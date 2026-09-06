@@ -27,9 +27,9 @@ tunnel = SshTunnel()
 pulls = PullTracker()
 
 
-def approvals(ws: Workspace) -> Approvals:
-    """Return a fresh `Approvals` reader for one workspace."""
-    return Approvals(ws)
+def pipeline_snapshot(ws: Workspace) -> list[dict]:
+    """The whole chain's state for one workspace, with what is building marked as such."""
+    return approvals(ws).snapshot(building(ws))
 
 
 def building(ws: Workspace) -> set[str]:
@@ -37,6 +37,6 @@ def building(ws: Workspace) -> set[str]:
     return runner.building_artifacts(ws.slug)
 
 
-def pipeline_snapshot(ws: Workspace) -> list[dict]:
-    """The whole chain's state for one workspace, with what is building marked as such."""
-    return approvals(ws).snapshot(building(ws))
+def approvals(ws: Workspace) -> Approvals:
+    """Return a fresh `Approvals` reader for one workspace."""
+    return Approvals(ws)

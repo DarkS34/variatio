@@ -53,65 +53,6 @@ _STEP_IDS = {
 }
 
 
-def index_for(ws, slot: str) -> FlatIndex:
-    """One index per slot of a workspace, kept warm for the life of the process.
-
-    The plain reading is reconciled first: it is idempotent and costs nothing when the
-    files did not change, and it is what catches up a subject whose documents were
-    uploaded before the reading existed.
-    """
-    raw_text.prepare_slot(ws, slot)
-    entries = raw_text.chunks(ws, slot, evaluation_config.RAG_CHUNK_CHARS)
-    key = (ws.slug, slot)
-    existing = _indices.get(key)
-    if existing is None or existing.entries != entries:
-        _indices[key] = FlatIndex(
-            entries,
-            cache_path=rag_index_path(ws, slot),
-            label=_LABELS[slot],
-            step_id=_STEP_IDS[slot],
-        )
-    return _indices[key]
-
-
-def warm(ws) -> None:
-    """Read and index both slots before anything is timed.
-
-    Built inside the arm, this one-off cost would land in the RAG baseline's `elapsed_ms`
-    and its step would be swallowed by the blind filter, so the evaluation job calls it
-    before the blind section starts.
-    """
-    for slot in (CORPUS, EXEMPLARS):
-        index_for(ws, slot).ensure()
-
-
-def build_query(commission: Commission) -> str:
-    """Everything this arm has to search with: the topic and the free instruction.
-
-    No `EMBEDDING_QUERY_PREFIX` — that prefix talks about curriculum concepts and was
-    measured as an optimisation of the system, so it belongs to the system.
-    """
-    parts = [", ".join(commission.concepts)]
-    if commission.instructions.strip():
-        parts.append(commission.instructions.strip())
-    return "\n".join(parts)
-
-
-def retrieve(ws, slot: str, query: str, k: int) -> list[tuple[str, str, float]]:
-    """Return the top-k pieces of one slot as `(key, text, score)`."""
-    index = index_for(ws, slot)
-    return [(key, index.entries[key], score) for key, score in index.search(query, k)]
-
-
-def render_pieces(pieces: list[tuple[str, str, float]]) -> str:
-    """Lay the retrieved pieces out verbatim, each under the document and position it came from."""
-    blocks = []
-    for key, text, _score in pieces:
-        name, _, position = key.rpartition("#")
-        blocks.append(f"--- «{name}», fragmento {position}\n{text}")
-    return "\n".join(blocks)
-
-
 def run(commission: Commission, context) -> ArmResult:
     """Retrieve pieces of the notes and of the exercises by plain cosine and generate one item."""
     item_type = context.exemplars_profile.item_type(commission.item_type)
@@ -168,3 +109,62 @@ def run(commission: Commission, context) -> ArmResult:
         elapsed_ms=round((time.perf_counter() - started) * 1000),
         error=None if item is not None else str(error),
     )
+
+
+def build_query(commission: Commission) -> str:
+    """Everything this arm has to search with: the topic and the free instruction.
+
+    No `EMBEDDING_QUERY_PREFIX` — that prefix talks about curriculum concepts and was
+    measured as an optimisation of the system, so it belongs to the system.
+    """
+    parts = [", ".join(commission.concepts)]
+    if commission.instructions.strip():
+        parts.append(commission.instructions.strip())
+    return "\n".join(parts)
+
+
+def retrieve(ws, slot: str, query: str, k: int) -> list[tuple[str, str, float]]:
+    """Return the top-k pieces of one slot as `(key, text, score)`."""
+    index = index_for(ws, slot)
+    return [(key, index.entries[key], score) for key, score in index.search(query, k)]
+
+
+def render_pieces(pieces: list[tuple[str, str, float]]) -> str:
+    """Lay the retrieved pieces out verbatim, each under the document and position it came from."""
+    blocks = []
+    for key, text, _score in pieces:
+        name, _, position = key.rpartition("#")
+        blocks.append(f"--- «{name}», fragmento {position}\n{text}")
+    return "\n".join(blocks)
+
+
+def warm(ws) -> None:
+    """Read and index both slots before anything is timed.
+
+    Built inside the arm, this one-off cost would land in the RAG baseline's `elapsed_ms`
+    and its step would be swallowed by the blind filter, so the evaluation job calls it
+    before the blind section starts.
+    """
+    for slot in (CORPUS, EXEMPLARS):
+        index_for(ws, slot).ensure()
+
+
+def index_for(ws, slot: str) -> FlatIndex:
+    """One index per slot of a workspace, kept warm for the life of the process.
+
+    The plain reading is reconciled first: it is idempotent and costs nothing when the
+    files did not change, and it is what catches up a subject whose documents were
+    uploaded before the reading existed.
+    """
+    raw_text.prepare_slot(ws, slot)
+    entries = raw_text.chunks(ws, slot, evaluation_config.RAG_CHUNK_CHARS)
+    key = (ws.slug, slot)
+    existing = _indices.get(key)
+    if existing is None or existing.entries != entries:
+        _indices[key] = FlatIndex(
+            entries,
+            cache_path=rag_index_path(ws, slot),
+            label=_LABELS[slot],
+            step_id=_STEP_IDS[slot],
+        )
+    return _indices[key]

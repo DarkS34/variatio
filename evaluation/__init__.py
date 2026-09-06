@@ -25,7 +25,7 @@ ARM_LABELS: dict[str, str] = {
 def rag_index_path(ws, slot: str) -> Path:
     """Where the rag arm's flat index over one raw slot is cached, inside the workspace.
 
-    Under `embeddings/` so the panel's «vaciar la caché» takes it with the pipeline's own;
+    Under `embeddings/` so the panel's "vaciar la caché" takes it with the pipeline's own;
     the plain readings it is built from live under `rag_text/` and stay, being seconds.
     """
     return ws.cache_dir / "embeddings" / f"eval_rag_{slot}.npz"

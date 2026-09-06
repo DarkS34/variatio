@@ -32,104 +32,6 @@ DESCRIPTION_SCHEMA = {
 }
 
 
-def _batch_schema(concepts: list[str]) -> dict:
-    """Build the grammar for one domain's batch: every concept a required key.
-
-    The prompt already demands one entry per concept and no more; pinning the keys is that
-    rule stated where the decoder enforces it, so a batch that drops three concepts cannot
-    look like a successful call.
-    """
-    return {
-        "type": "object",
-        "properties": {
-            "descriptions": {
-                "type": "object",
-                "properties": {c: {"type": "string"} for c in concepts},
-                "required": list(concepts),
-            }
-        },
-        "required": ["descriptions"],
-    }
-
-
-def _parse_batch(response: str, concepts: list[str]) -> tuple[dict[str, str] | None, str | None]:
-    """Parse a domain batch, returning `(descriptions, None)` or `(None, reason)`."""
-    try:
-        data = json.loads(response)
-    except json.JSONDecodeError as e:
-        return None, str(e)
-    if not isinstance(data, dict):
-        return None, "the answer is not an object"
-    written = data.get("descriptions")
-    if not isinstance(written, dict):
-        return None, "the «descriptions» object is missing"
-
-    out = {}
-    for concept in concepts:
-        text = written.get(concept)
-        if not isinstance(text, str) or not text.strip():
-            return None, f"the description of «{concept}» is missing"
-        out[concept] = " ".join(text.split())
-    return out, None
-
-
-def load_descriptions(path: str | Path) -> dict[str, str]:
-    """Read the `{concept: text}` cache — the file alone, no graph and no profile.
-
-    Outside `ConceptDescriber` on purpose: demanding the whole describer to touch the file
-    coupled reading the GRAPH to an artifact the graph does not depend on, and
-    `review.UPSTREAM` states that the graph has no upstreams.
-    """
-    path = Path(path)
-    if not path.exists():
-        return {}
-    with path.open(encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
-    """Write the `{concept: text}` cache."""
-    write_json(path, descriptions)
-
-
-def load_sources(path: str | Path) -> dict:
-    """Read the corpus anchoring a graph build wrote, tolerating its absence.
-
-    A workspace whose graph arrived imported has none, and that is not an error: such a
-    concept is described from its relations, as before the anchoring existed.
-    """
-    path = Path(path)
-    empty = {"documents": [], "concepts": {}}
-    if not path.exists():
-        return empty
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return empty
-    if not isinstance(data, dict):
-        return empty
-    return {
-        **data,
-        "documents": data.get("documents") or [],
-        "concepts": data.get("concepts") or {},
-    }
-
-
-def _parse_description(response: str) -> tuple[str | None, str | None]:
-    """Parse one description, returning `(text, None)` or `(None, reason)`."""
-    try:
-        data = json.loads(response)
-    except json.JSONDecodeError as e:
-        return None, str(e)
-    if not isinstance(data, dict):
-        return None, "expected an object with a 'description' key"
-    text = " ".join(str(data.get("description") or "").split())
-    if not text:
-        return None, "'description' is empty"
-    return text, None
-
-
 class ConceptDescriber:
     """Writes, refreshes and contrasts the prose each concept is retrieved by."""
 
@@ -176,14 +78,19 @@ class ConceptDescriber:
 
     # FRESHNESS -------------------------------------------------------------------------------
 
-    @property
-    def fingerprints_path(self) -> Path:
-        """The sidecar recording what each description was written against.
+    def restamp(self, dry_run: bool = False) -> tuple[int, int]:
+        """Stamp the written descriptions against the current graph without rewriting them.
 
-        A sidecar, so the descriptions file stays the plain `{concept: text}` map the
-        editors read.
+        Returns `(how many were stale, how many are written)`.
         """
-        return self.path.with_suffix(".fingerprints.json")
+        descriptions = self.load()
+        written = [c for c in self.knowledge_graph.taggable_concepts if descriptions.get(c)]
+        current = {c: self._fingerprint(c) for c in written}
+        stored = self._load_fingerprints()
+        changed = sum(1 for c in written if stored.get(c) != current[c])
+        if not dry_run:
+            self._save_fingerprints(current)
+        return changed, len(written)
 
     def _fingerprint(self, concept: str) -> str:
         """Digest everything a description is written from, so a change makes it stale.
@@ -202,16 +109,6 @@ class ConceptDescriber:
         blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:12]
 
-    def _load_fingerprints(self) -> dict[str, str]:
-        """Read the sidecar; an absent or corrupt one means nothing is known to be stale."""
-        if not self.fingerprints_path.exists():
-            return {}
-        try:
-            with self.fingerprints_path.open(encoding="utf-8") as f:
-                return json.load(f)
-        except (OSError, json.JSONDecodeError):
-            return {}
-
     def _save_fingerprints(self, fingerprints: dict[str, str]) -> None:
         """Merge into the sidecar, never replace it.
 
@@ -220,20 +117,6 @@ class ConceptDescriber:
         """
         merged = {**self._load_fingerprints(), **fingerprints}
         write_json(self.fingerprints_path, merged, sort_keys=True)
-
-    def restamp(self, dry_run: bool = False) -> tuple[int, int]:
-        """Stamp the written descriptions against the current graph without rewriting them.
-
-        Returns `(how many were stale, how many are written)`.
-        """
-        descriptions = self.load()
-        written = [c for c in self.knowledge_graph.taggable_concepts if descriptions.get(c)]
-        current = {c: self._fingerprint(c) for c in written}
-        stored = self._load_fingerprints()
-        changed = sum(1 for c in written if stored.get(c) != current[c])
-        if not dry_run:
-            self._save_fingerprints(current)
-        return changed, len(written)
 
     def _pending(
         self, targets: list[str], descriptions: dict[str, str], current: dict[str, str]
@@ -254,6 +137,25 @@ class ConceptDescriber:
                 "rewriting them"
             )
         return missing + stale
+
+    def _load_fingerprints(self) -> dict[str, str]:
+        """Read the sidecar; an absent or corrupt one means nothing is known to be stale."""
+        if not self.fingerprints_path.exists():
+            return {}
+        try:
+            with self.fingerprints_path.open(encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    @property
+    def fingerprints_path(self) -> Path:
+        """The sidecar recording what each description was written against.
+
+        A sidecar, so the descriptions file stays the plain `{concept: text}` map the
+        editors read.
+        """
+        return self.path.with_suffix(".fingerprints.json")
 
     # WRITING ---------------------------------------------------------------------------------
 
@@ -349,10 +251,6 @@ class ConceptDescriber:
                 descriptions[concept] = self.simple_describe(concept)
             self.save(descriptions)
 
-    def _by_domain(self, concepts: list[str]) -> list[str]:
-        """Order concepts by domain, so `_write` batches them in as few calls as it can."""
-        return sorted(concepts, key=lambda c: (self.knowledge_graph.concept_domain[c], c))
-
     def describe(
         self,
         concept: str,
@@ -409,6 +307,10 @@ class ConceptDescriber:
             for verb, neighbors in self.collect_relations(concept).items()
         )
         return "\n".join(lines)
+
+    def _by_domain(self, concepts: list[str]) -> list[str]:
+        """Order concepts by domain, so `_write` batches them in as few calls as it can."""
+        return sorted(concepts, key=lambda c: (self.knowledge_graph.concept_domain[c], c))
 
     # CONTRAST --------------------------------------------------------------------------------
 
@@ -529,30 +431,6 @@ class ConceptDescriber:
                 lines.append(f"    · {verbose}: {', '.join(neighbors)}")
         return "\n".join(lines)
 
-    def _passage_place(self, entry: dict) -> str:
-        """Return where one passage came from, naming its document only if there are several."""
-        place = entry.get("location") or ""
-        if self.name_documents:
-            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
-        return place
-
-    def _group_passages(
-        self, concepts: list[str]
-    ) -> tuple[dict[str, list[str]], dict[str, str]]:
-        """Group each distinct passage with the concepts it yielded, and where it is from."""
-        by_text: dict[str, list[str]] = {}
-        places: dict[str, str] = {}
-        for concept in concepts:
-            for entry in self.passages.get(concept) or []:
-                text = (entry.get("text") or "").strip()
-                if not text:
-                    continue
-                by_text.setdefault(text, [])
-                if concept not in by_text[text]:
-                    by_text[text].append(concept)
-                places.setdefault(text, self._passage_place(entry))
-        return by_text, places
-
     def _batch_passages_block(self, concepts: list[str]) -> str:
         """Render each distinct passage once, naming the concepts it yielded.
 
@@ -572,6 +450,38 @@ class ConceptDescriber:
             blocks.append(f"{head}\n{heading}{named}\n\n{text}")
         return "\n\n---\n\n".join(blocks)
 
+    def _group_passages(
+        self, concepts: list[str]
+    ) -> tuple[dict[str, list[str]], dict[str, str]]:
+        """Group each distinct passage with the concepts it yielded, and where it is from."""
+        by_text: dict[str, list[str]] = {}
+        places: dict[str, str] = {}
+        for concept in concepts:
+            for entry in self.passages.get(concept) or []:
+                text = (entry.get("text") or "").strip()
+                if not text:
+                    continue
+                by_text.setdefault(text, [])
+                if concept not in by_text[text]:
+                    by_text[text].append(concept)
+                places.setdefault(text, self._passage_place(entry))
+        return by_text, places
+
+    def _passage_place(self, entry: dict) -> str:
+        """Return where one passage came from, naming its document only if there are several."""
+        place = entry.get("location") or ""
+        if self.name_documents:
+            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
+        return place
+
+    def _domains_block(self, current: str) -> str:
+        """Render every domain and its concepts, marking the one being described."""
+        lines = []
+        for domain, names in self.knowledge_graph.concepts_by_domains.items():
+            mark = self._wording.DESCRIBING_MARK if domain == current else ""
+            lines.append(f"- {domain}{mark}: {', '.join(names)}")
+        return "\n".join(lines)
+
     def _existing_block(self, domain: str, batch: list[str], written: dict[str, str]) -> str:
         """Render the domain's descriptions the batch is NOT rewriting.
 
@@ -585,14 +495,6 @@ class ConceptDescriber:
             if c in taggable and c not in set(batch) and (written.get(c) or "").strip()
         ]
         return "\n".join(f"- {c}: {' '.join(written[c].split())}" for c in rest)
-
-    def _domains_block(self, current: str) -> str:
-        """Render every domain and its concepts, marking the one being described."""
-        lines = []
-        for domain, names in self.knowledge_graph.concepts_by_domains.items():
-            mark = self._wording.DESCRIBING_MARK if domain == current else ""
-            lines.append(f"- {domain}{mark}: {', '.join(names)}")
-        return "\n".join(lines)
 
     # RELATIONS -------------------------------------------------------------------------------
 
@@ -622,3 +524,101 @@ class ConceptDescriber:
                 relations[f"{verb} este concepto"] = predecessors
 
         return relations
+
+
+def load_sources(path: str | Path) -> dict:
+    """Read the corpus anchoring a graph build wrote, tolerating its absence.
+
+    A workspace whose graph arrived imported has none, and that is not an error: such a
+    concept is described from its relations, as before the anchoring existed.
+    """
+    path = Path(path)
+    empty = {"documents": [], "concepts": {}}
+    if not path.exists():
+        return empty
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return empty
+    if not isinstance(data, dict):
+        return empty
+    return {
+        **data,
+        "documents": data.get("documents") or [],
+        "concepts": data.get("concepts") or {},
+    }
+
+
+def load_descriptions(path: str | Path) -> dict[str, str]:
+    """Read the `{concept: text}` cache — the file alone, no graph and no profile.
+
+    Outside `ConceptDescriber` on purpose: demanding the whole describer to touch the file
+    coupled reading the GRAPH to an artifact the graph does not depend on, and
+    `review.UPSTREAM` states that the graph has no upstreams.
+    """
+    path = Path(path)
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_descriptions(path: str | Path, descriptions: dict[str, str]) -> None:
+    """Write the `{concept: text}` cache."""
+    write_json(path, descriptions)
+
+
+def _parse_description(response: str) -> tuple[str | None, str | None]:
+    """Parse one description, returning `(text, None)` or `(None, reason)`."""
+    try:
+        data = json.loads(response)
+    except json.JSONDecodeError as e:
+        return None, str(e)
+    if not isinstance(data, dict):
+        return None, "expected an object with a 'description' key"
+    text = " ".join(str(data.get("description") or "").split())
+    if not text:
+        return None, "'description' is empty"
+    return text, None
+
+
+def _parse_batch(response: str, concepts: list[str]) -> tuple[dict[str, str] | None, str | None]:
+    """Parse a domain batch, returning `(descriptions, None)` or `(None, reason)`."""
+    try:
+        data = json.loads(response)
+    except json.JSONDecodeError as e:
+        return None, str(e)
+    if not isinstance(data, dict):
+        return None, "the answer is not an object"
+    written = data.get("descriptions")
+    if not isinstance(written, dict):
+        return None, "the «descriptions» object is missing"
+
+    out = {}
+    for concept in concepts:
+        text = written.get(concept)
+        if not isinstance(text, str) or not text.strip():
+            return None, f"the description of «{concept}» is missing"
+        out[concept] = " ".join(text.split())
+    return out, None
+
+
+def _batch_schema(concepts: list[str]) -> dict:
+    """Build the grammar for one domain's batch: every concept a required key.
+
+    The prompt already demands one entry per concept and no more; pinning the keys is that
+    rule stated where the decoder enforces it, so a batch that drops three concepts cannot
+    look like a successful call.
+    """
+    return {
+        "type": "object",
+        "properties": {
+            "descriptions": {
+                "type": "object",
+                "properties": {c: {"type": "string"} for c in concepts},
+                "required": list(concepts),
+            }
+        },
+        "required": ["descriptions"],
+    }

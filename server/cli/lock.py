@@ -14,6 +14,25 @@ class LockHeld(RuntimeError):
         self.path = path
 
 
+def hold(path: Path):
+    """Take the lock and keep it for the life of the process."""
+    handle = acquire(path)
+    atexit.register(release, handle)
+    return handle
+
+
+def acquire(path: Path):
+    """Open the lock file and take it, or raise `LockHeld`."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+")
+    handle.seek(0)
+    if not _try_lock(handle):
+        handle.close()
+        raise LockHeld(path)
+    return handle
+
+
 def _try_lock(handle) -> bool:
     """Take the lock without blocking; False when somebody else holds it."""
     if os.name == "nt":
@@ -33,6 +52,13 @@ def _try_lock(handle) -> bool:
     return True
 
 
+def release(handle) -> None:
+    """Release a handle from `acquire`, tolerating None and an already-closed one."""
+    if handle is None or handle.closed:
+        return
+    _unlock(handle)
+
+
 def _unlock(handle) -> None:
     """Release the lock and close the handle, tolerating a failure to unlock."""
     try:
@@ -48,29 +74,3 @@ def _unlock(handle) -> None:
     except OSError:
         pass
     handle.close()
-
-
-def acquire(path: Path):
-    """Open the lock file and take it, or raise `LockHeld`."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle = path.open("a+")
-    handle.seek(0)
-    if not _try_lock(handle):
-        handle.close()
-        raise LockHeld(path)
-    return handle
-
-
-def release(handle) -> None:
-    """Release a handle from `acquire`, tolerating None and an already-closed one."""
-    if handle is None or handle.closed:
-        return
-    _unlock(handle)
-
-
-def hold(path: Path):
-    """Take the lock and keep it for the life of the process."""
-    handle = acquire(path)
-    atexit.register(release, handle)
-    return handle

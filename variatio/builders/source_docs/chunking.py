@@ -5,22 +5,6 @@ import re
 from .markdown import HEADING_RE, mask_fences, restore_fences, strip_page_marks
 
 
-def chunk_text(text: str, max_chars: int) -> list[str]:
-    """Pack the paragraphs of `text` into chunks of at most `max_chars`."""
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", strip_page_marks(text)) if p.strip()]
-    chunks: list[str] = []
-    current = ""
-    for paragraph in paragraphs:
-        if current and len(current) + len(paragraph) + 2 > max_chars:
-            chunks.append(current)
-            current = paragraph
-        else:
-            current = f"{current}\n\n{paragraph}" if current else paragraph
-    if current:
-        chunks.append(current)
-    return chunks
-
-
 def chunk_markdown(text: str, max_chars: int) -> list[tuple[str, str]]:
     """`chunk_sections` without the per-chunk heading list: `(heading path, body)`."""
     return [(path, body) for path, _headings, body in chunk_sections(text, max_chars)]
@@ -106,6 +90,22 @@ def split_sections(text: str) -> list[tuple[str, str, str]]:
         for p, t, lines in sections
         if (body := restore_fences("\n".join(lines), fences).strip())
     ]
+
+
+def chunk_text(text: str, max_chars: int) -> list[str]:
+    """Pack the paragraphs of `text` into chunks of at most `max_chars`."""
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", strip_page_marks(text)) if p.strip()]
+    chunks: list[str] = []
+    current = ""
+    for paragraph in paragraphs:
+        if current and len(current) + len(paragraph) + 2 > max_chars:
+            chunks.append(current)
+            current = paragraph
+        else:
+            current = f"{current}\n\n{paragraph}" if current else paragraph
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 def common_path(paths: list[str]) -> str:

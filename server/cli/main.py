@@ -18,6 +18,14 @@ from .common import PROG, guarded
 from .serve import serve
 
 
+def main(argv: list[str] | None = None) -> int:
+    """Parse the arguments and run the subcommand, returning its exit code."""
+    parser, subparsers = build_parser()
+    argv = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(_with_default_command(argv, subparsers.choices))
+    return args.func(args)
+
+
 def build_parser():
     """Build the argument parser, returning it with its subparsers.
 
@@ -150,11 +158,3 @@ def _with_default_command(argv: list[str], commands) -> list[str]:
     if argv[0] in ("-h", "--help") or argv[0] in commands:
         return argv
     return ["serve", *argv]
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Parse the arguments and run the subcommand, returning its exit code."""
-    parser, subparsers = build_parser()
-    argv = list(sys.argv[1:] if argv is None else argv)
-    args = parser.parse_args(_with_default_command(argv, subparsers.choices))
-    return args.func(args)

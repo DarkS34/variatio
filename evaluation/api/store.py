@@ -1,7 +1,7 @@
 """Where evaluation sessions are written, and the whole arithmetic of the evaluation over them.
 
 Sessions live in a table rather than on disk for a reason that is not tidiness: a session
-recorded on disk has no evaluator, and «cómo van las evaluaciones por cuenta» is a question
+recorded on disk has no evaluator, and "how the evaluations are going per account" is a question
 that cannot be asked of a row that does not know whose it is.
 
 The aggregates below are the only implementation of the evaluation's arithmetic in the codebase,
@@ -208,15 +208,18 @@ def _clean_rating(rating: dict) -> dict:
 # READ ------------------------------------------------------------------------------------------
 
 
-def _account_fields(user) -> dict:
-    """Name the evaluator, or leave the three columns blank when the row has no author."""
-    if user is None:
-        return {"account": None, "account_name": None, "evaluator_profile": None}
-    return {
-        "account": user.username,
-        "account_name": user.name,
-        "evaluator_profile": user.evaluator_profile,
-    }
+def listing(
+    db: DbSession,
+    workspace_id: int,
+    author: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[dict], int]:
+    """Return one page of headers with the total, for the evaluator's own listing."""
+    rows, total = queries.list_evaluations(
+        db, workspace_id=workspace_id, author=author, limit=limit, offset=offset
+    )
+    return [header(row) for row in rows], total
 
 
 def header(row: EvalSession, user=None, workspace_slug: str | None = None) -> dict:
@@ -274,38 +277,18 @@ def _seconds(opened: float | None, ended: float | None) -> float | None:
     return round(ended - opened, 1)
 
 
-def listing(
-    db: DbSession,
-    workspace_id: int,
-    author: int | None = None,
-    limit: int = 50,
-    offset: int = 0,
-) -> tuple[list[dict], int]:
-    """Return one page of headers with the total, for the evaluator's own listing."""
-    rows, total = queries.list_evaluations(
-        db, workspace_id=workspace_id, author=author, limit=limit, offset=offset
-    )
-    return [header(row) for row in rows], total
+def _account_fields(user) -> dict:
+    """Name the evaluator, or leave the three columns blank when the row has no author."""
+    if user is None:
+        return {"account": None, "account_name": None, "evaluator_profile": None}
+    return {
+        "account": user.username,
+        "account_name": user.name,
+        "evaluator_profile": user.evaluator_profile,
+    }
 
 
 # AGGREGATES ------------------------------------------------------------------------------------
-
-
-def headers(db: DbSession, workspace_id: int | None = None) -> list[dict]:
-    """Read the whole population as headers, each carrying its author and its workspace."""
-    return [
-        header(row, user, row.workspace.slug if row.workspace else None)
-        for row, user in queries.all_evaluations(db, workspace_id)
-    ]
-
-
-def _preferences(rows: list[dict]) -> dict:
-    """Count which arm won, with «none» for an explicitly registered no-preference."""
-    counts = {arm: 0 for arm in ARMS}
-    counts["none"] = 0
-    for row in rows:
-        counts[row.get("choice_arm") or "none"] += 1
-    return counts
 
 
 def aggregates(headers: list[dict]) -> dict:
@@ -313,7 +296,7 @@ def aggregates(headers: list[dict]) -> dict:
 
     Everything per-arm is counted over DECIDED sessions only, and that is a blinding
     requirement rather than a statistical preference: with a session still waiting to be
-    judged, «naive: unavailable 1» beside a card that shows no exercise names the card.
+    judged, "naive: unavailable 1" beside a card that shows no exercise names the card.
     """
     decided = [h for h in headers if h.get("chosen_at")]
     declined = [h for h in headers if h.get("declined_at")]
@@ -345,60 +328,27 @@ def aggregates(headers: list[dict]) -> dict:
     }
 
 
+def headers(db: DbSession, workspace_id: int | None = None) -> list[dict]:
+    """Read the whole population as headers, each carrying its author and its workspace."""
+    return [
+        header(row, user, row.workspace.slug if row.workspace else None)
+        for row, user in queries.all_evaluations(db, workspace_id)
+    ]
+
+
+def _preferences(rows: list[dict]) -> dict:
+    """Count which arm won, with "none" for an explicitly registered no-preference."""
+    counts = {arm: 0 for arm in ARMS}
+    counts["none"] = 0
+    for row in rows:
+        counts[row.get("choice_arm") or "none"] += 1
+    return counts
+
+
 # STATISTICS ------------------------------------------------------------------------------
 #
 # Written out with stdlib `math` rather than reached for from scipy, whose 115 MB the
 # runtime stopped paying for. The three tests the evaluation needs are a handful of lines each.
-
-
-def _binomial_pmf(k: int, n: int, p: float) -> float:
-    """Return the probability of exactly k successes in n trials at rate p."""
-    return math.comb(n, k) * (p**k) * ((1 - p) ** (n - k))
-
-
-def binomial_p(successes: int, total: int, expected: float) -> float | None:
-    """Return the EXACT two-sided binomial p, by the method of small p-values.
-
-    Exact rather than normal-approximated because the evaluation's n is in the dozens, which is
-    precisely where the approximation stops being one.
-    """
-    if total <= 0:
-        return None
-    observed = _binomial_pmf(successes, total, expected)
-    # Floating point makes «equally likely» a knife edge, and without a tolerance the
-    # symmetric case silently loses its own mirror image.
-    tolerance = observed * 1e-7
-    return min(
-        1.0,
-        sum(
-            _binomial_pmf(k, total, expected)
-            for k in range(total + 1)
-            if _binomial_pmf(k, total, expected) <= observed + tolerance
-        ),
-    )
-
-
-def wilson(successes: int, total: int, z: float = 1.96) -> list[float] | None:
-    """Return a WILSON 95 % interval, never the textbook normal one.
-
-    At these counts the textbook formula puts a bound below zero or above one, and a
-    5-of-5 preference is exactly the case this evaluation will meet.
-    """
-    if total <= 0:
-        return None
-    phat = successes / total
-    denominator = 1 + z * z / total
-    centre = (phat + z * z / (2 * total)) / denominator
-    spread = z * math.sqrt(phat * (1 - phat) / total + z * z / (4 * total * total)) / denominator
-    return [round(max(0.0, centre - spread), 4), round(min(1.0, centre + spread), 4)]
-
-
-def _chi2_p_df2(statistic: float) -> float:
-    """Return the chi-square survival for the 2 degrees of freedom three positions leave.
-
-    That case has the closed form exp(-x/2): no table, no library, no approximation.
-    """
-    return math.exp(-statistic / 2)
 
 
 def significance(preferences: dict, decided: int) -> dict:
@@ -414,6 +364,33 @@ def significance(preferences: dict, decided: int) -> dict:
             "p": (round(p, 5) if (p := binomial_p(wins, decided, expected)) is not None else None),
         }
     return summary
+
+
+def binomial_p(successes: int, total: int, expected: float) -> float | None:
+    """Return the EXACT two-sided binomial p, by the method of small p-values.
+
+    Exact rather than normal-approximated because the evaluation's n is in the dozens, which is
+    precisely where the approximation stops being one.
+    """
+    if total <= 0:
+        return None
+    observed = _binomial_pmf(successes, total, expected)
+    # Floating point makes "equally likely" a knife edge, and without a tolerance the
+    # symmetric case silently loses its own mirror image.
+    tolerance = observed * 1e-7
+    return min(
+        1.0,
+        sum(
+            _binomial_pmf(k, total, expected)
+            for k in range(total + 1)
+            if _binomial_pmf(k, total, expected) <= observed + tolerance
+        ),
+    )
+
+
+def _binomial_pmf(k: int, n: int, p: float) -> float:
+    """Return the probability of exactly k successes in n trials at rate p."""
+    return math.comb(n, k) * (p**k) * ((1 - p) ** (n - k))
 
 
 def position_bias(decided: list[dict]) -> dict:
@@ -441,10 +418,18 @@ def position_bias(decided: list[dict]) -> dict:
     }
 
 
+def _chi2_p_df2(statistic: float) -> float:
+    """Return the chi-square survival for the 2 degrees of freedom three positions leave.
+
+    That case has the closed form exp(-x/2): no table, no library, no approximation.
+    """
+    return math.exp(-statistic / 2)
+
+
 def triage_summary(decided: list[dict]) -> dict:
     """Summarise the blind per-card answer, the one quality signal all three arms have.
 
-    `usable` folds «tal cual» and «con retoques» together, because that is the question a
+    `usable` folds "tal cual" and "con retoques" together, because that is the question a
     teacher is really answering; `outright` keeps the stricter reading beside it.
     """
     summary: dict = {}
@@ -465,6 +450,21 @@ def triage_summary(decided: list[dict]) -> dict:
             "ci95_usable": wilson(counts["yes"] + counts["partly"], total),
         }
     return summary
+
+
+def wilson(successes: int, total: int, z: float = 1.96) -> list[float] | None:
+    """Return a WILSON 95 % interval, never the textbook normal one.
+
+    At these counts the textbook formula puts a bound below zero or above one, and a
+    5-of-5 preference is exactly the case this evaluation will meet.
+    """
+    if total <= 0:
+        return None
+    phat = successes / total
+    denominator = 1 + z * z / total
+    centre = (phat + z * z / (2 * total)) / denominator
+    spread = z * math.sqrt(phat * (1 - phat) / total + z * z / (4 * total * total)) / denominator
+    return [round(max(0.0, centre - spread), 4), round(min(1.0, centre + spread), 4)]
 
 
 def _duration_summary(decided: list[dict]) -> dict:
@@ -512,24 +512,10 @@ def _think_breakdown(decided: list[dict]) -> dict:
     return breakdown
 
 
-def _mean_elapsed(rows: list[dict]) -> dict:
-    """Average each arm's wall time, ignoring the arms that produced nothing."""
-    means = {}
-    for arm in ARMS:
-        values = [
-            ms
-            for ms in ((h.get("arm_elapsed_ms") or {}).get(arm) for h in rows)
-            if isinstance(ms, (int, float)) and ms > 0
-        ]
-        if values:
-            means[arm] = round(sum(values) / len(values))
-    return means
-
-
 def _rubric_summary(ratings: list[dict]) -> dict:
     """Average the four post-reveal scales, and report `complexity` twice.
 
-    `complexity` is NOT «more is better»: a 5 is as wrong as a 1 and the target is 3, so
+    `complexity` is NOT "more is better": a 5 is as wrong as a 1 and the target is 3, so
     the mean distance to 3 goes beside the raw mean, which alone reads as a quality score.
     """
     summary: dict = {"n": len(ratings)}
@@ -550,6 +536,20 @@ def _rubric_summary(ratings: list[dict]) -> dict:
             value: usability.count(value) for value in USABILITY_VALUES
         }
     return summary
+
+
+def _mean_elapsed(rows: list[dict]) -> dict:
+    """Average each arm's wall time, ignoring the arms that produced nothing."""
+    means = {}
+    for arm in ARMS:
+        values = [
+            ms
+            for ms in ((h.get("arm_elapsed_ms") or {}).get(arm) for h in rows)
+            if isinstance(ms, (int, float)) and ms > 0
+        ]
+        if values:
+            means[arm] = round(sum(values) / len(values))
+    return means
 
 
 def by_account(headers: list[dict]) -> list[dict]:
@@ -585,32 +585,6 @@ def by_profile(headers: list[dict]) -> list[dict]:
 # AGREEMENT -------------------------------------------------------------------------------
 
 
-def _comparable_pairs(rows: list[dict]):
-    """Yield every pair of judgements of one set made by two DIFFERENT accounts.
-
-    Two judgements by the same account are consistency, not agreement, and pooling them
-    here would flatter the number.
-    """
-    for first in range(len(rows)):
-        for second in range(first + 1, len(rows)):
-            left, right = rows[first], rows[second]
-            account = left.get("account_id")
-            if account is not None and account == right.get("account_id"):
-                continue
-            yield left, right
-
-
-def _shared_triage(left: dict, right: dict) -> list[tuple[str, str]]:
-    """Return the blind answers both evaluators gave, for the arms both of them answered."""
-    left_triage = left.get("triage_arm") or {}
-    right_triage = right.get("triage_arm") or {}
-    return [
-        (left_triage[arm], right_triage[arm])
-        for arm in ARMS
-        if arm in left_triage and arm in right_triage
-    ]
-
-
 def agreement(headers: list[dict]) -> dict:
     """Pool what two people who judged the SAME three items said.
 
@@ -639,6 +613,32 @@ def agreement(headers: list[dict]) -> dict:
         "choice": _pooled_kappa(choice_pairs),
         "triage": _pooled_kappa(triage_pairs),
     }
+
+
+def _comparable_pairs(rows: list[dict]):
+    """Yield every pair of judgements of one set made by two DIFFERENT accounts.
+
+    Two judgements by the same account are consistency, not agreement, and pooling them
+    here would flatter the number.
+    """
+    for first in range(len(rows)):
+        for second in range(first + 1, len(rows)):
+            left, right = rows[first], rows[second]
+            account = left.get("account_id")
+            if account is not None and account == right.get("account_id"):
+                continue
+            yield left, right
+
+
+def _shared_triage(left: dict, right: dict) -> list[tuple[str, str]]:
+    """Return the blind answers both evaluators gave, for the arms both of them answered."""
+    left_triage = left.get("triage_arm") or {}
+    right_triage = right.get("triage_arm") or {}
+    return [
+        (left_triage[arm], right_triage[arm])
+        for arm in ARMS
+        if arm in left_triage and arm in right_triage
+    ]
 
 
 def _pooled_kappa(pairs: list[tuple[str, str]]) -> dict:
@@ -671,7 +671,7 @@ def _pooled_kappa(pairs: list[tuple[str, str]]) -> dict:
 
 
 def _account_label(row: dict) -> str:
-    """Name the evaluator, or «Sin evaluador» — never «cuenta borrada».
+    """Name the evaluator, or "Sin evaluador" — never "cuenta borrada".
 
     `account_id` goes null for two reasons and only one is a deletion: stock has no
     evaluator until somebody is handed a copy, and calling that data loss reads as an
@@ -726,74 +726,6 @@ def per_day(headers: list[dict]) -> list[dict]:
 # EXPORT ----------------------------------------------------------------------------------------
 
 
-def _export_commission(row: dict) -> dict:
-    """The columns identifying one session and the commission behind it."""
-    return {
-        "session_id": row["id"],
-        "created_at": _iso(row.get("created_at")),
-        "workspace": row.get("workspace") or "",
-        "account": row.get("account") or "",
-        "evaluator_profile": row.get("evaluator_profile") or "",
-        "set_id": row.get("set_id") or row["id"],
-        "assigned": int(bool(row.get("assigned"))),
-        "job_id": row.get("job_id") or "",
-        "item_type": row.get("item_type") or "",
-        "concepts": "|".join(row.get("concepts") or []),
-        "curriculum": "|".join(row.get("curriculum") or []),
-        "fixed": json.dumps(row.get("fixed") or {}, ensure_ascii=False),
-        "instructions": row.get("instructions") or "",
-        "seed": row.get("seed"),
-        "think": int(bool(row.get("think", True))),
-    }
-
-
-def _export_judgement(row: dict, rating: dict) -> dict:
-    """The columns recording what the evaluator answered and how long it took them."""
-    return {
-        "choice": row.get("choice") if row.get("choice") is not None else "",
-        "choice_arm": row.get("choice_arm") or "",
-        "chosen_at": _iso(row.get("chosen_at")),
-        "declined": int(bool(row.get("declined_at"))),
-        "seconds": row.get("seconds") if row.get("seconds") is not None else "",
-        "evaluator_note": row.get("evaluator_note") or "",
-        "usability": rating.get("usability", ""),
-        "rating_comment": rating.get("comment", ""),
-    }
-
-
-def _export_positions(shuffle: list) -> dict:
-    """Which arm sat at each of the three positions, so the blinding stays auditable."""
-    return {
-        f"position_{index + 1}": shuffle[index] if index < len(shuffle) else ""
-        for index in range(3)
-    }
-
-
-def _export_arms(row: dict) -> dict:
-    """The blind triage, the status and the timing, one column per arm."""
-    triage = row.get("triage_arm") or {}
-    status = row.get("arm_status") or {}
-    elapsed = row.get("arm_elapsed_ms") or {}
-    line: dict = {}
-    for arm in ARMS:
-        line[f"triage_{arm}"] = triage.get(arm, "")
-        line[f"{arm}_status"] = status.get(arm, "")
-        line[f"{arm}_ms"] = elapsed.get(arm, "")
-    return line
-
-
-def _export_row(row: dict) -> dict:
-    """Build one line of the export from the blocks above, plus the four rubric scales."""
-    rating = row.get("rating") or {}
-    return {
-        **_export_commission(row),
-        **_export_judgement(row, rating),
-        **_export_positions(row.get("shuffle") or []),
-        **_export_arms(row),
-        **{name: rating.get(name, "") for name in RATING_SCALES},
-    }
-
-
 def export_csv(headers: list[dict]) -> str:
     """Render the evaluation's raw data: one row per session, oldest first.
 
@@ -842,8 +774,76 @@ def export_csv(headers: list[dict]) -> str:
     return buffer.getvalue()
 
 
+def _export_row(row: dict) -> dict:
+    """Build one line of the export from the blocks above, plus the four rubric scales."""
+    rating = row.get("rating") or {}
+    return {
+        **_export_commission(row),
+        **_export_judgement(row, rating),
+        **_export_positions(row.get("shuffle") or []),
+        **_export_arms(row),
+        **{name: rating.get(name, "") for name in RATING_SCALES},
+    }
+
+
+def _export_commission(row: dict) -> dict:
+    """The columns identifying one session and the commission behind it."""
+    return {
+        "session_id": row["id"],
+        "created_at": _iso(row.get("created_at")),
+        "workspace": row.get("workspace") or "",
+        "account": row.get("account") or "",
+        "evaluator_profile": row.get("evaluator_profile") or "",
+        "set_id": row.get("set_id") or row["id"],
+        "assigned": int(bool(row.get("assigned"))),
+        "job_id": row.get("job_id") or "",
+        "item_type": row.get("item_type") or "",
+        "concepts": "|".join(row.get("concepts") or []),
+        "curriculum": "|".join(row.get("curriculum") or []),
+        "fixed": json.dumps(row.get("fixed") or {}, ensure_ascii=False),
+        "instructions": row.get("instructions") or "",
+        "seed": row.get("seed"),
+        "think": int(bool(row.get("think", True))),
+    }
+
+
+def _export_judgement(row: dict, rating: dict) -> dict:
+    """The columns recording what the evaluator answered and how long it took them."""
+    return {
+        "choice": row.get("choice") if row.get("choice") is not None else "",
+        "choice_arm": row.get("choice_arm") or "",
+        "chosen_at": _iso(row.get("chosen_at")),
+        "declined": int(bool(row.get("declined_at"))),
+        "seconds": row.get("seconds") if row.get("seconds") is not None else "",
+        "evaluator_note": row.get("evaluator_note") or "",
+        "usability": rating.get("usability", ""),
+        "rating_comment": rating.get("comment", ""),
+    }
+
+
 def _iso(timestamp: float | None) -> str:
     """Render a POSIX timestamp as a local ISO string to the second, or as empty."""
     if not timestamp:
         return ""
     return datetime.fromtimestamp(timestamp).isoformat(timespec="seconds")
+
+
+def _export_positions(shuffle: list) -> dict:
+    """Which arm sat at each of the three positions, so the blinding stays auditable."""
+    return {
+        f"position_{index + 1}": shuffle[index] if index < len(shuffle) else ""
+        for index in range(3)
+    }
+
+
+def _export_arms(row: dict) -> dict:
+    """The blind triage, the status and the timing, one column per arm."""
+    triage = row.get("triage_arm") or {}
+    status = row.get("arm_status") or {}
+    elapsed = row.get("arm_elapsed_ms") or {}
+    line: dict = {}
+    for arm in ARMS:
+        line[f"triage_{arm}"] = triage.get(arm, "")
+        line[f"{arm}_status"] = status.get(arm, "")
+        line[f"{arm}_ms"] = elapsed.get(arm, "")
+    return line

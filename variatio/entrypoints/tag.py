@@ -9,11 +9,6 @@ from ..core.json_io import write_json
 from .initialize import RuntimeContext
 
 
-def save_bank(bank: dict, path: str | Path) -> Path:
-    """Write the exemplars bank."""
-    return write_json(path, bank)
-
-
 def tag_bank(
     context: RuntimeContext,
     ids: list[str] | None = None,
@@ -55,3 +50,8 @@ def tag_bank(
     logger.success(f"{len(pending)} item(s) tagged; bank saved to {Path(path).name}")
     context.apply_bank(annotated)
     return annotated
+
+
+def save_bank(bank: dict, path: str | Path) -> Path:
+    """Write the exemplars bank."""
+    return write_json(path, bank)

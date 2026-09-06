@@ -5,7 +5,7 @@ because somebody redeemed a single-use invitation, or because the installation's
 account was created from the command line. That is what removes the largest attack
 surface a web login has, and with it the captcha and the anti-spam quotas.
 
-«DOES THIS USERNAME HAVE AN ACCOUNT?» IS REFUSED IN THREE PLACES AT ONCE, and weakening
+"DOES THIS USERNAME HAVE AN ACCOUNT?" IS REFUSED IN THREE PLACES AT ONCE, and weakening
 any one of them re-opens enumeration on its own: `/login` answers the same sentence for a
 wrong password and a missing account, the missing-account path pays for a decoy Argon2
 hash so the two also take the same time, and `/forgot` always answers 202.
@@ -32,8 +32,8 @@ from ..db.models import OWNER, Invite, User, Workspace
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# The same sentence for «no such account» and «wrong password». Either half alone still
-# answers «does this name have an account here?».
+# The same sentence for "no such account" and "wrong password". Either half alone still
+# answers "does this name have an account here?".
 BAD_CREDENTIALS = "Usuario o contraseña incorrectos."
 
 
@@ -352,7 +352,7 @@ def accept_invite(
     A username already taken is refused outright: an invitation is not a way to set
     somebody else's credentials. An evaluator profile is required here and required
     nowhere else — this is the one moment the person is in front of the form, and NULL
-    («nobody said») has to stay reachable for the accounts the command line creates and
+    ("nobody said") has to stay reachable for the accounts the command line creates and
     for every account older than the question. It is not a permission and never becomes
     one. An unknown UI language, unlike an absent profile, is refused rather than ignored:
     the account reads everything through it, so silently seating somebody in Spanish
@@ -449,13 +449,13 @@ def _me(session: DbSession, user: User) -> dict:
         },
         "workspaces": workspaces,
         "active_workspace": active,
-        # AN INSTALLATION FACT, deliberately outside `user`. It stops «Mi perfil» offering
+        # AN INSTALLATION FACT, deliberately outside `user`. It stops "Mi perfil" offering
         # an address when nothing could ever deliver to it: with no SMTP the reset link is
         # logged and handed back in the response. Behind a session anyway, because the
         # public half of that flow must answer identically whatever is configured.
         "mail_configured": mail.configured(),
         # Matches what `access_for` will decide on the next request, administrator bypass
-        # included: a `null` here is what makes the panel offer «crea tu workspace», so it
+        # included: a `null` here is what makes the panel offer "crea tu workspace", so it
         # must not say that to somebody every route is about to let through.
         "role": _role_here(user, current, mine),
     }

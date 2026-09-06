@@ -1,8 +1,8 @@
 """Accent- and inflection-tolerant matching, shared by the KG extractor and `checks`.
 
 What a stopword IS depends on the language, so the set is the workspace's wording and not a
-constant here: with the Spanish list over an English corpus «the», «of» and «in» become
-needles that every stem has to satisfy, and a concept named «Order of growth» matches
+constant here: with the Spanish list over an English corpus "the", "of" and "in" become
+needles that every stem has to satisfy, and a concept named "Order of growth" matches
 almost nothing.
 """
 
@@ -13,19 +13,6 @@ from .. import config, wording as wording_sets
 
 MIN_NEEDLE_LENGTH = 3
 MAX_INFLECTION_SLACK = 2
-
-
-def _singular(word: str) -> str:
-    """Strip one plural suffix from `word`, leaving anything shorter than a needle alone."""
-    for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
-        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
-            return word[: -len(suffix)]
-    return word
-
-
-def _stems(text: str) -> set[str]:
-    """Return the singularised, folded stems of every word in `text`."""
-    return {_singular(w) for w in re.findall(r"\w+", fold(text))}
 
 
 def mentions(text: str, concept: str, wording=None) -> bool:
@@ -56,8 +43,21 @@ def mentions(text: str, concept: str, wording=None) -> bool:
     )
 
 
+def _stems(text: str) -> set[str]:
+    """Return the singularised, folded stems of every word in `text`."""
+    return {_singular(w) for w in re.findall(r"\w+", fold(text))}
+
+
 def fold(text: str) -> str:
     """Return `text` lowercased, stripped of accents and with whitespace runs collapsed."""
     lowered = unicodedata.normalize("NFD", text.lower())
     stripped = "".join(c for c in lowered if unicodedata.category(c) != "Mn")
     return re.sub(r"\s+", " ", stripped)
+
+
+def _singular(word: str) -> str:
+    """Strip one plural suffix from `word`, leaving anything shorter than a needle alone."""
+    for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
+        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
+            return word[: -len(suffix)]
+    return word

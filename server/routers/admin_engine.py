@@ -61,8 +61,8 @@ def _listings() -> tuple[list[dict], list[dict]]:
 def _model_state(model: str, remote: set, resident: set, on_disk: set) -> str:
     """Say where one required model is: remote, loaded, on disk, or not installed.
 
-    A remotely served model is never «not installed»: there is no disk for it to be
-    missing from, which is how a screen says «remoto» instead of «sin instalar».
+    A remotely served model is never "not installed": there is no disk for it to be
+    missing from, which is how a screen says "remoto" instead of "sin instalar".
     """
     if model in remote:
         return "remote"
@@ -75,7 +75,7 @@ def _model_state(model: str, remote: set, resident: set, on_disk: set) -> str:
 
 @router.get("/engine")
 def engine() -> dict:
-    """Answer the whole «Motor» tab: the engine, its models, the queue and the tunnel."""
+    """Answer the whole "Motor" tab: the engine, its models, the queue and the tunnel."""
     available = inference.is_available()
     installed: list[dict] = []
     running: list[dict] = []
@@ -134,7 +134,7 @@ def cerebras_state() -> dict:
     `routed` and `usage` are two keys on purpose: the first is what the engine sends to
     Cerebras — its catalogue as last read plus the declared list, asked of the engine so
     it is the same answer routing gives — the second what has actually been spent. A model can be in one and
-    not the other, and collapsing them into one «models» loses exactly that difference.
+    not the other, and collapsing them into one "models" loses exactly that difference.
     """
     budget = cerebras_budget.shared().snapshot()
     return {

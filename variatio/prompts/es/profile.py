@@ -165,8 +165,8 @@ def consolidate_exemplars_profile_prompt(
     workspaces, 17 modalities: 17 of 17 already declared the field and the same three rungs
     unprompted, so the ladder costs nothing — but one draft's two modalities spelled a rung
     `básico` with its accent, only the 3 hand-curated ones set `decided_by`, and the criteria
-    were three words a rung and unfalsifiable («basico (reconocimiento), intermedio
-    (aplicacion), avanzado (analisis)» for a multiple-choice modality, which is generic Bloom
+    were three words a rung and unfalsifiable ("basico (reconocimiento), intermedio
+    (aplicacion), avanzado (analisis)" for a multiple-choice modality, which is generic Bloom
     vocabulary and would fit any subject). `guarantee_difficulty` fixes the shape afterwards;
     what only the prompt can produce is a criterion written from THIS modality's exemplars.
 

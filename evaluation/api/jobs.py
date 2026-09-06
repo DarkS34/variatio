@@ -51,17 +51,6 @@ class _BlindEmitter:
 # WHO HAS TO JUDGE WHAT THIS PRODUCES ----------------------------------------------------
 
 
-def evaluator_of(job: Job) -> int | None:
-    """Return who owns the session this job produces, which for stock is nobody.
-
-    A comparison ordered from the administration panel waits for somebody to be judged
-    competent for it, and `store.assign` is the only thing that gives a set an evaluator.
-    Recording stock under whoever pressed the button would let them answer, unassigned,
-    what they had prepared for somebody else.
-    """
-    return None if job.params.get("stock") else job.user_id
-
-
 def handle_evaluate(job: Job, control: JobControl) -> dict:
     """Run one blind comparison and save it, with the run drawer muted throughout."""
     deps.require_inference()
@@ -115,3 +104,14 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     # client and stays in the event buffer. They are read from `GET /api/evaluation/{id}`,
     # which knows what it may show and what it may not.
     return {"session_id": session.id, "arms": len(ARMS), "produced": produced}
+
+
+def evaluator_of(job: Job) -> int | None:
+    """Return who owns the session this job produces, which for stock is nobody.
+
+    A comparison ordered from the administration panel waits for somebody to be judged
+    competent for it, and `store.assign` is the only thing that gives a set an evaluator.
+    Recording stock under whoever pressed the button would let them answer, unassigned,
+    what they had prepared for somebody else.
+    """
+    return None if job.params.get("stock") else job.user_id

@@ -11,7 +11,7 @@ EVERY ROUTE IS SCOPED TO THE ACCOUNT THAT ASKS, and there is no second scope to 
 filter somebody can turn off is not privacy. The membership bounds the workspace and the
 author bounds the rows inside it, so two accounts preparing one subject do not read each
 other's exercises. Neither the owner nor the administrator is an exception — `_require`
-answers 404 for a row that is not yours, because «existe pero no es tuya» is itself
+answers 404 for a row that is not yours, because "it exists but is not yours" is itself
 something this refuses to say.
 """
 

@@ -384,15 +384,15 @@ class EvalSession(Base):
     keeps its OWN seed and shuffle, because sharing an order would let one position bias
     act on both evaluators and inflate their agreement — the copies have to agree about
     the exercises, not about where they were sitting. `assigned_by` NULL means the
-    evaluator commissioned it themselves; set is what the queue lists as «asignada».
+    evaluator commissioned it themselves; set is what the queue lists as "asignada".
 
     `triage` is one answer per POSITION, given before the reveal, stored by position
     exactly as `choice` is, so what is kept is what the evaluator actually saw; the arm
     behind each one is derived from `shuffle`, which keeps the mapping auditable from the
     seed months later. `opened_at` is when the three cards first reached the evaluator,
-    so «cuánto tardó» is a fact rather than an impression. `declined_at` is «no me veo
-    capacitado para juzgar esto» and deliberately NOT `chosen_at` with a null choice —
-    that already means «none of the three convinces me», which is a judgement, while this
+    so how long it took is a fact rather than an impression. `declined_at` is "I do not feel
+    qualified to judge this" and deliberately NOT `chosen_at` with a null choice — that
+    already means "none of the three convinces me", which is a judgement, while this
     is the absence of one: it never enters the preference counts and is a datum about the
     panel's composition.
 
@@ -461,8 +461,8 @@ class StageEvaluation(Base):
     judgement about an artifact collected anywhere else is a judgement about a memory of it.
 
     `artifact_hash` is what makes the row a measurement rather than an opinion — it names
-    the build that was on screen — so a rebuild starts a NEW row and «esto salió mal» and
-    «lo rehíce y salió bien» are two data rather than an edit of one. The unique constraint
+    the build that was on screen — so a rebuild starts a NEW row and "esto salió mal" and
+    "lo rehíce y salió bien" are two data rather than an edit of one. The unique constraint
     is over the four together, so re-answering the same build replaces your answer.
 
     `instrument` is the version of the question set: rewording a question changes what was
@@ -510,12 +510,12 @@ class StageEvaluation(Base):
     # of a guarantee: the verdict of somebody who fixed the thing is not the verdict of
     # somebody who judged it as it came out, and one average over both says neither. It is
     # NOT `CURATED` above, which names which FILE is being read; this is about the person.
-    # Three states: NULL is «nadie lo dijo» — every row predating the column, and every
+    # Three states: NULL is "nobody said" — every row predating the column, and every
     # client that does not say — and `False` is somebody saying they did not.
     curated: Mapped[bool | None] = mapped_column(Boolean, default=None)
 
-    # When the questions first reached whoever had to answer them, so «cuánto tardó en
-    # contestar» is a fact rather than an impression. Written once, never on a reload.
+    # When the questions first reached whoever had to answer them, so "cuánto tardó en
+    # contestar" is a fact rather than an impression. Written once, never on a reload.
     opened_at: Mapped[float | None] = mapped_column(Float, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

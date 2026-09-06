@@ -202,14 +202,21 @@ class JobRunner:
         """Return the last `limit` jobs, newest first.
 
         As in every listing here, `workspace=None` means the whole queue and is for callers
-        that have already established the right to see it. The machine is shared, so «is
-        something running» is legitimately global; *what* is running is not.
+        that have already established the right to see it. The machine is shared, so "is
+        something running" is legitimately global; *what* is running is not.
         """
         with self._lock:
             jobs = [self._jobs[i] for i in self._order]
         if workspace is not None:
             jobs = [j for j in jobs if j.workspace == workspace]
         return jobs[-limit:][::-1]
+
+    def current(self) -> Job | None:
+        """Return the oldest job still running — the one honest answer to "what is it doing"."""
+        jobs = self.running()
+        if not jobs:
+            return None
+        return min(jobs, key=lambda j: (j.started_at or j.created_at))
 
     def running(self, workspace: str | None = None) -> list[Job]:
         """Return every job running right now, in order of arrival."""
@@ -218,13 +225,6 @@ class JobRunner:
         if workspace is not None:
             jobs = [j for j in jobs if j.workspace == workspace]
         return jobs
-
-    def current(self) -> Job | None:
-        """Return the oldest job still running — the one honest answer to «what is it doing»."""
-        jobs = self.running()
-        if not jobs:
-            return None
-        return min(jobs, key=lambda j: (j.started_at or j.created_at))
 
     def current_in(self, backend: str) -> Job | None:
         """Return the oldest job holding this lane, for a label. `holders_in` is the count."""
@@ -237,16 +237,6 @@ class JobRunner:
             return [
                 self._jobs[i] for i in self._holders.get(backend, ()) if i in self._jobs
             ]
-
-    def pending(self, workspace: str | None = None) -> list[Job]:
-        """Return every job still waiting for a lane, in order of arrival."""
-        with self._lock:
-            jobs = [self._jobs[i] for i in self._order]
-        return [
-            j
-            for j in jobs
-            if j.status == "queued" and (workspace is None or j.workspace == workspace)
-        ]
 
     def queue_position(self, job_id: str) -> int:
         """Say where a job stands in ITS OWN lanes, from 1, or 0 once it is running.
@@ -276,8 +266,8 @@ class JobRunner:
         """Return the seconds since the last job was queued or finished; 0 while any is alive.
 
         The only measure of idleness there is, and enough: every model call of this process
-        goes through the queue, so «nobody has asked for anything» and «the GPU is not
-        needed» are the same statement.
+        goes through the queue, so "nobody has asked for anything" and "the GPU is not
+        needed" are the same statement.
 
         It counts EVERY lane and is deliberately not narrowed to the local one. A job
         reserving only `remote` still embeds and still screens with the guardrail — the two
@@ -289,11 +279,28 @@ class JobRunner:
                 return 0.0
             return max(0.0, time.time() - self._last_activity)
 
+    def pending(self, workspace: str | None = None) -> list[Job]:
+        """Return every job still waiting for a lane, in order of arrival."""
+        with self._lock:
+            jobs = [self._jobs[i] for i in self._order]
+        return [
+            j
+            for j in jobs
+            if j.status == "queued" and (workspace is None or j.workspace == workspace)
+        ]
+
     # INTERNAL STATE ------------------------------------------------------------------------
 
     def _running_locked(self) -> list[Job]:
         """Return every running job, in order of arrival. The caller holds the lock."""
         return [self._jobs[i] for i in self._order if self._jobs[i].status == "running"]
+
+    def _restamp(self) -> None:
+        """Re-derive every queued job's position after the queue moved. Lock held."""
+        for job_id in self._order:
+            job = self._jobs[job_id]
+            if job.status == "queued":
+                job.queue_position = self._position(job_id)
 
     def _position(self, job_id: str) -> int:
         """Count the queued jobs ahead of this one sharing a lane with it. Lock held."""
@@ -310,13 +317,6 @@ class JobRunner:
                 position += 1
         return position
 
-    def _restamp(self) -> None:
-        """Re-derive every queued job's position after the queue moved. Lock held."""
-        for job_id in self._order:
-            job = self._jobs[job_id]
-            if job.status == "queued":
-                job.queue_position = self._position(job_id)
-
     # WORKER --------------------------------------------------------------------------------
 
     def _dispatch(self) -> None:
@@ -327,26 +327,6 @@ class JobRunner:
             if self._stopping.is_set():
                 return
             self._launch_ready()
-
-    def _next_ready(self, caps: dict[str, int]) -> str | None:
-        """FIFO over the queue, skipping what cannot start. The caller holds the lock.
-
-        A blocked job TAKES A SLOT of each of its lanes for the rest of the pass, so nothing
-        behind it takes that slot: without this a job needing both lanes would be overtaken
-        for ever by single-lane jobs arriving after it.
-        """
-        taken = {b: len(ids) for b, ids in self._holders.items()}
-        for job_id in self._order:
-            job = self._jobs[job_id]
-            if job.status != "queued":
-                continue
-            reserved = set(job.backends)
-            if any(taken.get(b, 0) >= caps.get(b, 1) for b in reserved):
-                for backend in reserved:
-                    taken[backend] = taken.get(backend, 0) + 1
-                continue
-            return job_id
-        return None
 
     def _launch_ready(self) -> None:
         """Start every job whose lanes have room, one worker thread each.
@@ -375,6 +355,26 @@ class JobRunner:
                 name=f"job-{job.id}",
                 daemon=True,
             ).start()
+
+    def _next_ready(self, caps: dict[str, int]) -> str | None:
+        """FIFO over the queue, skipping what cannot start. The caller holds the lock.
+
+        A blocked job TAKES A SLOT of each of its lanes for the rest of the pass, so nothing
+        behind it takes that slot: without this a job needing both lanes would be overtaken
+        for ever by single-lane jobs arriving after it.
+        """
+        taken = {b: len(ids) for b, ids in self._holders.items()}
+        for job_id in self._order:
+            job = self._jobs[job_id]
+            if job.status != "queued":
+                continue
+            reserved = set(job.backends)
+            if any(taken.get(b, 0) >= caps.get(b, 1) for b in reserved):
+                for backend in reserved:
+                    taken[backend] = taken.get(backend, 0) + 1
+                continue
+            return job_id
+        return None
 
     def _execute(self, job: Job, control: JobControl) -> None:
         """Run one job to its end on its own thread, releasing its lanes whatever happens."""
@@ -412,19 +412,6 @@ class JobRunner:
             self._restamp()
         self._wake.set()
 
-    def _chain(self, job: Job) -> None:
-        """Queue whatever follows this job, if anything.
-
-        A convenience and not part of the result: when it fails the job that just finished
-        is still finished, and only the next link is lost.
-        """
-        if self.after_success is None:
-            return
-        try:
-            self.after_success(self, job)
-        except Exception as exc:  # noqa: BLE001 - el trabajo ya terminó bien
-            logger.warning(f"No se pudo encadenar nada tras «{job.label}»: {exc}")
-
     def _settle(self, job: Job, status: str) -> None:
         """Close a job in one of the three terminal states and announce it."""
         job.status = status
@@ -438,6 +425,19 @@ class JobRunner:
             "cancelled": "job.cancelled",
         }[status]
         self.bus.publish(job.workspace, job.id, kind, {"job": job.to_dict()})
+
+    def _chain(self, job: Job) -> None:
+        """Queue whatever follows this job, if anything.
+
+        A convenience and not part of the result: when it fails the job that just finished
+        is still finished, and only the next link is lost.
+        """
+        if self.after_success is None:
+            return
+        try:
+            self.after_success(self, job)
+        except Exception as exc:  # noqa: BLE001 - el trabajo ya terminó bien
+            logger.warning(f"No se pudo encadenar nada tras «{job.label}»: {exc}")
 
 def uses_subprocess(kind: str) -> bool:
     """Whether this kind of job runs out of process."""

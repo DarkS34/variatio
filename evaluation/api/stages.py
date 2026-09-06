@@ -32,7 +32,7 @@ class AnswersBody(BaseModel):
     note: str | None = None
     job_id: str | None = None
     # Whether this person had corrected the artifact by hand before answering. Absent is
-    # «no se sabe» and never «no»: a client that does not send it is not denying it, and
+    # "not known" and never "no": a client that does not send it is not denying it, and
     # `stage_queries.save` refuses to let an absence lower what a row already records.
     curated: bool | None = None
 
@@ -49,25 +49,6 @@ def _digest(access: auth.Access, artifact: str) -> str | None:
     return singletons.approvals(access.ws).state(artifact)["hash"]
 
 
-def _mine(row) -> dict | None:
-    """One person's own row as the form reads it back."""
-    if row is None:
-        return None
-    return {
-        "answers": row.answers or {},
-        "overall": row.overall,
-        "note": row.note,
-        # Passed through as it stands, `null` included: «nadie lo dijo» is a third state
-        # and the form has to be able to tell it from a «no», so it is never folded to one.
-        "curated": row.curated,
-        # «Contestada» is `overall`, which is the one question asked of all three stages
-        # and the last one on the form: with it set, the person reached the end.
-        "answered": row.overall is not None,
-        "instrument": row.instrument,
-        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
-    }
-
-
 def _payload(artifact: str, digest: str | None, row) -> dict:
     """What both the read and the save answer: the questions, and this person's answers.
 
@@ -82,6 +63,25 @@ def _payload(artifact: str, digest: str | None, row) -> dict:
         "hash": digest,
         "instrument": stage_instruments.for_artifact(artifact),
         "mine": _mine(row),
+    }
+
+
+def _mine(row) -> dict | None:
+    """One person's own row as the form reads it back."""
+    if row is None:
+        return None
+    return {
+        "answers": row.answers or {},
+        "overall": row.overall,
+        "note": row.note,
+        # Passed through as it stands, `null` included: "nobody said" is a third state
+        # and the form has to be able to tell it from a "no", so it is never folded to one.
+        "curated": row.curated,
+        # "Contestada" is `overall`, which is the one question asked of all three stages
+        # and the last one on the form: with it set, the person reached the end.
+        "answered": row.overall is not None,
+        "instrument": row.instrument,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
 
 

@@ -21,8 +21,8 @@ from server import approvals, csv_safe
 from . import stage_instruments, stage_queries
 
 # The rungs of `effort` that leave the artifact usable, which is the reading the panel
-# gives beside the raw counts: «de acuerdo» and «totalmente de acuerdo» with «lo podría
-# usar tal cual» together are «lo usaría».
+# gives beside the raw counts: "de acuerdo" and "totalmente de acuerdo" with "lo podría
+# usar tal cual" together are "lo usaría".
 USABLE_EFFORT = tuple(range(stage_instruments.AGREE_FROM, stage_instruments.SCALE_MAX + 1))
 
 # The three states of the curation mark, named so a CSV column and a card agree.
@@ -30,6 +30,18 @@ CURATION = ("yes", "no", "unknown")
 
 
 # READ ------------------------------------------------------------------------------------------
+
+
+def headers(db: DbSession, workspace_id: int | None = None) -> list[dict]:
+    """Read the whole population as headers, each carrying its author and its workspace.
+
+    Unanswered rows are INCLUDED: "opened it and never answered" is a datum about whether a
+    panel of teachers engages at all, and the aggregates count it apart from a verdict.
+    """
+    return [
+        header(row, user, workspace.slug)
+        for row, workspace, user in stage_queries.everything(db, workspace_id)
+    ]
 
 
 def header(row, user=None, workspace_slug: str | None = None) -> dict:
@@ -67,96 +79,21 @@ def _seconds(opened: float | None, ended: float | None) -> float | None:
     return round(ended - opened, 1)
 
 
-def headers(db: DbSession, workspace_id: int | None = None) -> list[dict]:
-    """Read the whole population as headers, each carrying its author and its workspace.
-
-    Unanswered rows are INCLUDED: «lo abrió y no lo contestó» is a datum about whether a
-    panel of teachers engages at all, and the aggregates count it apart from a verdict.
-    """
-    return [
-        header(row, user, workspace.slug)
-        for row, workspace, user in stage_queries.everything(db, workspace_id)
-    ]
-
-
 # AGGREGATES ------------------------------------------------------------------------------------
 
 
-def _mean(values: list[int | float]) -> float | None:
-    """Return the mean rounded to two decimals, or None over nothing."""
-    return round(sum(values) / len(values), 2) if values else None
-
-
-def _median(values: list[float]) -> float | None:
-    """Return the median, or None over nothing."""
-    if not values:
-        return None
-    ordered = sorted(values)
-    middle = len(ordered) // 2
-    if len(ordered) % 2:
-        return round(ordered[middle], 1)
-    return round((ordered[middle - 1] + ordered[middle]) / 2, 1)
-
-
-def _scale_counts(values: list) -> dict[str, int]:
-    """Count answers per rung, every rung present and in order, an earlier wording's after.
-
-    Keyed by the rung as a STRING, like `overall`'s counts, so a JSON reader sees one
-    shape for the six scales of a stage. A value the current instrument does not offer —
-    an option of a version before the scale — is kept under its raw key rather than
-    dropped, because it was answered.
-    """
-    counts: dict[str, int] = {str(value): 0 for value in stage_instruments.SCALE_VALUES}
-    for value in values:
-        if value is None:
-            continue
-        score = stage_instruments.as_score(value)
-        key = str(score) if score is not None else str(value)
-        counts[key] = counts.get(key, 0) + 1
-    return counts
-
-
-def _scale_options(counts: dict[str, int]) -> list[dict]:
-    """Name every rung the counts hold: the scale's own labels, and the raw value otherwise."""
-    labels = dict(zip(map(str, stage_instruments.SCALE_VALUES), stage_instruments.SCALE_LABELS))
-    return [{"value": value, "label": labels.get(value, value)} for value in counts]
-
-
-def _scores(values: list) -> list[int]:
-    """The answers that are on the scale, as numbers, for a mean."""
-    return [s for s in (stage_instruments.as_score(v) for v in values) if s is not None]
-
-
-def _question_summary(question: dict, rows: list[dict]) -> dict:
-    """Count the answers to one statement over these rows, rung by rung, with their mean."""
-    key = question["key"]
-    values = [row["answers"].get(key) for row in rows]
-    counts = _scale_counts(values)
+def aggregates(headers: list[dict]) -> dict:
+    """Summarise a population: the totals, and one summary per stage of the chain."""
+    answered = [row for row in headers if row["answered"]]
     return {
-        "key": key,
-        "axis": question.get("axis") or stage_instruments.AXES.get(key, ""),
-        "statement": question["statement"],
-        "options": _scale_options(counts),
-        "counts": counts,
-        "n": sum(counts.values()),
-        "mean": _mean(_scores(values)),
-    }
-
-
-def _curation_summary(answered: list[dict]) -> dict:
-    """Split the verdicts by whether the person had corrected the artifact first.
-
-    This is the contrast the `curated` column exists for — «cómo lo valoran los que
-    curaron y cómo los que no» — and the third bucket is every row that predates the
-    question, which is not a «no».
-    """
-    buckets: dict[str, list[dict]] = {state: [] for state in CURATION}
-    for row in answered:
-        state = "unknown" if row["curated"] is None else ("yes" if row["curated"] else "no")
-        buckets[state].append(row)
-    return {
-        state: {"n": len(rows), "overall_mean": _mean([r["overall"] for r in rows])}
-        for state, rows in buckets.items()
+        "rows": len(headers),
+        "answered": len(answered),
+        "opened_only": len(headers) - len(answered),
+        "overall_mean": _mean([row["overall"] for row in answered]),
+        "by_artifact": [
+            artifact_summary(artifact, [row for row in headers if row["artifact"] == artifact])
+            for artifact in approvals.ARTIFACTS
+        ],
     }
 
 
@@ -170,7 +107,7 @@ def artifact_summary(artifact: str, rows: list[dict]) -> dict:
         for question in stage_instruments.QUESTIONS.get(artifact, ())
     ]
     # Over the answers ON THE SCALE only: a row from before the scale keeps its raw value
-    # in the counts, but «none» was that wording's best rung and reading it as
+    # in the counts, but "none" was that wording's best rung and reading it as
     # disagreement would pull the share down for a verdict that said the opposite.
     effort = next((q for q in questions if q["key"] == "effort"), None)
     usable = None
@@ -209,24 +146,78 @@ def artifact_summary(artifact: str, rows: list[dict]) -> dict:
     }
 
 
-def aggregates(headers: list[dict]) -> dict:
-    """Summarise a population: the totals, and one summary per stage of the chain."""
-    answered = [row for row in headers if row["answered"]]
+def _question_summary(question: dict, rows: list[dict]) -> dict:
+    """Count the answers to one statement over these rows, rung by rung, with their mean."""
+    key = question["key"]
+    values = [row["answers"].get(key) for row in rows]
+    counts = _scale_counts(values)
     return {
-        "rows": len(headers),
-        "answered": len(answered),
-        "opened_only": len(headers) - len(answered),
-        "overall_mean": _mean([row["overall"] for row in answered]),
-        "by_artifact": [
-            artifact_summary(artifact, [row for row in headers if row["artifact"] == artifact])
-            for artifact in approvals.ARTIFACTS
-        ],
+        "key": key,
+        "axis": question.get("axis") or stage_instruments.AXES.get(key, ""),
+        "statement": question["statement"],
+        "options": _scale_options(counts),
+        "counts": counts,
+        "n": sum(counts.values()),
+        "mean": _mean(_scores(values)),
     }
 
 
-def _account_label(row: dict) -> str:
-    """Name the evaluator, or «Sin evaluador» — never «cuenta borrada»."""
-    return row.get("account") or row.get("account_name") or "Sin evaluador"
+def _scale_counts(values: list) -> dict[str, int]:
+    """Count answers per rung, every rung present and in order, an earlier wording's after.
+
+    Keyed by the rung as a STRING, like `overall`'s counts, so a JSON reader sees one
+    shape for the six scales of a stage. A value the current instrument does not offer —
+    an option of a version before the scale — is kept under its raw key rather than
+    dropped, because it was answered.
+    """
+    counts: dict[str, int] = {str(value): 0 for value in stage_instruments.SCALE_VALUES}
+    for value in values:
+        if value is None:
+            continue
+        score = stage_instruments.as_score(value)
+        key = str(score) if score is not None else str(value)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _scale_options(counts: dict[str, int]) -> list[dict]:
+    """Name every rung the counts hold: the scale's own labels, and the raw value otherwise."""
+    labels = dict(zip(map(str, stage_instruments.SCALE_VALUES), stage_instruments.SCALE_LABELS))
+    return [{"value": value, "label": labels.get(value, value)} for value in counts]
+
+
+def _scores(values: list) -> list[int]:
+    """The answers that are on the scale, as numbers, for a mean."""
+    return [s for s in (stage_instruments.as_score(v) for v in values) if s is not None]
+
+
+def _curation_summary(answered: list[dict]) -> dict:
+    """Split the verdicts by whether the person had corrected the artifact first.
+
+    This is the contrast the `curated` column exists for — how the people who corrected the
+    artifact rate it against the people who did not — and the third bucket is every row that
+    predates the
+    question, which is not a "no".
+    """
+    buckets: dict[str, list[dict]] = {state: [] for state in CURATION}
+    for row in answered:
+        state = "unknown" if row["curated"] is None else ("yes" if row["curated"] else "no")
+        buckets[state].append(row)
+    return {
+        state: {"n": len(rows), "overall_mean": _mean([r["overall"] for r in rows])}
+        for state, rows in buckets.items()
+    }
+
+
+def _median(values: list[float]) -> float | None:
+    """Return the median, or None over nothing."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return round(ordered[middle], 1)
+    return round((ordered[middle - 1] + ordered[middle]) / 2, 1)
 
 
 def by_account(headers: list[dict]) -> list[dict]:
@@ -262,12 +253,52 @@ def by_account(headers: list[dict]) -> list[dict]:
     return sorted(groups, key=lambda g: (-g["answered"], -g["opened"], g["label"]))
 
 
+def _mean(values: list[int | float]) -> float | None:
+    """Return the mean rounded to two decimals, or None over nothing."""
+    return round(sum(values) / len(values), 2) if values else None
+
+
+def _account_label(row: dict) -> str:
+    """Name the evaluator, or "Sin evaluador" — never "cuenta borrada"."""
+    return row.get("account") or row.get("account_name") or "Sin evaluador"
+
+
 # EXPORT ----------------------------------------------------------------------------------------
 
 # One column per axis, in the order asked — the same four keys on the three stages, so a
 # spreadsheet reads the same across them. An answer under an earlier wording's key lands
 # in `other_answers`, exactly as before.
 ANSWER_COLUMNS: tuple[str, ...] = tuple(stage_instruments.AXES)
+
+
+def export_csv(headers: list[dict]) -> str:
+    """Render the forms' raw data: one row per (person, build, stage), oldest first."""
+    columns = [
+        "id",
+        "created_at",
+        "updated_at",
+        "opened_at",
+        "seconds",
+        "workspace",
+        "account",
+        "evaluator_profile",
+        "artifact",
+        "artifact_hash",
+        "job_id",
+        "instrument",
+        "answered",
+        "curated",
+        "overall",
+        *ANSWER_COLUMNS,
+        "other_answers",
+        "note",
+    ]
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
+    writer.writeheader()
+    for row in sorted(headers, key=lambda h: h.get("created_at") or 0):
+        writer.writerow(csv_safe.row(_export_row(row)))
+    return buffer.getvalue()
 
 
 def _export_row(row: dict) -> dict:
@@ -299,36 +330,6 @@ def _export_row(row: dict) -> dict:
     line["other_answers"] = "|".join(f"{key}={value}" for key, value in sorted(extra.items()))
     line["note"] = row.get("note") or ""
     return line
-
-
-def export_csv(headers: list[dict]) -> str:
-    """Render the forms' raw data: one row per (person, build, stage), oldest first."""
-    columns = [
-        "id",
-        "created_at",
-        "updated_at",
-        "opened_at",
-        "seconds",
-        "workspace",
-        "account",
-        "evaluator_profile",
-        "artifact",
-        "artifact_hash",
-        "job_id",
-        "instrument",
-        "answered",
-        "curated",
-        "overall",
-        *ANSWER_COLUMNS,
-        "other_answers",
-        "note",
-    ]
-    buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
-    writer.writeheader()
-    for row in sorted(headers, key=lambda h: h.get("created_at") or 0):
-        writer.writerow(csv_safe.row(_export_row(row)))
-    return buffer.getvalue()
 
 
 def _iso(timestamp: float | None) -> str:

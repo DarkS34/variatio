@@ -159,7 +159,7 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
     Whoever holds one is a click away from the account, so a change made out of a
     suspicion has to close that door in the same transaction that revokes the sessions.
     The login's `needs_rehash` comes through here too, deliberately: this is the one place
-    every password write passes, and the cost of closing early is one «pide otro enlace».
+    every password write passes, and the cost of closing early is one "ask for another link".
     """
     user.password_hash = password_hash
     moment = now()

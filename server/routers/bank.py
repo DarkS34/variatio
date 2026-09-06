@@ -44,8 +44,8 @@ def listing(
     """Answer one page of the bank, filtered and ordered as asked.
 
     A modality the profile does not declare is a 422 naming it, never an empty page: the
-    filter is an equality, so an unknown value would read as «the bank has none of these»
-    rather than «that does not exist». The 404 of this route means «there is no bank yet».
+    filter is an equality, so an unknown value would read as "the bank has none of these"
+    rather than "that does not exist". The 404 of this route means "there is no bank yet".
     A rung the profile does not declare is refused the same way and for the same reason.
     """
     try:

@@ -26,7 +26,7 @@ OVERRIDE_OBJECTS: str = (
 
 OVERRIDE_QUALIFIERS: str = r"anterior(?:es)?|previ[ao]s?|de arriba|" + shared.OVERRIDE_QUALIFIERS
 
-# The lookahead spares «instrucciones del sistema operativo», a legitimate subject.
+# The lookahead spares "instrucciones del sistema operativo", a legitimate subject.
 INJECTION_PATTERNS: tuple[str, ...] = shared.INJECTION_PATTERNS + (
     r"\bprompt del sistema\b",
     r"\binstrucciones del sistema\b(?! ?operativ)",
@@ -78,9 +78,9 @@ OWNER_CONTEXT: tuple[str, str] = (
 
 def scope_blocked(text: str, owner: str, term: str, where: str) -> str:
     """Say which control already decides what the free text is asking for."""
-    # «lo decide» agreed with nothing: two of the four owners are plural («los conceptos
-    # objetivo», «la materia, el nivel y el idioma»), so the sentence read «lo decide los
-    # conceptos objetivo». «corresponde a» agrees with all four.
+    # "lo decide" agreed with nothing: two of the four owners are plural ("los conceptos
+    # objetivo", "la materia, el nivel y el idioma"), so the sentence read "lo decide los
+    # conceptos objetivo". "corresponde a" agrees with all four.
     return f"«{text}» no se pide aquí: eso corresponde a {owner} («{term}»). {where}."
 
 

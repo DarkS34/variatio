@@ -21,25 +21,6 @@ from ..instance.knowledge_graph import KnowledgeGraph
 from . import _artifacts
 
 
-def _describer(ws: Workspace) -> ConceptDescriber:
-    """Build a describer from the graph and the subject context — never the profile.
-
-    Describing a concept needs what subject this is, and it never needed the anatomy of an
-    exercise: `review.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and this is what keeps it true.
-    """
-    kg_path = _artifacts.knowledge_graph_path(ws)
-    if kg_path is None:
-        raise _artifacts.MissingArtifactError(_artifacts.KNOWLEDGE_GRAPH)
-
-    return ConceptDescriber(
-        KnowledgeGraph(kg_path),
-        _artifacts.load_content_context(ws),
-        prompts_pkg.of(locale.prompt_language(ws)),
-        path=ws.concept_descriptions_path,
-        sources_path=ws.concept_sources_path,
-    )
-
-
 def describe_concepts(
     ws: Workspace,
     concepts: list[str] | None = None,
@@ -71,6 +52,25 @@ def restamp_descriptions(ws: Workspace, dry_run: bool = False) -> tuple[int, int
     else:
         logger.info(f"{total} description(s) were already stamped against the current graph")
     return changed, total
+
+
+def _describer(ws: Workspace) -> ConceptDescriber:
+    """Build a describer from the graph and the subject context — never the profile.
+
+    Describing a concept needs what subject this is, and it never needed the anatomy of an
+    exercise: `review.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and this is what keeps it true.
+    """
+    kg_path = _artifacts.knowledge_graph_path(ws)
+    if kg_path is None:
+        raise _artifacts.MissingArtifactError(_artifacts.KNOWLEDGE_GRAPH)
+
+    return ConceptDescriber(
+        KnowledgeGraph(kg_path),
+        _artifacts.load_content_context(ws),
+        prompts_pkg.of(locale.prompt_language(ws)),
+        path=ws.concept_descriptions_path,
+        sources_path=ws.concept_sources_path,
+    )
 
 
 def load_concept_descriptions(ws: Workspace) -> dict[str, str]:

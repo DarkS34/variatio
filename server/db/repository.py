@@ -32,19 +32,24 @@ def content_sha256(content) -> str:
 # WORKSPACES ----------------------------------------------------------------------------
 
 
-def get_workspace(session: Session, slug: str) -> Workspace | None:
-    """Return the workspace with this slug, or None when it is missing or deleted."""
-    return session.scalar(
-        select(Workspace).where(Workspace.slug == slug, Workspace.deleted_at.is_(None))
-    )
-
-
 def list_workspaces(session: Session) -> list[Workspace]:
     """Return every workspace that has not been deleted, by slug."""
     return list(
         session.scalars(
             select(Workspace).where(Workspace.deleted_at.is_(None)).order_by(Workspace.slug)
         )
+    )
+
+
+def ensure_workspace(session: Session, slug: str, name: str | None = None) -> Workspace:
+    """Return this workspace, creating it when it does not exist yet."""
+    return get_workspace(session, slug) or create_workspace(session, slug, name)
+
+
+def get_workspace(session: Session, slug: str) -> Workspace | None:
+    """Return the workspace with this slug, or None when it is missing or deleted."""
+    return session.scalar(
+        select(Workspace).where(Workspace.slug == slug, Workspace.deleted_at.is_(None))
     )
 
 
@@ -60,28 +65,7 @@ def create_workspace(
     return workspace
 
 
-def ensure_workspace(session: Session, slug: str, name: str | None = None) -> Workspace:
-    """Return this workspace, creating it when it does not exist yet."""
-    return get_workspace(session, slug) or create_workspace(session, slug, name)
-
-
 # ARTIFACTS -----------------------------------------------------------------------------
-
-
-def latest_artifact(
-    session: Session, workspace_id: int, kind: str, stage: str
-) -> Artifact | None:
-    """Return the highest version of one artifact at one stage."""
-    return session.scalar(
-        select(Artifact)
-        .where(
-            Artifact.workspace_id == workspace_id,
-            Artifact.kind == kind,
-            Artifact.stage == stage,
-        )
-        .order_by(Artifact.version.desc())
-        .limit(1)
-    )
 
 
 def current_artifact(session: Session, workspace_id: int, kind: str) -> Artifact | None:
@@ -133,6 +117,22 @@ def save_artifact(
     return artifact
 
 
+def latest_artifact(
+    session: Session, workspace_id: int, kind: str, stage: str
+) -> Artifact | None:
+    """Return the highest version of one artifact at one stage."""
+    return session.scalar(
+        select(Artifact)
+        .where(
+            Artifact.workspace_id == workspace_id,
+            Artifact.kind == kind,
+            Artifact.stage == stage,
+        )
+        .order_by(Artifact.version.desc())
+        .limit(1)
+    )
+
+
 def artifact_versions(session: Session, workspace_id: int, kind: str) -> list[Artifact]:
     """Return every saved version of an artifact, newest first."""
     return list(
@@ -145,13 +145,6 @@ def artifact_versions(session: Session, workspace_id: int, kind: str) -> list[Ar
 
 
 # APPROVALS -----------------------------------------------------------------------------
-
-
-def get_approval(session: Session, workspace_id: int, kind: str) -> Approval | None:
-    """Return this kind's approval, or None when it is not approved."""
-    return session.scalar(
-        select(Approval).where(Approval.workspace_id == workspace_id, Approval.kind == kind)
-    )
 
 
 def approve(
@@ -181,6 +174,13 @@ def reopen(session: Session, workspace_id: int, kind: str) -> None:
     if approval is not None:
         session.delete(approval)
         session.flush()
+
+
+def get_approval(session: Session, workspace_id: int, kind: str) -> Approval | None:
+    """Return this kind's approval, or None when it is not approved."""
+    return session.scalar(
+        select(Approval).where(Approval.workspace_id == workspace_id, Approval.kind == kind)
+    )
 
 
 # RAW DOCUMENTS -------------------------------------------------------------------------

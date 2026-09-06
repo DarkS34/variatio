@@ -29,15 +29,6 @@ from .admissibility import (
 from .guardrail import Verdict, check, injection_pattern
 
 
-def sentence_case(text: str) -> str:
-    """Upper-case the first letter and leave the rest alone.
-
-    NOT `str.capitalize()`, which lowercases everything after it: an owner's `where`
-    quotes a screen control by name, and capitalising it names one nobody can find.
-    """
-    return text[:1].upper() + text[1:]
-
-
 def screen_instructions(
     instructions: str | None,
     *,
@@ -52,7 +43,7 @@ def screen_instructions(
     """Run both screens over one free-text field, in order, and return what it may ask for.
 
     Raises ValueError when either screen blocks the commission. The raise stays INSIDE the
-    step so a block marks that step failed: a green tick on «checking» beside a failed job
+    step so a block marks that step failed: a green tick on "checking" beside a failed job
     would read as if something else broke.
 
     `step_prefix` is what tells the evaluation's steps from the pipeline's (`eval.guardrail`
@@ -87,6 +78,15 @@ def screen_instructions(
                 )
             )
     return ruling
+
+
+def sentence_case(text: str) -> str:
+    """Upper-case the first letter and leave the rest alone.
+
+    NOT `str.capitalize()`, which lowercases everything after it: an owner's `where`
+    quotes a screen control by name, and capitalising it names one nobody can find.
+    """
+    return text[:1].upper() + text[1:]
 
 
 __all__ = [

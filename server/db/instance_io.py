@@ -27,63 +27,6 @@ from .layout import KINDS, artifact_paths
 from .models import SLOT_CORPUS, SLOT_EXEMPLARS
 
 
-def _slots(ws: FsWorkspace) -> dict[str, Path]:
-    """Return the two raw slots of this workspace, by name."""
-    return {SLOT_CORPUS: ws.raw_corpus_dir, SLOT_EXEMPLARS: ws.raw_exemplars_dir}
-
-
-def _read_json(path: Path):
-    """Read a JSON file, or warn and return None when it is missing or unreadable."""
-    if not path.is_file():
-        return None
-    try:
-        with path.open(encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError) as exc:
-        logger.warning(f"No se pudo leer {path.name}; se omite: {exc}")
-        return None
-
-
-def _file_sha256(path: Path) -> str:
-    """Return the SHA-256 of a file's bytes."""
-    digest = hashlib.sha256()
-    with path.open("rb") as f:
-        for block in iter(lambda: f.read(65536), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def _current_file(ws: FsWorkspace, kind: str) -> Path | None:
-    """Return the file the entry points would read for this kind, or None."""
-    if kind == entrypoints.KNOWLEDGE_GRAPH:
-        return entrypoints.knowledge_graph_path(ws)
-    if kind == entrypoints.EXEMPLARS_PROFILE:
-        return entrypoints.exemplars_profile_path(ws)
-    if kind == entrypoints.EXEMPLARS_BANK:
-        return ws.exemplars_bank_path if ws.exemplars_bank_path.is_file() else None
-    return None
-
-
-def _approval_is_current(ws: FsWorkspace, kind: str, record: dict) -> bool:
-    """Return True when an approval on disk still matches the files it was made against.
-
-    The recorded hashes are of *files* and the database stores hashes of *content*.
-    Rather than assume the two agree, the file hashes answer only the question they can —
-    was this approval still current, for the artifact and for everything it derives from?
-    — and what gets stored is re-derived from the imported rows. A stale approval is
-    simply not imported, which lands the artifact in `draft`: conservative, and never a
-    false «approved».
-    """
-    path = _current_file(ws, kind)
-    if path is None or _file_sha256(path) != record.get("hash"):
-        return False
-    for up, recorded in (record.get("upstream") or {}).items():
-        up_path = _current_file(ws, up)
-        if up_path is None or _file_sha256(up_path) != recorded:
-            return False
-    return True
-
-
 def import_instance(
     session: Session,
     ws: FsWorkspace,
@@ -169,6 +112,63 @@ def import_instance(
         f"{approvals} aprobación(es), {documents} documento(s) fuente"
     )
     return summary
+
+
+def _read_json(path: Path):
+    """Read a JSON file, or warn and return None when it is missing or unreadable."""
+    if not path.is_file():
+        return None
+    try:
+        with path.open(encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning(f"No se pudo leer {path.name}; se omite: {exc}")
+        return None
+
+
+def _approval_is_current(ws: FsWorkspace, kind: str, record: dict) -> bool:
+    """Return True when an approval on disk still matches the files it was made against.
+
+    The recorded hashes are of *files* and the database stores hashes of *content*.
+    Rather than assume the two agree, the file hashes answer only the question they can —
+    was this approval still current, for the artifact and for everything it derives from?
+    — and what gets stored is re-derived from the imported rows. A stale approval is
+    simply not imported, which lands the artifact in `draft`: conservative, and never a
+    false "approved".
+    """
+    path = _current_file(ws, kind)
+    if path is None or _file_sha256(path) != record.get("hash"):
+        return False
+    for up, recorded in (record.get("upstream") or {}).items():
+        up_path = _current_file(ws, up)
+        if up_path is None or _file_sha256(up_path) != recorded:
+            return False
+    return True
+
+
+def _current_file(ws: FsWorkspace, kind: str) -> Path | None:
+    """Return the file the entry points would read for this kind, or None."""
+    if kind == entrypoints.KNOWLEDGE_GRAPH:
+        return entrypoints.knowledge_graph_path(ws)
+    if kind == entrypoints.EXEMPLARS_PROFILE:
+        return entrypoints.exemplars_profile_path(ws)
+    if kind == entrypoints.EXEMPLARS_BANK:
+        return ws.exemplars_bank_path if ws.exemplars_bank_path.is_file() else None
+    return None
+
+
+def _file_sha256(path: Path) -> str:
+    """Return the SHA-256 of a file's bytes."""
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _slots(ws: FsWorkspace) -> dict[str, Path]:
+    """Return the two raw slots of this workspace, by name."""
+    return {SLOT_CORPUS: ws.raw_corpus_dir, SLOT_EXEMPLARS: ws.raw_exemplars_dir}
 
 
 def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:

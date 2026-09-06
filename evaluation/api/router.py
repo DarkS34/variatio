@@ -43,7 +43,7 @@ class EvaluationBody(BaseModel):
 
 
 class ChoiceBody(BaseModel):
-    """Which position won, or null for «ninguna», plus an optional note."""
+    """Which position won, or null for "ninguna", plus an optional note."""
 
     choice: int | None = None
     comment: str | None = None
@@ -74,7 +74,7 @@ class TriageBody(BaseModel):
 
 
 class DeclineBody(BaseModel):
-    """An optional note beside «no tengo criterio para juzgar esto»."""
+    """An optional note beside "no tengo criterio para juzgar esto"."""
 
     comment: str | None = None
 
@@ -159,7 +159,7 @@ def listing(
 def _queue(rows: list) -> dict:
     """Shape what this evaluator was handed: pending first, oldest first inside each half.
 
-    A queue is worked from the front, so «la siguiente» has to mean the same thing on every
+    A queue is worked from the front, so "la siguiente" has to mean the same thing on every
     reload. Who assigned each session is recorded and read by the panel, and deliberately
     absent here: on the evaluator's own screen it invites reading the judgement as owed to
     a person rather than to the evaluation.
@@ -315,7 +315,7 @@ def rate(
 def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession:
     """Return the session only when it is this workspace's AND this account's own.
 
-    The ownership half is an EQUALITY and not «not mine and not an administrator»: the
+    The ownership half is an EQUALITY and not "not mine and not an administrator": the
     looser form let an administrator answer somebody else's session, recorded under that
     somebody because no answer rewrites `user_id`, and let unassigned stock through for
     everyone. Reading another account's session is the panel's own route, which never
@@ -332,7 +332,7 @@ def _require(db: DbSession, session_id: str, access: auth.Access) -> EvalSession
 def _summary(header: dict) -> dict:
     """Shape one row of the listing, withholding the per-arm history until it is judged.
 
-    A pending session that admits «the commercial one was unavailable» hands over the
+    A pending session that admits "the commercial one was unavailable" hands over the
     identity of whichever card shows no exercise.
     """
     decided = bool(header.get("chosen_at"))

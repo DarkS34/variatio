@@ -62,14 +62,6 @@ class RawLimitError(RawError):
     """A raw-slot operation refused for exceeding a size or count cap."""
 
 
-def directory(ws: Workspace, kind: str) -> Path:
-    """Return the workspace directory one slot writes into."""
-    dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
-    if kind not in dirs:
-        raise RawError(f"Origen desconocido: '{kind}'")
-    return dirs[kind]
-
-
 def listing(ws: Workspace) -> dict:
     """Describe both slots and the caps that govern an upload."""
     return {
@@ -93,26 +85,6 @@ def slot(ws: Workspace, kind: str) -> dict:
         "files": files,
         "bytes": sum(f["bytes"] for f in files),
     }
-
-
-def _files(path: Path) -> list[dict]:
-    """List the supported documents of a slot directory, by name."""
-    if not path.is_dir():
-        return []
-    out = []
-    for entry in sorted(path.iterdir(), key=lambda p: p.name.lower()):
-        if not entry.is_file() or entry.suffix.lower() not in SUPPORTED_EXTS:
-            continue
-        stat = entry.stat()
-        out.append(
-            {
-                "name": entry.name,
-                "bytes": stat.st_size,
-                "modified": stat.st_mtime,
-                "extension": entry.suffix.lower(),
-            }
-        )
-    return out
 
 
 def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
@@ -163,7 +135,7 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
     # A document this installation has already read arrives READ. Identity is the file's
     # bytes, so the same PDF uploaded into another subject — or into this one under another
     # name — carries its pages over instead of paying for one model call per page again. A
-    # filesystem copy, made here in the request, so the screen says «al día» as the drop
+    # filesystem copy, made here in the request, so the screen says "al día" as the drop
     # lands.
     #
     # Best effort, and deliberately so: an upload must not fail because a shortcut did.
@@ -175,22 +147,6 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
         _prepare_raw_text(ws, kind)
 
     return {"added": added, "rejected": rejected}
-
-
-def _prepare_raw_text(ws: Workspace, kind: str) -> None:
-    """Bring the evaluation's plain reading of the slot in line with its files, best effort.
-
-    The RAG arm of the evaluation retrieves over the documents read with a plain extractor,
-    and that reading is prepared here, inside step 1, with no step and no badge: it is
-    seconds, it is keyed by the bytes of each file, and nothing on the screen depends on
-    it. An upload or a deletion must not fail because it did.
-    """
-    try:
-        from evaluation import raw_text
-
-        raw_text.prepare_slot(ws, kind)
-    except Exception as exc:  # noqa: BLE001 - the request matters more than the reading
-        logger.warning(f"[raw] No se pudo preparar la lectura en crudo de «{kind}»: {exc}")
 
 
 def _slot_bytes(path: Path) -> int:
@@ -222,6 +178,19 @@ def _mb(size: int) -> int:
 def _gb(size: int) -> int:
     """Render a byte count in whole gigabytes."""
     return size // (1024 * 1024 * 1024)
+
+
+def _free_path(directory_path: Path, name: str) -> Path:
+    """Return a path in the slot that no file occupies, suffixing "(n)" when needed."""
+    target = directory_path / name
+    if not target.exists():
+        return target
+    stem, suffix = target.stem, target.suffix
+    for index in range(2, 100):
+        candidate = directory_path / f"{stem} ({index}){suffix}"
+        if not candidate.exists():
+            return candidate
+    return directory_path / f"{stem} ({int(time.time())}){suffix}"
 
 
 def _write(upload: UploadFile, target: Path, limit: int, reason: str) -> int:
@@ -257,23 +226,20 @@ def delete(ws: Workspace, kind: str, name: str) -> dict:
     return {"deleted": safe}
 
 
-def _stage():
-    """Import the transcription stage lazily, so listing a slot costs no pipeline import."""
-    from variatio.entrypoints import transcribe
+def _prepare_raw_text(ws: Workspace, kind: str) -> None:
+    """Bring the evaluation's plain reading of the slot in line with its files, best effort.
 
-    return transcribe
-
-
-def document(ws: Workspace, kind: str, name: str) -> str:
-    """Resolve a requested name against the files the slot actually holds.
-
-    Checked rather than sanitised and used; the library checks again in `_source_for`.
+    The RAG arm of the evaluation retrieves over the documents read with a plain extractor,
+    and that reading is prepared here, inside step 1, with no step and no badge: it is
+    seconds, it is keyed by the bytes of each file, and nothing on the screen depends on
+    it. An upload or a deletion must not fail because it did.
     """
-    path = directory(ws, kind)
-    safe = _safe_name(name)
-    if not safe or safe not in {entry["name"] for entry in _files(path)}:
-        raise RawError(f"No existe '{name}' en {path.name}")
-    return safe
+    try:
+        from evaluation import raw_text
+
+        raw_text.prepare_slot(ws, kind)
+    except Exception as exc:  # noqa: BLE001 - the request matters more than the reading
+        logger.warning(f"[raw] No se pudo preparar la lectura en crudo de «{kind}»: {exc}")
 
 
 def transcription(ws: Workspace, kind: str) -> dict:
@@ -303,21 +269,55 @@ def delete_page(ws: Workspace, kind: str, name: str, index: int) -> None:
     _stage().delete_document_page(ws, kind, document(ws, kind, name), index)
 
 
+def _stage():
+    """Import the transcription stage lazily, so listing a slot costs no pipeline import."""
+    from variatio.entrypoints import transcribe
+
+    return transcribe
+
+
+def document(ws: Workspace, kind: str, name: str) -> str:
+    """Resolve a requested name against the files the slot actually holds.
+
+    Checked rather than sanitised and used; the library checks again in `_source_for`.
+    """
+    path = directory(ws, kind)
+    safe = _safe_name(name)
+    if not safe or safe not in {entry["name"] for entry in _files(path)}:
+        raise RawError(f"No existe '{name}' en {path.name}")
+    return safe
+
+
+def directory(ws: Workspace, kind: str) -> Path:
+    """Return the workspace directory one slot writes into."""
+    dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
+    if kind not in dirs:
+        raise RawError(f"Origen desconocido: '{kind}'")
+    return dirs[kind]
+
+
+def _files(path: Path) -> list[dict]:
+    """List the supported documents of a slot directory, by name."""
+    if not path.is_dir():
+        return []
+    out = []
+    for entry in sorted(path.iterdir(), key=lambda p: p.name.lower()):
+        if not entry.is_file() or entry.suffix.lower() not in SUPPORTED_EXTS:
+            continue
+        stat = entry.stat()
+        out.append(
+            {
+                "name": entry.name,
+                "bytes": stat.st_size,
+                "modified": stat.st_mtime,
+                "extension": entry.suffix.lower(),
+            }
+        )
+    return out
+
+
 def _safe_name(name: str) -> str:
     """Reduce a client-supplied filename to a plain basename, or to an empty string."""
     base = Path(name.replace("\\", "/")).name.strip()
     base = _UNSAFE.sub("_", base).strip(". ")
     return base[:180]
-
-
-def _free_path(directory_path: Path, name: str) -> Path:
-    """Return a path in the slot that no file occupies, suffixing «(n)» when needed."""
-    target = directory_path / name
-    if not target.exists():
-        return target
-    stem, suffix = target.stem, target.suffix
-    for index in range(2, 100):
-        candidate = directory_path / f"{stem} ({index}){suffix}"
-        if not candidate.exists():
-            return candidate
-    return directory_path / f"{stem} ({int(time.time())}){suffix}"

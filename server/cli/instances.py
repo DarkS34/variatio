@@ -1,19 +1,6 @@
 """`import-instance`, `export-instance`, `workspaces` and `create-workspace`."""
 
 
-def _slug_error(*slugs: str | None) -> str | None:
-    """Return the first complaint about these slugs, or None when all of them are usable."""
-    from ..installation import slug_error
-
-    for slug in slugs:
-        if slug is None:
-            continue
-        error = slug_error(slug)
-        if error:
-            return f"«{slug}» no vale como asignatura. {error}"
-    return None
-
-
 def import_instance(args) -> int:
     """Load a workspace's directory into the database, and print what arrived."""
     from variatio.core import paths
@@ -56,6 +43,19 @@ def export_instance(args) -> int:
     return 0
 
 
+def _slug_error(*slugs: str | None) -> str | None:
+    """Return the first complaint about these slugs, or None when all of them are usable."""
+    from ..installation import slug_error
+
+    for slug in slugs:
+        if slug is None:
+            continue
+        error = slug_error(slug)
+        if error:
+            return f"«{slug}» no vale como asignatura. {error}"
+    return None
+
+
 def list_workspaces(_args) -> int:
     """Print every workspace of the database with the directory it reads."""
     from ..db import session_scope
@@ -75,8 +75,8 @@ def list_workspaces(_args) -> int:
 def create_workspace(args) -> int:
     """Create an empty workspace, provision its tree, and optionally give it an owner.
 
-    The web can create one too — any account may, since «tener varios grafos» is «tener
-    varios workspaces» — but the command line is what an operator uses to prepare one
+    The web can create one too — any account may, since "tener varios grafos" is "tener
+    varios workspaces" — but the command line is what an operator uses to prepare one
     before there is anybody to hand it to. The prompt language is chosen here and never
     after: it is baked into the artifacts a build writes.
     """

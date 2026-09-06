@@ -1,8 +1,8 @@
 """Which instances this account can work in, and which one it is looking at.
 
 A workspace is a whole instance — its corpus, its graph, its exemplars profile, its bank,
-its caches and its generations — so «tener varios perfiles de ejemplares o varios grafos»
-is exactly «tener varios workspaces». That is why creating one is offered to any account
+its caches and its generations — so "tener varios perfiles de ejemplares o varios grafos"
+is exactly "tener varios workspaces". That is why creating one is offered to any account
 rather than reserved to the administrator: a teacher with two subjects needs two, and
 nothing about the second touches anybody else's data.
 
@@ -176,8 +176,8 @@ def remove(
 
     ws = access.ws
     # Read before the cascade takes the rows away. An administrator reaching this through
-    # the bypass holds no membership of their own, so the question is «is anybody else in
-    # it» and not «does it have members».
+    # the bypass holds no membership of their own, so the question is "is anybody else in
+    # it" and not "does it have members".
     others = [
         m
         for m, _ in identity.members_of(db, access.workspace.id)
@@ -193,7 +193,7 @@ def remove(
             raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
     # Whoever was sitting in it is moved before the row goes. The FK is `SET NULL`, so
-    # without this the database strands every one of them at «no workspace» — including
+    # without this the database strands every one of them at "no workspace" — including
     # the people who have another one to fall back to.
     rehomed = auth_deps.rehome_accounts(db, access.workspace)
     db.delete(access.workspace)
@@ -207,7 +207,7 @@ def remove(
         "path": str(ws.root),
         "rehomed": rehomed,
         # The one entry of `rehomed` the calling tab needs, so it can move straight to the
-        # surviving instance instead of blanking to «ningún workspace» until `me` answers.
+        # surviving instance instead of blanking to "ningún workspace" until `me` answers.
         "landed": rehomed.get(access.user.username),
         "files_removed": removed,
     }
@@ -229,7 +229,7 @@ def leave(
     owner — the case exists (an owner's account was deleted and `memberships` went with
     it), and refusing there would strand an instance only an administrator could reopen.
 
-    There is deliberately no «last workspace of the installation» guard: an installation
+    There is deliberately no "last workspace of the installation" guard: an installation
     holding zero workspaces and an account belonging to none are both normal states the
     app renders on purpose.
     """

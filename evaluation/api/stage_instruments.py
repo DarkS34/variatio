@@ -14,7 +14,7 @@ axes are what a builder can get wrong about a list extracted from somebody's doc
   3. `function` — does the artifact do what it exists for: the fields of a type, the
      order of the syllabus, the concept put on each exercise.
   4. `effort` — could it be used without correcting much; identical wording on all three.
-  5. `overall` — «en conjunto, ha salido bien», the one column shared with the rest of
+  5. `overall` — "en conjunto, ha salido bien", the one column shared with the rest of
      the evaluation.
 
 Every statement is worded so that AGREEING is the good answer, so the value IS the score
@@ -36,7 +36,7 @@ from server import approvals
 
 # Stored in `stage_evaluations.instrument`. Bump on ANY change to the statements below, or
 # two wordings are pooled by accident: rows under an earlier version hold option keys such
-# as «none» / «touch_up» and must never be averaged with a 1-5 rung. A row under «» was
+# as "none" / "touch_up" and must never be averaged with a 1-5 rung. A row under "" was
 # opened and never answered — `mark_opened` writes it before `save` stamps the version.
 VERSION = "4"
 
@@ -59,8 +59,8 @@ SCALE_VALUES: tuple[int, ...] = tuple(range(SCALE_MIN, SCALE_MAX + 1))
 OVERALL_MIN = SCALE_MIN
 OVERALL_MAX = SCALE_MAX
 
-# The rungs that count as agreement — «de acuerdo» and «totalmente de acuerdo» — which is
-# the reading the panel gives beside the raw counts on `effort`: «lo usarían».
+# The rungs that count as agreement — "de acuerdo" and "totalmente de acuerdo" — which is
+# the reading the panel gives beside the raw counts on `effort`: "lo usarían".
 AGREE_FROM = 4
 
 # The axis of each key, in the order asked. One key per axis on every stage, so the CSV
@@ -96,8 +96,8 @@ _NOTE = {
 QUESTIONS: dict[str, tuple[dict, ...]] = {
     approvals.EXEMPLARS_PROFILE: (
         # PRECISION. The consolidator has produced different type sets across runs on one
-        # corpus and has split one modality in two, which is what «repetido con otro
-        # nombre» is there to catch.
+        # corpus and has split one modality in two, which is what "repeated under another
+        # nombre" is there to catch.
         {
             "key": "precision",
             "axis": "precision",
@@ -124,7 +124,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
         _EFFORT,
     ),
     approvals.KNOWLEDGE_GRAPH: (
-        # PRECISION, and wider than «not of my subject»: the extractor's measured failures
+        # PRECISION, and wider than "not of my subject": the extractor's measured failures
         # are an example exercise's terms pulled in as concepts, a concept twice under two
         # names, and a granularity no teacher would put on a syllabus.
         {
@@ -142,7 +142,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
         },
         # FUNCTION. What the graph is FOR is deciding what may be assumed known and what
         # may not be leaned on, and that is a claim about the order rather than the list.
-        # There is no «no lo he mirado» any more: the middle of the scale is where somebody
+        # There is no "I have not looked at it" rung: the middle of the scale is where somebody
         # who has not looked leaves it, and the hint says so.
         {
             "key": "function",
@@ -168,7 +168,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
             "statement": "Están todos los ejercicios de mis documentos.",
             "hint": "Que falte un documento entero pesa mucho más que que falte alguno suelto.",
         },
-        # FUNCTION. The step is called «Etiquetado»: this is the statement it is named after.
+        # FUNCTION. The step is called "Etiquetado": this is the statement it is named after.
         {
             "key": "function",
             "axis": "function",
@@ -185,7 +185,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
 #
 # THE NUMBER IS NOT WRITTEN HERE. It is `{n}`, filled by `count()` below, because a hand
 # written figure drifts the moment a statement is added or dropped — and it had: the
-# button that opens this form promised «cinco preguntas» for all three stages while the
+# button that opens this form promised "cinco preguntas" for all three stages while the
 # graph asked six, so the control contradicted the form it opened.
 PREAMBLE: dict[str, str] = {
     approvals.EXEMPLARS_PROFILE: (
@@ -203,7 +203,7 @@ PREAMBLE: dict[str, str] = {
     ),
 }
 
-# Spelled out, because the preamble is prose and «5 afirmaciones» reads as a form field.
+# Spelled out, because the preamble is prose and "5 afirmaciones" reads as a form field.
 # Only the range an instrument can plausibly reach; anything outside it falls back to the
 # digit rather than to nothing.
 _SPELLED: dict[int, str] = {
@@ -219,44 +219,12 @@ _SPELLED: dict[int, str] = {
 }
 
 
-def count(artifact: str) -> int:
-    """How many statements this stage's form actually asks.
-
-    `overall` is one of them: it is on the form, it is the last thing answered, and it is
-    what «contestada» means — so a count that left it out would be short by one wherever
-    a person is told how much is left.
-    """
-    return len(QUESTIONS.get(artifact, ())) + 1
-
-
-def preamble(artifact: str) -> str:
-    """The prose above the statements, with its own count filled in."""
-    n = count(artifact)
-    return PREAMBLE.get(artifact, "").replace("{n}", _SPELLED.get(n, str(n)))
-
-
 def scale_values(artifact: str, key: str) -> tuple[int, ...]:
     """The accepted values of one statement — the whole scale — or `()` when nothing declares it."""
     for question in QUESTIONS.get(artifact, ()):
         if question["key"] == key:
             return SCALE_VALUES
     return ()
-
-
-def as_score(value) -> int | None:
-    """Read one answer as a rung of the scale, or None when it is not one.
-
-    The browser sends an integer, but a JSON round trip or an older bundle may hand over
-    the digit as a string, and `True` must not pass for 1: only an int or a digit string
-    inside the scale is a score.
-    """
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, str) and value.strip().isdigit():
-        value = int(value.strip())
-    if isinstance(value, int) and SCALE_MIN <= value <= SCALE_MAX:
-        return value
-    return None
 
 
 def clean(artifact: str, answers: dict) -> dict:
@@ -277,6 +245,22 @@ def clean(artifact: str, answers: dict) -> dict:
     return kept
 
 
+def as_score(value) -> int | None:
+    """Read one answer as a rung of the scale, or None when it is not one.
+
+    The browser sends an integer, but a JSON round trip or an older bundle may hand over
+    the digit as a string, and `True` must not pass for 1: only an int or a digit string
+    inside the scale is a score.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str) and value.strip().isdigit():
+        value = int(value.strip())
+    if isinstance(value, int) and SCALE_MIN <= value <= SCALE_MAX:
+        return value
+    return None
+
+
 def for_artifact(artifact: str) -> dict:
     """Everything the stage's screen needs in order to word its form, in one payload."""
     return {
@@ -292,3 +276,19 @@ def for_artifact(artifact: str) -> dict:
         "overall": dict(_OVERALL),
         "note": _NOTE,
     }
+
+
+def preamble(artifact: str) -> str:
+    """The prose above the statements, with its own count filled in."""
+    n = count(artifact)
+    return PREAMBLE.get(artifact, "").replace("{n}", _SPELLED.get(n, str(n)))
+
+
+def count(artifact: str) -> int:
+    """How many statements this stage's form actually asks.
+
+    `overall` is one of them: it is on the form, it is the last thing answered, and it is
+    what "contestada" means — so a count that left it out would be short by one wherever
+    a person is told how much is left.
+    """
+    return len(QUESTIONS.get(artifact, ())) + 1

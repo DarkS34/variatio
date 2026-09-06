@@ -40,21 +40,6 @@ class ExternalAnswer:
     model: str
 
 
-def _model(provider: str) -> str:
-    """Return the model id configured for this provider, or an empty string."""
-    return evaluation_config.PROVIDER_MODELS.get(provider, "")
-
-
-def _key(provider: str) -> str:
-    """Return the API key configured for this provider, or an empty string."""
-    return evaluation_config.PROVIDER_KEYS.get(provider, "")
-
-
-def configured_providers() -> list[str]:
-    """The chain, in order, minus the unknown names and the ones with no key."""
-    return [p for p in evaluation_config.EXTERNAL_PROVIDERS if p in _CALLERS and _key(p)]
-
-
 def is_configured() -> bool:
     """Say whether the commercial arm can be attempted at all."""
     return bool(configured_providers())
@@ -68,30 +53,6 @@ def primary() -> tuple[str, str]:
     return chain[0], _model(chain[0])
 
 
-def unavailable_reason() -> str | None:
-    """Say in words why nothing in the chain can be called, or None if something can.
-
-    One usable provider is enough, so an unknown name is only worth reporting when it is
-    the reason nothing at all is callable.
-    """
-    declared = evaluation_config.EXTERNAL_PROVIDERS
-    if not declared:
-        return "El proveedor externo está desactivado (EVAL_EXTERNAL_PROVIDER=none)."
-    if configured_providers():
-        return None
-    unknown = [p for p in declared if p not in _CALLERS]
-    if unknown:
-        return (
-            f"Proveedor externo desconocido: {', '.join(unknown)} "
-            f"(se esperaba {', '.join(_CALLERS)} o none)."
-        )
-    return (
-        "No hay clave para ningún proveedor externo: define "
-        + " o ".join(f"EVAL_{p.upper()}_API_KEY" for p in declared)
-        + " en el fichero .env de la raíz del proyecto o en el entorno."
-    )
-
-
 def generate(prompt: str) -> ExternalAnswer:
     """Walk the chain until one provider answers, raising ArmUnavailable if none does.
 
@@ -99,8 +60,8 @@ def generate(prompt: str) -> ExternalAnswer:
     the next provider, the 200 with no candidates that a safety filter produces included.
 
     NO SCHEMA CROSSES THIS BOUNDARY, and the signature is where that is enforced: there is
-    no parameter to pass one through. The arm this serves is «the prompt somebody would
-    type in a hurry», and nobody typing into a chat box attaches a JSON Schema to it — a
+    no parameter to pass one through. The arm this serves is "the prompt somebody would
+    type in a hurry", and nobody typing into a chat box attaches a JSON Schema to it — a
     machine-enforced grammar made the baseline decode better than the thing it is a
     baseline for, which flatters the system under test.
     """
@@ -129,6 +90,56 @@ def generate(prompt: str) -> ExternalAnswer:
         failures.append(failure)
 
     raise ArmUnavailable(" | ".join(failures))
+
+
+def _model(provider: str) -> str:
+    """Return the model id configured for this provider, or an empty string."""
+    return evaluation_config.PROVIDER_MODELS.get(provider, "")
+
+
+def unavailable_reason() -> str | None:
+    """Say in words why nothing in the chain can be called, or None if something can.
+
+    One usable provider is enough, so an unknown name is only worth reporting when it is
+    the reason nothing at all is callable.
+    """
+    declared = evaluation_config.EXTERNAL_PROVIDERS
+    if not declared:
+        return "El proveedor externo está desactivado (EVAL_EXTERNAL_PROVIDER=none)."
+    if configured_providers():
+        return None
+    unknown = [p for p in declared if p not in _CALLERS]
+    if unknown:
+        return (
+            f"Proveedor externo desconocido: {', '.join(unknown)} "
+            f"(se esperaba {', '.join(_CALLERS)} o none)."
+        )
+    return (
+        "No hay clave para ningún proveedor externo: define "
+        + " o ".join(f"EVAL_{p.upper()}_API_KEY" for p in declared)
+        + " en el fichero .env de la raíz del proyecto o en el entorno."
+    )
+
+
+def configured_providers() -> list[str]:
+    """The chain, in order, minus the unknown names and the ones with no key."""
+    return [p for p in evaluation_config.EXTERNAL_PROVIDERS if p in _CALLERS and _key(p)]
+
+
+def _key(provider: str) -> str:
+    """Return the API key configured for this provider, or an empty string."""
+    return evaluation_config.PROVIDER_KEYS.get(provider, "")
+
+
+def _http_reason(provider: str, error: httpx.HTTPStatusError) -> str:
+    """Turn an HTTP failure into a sentence, naming the spent quota rather than a bare 429."""
+    status = error.response.status_code
+    if status == 429:
+        return f"{provider} ha agotado la cuota gratuita (429). Reintenta más tarde."
+    if status in (401, 403):
+        return f"{provider} ha rechazado la clave API ({status})."
+    detail = (error.response.text or "")[:200]
+    return f"{provider} respondió {status}: {detail}"
 
 
 def _gemini(prompt: str, model: str, key: str) -> str:
@@ -202,17 +213,6 @@ def _openai_compatible(url: str, prompt: str, model: str, key: str) -> str:
     if not choices:
         raise ValueError("la respuesta no traía ninguna opción")
     return choices[0].get("message", {}).get("content") or ""
-
-
-def _http_reason(provider: str, error: httpx.HTTPStatusError) -> str:
-    """Turn an HTTP failure into a sentence, naming the spent quota rather than a bare 429."""
-    status = error.response.status_code
-    if status == 429:
-        return f"{provider} ha agotado la cuota gratuita (429). Reintenta más tarde."
-    if status in (401, 403):
-        return f"{provider} ha rechazado la clave API ({status})."
-    detail = (error.response.text or "")[:200]
-    return f"{provider} respondió {status}: {detail}"
 
 
 # Which names are callable at all; the ORDER of the attempts is

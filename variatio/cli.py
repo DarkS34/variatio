@@ -13,6 +13,45 @@ from . import entrypoints
 from .core import inference, paths
 
 
+def main(argv: list[str] | None = None) -> int:
+    """Run one subcommand and return its exit code."""
+    args = build_parser().parse_args(argv)
+
+    ws = paths.workspace(args.workspace)
+
+    try:
+        # `restamp-descriptions` calls no model, so it must not demand a live engine.
+        if args.command != "restamp-descriptions":
+            inference.require_engine()
+        
+        match args.command:
+            case "transcribe":
+                _transcribe_and_report(args, ws)
+            case "build":
+                built = entrypoints.build_missing(ws)
+                if built:
+                    logger.success(f"Artifacts built: {', '.join(built)}")
+                else:
+                    logger.info("Every artifact of the instance already exists")
+            case "init":
+                entrypoints.initialize(tag=True, ws=ws)
+            case "restamp-descriptions":
+                changed, total = entrypoints.restamp_descriptions(ws=ws, dry_run=args.dry_run)
+                logger.info(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
+            case "generate":
+                _generate_and_report(args, ws)
+            case "all":
+                entrypoints.build_missing(ws)
+                _generate_and_report(args, ws)
+    except entrypoints.MissingArtifactError as e:
+        logger.error(f"{e}; run `variatio build` first")
+        return 1
+    except (RuntimeError, ImportError, OSError, ValueError) as e:
+        logger.error(str(e))
+        return 1
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser for every subcommand."""
     parser = argparse.ArgumentParser(
@@ -166,42 +205,3 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
             print(f"--- THINKING ---\n{result.thinking}")
             print("-----------------\n")
         print(result.item.model_dump_json(indent=2))
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Run one subcommand and return its exit code."""
-    args = build_parser().parse_args(argv)
-
-    ws = paths.workspace(args.workspace)
-
-    try:
-        # `restamp-descriptions` calls no model, so it must not demand a live engine.
-        if args.command != "restamp-descriptions":
-            inference.require_engine()
-        
-        match args.command:
-            case "transcribe":
-                _transcribe_and_report(args, ws)
-            case "build":
-                built = entrypoints.build_missing(ws)
-                if built:
-                    logger.success(f"Artifacts built: {', '.join(built)}")
-                else:
-                    logger.info("Every artifact of the instance already exists")
-            case "init":
-                entrypoints.initialize(tag=True, ws=ws)
-            case "restamp-descriptions":
-                changed, total = entrypoints.restamp_descriptions(ws=ws, dry_run=args.dry_run)
-                logger.info(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
-            case "generate":
-                _generate_and_report(args, ws)
-            case "all":
-                entrypoints.build_missing(ws)
-                _generate_and_report(args, ws)
-    except entrypoints.MissingArtifactError as e:
-        logger.error(f"{e}; run `variatio build` first")
-        return 1
-    except (RuntimeError, ImportError, OSError, ValueError) as e:
-        logger.error(str(e))
-        return 1
-    return 0

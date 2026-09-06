@@ -47,13 +47,6 @@ def _graph_exists(ws: Workspace) -> str | None:
     return None
 
 
-def _profile_exists(ws: Workspace) -> str | None:
-    """Why a link that reads the exemplars profile cannot follow, or `None` when it can."""
-    if entrypoints.exemplars_profile_path(ws) is None:
-        return "esta asignatura todavía no tiene perfil de ejemplares"
-    return None
-
-
 def _profile_approved(ws: Workspace) -> str | None:
     """Why the taggability review cannot follow, or `None` when it can.
 
@@ -76,6 +69,13 @@ def _indexable(ws: Workspace) -> str | None:
         return reason
     if not ws.exemplars_bank_path.is_file():
         return "todavía no hay banco de ejemplares que indexar"
+    return None
+
+
+def _profile_exists(ws: Workspace) -> str | None:
+    """Why a link that reads the exemplars profile cannot follow, or `None` when it can."""
+    if entrypoints.exemplars_profile_path(ws) is None:
+        return "esta asignatura todavía no tiene perfil de ejemplares"
     return None
 
 

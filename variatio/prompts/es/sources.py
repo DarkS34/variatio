@@ -18,7 +18,7 @@ __all__ = [
 # figure on the page, and the image prompt, where it arrives alone out of a Word or
 # PowerPoint file. An image is transcribed by what it CONTAINS and described only when
 # nothing can be copied — a description of a formula cannot be solved from, and a
-# description of a screenshot destroys the «write a program that prints this» exercise
+# description of a screenshot destroys the "write a program that prints this" exercise
 # whose expected output was the screenshot.
 IMAGE_RULES = """\
 # IMÁGENES Y FIGURAS
@@ -34,7 +34,7 @@ Una imagen se transcribe por lo que CONTIENE, y solo se describe cuando no hay n
 def transcribe_page_prompt(page_number: int, page_count: int) -> str:
     """Ask for one page image copied into Markdown, character by character.
 
-    The whole route stands on «copy, do not interpret»: a later extractor reads the
+    The whole route stands on "copy, do not interpret": a later extractor reads the
     transcription believing it is the original document, so anything changed becomes false
     teaching material. The only mark the model may add is `CORRECT_ANSWER_MARK`, on a
     visually highlighted answer option; a page carrying nothing but logos and page numbers

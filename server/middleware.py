@@ -17,23 +17,6 @@ from . import installation
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
-def _socket_origin() -> str:
-    """Name the WebSocket origin for `connect-src`, or nothing when none is declared.
-
-    It grants nothing `'self'` does not already cover and exists for browsers predating
-    CSP3's rule that `'self'` matches a same-origin `wss:` (Safari below 16). A bare `ws:`
-    or `wss:` here would be a scheme source matching every host there is.
-    """
-    base = installation.public_base_url()
-    if not base:
-        return ""
-    split = urlsplit(base)
-    if not split.hostname:
-        return ""
-    scheme = "wss" if split.scheme == "https" else "ws"
-    return f" {scheme}://{split.netloc}"
-
-
 def csp() -> str:
     """Build the Content-Security-Policy header.
 
@@ -52,6 +35,23 @@ def csp() -> str:
         "form-action 'self'; "
         "frame-ancestors 'none'"
     )
+
+
+def _socket_origin() -> str:
+    """Name the WebSocket origin for `connect-src`, or nothing when none is declared.
+
+    It grants nothing `'self'` does not already cover and exists for browsers predating
+    CSP3's rule that `'self'` matches a same-origin `wss:` (Safari below 16). A bare `ws:`
+    or `wss:` here would be a scheme source matching every host there is.
+    """
+    base = installation.public_base_url()
+    if not base:
+        return ""
+    split = urlsplit(base)
+    if not split.hostname:
+        return ""
+    scheme = "wss" if split.scheme == "https" else "ws"
+    return f" {scheme}://{split.netloc}"
 
 
 # `X-Frame-Options` says what `frame-ancestors` says, to an older generation of browser.
@@ -105,7 +105,7 @@ def cross_site(connection) -> bool:
     nor `Origin` is a script or a CLI, and CSRF needs a browser, which sends one of the
     two. Takes an `HTTPConnection` rather than a `Request` because `BaseHTTPMiddleware`
     short-circuits every non-`http` scope, so `/ws` never reaches `OriginCheck` and asks
-    for itself — one reading of «same site», not two.
+    for itself — one reading of "same site", not two.
     """
     fetch_site = connection.headers.get("sec-fetch-site")
     if fetch_site and fetch_site not in ("same-origin", "none"):

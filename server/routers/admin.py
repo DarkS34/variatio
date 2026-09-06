@@ -82,8 +82,8 @@ def _lane_jobs() -> dict:
     """Report what is holding each lane, as a list and with the room it is filling.
 
     A list per lane and not one job: the remote lane holds as many as
-    `CEREBRAS_MAX_CONCURRENT_JOBS` allows, so the oldest of them does not answer «what is
-    this half of the engine doing», and N jobs means nothing without the capacity.
+    `CEREBRAS_MAX_CONCURRENT_JOBS` allows, so the oldest of them does not answer "what is
+    this half of the engine doing", and N jobs means nothing without the capacity.
     """
     return {
         backend: {
@@ -315,7 +315,7 @@ def delete_workspace(
     other people are still in it: this is the installation being tidied up, and an
     administrator is who finishes the job the other door leaves half done.
 
-    There is deliberately NO «last workspace of the installation» guard: an installation
+    There is deliberately NO "last workspace of the installation" guard: an installation
     holding zero workspaces is a normal state the app renders on purpose, and `leave`
     already deletes the last one when its last member walks out.
     """
@@ -354,11 +354,11 @@ def delete_workspace(
 
 @router.delete("/workspaces/{slug}/artifacts/{artifact}")
 def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) -> dict:
-    """Empty one stage, leaving the workspace standing and the artifact «missing».
+    """Empty one stage, leaving the workspace standing and the artifact "missing".
 
     What goes is the curated file, the draft and the cache derivations that spoke of it,
     which is what allows rebuilding. `.history/` is untouched, so a mistaken deletion is
-    undone from «Restaurar» on the artifact's own screen — and that is what makes this
+    undone from "Restaurar" on the artifact's own screen — and that is what makes this
     button safe to offer at all.
     """
     if artifact not in approvals.ARTIFACTS:

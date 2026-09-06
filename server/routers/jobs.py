@@ -32,7 +32,7 @@ GATES: dict[str, str | None] = {
     "evaluate": "__all__",
 }
 
-# `GATES` answers «are the UPSTREAM of X approved?», which is the question for building X.
+# `GATES` answers "are the UPSTREAM of X approved?", which is the question for building X.
 # Taggability asks a different one — that a SPECIFIC artifact is approved — and cannot
 # reuse `EXEMPLARS_BANK` as a gate: that would demand the graph be approved, and the review
 # is what happens before approving it. Hence a table of its own.
@@ -49,27 +49,11 @@ class JobBody(BaseModel):
     force: bool = False
 
 
-def _pending_labels(ws: Workspace) -> list[str]:
-    """Name the stages of the chain that are not approved yet."""
-    return [
-        s["label"] for s in singletons.pipeline_snapshot(ws) if s["status"] != "approved"
-    ]
-
-
-def _unapproved_upstream(state, gate: str) -> list[str]:
-    """Name the artifacts `gate` depends on that are not approved yet."""
-    return [
-        approvals.LABELS[up]
-        for up in approvals.UPSTREAM[gate]
-        if state.state(up)["status"] != "approved"
-    ]
-
-
 def gate_error(ws: Workspace, kind: str) -> str | None:
     """Say in Spanish which steps have to be settled before `kind` may run, or nothing.
 
-    It names the STATE and not a button: «Aprobar» is not a control any more — a stage is
-    closed by moving on from it — so «aprueba primero» sent people looking for something
+    It names the STATE and not a button: "Aprobar" is not a control any more — a stage is
+    closed by moving on from it — so "aprueba primero" sent people looking for something
     that is not on the screen.
     """
     needed = NEEDS_APPROVED.get(kind)
@@ -90,6 +74,22 @@ def gate_error(ws: Workspace, kind: str) -> str | None:
         blockers = _unapproved_upstream(state, gate)
         return f"Antes hay que dar por bueno: {', '.join(blockers)}."
     return None
+
+
+def _pending_labels(ws: Workspace) -> list[str]:
+    """Name the stages of the chain that are not approved yet."""
+    return [
+        s["label"] for s in singletons.pipeline_snapshot(ws) if s["status"] != "approved"
+    ]
+
+
+def _unapproved_upstream(state, gate: str) -> list[str]:
+    """Name the artifacts `gate` depends on that are not approved yet."""
+    return [
+        approvals.LABELS[up]
+        for up in approvals.UPSTREAM[gate]
+        if state.state(up)["status"] != "approved"
+    ]
 
 
 def _check_params(kind: str, params: dict) -> None:
@@ -190,14 +190,14 @@ def listing(limit: int = Query(50, ge=1, le=200), access: auth.Access = auth.VIE
 
 
 # Declared above `/jobs/{job_id}`: FastAPI matches in declaration order, so the other way
-# round «current» would be read as a job id and answer «no existe el trabajo 'current'».
+# round "current" would be read as a job id and answer "no existe el trabajo 'current'".
 @router.get("/jobs/current")
 def current(access: auth.Access = auth.VIEW) -> dict:
     """Answer this workspace's oldest running job, its queue, and whether a lane is held.
 
     `job` is the oldest run of YOUR workspace and not of the installation: with one job
     per lane there can be two at once, and blanking yours because somebody else's started
-    first on the other lane would report «nada en ejecución» while your build runs.
+    first on the other lane would report "nada en ejecución" while your build runs.
     Whether a lane is held at all, and by what, stays global — the machine is shared.
     """
     running = singletons.runner.running()
@@ -251,7 +251,7 @@ def events(since: int = 0, access: auth.Access = auth.VIEW) -> dict:
     """Replay this workspace's events since `since`, saying whether any were lost.
 
     The router-level dependency already guarantees membership; the filter is passed
-    explicitly anyway so «you may only replay your own events» is visible where the
+    explicitly anyway so "you may only replay your own events" is visible where the
     replay happens rather than inferred two files away.
     """
     replayed, gap = singletons.bus.replay(since, workspace=access.ws.slug)

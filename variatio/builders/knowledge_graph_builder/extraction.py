@@ -257,6 +257,34 @@ _SENTENCE_END = re.compile(r"[.!?:](?=\s|$)")
 MIN_LEADER_RUNS = 3
 
 
+def excerpt(chunk: str, concept: str, max_chars: int) -> str:
+    """The passage of `chunk` that justifies `concept`, cut by paragraphs and not by characters.
+
+    Half a sentence quoted as proof that a concept exists in the material proves nothing,
+    and the model reading it has to be able to understand it. When the name occurs in no
+    non-navigation paragraph, NO passage is stored: a concept with no anchoring is honest
+    and the interface already reports it, whereas quoting the head of the chunk anchored
+    43 of 200 concepts to the table of contents.
+    """
+    paragraphs = [
+        p
+        for p in (p.strip() for p in re.split(r"\n\s*\n", chunk))
+        if p and not is_navigation(p)
+    ]
+    if not paragraphs:
+        return ""
+
+    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), None)
+    if hit is None:
+        return ""
+
+    text = clip_to_sentence(paragraphs[hit], max_chars)
+    if not text:
+        return ""
+
+    return _grow_into_neighbours(text, paragraphs, hit, max_chars).strip()
+
+
 def is_navigation(paragraph: str) -> bool:
     """Say whether a paragraph is a table of contents rather than material.
 
@@ -298,34 +326,6 @@ def _grow_into_neighbours(text: str, paragraphs: list[str], hit: int, max_chars:
     return text
 
 
-def excerpt(chunk: str, concept: str, max_chars: int) -> str:
-    """The passage of `chunk` that justifies `concept`, cut by paragraphs and not by characters.
-
-    Half a sentence quoted as proof that a concept exists in the material proves nothing,
-    and the model reading it has to be able to understand it. When the name occurs in no
-    non-navigation paragraph, NO passage is stored: a concept with no anchoring is honest
-    and the interface already reports it, whereas quoting the head of the chunk anchored
-    43 of 200 concepts to the table of contents.
-    """
-    paragraphs = [
-        p
-        for p in (p.strip() for p in re.split(r"\n\s*\n", chunk))
-        if p and not is_navigation(p)
-    ]
-    if not paragraphs:
-        return ""
-
-    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), None)
-    if hit is None:
-        return ""
-
-    text = clip_to_sentence(paragraphs[hit], max_chars)
-    if not text:
-        return ""
-
-    return _grow_into_neighbours(text, paragraphs, hit, max_chars).strip()
-
-
 
 
 def extract_from_chunk(
@@ -361,7 +361,7 @@ def glean_chunk(
     """Read the same chunk again, shown what the first pass found, until nothing is added.
 
     A model asked to list everything lists the obvious and closes the JSON; asked instead
-    «what is missing», with the inventory in front of it, it fills in the relations between
+    "what is missing", with the inventory in front of it, it fills in the relations between
     concepts it already named, which is where the graph was thin.
     """
     if not concepts:

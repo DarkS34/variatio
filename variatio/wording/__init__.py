@@ -18,11 +18,6 @@ from . import en, es
 _SETS = {"es": es, "en": en}
 
 
-def of(language: str | None):
-    """Return the wording for `language`, falling back to the default when unknown."""
-    return _SETS[languages.resolve(language)]
-
-
 def beside(prompts):
     """Return the wording that goes with a prompt set already resolved.
 
@@ -31,6 +26,11 @@ def beside(prompts):
     languages is the defect this exists to prevent.
     """
     return of(getattr(prompts, "LANGUAGE", None))
+
+
+def of(language: str | None):
+    """Return the wording for `language`, falling back to the default when unknown."""
+    return _SETS[languages.resolve(language)]
 
 
 __all__ = ["beside", "of"]

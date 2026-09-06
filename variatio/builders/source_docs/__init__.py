@@ -5,13 +5,10 @@ never duplicated into one of them. `pages` is the only module of the four that t
 model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
 property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
 
-Named `_source_docs` until 2026-09-06. The leading underscore claimed the package was
-private to the builders and it never was: `entrypoints/transcribe.py`, `server/raw_data.py`,
+Not private, despite serving the builders: `entrypoints/transcribe.py`, `server/raw_data.py`,
 `server/db/repository.py`, `evaluation/raw_text.py`, the settings registry and fourteen
-tests all reach it. `documents` was tried first and reverted the same hour — it collides
-with an ordinary local variable in `knowledge_graph_builder/extraction.py`, which is the
-cost of naming a module after a common noun. `_context.py` beside it keeps its underscore,
-being genuinely the builders' own.
+tests all reach it. `_context.py` beside it keeps its underscore, being genuinely the
+builders' own.
 """
 
 from . import chunking, files, markdown, office, pages

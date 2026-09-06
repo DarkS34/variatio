@@ -26,33 +26,6 @@ import sys
 from .protocol import MARKER
 
 
-def send(kind: str, **payload) -> None:
-    """Write one marked event on stdout and flush, so the parent sees it as it happens."""
-    line = json.dumps({"kind": kind, **payload}, ensure_ascii=False, default=str)
-    sys.stdout.write(f"{MARKER}{line}\n")
-    sys.stdout.flush()
-
-
-class StdoutEmitter:
-    """The `progress.Emitter` of the child: every event goes down the pipe as a marked line."""
-
-    def __init__(self) -> None:
-        """Start uncancelled."""
-        self._cancelled = False
-
-    def emit(self, kind: str, payload: dict) -> None:
-        """Send one progress event to the parent."""
-        send(kind, **payload)
-
-    def should_cancel(self) -> bool:
-        """Whether a signal has asked this build to stop."""
-        return self._cancelled
-
-    def request_cancel(self, *_args) -> None:
-        """Raise the cancel flag. Installed as the SIGTERM and SIGINT handler."""
-        self._cancelled = True
-
-
 def main(argv: list[str] | None = None) -> int:
     """Build one artifact of one workspace. 0 built, 1 failed, 2 cancelled."""
     parser = argparse.ArgumentParser(prog="build-worker")
@@ -97,6 +70,33 @@ def main(argv: list[str] | None = None) -> int:
     size = len(result) if isinstance(result, dict) else None
     send("worker.result", artifact=args.artifact, size=size)
     return 0
+
+
+class StdoutEmitter:
+    """The `progress.Emitter` of the child: every event goes down the pipe as a marked line."""
+
+    def __init__(self) -> None:
+        """Start uncancelled."""
+        self._cancelled = False
+
+    def emit(self, kind: str, payload: dict) -> None:
+        """Send one progress event to the parent."""
+        send(kind, **payload)
+
+    def should_cancel(self) -> bool:
+        """Whether a signal has asked this build to stop."""
+        return self._cancelled
+
+    def request_cancel(self, *_args) -> None:
+        """Raise the cancel flag. Installed as the SIGTERM and SIGINT handler."""
+        self._cancelled = True
+
+
+def send(kind: str, **payload) -> None:
+    """Write one marked event on stdout and flush, so the parent sees it as it happens."""
+    line = json.dumps({"kind": kind, **payload}, ensure_ascii=False, default=str)
+    sys.stdout.write(f"{MARKER}{line}\n")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

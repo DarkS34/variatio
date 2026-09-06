@@ -110,10 +110,6 @@ class KnowledgeGraphBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
-    def bootstrap(self) -> None:
-        """Check every model of the build is installed, so a failure comes at second zero."""
-        ensure_models(build_models(), "knowledge graph")
-
     def build(self, input_dir: str | Path) -> dict:
         """Run the whole build over a corpus directory and return the curated draft."""
         self.bootstrap()
@@ -134,32 +130,9 @@ class KnowledgeGraphBuilder:
         self.synthesize_context(graph)
         return graph
 
-    def synthesize_context(self, graph: dict) -> None:
-        """Write the subject-context draft from what the graph alone knows about the subject.
-
-        The names of the blocks the syllabus is divided into, and how big it is — NOT the
-        concepts themselves: the prompt forbids enumerating them, and the graph is right
-        there for whoever wants the list.
-        """
-        progress.phase("context")
-        domains = list(graph.get("concepts_by_domains") or {})
-        if not domains:
-            return
-        total = sum(len(members) for members in graph["concepts_by_domains"].values())
-        evidence = "\n".join(
-            [
-                self._wording.syllabus_blocks(len(domains), total),
-                *(f"- {domain}" for domain in domains),
-            ]
-        )
-        _context.synthesize(
-            self.workspace,
-            evidence,
-            self._wording.CONTEXT_SOURCE_GRAPH,
-            config.KG_CONTEXT_MODEL,
-            think=config.THINK_KG_CONTEXT,
-        )
-        progress.advance(1.0)
+    def bootstrap(self) -> None:
+        """Check every model of the build is installed, so a failure comes at second zero."""
+        ensure_models(build_models(), "knowledge graph")
 
     def extract(self, input_dir: str | Path, recursive: bool = False) -> dict:
         """Phase 1: the corpus as a raw inventory of concepts and relation triples."""
@@ -198,3 +171,30 @@ class KnowledgeGraphBuilder:
             max_attempts=self.max_repair_attempts,
             prompts=self.prompts,
         )
+
+    def synthesize_context(self, graph: dict) -> None:
+        """Write the subject-context draft from what the graph alone knows about the subject.
+
+        The names of the blocks the syllabus is divided into, and how big it is — NOT the
+        concepts themselves: the prompt forbids enumerating them, and the graph is right
+        there for whoever wants the list.
+        """
+        progress.phase("context")
+        domains = list(graph.get("concepts_by_domains") or {})
+        if not domains:
+            return
+        total = sum(len(members) for members in graph["concepts_by_domains"].values())
+        evidence = "\n".join(
+            [
+                self._wording.syllabus_blocks(len(domains), total),
+                *(f"- {domain}" for domain in domains),
+            ]
+        )
+        _context.synthesize(
+            self.workspace,
+            evidence,
+            self._wording.CONTEXT_SOURCE_GRAPH,
+            config.KG_CONTEXT_MODEL,
+            think=config.THINK_KG_CONTEXT,
+        )
+        progress.advance(1.0)

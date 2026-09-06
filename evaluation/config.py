@@ -24,26 +24,6 @@ RAG_TOP_K_THEORY = 3
 RAG_TOP_K_EXERCISES = 3
 
 
-def _chain(declared) -> list[str]:
-    """Normalise the declared provider chain: lowercased, deduplicated, `none` dropped."""
-    chain: list[str] = []
-    for name in declared:
-        name = str(name).strip().lower()
-        if name and name != "none" and name not in chain:
-            chain.append(name)
-    return chain
-
-
-def _by_provider(values: dict[str, object], prefix: str) -> dict[str, str]:
-    """Index every `<prefix><provider>` setting by its provider name.
-
-    Read off the registry rather than listed here, so a fourth provider is two settings
-    and one caller in `arms/external.py` — never a third place holding the same names,
-    which is where a key and a model id from different providers would start to cross.
-    """
-    return {k[len(prefix) :]: str(v) for k, v in values.items() if k.startswith(prefix)}
-
-
 def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, object]:
     """Compute the evaluation's five resolved values from the registry and the environment."""
     providers = _chain(values["evaluation.providers"])
@@ -69,6 +49,26 @@ def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, obje
         "PROVIDER_KEYS": keys,
         "EXTERNAL_TIMEOUT": values["evaluation.timeout"],
     }
+
+
+def _chain(declared) -> list[str]:
+    """Normalise the declared provider chain: lowercased, deduplicated, `none` dropped."""
+    chain: list[str] = []
+    for name in declared:
+        name = str(name).strip().lower()
+        if name and name != "none" and name not in chain:
+            chain.append(name)
+    return chain
+
+
+def _by_provider(values: dict[str, object], prefix: str) -> dict[str, str]:
+    """Index every `<prefix><provider>` setting by its provider name.
+
+    Read off the registry rather than listed here, so a fourth provider is two settings
+    and one caller in `arms/external.py` — never a third place holding the same names,
+    which is where a key and a model id from different providers would start to cross.
+    """
+    return {k[len(prefix) :]: str(v) for k, v in values.items() if k.startswith(prefix)}
 
 
 def __getattr__(name: str):

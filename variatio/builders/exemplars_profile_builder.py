@@ -42,8 +42,8 @@ CONTEXT_EXCERPTS = 3
 
 # The scan's shape is fixed, so it is stated as a schema. The CONSOLIDATION's is not: what it
 # returns is a profile, and a profile CONTAINS JSON Schemas the model writes itself, one per
-# field of each modality it invents. There is no schema for «an object whose values are
-# arbitrary schemas» that would constrain anything worth constraining, so that call gets
+# field of each modality it invents. There is no schema for "an object whose values are
+# arbitrary schemas" that would constrain anything worth constraining, so that call gets
 # `"json"` — the syntax guaranteed, the shape left to `_validate`, which already knows it.
 SCAN_SCHEMA = {
     "type": "object",
@@ -79,91 +79,6 @@ def build_models() -> list[str]:
     ]
 
 
-def _fold(value: str) -> str:
-    """Fold one enum value for comparison: lowercase, unaccented, trimmed."""
-    stripped = unicodedata.normalize("NFKD", str(value).strip().lower())
-    return "".join(c for c in stripped if not unicodedata.combining(c))
-
-
-def guarantee_difficulty(profile: dict, prompts) -> dict:
-    """Give every modality the difficulty field, on the ladder every modality shares.
-
-    The prompt asks for it in a section of its own; this is what makes it true. Measured on
-    the real builds of two workspaces before either existed: the model already converged on
-    the field and on those three rungs by itself, so the ladder costs nothing — but one
-    draft spelled a rung `básico` with its accent (a different stored value from the same
-    builder on the same corpus), none of the four drafts set `decided_by`, and the criteria
-    were three words a rung. The first two are shape and are fixed here; the third is
-    judgement and only the prompt can produce it.
-
-    Everything it writes is a floor, never a rewrite: a criterion the model wrote survives
-    untouched, and the fallback is used only where there is nothing at all. A ladder that
-    does NOT fold onto the canonical one is replaced and said out loud, because the
-    description then enumerates rungs that no longer exist — kept rather than dropped,
-    since it is the modality's only reasoning and the profile screen now puts it where
-    somebody will read it.
-    """
-    field = prompts.DIFFICULTY_FIELD
-    levels = list(prompts.DIFFICULTY_LEVELS)
-    canonical = {_fold(level): level for level in levels}
-
-    for key, spec in (profile.get("item_types") or {}).items():
-        if not isinstance(spec, dict):
-            continue
-        fields = spec.get("fields")
-        if not isinstance(fields, dict):
-            continue
-
-        found = next((name for name in (field, *DIFFICULTY_FIELDS) if name in fields), None)
-        entry = fields.pop(found) if found else None
-        if not isinstance(entry, dict):
-            entry = {}
-        if found is None:
-            logger.warning(f"«{key}»: no difficulty field; adding '{field}' with no criterion")
-        elif found != field:
-            logger.warning(f"«{key}»: difficulty declared as '{found}'; renamed to '{field}'")
-
-        schema = entry.get("schema")
-        declared = schema.get("enum") if isinstance(schema, dict) else None
-        if isinstance(declared, list) and declared:
-            folded = [canonical.get(_fold(v)) for v in declared]
-            if sorted(v for v in folded if v) != sorted(levels) or None in folded:
-                logger.warning(
-                    f"«{key}»: difficulty declared {declared}; replaced by the shared ladder "
-                    f"{levels}. Its criterion still describes the old rungs — correct it by hand"
-                )
-        entry["schema"] = {"enum": levels}
-
-        if not str(entry.get("description") or "").strip():
-            entry["description"] = prompts.DIFFICULTY_FALLBACK_DESCRIPTION
-        guidance = entry.get("guidance")
-        guidance = dict(guidance) if isinstance(guidance, dict) else {}
-        if not str(guidance.get("extraction") or "").strip():
-            guidance["extraction"] = prompts.DIFFICULTY_FALLBACK_EXTRACTION
-        entry["guidance"] = {"extraction": guidance["extraction"]}
-        entry["decided_by"] = "user"
-
-        # Last of the fields, so the artifact reads the way the screens draw it.
-        fields[field] = entry
-
-        # It carries no concept and adds the same noise to every item, so indexing it can
-        # only hurt retrieval. The prompt says so twice; this is what makes it so.
-        embed = spec.get("embed_fields")
-        if isinstance(embed, list):
-            kept = [name for name in embed if name not in (field, *DIFFICULTY_FIELDS)]
-            if kept != embed:
-                logger.warning(f"«{key}»: '{field}' dropped from embed_fields")
-                spec["embed_fields"] = kept
-
-    return profile
-
-
-def _remember(values: list[str], value: str) -> None:
-    """Append `value` once, ignoring an empty one."""
-    if value and value not in values:
-        values.append(value)
-
-
 class ExemplarsProfileBuilder:
     """Scans the exemplars corpus for modalities and consolidates them into a draft profile."""
 
@@ -195,20 +110,6 @@ class ExemplarsProfileBuilder:
         self._docling = source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
 
     # PUBLIC API ----------------------------------------------------------------------------------
-
-    def bootstrap(self) -> None:
-        """Check this build's own models are installed, the overridden ones included."""
-        ensure_models(
-            [
-                config.TRANSCRIBE_MODEL,
-                config.TRANSCRIBE_SEAM_MODEL,
-                self.scan_model,
-                self.consolidate_model,
-                self.context_model,
-                config.REPAIR_LLM,
-            ],
-            "exemplars profile",
-        )
 
     def build(self, input_dir: str, output_file_path: str) -> dict:
         """Scan the corpus, consolidate the draft profile, write it and return it.
@@ -254,6 +155,20 @@ class ExemplarsProfileBuilder:
 
         self.synthesize_context(profile, findings)
         return profile
+
+    def bootstrap(self) -> None:
+        """Check this build's own models are installed, the overridden ones included."""
+        ensure_models(
+            [
+                config.TRANSCRIBE_MODEL,
+                config.TRANSCRIBE_SEAM_MODEL,
+                self.scan_model,
+                self.consolidate_model,
+                self.context_model,
+                config.REPAIR_LLM,
+            ],
+            "exemplars profile",
+        )
 
     def synthesize_context(self, profile: dict, found: dict[str, dict]) -> None:
         """Write the subject-context draft from what the profile knows that the graph does not.
@@ -360,19 +275,6 @@ class ExemplarsProfileBuilder:
         )
         return found
 
-    def _context_block(self) -> str:
-        """The subject's context, or an empty block on the build that has none yet.
-
-        Read once per build and cached, because both phases ask for it and the file does
-        not change while a build runs. Empty is the ordinary state of a FIRST build: the
-        context is synthesised in this same builder's last phase, so there is nothing to
-        pass until there has been one build. From the second onwards the two phases know
-        the subject, the level and — the reason this exists — the language it is taught in.
-        """
-        if self._context_cache is None:
-            self._context_cache = content_context.load_for(self.workspace).prompt_block()
-        return self._context_cache
-
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
         """Ask one chunk for its modalities, `[]` when the answer cannot be repaired."""
         prompt = self.prompts.scan_item_types_prompt(
@@ -400,6 +302,19 @@ class ExemplarsProfileBuilder:
             logger.warning(f"{tag}{location}: unusable scan ({err}); skipped")
             return []
         return entries
+
+    def _context_block(self) -> str:
+        """The subject's context, or an empty block on the build that has none yet.
+
+        Read once per build and cached, because both phases ask for it and the file does
+        not change while a build runs. Empty is the ordinary state of a FIRST build: the
+        context is synthesised in this same builder's last phase, so there is nothing to
+        pass until there has been one build. From the second onwards the two phases know
+        the subject, the level and — the reason this exists — the language it is taught in.
+        """
+        if self._context_cache is None:
+            self._context_cache = content_context.load_for(self.workspace).prompt_block()
+        return self._context_cache
 
     @staticmethod
     def _parse_scan(response: str) -> tuple[list[dict] | None, str | None]:
@@ -547,3 +462,88 @@ class ExemplarsProfileBuilder:
             return None
         except (ValueError, KeyError, TypeError) as e:
             return f"{type(e).__name__}: {str(e)[:200]}"
+
+
+def _remember(values: list[str], value: str) -> None:
+    """Append `value` once, ignoring an empty one."""
+    if value and value not in values:
+        values.append(value)
+
+
+def guarantee_difficulty(profile: dict, prompts) -> dict:
+    """Give every modality the difficulty field, on the ladder every modality shares.
+
+    The prompt asks for it in a section of its own; this is what makes it true. Measured on
+    the real builds of two workspaces before either existed: the model already converged on
+    the field and on those three rungs by itself, so the ladder costs nothing — but one
+    draft spelled a rung `básico` with its accent (a different stored value from the same
+    builder on the same corpus), none of the four drafts set `decided_by`, and the criteria
+    were three words a rung. The first two are shape and are fixed here; the third is
+    judgement and only the prompt can produce it.
+
+    Everything it writes is a floor, never a rewrite: a criterion the model wrote survives
+    untouched, and the fallback is used only where there is nothing at all. A ladder that
+    does NOT fold onto the canonical one is replaced and said out loud, because the
+    description then enumerates rungs that no longer exist — kept rather than dropped,
+    since it is the modality's only reasoning and the profile screen now puts it where
+    somebody will read it.
+    """
+    field = prompts.DIFFICULTY_FIELD
+    levels = list(prompts.DIFFICULTY_LEVELS)
+    canonical = {_fold(level): level for level in levels}
+
+    for key, spec in (profile.get("item_types") or {}).items():
+        if not isinstance(spec, dict):
+            continue
+        fields = spec.get("fields")
+        if not isinstance(fields, dict):
+            continue
+
+        found = next((name for name in (field, *DIFFICULTY_FIELDS) if name in fields), None)
+        entry = fields.pop(found) if found else None
+        if not isinstance(entry, dict):
+            entry = {}
+        if found is None:
+            logger.warning(f"«{key}»: no difficulty field; adding '{field}' with no criterion")
+        elif found != field:
+            logger.warning(f"«{key}»: difficulty declared as '{found}'; renamed to '{field}'")
+
+        schema = entry.get("schema")
+        declared = schema.get("enum") if isinstance(schema, dict) else None
+        if isinstance(declared, list) and declared:
+            folded = [canonical.get(_fold(v)) for v in declared]
+            if sorted(v for v in folded if v) != sorted(levels) or None in folded:
+                logger.warning(
+                    f"«{key}»: difficulty declared {declared}; replaced by the shared ladder "
+                    f"{levels}. Its criterion still describes the old rungs — correct it by hand"
+                )
+        entry["schema"] = {"enum": levels}
+
+        if not str(entry.get("description") or "").strip():
+            entry["description"] = prompts.DIFFICULTY_FALLBACK_DESCRIPTION
+        guidance = entry.get("guidance")
+        guidance = dict(guidance) if isinstance(guidance, dict) else {}
+        if not str(guidance.get("extraction") or "").strip():
+            guidance["extraction"] = prompts.DIFFICULTY_FALLBACK_EXTRACTION
+        entry["guidance"] = {"extraction": guidance["extraction"]}
+        entry["decided_by"] = "user"
+
+        # Last of the fields, so the artifact reads the way the screens draw it.
+        fields[field] = entry
+
+        # It carries no concept and adds the same noise to every item, so indexing it can
+        # only hurt retrieval. The prompt says so twice; this is what makes it so.
+        embed = spec.get("embed_fields")
+        if isinstance(embed, list):
+            kept = [name for name in embed if name not in (field, *DIFFICULTY_FIELDS)]
+            if kept != embed:
+                logger.warning(f"«{key}»: '{field}' dropped from embed_fields")
+                spec["embed_fields"] = kept
+
+    return profile
+
+
+def _fold(value: str) -> str:
+    """Fold one enum value for comparison: lowercase, unaccented, trimmed."""
+    stripped = unicodedata.normalize("NFKD", str(value).strip().lower())
+    return "".join(c for c in stripped if not unicodedata.combining(c))

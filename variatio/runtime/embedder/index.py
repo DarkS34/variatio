@@ -104,20 +104,6 @@ class Embedder:
 
     # FINGERPRINTS --------------------------------------------------------------------------------
 
-    def _embedding_fingerprint(self) -> str:
-        """The fingerprint of the embedding setup: model, indexed fields and prefixes."""
-        return cache.embedding_fingerprint(
-            self.embedding_model,
-            self.embed_signature,
-            config.EMBEDDING_QUERY_PREFIX,
-            config.EMBEDDING_DOCUMENT_PREFIX,
-        )
-
-    @staticmethod
-    def _text_fingerprint(text: str) -> str:
-        """The digest of one item's indexed text."""
-        return cache.text_fingerprint(text)
-
     def _concept_fingerprint(self) -> str:
         """The fingerprint of the concepts index as it currently stands."""
         return cache.concept_fingerprint(
@@ -134,10 +120,24 @@ class Embedder:
         """
         return {ex_id: self._text_fingerprint(self.embed_text(ex)) for ex_id, ex in bank.items()}
 
+    @staticmethod
+    def _text_fingerprint(text: str) -> str:
+        """The digest of one item's indexed text."""
+        return cache.text_fingerprint(text)
+
     def _exemplars_bank_fingerprint(self, text_fingerprints: dict[str, str]) -> str:
         """The fingerprint of the bank index as it currently stands."""
         return cache.bank_fingerprint(
             self._embedding_fingerprint(), self.exemplars_bank, text_fingerprints
+        )
+
+    def _embedding_fingerprint(self) -> str:
+        """The fingerprint of the embedding setup: model, indexed fields and prefixes."""
+        return cache.embedding_fingerprint(
+            self.embedding_model,
+            self.embed_signature,
+            config.EMBEDDING_QUERY_PREFIX,
+            config.EMBEDDING_DOCUMENT_PREFIX,
         )
 
     # INDICES -------------------------------------------------------------------------------
@@ -258,10 +258,9 @@ class Embedder:
 
     # VECTOR MATH -----------------------------------------------------------------------------
 
-    @staticmethod
-    def _prefix(kind: str) -> str:
-        """The task prefix for one side of retrieval."""
-        return prefix_for(kind)
+    def embed_document(self, text: str) -> np.ndarray:
+        """Embed one text on the indexed side."""
+        return self._embed(text, "document")
 
     def _embed(self, text: str, kind: str) -> np.ndarray:
         """Embed one text, memoised by PREFIXED text.
@@ -276,14 +275,6 @@ class Embedder:
         vector = l2_normalize(np.array(raw, dtype=np.float32))
         self._embed_cache[key] = vector
         return vector
-
-    def embed_document(self, text: str) -> np.ndarray:
-        """Embed one text on the indexed side."""
-        return self._embed(text, "document")
-
-    def _pending_keys(self, keys: list[str]) -> list[str]:
-        """Return the distinct keys not already memoised, in order."""
-        return [k for k in dict.fromkeys(keys) if k not in self._embed_cache]
 
     def _embed_many(self, texts: list[str], kind: str, reporter=None) -> list[np.ndarray]:
         """Embed a list of texts in batches, memoising each and reporting progress."""
@@ -302,6 +293,15 @@ class Embedder:
                 reporter.tick(done)
 
         return [self._embed_cache[k] for k in keys]
+
+    @staticmethod
+    def _prefix(kind: str) -> str:
+        """The task prefix for one side of retrieval."""
+        return prefix_for(kind)
+
+    def _pending_keys(self, keys: list[str]) -> list[str]:
+        """Return the distinct keys not already memoised, in order."""
+        return [k for k in dict.fromkeys(keys) if k not in self._embed_cache]
 
     # RETRIEVAL -----------------------------------------------------------------------------
 

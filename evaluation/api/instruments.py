@@ -6,7 +6,7 @@ all three architectures rather than for the one whose name was already known. Th
 **rubric** is four scales about the system's variant, answered after the reveal and
 deliberately optional, so a person in a hurry still leaves a complete datum.
 
-A teacher and a student are NOT asked the same thing — «¿La pondrías en clase?» is a
+A teacher and a student are NOT asked the same thing — "¿La pondrías en clase?" is a
 question about teaching, and asking it of somebody who does not teach produces an answer,
 which is worse than producing none. What the two share is the SHAPE, three ordered options
 best first, so the arithmetic downstream stays one function.
@@ -114,16 +114,6 @@ DECLINE_LABEL = "No tengo criterio para juzgar esto"
 DECLINE_HINT = "Queda registrado que la saltaste; no cuenta como preferencia."
 
 
-def resolve(profile: str | None) -> str:
-    """Return the profile whose wording to use, defaulting an unset one to the teacher's.
-
-    Every account of an installation older than the question is NULL, and the evaluation's panel
-    reports that per account so it can be corrected — what it must not do is refuse to draw
-    the screen because a column is empty.
-    """
-    return profile if profile in TRIAGE else TEACHER
-
-
 def for_profile(profile: str | None) -> dict:
     """Everything the evaluation screen needs in order to word itself, in one payload."""
     resolved = resolve(profile)
@@ -136,3 +126,13 @@ def for_profile(profile: str | None) -> dict:
         ],
         "decline": {"label": DECLINE_LABEL, "hint": DECLINE_HINT},
     }
+
+
+def resolve(profile: str | None) -> str:
+    """Return the profile whose wording to use, defaulting an unset one to the teacher's.
+
+    Every account of an installation older than the question is NULL, and the evaluation's panel
+    reports that per account so it can be corrected — what it must not do is refuse to draw
+    the screen because a column is empty.
+    """
+    return profile if profile in TRIAGE else TEACHER

@@ -118,10 +118,6 @@ class ExemplarsBankBuilder:
 
     # PUBLIC API ----------------------------------------------------------------------------------
 
-    def bootstrap(self) -> None:
-        """Check every model of the build is installed, the tagger's and embedder's included."""
-        ensure_models(build_models(), "exemplars bank")
-
     def build(
         self,
         input_dir: str,
@@ -226,6 +222,10 @@ class ExemplarsBankBuilder:
         logger.success(f"Bank finished: {len(bank)} item(s) in {Path(output_file_path).name}")
         return bank
 
+    def bootstrap(self) -> None:
+        """Check every model of the build is installed, the tagger's and embedder's included."""
+        ensure_models(build_models(), "exemplars bank")
+
     # PIPELINE ------------------------------------------------------------------------------------
 
     def _convert(self, files: list[Path]) -> dict[Path, str]:
@@ -302,50 +302,6 @@ class ExemplarsBankBuilder:
             logger.debug(f"{tag} {repeated} item(s) repeated by the overlap, discarded")
         return items
 
-    def _identity(self, raw: dict) -> str:
-        """What makes two extractions the same item: its modality and its primary field.
-
-        Compared FOLDED, because the same exercise read from two overlapping batches comes
-        back with the same words and not necessarily the same spacing.
-        """
-        key = raw.get(ITEM_TYPE_KEY) or self.exemplars_profile.default_type
-        try:
-            item_type = self.exemplars_profile.item_type(str(key))
-            text = item_type.primary_text(raw)
-        except (KeyError, ValueError):
-            return ""
-        return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
-
-    @staticmethod
-    def _grammar_costs_the_text(model: str) -> bool:
-        r"""Whether a grammar on `model` would mangle the prose it makes it copy.
-
-        Measured against Cerebras' constrained decoding: `gemma-4-31b` stops emitting raw
-        UTF-8 inside a JSON string and takes the grammar's `\uXXXX` branch for every
-        non-ASCII character, then writes the hex wrong. One real batch came back with 107
-        escapes, all of them `\u00` plus two arbitrary digits, so `á`, `é`, `ó`, `ñ` and
-        `→` all reached the bank as a single control character. It worsens with the length
-        of what is generated (107 escapes under the real schema, 17 under a one-field one,
-        0 on a short answer) and `json_object` mode is no cure (31), which is why the whole
-        `response_format` has to go rather than only its schema.
-        """
-        return model in inference.remote_models()
-
-    def _grammar(self) -> dict | None:
-        """The extraction schema, or nothing when a grammar would cost the text itself.
-
-        Reasoning silences a grammar as it does everywhere else. A remotely served model
-        drops it for the heavier reason above: this is the one phase that copies whole
-        paragraphs of the corpus verbatim, and losing the text is worse than losing the
-        decoder's guarantee, which `parse_with_repair` takes over exactly as it does for
-        the phases that reason.
-        """
-        if config.THINK_EB_EXTRACT:
-            return None
-        if self._grammar_costs_the_text(config.EB_EXTRACT_MODEL):
-            return None
-        return self._extraction_schema
-
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
         """Ask for one batch's items, raising when no repair produces usable JSON."""
         prompt = self.prompts.format_content_prompt(
@@ -382,6 +338,36 @@ class ExemplarsBankBuilder:
             raise ValueError(f"unrecoverable JSON after {self.max_repair_attempts} repairs: {err}")
         return items
 
+    def _grammar(self) -> dict | None:
+        """The extraction schema, or nothing when a grammar would cost the text itself.
+
+        Reasoning silences a grammar as it does everywhere else. A remotely served model
+        drops it for the heavier reason above: this is the one phase that copies whole
+        paragraphs of the corpus verbatim, and losing the text is worse than losing the
+        decoder's guarantee, which `parse_with_repair` takes over exactly as it does for
+        the phases that reason.
+        """
+        if config.THINK_EB_EXTRACT:
+            return None
+        if self._grammar_costs_the_text(config.EB_EXTRACT_MODEL):
+            return None
+        return self._extraction_schema
+
+    @staticmethod
+    def _grammar_costs_the_text(model: str) -> bool:
+        r"""Whether a grammar on `model` would mangle the prose it makes it copy.
+
+        Measured against Cerebras' constrained decoding: `gemma-4-31b` stops emitting raw
+        UTF-8 inside a JSON string and takes the grammar's `\uXXXX` branch for every
+        non-ASCII character, then writes the hex wrong. One real batch came back with 107
+        escapes, all of them `\u00` plus two arbitrary digits, so `á`, `é`, `ó`, `ñ` and
+        `→` all reached the bank as a single control character. It worsens with the length
+        of what is generated (107 escapes under the real schema, 17 under a one-field one,
+        0 on a short answer) and `json_object` mode is no cure (31), which is why the whole
+        `response_format` has to go rather than only its schema.
+        """
+        return model in inference.remote_models()
+
     def _parse_and_validate(self, response: str) -> tuple[list[dict] | None, str | None]:
         """Validate each raw object against the schema of the modality it declares.
 
@@ -415,6 +401,20 @@ class ExemplarsBankBuilder:
             return items, None
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
             return None, f"{type(e).__name__}: {str(e)[:200]}"
+
+    def _identity(self, raw: dict) -> str:
+        """What makes two extractions the same item: its modality and its primary field.
+
+        Compared FOLDED, because the same exercise read from two overlapping batches comes
+        back with the same words and not necessarily the same spacing.
+        """
+        key = raw.get(ITEM_TYPE_KEY) or self.exemplars_profile.default_type
+        try:
+            item_type = self.exemplars_profile.item_type(str(key))
+            text = item_type.primary_text(raw)
+        except (KeyError, ValueError):
+            return ""
+        return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
 
     # BATCHING ------------------------------------------------------------------------------------
 

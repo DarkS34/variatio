@@ -12,18 +12,6 @@ from sqlalchemy.orm import Session
 from server.db.models import EvalSession, User
 
 
-def _moment(timestamp: float | None) -> datetime | None:
-    """Turn a POSIX timestamp into an aware UTC datetime, or None."""
-    if not timestamp:
-        return None
-    return datetime.fromtimestamp(timestamp, tz=timezone.utc)
-
-
-def _per_arm(payload: dict, field: str) -> dict:
-    """Pull one field out of every arm's result, for the columns the listing reads."""
-    return {name: arm.get(field) for name, arm in (payload.get("arms") or {}).items()}
-
-
 def upsert_evaluation(
     session: Session,
     session_id: str,
@@ -67,6 +55,18 @@ def upsert_evaluation(
     row.trace = payload
     session.flush()
     return row
+
+
+def _moment(timestamp: float | None) -> datetime | None:
+    """Turn a POSIX timestamp into an aware UTC datetime, or None."""
+    if not timestamp:
+        return None
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
+def _per_arm(payload: dict, field: str) -> dict:
+    """Pull one field out of every arm's result, for the columns the listing reads."""
+    return {name: arm.get(field) for name, arm in (payload.get("arms") or {}).items()}
 
 
 def get_evaluation(session: Session, session_id: str) -> EvalSession | None:
@@ -164,7 +164,7 @@ def assigned_to(
 ) -> list[EvalSession]:
     """Return what this evaluator was handed, oldest first.
 
-    A queue is worked from the front, so «la siguiente» has to mean the same thing on
+    A queue is worked from the front, so "la siguiente" has to mean the same thing on
     every reload.
     """
     query = select(EvalSession).where(

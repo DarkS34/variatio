@@ -47,6 +47,19 @@ _REASONS = {
 _UNKNOWN_REASON = "config"
 
 
+def transcription_status(ws: Workspace, slot: str) -> dict:
+    """Report a whole slot: every document's state, and the three tallies over them."""
+    documents = [_document_status(source, ws, slot) for source in _sources(ws, slot)]
+    return {
+        "slot": slot,
+        "documents": documents,
+        "done": sum(1 for d in documents if d["state"] == DONE),
+        "pending": sum(1 for d in documents if d["state"] == PENDING),
+        "stale": sum(1 for d in documents if d["state"] == STALE),
+        "total_pages": sum(d["pages"] for d in documents),
+    }
+
+
 def slot_dir(ws: Workspace, slot: str) -> Path:
     """Return the `raw/` directory one slot reads from."""
     if slot == CORPUS:
@@ -54,18 +67,6 @@ def slot_dir(ws: Workspace, slot: str) -> Path:
     if slot == EXEMPLARS:
         return ws.raw_exemplars_dir
     raise ValueError(f"Unknown slot '{slot}'; expected one of {list(SLOTS)}")
-
-
-def _slot_ocr(slot: str) -> bool:
-    """Return whether this slot's documents are read with OCR."""
-    return config.EXEMPLARS_OCR if slot == EXEMPLARS else False
-
-
-def _slot_converter(slot: str):
-    """Return the slot's lazily-opened Docling converter, still unbuilt."""
-    if slot == EXEMPLARS:
-        return source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
-    return source_docs.LazyConverter(table_structure=False)
 
 
 def _sources(ws: Workspace, slot: str) -> list[Path]:
@@ -86,33 +87,6 @@ def _source_for(ws: Workspace, slot: str, name: str) -> Path:
         if source.name == name:
             return source
     raise ValueError(f"No document named '{name}' in slot '{slot}'")
-
-
-def _cache_dir_for(ws: Workspace, source: Path) -> Path:
-    """Return where one document's transcribed pages live."""
-    return source_docs.document_cache_dir(source, ws.markdown_cache_dir)
-
-
-def _expected_fingerprint(source: Path, slot: str) -> dict:
-    """Return the fingerprint this document would be transcribed under right now."""
-    return source_docs.fingerprint_for(
-        source, config.TRANSCRIBE_MODEL, config.TRANSCRIBE_DPI, _slot_ocr(slot)
-    )
-
-
-def _reasons(stored: dict, expected: dict) -> list[str]:
-    """Name what changed, deduped and in fingerprint order; `config` when nothing is named."""
-    changed = [
-        key
-        for key in expected
-        if key in _REASONS and stored.get(key) != expected[key]
-    ]
-    said: list[str] = []
-    for key in changed:
-        code = _REASONS[key]
-        if code not in said:
-            said.append(code)
-    return said or [_UNKNOWN_REASON]
 
 
 def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
@@ -150,6 +124,45 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
     }
 
 
+def _cache_dir_for(ws: Workspace, source: Path) -> Path:
+    """Return where one document's transcribed pages live."""
+    return source_docs.document_cache_dir(source, ws.markdown_cache_dir)
+
+
+def _expected_fingerprint(source: Path, slot: str) -> dict:
+    """Return the fingerprint this document would be transcribed under right now."""
+    return source_docs.fingerprint_for(
+        source, config.TRANSCRIBE_MODEL, config.TRANSCRIBE_DPI, _slot_ocr(slot)
+    )
+
+
+def _slot_ocr(slot: str) -> bool:
+    """Return whether this slot's documents are read with OCR."""
+    return config.EXEMPLARS_OCR if slot == EXEMPLARS else False
+
+
+def _slot_converter(slot: str):
+    """Return the slot's lazily-opened Docling converter, still unbuilt."""
+    if slot == EXEMPLARS:
+        return source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
+    return source_docs.LazyConverter(table_structure=False)
+
+
+def _reasons(stored: dict, expected: dict) -> list[str]:
+    """Name what changed, deduped and in fingerprint order; `config` when nothing is named."""
+    changed = [
+        key
+        for key in expected
+        if key in _REASONS and stored.get(key) != expected[key]
+    ]
+    said: list[str] = []
+    for key in changed:
+        code = _REASONS[key]
+        if code not in said:
+            said.append(code)
+    return said or [_UNKNOWN_REASON]
+
+
 def _count(meta: dict, key: str) -> int:
     """Read one of the tallies `_meta.json` carries, `0` for a meta written before it."""
     value = meta.get(key)
@@ -159,19 +172,6 @@ def _count(meta: dict, key: str) -> int:
 def _merged(meta: dict) -> int:
     """Return how many page seams the model decided to join."""
     return source_docs.seams_merged(meta.get("seams"))
-
-
-def transcription_status(ws: Workspace, slot: str) -> dict:
-    """Report a whole slot: every document's state, and the three tallies over them."""
-    documents = [_document_status(source, ws, slot) for source in _sources(ws, slot)]
-    return {
-        "slot": slot,
-        "documents": documents,
-        "done": sum(1 for d in documents if d["state"] == DONE),
-        "pending": sum(1 for d in documents if d["state"] == PENDING),
-        "stale": sum(1 for d in documents if d["state"] == STALE),
-        "total_pages": sum(d["pages"] for d in documents),
-    }
 
 
 # ADOPTING A TRANSCRIPTION ALREADY IN THE INSTALLATION -----------------------------------------
@@ -184,21 +184,6 @@ def transcription_status(ws: Workspace, slot: str) -> dict:
 #
 # It is a shortcut and never a source of truth: nothing is adopted unless every field the
 # pages were produced under agrees, and a document nothing matches is simply transcribed.
-
-
-def _transcribed_documents() -> list[tuple[Path, dict]]:
-    """Every finished transcription of the installation, as `(directory, fingerprint)`.
-
-    One pass over `workspaces/*/cache/markdown/*/*/_meta.json` and no index file beside it:
-    the meta is small, the count is one entry per document the installation has ever read,
-    and an index would be a second writer of state that could disagree with the pages.
-    """
-    found: list[tuple[Path, dict]] = []
-    for meta_path in sorted(paths.WORKSPACES_DIR.glob("*/cache/markdown/*/*/" + META_NAME)):
-        meta = source_docs.read_meta(meta_path.parent)
-        if meta:
-            found.append((meta_path.parent, source_docs.fingerprint_of(meta)))
-    return found
 
 
 def adopt_transcriptions(ws: Workspace, slot: str) -> dict:
@@ -260,6 +245,21 @@ def adopt_transcriptions(ws: Workspace, slot: str) -> dict:
     return summary
 
 
+def _transcribed_documents() -> list[tuple[Path, dict]]:
+    """Every finished transcription of the installation, as `(directory, fingerprint)`.
+
+    One pass over `workspaces/*/cache/markdown/*/*/_meta.json` and no index file beside it:
+    the meta is small, the count is one entry per document the installation has ever read,
+    and an index would be a second writer of state that could disagree with the pages.
+    """
+    found: list[tuple[Path, dict]] = []
+    for meta_path in sorted(paths.WORKSPACES_DIR.glob("*/cache/markdown/*/*/" + META_NAME)):
+        meta = source_docs.read_meta(meta_path.parent)
+        if meta:
+            found.append((meta_path.parent, source_docs.fingerprint_of(meta)))
+    return found
+
+
 def transcribe_slot(ws: Workspace, slot: str) -> dict:
     """Transcribe every document of one slot, page by page, and report what came out.
 
@@ -296,7 +296,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
 
     with progress.overall(TRANSCRIBE_PHASES):
         progress.phase("transcribe", f"0/{len(sources)} documento(s)")
-        # NOT «transcribe»: `pages.py` already spends that id on the per-page loop nested
+        # NOT "transcribe": `pages.py` already spends that id on the per-page loop nested
         # inside this one, and the client patches the LAST step carrying an id — so the two
         # loops overwrote each other's counter and neither could be drawn.
         with progress.step(
@@ -370,26 +370,26 @@ def write_document_page(
     ws: Workspace, slot: str, name: str, index: int, text: str
 ) -> None:
     """Replace one page with a hand-corrected version."""
-    cache_dir, meta, pages = _open(ws, slot, name)
+    cache_dir, meta, pages = _open_document(ws, slot, name)
     _check_index(index, len(pages))
     pages[index - 1] = text
     # A seam record is named after the page that STARTS at it, so the two around page N are
     # N (what precedes it) and N+1 (what follows it).
-    _save(cache_dir, meta, pages, dropped={index, index + 1})
+    _save_document(cache_dir, meta, pages, dropped={index, index + 1})
 
 
 def insert_document_page(
     ws: Workspace, slot: str, name: str, after: int, text: str
 ) -> int:
     """Insert a page after `after` (0 for the front) and return its new number."""
-    cache_dir, meta, pages = _open(ws, slot, name)
+    cache_dir, meta, pages = _open_document(ws, slot, name)
     count = len(pages)
     if after < 0 or after > count:
         raise ValueError(f"Cannot insert after page {after} of {count}")
     pages.insert(after, text)
     # Everything from the insertion point on is renumbered, so every seam record beyond it
     # now names a boundary between different pages.
-    _save(cache_dir, meta, pages, dropped=set(range(after + 1, count + 2)))
+    _save_document(cache_dir, meta, pages, dropped=set(range(after + 1, count + 2)))
     return after + 1
 
 
@@ -399,7 +399,7 @@ def delete_document_page(ws: Workspace, slot: str, name: str, index: int) -> Non
     A document with zero pages reads as `pending`, and the next build would throw away
     every hand correction without a word.
     """
-    cache_dir, meta, pages = _open(ws, slot, name)
+    cache_dir, meta, pages = _open_document(ws, slot, name)
     count = len(pages)
     _check_index(index, count)
     if count == 1:
@@ -408,10 +408,10 @@ def delete_document_page(ws: Workspace, slot: str, name: str, index: int) -> Non
             "transcribed and the next build would silently redo it."
         )
     del pages[index - 1]
-    _save(cache_dir, meta, pages, dropped=set(range(index, count + 2)))
+    _save_document(cache_dir, meta, pages, dropped=set(range(index, count + 2)))
 
 
-def _open(ws: Workspace, slot: str, name: str) -> tuple[Path, dict, list[str]]:
+def _open_document(ws: Workspace, slot: str, name: str) -> tuple[Path, dict, list[str]]:
     """Resolve a document and read back its cache directory, metadata and pages."""
     source = _source_for(ws, slot, name)
     cache_dir = _cache_dir_for(ws, source)
@@ -427,7 +427,7 @@ def _check_index(index: int, count: int) -> None:
         raise ValueError(f"No page {index}; the document has {count}")
 
 
-def _save(cache_dir: Path, meta: dict, pages: list[str], dropped: set[int]) -> None:
+def _save_document(cache_dir: Path, meta: dict, pages: list[str], dropped: set[int]) -> None:
     """Write the pages back under the SAME fingerprint, dropping the named seam records."""
     seams = [
         record

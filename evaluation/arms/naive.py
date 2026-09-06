@@ -1,7 +1,7 @@
 """Arm 1 — a commercial model with the prompt an average user would type.
 
 Besides being the lower anchor, this arm answers the question every defence of a local
-system gets asked: «¿no sería más fácil usar un modelo comercial grande?». With data,
+system gets asked: "¿no sería más fácil usar un modelo comercial grande?". With data,
 the answer stops being an opinion.
 
 A dead provider does not stop a session: the arm records itself `unavailable` with its
@@ -19,41 +19,6 @@ from variatio.runtime.generator import parse_item
 from .. import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission
 from .. import prompts as evaluation_prompts
 from . import external
-
-
-def _spoken_fixed(commission: Commission, item_type) -> dict[str, object]:
-    """Re-key the pinned fields by their human label, falling back to the field name.
-
-    `nivel_dificultad` is an identifier of this system, not a word anybody says out loud,
-    and this arm is the sentence somebody types in a hurry. The commission itself is left
-    alone — only what the prompt SAYS is relabelled, never what `parse_item` validates.
-    """
-    spoken: dict[str, object] = {}
-    for name, value in (commission.fixed or {}).items():
-        spoken[item_type.field_specs.get(name, {}).get("label") or name] = value
-    return spoken
-
-
-def build_prompt(commission: Commission, context) -> str:
-    """Render the baseline prompt: the three canonical facts plus the subject's context.
-
-    The context block is `content_context.prompt_block()`, the same prose every prompt of
-    the pipeline interpolates. Without it the two baselines invent the material — a
-    programming course's exercises come back in whatever language the model favours — and
-    what is measured is the absence of a paragraph rather than the absence of the system.
-    The rag arm builds on this same prompt.
-    """
-    item_type = context.exemplars_profile.item_type(commission.item_type)
-    return evaluation_prompts.of(context.language).naive_generation_prompt(
-        subject=context.content_context.subject,
-        educational_level=context.content_context.educational_level,
-        language_of_instruction=context.content_context.language_of_instruction,
-        context_block=context.content_context.prompt_block(),
-        concepts=commission.concepts,
-        keys=list(item_type.field_specs),
-        fixed=_spoken_fixed(commission, item_type),
-        instructions=commission.instructions,
-    )
 
 
 def run(commission: Commission, context) -> ArmResult:
@@ -112,3 +77,38 @@ def run(commission: Commission, context) -> ArmResult:
         elapsed_ms=elapsed(),
         error=None if item is not None else str(error),
     )
+
+
+def build_prompt(commission: Commission, context) -> str:
+    """Render the baseline prompt: the three canonical facts plus the subject's context.
+
+    The context block is `content_context.prompt_block()`, the same prose every prompt of
+    the pipeline interpolates. Without it the two baselines invent the material — a
+    programming course's exercises come back in whatever language the model favours — and
+    what is measured is the absence of a paragraph rather than the absence of the system.
+    The rag arm builds on this same prompt.
+    """
+    item_type = context.exemplars_profile.item_type(commission.item_type)
+    return evaluation_prompts.of(context.language).naive_generation_prompt(
+        subject=context.content_context.subject,
+        educational_level=context.content_context.educational_level,
+        language_of_instruction=context.content_context.language_of_instruction,
+        context_block=context.content_context.prompt_block(),
+        concepts=commission.concepts,
+        keys=list(item_type.field_specs),
+        fixed=_spoken_fixed(commission, item_type),
+        instructions=commission.instructions,
+    )
+
+
+def _spoken_fixed(commission: Commission, item_type) -> dict[str, object]:
+    """Re-key the pinned fields by their human label, falling back to the field name.
+
+    `nivel_dificultad` is an identifier of this system, not a word anybody says out loud,
+    and this arm is the sentence somebody types in a hurry. The commission itself is left
+    alone — only what the prompt SAYS is relabelled, never what `parse_item` validates.
+    """
+    spoken: dict[str, object] = {}
+    for name, value in (commission.fixed or {}).items():
+        spoken[item_type.field_specs.get(name, {}).get("label") or name] = value
+    return spoken

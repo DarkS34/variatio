@@ -22,39 +22,6 @@ from variatio.core import inference, progress
 from .. import FAILED, OK, ArmResult, Commission
 
 
-class _Capture:
-    """A tee on the emitter: records what the run says, forwards it to whoever listens."""
-
-    def __init__(self, inner):
-        """Wrap the emitter the run is already publishing to, or nothing."""
-        self._inner = inner
-        self.prompt = ""
-        self.exemplar_ids: list[str] = []
-        self.answer: list[str] = []
-        self.thinking: list[str] = []
-
-    def emit(self, kind: str, payload: dict) -> None:
-        """Keep the prompt, the exemplars and the token stream, then forward the event."""
-        if kind == "prompt":
-            self.prompt = payload.get("text") or self.prompt
-        elif kind == "few_shot":
-            self.exemplar_ids = list(payload.get("ids") or [])
-        elif kind == "token":
-            target = self.thinking if payload.get("channel") == "thinking" else self.answer
-            target.append(payload.get("text") or "")
-        if self._inner is not None:
-            self._inner.emit(kind, payload)
-
-    def should_cancel(self) -> bool:
-        """Defer the cancellation question to whoever is listening underneath."""
-        return bool(self._inner is not None and self._inner.should_cancel())
-
-    @property
-    def raw(self) -> str:
-        """Return what the model wrote, falling back to the reasoning channel."""
-        return "".join(self.answer) or "".join(self.thinking)
-
-
 def run(commission: Commission, context) -> ArmResult:
     """Generate one item through the pipeline untouched, capturing what it emits."""
     started = time.perf_counter()
@@ -100,3 +67,36 @@ def run(commission: Commission, context) -> ArmResult:
         checks=results[0].checks if results else None,
         retried=results[0].retried if results else 0,
     )
+
+
+class _Capture:
+    """A tee on the emitter: records what the run says, forwards it to whoever listens."""
+
+    def __init__(self, inner):
+        """Wrap the emitter the run is already publishing to, or nothing."""
+        self._inner = inner
+        self.prompt = ""
+        self.exemplar_ids: list[str] = []
+        self.answer: list[str] = []
+        self.thinking: list[str] = []
+
+    def emit(self, kind: str, payload: dict) -> None:
+        """Keep the prompt, the exemplars and the token stream, then forward the event."""
+        if kind == "prompt":
+            self.prompt = payload.get("text") or self.prompt
+        elif kind == "few_shot":
+            self.exemplar_ids = list(payload.get("ids") or [])
+        elif kind == "token":
+            target = self.thinking if payload.get("channel") == "thinking" else self.answer
+            target.append(payload.get("text") or "")
+        if self._inner is not None:
+            self._inner.emit(kind, payload)
+
+    def should_cancel(self) -> bool:
+        """Defer the cancellation question to whoever is listening underneath."""
+        return bool(self._inner is not None and self._inner.should_cancel())
+
+    @property
+    def raw(self) -> str:
+        """Return what the model wrote, falling back to the reasoning channel."""
+        return "".join(self.answer) or "".join(self.thinking)

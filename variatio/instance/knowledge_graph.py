@@ -99,6 +99,20 @@ class KnowledgeGraph:
 
         raise ValueError(f"direction must be 'out' or 'in', not {direction!r}")
 
+    def prerequisite_closure(self, concepts: list[str], relation: str) -> list[str]:
+        """Return the transitive prerequisites of `concepts`, following OUTGOING edges.
+
+        `A → B` means "B is a prerequisite of A", so the domain's names and networkx's are
+        crossed: this is `descendants`, not `ancestors`. Getting it backwards swaps
+        "assumed known" with "not yet taught" — both lists come back non-empty and
+        plausible, and nothing fails.
+        """
+        return self._closure(concepts, relation, forward=True)
+
+    def dependent_closure(self, concepts: list[str], relation: str) -> list[str]:
+        """Return everything `concepts` are a prerequisite of, following INCOMING edges."""
+        return self._closure(concepts, relation, forward=False)
+
     def _closure(self, concepts: list[str], relation: str, forward: bool) -> list[str]:
         """Return everything reachable from `concepts` along one directed relation.
 
@@ -117,17 +131,3 @@ class KnowledgeGraph:
             if concept in graph:
                 found |= reach(graph, concept)
         return sorted(found - set(concepts))
-
-    def prerequisite_closure(self, concepts: list[str], relation: str) -> list[str]:
-        """Return the transitive prerequisites of `concepts`, following OUTGOING edges.
-
-        `A → B` means "B is a prerequisite of A", so the domain's names and networkx's are
-        crossed: this is `descendants`, not `ancestors`. Getting it backwards swaps
-        "assumed known" with "not yet taught" — both lists come back non-empty and
-        plausible, and nothing fails.
-        """
-        return self._closure(concepts, relation, forward=True)
-
-    def dependent_closure(self, concepts: list[str], relation: str) -> list[str]:
-        """Return everything `concepts` are a prerequisite of, following INCOMING edges."""
-        return self._closure(concepts, relation, forward=False)

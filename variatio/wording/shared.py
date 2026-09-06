@@ -1,7 +1,7 @@
 """The half of the wording that is the same in every language.
 
-Prompt injection is written in English whatever the reader speaks — «ignore previous
-instructions» is the canonical attempt and arrives at a Spanish workspace as often as at
+Prompt injection is written in English whatever the reader speaks — "ignore previous
+instructions" is the canonical attempt and arrives at a Spanish workspace as often as at
 an English one — so the English attack vocabulary is not the English set's, it is
 everybody's, and each language adds its own on top of it.
 """

@@ -15,6 +15,16 @@ from .models import CURATED, DRAFT
 KINDS = (entrypoints.KNOWLEDGE_GRAPH, entrypoints.EXEMPLARS_PROFILE, entrypoints.EXEMPLARS_BANK)
 
 
+def locate(ws: FsWorkspace, path: Path) -> tuple[str, str] | None:
+    """Return the (kind, stage) this path is, or None when it is not one of the artifacts."""
+    target = Path(path).resolve()
+    for kind, stage_paths in artifact_paths(ws).items():
+        for stage, candidate in stage_paths.items():
+            if candidate.resolve() == target:
+                return kind, stage
+    return None
+
+
 def artifact_paths(ws: FsWorkspace) -> dict[str, dict[str, Path]]:
     """Return every artifact file of this workspace, by kind and then by stage."""
     return {
@@ -25,13 +35,3 @@ def artifact_paths(ws: FsWorkspace) -> dict[str, dict[str, Path]]:
         },
         entrypoints.EXEMPLARS_BANK: {CURATED: ws.exemplars_bank_path},
     }
-
-
-def locate(ws: FsWorkspace, path: Path) -> tuple[str, str] | None:
-    """Return the (kind, stage) this path is, or None when it is not one of the artifacts."""
-    target = Path(path).resolve()
-    for kind, stage_paths in artifact_paths(ws).items():
-        for stage, candidate in stage_paths.items():
-            if candidate.resolve() == target:
-                return kind, stage
-    return None

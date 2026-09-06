@@ -25,7 +25,7 @@ DRIFT_ASPECTS = ("type", "enum", "decided_by")
 # THE ONE FIELD EVERY MODALITY CARRIES, and the two names it answers to.
 #
 # Difficulty is not a field the consolidation may or may not invent: every modality has one,
-# because it is the axis a commission turns («uno más sencillo», «uno más exigente») and the
+# because it is the axis a commission turns ("uno más sencillo", "uno más exigente") and the
 # axis the bank is read along. What varies between modalities is the CRITERION, never the
 # ladder — see the profile prompts, which own that engineering.
 #
@@ -37,32 +37,8 @@ DRIFT_ASPECTS = ("type", "enum", "decided_by")
 DIFFICULTY_FIELDS = ("nivel_dificultad", "difficulty_level")
 
 # Sorts after every declared level, so an item with no difficulty — an older bank, or one
-# whose profile has since dropped the field — lands at the end instead of at «basic».
+# whose profile has since dropped the field — lands at the end instead of at "basic".
 UNRANKED_DIFFICULTY = 1_000_000
-
-
-def _fields_by_type(raw: dict) -> dict[str, dict]:
-    """Return `{item_type: {field: spec}}` from a raw profile, tolerating any shape."""
-    item_types = raw.get("item_types") if isinstance(raw, dict) else None
-    if not isinstance(item_types, dict):
-        return {}
-    return {
-        key: dict(spec.get("fields") or {})
-        for key, spec in item_types.items()
-        if isinstance(spec, dict)
-    }
-
-
-def _field_aspects(spec: dict) -> dict:
-    """Return the three aspects of a field spec that drift is measured on."""
-    schema = spec.get("schema") if isinstance(spec, dict) else None
-    schema = schema if isinstance(schema, dict) else {}
-    decided_by = spec.get("decided_by") if isinstance(spec, dict) else None
-    return {
-        "type": schema.get("type"),
-        "enum": list(schema["enum"]) if isinstance(schema.get("enum"), list) else None,
-        "decided_by": decided_by or "model",
-    }
 
 
 def profile_drift(curated: dict, draft: dict) -> dict:
@@ -103,6 +79,30 @@ def profile_drift(curated: dict, draft: dict) -> dict:
     }
 
 
+def _fields_by_type(raw: dict) -> dict[str, dict]:
+    """Return `{item_type: {field: spec}}` from a raw profile, tolerating any shape."""
+    item_types = raw.get("item_types") if isinstance(raw, dict) else None
+    if not isinstance(item_types, dict):
+        return {}
+    return {
+        key: dict(spec.get("fields") or {})
+        for key, spec in item_types.items()
+        if isinstance(spec, dict)
+    }
+
+
+def _field_aspects(spec: dict) -> dict:
+    """Return the three aspects of a field spec that drift is measured on."""
+    schema = spec.get("schema") if isinstance(spec, dict) else None
+    schema = schema if isinstance(schema, dict) else {}
+    decided_by = spec.get("decided_by") if isinstance(spec, dict) else None
+    return {
+        "type": schema.get("type"),
+        "enum": list(schema["enum"]) if isinstance(schema.get("enum"), list) else None,
+        "decided_by": decided_by or "model",
+    }
+
+
 class ItemType:
     """One modality of the profile, with the Pydantic model its items validate against."""
 
@@ -127,6 +127,27 @@ class ItemType:
         model.ITEM_TYPE = self.key
         return model
 
+    def difficulty_rank(self, item: dict) -> int:
+        """Where an item sits on its own modality's ladder, unrankable values last.
+
+        The rank is the position in the modality's OWN `enum` rather than in a table here:
+        that is what keeps a hand-edited profile with four rungs, or one built before the
+        ladder was fixed, sorting the way its own declaration reads.
+        """
+        value = self.difficulty_of(item)
+        if value is None:
+            return UNRANKED_DIFFICULTY
+        levels = self.difficulty_levels
+        return levels.index(value) if value in levels else UNRANKED_DIFFICULTY
+
+    def difficulty_of(self, item: dict) -> str | None:
+        """The rung one item sits on, or None when it carries no readable difficulty."""
+        name = self.difficulty_field
+        if name is None:
+            return None
+        value = item.get(name)
+        return str(value) if isinstance(value, (str, int, float)) and value != "" else None
+
     @property
     def difficulty_field(self) -> str | None:
         """The name this modality declares its difficulty under, or None if it declares none.
@@ -149,26 +170,9 @@ class ItemType:
         values = schema.get("enum") if isinstance(schema, dict) else None
         return [str(v) for v in values] if isinstance(values, list) else []
 
-    def difficulty_of(self, item: dict) -> str | None:
-        """The rung one item sits on, or None when it carries no readable difficulty."""
-        name = self.difficulty_field
-        if name is None:
-            return None
-        value = item.get(name)
-        return str(value) if isinstance(value, (str, int, float)) and value != "" else None
-
-    def difficulty_rank(self, item: dict) -> int:
-        """Where an item sits on its own modality's ladder, unrankable values last.
-
-        The rank is the position in the modality's OWN `enum` rather than in a table here:
-        that is what keeps a hand-edited profile with four rungs, or one built before the
-        ladder was fixed, sorting the way its own declaration reads.
-        """
-        value = self.difficulty_of(item)
-        if value is None:
-            return UNRANKED_DIFFICULTY
-        levels = self.difficulty_levels
-        return levels.index(value) if value in levels else UNRANKED_DIFFICULTY
+    def schema_str(self) -> str:
+        """Return the stripped schema rendered for a prompt."""
+        return json.dumps(self.stripped_schema(), indent=2, ensure_ascii=False)
 
     def stripped_schema(self) -> dict:
         """Return the JSON schema without the title or the per-field guidance.
@@ -182,9 +186,9 @@ class ItemType:
             prop.pop("guidance", None)
         return schema
 
-    def schema_str(self) -> str:
-        """Return the stripped schema rendered for a prompt."""
-        return json.dumps(self.stripped_schema(), indent=2, ensure_ascii=False)
+    def output_schema_str(self) -> str:
+        """Return the bare output schema rendered for a prompt."""
+        return json.dumps(self.output_schema(), indent=2, ensure_ascii=False)
 
     def output_schema(self) -> dict:
         """Return the bare shape of an item: keys, types, enums, what is required.
@@ -196,10 +200,6 @@ class ItemType:
         written by this system's profile builder is not the bank.
         """
         return _bare(self.stripped_schema())
-
-    def output_schema_str(self) -> str:
-        """Return the bare output schema rendered for a prompt."""
-        return json.dumps(self.output_schema(), indent=2, ensure_ascii=False)
 
     def field_guidance(self, task: str) -> dict[str, str]:
         """Return the per-field guidance declared for one task."""
@@ -213,15 +213,6 @@ class ItemType:
             if text:
                 out[name] = text
         return out
-
-    def primary_text(self, item: dict) -> str:
-        """Return the item's primary field — the one carrying its semantic payload."""
-        if self.primary_field not in item:
-            raise ValueError(
-                f"Item is missing its primary field '{self.primary_field}' "
-                f"(item type '{self.key}')"
-            )
-        return str(item[self.primary_field] or "")
 
     def embed_text(self, item: dict, field_max_chars: int = 0) -> str:
         """Render the text this modality is indexed by, clipping each extra field."""
@@ -240,6 +231,15 @@ class ItemType:
                     rendered = rendered[:field_max_chars].rstrip() + " […]"
                 parts.append(f"{name}:\n{rendered}")
         return "\n\n".join(p for p in parts if p)
+
+    def primary_text(self, item: dict) -> str:
+        """Return the item's primary field — the one carrying its semantic payload."""
+        if self.primary_field not in item:
+            raise ValueError(
+                f"Item is missing its primary field '{self.primary_field}' "
+                f"(item type '{self.key}')"
+            )
+        return str(item[self.primary_field] or "")
 
     @staticmethod
     def _render_value(value) -> str:
@@ -373,7 +373,7 @@ class ExemplarsProfile:
 
         Normally this is one ladder — that is the whole point of the shared scale — so the
         union is what makes a filter over a mixed list mean the same thing in every row.
-        It stays a union rather than «the first modality's» because a profile somebody
+        It stays a union rather than "the first modality's" because a profile somebody
         edited by hand may disagree with itself, and a rung that exists in the bank must
         still be selectable.
         """

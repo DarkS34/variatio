@@ -30,13 +30,18 @@ _invalid_reasons: dict[str, str] = {}
 _lock = threading.RLock()
 
 
-def require_inference() -> None:
-    """Raise unless the inference engine answers, before a job pays for a build."""
-    if not inference.is_available():
-        raise RuntimeError(
-            f"No hay conexión con el motor de inferencia '{inference.engine_name()}'. "
-            "Arranca Ollama antes de lanzar un trabajo."
-        )
+def reload_context(ws: Workspace) -> RuntimeContext:
+    """Drop the workspace's context and build it again."""
+    invalidate(ws.slug, "reindexado solicitado")
+    return get_context(ws)
+
+
+def invalidate(slug: str, reason: str) -> None:
+    """Evict one workspace's context, recording why for the next build's log line."""
+    with _lock:
+        if _contexts.pop(slug, None) is not None:
+            logger.info(f"Contexto de «{slug}» invalidado: {reason}")
+        _invalid_reasons[slug] = reason
 
 
 def get_context(ws: Workspace) -> RuntimeContext:
@@ -58,18 +63,24 @@ def get_context(ws: Workspace) -> RuntimeContext:
         return context
 
 
-def reload_context(ws: Workspace) -> RuntimeContext:
-    """Drop the workspace's context and build it again."""
-    invalidate(ws.slug, "reindexado solicitado")
-    return get_context(ws)
+def require_inference() -> None:
+    """Raise unless the inference engine answers, before a job pays for a build."""
+    if not inference.is_available():
+        raise RuntimeError(
+            f"No hay conexión con el motor de inferencia '{inference.engine_name()}'. "
+            "Arranca Ollama antes de lanzar un trabajo."
+        )
 
 
-def invalidate(slug: str, reason: str) -> None:
-    """Evict one workspace's context, recording why for the next build's log line."""
-    with _lock:
-        if _contexts.pop(slug, None) is not None:
-            logger.info(f"Contexto de «{slug}» invalidado: {reason}")
-        _invalid_reasons[slug] = reason
+def _evict() -> None:
+    """Drop the least recently USED contexts down to `MAX_CONTEXTS`.
+
+    Used and not built, so a workspace somebody is working in keeps its turn on every job
+    it runs.
+    """
+    while len(_contexts) > MAX_CONTEXTS:
+        slug, _ = _contexts.popitem(last=False)
+        logger.info(f"Contexto de «{slug}» descargado: el registro está lleno")
 
 
 def invalidate_all(reason: str) -> int:
@@ -84,29 +95,18 @@ def invalidate_all(reason: str) -> int:
         return len(slugs)
 
 
+def is_ready(slug: str) -> bool:
+    """Report whether a workspace's context is warm."""
+    return peek(slug) is not None
+
+
 def peek(slug: str) -> RuntimeContext | None:
     """Return a workspace's context if it is already warm, without building one."""
     with _lock:
         return _contexts.get(slug)
 
 
-def is_ready(slug: str) -> bool:
-    """Report whether a workspace's context is warm."""
-    return peek(slug) is not None
-
-
 def warm_slugs() -> list[str]:
     """List the workspaces holding a warm context."""
     with _lock:
         return list(_contexts)
-
-
-def _evict() -> None:
-    """Drop the least recently USED contexts down to `MAX_CONTEXTS`.
-
-    Used and not built, so a workspace somebody is working in keeps its turn on every job
-    it runs.
-    """
-    while len(_contexts) > MAX_CONTEXTS:
-        slug, _ = _contexts.popitem(last=False)
-        logger.info(f"Contexto de «{slug}» descargado: el registro está lleno")

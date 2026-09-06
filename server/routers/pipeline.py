@@ -5,7 +5,7 @@ Declares `auth.VIEW` for the whole router; approving, reopening and restoring ad
 
 ROUTE ORDER IS LOAD-BEARING. `/phases` and `/scope` are declared ABOVE the
 `/{artifact}/…` routes: FastAPI matches in declaration order, and the other way round the
-wildcard reads «phases» as an artifact and answers «Artefacto desconocido». Do not reorder.
+wildcard reads "phases" as an artifact and answers "Artefacto desconocido". Do not reorder.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -43,59 +43,11 @@ def _check(artifact: str) -> None:
         raise HTTPException(404, f"Artefacto desconocido: '{artifact}'")
 
 
-def _lane_payload(backend: str, slug: str) -> dict:
-    """Report one lane globally, and this workspace's own place in its queue.
-
-    The machine and the quota belong to the installation, so `busy` and the label of what
-    is holding the lane are said to everyone: a queued job of yours that looks stuck has
-    an honest reason, and no per-workspace number can express it. `mine`, `queued` and
-    `ahead` are the scoped half.
-
-    `busy` means «this lane is FULL» and not «something is running on it» — it is what
-    every reader uses to predict a wait, and on a lane of capacity 4 a third job waits for
-    nothing. `running` and `capacity` report the activity itself; at capacity 1 the two
-    readings coincide, so a single-engine installation is unchanged.
-    """
-    holders = singletons.runner.holders_in(backend)
-    room = jobs_lanes.capacity(backend)
-    waiting = [j for j in singletons.runner.pending() if backend in j.backends]
-    mine = [j for j in waiting if j.workspace == slug]
-    ahead = None
-    if mine:
-        # How many jobs have to finish before mine starts: everything already holding a
-        # slot, plus everything queued in front of it, less the room there is. At capacity
-        # 1 this is exactly the old «those in front, plus one if the lane is held».
-        first = [j.id for j in waiting].index(mine[0].id)
-        ahead = max(0, len(holders) + first + 1 - room)
-    return {
-        "busy": len(holders) >= room,
-        "running": len(holders),
-        "capacity": room,
-        "mine": any(j.workspace == slug for j in holders),
-        "label": holders[0].label if holders else None,
-        "queued": len(mine),
-        "ahead": ahead,
-    }
-
-
-def _queue_ahead(waiting: list, running: list) -> int | None:
-    """Count what has to finish before this workspace's first queued job starts.
-
-    Clamped at zero: the dispatcher can start `waiting[0]` between the two reads, and
-    `queue_position` then answers 0 — «-1 por delante» is not a count.
-    """
-    if not waiting:
-        return None
-    first = set(waiting[0].backends)
-    blocking = sum(1 for j in running if first & set(j.backends))
-    return max(0, blocking + singletons.runner.queue_position(waiting[0].id) - 1)
-
-
 def pipeline_payload(access: auth.Access) -> dict:
     """Answer one workspace's chain, and what the shared machine is doing behind it.
 
     The two halves are scoped differently on purpose: whether a lane is held, and by which
-    job, is said to everyone — the machine is shared, so «somebody is building something»
+    job, is said to everyone — the machine is shared, so "somebody is building something"
     is true for everyone and hiding it leaves a queued job looking stuck — while
     `current_job`, the waiting counts and the artifacts marked as building are statements
     about this instance and never leave it.
@@ -128,6 +80,54 @@ def pipeline_payload(access: auth.Access) -> dict:
             lane["busy"] and not lane["mine"] for lane in lanes.values()
         ),
     }
+
+
+def _lane_payload(backend: str, slug: str) -> dict:
+    """Report one lane globally, and this workspace's own place in its queue.
+
+    The machine and the quota belong to the installation, so `busy` and the label of what
+    is holding the lane are said to everyone: a queued job of yours that looks stuck has
+    an honest reason, and no per-workspace number can express it. `mine`, `queued` and
+    `ahead` are the scoped half.
+
+    `busy` means "this lane is FULL" and not "something is running on it" — it is what
+    every reader uses to predict a wait, and on a lane of capacity 4 a third job waits for
+    nothing. `running` and `capacity` report the activity itself; at capacity 1 the two
+    readings coincide, so a single-engine installation is unchanged.
+    """
+    holders = singletons.runner.holders_in(backend)
+    room = jobs_lanes.capacity(backend)
+    waiting = [j for j in singletons.runner.pending() if backend in j.backends]
+    mine = [j for j in waiting if j.workspace == slug]
+    ahead = None
+    if mine:
+        # How many jobs have to finish before mine starts: everything already holding a
+        # slot, plus everything queued in front of it, less the room there is. At capacity
+        # 1 this is exactly the old "those in front, plus one if the lane is held".
+        first = [j.id for j in waiting].index(mine[0].id)
+        ahead = max(0, len(holders) + first + 1 - room)
+    return {
+        "busy": len(holders) >= room,
+        "running": len(holders),
+        "capacity": room,
+        "mine": any(j.workspace == slug for j in holders),
+        "label": holders[0].label if holders else None,
+        "queued": len(mine),
+        "ahead": ahead,
+    }
+
+
+def _queue_ahead(waiting: list, running: list) -> int | None:
+    """Count what has to finish before this workspace's first queued job starts.
+
+    Clamped at zero: the dispatcher can start `waiting[0]` between the two reads, and
+    `queue_position` then answers 0 — "-1 por delante" is not a count.
+    """
+    if not waiting:
+        return None
+    first = set(waiting[0].backends)
+    blocking = sum(1 for j in running if first & set(j.backends))
+    return max(0, blocking + singletons.runner.queue_position(waiting[0].id) - 1)
 
 
 @router.get("")
@@ -192,7 +192,7 @@ def _scope_payload(knowledge_graph, profile, content_context, item_type: str, wo
 
 @router.get("/scope")
 def scope(item_type: str, access: auth.Access = auth.VIEW) -> dict:
-    """Answer what «Instrucciones adicionales» may not re-decide, for one modality.
+    """Answer what "Instrucciones adicionales" may not re-decide, for one modality.
 
     The owners' TERMS never leave the server: the payload names the control that decides
     a thing, never the values it may take, which is why this takes no `concepts` and its

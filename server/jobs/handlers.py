@@ -34,11 +34,6 @@ _TAGGABILITY_MISSING = {
 }
 
 
-def _workspace(job: Job) -> Workspace:
-    """Resolve the workspace a job names, which is the only one it may touch."""
-    return installation.workspace_for(job.workspace)
-
-
 def _build(artifact: str):
     """Make the handler that builds one artifact out of process and files the result."""
 
@@ -95,6 +90,11 @@ def context_for(job: Job, reload: bool = False):
         f"{len(context.exemplars_bank)} ítem(s) del banco"
     )
     return context
+
+
+def _workspace(job: Job) -> Workspace:
+    """Resolve the workspace a job names, which is the only one it may touch."""
+    return installation.workspace_for(job.workspace)
 
 
 _SLOTS = ("corpus", "exemplars")
@@ -199,22 +199,6 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
     return {"non_taggable": saved["non_taggable"], "concepts": verdict["concepts"]}
 
 
-def _commission_detail(fixed, curriculum, instructions, think) -> list[str]:
-    """Spell out the parts of a commission that are not the concepts, for the log line."""
-    detail = []
-    if fixed:
-        detail.append("campos fijados " + ", ".join(f"{k}={v}" for k, v in fixed.items()))
-    if curriculum:
-        detail.append(f"currículo de {len(curriculum)} concepto(s)")
-    if instructions:
-        detail.append(f"instrucciones «{instructions}»")
-    if isinstance(think, str):
-        detail.append(f"con razonamiento ({think})")
-    else:
-        detail.append("con razonamiento" if think else "sin razonamiento")
-    return detail
-
-
 def handle_generate(job: Job, control: JobControl) -> dict:
     """Generate `n` items on commission, saving each one the moment it validates.
 
@@ -225,7 +209,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     deps.require_inference()
     context = context_for(job)
     params = job.params
-    # `or 1` was wrong on a falsy zero: «genera 0» produced one item and then recorded
+    # `or 1` was wrong on a falsy zero: "genera 0" produced one item and then recorded
     # `requested: 1`, falsifying the very thing the `generations` row exists to keep. An
     # absent `n` still means one; a zero travels as itself and the generator refuses it.
     n = 1 if params.get("n") is None else int(params["n"])
@@ -236,7 +220,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         context.workspace, context.knowledge_graph, params.get("curriculum")
     )
     instructions = params.get("instructions") or None
-    # Absent means «as it always was»: a caller predating the switch reasons at the default
+    # Absent means "as it always was": a caller predating the switch reasons at the default
     # effort. A recognised level travels as itself; anything else collapses to a bool.
     raw_think = params.get("think", True)
     think = raw_think if raw_think in _EFFORT_LEVELS else bool(raw_think)
@@ -313,6 +297,22 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         "saved": len(saved_ids),
         "items": items,
     }
+
+
+def _commission_detail(fixed, curriculum, instructions, think) -> list[str]:
+    """Spell out the parts of a commission that are not the concepts, for the log line."""
+    detail = []
+    if fixed:
+        detail.append("campos fijados " + ", ".join(f"{k}={v}" for k, v in fixed.items()))
+    if curriculum:
+        detail.append(f"currículo de {len(curriculum)} concepto(s)")
+    if instructions:
+        detail.append(f"instrucciones «{instructions}»")
+    if isinstance(think, str):
+        detail.append(f"con razonamiento ({think})")
+    else:
+        detail.append("con razonamiento" if think else "sin razonamiento")
+    return detail
 
 
 def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[str]:

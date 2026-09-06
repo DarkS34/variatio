@@ -25,16 +25,16 @@ class MissingArtifactError(Exception):
         super().__init__(f"Missing instance artifact '{artifact}'")
 
 
-def _json_has_key(path: str | Path, key: str) -> bool:
-    """Return whether a readable JSON object at `path` declares `key`."""
-    path = Path(path)
-    if not path.is_file():
-        return False
-    try:
-        with path.open(encoding="utf-8") as f:
-            return key in json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return False
+def missing_artifacts(ws: Workspace) -> list[str]:
+    """Return the artifacts still to be built, in the order they have to be built in."""
+    missing = []
+    if exemplars_profile_path(ws) is None:
+        missing.append(EXEMPLARS_PROFILE)
+    if knowledge_graph_path(ws) is None:
+        missing.append(KNOWLEDGE_GRAPH)
+    if not ws.exemplars_bank_path.is_file():
+        missing.append(EXEMPLARS_BANK)
+    return missing
 
 
 def exemplars_profile_path(ws: Workspace) -> Path | None:
@@ -74,13 +74,13 @@ def load_content_context(ws: Workspace) -> ContentContext:
     return load_for(ws)
 
 
-def missing_artifacts(ws: Workspace) -> list[str]:
-    """Return the artifacts still to be built, in the order they have to be built in."""
-    missing = []
-    if exemplars_profile_path(ws) is None:
-        missing.append(EXEMPLARS_PROFILE)
-    if knowledge_graph_path(ws) is None:
-        missing.append(KNOWLEDGE_GRAPH)
-    if not ws.exemplars_bank_path.is_file():
-        missing.append(EXEMPLARS_BANK)
-    return missing
+def _json_has_key(path: str | Path, key: str) -> bool:
+    """Return whether a readable JSON object at `path` declares `key`."""
+    path = Path(path)
+    if not path.is_file():
+        return False
+    try:
+        with path.open(encoding="utf-8") as f:
+            return key in json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return False

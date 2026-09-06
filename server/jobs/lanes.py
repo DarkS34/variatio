@@ -29,6 +29,11 @@ BACKENDS = (LOCAL, REMOTE)
 LOCAL_CAPACITY = 1
 
 
+def capacities() -> dict[str, int]:
+    """Return the room every lane has right now, for one pass of the dispatcher."""
+    return {backend: capacity(backend) for backend in BACKENDS}
+
+
 def capacity(backend: str) -> int:
     """Return how many jobs may hold this lane at once. Read live: the panel changes it hot."""
     if backend != REMOTE:
@@ -37,11 +42,6 @@ def capacity(backend: str) -> int:
         return max(1, int(config.CEREBRAS_MAX_CONCURRENT_JOBS))
     except (AttributeError, TypeError, ValueError):
         return 1
-
-
-def capacities() -> dict[str, int]:
-    """Return the room every lane has right now, for one pass of the dispatcher."""
-    return {backend: capacity(backend) for backend in BACKENDS}
 
 # `entrypoints.build_models` is the builder's own declaration, so the phases and the lane cannot
 # drift apart.
@@ -84,9 +84,43 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
 }
 
 
-def _excluded() -> set[str]:
-    """Return the two models that reserve nothing: small, always local, and co-resident."""
-    return {config.EMBEDDING_LLM, config.GUARDRAIL_LLM}
+def backend_of(model: str) -> str:
+    """Return the lane one model is served from."""
+    return REMOTE if model in _remote_models() else LOCAL
+
+
+def backends_for(kind: str, params: dict | None = None) -> frozenset[str]:
+    """Return the lanes a job of this kind has to hold at once in order to run.
+
+    Empty means it calls no generative model, and a job that reserves nothing never waits.
+
+    This runs on the submit path, so it fails CLOSED rather than raising: a builder whose
+    model list cannot be read is a reason to reserve everything and go back to one job at a
+    time, never a reason to turn `POST /api/jobs` into a 500.
+    """
+    try:
+        models = models_for(kind, params)
+    except Exception as exc:  # noqa: BLE001 - degrade to one lane, never refuse the job
+        logger.warning(
+            f"[carriles] No se pudo decidir qué motores usa «{kind}» ({exc}); "
+            "se reservan todos y el trabajo espera a que no haya nada más"
+        )
+        return frozenset(BACKENDS)
+
+    remote = _remote_models()
+    return frozenset(REMOTE if model in remote else LOCAL for model in models)
+
+
+def _remote_models() -> frozenset[str]:
+    """Return the models served remotely, and nothing at all if the engine will not build.
+
+    Asked of the engine rather than compared against `config.INFERENCE_ENGINE`: plain Ollama
+    answers with nothing remote, so one reading covers both engines.
+    """
+    try:
+        return inference.remote_models()
+    except inference.InferenceError:
+        return frozenset()
 
 
 def models_for(kind: str, params: dict | None = None) -> list[str]:
@@ -131,40 +165,6 @@ def _evaluation_writer() -> str:
     return evaluation_config.LOCAL_MODEL
 
 
-def _remote_models() -> frozenset[str]:
-    """Return the models served remotely, and nothing at all if the engine will not build.
-
-    Asked of the engine rather than compared against `config.INFERENCE_ENGINE`: plain Ollama
-    answers with nothing remote, so one reading covers both engines.
-    """
-    try:
-        return inference.remote_models()
-    except inference.InferenceError:
-        return frozenset()
-
-
-def backend_of(model: str) -> str:
-    """Return the lane one model is served from."""
-    return REMOTE if model in _remote_models() else LOCAL
-
-
-def backends_for(kind: str, params: dict | None = None) -> frozenset[str]:
-    """Return the lanes a job of this kind has to hold at once in order to run.
-
-    Empty means it calls no generative model, and a job that reserves nothing never waits.
-
-    This runs on the submit path, so it fails CLOSED rather than raising: a builder whose
-    model list cannot be read is a reason to reserve everything and go back to one job at a
-    time, never a reason to turn `POST /api/jobs` into a 500.
-    """
-    try:
-        models = models_for(kind, params)
-    except Exception as exc:  # noqa: BLE001 - degrade to one lane, never refuse the job
-        logger.warning(
-            f"[carriles] No se pudo decidir qué motores usa «{kind}» ({exc}); "
-            "se reservan todos y el trabajo espera a que no haya nada más"
-        )
-        return frozenset(BACKENDS)
-
-    remote = _remote_models()
-    return frozenset(REMOTE if model in remote else LOCAL for model in models)
+def _excluded() -> set[str]:
+    """Return the two models that reserve nothing: small, always local, and co-resident."""
+    return {config.EMBEDDING_LLM, config.GUARDRAIL_LLM}

@@ -98,67 +98,6 @@ A single JSON object with exactly this shape:
 JSON:"""
 
 
-def _relations_block(relations: dict[str, list[str]]) -> str:
-    """Render the concept's neighbours in the graph, or nothing when it has none."""
-    with_neighbors = {v: ns for v, ns in relations.items() if ns}
-    if not with_neighbors:
-        return ""
-    lines = "\n".join(
-        f"- {verbose}: {', '.join(neighbors)}."
-        for verbose, neighbors in with_neighbors.items()
-    )
-    return f"\n# RELATIONS IN THE CURRICULUM GRAPH\n{lines}\n"
-
-
-def _siblings_block(siblings: dict[str, str]) -> str:
-    """Render the block's other concepts, the ones this description competes against.
-
-    They are shown so the description does not overlap them, never as a model of style: one
-    that already breaks the form rules must not be imitated.
-    """
-    if not siblings:
-        return ""
-    sibling_lines = []
-    for name, text in siblings.items():
-        written = " ".join((text or "").split())
-        sibling_lines.append(f"- {name}: {written}" if written else f"- {name}")
-    return (
-        "\n# OTHER CONCEPTS FROM THE SAME SYLLABUS BLOCK\n"
-        "Your description competes with these: they are all compared against the same exercise and only one should fit. "
-        "The ones already written are shown with their text.\n"
-        "They are here ONLY so that you do not overlap with them. Do not copy their structure, their voice or their formulas: "
-        "if one of them breaks the form rules below, do not imitate it — the rules outrank the example.\n"
-        + "\n".join(sibling_lines)
-        + "\n"
-    )
-
-
-def _passages_block(passages: list[dict] | None, name_documents: bool) -> str:
-    """Render the corpus paragraphs this concept was extracted from, cited in place.
-
-    Without them the model describes from memory and drags in the vocabulary of its own
-    training. The document name is written only when the corpus holds more than one: with a
-    single document it distinguishes nothing and only spends context.
-    """
-    if not passages:
-        return ""
-    cited = []
-    for entry in passages:
-        place = entry.get("location") or ""
-        if name_documents:
-            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
-        cited.append((f"[{place}]\n" if place else "") + (entry.get("text") or "").strip())
-    return (
-        "\n# WHERE THIS CONCEPT COMES FROM (THEORY MATERIAL, VERBATIM)\n"
-        "The passages of the syllabus in which it appears. They are the only evidence of what this concept means IN THIS COURSE:\n"
-        "- Take the vocabulary, the notation and the level from here; whatever is not here and does not follow from the teaching context, do not invent.\n"
-        "- If your idea of the concept does not match what the material says, the material wins.\n"
-        "- Do not quote them and do not summarise them: describe the TASK that is practised with this.\n\n"
-        + "\n\n---\n\n".join(cited)
-        + "\n"
-    )
-
-
 def concept_description_prompt(
     concept: str,
     domain: str,
@@ -220,3 +159,64 @@ The description states the task IMPERSONALLY, starting with a bare verb: «Sort�
 A single JSON object: {{"description": "…"}}. Nothing before, nothing after.
 
 JSON:"""
+
+
+def _relations_block(relations: dict[str, list[str]]) -> str:
+    """Render the concept's neighbours in the graph, or nothing when it has none."""
+    with_neighbors = {v: ns for v, ns in relations.items() if ns}
+    if not with_neighbors:
+        return ""
+    lines = "\n".join(
+        f"- {verbose}: {', '.join(neighbors)}."
+        for verbose, neighbors in with_neighbors.items()
+    )
+    return f"\n# RELATIONS IN THE CURRICULUM GRAPH\n{lines}\n"
+
+
+def _siblings_block(siblings: dict[str, str]) -> str:
+    """Render the block's other concepts, the ones this description competes against.
+
+    They are shown so the description does not overlap them, never as a model of style: one
+    that already breaks the form rules must not be imitated.
+    """
+    if not siblings:
+        return ""
+    sibling_lines = []
+    for name, text in siblings.items():
+        written = " ".join((text or "").split())
+        sibling_lines.append(f"- {name}: {written}" if written else f"- {name}")
+    return (
+        "\n# OTHER CONCEPTS FROM THE SAME SYLLABUS BLOCK\n"
+        "Your description competes with these: they are all compared against the same exercise and only one should fit. "
+        "The ones already written are shown with their text.\n"
+        "They are here ONLY so that you do not overlap with them. Do not copy their structure, their voice or their formulas: "
+        "if one of them breaks the form rules below, do not imitate it — the rules outrank the example.\n"
+        + "\n".join(sibling_lines)
+        + "\n"
+    )
+
+
+def _passages_block(passages: list[dict] | None, name_documents: bool) -> str:
+    """Render the corpus paragraphs this concept was extracted from, cited in place.
+
+    Without them the model describes from memory and drags in the vocabulary of its own
+    training. The document name is written only when the corpus holds more than one: with a
+    single document it distinguishes nothing and only spends context.
+    """
+    if not passages:
+        return ""
+    cited = []
+    for entry in passages:
+        place = entry.get("location") or ""
+        if name_documents:
+            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
+        cited.append((f"[{place}]\n" if place else "") + (entry.get("text") or "").strip())
+    return (
+        "\n# WHERE THIS CONCEPT COMES FROM (THEORY MATERIAL, VERBATIM)\n"
+        "The passages of the syllabus in which it appears. They are the only evidence of what this concept means IN THIS COURSE:\n"
+        "- Take the vocabulary, the notation and the level from here; whatever is not here and does not follow from the teaching context, do not invent.\n"
+        "- If your idea of the concept does not match what the material says, the material wins.\n"
+        "- Do not quote them and do not summarise them: describe the TASK that is practised with this.\n\n"
+        + "\n\n---\n\n".join(cited)
+        + "\n"
+    )

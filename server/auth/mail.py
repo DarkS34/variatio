@@ -15,15 +15,6 @@ from loguru import logger
 from .. import installation
 
 
-def configured() -> bool:
-    """True when an SMTP host is set.
-
-    `GET /api/auth/me` reports this as `mail_configured`, which is what makes «Mi perfil»
-    hide the address field where nothing could deliver to it.
-    """
-    return bool(installation.smtp_host())
-
-
 def send(to: str, subject: str, body: str) -> bool:
     """Send the message, or log it whole when there is no SMTP.
 
@@ -46,6 +37,15 @@ def send(to: str, subject: str, body: str) -> bool:
         logger.error(f"No se pudo enviar el correo a {to}: {type(exc).__name__}: {exc}")
         return False
     return True
+
+
+def configured() -> bool:
+    """True when an SMTP host is set.
+
+    `GET /api/auth/me` reports this as `mail_configured`, which is what makes "Mi perfil"
+    hide the address field where nothing could deliver to it.
+    """
+    return bool(installation.smtp_host())
 
 
 def _deliver(message: EmailMessage) -> None:

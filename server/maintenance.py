@@ -2,8 +2,8 @@
 
 The administrator is NOT locked out — the check lives in `auth.deps.access_for`, beside the
 administrator bypass, so a closed door still has somebody able to reopen it. The state is
-readable with no session, because the entrance screen has to say «esto está en
-mantenimiento» before it knows who is asking.
+readable with no session, because the entrance screen has to say "this is under
+mantenimiento" before it knows who is asking.
 
 Installation state rather than a workspace's or a registry setting, so it is a gitignored
 JSON file at the root: builds run in another process, and restarting the API mid-change
@@ -28,44 +28,6 @@ CLOSED = "La instalación está en mantenimiento. Vuelve a intentarlo en unos mi
 
 _cache: dict | None = None
 _stamp: int | None = None
-
-
-def _blank() -> dict:
-    """Return the open-door state, which is also what an unreadable file means."""
-    return {"active": False, "message": "", "since": None, "by": None}
-
-
-def _read() -> dict:
-    """Read the state file, treating anything unreadable or malformed as an open door."""
-    try:
-        raw = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return _blank()
-    if not isinstance(raw, dict):
-        return _blank()
-    return {
-        "active": bool(raw.get("active")),
-        "message": str(raw.get("message") or "")[:MAX_MESSAGE_CHARS],
-        "since": raw.get("since") or None,
-        "by": raw.get("by") or None,
-    }
-
-
-def state() -> dict:
-    """Return the door's state, re-reading the file only when its timestamp moved.
-
-    Every request that resolves a membership asks this, so it cannot cost a disk read each
-    time; keying the cache on the mtime keeps the answer true across processes.
-    """
-    global _cache, _stamp
-    try:
-        stamp = STATE_PATH.stat().st_mtime_ns
-    except OSError:
-        _cache, _stamp = _blank(), None
-        return dict(_cache)
-    if _cache is None or stamp != _stamp:
-        _cache, _stamp = _read(), stamp
-    return dict(_cache)
 
 
 def active() -> bool:
@@ -97,3 +59,41 @@ def set_state(is_active: bool, message: str | None, by: str | None) -> dict:
         + (f" por «{by}»" if is_active and by else "")
     )
     return dict(data)
+
+
+def state() -> dict:
+    """Return the door's state, re-reading the file only when its timestamp moved.
+
+    Every request that resolves a membership asks this, so it cannot cost a disk read each
+    time; keying the cache on the mtime keeps the answer true across processes.
+    """
+    global _cache, _stamp
+    try:
+        stamp = STATE_PATH.stat().st_mtime_ns
+    except OSError:
+        _cache, _stamp = _blank(), None
+        return dict(_cache)
+    if _cache is None or stamp != _stamp:
+        _cache, _stamp = _read(), stamp
+    return dict(_cache)
+
+
+def _read() -> dict:
+    """Read the state file, treating anything unreadable or malformed as an open door."""
+    try:
+        raw = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _blank()
+    if not isinstance(raw, dict):
+        return _blank()
+    return {
+        "active": bool(raw.get("active")),
+        "message": str(raw.get("message") or "")[:MAX_MESSAGE_CHARS],
+        "since": raw.get("since") or None,
+        "by": raw.get("by") or None,
+    }
+
+
+def _blank() -> dict:
+    """Return the open-door state, which is also what an unreadable file means."""
+    return {"active": False, "message": "", "since": None, "by": None}

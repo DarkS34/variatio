@@ -5,31 +5,6 @@
 PROFILE_LABELS = {"teacher": "docente", "student": "alumno"}
 
 
-def _ask_password(args) -> str | None:
-    """Take the password from the flag or the environment, or ask for it twice.
-
-    None when the two do not match, or when the prompt was cancelled.
-    """
-    import getpass
-    import os
-
-    if args.password:
-        return args.password
-    from_env = os.environ.get("VARIATIO_PASSWORD")
-    if from_env:
-        return from_env
-    try:
-        first = getpass.getpass("Contraseña: ")
-        second = getpass.getpass("Repítela: ")
-    except (EOFError, KeyboardInterrupt):
-        print("\nCancelado.")
-        return None
-    if first != second:
-        print("Las dos contraseñas no coinciden.")
-        return None
-    return first
-
-
 def create_user(args) -> int:
     """Create one account, with an optional membership.
 
@@ -91,6 +66,31 @@ def create_user(args) -> int:
             f"{membership}, {profile}."
         )
     return 0
+
+
+def _ask_password(args) -> str | None:
+    """Take the password from the flag or the environment, or ask for it twice.
+
+    None when the two do not match, or when the prompt was cancelled.
+    """
+    import getpass
+    import os
+
+    if args.password:
+        return args.password
+    from_env = os.environ.get("VARIATIO_PASSWORD")
+    if from_env:
+        return from_env
+    try:
+        first = getpass.getpass("Contraseña: ")
+        second = getpass.getpass("Repítela: ")
+    except (EOFError, KeyboardInterrupt):
+        print("\nCancelado.")
+        return None
+    if first != second:
+        print("Las dos contraseñas no coinciden.")
+        return None
+    return first
 
 
 def list_users(_args) -> int:

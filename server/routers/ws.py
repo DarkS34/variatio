@@ -46,7 +46,7 @@ def trim_cold_replay(events: list[dict]) -> list[dict]:
     return kept[-COLD_REPLAY_LIMIT:]
 
 
-# The WebSocket convention for «unauthorised». A browser cannot read an HTTP status here,
+# The WebSocket convention for "unauthorised". A browser cannot read an HTTP status here,
 # so the close code is the only way to tell the client to go and log in rather than
 # reconnect for ever.
 UNAUTHORISED = 4401
@@ -97,7 +97,7 @@ async def stream(websocket: WebSocket) -> None:
     function — refuse on positive evidence of cross-site, which leaves a CLI with no
     `Origin` connecting as it always did. It closes with 4401 rather than a code of its
     own: our client is same-origin, so a distinct code would only tell a foreign page
-    apart from «no session» for free, and a misconfigured `PUBLIC_BASE_URL` stops
+    apart from "no session" for free, and a misconfigured `PUBLIC_BASE_URL` stops
     reconnecting instead of looping on a code nothing recognises.
     """
     if middleware.cross_site(websocket):

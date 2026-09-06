@@ -133,7 +133,7 @@ def write(body: Patch) -> dict:
 def reset(body: Reset) -> dict:
     """Drop these keys from `config.json`, back to the registry's default.
 
-    The key leaves the file, so the panel reports the value as «por defecto» again
+    The key leaves the file, so the panel reports the value as "por defecto" again
     instead of as a stored value that happens to equal it.
     """
     _refuse_while_busy()

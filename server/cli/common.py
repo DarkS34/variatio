@@ -11,21 +11,12 @@ DB_HINT = (
 )
 
 
-def database_hint() -> None:
-    """Print where the database was expected and the two commands that bring it up."""
-    from ..db import database_url
-
-    url = database_url()
-    print(f"No hay conexión con la base de datos en {url.split('@')[-1]}.")
-    print(DB_HINT)
-
-
 def guarded(func):
     """Wrap a subcommand so a database failure prints a message instead of a stack trace.
 
     Two failures reach here and they are not the same: the database cannot be REACHED, and
-    the database rejected what it was asked. Only the first is answered with «arranca la
-    base de datos» — telling somebody to start a Postgres they already have running is how
+    the database rejected what it was asked. Only the first is answered with "arranca la
+    base de datos" — telling somebody to start a Postgres they already have running is how
     a corrupt artifact spent months looking like a connection problem. Two subcommands are
     deliberately not wrapped: `db-check`, whose whole job is to report that failure, and
     `serve`, which checks the connection itself before uvicorn takes over.
@@ -52,3 +43,12 @@ def guarded(func):
             return 1
 
     return run
+
+
+def database_hint() -> None:
+    """Print where the database was expected and the two commands that bring it up."""
+    from ..db import database_url
+
+    url = database_url()
+    print(f"No hay conexión con la base de datos en {url.split('@')[-1]}.")
+    print(DB_HINT)

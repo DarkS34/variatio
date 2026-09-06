@@ -80,6 +80,15 @@ def review(
     return sorted(non_taggable)
 
 
+def _relation_triples(knowledge_graph) -> list[list]:
+    """Flatten every relation of the graph into `[source, verb, target]` triples."""
+    triples = []
+    for verbose, graph in knowledge_graph.graphs.items():
+        for source, target in graph.edges():
+            triples.append([source, verbose, target])
+    return triples
+
+
 def _modalities_block(exemplars_profile) -> str:
     """Render the profile's modalities for the prompt."""
     lines = []
@@ -89,15 +98,6 @@ def _modalities_block(exemplars_profile) -> str:
             line += f": {item_type.description}"
         lines.append(line)
     return "\n".join(lines)
-
-
-def _relation_triples(knowledge_graph) -> list[list]:
-    """Flatten every relation of the graph into `[source, verb, target]` triples."""
-    triples = []
-    for verbose, graph in knowledge_graph.graphs.items():
-        for source, target in graph.edges():
-            triples.append([source, verbose, target])
-    return triples
 
 
 def _judge_domain(

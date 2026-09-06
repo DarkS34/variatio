@@ -68,158 +68,6 @@ class Ruling:
 SLOT_KEYS: tuple[str, ...] = tuple(key for key, _, _ in wording_sets.of(None).SLOTS)
 
 
-def catalog(wording=None) -> tuple[Slot, ...]:
-    """Return the four admissible slots, worded in one language.
-
-    The KEYS are the catalogue and never move — the grammar pins them, the prompt's own
-    label table is checked against them by test, and `_accept` admits nothing else. What a
-    language owns is the label and the example the prompt illustrates each one by.
-    """
-    if wording is None:
-        wording = wording_sets.of(None)
-    return tuple(Slot(key, label, example) for key, label, example in wording.SLOTS)
-
-
-def owners(knowledge_graph, item_type, profile, content_context, concepts, wording=None) -> list[Owner]:
-    """Derive the controls that already decide something for this commission.
-
-    The terms belong to the instance, not to the code: the graph's non-target concepts,
-    the `decided_by: "user"` enums plus the difficulty, the modalities, and the three
-    context facts. Another workspace gets other owners with no change here, and the
-    wording of each one comes from the language the commission is judged in.
-    """
-    if wording is None:
-        wording = wording_sets.of(None)
-    concepts_label, concepts_where = wording.OWNER_CONCEPTS
-    item_type_label, item_type_where = wording.OWNER_ITEM_TYPE
-    context_label, context_where = wording.OWNER_CONTEXT
-    targets = set(concepts)
-    found: list[Owner] = []
-
-    others = tuple(c for c in knowledge_graph.all_concepts if c not in targets)
-    if others:
-        found.append(
-            Owner(
-                key="concepts",
-                label=concepts_label,
-                where=concepts_where,
-                terms=others,
-            )
-        )
-
-    # The difficulty owns its own step on the form, and it is offered there whether or not
-    # the artifact says `decided_by: "user"` — every modality carries it, so a profile built
-    # before that rule still gets the control. The judge has to see the same catalogue the
-    # screen does, or «hazlo avanzado» would pass as free text on exactly those instances.
-    difficulty = item_type.difficulty_field
-    for name, spec in item_type.field_specs.items():
-        if name != difficulty and spec.get("decided_by") != "user":
-            continue
-        values = tuple(str(v) for v in (spec.get("schema") or {}).get("enum") or ())
-        if not values:
-            continue
-        found.append(
-            Owner(
-                key=f"field:{name}",
-                label=name,
-                where=(
-                    wording.OWNER_DIFFICULTY_WHERE
-                    if name == difficulty
-                    else wording.OWNER_FIELD_WHERE
-                ),
-                terms=values,
-            )
-        )
-
-    modalities = tuple(
-        value
-        for key in profile.item_types
-        for value in (key, profile.item_type(key).label)
-    )
-    found.append(
-        Owner(
-            key="item_type",
-            label=item_type_label,
-            where=item_type_where,
-            terms=modalities,
-        )
-    )
-
-    facts = tuple(
-        value
-        for value in (
-            content_context.subject,
-            content_context.educational_level,
-            content_context.language_of_instruction,
-        )
-        if value
-    )
-    if facts:
-        found.append(
-            Owner(
-                key="context",
-                label=context_label,
-                where=context_where,
-                terms=facts,
-            )
-        )
-
-    return found
-
-
-def _schema(owners: list[Owner]) -> dict:
-    """The grammar the judge answers under, with this instance's owners as an enum."""
-    return {
-        "type": "object",
-        "properties": {
-            "requests": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "slot": {"enum": [*SLOT_KEYS, None]},
-                        "owner": {"enum": [*(o.key for o in owners), None]},
-                        "term": {"type": ["string", "null"]},
-                    },
-                    "required": ["text", "slot", "owner", "term"],
-                },
-            }
-        },
-        "required": ["requests"],
-    }
-
-
-def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | None:
-    """Return one verified request, or None when the judge's entry does not hold up.
-
-    The answer is checked against the derived catalogue before it is believed: the slot
-    must be in `SLOT_KEYS`, the owner in `owners`, and the term must fold-match one that
-    owner actually holds without being a target concept. An invented term is discarded,
-    never reported — a grammar pins the keys, not the values.
-    """
-    text = str(entry.get("text") or "").strip()
-    if not text:
-        return None
-
-    slot = entry.get("slot")
-    if slot in SLOT_KEYS:
-        return Request(text=text, slot=slot, owner=None, term=None)
-
-    owner = next((o for o in owners if o.key == entry.get("owner")), None)
-    if owner is None:
-        return None
-
-    wanted = fold(str(entry.get("term") or ""))
-    if not wanted:
-        return None
-    term = next((t for t in owner.terms if fold(t) == wanted), None)
-    if term is None or term in targets:
-        return None
-
-    return Request(text=text, slot=None, owner=owner, term=term)
-
-
 def screen(
     text: str,
     owners: list[Owner],
@@ -277,6 +125,48 @@ def screen(
     return ruling
 
 
+def catalog(wording=None) -> tuple[Slot, ...]:
+    """Return the four admissible slots, worded in one language.
+
+    The KEYS are the catalogue and never move — the grammar pins them, the prompt's own
+    label table is checked against them by test, and `_accept` admits nothing else. What a
+    language owns is the label and the example the prompt illustrates each one by.
+    """
+    if wording is None:
+        wording = wording_sets.of(None)
+    return tuple(Slot(key, label, example) for key, label, example in wording.SLOTS)
+
+
+def _unchecked() -> Ruling:
+    """Return the fail-open ruling, telling the UI the check did not run."""
+    ruling = Ruling(requests=(), checked=False)
+    progress.emit("admissibility", ok=True, checked=False, slots=[], owner=None, term=None)
+    return ruling
+
+
+def _schema(owners: list[Owner]) -> dict:
+    """The grammar the judge answers under, with this instance's owners as an enum."""
+    return {
+        "type": "object",
+        "properties": {
+            "requests": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "slot": {"enum": [*SLOT_KEYS, None]},
+                        "owner": {"enum": [*(o.key for o in owners), None]},
+                        "term": {"type": ["string", "null"]},
+                    },
+                    "required": ["text", "slot", "owner", "term"],
+                },
+            }
+        },
+        "required": ["requests"],
+    }
+
+
 def _parse(response: str) -> list[dict] | None:
     """Return the judge's `requests` entries, or None when the reply is unreadable."""
     try:
@@ -291,11 +181,121 @@ def _parse(response: str) -> list[dict] | None:
     return [e for e in entries if isinstance(e, dict)]
 
 
-def _unchecked() -> Ruling:
-    """Return the fail-open ruling, telling the UI the check did not run."""
-    ruling = Ruling(requests=(), checked=False)
-    progress.emit("admissibility", ok=True, checked=False, slots=[], owner=None, term=None)
-    return ruling
+def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | None:
+    """Return one verified request, or None when the judge's entry does not hold up.
+
+    The answer is checked against the derived catalogue before it is believed: the slot
+    must be in `SLOT_KEYS`, the owner in `owners`, and the term must fold-match one that
+    owner actually holds without being a target concept. An invented term is discarded,
+    never reported — a grammar pins the keys, not the values.
+    """
+    text = str(entry.get("text") or "").strip()
+    if not text:
+        return None
+
+    slot = entry.get("slot")
+    if slot in SLOT_KEYS:
+        return Request(text=text, slot=slot, owner=None, term=None)
+
+    owner = next((o for o in owners if o.key == entry.get("owner")), None)
+    if owner is None:
+        return None
+
+    wanted = fold(str(entry.get("term") or ""))
+    if not wanted:
+        return None
+    term = next((t for t in owner.terms if fold(t) == wanted), None)
+    if term is None or term in targets:
+        return None
+
+    return Request(text=text, slot=None, owner=owner, term=term)
+
+
+def owners(knowledge_graph, item_type, profile, content_context, concepts, wording=None) -> list[Owner]:
+    """Derive the controls that already decide something for this commission.
+
+    The terms belong to the instance, not to the code: the graph's non-target concepts,
+    the `decided_by: "user"` enums plus the difficulty, the modalities, and the three
+    context facts. Another workspace gets other owners with no change here, and the
+    wording of each one comes from the language the commission is judged in.
+    """
+    if wording is None:
+        wording = wording_sets.of(None)
+    concepts_label, concepts_where = wording.OWNER_CONCEPTS
+    item_type_label, item_type_where = wording.OWNER_ITEM_TYPE
+    context_label, context_where = wording.OWNER_CONTEXT
+    targets = set(concepts)
+    found: list[Owner] = []
+
+    others = tuple(c for c in knowledge_graph.all_concepts if c not in targets)
+    if others:
+        found.append(
+            Owner(
+                key="concepts",
+                label=concepts_label,
+                where=concepts_where,
+                terms=others,
+            )
+        )
+
+    # The difficulty owns its own step on the form, and it is offered there whether or not
+    # the artifact says `decided_by: "user"` — every modality carries it, so a profile built
+    # before that rule still gets the control. The judge has to see the same catalogue the
+    # screen does, or "hazlo avanzado" would pass as free text on exactly those instances.
+    difficulty = item_type.difficulty_field
+    for name, spec in item_type.field_specs.items():
+        if name != difficulty and spec.get("decided_by") != "user":
+            continue
+        values = tuple(str(v) for v in (spec.get("schema") or {}).get("enum") or ())
+        if not values:
+            continue
+        found.append(
+            Owner(
+                key=f"field:{name}",
+                label=name,
+                where=(
+                    wording.OWNER_DIFFICULTY_WHERE
+                    if name == difficulty
+                    else wording.OWNER_FIELD_WHERE
+                ),
+                terms=values,
+            )
+        )
+
+    modalities = tuple(
+        value
+        for key in profile.item_types
+        for value in (key, profile.item_type(key).label)
+    )
+    found.append(
+        Owner(
+            key="item_type",
+            label=item_type_label,
+            where=item_type_where,
+            terms=modalities,
+        )
+    )
+
+    facts = tuple(
+        value
+        for value in (
+            content_context.subject,
+            content_context.educational_level,
+            content_context.language_of_instruction,
+        )
+        if value
+    )
+    if facts:
+        found.append(
+            Owner(
+                key="context",
+                label=context_label,
+                where=context_where,
+                terms=facts,
+            )
+        )
+
+    return found
 
 
 def _report(ruling: Ruling) -> None:

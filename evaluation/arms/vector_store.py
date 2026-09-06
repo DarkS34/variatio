@@ -54,6 +54,16 @@ class FlatIndex:
         self.ids: list[str] = []
         self.matrix: np.ndarray = np.zeros((0, 0), dtype=np.float32)
 
+    def search(self, query: str, k: int) -> list[tuple[str, float]]:
+        """Plain cosine, top-k. No threshold, no relative band, no query prefix."""
+        self.ensure()
+        if not self.ids or k <= 0:
+            return []
+        vector = self._embed([query])[0]
+        scores = self.matrix @ vector
+        order = np.argsort(-scores)[:k]
+        return [(self.ids[int(i)], float(scores[int(i)])) for i in order]
+
     def ensure(self) -> None:
         """Load the index from cache or build it, once per process."""
         if self.ids or not self.entries:
@@ -64,16 +74,6 @@ class FlatIndex:
         self._build()
         self._save_cache()
         logger.info(f"Índice RAG construido y guardado ({len(self.ids)} fragmento(s))")
-
-    def search(self, query: str, k: int) -> list[tuple[str, float]]:
-        """Plain cosine, top-k. No threshold, no relative band, no query prefix."""
-        self.ensure()
-        if not self.ids or k <= 0:
-            return []
-        vector = self._embed([query])[0]
-        scores = self.matrix @ vector
-        order = np.argsort(-scores)[:k]
-        return [(self.ids[int(i)], float(scores[int(i)])) for i in order]
 
     # BUILD -----------------------------------------------------------------------------------
 
@@ -98,15 +98,6 @@ class FlatIndex:
 
     # CACHE -----------------------------------------------------------------------------------
 
-    def _fingerprint(self) -> str:
-        """Hash the model and every text, which is what invalidates the cache."""
-        digest = sorted(
-            (key, hashlib.md5(text.encode("utf-8")).hexdigest())
-            for key, text in self.entries.items()
-        )
-        payload = json.dumps(digest, ensure_ascii=False)
-        return hashlib.md5(f"{CACHE_VERSION}::{self.model}::{payload}".encode()).hexdigest()
-
     def _load_cache(self) -> bool:
         """Read the `.npz` back, answering False for anything stale or unreadable."""
         if not self.cache_path.exists():
@@ -130,6 +121,15 @@ class FlatIndex:
             vectors=self.matrix,
             fingerprint=self._fingerprint(),
         )
+
+    def _fingerprint(self) -> str:
+        """Hash the model and every text, which is what invalidates the cache."""
+        digest = sorted(
+            (key, hashlib.md5(text.encode("utf-8")).hexdigest())
+            for key, text in self.entries.items()
+        )
+        payload = json.dumps(digest, ensure_ascii=False)
+        return hashlib.md5(f"{CACHE_VERSION}::{self.model}::{payload}".encode()).hexdigest()
 
 
 def _l2_normalize(vector: np.ndarray) -> np.ndarray:

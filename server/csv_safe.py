@@ -16,13 +16,13 @@ _FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r", "\n")
 _NUMBER = re.compile(r"^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?$")
 
 
+def row(values: dict) -> dict:
+    """Defuse every cell of one export row."""
+    return {key: cell(entry) for key, entry in values.items()}
+
+
 def cell(value):
     """Prefix an apostrophe to a value a spreadsheet would read as a formula."""
     if not isinstance(value, str) or not value.startswith(_FORMULA_LEAD):
         return value
     return value if _NUMBER.match(value) else f"'{value}"
-
-
-def row(values: dict) -> dict:
-    """Defuse every cell of one export row."""
-    return {key: cell(entry) for key, entry in values.items()}

@@ -4,13 +4,6 @@ from .common import PROG, database_hint
 from .lock import LockHeld, hold
 
 
-def serve_lock_path():
-    """Return the lock file that keeps a second `serve` from starting."""
-    from variatio.core.paths import WORKSPACES_DIR
-
-    return WORKSPACES_DIR / ".serve.lock"
-
-
 def serve(args) -> int:
     """Start the API, refusing to run twice or without a database.
 
@@ -69,3 +62,10 @@ def serve(args) -> int:
         log_config=access_log_config(access_log_path()),
     )
     return 0
+
+
+def serve_lock_path():
+    """Return the lock file that keeps a second `serve` from starting."""
+    from variatio.core.paths import WORKSPACES_DIR
+
+    return WORKSPACES_DIR / ".serve.lock"

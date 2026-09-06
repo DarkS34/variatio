@@ -17,45 +17,10 @@ from .session import engine
 MIGRATE = "uv run alembic upgrade head"
 
 
-def _script():
-    """Return the migration directory, addressed absolutely and not through the CWD."""
-    from alembic.config import Config
-    from alembic.script import ScriptDirectory
-
-    config = Config()
-    config.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
-    return ScriptDirectory.from_config(config)
-
-
-def head_revisions() -> set[str]:
-    """Return the revisions this checkout's migrations end at."""
-    return set(_script().get_heads())
-
-
-def applied_revisions() -> set[str]:
-    """Return the revisions the database says it is at, empty when it has never migrated."""
-    from alembic.runtime.migration import MigrationContext
-
-    with engine().connect() as connection:
-        return set(MigrationContext.configure(connection).get_current_heads())
-
-
-def _known(revisions: set[str]) -> bool:
-    """Return whether this checkout's migrations know every revision the database names."""
-    script = _script()
-    for revision in revisions:
-        try:
-            if script.get_revision(revision) is None:
-                return False
-        except Exception:  # noqa: BLE001 - an unresolvable revision is the answer itself
-            return False
-    return True
-
-
 def mismatch() -> str | None:
     """Return what to say about the schema, or None when there is nothing to say.
 
-    None covers three states and they are all «do not stand in the way»: the schema is at
+    None covers three states and they are all "do not stand in the way": the schema is at
     head, the migrations cannot be read at all (a checkout without them is not this
     check's business), and the database cannot be reached — that failure has its own
     message and its own caller.
@@ -92,3 +57,38 @@ def mismatch() -> str | None:
         f"El esquema de la base de datos está en «{now}» y este código espera «{expected}».\n"
         f"Aplica las migraciones: `{MIGRATE}`."
     )
+
+
+def head_revisions() -> set[str]:
+    """Return the revisions this checkout's migrations end at."""
+    return set(_script().get_heads())
+
+
+def applied_revisions() -> set[str]:
+    """Return the revisions the database says it is at, empty when it has never migrated."""
+    from alembic.runtime.migration import MigrationContext
+
+    with engine().connect() as connection:
+        return set(MigrationContext.configure(connection).get_current_heads())
+
+
+def _known(revisions: set[str]) -> bool:
+    """Return whether this checkout's migrations know every revision the database names."""
+    script = _script()
+    for revision in revisions:
+        try:
+            if script.get_revision(revision) is None:
+                return False
+        except Exception:  # noqa: BLE001 - an unresolvable revision is the answer itself
+            return False
+    return True
+
+
+def _script():
+    """Return the migration directory, addressed absolutely and not through the CWD."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    config = Config()
+    config.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
+    return ScriptDirectory.from_config(config)

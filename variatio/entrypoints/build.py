@@ -180,15 +180,6 @@ def build_models(artifact: str) -> list[str]:
     return list(dict.fromkeys(_MODELS[artifact]()))
 
 
-def build_artifact(artifact: str, ws: Workspace) -> dict:
-    """Build one artifact, with its phase plan installed so progress is a percentage."""
-    if artifact not in _BUILDERS:
-        raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
-
-    with progress.step(f"build_{artifact}", f"Building: {_LABELS[artifact]}"), progress.overall(_PHASES[artifact]):
-        return _BUILDERS[artifact](ws=ws)
-
-
 def build_missing(ws: Workspace) -> list[str]:
     """Build every artifact the workspace lacks, and return which ones those were.
 
@@ -200,3 +191,12 @@ def build_missing(ws: Workspace) -> list[str]:
         progress.checkpoint()
         build_artifact(artifact, ws)
     return missing
+
+
+def build_artifact(artifact: str, ws: Workspace) -> dict:
+    """Build one artifact, with its phase plan installed so progress is a percentage."""
+    if artifact not in _BUILDERS:
+        raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
+
+    with progress.step(f"build_{artifact}", f"Building: {_LABELS[artifact]}"), progress.overall(_PHASES[artifact]):
+        return _BUILDERS[artifact](ws=ws)

@@ -132,7 +132,7 @@ def recent_items(
     """Return the most recent items of this workspace, by modality and by concept.
 
     `author` narrows it to one account, and the caller passes one: what this feeds is the
-    «no repitas estos» block of somebody's prompt, so reading a colleague's statement here
+    "no repitas estos" block of somebody's prompt, so reading a colleague's statement here
     would put it in front of them by another door than the one that was closed.
     """
     conditions = [Generation.workspace_id == workspace_id]

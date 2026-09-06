@@ -25,15 +25,15 @@ def read_json(path: Path) -> dict | list | None:
         return json.load(f)
 
 
-def sha256_of(path: Path | None) -> str | None:
-    """Digest a file's bytes, or None when there is no file."""
-    if path is None or not Path(path).is_file():
-        return None
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as f:
-        for block in iter(lambda: f.read(65536), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | None = None) -> Path:
+    """Write a JSON file, snapshotting and mirroring it when it is a named artifact."""
+    path = Path(path)
+    if artifact and ws is not None:
+        backup(ws, path, artifact)
+    written = json_io.write_json(path, data)
+    if artifact and ws is not None:
+        mirror.mirror_file(ws, path)
+    return written
 
 
 def backup(ws: Workspace, path: Path, artifact: str) -> Path | None:
@@ -58,17 +58,6 @@ def _prune(directory: Path, keep: int) -> None:
     snapshots = sorted(directory.iterdir(), reverse=True)
     for stale in snapshots[keep:]:
         stale.unlink(missing_ok=True)
-
-
-def write_json(path: Path, data, ws: Workspace | None = None, artifact: str | None = None) -> Path:
-    """Write a JSON file, snapshotting and mirroring it when it is a named artifact."""
-    path = Path(path)
-    if artifact and ws is not None:
-        backup(ws, path, artifact)
-    written = json_io.write_json(path, data)
-    if artifact and ws is not None:
-        mirror.mirror_file(ws, path)
-    return written
 
 
 def history(ws: Workspace, artifact: str) -> list[dict]:
@@ -97,3 +86,14 @@ def restore(ws: Workspace, artifact: str, snapshot_id: str, target: Path) -> Pat
     if not source.is_file():
         raise FileNotFoundError(f"No snapshot '{snapshot_id}' for '{artifact}'")
     return write_json(Path(target), read_json(source), ws=ws, artifact=artifact)
+
+
+def sha256_of(path: Path | None) -> str | None:
+    """Digest a file's bytes, or None when there is no file."""
+    if path is None or not Path(path).is_file():
+        return None
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+            digest.update(block)
+    return digest.hexdigest()

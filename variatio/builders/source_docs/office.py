@@ -37,32 +37,10 @@ _RELS_TARGET_RE = r'(Target="[^"]*?){name}"'
 _PNG_DEFAULT = '<Default Extension="png" ContentType="image/png"/>'
 
 
-def rasteriser() -> str | None:
-    """Return the LibreOffice binary on the PATH, or `None` when there is none.
-
-    Looked up at call time and never cached: installing LibreOffice must not need a
-    restart, and the fingerprint asks the same question to expire what was read without it.
-    """
-    return shutil.which("soffice") or shutil.which("libreoffice")
-
-
-def metafiles(source: str | Path) -> list[str]:
-    """The zip entries of an Office file that are EMF or WMF pictures, in archive order."""
-    try:
-        with zipfile.ZipFile(source) as archive:
-            return [
-                name
-                for name in archive.namelist()
-                if "/media/" in name and name.lower().endswith(METAFILE_EXTS)
-            ]
-    except (zipfile.BadZipFile, OSError):
-        return []
-
-
 def rasterised_copy(source: str | Path, workdir: str | Path) -> Path | None:
     """Write a copy of `source` whose metafiles are PNGs, or `None` when there is nothing to do.
 
-    `None` means «read the original»: the file carries no metafile, it is not a zip at all
+    `None` means "read the original": the file carries no metafile, it is not a zip at all
     (Docling will say so in its own words), or there is no LibreOffice to render with — in
     which case the pictures stay unreadable and the document says so, picture by picture.
     A metafile LibreOffice could not render is left as it was, for the same reason.
@@ -88,6 +66,28 @@ def rasterised_copy(source: str | Path, workdir: str | Path) -> Path | None:
     _rewrite(source, copy, rendered)
     logger.info(f"[{source.name}] {len(rendered)}/{len(names)} metafile(s) rasterised")
     return copy
+
+
+def metafiles(source: str | Path) -> list[str]:
+    """The zip entries of an Office file that are EMF or WMF pictures, in archive order."""
+    try:
+        with zipfile.ZipFile(source) as archive:
+            return [
+                name
+                for name in archive.namelist()
+                if "/media/" in name and name.lower().endswith(METAFILE_EXTS)
+            ]
+    except (zipfile.BadZipFile, OSError):
+        return []
+
+
+def rasteriser() -> str | None:
+    """Return the LibreOffice binary on the PATH, or `None` when there is none.
+
+    Looked up at call time and never cached: installing LibreOffice must not need a
+    restart, and the fingerprint asks the same question to expire what was read without it.
+    """
+    return shutil.which("soffice") or shutil.which("libreoffice")
 
 
 def _render(tool: str, source: Path, names: list[str], workdir: Path) -> dict[str, bytes]:

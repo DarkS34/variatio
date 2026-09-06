@@ -1,4 +1,4 @@
-"""The judge that reads «Instrucciones adicionales» and says what may be asked there."""
+"""The judge that reads "Instrucciones adicionales" and says what may be asked there."""
 
 
 def classify_instructions_prompt(

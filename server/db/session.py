@@ -17,25 +17,10 @@ _engine = None
 _factory: sessionmaker | None = None
 
 
-def database_url() -> str:
-    """Return `DATABASE_URL`, or the local Postgres this project ships with."""
-    return os.environ.get("DATABASE_URL", DEFAULT_URL)
-
-
-def engine():
-    """Return this process's engine, creating it on first use."""
-    global _engine
-    if _engine is None:
-        _engine = create_engine(database_url(), pool_pre_ping=True, future=True)
-    return _engine
-
-
-def factory() -> sessionmaker:
-    """Return this process's session factory, creating it on first use."""
-    global _factory
-    if _factory is None:
-        _factory = sessionmaker(bind=engine(), expire_on_commit=False, future=True)
-    return _factory
+def get_session() -> Iterator[Session]:
+    """Yield a session, as a FastAPI dependency."""
+    with session_scope() as session:
+        yield session
 
 
 @contextmanager
@@ -52,10 +37,12 @@ def session_scope() -> Iterator[Session]:
         session.close()
 
 
-def get_session() -> Iterator[Session]:
-    """Yield a session, as a FastAPI dependency."""
-    with session_scope() as session:
-        yield session
+def factory() -> sessionmaker:
+    """Return this process's session factory, creating it on first use."""
+    global _factory
+    if _factory is None:
+        _factory = sessionmaker(bind=engine(), expire_on_commit=False, future=True)
+    return _factory
 
 
 def is_available() -> bool:
@@ -65,6 +52,19 @@ def is_available() -> bool:
             return True
     except Exception:  # noqa: BLE001 - any connection failure is the same answer here
         return False
+
+
+def engine():
+    """Return this process's engine, creating it on first use."""
+    global _engine
+    if _engine is None:
+        _engine = create_engine(database_url(), pool_pre_ping=True, future=True)
+    return _engine
+
+
+def database_url() -> str:
+    """Return `DATABASE_URL`, or the local Postgres this project ships with."""
+    return os.environ.get("DATABASE_URL", DEFAULT_URL)
 
 
 def reset() -> None:

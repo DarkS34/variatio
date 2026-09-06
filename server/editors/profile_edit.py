@@ -26,15 +26,6 @@ def load(ws: Workspace) -> dict:
     }
 
 
-def validate(raw: dict) -> str | None:
-    """Return why this profile would not load, or `None` when it would."""
-    try:
-        ExemplarsProfile.validate_raw(raw)
-    except (ValueError, KeyError, TypeError) as exc:
-        return f"{type(exc).__name__}: {exc}"
-    return None
-
-
 def save(ws: Workspace, raw: dict) -> dict:
     """Validate and write the profile, reopening its review. Raises ValueError if invalid."""
     error = validate(raw)
@@ -47,3 +38,12 @@ def save(ws: Workspace, raw: dict) -> dict:
     approvals.Approvals(ws).invalidate(ARTIFACT)
     deps.invalidate(ws.slug, "perfil de ejemplares editado")
     return {"path": str(target), "hash": storage.sha256_of(target)}
+
+
+def validate(raw: dict) -> str | None:
+    """Return why this profile would not load, or `None` when it would."""
+    try:
+        ExemplarsProfile.validate_raw(raw)
+    except (ValueError, KeyError, TypeError) as exc:
+        return f"{type(exc).__name__}: {exc}"
+    return None

@@ -62,56 +62,6 @@ CONVERTER_ENTITIES = {"amp": "&", "lt": "<", "gt": ">"}
 CONVERTER_UNDERSCORE_RE = re.compile(r"\\_")
 
 
-def markdown_cache_path(source: str | Path, cache_dir: str | Path) -> Path:
-    """Where the markdown of a source document is cached."""
-    source = Path(source)
-    return Path(cache_dir) / source.parent.name / f"{source.name}.md"
-
-
-def markdown_meta_path(cached: str | Path) -> Path:
-    """Where the sidecar recording which bytes a cached markdown came from lives."""
-    cached = Path(cached)
-    return cached.with_name(cached.name + META_SUFFIX)
-
-
-def _recorded_source(cached: Path) -> str | None:
-    """Return the source digest the sidecar records, or `None` when there is none."""
-    meta_path = markdown_meta_path(cached)
-    if not meta_path.exists():
-        return None
-    try:
-        recorded = json.loads(meta_path.read_text(encoding="utf-8")).get("source_sha256")
-    except (json.JSONDecodeError, OSError):
-        return None
-    return recorded if isinstance(recorded, str) else None
-
-
-def _record_source(cached: Path, source: Path, digest: str) -> None:
-    """Write the sidecar naming the source document and its digest."""
-    markdown_meta_path(cached).write_text(
-        json.dumps(
-            {"source": source.name, "source_sha256": digest},
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-
-
-def _is_current(cached: Path, input_path: Path, digest: str) -> bool:
-    """Say whether the cached markdown still corresponds to the source document.
-
-    Freshness is the source's BYTES, so a hand-fixed markdown survives until the original
-    changes and a document that was merely copied or restored has not changed. Make-style
-    mtime is only for a cache written before the sidecar existed, which has nothing else to
-    go on.
-    """
-    recorded = _recorded_source(cached)
-    if recorded is not None:
-        return recorded == digest
-    return cached.stat().st_mtime >= input_path.stat().st_mtime
-
-
 def to_markdown(
     converter,
     input_path: Path,
@@ -149,6 +99,110 @@ def to_markdown(
         cached.write_text(text, encoding="utf-8")
         _record_source(cached, input_path, digest)
         logger.debug(f"[{input_path.name}] markdown written to {cached}")
+    return text
+
+
+def tidy_markdown(text: str, converted: bool = False) -> str:
+    """Clean up markdown, undoing the converter's own escapes when it wrote it.
+
+    Only what is unambiguous. Header/footer boilerplate is deliberately NOT removed: the
+    rule that catches it ("a short line repeated many times") also eats a legitimately
+    repeated `Solución:` label, and this text feeds the exemplars bank too.
+    """
+    masked, fences = mask_fences(text)
+    masked = TRAILING_WS_RE.sub("", masked)
+    if converted:
+        masked = undo_converter_escapes(masked)
+    masked = HYPHEN_BREAK_RE.sub(r"\1\2", masked)
+    masked = _recompose_accents(masked)
+    masked = PAGE_NUMBER_RE.sub("", masked)
+    masked = BLANK_RUN_RE.sub("\n\n", masked)
+    return restore_fences(masked, fences).strip() + "\n"
+
+
+def undo_converter_escapes(text: str) -> str:
+    """Invert Docling's two post-processing escapes, and nothing else.
+
+    For converter output only — never a `.md` a person wrote, where `&gt;` is what they
+    typed, and never a transcribed page, where the VLM writes `\\|`, `\\#` and `\\$` on
+    purpose inside LaTeX and table cells. Fences are already masked when this runs, which is
+    load-bearing: Docling serialises code with both escapes off. A literal backslash-
+    underscore in the source is the one thing it cannot tell from an escaped one, and that
+    is given up deliberately.
+    """
+    text = CONVERTER_ENTITY_RE.sub(lambda m: CONVERTER_ENTITIES[m.group(1)], text)
+    return CONVERTER_UNDERSCORE_RE.sub("_", text)
+
+
+def _recompose_accents(text: str) -> str:
+    """Glue a spacing accent onto the letter that follows it, where the two compose."""
+
+    def _compose(match: re.Match) -> str:
+        """Compose one accent/letter pair, or leave it exactly as it was."""
+        letter = DOTLESS.get(match.group(2), match.group(2))
+        composed = unicodedata.normalize("NFC", letter + SPACING_ACCENTS[match.group(1)])
+        # Only when the pair really becomes ONE character: a letter left carrying a dangling
+        # combining mark is worse than the corruption this tries to fix.
+        return composed if len(composed) == 1 else match.group(0)
+
+    return TEX_ACCENT_RE.sub(_compose, text)
+
+
+def markdown_cache_path(source: str | Path, cache_dir: str | Path) -> Path:
+    """Where the markdown of a source document is cached."""
+    source = Path(source)
+    return Path(cache_dir) / source.parent.name / f"{source.name}.md"
+
+
+def _is_current(cached: Path, input_path: Path, digest: str) -> bool:
+    """Say whether the cached markdown still corresponds to the source document.
+
+    Freshness is the source's BYTES, so a hand-fixed markdown survives until the original
+    changes and a document that was merely copied or restored has not changed. Make-style
+    mtime is only for a cache written before the sidecar existed, which has nothing else to
+    go on.
+    """
+    recorded = _recorded_source(cached)
+    if recorded is not None:
+        return recorded == digest
+    return cached.stat().st_mtime >= input_path.stat().st_mtime
+
+
+def _recorded_source(cached: Path) -> str | None:
+    """Return the source digest the sidecar records, or `None` when there is none."""
+    meta_path = markdown_meta_path(cached)
+    if not meta_path.exists():
+        return None
+    try:
+        recorded = json.loads(meta_path.read_text(encoding="utf-8")).get("source_sha256")
+    except (json.JSONDecodeError, OSError):
+        return None
+    return recorded if isinstance(recorded, str) else None
+
+
+def _record_source(cached: Path, source: Path, digest: str) -> None:
+    """Write the sidecar naming the source document and its digest."""
+    markdown_meta_path(cached).write_text(
+        json.dumps(
+            {"source": source.name, "source_sha256": digest},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+def markdown_meta_path(cached: str | Path) -> Path:
+    """Where the sidecar recording which bytes a cached markdown came from lives."""
+    cached = Path(cached)
+    return cached.with_name(cached.name + META_SUFFIX)
+
+
+def _refresh(path: Path, text: str) -> str:
+    """Rewrite the cached file when re-tidying changed it, and return the text."""
+    if text != path.read_text(encoding="utf-8"):
+        path.write_text(text, encoding="utf-8")
+        logger.debug(f"[{path.name}] cached markdown reformatted")
     return text
 
 
@@ -218,85 +272,14 @@ def export_markdown(document, replacements: dict[str, str]) -> str:
     return splice_pictures(text, replacements)
 
 
-def picture_mark(ref: str) -> str:
-    """The mark `export_markdown` leaves for one picture, for a caller that wants it kept."""
-    return f"<!-- image:{ref} -->"
-
-
 def splice_pictures(text: str, replacements: dict[str, str]) -> str:
     """Put `replacements[self_ref]` where each picture mark stands; nothing where none is."""
     return IMAGE_MARK_RE.sub(lambda match: replacements.get(match.group(1), ""), text)
 
 
-def _refresh(path: Path, text: str) -> str:
-    """Rewrite the cached file when re-tidying changed it, and return the text."""
-    if text != path.read_text(encoding="utf-8"):
-        path.write_text(text, encoding="utf-8")
-        logger.debug(f"[{path.name}] cached markdown reformatted")
-    return text
-
-
-def tidy_markdown(text: str, converted: bool = False) -> str:
-    """Clean up markdown, undoing the converter's own escapes when it wrote it.
-
-    Only what is unambiguous. Header/footer boilerplate is deliberately NOT removed: the
-    rule that catches it ("a short line repeated many times") also eats a legitimately
-    repeated `Solución:` label, and this text feeds the exemplars bank too.
-    """
-    masked, fences = mask_fences(text)
-    masked = TRAILING_WS_RE.sub("", masked)
-    if converted:
-        masked = undo_converter_escapes(masked)
-    masked = HYPHEN_BREAK_RE.sub(r"\1\2", masked)
-    masked = _recompose_accents(masked)
-    masked = PAGE_NUMBER_RE.sub("", masked)
-    masked = BLANK_RUN_RE.sub("\n\n", masked)
-    return restore_fences(masked, fences).strip() + "\n"
-
-
-def undo_converter_escapes(text: str) -> str:
-    """Invert Docling's two post-processing escapes, and nothing else.
-
-    For converter output only — never a `.md` a person wrote, where `&gt;` is what they
-    typed, and never a transcribed page, where the VLM writes `\\|`, `\\#` and `\\$` on
-    purpose inside LaTeX and table cells. Fences are already masked when this runs, which is
-    load-bearing: Docling serialises code with both escapes off. A literal backslash-
-    underscore in the source is the one thing it cannot tell from an escaped one, and that
-    is given up deliberately.
-    """
-    text = CONVERTER_ENTITY_RE.sub(lambda m: CONVERTER_ENTITIES[m.group(1)], text)
-    return CONVERTER_UNDERSCORE_RE.sub("_", text)
-
-
-def _recompose_accents(text: str) -> str:
-    """Glue a spacing accent onto the letter that follows it, where the two compose."""
-
-    def _compose(match: re.Match) -> str:
-        """Compose one accent/letter pair, or leave it exactly as it was."""
-        letter = DOTLESS.get(match.group(2), match.group(2))
-        composed = unicodedata.normalize("NFC", letter + SPACING_ACCENTS[match.group(1)])
-        # Only when the pair really becomes ONE character: a letter left carrying a dangling
-        # combining mark is worse than the corruption this tries to fix.
-        return composed if len(composed) == 1 else match.group(0)
-
-    return TEX_ACCENT_RE.sub(_compose, text)
-
-
-def mask_fences(text: str) -> tuple[str, list[str]]:
-    """Replace every code fence with a token, returning the text and the fences."""
-    fences: list[str] = []
-
-    def _stash(match):
-        """Store one fence and return the token standing in for it."""
-        fences.append(match.group(0))
-        return f"§§FENCE{len(fences) - 1}§§"
-
-    return CODE_FENCE_RE.sub(_stash, text), fences
-
-
-def restore_fences(text: str, fences: list[str]) -> str:
-    """Put the masked code fences back where their tokens are."""
-    return FENCE_TOKEN_RE.sub(lambda m: fences[int(m.group(1))], text)
+def picture_mark(ref: str) -> str:
+    """The mark `export_markdown` leaves for one picture, for a caller that wants it kept."""
+    return f"<!-- image:{ref} -->"
 
 
 def headings_by_level(text: str) -> dict[int, list[str]]:
@@ -323,13 +306,6 @@ def page_mark(index: int) -> str:
     return f"<!-- page {index} -->"
 
 
-def strip_page_marks(text: str) -> str:
-    """Remove the page marks, leaving the ones inside a code fence alone."""
-    masked, fences = mask_fences(text)
-    masked = BLANK_RUN_RE.sub("\n\n", PAGE_MARK_RE.sub("", masked))
-    return restore_fences(masked, fences).strip()
-
-
 def split_blocks(text: str) -> list[str]:
     """Split the document into blocks, on `---` rules when it has any and on blank lines."""
     masked, fences = mask_fences(strip_page_marks(text))
@@ -341,3 +317,27 @@ def split_blocks(text: str) -> list[str]:
     return [
         restored for restored in (restore_fences(p, fences).strip() for p in pieces) if restored
     ]
+
+
+def strip_page_marks(text: str) -> str:
+    """Remove the page marks, leaving the ones inside a code fence alone."""
+    masked, fences = mask_fences(text)
+    masked = BLANK_RUN_RE.sub("\n\n", PAGE_MARK_RE.sub("", masked))
+    return restore_fences(masked, fences).strip()
+
+
+def mask_fences(text: str) -> tuple[str, list[str]]:
+    """Replace every code fence with a token, returning the text and the fences."""
+    fences: list[str] = []
+
+    def _stash(match):
+        """Store one fence and return the token standing in for it."""
+        fences.append(match.group(0))
+        return f"§§FENCE{len(fences) - 1}§§"
+
+    return CODE_FENCE_RE.sub(_stash, text), fences
+
+
+def restore_fences(text: str, fences: list[str]) -> str:
+    """Put the masked code fences back where their tokens are."""
+    return FENCE_TOKEN_RE.sub(lambda m: fences[int(m.group(1))], text)

@@ -21,8 +21,8 @@ OVERRIDE_OBJECTS: str = r"order(?:s)?|command(?:s)?|restriction(?:s)?|" + shared
 
 OVERRIDE_QUALIFIERS: str = shared.OVERRIDE_QUALIFIERS
 
-# The lookahead spares «system requirements», a legitimate subject, as the Spanish set
-# spares «instrucciones del sistema operativo».
+# The lookahead spares "system requirements", a legitimate subject, as the Spanish set
+# spares "instrucciones del sistema operativo".
 INJECTION_PATTERNS: tuple[str, ...] = shared.INJECTION_PATTERNS + (
     r"\bsystem instructions\b",
     r"\bsystem prompt\b(?! ?requirement)",

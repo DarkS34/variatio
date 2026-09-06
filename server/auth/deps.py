@@ -69,7 +69,7 @@ class Access:
 def db() -> Iterator[DbSession]:
     """Yield a session, turning an unreachable database into a 503 with a hint.
 
-    Only the connection-level failures become «la base de datos no responde». Catching
+    Only the connection-level failures become "la base de datos no responde". Catching
     every `SQLAlchemyError` here would give a duplicate-key violation raised by the route
     that same message, which is a lie that sends whoever reads it to check Docker.
     """
@@ -144,25 +144,6 @@ def requested_slug(request: Request | WebSocket) -> str | None:
     return (request.query_params.get("workspace") or "").strip() or None
 
 
-def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] | None:
-    """Turn a session cookie into its row and its account, sliding the expiry.
-
-    The same work over HTTP and over the WebSocket handshake, and it must stay that way:
-    the socket is the one place where forgetting it leaks another user's tokens rather
-    than merely their metadata.
-    """
-    if not token:
-        return None
-    found = identity.live_session(session, digest(token))
-    if found is None:
-        return None
-    row, user = found
-    identity.touch_session(
-        session, row, installation.SESSION_SLIDING, installation.SESSION_TOUCH_INTERVAL
-    )
-    return row, user
-
-
 def current_user(request: Request, session: DbSession = Depends(db)) -> User:
     """Return the account behind the session cookie, or raise 401."""
     found = resolve(session, session_token(request))
@@ -183,6 +164,25 @@ def optional_user(request: Request, session: DbSession = Depends(db)) -> User | 
     return user
 
 
+def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] | None:
+    """Turn a session cookie into its row and its account, sliding the expiry.
+
+    The same work over HTTP and over the WebSocket handshake, and it must stay that way:
+    the socket is the one place where forgetting it leaks another user's tokens rather
+    than merely their metadata.
+    """
+    if not token:
+        return None
+    found = identity.live_session(session, digest(token))
+    if found is None:
+        return None
+    row, user = found
+    identity.touch_session(
+        session, row, installation.SESSION_SLIDING, installation.SESSION_TOUCH_INTERVAL
+    )
+    return row, user
+
+
 def require_admin(user: User = Depends(current_user)) -> User:
     """Require that the account administers the installation, or raise 403."""
     if not user.is_admin:
@@ -195,8 +195,8 @@ def require_open(user: User = Depends(current_user)) -> User:
 
     The two routes that write without resolving a membership — creating a workspace and
     activating one — are the only ones the door in `access_for` cannot see, because there
-    is no instance yet to be a member of. They declare this instead, so «the installation
-    is closed» is true rather than nearly true.
+    is no instance yet to be a member of. They declare this instead, so "the installation
+    is closed" is true rather than nearly true.
     """
     if not user.is_admin and maintenance.active():
         raise HTTPException(503, maintenance.CLOSED)
@@ -204,37 +204,6 @@ def require_open(user: User = Depends(current_user)) -> User:
 
 
 # WORKSPACE -----------------------------------------------------------------------------
-
-
-def first_membership(
-    session: DbSession, user: User, excluding: int | None = None
-) -> Workspace | None:
-    """Return the first workspace this account belongs to, skipping `excluding`."""
-    for _, workspace in identity.memberships_for(session, user.id):
-        if workspace.id != excluding:
-            return workspace
-    return None
-
-
-def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
-    """Return which instance this account lands in when the request does not name one.
-
-    Its own last choice, then its first membership, and nothing else: «the default
-    workspace» does not exist, so an account that belongs nowhere lands nowhere and the
-    panel says so and offers to create one. An administrator with no membership is NOT
-    dropped into the first workspace of the installation — entering somebody else's
-    instance because it happened to be first is not landing anywhere on purpose, and the
-    switcher already lists every one of them to open by hand.
-    """
-    if user.active_workspace_id is not None:
-        workspace = session.get(Workspace, user.active_workspace_id)
-        # The preference only counts while the access behind it does: the administrator
-        # can revoke a membership, and landing on a revoked one is a 403 on every route
-        # with no way back, even for someone who is a member of two others.
-        if workspace is not None and workspace.deleted_at is None:
-            if user.is_admin or identity.membership(session, workspace.id, user.id):
-                return workspace
-    return first_membership(session, user)
 
 
 def rehome_accounts(session: DbSession, workspace: Workspace) -> dict[str, str | None]:
@@ -258,6 +227,21 @@ def rehome_accounts(session: DbSession, workspace: Workspace) -> dict[str, str |
     return moved
 
 
+def require_member(minimum: str = VIEWER):
+    """Build the dependency demanding at least `minimum` in the requested workspace."""
+
+    def dependency(
+        request: Request,
+        user: User = Depends(current_user),
+        session: DbSession = Depends(db),
+    ) -> Access:
+        """Resolve the workspace this request names and the access the account has to it."""
+        workspace = resolve_workspace(session, user, requested_slug(request))
+        return access_for(session, user, workspace, minimum)
+
+    return dependency
+
+
 def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Workspace:
     """Return the workspace this request means, without deciding anything about access.
 
@@ -274,6 +258,37 @@ def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Works
     if workspace is None:
         raise HTTPException(403, NO_WORKSPACE)
     return workspace
+
+
+def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
+    """Return which instance this account lands in when the request does not name one.
+
+    Its own last choice, then its first membership, and nothing else: "the default
+    workspace" does not exist, so an account that belongs nowhere lands nowhere and the
+    panel says so and offers to create one. An administrator with no membership is NOT
+    dropped into the first workspace of the installation — entering somebody else's
+    instance because it happened to be first is not landing anywhere on purpose, and the
+    switcher already lists every one of them to open by hand.
+    """
+    if user.active_workspace_id is not None:
+        workspace = session.get(Workspace, user.active_workspace_id)
+        # The preference only counts while the access behind it does: the administrator
+        # can revoke a membership, and landing on a revoked one is a 403 on every route
+        # with no way back, even for someone who is a member of two others.
+        if workspace is not None and workspace.deleted_at is None:
+            if user.is_admin or identity.membership(session, workspace.id, user.id):
+                return workspace
+    return first_membership(session, user)
+
+
+def first_membership(
+    session: DbSession, user: User, excluding: int | None = None
+) -> Workspace | None:
+    """Return the first workspace this account belongs to, skipping `excluding`."""
+    for _, workspace in identity.memberships_for(session, user.id):
+        if workspace.id != excluding:
+            return workspace
+    return None
 
 
 def access_for(session: DbSession, user: User, workspace: Workspace, minimum: str) -> Access:
@@ -314,21 +329,6 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
         ws=installation.workspace_for(workspace.slug),
         as_admin=as_admin,
     )
-
-
-def require_member(minimum: str = VIEWER):
-    """Build the dependency demanding at least `minimum` in the requested workspace."""
-
-    def dependency(
-        request: Request,
-        user: User = Depends(current_user),
-        session: DbSession = Depends(db),
-    ) -> Access:
-        """Resolve the workspace this request names and the access the account has to it."""
-        workspace = resolve_workspace(session, user, requested_slug(request))
-        return access_for(session, user, workspace, minimum)
-
-    return dependency
 
 
 # WEBSOCKET -----------------------------------------------------------------------------

@@ -28,95 +28,6 @@ RULE_MENTIONS = "mentions"
 RULE_PRACTISES = "practises"
 
 
-def closure_rule(curriculum: list[str] | None) -> str:
-    """Return which reading of the downstream closure a commission is held to.
-
-    A curriculum turns «viene después» into «no impartido», so any mention counts. Without
-    one the closure is the generator's own guess and only the practised concept counts —
-    practicar ≠ usar, applied to the other side of the scaffolding.
-    """
-    return RULE_MENTIONS if curriculum else RULE_PRACTISES
-
-
-def practised_later(primary: str | None, forbidden: list[str]) -> list[str]:
-    """Return the primary concept when it lies after the target, else nothing."""
-    return [primary] if primary and primary in forbidden else []
-
-
-def content_floor(item: BaseModel, item_type: ItemType, wording=None) -> str | None:
-    """Return why the item is too empty to be worth keeping, or None.
-
-    A required field explicitly typed as nullable does not count as missing. The sentence
-    is the workspace's, like every other reason: it is read on screen and, when it becomes
-    a retry, by the model writing the next attempt.
-    """
-    wording = wording or wording_sets.of(None)
-    data = item.model_dump(mode="json")
-    primary = data.get(item_type.primary_field)
-    if not isinstance(primary, str) or len(primary.strip()) < MIN_PRIMARY_CHARS:
-        return wording.check_empty_primary(item_type.primary_field)
-    schema = item_type.stripped_schema()
-    properties = schema.get("properties", {})
-    missing = [
-        name
-        for name in schema.get("required", [])
-        if data.get(name) in (None, "") and not _nullable(properties.get(name, {}))
-    ]
-    if missing:
-        return wording.check_missing_fields(missing)
-    return None
-
-
-def _nullable(spec: dict) -> bool:
-    """True when the field's schema admits null."""
-    return any(option.get("type") == "null" for option in spec.get("anyOf", []))
-
-
-def _texts(item: dict) -> list[str]:
-    """Every string-valued field of the item."""
-    return [value for value in item.values() if isinstance(value, str)]
-
-
-def forbidden_mentions(item: dict, forbidden: list[str], wording=None) -> list[str]:
-    """Return the not-yet-taught concepts the item actually mentions.
-
-    It takes the DUMPED item rather than the model so that the evaluation can hold its three
-    proposals to this very rule instead of keeping a second copy of it: two readings of
-    «lo no impartido» a boundary apart is one that drifts.
-    """
-    texts = _texts(item)
-    return [c for c in forbidden if any(mentions(text, c, wording) for text in texts)]
-
-
-def nearest(
-    embedder: Embedder, text: str, others: list[tuple[str, str]]
-) -> tuple[str, float] | None:
-    """Return the label of whichever of `others` is closest to `text`, with its score."""
-    if not others:
-        return None
-    vector = embedder.embed_document(text)
-    best_label, best_score = None, -1.0
-    for label, other in others:
-        score = float(np.dot(vector, embedder.embed_document(other)))
-        if score > best_score:
-            best_label, best_score = label, score
-    return best_label, round(best_score, 4)
-
-
-def tagger_roundtrip(tagger: ConceptTagger, text: str, targets: list[str]) -> dict:
-    """Tag the generated item afresh and report whether it lands on the targets."""
-    annotation = tagger.tag(text)
-    primary = annotation.get("primary_concept")
-    tagged = list(annotation.get("concepts") or [])
-    return {
-        "primary": primary,
-        "concepts": tagged,
-        "method": (annotation.get(TRACE_KEY) or {}).get("method"),
-        "on_target": primary in targets if primary else False,
-        "targets_found": [c for c in targets if c in tagged],
-    }
-
-
 def run(
     item: BaseModel,
     item_type: ItemType,
@@ -177,10 +88,10 @@ def run(
     if checks["similarity"] and checks["similarity"]["high"]:
         reasons.append(wording.check_too_similar(close[0], close[1]))
     flags = list(reasons)
-    # Whether a target is among the tags AT ALL, never whether it was made primary. Which
-    # of several targets an item practises is the generator's business — the prompt asks
-    # for one or two out of the set — so `on_target`, which this read until 2026-09-02,
-    # flagged a disagreement about ranking as if it were a miss.
+    # Whether a target is among the tags AT ALL, never whether it was made primary: which of
+    # several targets an item practises is the generator's business, the prompt asking for
+    # one or two out of the set. Reading `on_target` here flags a disagreement about ranking
+    # as if it were a miss.
     if tagger is not None and targets and not checks["tagger"]["targets_found"]:
         flags.append(wording.check_tagger_missed(targets, checks["tagger"]["primary"]))
     checks["flags"] = flags
@@ -189,6 +100,95 @@ def run(
     if flags:
         logger.warning(f"Variant flagged: {'; '.join(flags)}")
     return checks
+
+
+def closure_rule(curriculum: list[str] | None) -> str:
+    """Return which reading of the downstream closure a commission is held to.
+
+    A curriculum turns "viene después" into "no impartido", so any mention counts. Without
+    one the closure is the generator's own guess and only the practised concept counts —
+    practicar ≠ usar, applied to the other side of the scaffolding.
+    """
+    return RULE_MENTIONS if curriculum else RULE_PRACTISES
+
+
+def content_floor(item: BaseModel, item_type: ItemType, wording=None) -> str | None:
+    """Return why the item is too empty to be worth keeping, or None.
+
+    A required field explicitly typed as nullable does not count as missing. The sentence
+    is the workspace's, like every other reason: it is read on screen and, when it becomes
+    a retry, by the model writing the next attempt.
+    """
+    wording = wording or wording_sets.of(None)
+    data = item.model_dump(mode="json")
+    primary = data.get(item_type.primary_field)
+    if not isinstance(primary, str) or len(primary.strip()) < MIN_PRIMARY_CHARS:
+        return wording.check_empty_primary(item_type.primary_field)
+    schema = item_type.stripped_schema()
+    properties = schema.get("properties", {})
+    missing = [
+        name
+        for name in schema.get("required", [])
+        if data.get(name) in (None, "") and not _nullable(properties.get(name, {}))
+    ]
+    if missing:
+        return wording.check_missing_fields(missing)
+    return None
+
+
+def _nullable(spec: dict) -> bool:
+    """True when the field's schema admits null."""
+    return any(option.get("type") == "null" for option in spec.get("anyOf", []))
+
+
+def forbidden_mentions(item: dict, forbidden: list[str], wording=None) -> list[str]:
+    """Return the not-yet-taught concepts the item actually mentions.
+
+    It takes the DUMPED item rather than the model so that the evaluation can hold its three
+    proposals to this very rule instead of keeping a second copy of it: two readings of
+    "what has not been taught" a boundary apart is one that drifts.
+    """
+    texts = _texts(item)
+    return [c for c in forbidden if any(mentions(text, c, wording) for text in texts)]
+
+
+def _texts(item: dict) -> list[str]:
+    """Every string-valued field of the item."""
+    return [value for value in item.values() if isinstance(value, str)]
+
+
+def practised_later(primary: str | None, forbidden: list[str]) -> list[str]:
+    """Return the primary concept when it lies after the target, else nothing."""
+    return [primary] if primary and primary in forbidden else []
+
+
+def nearest(
+    embedder: Embedder, text: str, others: list[tuple[str, str]]
+) -> tuple[str, float] | None:
+    """Return the label of whichever of `others` is closest to `text`, with its score."""
+    if not others:
+        return None
+    vector = embedder.embed_document(text)
+    best_label, best_score = None, -1.0
+    for label, other in others:
+        score = float(np.dot(vector, embedder.embed_document(other)))
+        if score > best_score:
+            best_label, best_score = label, score
+    return best_label, round(best_score, 4)
+
+
+def tagger_roundtrip(tagger: ConceptTagger, text: str, targets: list[str]) -> dict:
+    """Tag the generated item afresh and report whether it lands on the targets."""
+    annotation = tagger.tag(text)
+    primary = annotation.get("primary_concept")
+    tagged = list(annotation.get("concepts") or [])
+    return {
+        "primary": primary,
+        "concepts": tagged,
+        "method": (annotation.get(TRACE_KEY) or {}).get("method"),
+        "on_target": primary in targets if primary else False,
+        "targets_found": [c for c in targets if c in tagged],
+    }
 
 
 def needs_retry(checks: dict | None) -> bool:

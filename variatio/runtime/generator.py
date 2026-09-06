@@ -28,45 +28,6 @@ from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemTy
 from ..instance.knowledge_graph import KnowledgeGraph
 
 
-def json_objects(text: str) -> list[str]:
-    """Return every balanced `{…}` span in `text`, in the order they were written.
-
-    A model told to answer with one JSON object still writes drafts, examples and code
-    around it, and `repair_json` over the whole reply picks the first blob it finds —
-    the draft. Slicing the candidates out first lets the caller pick the one that fits.
-    """
-    spans: list[str] = []
-    depth = 0
-    start = 0
-    in_string = False
-    escaped = False
-
-    for index, char in enumerate(text):
-        if in_string:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                in_string = False
-            continue
-        if char == '"':
-            in_string = True
-        elif char == "{":
-            if depth == 0:
-                start = index
-            depth += 1
-        elif char == "}" and depth:
-            depth -= 1
-            if depth == 0:
-                spans.append(text[start : index + 1])
-
-    # A reply cut off mid-object is still worth repairing: it is usually the answer.
-    if depth:
-        spans.append(text[start:])
-    return spans
-
-
 def _public_fields(item: dict) -> dict:
     """Drop the underscore-prefixed bookkeeping keys before an item goes to the UI."""
     return {name: value for name, value in item.items() if not name.startswith("_")}
@@ -134,36 +95,46 @@ def parse_item(
     return best, None
 
 
-NEIGHBOUR = "neighbour"
+def json_objects(text: str) -> list[str]:
+    """Return every balanced `{…}` span in `text`, in the order they were written.
 
-
-def _split_exemplar_fields(
-    ex: dict, properties: dict, primary: str
-) -> tuple[str, list[tuple[str, str]], list[str]]:
-    """Sort one exemplar's fields into primary text, text blocks and scalar metadata.
-
-    Branching on the Python type is deliberate: list-valued fields never reach the LLM
-    as raw JSON, and enum-ish strings are rendered as full text blocks.
+    A model told to answer with one JSON object still writes drafts, examples and code
+    around it, and `repair_json` over the whole reply picks the first blob it finds —
+    the draft. Slicing the candidates out first lets the caller pick the one that fits.
     """
-    scalar_meta: list[str] = []
-    text_blocks: list[tuple[str, str]] = []
-    primary_text = ""
-    for name in properties:
-        if name not in ex:
+    spans: list[str] = []
+    depth = 0
+    start = 0
+    in_string = False
+    escaped = False
+
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
             continue
-        value = ex.get(name)
-        if value is None:
-            continue
-        if name == primary:
-            if isinstance(value, str) and value.strip():
-                primary_text = value.strip()
-        elif isinstance(value, str) and value.strip():
-            text_blocks.append((name, value.strip()))
-        elif isinstance(value, (int, float, bool)):
-            scalar_meta.append(f"{name}={value}")
-        elif isinstance(value, list) and value:
-            text_blocks.append((name, "\n".join(f"- {entry}" for entry in value)))
-    return primary_text, text_blocks, scalar_meta
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                spans.append(text[start : index + 1])
+
+    # A reply cut off mid-object is still worth repairing: it is usually the answer.
+    if depth:
+        spans.append(text[start:])
+    return spans
+
+
+NEIGHBOUR = "neighbour"
 
 
 def build_few_shot_block(
@@ -196,6 +167,35 @@ def build_few_shot_block(
     return "\n".join(parts)
 
 
+def _split_exemplar_fields(
+    ex: dict, properties: dict, primary: str
+) -> tuple[str, list[tuple[str, str]], list[str]]:
+    """Sort one exemplar's fields into primary text, text blocks and scalar metadata.
+
+    Branching on the Python type is deliberate: list-valued fields never reach the LLM
+    as raw JSON, and enum-ish strings are rendered as full text blocks.
+    """
+    scalar_meta: list[str] = []
+    text_blocks: list[tuple[str, str]] = []
+    primary_text = ""
+    for name in properties:
+        if name not in ex:
+            continue
+        value = ex.get(name)
+        if value is None:
+            continue
+        if name == primary:
+            if isinstance(value, str) and value.strip():
+                primary_text = value.strip()
+        elif isinstance(value, str) and value.strip():
+            text_blocks.append((name, value.strip()))
+        elif isinstance(value, (int, float, bool)):
+            scalar_meta.append(f"{name}={value}")
+        elif isinstance(value, list) and value:
+            text_blocks.append((name, "\n".join(f"- {entry}" for entry in value)))
+    return primary_text, text_blocks, scalar_meta
+
+
 # The asymmetry below is deliberate; symmetry here would be a bug. Assumed known is an
 # INTERSECTION ("a prerequisite AND covered"), forbidden a SUBTRACTION ("downstream AND
 # not covered"): subtracting on the permissive side would mark as known exactly the
@@ -212,8 +212,8 @@ def forbidden(closure: list[str], curriculum: list[str] | None) -> list[str]:
     """Subtract the curriculum from a dependent closure; no curriculum keeps it whole.
 
     What the whole closure MEANS differs by that condition, and the prompt and the checks
-    both read it: with a curriculum it is «no impartido», without one it is «viene
-    después» — usable as scaffolding, never the thing practised (`checks.closure_rule`).
+    both read it: with a curriculum it is "no impartido", without one it is "viene
+    después" — usable as scaffolding, never the thing practised (`checks.closure_rule`).
     """
     if not curriculum:
         return list(closure)
@@ -247,46 +247,6 @@ class GeneratedVariant(BaseModel):
     retried: int = 0
 
 
-def generate_with_retries(
-    attempt: Callable[[str | None], GeneratedVariant | None],
-    verify: Callable[[GeneratedVariant], dict] | None,
-    max_retries: int,
-    index: int = 1,
-) -> GeneratedVariant | None:
-    """Attempt one variant, retrying with a correction while the checks ask for it.
-
-    The last attempt is returned whether or not it satisfied the checks: a flagged item
-    is still worth showing, and its `checks` say why it was flagged.
-    """
-    result = attempt(None)
-    if result is None or verify is None:
-        return result
-    result.checks = verify(result)
-    while result.retried < max_retries and checks.needs_retry(result.checks):
-        reasons = list(result.checks.get("reasons") or [])
-        # `max` travels with the event because the person waiting is told a retry is
-        # happening and why, on the run strip itself: «reintento 1 de 2» says how much
-        # patience is left, where a bare ordinal says only that something went wrong.
-        progress.emit(
-            "item.retried",
-            index=index,
-            attempt=result.retried + 1,
-            max=max_retries,
-            reasons=reasons,
-        )
-        logger.info(
-            f"[generate] Retry {result.retried + 1}/{max_retries} of variant {index}: "
-            f"{'; '.join(reasons)}"
-        )
-        again = attempt(checks.correction_text(result.checks))
-        if again is None:
-            break
-        again.retried = result.retried + 1
-        again.checks = verify(again)
-        result = again
-    return result
-
-
 class VariantGenerator:
     """Produce new items for a set of target concepts, grounded in one workspace."""
 
@@ -310,7 +270,7 @@ class VariantGenerator:
         self.exemplars_profile = exemplars_profile
         self.prompts = prompts
         self._wording = wording_sets.beside(prompts)
-        # The graph's own label for «is a prerequisite of», in the instance's language: a
+        # The graph's own label for "is a prerequisite of", in the instance's language: a
         # field and not a `config` read, which would be the installation's for every
         # workspace.
         self.prerequisite_relation = prerequisite_relation
@@ -451,45 +411,9 @@ class VariantGenerator:
         return accepted
 
     @staticmethod
-    def _emit_few_shot(
-        few_shot: list[tuple[str, dict]],
-        origins: dict[str, str],
-        concepts: list[str],
-        item_type: ItemType,
-    ) -> None:
-        """Publish the chosen exemplars to the run feed, without their private keys."""
-        progress.emit(
-            "few_shot",
-            ids=[ex_id for ex_id, _ in few_shot],
-            items=[
-                {"id": ex_id, "item": _public_fields(item), "origin": origins[ex_id]}
-                for ex_id, item in few_shot
-            ],
-            concepts=concepts,
-            item_type=item_type.key,
-        )
-
-    @staticmethod
     def _clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
         """Drop the pins with no value."""
         return clean_fixed(fixed)
-
-    def _screen_instructions(self, item_type, concepts: list[str], instructions: str):
-        """Screen the free text before it is concatenated into the generation prompt.
-
-        One line, because the order, the two error sentences and the owner derivation are
-        `screening.screen_instructions`'s — the evaluation runs the same sequence and the
-        two used to be a copy of each other.
-        """
-        return screening.screen_instructions(
-            instructions,
-            knowledge_graph=self.knowledge_graph,
-            item_type=item_type,
-            profile=self.exemplars_profile,
-            content_context=self.content_context,
-            concepts=concepts,
-            prompts=self.prompts,
-        )
 
     def _validate_input(
         self,
@@ -531,39 +455,22 @@ class VariantGenerator:
                     f"Target concepts not contained in curriculum: {outside}"
                 )
 
-    def _is_type(self, item: dict, key: str) -> bool:
-        """True when the exemplar belongs to this modality.
+    def _screen_instructions(self, item_type, concepts: list[str], instructions: str):
+        """Screen the free text before it is concatenated into the generation prompt.
 
-        An exemplar that declares none counts only where the profile has a single
-        modality, there being nothing else it could be.
+        One line, because the order, the two error sentences and the owner derivation are
+        `screening.screen_instructions`'s — the evaluation runs the same sequence and the
+        two used to be a copy of each other.
         """
-        declared = item.get(ITEM_TYPE_KEY)
-        if declared is None:
-            return len(self.exemplars_profile.item_types) == 1
-        return declared == key
-
-    def _split_by_target(
-        self, item_type: ItemType, target: set[str]
-    ) -> tuple[list[tuple[str, dict]], list[tuple[str, dict]]]:
-        """Split this modality's matching exemplars into primaries and the rest.
-
-        An exemplar whose `primary_concept` is a target PRACTISES it; one that merely
-        carries the tag usually only uses it, and a few-shot example has to demonstrate
-        the first. Measured over the reference bank, the primary pool is 100 % on-target
-        against 78 % for the tag pool.
-        """
-        primary: list[tuple[str, dict]] = []
-        secondary: list[tuple[str, dict]] = []
-        for ex_id, item in self.exemplars_bank.items():
-            if not self._is_type(item, item_type.key):
-                continue
-            if not target.intersection(item.get("concepts") or []):
-                continue
-            if item.get("primary_concept") in target:
-                primary.append((ex_id, item))
-            else:
-                secondary.append((ex_id, item))
-        return primary, secondary
+        return screening.screen_instructions(
+            instructions,
+            knowledge_graph=self.knowledge_graph,
+            item_type=item_type,
+            profile=self.exemplars_profile,
+            content_context=self.content_context,
+            concepts=concepts,
+            prompts=self.prompts,
+        )
 
     def _select_few_shot(
         self, item_type: ItemType, concepts: list[str], fixed: dict[str, object]
@@ -593,6 +500,29 @@ class VariantGenerator:
         chosen = self._pick_few_shot(concepts, primary, secondary, neighbours, fixed)
         return chosen, {ex_id: origins[ex_id] for ex_id, _ in chosen}
 
+    def _split_by_target(
+        self, item_type: ItemType, target: set[str]
+    ) -> tuple[list[tuple[str, dict]], list[tuple[str, dict]]]:
+        """Split this modality's matching exemplars into primaries and the rest.
+
+        An exemplar whose `primary_concept` is a target PRACTISES it; one that merely
+        carries the tag usually only uses it, and a few-shot example has to demonstrate
+        the first. Measured over the reference bank, the primary pool is 100 % on-target
+        against 78 % for the tag pool.
+        """
+        primary: list[tuple[str, dict]] = []
+        secondary: list[tuple[str, dict]] = []
+        for ex_id, item in self.exemplars_bank.items():
+            if not self._is_type(item, item_type.key):
+                continue
+            if not target.intersection(item.get("concepts") or []):
+                continue
+            if item.get("primary_concept") in target:
+                primary.append((ex_id, item))
+            else:
+                secondary.append((ex_id, item))
+        return primary, secondary
+
     def _neighbour_exemplars(
         self, item_type: ItemType, concepts: list[str], taken: set[str]
     ) -> list[tuple[str, dict]]:
@@ -621,6 +551,17 @@ class VariantGenerator:
             and item.get("primary_concept") in prior
         ]
 
+    def _is_type(self, item: dict, key: str) -> bool:
+        """True when the exemplar belongs to this modality.
+
+        An exemplar that declares none counts only where the profile has a single
+        modality, there being nothing else it could be.
+        """
+        declared = item.get(ITEM_TYPE_KEY)
+        if declared is None:
+            return len(self.exemplars_profile.item_types) == 1
+        return declared == key
+
     def _pick_few_shot(
         self,
         concepts: list[str],
@@ -633,7 +574,7 @@ class VariantGenerator:
 
         The `fixed` filter applies only when at least `max_few_shot` examples survive it:
         below that, more examples beat exact matches. Similarity is the best proxy for
-        «closest to what is being asked» among exemplars already off the objective.
+        "closest to what is being asked" among exemplars already off the objective.
         """
         if fixed:
 
@@ -663,6 +604,25 @@ class VariantGenerator:
             chosen += [(ex_id, by_id[ex_id]) for ex_id in ranked[:fill]]
         return chosen
 
+    @staticmethod
+    def _emit_few_shot(
+        few_shot: list[tuple[str, dict]],
+        origins: dict[str, str],
+        concepts: list[str],
+        item_type: ItemType,
+    ) -> None:
+        """Publish the chosen exemplars to the run feed, without their private keys."""
+        progress.emit(
+            "few_shot",
+            ids=[ex_id for ex_id, _ in few_shot],
+            items=[
+                {"id": ex_id, "item": _public_fields(item), "origin": origins[ex_id]}
+                for ex_id, item in few_shot
+            ],
+            concepts=concepts,
+            item_type=item_type.key,
+        )
+
     def _format_target_concepts(self, concepts: list[str]) -> str:
         """Render the target concepts with their descriptions."""
         descriptions = self.embedder.concept_descriptions
@@ -671,26 +631,6 @@ class VariantGenerator:
             desc = (descriptions.get(c) or "").strip()
             lines.append(f"- **{c}**: {desc}" if desc else f"- **{c}**")
         return "\n".join(lines)
-
-    def _closure(self, concepts: list[str], forward: bool) -> list[str]:
-        """Walk the prerequisite relation, forward to the priors or back to the sequels."""
-        relation = self.prerequisite_relation
-        if forward:
-            return self.knowledge_graph.prerequisite_closure(concepts, relation)
-        return self.knowledge_graph.dependent_closure(concepts, relation)
-
-    def _prerequisites(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
-        """The prior knowledge the item may lean on: the closure INTERSECTED with the course."""
-        return assumed_known(self._closure(concepts, forward=True), curriculum)
-
-    def _posteriors(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
-        """What is forbidden: the downstream closure MINUS what the course has covered."""
-        return forbidden(self._closure(concepts, forward=False), curriculum)
-
-    @staticmethod
-    def _format_concept_list(concepts: list[str]) -> str:
-        """Render a bare bulleted list of concept names."""
-        return "\n".join(f"- {c}" for c in concepts)
 
     def _format_prerequisites(self, concepts: list[str]) -> str:
         """Render each prerequisite with its description, or with its relations instead.
@@ -717,34 +657,31 @@ class VariantGenerator:
             return ""
         return self._wording.relations_sentence(parts)
 
-    def _build_item_type_block(self, item_type: ItemType) -> str:
-        """Name the modality to produce, and the sibling modalities to stay away from."""
-        lines = [f"- **{item_type.label}** (`{item_type.key}`)"]
-        if item_type.description:
-            lines.append(item_type.description)
-        others = [t for k, t in self.exemplars_profile.item_types.items() if k != item_type.key]
-        if others:
-            lines.append(
-                self._wording.other_modalities([f"{t.label} (`{t.key}`)" for t in others])
-            )
-        return "\n".join(lines)
+    def _prerequisites(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
+        """The prior knowledge the item may lean on: the closure INTERSECTED with the course."""
+        return assumed_known(self._closure(concepts, forward=True), curriculum)
+
+    def _posteriors(self, concepts: list[str], curriculum: list[str] | None) -> list[str]:
+        """What is forbidden: the downstream closure MINUS what the course has covered."""
+        return forbidden(self._closure(concepts, forward=False), curriculum)
+
+    def _closure(self, concepts: list[str], forward: bool) -> list[str]:
+        """Walk the prerequisite relation, forward to the priors or back to the sequels."""
+        relation = self.prerequisite_relation
+        if forward:
+            return self.knowledge_graph.prerequisite_closure(concepts, relation)
+        return self.knowledge_graph.dependent_closure(concepts, relation)
+
+    @staticmethod
+    def _format_concept_list(concepts: list[str]) -> str:
+        """Render a bare bulleted list of concept names."""
+        return "\n".join(f"- {c}" for c in concepts)
 
     def _build_few_shot_block(
         self, item_type: ItemType, few_shot: list[dict], origins: list[str] | None = None
     ) -> str:
         """Render the few-shot block through the module-level renderer the arms share."""
         return build_few_shot_block(item_type, few_shot, origins, self._wording)
-
-    def _collect_already_generated(
-        self, item_type: ItemType, accepted: list[GeneratedVariant]
-    ) -> list[str]:
-        """The primary field of every item accepted so far, for the prompt to avoid."""
-        out = []
-        for r in accepted:
-            value = getattr(r.item, item_type.primary_field, None)
-            if isinstance(value, str) and value.strip():
-                out.append(value)
-        return out
 
     def _build_instance_template(self, item_type: ItemType, fixed: dict[str, object]) -> str:
         """Render the JSON skeleton the model fills in, with the pinned values in place."""
@@ -760,6 +697,29 @@ class VariantGenerator:
                 lines.append(f'  "{name}": <valor concreto para {name}>{comma}')
         lines.append("}")
         return "\n".join(lines)
+
+    def _build_item_type_block(self, item_type: ItemType) -> str:
+        """Name the modality to produce, and the sibling modalities to stay away from."""
+        lines = [f"- **{item_type.label}** (`{item_type.key}`)"]
+        if item_type.description:
+            lines.append(item_type.description)
+        others = [t for k, t in self.exemplars_profile.item_types.items() if k != item_type.key]
+        if others:
+            lines.append(
+                self._wording.other_modalities([f"{t.label} (`{t.key}`)" for t in others])
+            )
+        return "\n".join(lines)
+
+    def _collect_already_generated(
+        self, item_type: ItemType, accepted: list[GeneratedVariant]
+    ) -> list[str]:
+        """The primary field of every item accepted so far, for the prompt to avoid."""
+        out = []
+        for r in accepted:
+            value = getattr(r.item, item_type.primary_field, None)
+            if isinstance(value, str) and value.strip():
+                out.append(value)
+        return out
 
     _FIELD_META_KEYS = frozenset(
         {"description", "title", "type", "enum", "guidance", "default", "anyOf", "items", "$ref"}
@@ -873,3 +833,43 @@ class VariantGenerator:
         if item is None:
             return None
         return GeneratedVariant(item=item, item_type=item_type.key, thinking=thinking)
+
+
+def generate_with_retries(
+    attempt: Callable[[str | None], GeneratedVariant | None],
+    verify: Callable[[GeneratedVariant], dict] | None,
+    max_retries: int,
+    index: int = 1,
+) -> GeneratedVariant | None:
+    """Attempt one variant, retrying with a correction while the checks ask for it.
+
+    The last attempt is returned whether or not it satisfied the checks: a flagged item
+    is still worth showing, and its `checks` say why it was flagged.
+    """
+    result = attempt(None)
+    if result is None or verify is None:
+        return result
+    result.checks = verify(result)
+    while result.retried < max_retries and checks.needs_retry(result.checks):
+        reasons = list(result.checks.get("reasons") or [])
+        # `max` travels with the event because the person waiting is told a retry is
+        # happening and why, on the run strip itself: "reintento 1 de 2" says how much
+        # patience is left, where a bare ordinal says only that something went wrong.
+        progress.emit(
+            "item.retried",
+            index=index,
+            attempt=result.retried + 1,
+            max=max_retries,
+            reasons=reasons,
+        )
+        logger.info(
+            f"[generate] Retry {result.retried + 1}/{max_retries} of variant {index}: "
+            f"{'; '.join(reasons)}"
+        )
+        again = attempt(checks.correction_text(result.checks))
+        if again is None:
+            break
+        again.retried = result.retried + 1
+        again.checks = verify(again)
+        result = again
+    return result

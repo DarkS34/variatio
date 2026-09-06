@@ -79,14 +79,6 @@ limiter = RateLimiter()
 FALLBACK_LIMITS: dict[str, tuple[int, float]] = {"accept": (10, 3600.0)}
 
 
-def limits(bucket: str) -> tuple[int, float]:
-    """Return the (limit, window) this bucket is configured with."""
-    from .. import installation
-
-    declared = installation.RATE_LIMITS.get(bucket)
-    return declared if declared is not None else FALLBACK_LIMITS[bucket]
-
-
 def throttle(bucket: str, request: Request, account: str) -> None:
     """Record an attempt against both the caller's address and the account.
 
@@ -112,11 +104,19 @@ def throttle(bucket: str, request: Request, account: str) -> None:
 def locked_seconds(bucket: str, account: str) -> float:
     """How long the account half of the lock-out still has to run, without touching it.
 
-    What the panel shows beside a name, and what «Desbloquear» clears. The IP half is not
+    What the panel shows beside a name, and what "Desbloquear" clears. The IP half is not
     addressed by account and is not what a locked-out person is asking about.
     """
     limit, window = limits(bucket)
     return limiter.wait_for(bucket, account, limit, window)
+
+
+def limits(bucket: str) -> tuple[int, float]:
+    """Return the (limit, window) this bucket is configured with."""
+    from .. import installation
+
+    declared = installation.RATE_LIMITS.get(bucket)
+    return declared if declared is not None else FALLBACK_LIMITS[bucket]
 
 
 def unlock(bucket: str, account: str) -> None:

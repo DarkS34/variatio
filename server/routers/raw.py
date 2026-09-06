@@ -11,7 +11,7 @@ ROUTE ORDER IS LOAD-BEARING HERE. FastAPI matches in declaration order, so every
 `/{kind}/transcription…` path is declared ABOVE `POST /{kind}` and `DELETE /{kind}/{name}`.
 Declared the other way round the wildcard swallows them and answers a plausible 404 from a
 route nobody meant to call — `DELETE /{kind}/transcription/{name}/{index}` would be read as
-deleting a document called «transcription». Do not reorder anything in this file.
+deleting a document called "transcription". Do not reorder anything in this file.
 """
 
 from fastapi import APIRouter, File, HTTPException, UploadFile

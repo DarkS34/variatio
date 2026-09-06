@@ -55,20 +55,6 @@ def provision(ws: Workspace) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def _contained_root(ws: Workspace) -> Path:
-    """Return the workspace root, refusing anything that is not a direct child of the tree.
-
-    Not decorative: the slug arrives in a request and `shutil.rmtree` on a mis-resolved
-    path cannot be undone. `Workspace.__post_init__` already resolves it, so comparing is
-    enough.
-    """
-    root = ws.root
-    parent = Path(paths.WORKSPACES_DIR).resolve()
-    if root.parent != parent or root == parent:
-        raise ValueError(f"'{root}' no está dentro de '{parent}': no se borra nada.")
-    return root
-
-
 def destroy(ws: Workspace) -> bool:
     """Delete a workspace's whole tree, and report whether there was one."""
     root = _contained_root(ws)
@@ -76,15 +62,6 @@ def destroy(ws: Workspace) -> bool:
         return False
     shutil.rmtree(root)
     return True
-
-
-def _tree_size(path: Path) -> int:
-    """Total the bytes of a file or of everything under a directory."""
-    if not path.exists():
-        return 0
-    if path.is_file():
-        return path.stat().st_size
-    return sum(entry.stat().st_size for entry in path.rglob("*") if entry.is_file())
 
 
 def disk_usage(ws: Workspace) -> dict[str, int]:
@@ -104,6 +81,15 @@ def disk_usage(ws: Workspace) -> dict[str, int]:
     }
     usage["total"] = sum(usage.values())
     return usage
+
+
+def _tree_size(path: Path) -> int:
+    """Total the bytes of a file or of everything under a directory."""
+    if not path.exists():
+        return 0
+    if path.is_file():
+        return path.stat().st_size
+    return sum(entry.stat().st_size for entry in path.rglob("*") if entry.is_file())
 
 
 def clear_cache(ws: Workspace) -> dict:
@@ -129,6 +115,20 @@ def clear_cache(ws: Workspace) -> dict:
     return {"files_removed": removed, "bytes_freed": freed}
 
 
+def _contained_root(ws: Workspace) -> Path:
+    """Return the workspace root, refusing anything that is not a direct child of the tree.
+
+    Not decorative: the slug arrives in a request and `shutil.rmtree` on a mis-resolved
+    path cannot be undone. `Workspace.__post_init__` already resolves it, so comparing is
+    enough.
+    """
+    root = ws.root
+    parent = Path(paths.WORKSPACES_DIR).resolve()
+    if root.parent != parent or root == parent:
+        raise ValueError(f"'{root}' no está dentro de '{parent}': no se borra nada.")
+    return root
+
+
 def _flag(name: str, default: bool = False) -> bool:
     """Read a boolean environment variable."""
     raw = os.environ.get(name)
@@ -140,7 +140,7 @@ def _flag(name: str, default: bool = False) -> bool:
 def is_production() -> bool:
     """The one switch everything that gets stricter in production reads.
 
-    Anything other than «development» is production: an unset or misspelled value must not
+    Anything other than "development" is production: an unset or misspelled value must not
     be the permissive one.
     """
     return os.environ.get("VARIATIO_ENV", "development").strip().lower() not in ("development", "dev")
@@ -176,15 +176,6 @@ INVITE_TTL = timedelta(days=7)
 RESET_TTL = timedelta(minutes=45)
 
 
-def cookie_secure() -> bool:
-    """Whether the session cookie carries `Secure`.
-
-    Off in local development, where the app is served over plain http and a browser would
-    drop the cookie; on in production, where Caddy terminates TLS.
-    """
-    return _flag("VARIATIO_COOKIE_SECURE", default=is_production())
-
-
 def session_cookie() -> str:
     """The session cookie's name, `__Host-` prefixed wherever the cookie is `Secure`.
 
@@ -196,10 +187,19 @@ def session_cookie() -> str:
     return f"__Host-{SESSION_COOKIE}" if cookie_secure() else SESSION_COOKIE
 
 
+def cookie_secure() -> bool:
+    """Whether the session cookie carries `Secure`.
+
+    Off in local development, where the app is served over plain http and a browser would
+    drop the cookie; on in production, where Caddy terminates TLS.
+    """
+    return _flag("VARIATIO_COOKIE_SECURE", default=is_production())
+
+
 def public_base_url() -> str | None:
     """Where the links in an invitation or a reset mail point.
 
-    None means «derive it from the request that asked», which is right for a single-domain
+    None means "derive it from the request that asked", which is right for a single-domain
     deployment and for localhost.
     """
     raw = os.environ.get("PUBLIC_BASE_URL", "").strip()
@@ -218,7 +218,7 @@ def trust_proxy() -> bool:
 # Attempts allowed per window, as (limit, seconds). Two keys are checked against each of
 # these, the client IP and the account, so neither a spray nor a fixation gets through.
 # `accept` is the one whose second key is not an account: there is no account yet, and the
-# username is precisely what somebody holding a link varies to read «ya está cogido» off
+# username is precisely what somebody holding a link varies to read "already taken" off
 # it, so the key there is the invitation itself.
 RATE_LIMITS: dict[str, tuple[int, float]] = {
     "login": (8, 300.0),

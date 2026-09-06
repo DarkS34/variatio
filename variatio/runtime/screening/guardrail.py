@@ -67,7 +67,7 @@ def check(text: str, criteria: list[str] | None = None, wording=None) -> Verdict
     then evaluated in order and the first to flag stops the loop.
 
     `criteria` is resolved here and not in the signature: a default binds at import, so the
-    setting could never follow what the panel saves. `None` is «whatever is configured now»
+    setting could never follow what the panel saves. `None` is "whatever is configured now"
     and an empty list is an instruction, so the two are told apart with `is None`.
     """
     if criteria is None:

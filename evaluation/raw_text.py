@@ -31,13 +31,6 @@ TEXT_VERSION = 1
 META_NAME = "_meta.json"
 
 
-def text_dir(ws, slot: str) -> Path:
-    """Where one slot's plain readings live, beside the pipeline's caches and apart from them."""
-    if slot not in SLOTS:
-        raise ValueError(f"Unknown slot '{slot}'; expected one of {list(SLOTS)}")
-    return ws.cache_dir / "rag_text" / slot
-
-
 def prepare_workspace(ws) -> dict[str, dict]:
     """Reconcile both slots; one result per slot."""
     return {slot: prepare_slot(ws, slot) for slot in SLOTS}
@@ -95,6 +88,19 @@ def prepare_slot(ws, slot: str) -> dict:
     return {"read": read, "dropped": len(dropped), "failed": failed, "documents": len(meta)}
 
 
+def chunks(ws, slot: str, max_chars: int) -> dict[str, str]:
+    """Cut every reading of a slot into pieces, keyed `"document"#n` with n from 1.
+
+    The key is what the session records as `exemplar_ids` and what the prompt prints above
+    each piece, so a reader of a recorded session can open the document and find it.
+    """
+    out: dict[str, str] = {}
+    for name, text in texts(ws, slot).items():
+        for index, piece in enumerate(chunk_text(text, max_chars), start=1):
+            out[f"{name}#{index}"] = piece
+    return out
+
+
 def texts(ws, slot: str) -> dict[str, str]:
     """Return every prepared reading of a slot, keyed by document name, in a stable order."""
     root = text_dir(ws, slot)
@@ -106,17 +112,11 @@ def texts(ws, slot: str) -> dict[str, str]:
     return out
 
 
-def chunks(ws, slot: str, max_chars: int) -> dict[str, str]:
-    """Cut every reading of a slot into pieces, keyed `«document»#n` with n from 1.
-
-    The key is what the session records as `exemplar_ids` and what the prompt prints above
-    each piece, so a reader of a recorded session can open the document and find it.
-    """
-    out: dict[str, str] = {}
-    for name, text in texts(ws, slot).items():
-        for index, piece in enumerate(chunk_text(text, max_chars), start=1):
-            out[f"{name}#{index}"] = piece
-    return out
+def text_dir(ws, slot: str) -> Path:
+    """Where one slot's plain readings live, beside the pipeline's caches and apart from them."""
+    if slot not in SLOTS:
+        raise ValueError(f"Unknown slot '{slot}'; expected one of {list(SLOTS)}")
+    return ws.cache_dir / "rag_text" / slot
 
 
 # READERS -----------------------------------------------------------------------------------

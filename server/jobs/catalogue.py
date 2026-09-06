@@ -41,7 +41,7 @@ JOB_LABELS: dict[str, str] = {
 # Python cannot kill a thread. Everything else yields often enough to cancel cooperatively.
 SUBPROCESS_KINDS: frozenset[str] = frozenset({"build_profile", "build_kg", "build_bank"})
 
-# Artifact each job kind produces, which is what puts a stage into the «building» state.
+# Artifact each job kind produces, which is what puts a stage into the "building" state.
 # `review_taggability` is absent on purpose: it patches the graph's non-taggable list in
 # place, and marking the graph as building would hide the screen — the button that launched
 # the review included.

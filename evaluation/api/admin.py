@@ -23,7 +23,7 @@ from . import stage_queries
 from . import stage_store
 from . import store as evaluation_store
 
-# The two evaluator profiles a reading can be narrowed to. `None` in the filter is «todos»;
+# The two evaluator profiles a reading can be narrowed to. `None` in the filter is "todos";
 # a value outside this pair is refused rather than silently matching nobody.
 PROFILE_FILTERS = ("teacher", "student")
 
@@ -148,8 +148,8 @@ def evaluations(
             "profile": profile,
             **_filter_lists(db),
         },
-        # Newest first, and every one openable: the point of the panel is going from «este
-        # evaluador nunca elige el sistema» to the sessions that say so.
+        # Newest first, and every one openable: the point of the panel is going from "este
+        # evaluador nunca elige el sistema" to the sessions that say so.
         "sessions": [_row(h) for h in sorted(
             headers, key=lambda h: h.get("created_at") or 0, reverse=True
         )],
@@ -249,7 +249,7 @@ def delete_evaluator_records(
 #
 # EVERY ROUTE WITH A FIXED PATH GOES ABOVE `/evaluations/{session_id}`. FastAPI matches in
 # declaration order, so a wildcard declared first swallows `/evaluations/accounts` as a
-# session called «accounts» and answers a plausible 404 from a route nobody meant to call.
+# session called "accounts" and answers a plausible 404 from a route nobody meant to call.
 # `tests/evaluation/test_route_order.py` is what keeps the next addition from landing below it.
 
 
@@ -278,7 +278,7 @@ def _commission_gate(slug: str) -> dict:
 def assignable_accounts(db: DbSession = Depends(auth.db)) -> dict:
     """List every active account with the workspaces it can actually open.
 
-    The flow starts with a PERSON and not with a set, so «¿a quién?» comes before «¿cuál?»,
+    The flow starts with a PERSON and not with a set, so "¿a quién?" comes before "¿cuál?",
     and handing somebody a set of an instance they cannot reach would produce a queue entry
     that 404s when they click it.
     """
@@ -411,7 +411,7 @@ def sets(workspace: str, db: DbSession = Depends(auth.db)) -> dict:
                 "think": bool(representative.think),
                 # One entry per person holding these items. Stock has no evaluator and
                 # therefore no entry: listing it would draw the row nobody holds as
-                # «cuenta borrada», which is the opposite of «sin repartir».
+                # "cuenta borrada", which is the opposite of "sin repartir".
                 "holders": [
                     {
                         "session_id": copy.id,
@@ -515,16 +515,6 @@ def delete_sessions(
     return {"deleted": deleted, "missing": [i for i in ids if i not in deleted]}
 
 
-def _workspace_id(db: DbSession, workspace: str | None) -> int | None:
-    """Resolve the workspace filter to a row id, or None for «todas»."""
-    if not workspace:
-        return None
-    row = repository.get_workspace(db, workspace)
-    if row is None:
-        raise HTTPException(404, f"No existe la asignatura '{workspace}'.")
-    return row.id
-
-
 def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:
     """Read the population the panel aggregates over, optionally narrowed to a workspace."""
     return evaluation_store.headers(db, _workspace_id(db, workspace))
@@ -533,6 +523,16 @@ def _headers(db: DbSession, workspace: str | None = None) -> list[dict]:
 def _stage_headers(db: DbSession, workspace: str | None = None) -> list[dict]:
     """Read every construction form, optionally narrowed to a workspace."""
     return stage_store.headers(db, _workspace_id(db, workspace))
+
+
+def _workspace_id(db: DbSession, workspace: str | None) -> int | None:
+    """Resolve the workspace filter to a row id, or None for "todas"."""
+    if not workspace:
+        return None
+    row = repository.get_workspace(db, workspace)
+    if row is None:
+        raise HTTPException(404, f"No existe la asignatura '{workspace}'.")
+    return row.id
 
 
 def _stage_row(header: dict) -> dict:

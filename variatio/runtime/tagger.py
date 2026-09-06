@@ -21,23 +21,6 @@ from ..instance.content_context import ContentContext
 TRACE_KEY = "_tagging"
 
 
-def tagging_schema(candidate_names: list[str]) -> dict:
-    """The grammar for one tagging call, with the candidates as an `enum`.
-
-    The prompt already demands that only candidates be used; this states the same rule
-    where the decoder can enforce it. `_parse_and_validate` still filters, because the
-    escalated pass runs unconstrained and an invented name can arrive from there.
-    """
-    return {
-        "type": "object",
-        "properties": {
-            "concepts": {"type": "array", "items": {"enum": list(candidate_names)}},
-            "primary_concept": {"enum": [*candidate_names, None]},
-        },
-        "required": ["concepts", "primary_concept"],
-    }
-
-
 class ConceptTagger:
     """Assign graph concepts to an item and name the one it PRACTISES as primary."""
 
@@ -69,20 +52,55 @@ class ConceptTagger:
             config.TAGGER_FALLBACK_TOP_K if fallback_top_k is None else fallback_top_k
         )
 
-    def _trace(self, candidates: list[tuple[str, float]], method: str) -> dict:
-        """Record how the annotation was reached: candidates, scores, model and method.
+    def tag_all(
+        self,
+        exemplars_bank: dict,
+        ids: list[str] | None = None,
+        on_item: "Callable[[str, dict], None] | None" = None,
+    ) -> dict:
+        """Tag the pending items of the bank, or the given ids, and return the whole bank."""
+        pending = (
+            [i for i in ids if i in exemplars_bank]
+            if ids is not None
+            else self.pending_ids(exemplars_bank)
+        )
+        annotated = dict(exemplars_bank)
+        total = len(pending)
 
-        Every annotation carries one; without it a reviewer sees a tag and no way to
-        judge it.
+        self.embedder.prefetch_queries(
+            [self.embed_text(exemplars_bank[c_id]) for c_id in pending]
+        )
+
+        with progress.step("tagging", "Tagging the bank with the graph's concepts", total) as reporter:
+            for idx, c_id in enumerate(pending, 1):
+                progress.checkpoint()
+                content = exemplars_bank[c_id]
+                statement = self.embed_text(content)
+                reporter.start(idx, detail=c_id)
+                annotation = self.tag(statement)
+                annotated[c_id] = {**content, **annotation}
+                progress.emit(
+                    "item.tagged",
+                    id=c_id,
+                    text=self.primary_text(content)[:200],
+                    concepts=annotation["concepts"],
+                    primary_concept=annotation["primary_concept"],
+                    method=annotation[TRACE_KEY]["method"],
+                )
+                if on_item is not None:
+                    on_item(c_id, annotated[c_id])
+
+        return annotated
+
+    @staticmethod
+    def pending_ids(exemplars_bank: dict) -> list[str]:
+        """The bank ids still without concepts.
+
+        An empty `concepts` list counts as untagged, so an item the LLM rejected is
+        retried on every later run: the index improves across runs, which makes a
+        rejection provisional.
         """
-        return {
-            TRACE_KEY: {
-                "candidates": [[c, round(float(s), 4)] for c, s in candidates],
-                "method": method,
-                "model": self.concept_tagger_model,
-                "threshold": self.embedder.similarity_threshold,
-            }
-        }
+        return [c_id for c_id, content in exemplars_bank.items() if not content.get("concepts")]
 
     def tag(self, statement: str) -> dict:
         """Annotate one statement with its concepts and its primary concept.
@@ -137,6 +155,21 @@ class ConceptTagger:
 
         return {**result, **self._trace(candidates, method)}
 
+    def _trace(self, candidates: list[tuple[str, float]], method: str) -> dict:
+        """Record how the annotation was reached: candidates, scores, model and method.
+
+        Every annotation carries one; without it a reviewer sees a tag and no way to
+        judge it.
+        """
+        return {
+            TRACE_KEY: {
+                "candidates": [[c, round(float(s), 4)] for c, s in candidates],
+                "method": method,
+                "model": self.concept_tagger_model,
+                "threshold": self.embedder.similarity_threshold,
+            }
+        }
+
     def _resolve(
         self, statement: str, candidates: list[tuple[str, float]], method: str
     ) -> tuple[dict | None, str]:
@@ -160,42 +193,6 @@ class ConceptTagger:
             if not self._is_inconclusive(escalated):
                 return escalated, f"{method}_thinking"
         return result, method
-
-    @staticmethod
-    def _is_inconclusive(result: dict | None) -> bool:
-        """True when the pass produced nothing, or named no primary concept."""
-        return result is None or result["primary_concept"] is None
-
-    def _verify(self, prompt: str, candidate_names: list[str], think: bool | str) -> dict | None:
-        """Run one tagging call and parse its reply, repairing it if need be.
-
-        The reasoning pass drops the grammar: it exists to buy deliberation on an item
-        the first pass could not place, and a grammar would take exactly that away.
-        """
-        schema = tagging_schema(candidate_names)
-        response = inference.generate(
-            model=self.concept_tagger_model,
-            prompt=prompt,
-            think=think,
-            format=None if think else schema,
-            temperature=inference.judgement_temperature(think),
-        ).response
-
-        def parse(text: str) -> tuple[dict | None, str | None]:
-            """Parse one reply, reporting why it failed when it does."""
-            parsed = self._parse_and_validate(text, candidate_names)
-            return parsed, None if parsed is not None else "invalid JSON or schema"
-
-        result, _ = parse_with_repair(
-            response,
-            parse,
-            repair_model=self.concept_tagger_model,
-            max_attempts=self.max_repair_attempts,
-            shape="objeto",
-            format=schema,
-            prompts=self.prompts,
-        )
-        return result
 
     def _candidates_block(self, candidates: list[tuple[str, float]]) -> str:
         """Render the numbered candidates, each with its description."""
@@ -243,10 +240,41 @@ class ConceptTagger:
 
         return "\n".join(lines)
 
+    def _verify(self, prompt: str, candidate_names: list[str], think: bool | str) -> dict | None:
+        """Run one tagging call and parse its reply, repairing it if need be.
+
+        The reasoning pass drops the grammar: it exists to buy deliberation on an item
+        the first pass could not place, and a grammar would take exactly that away.
+        """
+        schema = tagging_schema(candidate_names)
+        response = inference.generate(
+            model=self.concept_tagger_model,
+            prompt=prompt,
+            think=think,
+            format=None if think else schema,
+            temperature=inference.judgement_temperature(think),
+        ).response
+
+        def parse(text: str) -> tuple[dict | None, str | None]:
+            """Parse one reply, reporting why it failed when it does."""
+            parsed = self._parse_and_validate(text, candidate_names)
+            return parsed, None if parsed is not None else "invalid JSON or schema"
+
+        result, _ = parse_with_repair(
+            response,
+            parse,
+            repair_model=self.concept_tagger_model,
+            max_attempts=self.max_repair_attempts,
+            shape="objeto",
+            format=schema,
+            prompts=self.prompts,
+        )
+        return result
+
     def _parse_and_validate(self, response: str, candidate_names: list[str]) -> dict | None:
         """Return an annotation restricted to the candidates, or None if unusable.
 
-        An answer that names nothing at all is a legitimate «none of these» and comes
+        An answer that names nothing at all is a legitimate "none of these" and comes
         back as an empty annotation rather than as a parse failure.
         """
         try:
@@ -275,51 +303,23 @@ class ConceptTagger:
             return None
 
     @staticmethod
-    def pending_ids(exemplars_bank: dict) -> list[str]:
-        """The bank ids still without concepts.
+    def _is_inconclusive(result: dict | None) -> bool:
+        """True when the pass produced nothing, or named no primary concept."""
+        return result is None or result["primary_concept"] is None
 
-        An empty `concepts` list counts as untagged, so an item the LLM rejected is
-        retried on every later run: the index improves across runs, which makes a
-        rejection provisional.
-        """
-        return [c_id for c_id, content in exemplars_bank.items() if not content.get("concepts")]
 
-    def tag_all(
-        self,
-        exemplars_bank: dict,
-        ids: list[str] | None = None,
-        on_item: "Callable[[str, dict], None] | None" = None,
-    ) -> dict:
-        """Tag the pending items of the bank, or the given ids, and return the whole bank."""
-        pending = (
-            [i for i in ids if i in exemplars_bank]
-            if ids is not None
-            else self.pending_ids(exemplars_bank)
-        )
-        annotated = dict(exemplars_bank)
-        total = len(pending)
+def tagging_schema(candidate_names: list[str]) -> dict:
+    """The grammar for one tagging call, with the candidates as an `enum`.
 
-        self.embedder.prefetch_queries(
-            [self.embed_text(exemplars_bank[c_id]) for c_id in pending]
-        )
-
-        with progress.step("tagging", "Tagging the bank with the graph's concepts", total) as reporter:
-            for idx, c_id in enumerate(pending, 1):
-                progress.checkpoint()
-                content = exemplars_bank[c_id]
-                statement = self.embed_text(content)
-                reporter.start(idx, detail=c_id)
-                annotation = self.tag(statement)
-                annotated[c_id] = {**content, **annotation}
-                progress.emit(
-                    "item.tagged",
-                    id=c_id,
-                    text=self.primary_text(content)[:200],
-                    concepts=annotation["concepts"],
-                    primary_concept=annotation["primary_concept"],
-                    method=annotation[TRACE_KEY]["method"],
-                )
-                if on_item is not None:
-                    on_item(c_id, annotated[c_id])
-
-        return annotated
+    The prompt already demands that only candidates be used; this states the same rule
+    where the decoder can enforce it. `_parse_and_validate` still filters, because the
+    escalated pass runs unconstrained and an invented name can arrive from there.
+    """
+    return {
+        "type": "object",
+        "properties": {
+            "concepts": {"type": "array", "items": {"enum": list(candidate_names)}},
+            "primary_concept": {"enum": [*candidate_names, None]},
+        },
+        "required": ["concepts", "primary_concept"],
+    }

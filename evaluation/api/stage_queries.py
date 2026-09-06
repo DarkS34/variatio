@@ -14,58 +14,6 @@ from sqlalchemy.orm import Session
 from server.db.models import StageEvaluation, User, Workspace
 
 
-def _now() -> datetime:
-    return datetime.now(tz=timezone.utc)
-
-
-def mine(
-    session: Session,
-    workspace_id: int,
-    user_id: int | None,
-    artifact: str,
-    artifact_hash: str | None,
-) -> StageEvaluation | None:
-    """This person's row for this build of this artifact, or nothing."""
-    return session.scalars(
-        select(StageEvaluation).where(
-            StageEvaluation.workspace_id == workspace_id,
-            StageEvaluation.user_id == user_id,
-            StageEvaluation.artifact == artifact,
-            StageEvaluation.artifact_hash == artifact_hash,
-        )
-    ).one_or_none()
-
-
-def mark_opened(
-    session: Session,
-    workspace_id: int,
-    user_id: int | None,
-    artifact: str,
-    artifact_hash: str | None,
-) -> StageEvaluation:
-    """Record that the questions reached this person, without moving an earlier stamp.
-
-    A row exists from the moment the form is SEEN rather than from the moment it is
-    answered, and that is deliberate: «lo abrió y no lo contestó» is a datum about whether
-    a panel of teachers will engage at all, and a table that only holds finished forms
-    cannot express it. `overall is None` is what «sin contestar» means from here on.
-    """
-    row = mine(session, workspace_id, user_id, artifact, artifact_hash)
-    if row is None:
-        row = StageEvaluation(
-            workspace_id=workspace_id,
-            user_id=user_id,
-            artifact=artifact,
-            artifact_hash=artifact_hash,
-            opened_at=_now().timestamp(),
-        )
-        session.add(row)
-        session.flush()
-    elif row.opened_at is None:
-        row.opened_at = _now().timestamp()
-    return row
-
-
 def save(
     session: Session,
     workspace_id: int,
@@ -82,7 +30,7 @@ def save(
 ) -> StageEvaluation:
     """Write this person's answers about this build, replacing whatever they said before.
 
-    `curated` only ever climbs the ladder «nadie lo dijo» < «no» < «sí». Having corrected
+    `curated` only ever climbs the ladder "nobody said" < "no" < "yes". Having corrected
     the artifact by hand is something that HAPPENED, so a later save that stays silent, or
     that says no because the correction was made in an earlier visit, must not erase a yes
     already recorded — otherwise fixing a typo in the note an hour later moves the row into
@@ -104,6 +52,58 @@ def save(
     return row
 
 
+def mark_opened(
+    session: Session,
+    workspace_id: int,
+    user_id: int | None,
+    artifact: str,
+    artifact_hash: str | None,
+) -> StageEvaluation:
+    """Record that the questions reached this person, without moving an earlier stamp.
+
+    A row exists from the moment the form is SEEN rather than from the moment it is
+    answered, and that is deliberate: "opened it and never answered" is a datum about whether
+    a panel of teachers will engage at all, and a table that only holds finished forms
+    cannot express it. `overall is None` is what "sin contestar" means from here on.
+    """
+    row = mine(session, workspace_id, user_id, artifact, artifact_hash)
+    if row is None:
+        row = StageEvaluation(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            artifact=artifact,
+            artifact_hash=artifact_hash,
+            opened_at=_now().timestamp(),
+        )
+        session.add(row)
+        session.flush()
+    elif row.opened_at is None:
+        row.opened_at = _now().timestamp()
+    return row
+
+
+def mine(
+    session: Session,
+    workspace_id: int,
+    user_id: int | None,
+    artifact: str,
+    artifact_hash: str | None,
+) -> StageEvaluation | None:
+    """This person's row for this build of this artifact, or nothing."""
+    return session.scalars(
+        select(StageEvaluation).where(
+            StageEvaluation.workspace_id == workspace_id,
+            StageEvaluation.user_id == user_id,
+            StageEvaluation.artifact == artifact,
+            StageEvaluation.artifact_hash == artifact_hash,
+        )
+    ).one_or_none()
+
+
+def _now() -> datetime:
+    return datetime.now(tz=timezone.utc)
+
+
 def for_workspace(session: Session, workspace_id: int) -> list[StageEvaluation]:
     """Every answered row of one workspace, newest first — the panel's per-instance read."""
     return list(
@@ -122,7 +122,7 @@ def all_rows(session: Session) -> list[tuple[StageEvaluation, str, str | None]]:
     """Every row of the installation with its workspace slug and evaluator, for the export.
 
     Unanswered rows are INCLUDED here and excluded from `for_workspace`: the panel counts
-    verdicts, while the export is research data and «se abrió y se abandonó» is one of the
+    verdicts, while the export is research data and "opened and abandoned" is one of the
     things it is for.
     """
     rows = session.execute(
