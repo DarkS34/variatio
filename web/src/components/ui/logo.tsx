@@ -3,34 +3,23 @@ import { cn } from "@/lib/utils";
 /**
  * The mark: the knowledge frontier, in three squares.
  *
- * Three concepts in a row — what is behind you, solid in `--settled`; where you act,
- * solid in the one ultramarine the palette spends on «act here»; what lies ahead, an
- * outline. It draws the calculation the generator performs on every prompt (assumed
- * known / target / not yet taught), which is the same thing the palette encodes
- * everywhere else — so the mark introduces no colour of its own.
+ * What is behind you, solid in `--settled`; where you act, solid in the one ultramarine the
+ * palette spends on "act here"; what lies ahead, an outline. It draws the calculation the
+ * generator performs on every prompt, so the mark introduces no colour of its own.
  *
- * The three squares are the same size and the same distance apart (2026-08-31, explicit
- * user request), which took two changes rather than one: the connectors between them are
- * gone, and the third square is INSET BY HALF ITS STROKE. A stroke is centred on the
- * path, so a 4.6 rect stroked at 1.6 paints 6.2 across — the outline square was visibly
- * larger than its two solid neighbours and overhung the band above and below. Drawn as a
- * 3.4 rect at 18.0/10.3 it paints exactly the 4.6 box the other two fill, and every gap
- * is 3.1.
+ * The three squares are the same size and the same distance apart, and the outline one is
+ * INSET BY HALF ITS STROKE: a stroke is centred on the path, so a 4.6 rect stroked at 1.6
+ * paints 6.2 across and overhangs the band. Drawn as a 3.4 rect at 18.0/10.3 it paints
+ * exactly the 4.6 box the other two fill, with every gap 3.1.
  *
- * The stroke is 1.2 and NOT 1.6 (2026-08-31, explicit user request: the hole is bigger).
- * The outer box is fixed at 4.6 by the two squares beside it, so the only way to open the
- * counter is to thin the rule: the hole goes from 1.4 to 2.2 units, and the rect grows to
- * absorb it. That is a property of the whole mark and not of one file — the two favicons
- * carry the same three numbers, and getting one of them wrong is a square of a different
- * size in the tab strip.
+ * The stroke is 1.2, which is what opens the counter to 2.2: the outer box is fixed at 4.6
+ * by its neighbours, so the only way to widen the hole is to thin the rule. These three
+ * numbers are a property of the whole mark and not of one file — the two favicons carry
+ * them too, and getting one wrong is a square of a different size in the tab strip.
  *
- * The two coloured stops read their tokens directly (`var(--settled)`, `var(--attention)`)
- * and therefore move with the theme; the outline paints in `currentColor`, so the caller's
- * `text-primary` still owns it. Everything is orthogonal and every corner is square, so
- * the mark cannot drift away from `--radius: 0`.
- *
- * The favicons carry the single-tone version: fill against outline keeps the frontier
- * legible without colour.
+ * The coloured stops read their tokens directly and move with the theme; the outline paints
+ * in `currentColor`, so a caller's `text-primary` owns it. Everything is orthogonal and
+ * every corner square, so the mark cannot drift from `--radius: 0`.
  */
 export function Logo({ className, tight = false }: { className?: string; tight?: boolean }) {
   return (

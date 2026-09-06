@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * reason it is allowed to be coloured at all.
  *
  * Emoji were the obvious alternative and are not usable here: Chrome on Windows draws no
- * flag at all, only the two regional letters, so the field would show «ES» and «GB» on the
+ * flag at all, only the two regional letters, so the field would show "ES" and "GB" on the
  * platform most likely to be reading it.
  *
  * Both flags are drawn into the SAME 3:2 box, which stretches the Union Flag out of its

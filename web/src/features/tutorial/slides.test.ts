@@ -13,7 +13,7 @@ describe("slideOf / slidePath", () => {
   });
 
   it("clamps a number off either end instead of refusing it", () => {
-    // Un enlace viejo a una diapositiva que ya no existe abre la última, no un 404.
+    // An old link to a slide that no longer exists opens the last one, never a 404.
     expect(slideOf("/tutorial/0")).toBe(0);
     expect(slideOf("/tutorial/99")).toBe(SLIDE_COUNT - 1);
     expect(slidePath(-3)).toBe("/tutorial");

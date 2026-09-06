@@ -98,9 +98,9 @@ def test_an_off_target_tagger_alone_is_a_flag_and_never_a_retry(ejercicio):
 def test_a_target_tagged_as_a_secondary_concept_is_not_flagged(ejercicio):
     """Which target an item practises is the generator's business, not a defect.
 
-    The flag read the PRIMARY until 2026-09-02, so it fired on every item whose tagger
-    agreed about the concept and disagreed about the ranking — which, measured over the
-    reference installation, was every flag it had ever raised.
+    Reading the PRIMARY here fires on every item whose tagger agrees about the concept and
+    disagrees about the ranking — measured over the reference installation, that was every
+    flag this check had ever raised.
     """
     item = _item(ejercicio, "Escribe una función recursiva que invierta una cadena de texto.")
     result = _run(ejercicio, item, tagger=_FakeTagger("Cadena", ["Cadena", "Recursividad"]))

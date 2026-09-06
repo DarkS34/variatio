@@ -1,10 +1,9 @@
 """Every step the evaluation emits has a name the browser can translate.
 
 The client names a step by its ID (`lib/names.ts`) and explains it by the same id
-(`lib/explain.ts`), never by the label the server sends — so a step id nothing lists
-falls through to the server's Spanish string in both languages. That is how
-`eval.tagging` shipped nameless on 2026-09-04 and how the RAG index's two slots read as
-«el banco» twice; this pins the ids the evaluation emits to the three tables at once.
+(`lib/explain.ts`), never by the label the server sends — so a step id nothing lists falls
+through to the server's own string in both languages. This pins the ids the evaluation emits
+to the three tables at once.
 """
 
 import re

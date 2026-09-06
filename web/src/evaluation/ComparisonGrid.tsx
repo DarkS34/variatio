@@ -25,11 +25,11 @@ import { useT } from "@/lib/i18n";
  * exercise with a grammar and a table in it was read through a slot a third of the window
  * wide and half a window tall, three times over. The page scrolls once and the three stay
  * the same height, which keeps the blinding intent; what a third of a window cannot hold
- * is read through «Leer en grande», at reading size, over the comparison.
+ * is read through "Leer en grande", at reading size, over the comparison.
  *
  * The LETTER CARRIES NO STATE, and that is not an oversight. It is the handle somebody
- * uses to say «la B»; filling it to mean «ya respondida» would make it a signal, which is
- * the one thing the blinding exists to keep it from being — and «respondida» is already
+ * uses to say "la B"; filling it to mean "ya respondida" would make it a signal, which is
+ * the one thing the blinding exists to keep it from being — and "respondida" is already
  * said twice over, by the card's own border and by the option that is pressed.
  */
 // How much of a proposal a card shows before the fade. Measured against the reference
@@ -95,14 +95,11 @@ function ProposalCard({
         ) : null}
       </header>
 
-      {/* THE BODY IS CLIPPED AT `CLIP`, NOT SCROLLED (2026-09-05, explicit user request:
-          «haz los items más cortos; hay un botón para hacerlos más grandes»). Three whole
-          exercises side by side ran to several screens, and the choice bar sat under the
-          longest of them. What a card shows is enough to tell the three apart; what it
-          hides is read through «Leer en grande», which is one press away in the header,
-          and the fade says there is more rather than pretending the statement ends where
-          the box does. The three still share one height, so a longer proposal cannot read
-          as «more complete» before it is read. */}
+      {/* The body is CLIPPED and never scrolled: three whole exercises side by side run to
+          several screens, and what a card shows is enough to tell them apart. The rest is
+          read through "Leer en grande", and the fade says there is more rather than
+          pretending the statement ends where the box does. The three still share ONE
+          height, so a longer proposal cannot read as "more complete" before it is read. */}
       <div className={cn("relative flex-1 overflow-hidden", hasItem && CLIP)}>
         {hasItem ? (
           <>

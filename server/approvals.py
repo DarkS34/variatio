@@ -1,14 +1,12 @@
 """The chain of artifacts and its approval gates.
 
-Each artifact is built, reviewed and approved before the next one is unlocked.
-Approving records the artifact's own hash *and* the hash of everything it was
-derived from; if an upstream later changes, the downstream is marked stale and
-the UI can offer to redo that step. Nothing repairs itself behind the user's back.
+Each artifact is built, reviewed and approved before the next one is unlocked. Approving
+records the artifact's own hash AND the hash of everything it was derived from; if an
+upstream later changes, the downstream is marked stale and the UI can offer to redo that
+step. Nothing repairs itself behind the user's back.
 
-Named `review.py` until 2026-09-06. «Review» had come to mean three different things a
-click apart — this, the construction questionnaire (`StageReview`, `stage_evaluations`)
-and `review_taggability` — and of the three this is the only one that is not a review at
-all: it is the record of what has been approved. `.review_state.json` and
+Not a «review»: it is the record of what has been APPROVED, which is why it is not named
+after the construction questionnaire or the taggability pass. `.review_state.json` and
 `Workspace.review_state_path` keep their names, being the operational truth on disk.
 """
 
@@ -102,10 +100,10 @@ def current_path(ws: Workspace, artifact: str) -> Path | None:
     return path if path.is_file() else None
 
 
-# What stops making sense once the artifact is gone: regenerable derivations, not user
+# What stops making sense once the artifact is gone: regenerable derivations, never user
 # data, deleted so the next build does not start on the cache of a graph that no longer
-# exists. The evaluation's RAG index is not here: since 2026-09-04 it derives from the raw
-# documents and not from the bank, so emptying a stage leaves it alone.
+# exists. The evaluation's RAG index is NOT here — it derives from the raw documents and not
+# from the bank, so emptying a stage leaves it alone.
 DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
     KNOWLEDGE_GRAPH: (
         attrgetter("concept_descriptions_path"),

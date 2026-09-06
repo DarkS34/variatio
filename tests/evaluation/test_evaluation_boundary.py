@@ -5,9 +5,9 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-# The one deliberate exception, taken by explicit user request: the settings registry
-# reaches `evaluation.settings` by name so the six declarations live beside the code that reads
-# them. It is optional (`try/except ImportError`) and it is the ONLY place. Everywhere else
+# The one deliberate exception: the settings registry reaches `evaluation.settings` by name
+# so its declarations live beside the code that reads them. It is optional
+# (`try/except ImportError`) and it is the ONLY place. Everywhere else
 # the direction is absolute — the evaluation imports the pipeline, the pipeline does not know it
 # exists.
 ALLOWED = {pathlib.Path("variatio/settings/registry/__init__.py")}

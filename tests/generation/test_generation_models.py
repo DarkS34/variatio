@@ -55,10 +55,10 @@ def test_the_offered_list_may_not_be_emptied():
         coerce(setting, [])
 
 
-# WHICH MODELS IGNORE THE REASONING LEVELS is a measurement, and since 2026-09-01 it is a
-# setting rather than a table in the browser's source. It is deliberately NOT validated
-# against the offered list: a model is taken off the offer far more often than its
-# reasoning is re-measured, and dropping the measurement with it would force a re-run.
+# Which models IGNORE the reasoning levels is a measurement, and therefore a setting rather
+# than a table in the browser's source. Deliberately NOT validated against the offered list:
+# a model is taken off the offer far more often than its reasoning is re-measured, and
+# dropping the measurement with it would force a re-run.
 def test_the_fixed_effort_listing_is_a_copy_of_the_setting(monkeypatch):
     monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
     listing = entrypoints.fixed_effort_models()
@@ -93,9 +93,9 @@ def test_a_fixed_effort_value_reads_as_a_comma_list_or_is_refused():
         coerce(setting, {"gemma-4-31b": True})
 
 
-# WITH WHICH LEVEL a locked model is called is the other half of the same decision, and a
-# setting since 2026-09-04: the lock said the requester does not choose the effort, and the
-# level was then whatever the browser's slider happened to hold.
+# With WHICH LEVEL a locked model is called is the other half of the same decision, and a
+# setting too: locking says only that the requester does not choose, so without it the level
+# is whatever the browser's slider happens to hold.
 @pytest.fixture
 def locked(monkeypatch):
     monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])

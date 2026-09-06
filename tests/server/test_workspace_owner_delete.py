@@ -1,14 +1,11 @@
-"""The owner disposing of their own instance, which had a route and no way to reach it.
+"""The owner disposing of one of their own instances.
 
-`DELETE /api/workspaces/{slug}` was written, tested at the edges and never wired to a
-button, so «borrar un workspace mío» was not something the application could do. What the
-tests here pin is the behaviour that had to change for it to be worth wiring: the last
-workspace of the installation is deletable, because zero workspaces is a normal state and
-`leave` already reached it from the other side; and whoever was sitting in the instance is
-moved rather than stranded, which the `SET NULL` on the foreign key does not do by itself.
+The LAST workspace of the installation is deletable, zero workspaces being a normal state,
+and whoever was sitting in the instance is MOVED rather than stranded — which the `SET NULL`
+on the foreign key does not do by itself.
 
-And, since 2026-08-28, WHO ELSE IS IN IT decides whether the directory tree goes with the
-row — the same condition `leave` applies, arrived at from the other side.
+Who else is in it decides whether the directory tree goes with the row: the same condition
+`leave` applies, arrived at from the other side.
 """
 
 import pytest
@@ -77,7 +74,7 @@ def test_the_owner_can_delete_the_last_workspace_of_the_installation(db):
     assert repository.list_workspaces(db) == []
 
 
-# The FK is `SET NULL`, so without rehoming the database lands everybody at «no workspace»
+# The FK is `SET NULL`, so without rehoming the database lands everybody at "no workspace"
 # — including the people who have another one to fall back to.
 def test_whoever_was_inside_is_moved_to_a_workspace_they_belong_to(db):
     aula = _workspace(db, "aula")
@@ -106,7 +103,7 @@ def test_only_the_active_workspace_is_deletable(db):
 
 
 # The deleter is themselves one of the stranded: they were standing in the instance they
-# just removed, so «where do I land» has to be answered for them too and not only for the
+# just removed, so "where do I land" has to be answered for them too and not only for the
 # people who were sharing it.
 def test_the_owner_lands_in_their_first_remaining_workspace(db):
     aula = _workspace(db, "aula")
@@ -120,10 +117,9 @@ def test_the_owner_lands_in_their_first_remaining_workspace(db):
     assert auth_deps.current_workspace_for(db, ana) is taller
 
 
-# NOBODY LEFT, NOTHING KEPT (2026-08-28, explicit user request). Leaving the tree standing
-# after the only member disposes of the instance piles up hundreds of megabytes under a slug
-# the installation no longer records anywhere, and only an administrator could ever say what
-# any one of those directories was.
+# Nobody left, nothing kept: leaving the tree standing after the only member disposes of the
+# instance piles up hundreds of megabytes under a slug the installation no longer records
+# anywhere, and only an administrator could ever say what any one of those directories was.
 def test_deleting_an_instance_only_you_hold_takes_its_files(db):
     aula = _workspace(db, "aula")
     ana = _account(db, "ana", [(aula, OWNER)], active=aula)
@@ -137,7 +133,7 @@ def test_deleting_an_instance_only_you_hold_takes_its_files(db):
 # The other side of the same condition, and the reason it is a condition at all: those raw
 # documents are the OTHER person's, they are losing the instance without having asked, and a
 # web request that silently takes their lecture notes with it is not one anybody expects to
-# be irreversible. An administrator finishes the job from «Administración».
+# be irreversible. An administrator finishes the job from "Administración".
 def test_deleting_one_other_people_are_in_leaves_their_files(db):
     aula = _workspace(db, "aula")
     ana = _account(db, "ana", [(aula, OWNER)], active=aula)
@@ -149,8 +145,8 @@ def test_deleting_one_other_people_are_in_leaves_their_files(db):
     assert (installation.workspace_for("aula").raw_corpus_dir / "apuntes.md").exists()
 
 
-# An administrator reaches this through the bypass and holds no membership row, so «is
-# anybody else in it» is the whole roster for them — not «is it empty of members».
+# An administrator reaches this through the bypass and holds no membership row, so "is
+# anybody else in it" is the whole roster for them — not "is it empty of members".
 def test_an_administrator_deleting_a_workspace_with_a_member_leaves_its_files(db):
     aula = _workspace(db, "aula")
     _account(db, "ana", [(aula, OWNER)], active=aula)

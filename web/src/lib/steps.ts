@@ -23,22 +23,16 @@ export const STEPS = [
 ] as const satisfies readonly { path: string; labelKey: Key; artifact: string | null }[];
 
 /**
- * TWO PHASES, NAMED AND NOT NUMBERED (2026-09-02, explicit user request).
+ * Two phases, NAMED and not numbered.
  *
- * «Primero va la fase de construcción, luego la fase de pruebas. Esta segunda comprende
- * dos posibles acciones: generar ejercicios de tu asignatura con el sistema y evaluar el
- * sistema.» The bar used to number the phases themselves — `1.1 … 1.4`, then `2` on
- * generating and `3` on evaluating — and a number says «after», which is false of the
- * last two: both open on the same condition, the whole construction closed, and neither
- * waits for the other. A number encodes dependency, so it goes exactly where there is
- * one: INSIDE the construction, `1 … 4`, where each step needs the one before it closed.
- * The two phases carry a NAME instead (`nav.phase.build` / `nav.phase.test`), drawn as a
- * caption over each group, and the two actions of the second carry an icon where a step
- * carries its number — an icon says «a door», a number would say «a stop».
+ * A number encodes dependency, so it goes exactly where there is one: inside the
+ * construction, `1 … 4`, where each step needs the one before it closed. Generating and
+ * evaluating open on the same condition — the whole construction closed — and neither waits
+ * for the other, so numbering them would claim an order that does not exist. They carry an
+ * ICON where a step carries its number: an icon says "a door", a number "a stop".
  *
- * The four steps are one thing and their captions say so; the tutorial names the same two
- * phases on its own slides, so the deck cannot promise a shape the navigation does not
- * have. `USES` is the second phase's two doors, one home for the bar and the guide.
+ * The tutorial names the same two phases on its own slides, so the deck cannot promise a
+ * shape the navigation does not have. `USES` is one home for the bar and the guide.
  */
 export const USES = [
   { key: "generate", path: "/generate", labelKey: "nav.create", evaluation: false },
@@ -66,7 +60,7 @@ export function stepNumberOf(artifact: string): string | null {
  * Where the step AFTER this artifact's leads, and what to call it.
  *
  * `null` is the raw material — the one step with no artifact — so its screen can offer the
- * same «Continuar» every stage ends with, read from the same list.
+ * same "Continuar" every stage ends with, read from the same list.
  */
 export function nextStepOf(
   artifact: string | null,
@@ -83,9 +77,9 @@ export type StepState = "done" | "now" | "later";
 /**
  * Where each step stands, and which single one is the next move.
  *
- * The current step is the FIRST one not done and never «every one not done»: what makes a
+ * The current step is the FIRST one not done and never "every one not done": what makes a
  * path obvious is one next move, not a list of pending chores. Step 1 has no artifact and
- * no approval, so «done» there means both origins hold documents — the condition the three
+ * no approval, so "done" there means both origins hold documents — the condition the three
  * builds behind it actually need. Being untranscribed is deliberately NOT part of it:
  * transcribing is an accelerator and never a gate, and a step marked pending by something
  * that does not stop you would be a false promise in the one bar everybody reads.
@@ -101,11 +95,11 @@ export function stepStates(stages: StageState[], rawStocked: boolean): StepState
 }
 
 /**
- * Where «/» lands: the step that is next, or generation once the whole path is walked.
+ * Where "/" lands: the step that is next, or generation once the whole path is walked.
  *
  * A landing route that resolves rather than a page of its own, because there is nothing
  * left to say from outside a chain that IS the navigation — and because the one question
- * somebody opening this has is «what do I do now», which this answers by doing it.
+ * somebody opening this has is "what do I do now", which this answers by doing it.
  */
 export function currentStepPath(stages: StageState[], rawStocked: boolean): string {
   const states = stepStates(stages, rawStocked);

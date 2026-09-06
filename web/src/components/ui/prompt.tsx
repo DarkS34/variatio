@@ -12,7 +12,7 @@ import { useT } from "@/lib/i18n";
  * The graph asked for a unit's name with `window.prompt` and destroyed one with
  * `window.confirm`, while deleting a workspace opened a considered dialog that makes you
  * type the slug. Two visual languages for one act, and the cheaper one guarded the more
- * destructive operation: `window.confirm` on «eliminar la unidad y sus 28 conceptos»
+ * destructive operation: `window.confirm` on "eliminar la unidad y sus 28 conceptos"
  * against a typed confirmation on an empty instance.
  *
  * The native dialogs are also the only surfaces in the product that ignore the theme, the
@@ -53,7 +53,7 @@ export function PromptDialog({
   const [touched, setTouched] = useState(false);
 
   // Reopening for a different subject must not inherit the last answer: the graph reuses
-  // one dialog for «nueva unidad» and «renombrar», and the second arrives with the current
+  // one dialog for "nueva unidad" and "renombrar", and the second arrives with the current
   // name in it.
   useEffect(() => {
     if (open) {

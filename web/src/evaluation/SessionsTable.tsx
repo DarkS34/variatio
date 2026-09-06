@@ -141,11 +141,9 @@ export function SessionsTable({
                     <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
                       {when(new Date(session.created_at * 1000).toISOString())}
                     </TD>
-                    {/* WHAT KIND OF EXERCISE WAS ASKED FOR (2026-09-04, explicit user
-                        request). A row said when and about what, and never what: two
-                        sessions over the same concepts are different comparisons when one
-                        asked for a four-option question and the other for a whole
-                        program. */}
+                    {/* What kind of exercise was asked for: two sessions over the same
+                        concepts are different comparisons when one asked for a four-option
+                        question and the other for a whole program. */}
                     <TD className="whitespace-nowrap px-3 py-2">
                       <span className="border border-border px-2 py-0.5 text-small">
                         {typeLabel(session.item_type)}

@@ -6,22 +6,15 @@ import { cn } from "@/lib/utils";
 /**
  * A concept, drawn as a pill: the name whole, in the reading size, in its own case.
  *
- * ONE DRAWING FOR EVERY LIST OF CONCEPTS (2026-09-05, explicit user request: «el aspecto
- * visual de las píldoras de los conceptos es incorrecto; no caben varios»). They were
- * `Badge`s — micro, condensed, UPPERCASE with 0.12em of tracking, a name truncated at
- * `max-w-56` — which is the drawing of a STATE word («aprobado», «remoto») and not of a
- * name somebody chose: a syllabus's names run to «Análisis sintáctico descendente
- * recursivo», and in that setting a name of more than ~32 characters was cut with an
- * ellipsis while a row of four of them overflowed a card. What the selector's own board
- * already draws — `text-small`, normal case, the pill as wide as the name — is what every
- * other list now draws too, so a concept looks the same wherever it is read: the chosen
- * ones under «Elegir conceptos», the tray of the selector, the bank's picker, the reveal's
- * tagging and the commission strip.
+ * ONE drawing for every list of concepts, so a concept looks the same wherever it is read.
+ * Never a `Badge`: micro, condensed, uppercase with tracking is the drawing of a STATE word
+ * ("aprobado", "remoto") and not of a name somebody chose, and a syllabus's names run to
+ * "Análisis sintáctico descendente recursivo".
  *
- * The name is never truncated. A name wider than its container wraps INSIDE the pill,
- * which is rare and reads as what it is, where an ellipsis reads as a different name.
- * `tone` is the only thing that varies: where the concept sits relative to the choice
- * (chosen, a prerequisite of it), or what the graph made of it (primary, out of bounds).
+ * The name is never truncated — one wider than its container wraps INSIDE the pill, which
+ * is rare and reads as what it is, where an ellipsis reads as a different name. `tone` is
+ * the only thing that varies: where the concept sits relative to the choice, or what the
+ * graph made of it.
  */
 const TONES = {
   default: "border-border bg-card text-foreground",

@@ -139,8 +139,8 @@ def test_validate_patch_names_every_offender_not_just_the_first():
 # THE RENAMED KEYS ---------------------------------------------------------------------------------
 #
 # `config.json` at the root is the installation's own settings as they actually stand, and it
-# predates the 2026-08-27 rename of the transcription phase. Refusing to read the old names
-# would turn a rename into a silent reset of whatever the installation had chosen.
+# predates the rename of the transcription phase. Refusing to read the old names would turn a
+# rename into a silent reset of whatever the installation had chosen.
 
 
 def test_a_legacy_key_still_resolves(tmp_path):

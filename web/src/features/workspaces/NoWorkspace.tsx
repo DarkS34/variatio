@@ -11,16 +11,11 @@ import { useCreateWorkspace } from "@/state/queries";
 import { usePromptLanguage } from "./promptLanguage";
 
 /**
- * What the panel says to an account that is in no instance.
+ * What is said to an account that is in no instance.
  *
- * It is a screen and not a gate, and that is the whole point of it. Until 2026-08-26 the
- * installation had a workspace called `default` that every entry point fell back to, so
- * «no tengo ninguno» was not a state the app could be in: an account either landed in
- * somebody's instance or was stopped by a full-page notice outside the shell, before the
- * navigation, the account menu and the guide had rendered. None of those needs a
- * workspace. So the message moved inside: the shell is up, `/guide` and `/account` are
- * reachable, and what sits in the middle of the panel is the one thing there is to do
- * here — start an instance, which is what a workspace is.
+ * A screen and NOT a gate, which is the whole point: the shell is up and `/guide` and
+ * `/account` are reachable, because none of them needs a workspace. What sits in the middle
+ * is the one thing there is to do here — start a subject.
  */
 export function NoWorkspace() {
   const session = useSession();
@@ -98,7 +93,7 @@ export function NoWorkspace() {
             ) : null}
             {/* ENABLED WITH AN EMPTY NAME, AND THAT IS THE POINT. This is the only control
                 on the only screen the account can reach, and it greeted everybody greyed
-                out with nothing saying why — «prevención de errores» applied so early that
+                out with nothing saying why — "prevención de errores" applied so early that
                 it stops being prevention and becomes a dead end. It validates on press
                 instead, and says what is missing. `create.isPending` still disables it:
                 that one is a real reason, and it is visible as a spinner. */}

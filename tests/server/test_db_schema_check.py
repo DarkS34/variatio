@@ -1,10 +1,10 @@
 """A database that answers is not a database at the revision this code expects.
 
-The state these pin shipped and was found the hard way: the installation ran at «0009»
-while the code was written against «0010», so every request that loaded a `generations`
-row asked for a column that did not exist — and what a person saw was a 500 on «borrar
-workspace», a button that has nothing to do with which model wrote a variant. Nothing
-refused to start and nothing said the word «migración».
+The state these pin shipped and was found the hard way: the installation ran at "0009"
+while the code was written against "0010", so every request that loaded a `generations`
+row asked for a column that did not exist — and what a person saw was a 500 on "borrar
+workspace", a button that has nothing to do with which model wrote a variant. Nothing
+refused to start and nothing said the word "migración".
 """
 
 import pytest
@@ -57,8 +57,8 @@ def test_a_schema_behind_the_code_names_BOTH_revisions_and_the_command():
     assert schema.MIGRATE in message
 
 
-# Upgrading cannot fix a database that is AHEAD of the checkout, so saying «aplica las
-# migraciones» there sends somebody to a command that will report nothing to do.
+# Upgrading cannot fix a database that is AHEAD of the checkout, so saying "aplica las
+# migraciones" there sends somebody to a command that will report nothing to do.
 def test_a_revision_the_code_does_not_know_is_not_reported_as_a_pending_migration():
     _stamp("9999")
     message = schema.mismatch()

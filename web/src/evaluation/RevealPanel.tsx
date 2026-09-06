@@ -22,23 +22,16 @@ import { useT } from "@/lib/i18n";
 /**
  * The moment the screen goes from grey to colour.
  *
- * The reveal is irreversible by design: being able to re-choose after seeing the origins
- * would mean the datum was never blind. So this panel only tells; it never offers a way
- * back.
+ * The reveal is irreversible by design: re-choosing after seeing the origins would mean the
+ * datum was never blind. This panel only tells and never offers a way back.
  *
- * ONE CARD PER PROPOSAL, AND ONLY ONE. The old screen kept the three full cards on screen
- * and drew a second set of three under them — the identity, the description, the checks,
- * the prompt — so every proposal was on screen twice and the rubric was squeezed into the
- * half column left over. Here the identity is a card, COLLAPSED: the letter in its arm's
- * colour, what you said about it, the model and the time, and ONE way to read it in full —
- * the reading dialog, which after the reveal also says where the proposal came from. What
- * is being RATED, the system's, gets a card of its own beside the questions about it.
+ * ONE card per proposal, collapsed — the letter in its arm's colour, what you said about
+ * it, the model, the time, and one way to read it in full. What is being RATED gets a card
+ * of its own beside the questions about it.
  *
- * THEY ARE THREE COLUMNS AND NOT THREE ROWS (2026-09-04, explicit user request: «lo mismo
- * pero en columnas, para que no se diferencie tanto»). The blind half draws three columns
- * and the reveal is the same three proposals a second later; turning them on their side at
- * that exact moment made the screen look like it had become something else, when all that
- * happened is that each card lost its body and gained a name.
+ * Three COLUMNS and not three rows: the blind half draws three columns and the reveal is
+ * the same three proposals a second later, so turning them on their side at that moment
+ * makes the screen look like it has become something else.
  */
 function OriginCard({
   position,
@@ -93,10 +86,9 @@ function OriginCard({
           </span>
         </div>
 
-        {/* ONE BUTTON, BOTTOM RIGHT (2026-09-04, explicit user request). «Leer» opened the
-            reading dialog and «Detalle» unfolded the arm's description, the checks and the
-            retrieved fragments in place; the dialog carries all of that now once the
-            session is revealed, so the two doors were one door with two names. */}
+        {/* One button, bottom right: the reading dialog carries the arm's description, the
+            checks and the retrieved fragments once the session is revealed, so a second
+            in-place fold was one door with two names. */}
         <div className="flex justify-end">
           <Button
             variant="ghost"
@@ -224,15 +216,12 @@ export function RevealPanel({
 
   return (
     <div className="animate-fade-in space-y-5">
-      {/* THE THREE, IN THE ORDER THE BLIND HALF DREW THEM. What each one was is the answer
-          to the question the cards above just asked, so it comes first and the verdict
-          comes after — it was the other way round until 2026-09-04 (explicit user
-          request), which put the result of the choice above the things it was a choice
-          between.
+      {/* The three, in the order the blind half drew them. What each one was answers the
+          question the cards just asked, so it comes FIRST and the verdict after.
 
-          They STRETCH to one height, and that is what puts the three tagging feet on one
-          line: with `items-start` a card carrying four concepts pushed its own foot down
-          and the row read as three unrelated blocks rather than as one comparison. */}
+          They STRETCH to one height, which is what puts the three tagging feet on one line:
+          with `items-start` a card carrying four concepts pushes its own foot down and the
+          row reads as three unrelated blocks. */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {positions.map((position) => (
           <OriginCard
@@ -245,13 +234,10 @@ export function RevealPanel({
         ))}
       </div>
 
-      {/* THE RESULT, IN ONE LINE. `--evaluation` is the evaluation's own token, and this band
-          is the one place on the screen that is about the evaluation rather than about an
-          exercise. It is the verdict and nothing else (2026-09-04, explicit user request):
-          the eyebrow «De dónde salió cada propuesta» named what the three cards above had
-          just said, and «sin razonamiento · semilla N» is provenance of the draw — it is
-          still stored on the row and read by the panel, and it told the evaluator nothing
-          they could use. */}
+      {/* The result, in one line, and the verdict alone: `--evaluation` is the evaluation's
+          own token, and this band is the one place on the screen about the evaluation rather
+          than about an exercise. The provenance of the draw is stored on the row and read by
+          the panel, and tells the evaluator nothing they can use. */}
       <section className="border border-border border-l-[3px] border-l-evaluation bg-card px-4 py-3 shadow-sm">
         <h2 className="text-title">
           {session.choice === null ? (
@@ -267,11 +253,10 @@ export function RevealPanel({
         </h2>
       </section>
 
-      {/* A SECOND SECTION, WITH A TITLE OF ITS OWN (2026-09-04, explicit user request:
-          «necesito que separes aún más»). What is above is the comparison and what is
-          below is the rating of ONE proposal — a different question, asked after the
-          reveal and optional — and a rule alone did not say so. The head carries the
-          sentence the rubric card used to open with, so the card no longer repeats it. */}
+      {/* A second section with a title of its own: above is the comparison, below is the
+          rating of ONE proposal — a different question, asked after the reveal and optional
+          — and a rule alone does not say so. The head carries the sentence the rubric card
+          would otherwise repeat. */}
       {session.declined_at || !system ? null : (
         <div className="border-t border-border pt-5">
           <h2 className="text-title">{t("reveal.rubricSection.title")}</h2>

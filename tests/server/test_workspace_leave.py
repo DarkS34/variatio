@@ -5,7 +5,7 @@ person disposing of their own access, and the two collapse into one exactly when
 leaving is the last one linked to it: with the seat empty there is nobody left for the
 workspace to belong to.
 
-What the tests pin is the arithmetic of that «exactly when», the two states the register
+What the tests pin is the arithmetic of that "exactly when", the two states the register
 calls normal — an installation with no workspaces, an account belonging to none — and what
 happens to the DIRECTORY TREE on each side of it: it goes when the seat it belonged to
 empties, because otherwise abandoned instances pile up under slugs that are on record
@@ -122,7 +122,7 @@ def test_an_administrator_with_no_seat_has_nothing_to_leave(db):
 
 def test_leaving_the_installation_s_only_workspace_is_allowed(db):
     # `remove` refuses this and predates the decision that an installation may hold zero
-    # workspaces. Refusing here would make «no workspace» reachable only by an administrator.
+    # workspaces. Refusing here would make "no workspace" reachable only by an administrator.
     aula = _workspace(db, "aula")
     ana = _account(db, "ana", [(aula, OWNER)], active=aula)
 

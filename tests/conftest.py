@@ -56,11 +56,11 @@ def _isolated_cerebras_ledger(tmp_path):
     cerebras_budget.use(None)
 
 
-# The fourth (2026-09-03) stops a test reading Cerebras' catalogue over the network. Since
-# routing asks the catalogue — every model the API lists is served remotely — a hybrid
-# engine built by any test would call `/models` with the installation's own key, and the
-# lane tests then measured the real catalogue instead of the routing list they set up.
-# The two tests of `known_models` itself restore the real method on their own instance.
+# The fourth stops a test reading Cerebras' catalogue over the network. Routing asks the
+# catalogue — every model the API lists is served remotely — so a hybrid engine built by any
+# test would call `/models` with the installation's own key, and the lane tests would then
+# measure the real catalogue instead of the routing list they set up. The two tests of
+# `known_models` itself restore the real method on their own instance.
 @pytest.fixture(autouse=True)
 def _no_cerebras_catalogue(monkeypatch):
     from variatio.core import cerebras
@@ -68,13 +68,12 @@ def _no_cerebras_catalogue(monkeypatch):
     monkeypatch.setattr(cerebras.CerebrasEngine, "known_models", lambda self: frozenset())
 
 
-# The second stops a test writing to the production database. `session.database_url()` reads
-# `DATABASE_URL`, `.env` supplies a real one, and nothing under `tests/` overrode it — so a
-# test reaching `session_scope()` without meaning to opened a transaction against the live
-# Postgres. One did, on 2026-08-28, and left an orphan row in `workspaces`.
+# The second stops a test writing to the production database: `session.database_url()` reads
+# `DATABASE_URL` and `.env` supplies a real one, so a test reaching `session_scope()` without
+# meaning to opens a transaction against the live Postgres.
 #
 # A throwaway SQLite file rather than a refusal: a test that genuinely wants a database gets
-# a working empty one, and a test that never meant to touch it fails on the missing schema
+# a working empty one, and one that never meant to touch it fails on the missing schema
 # instead of quietly succeeding against real data. Tests that build their own engine are
 # unaffected, and the import is inside the function so a runtime-only checkout without the
 # `server` extra can still collect this file.
@@ -88,23 +87,20 @@ def _isolated_database(tmp_path, monkeypatch):
     session.reset()
 
 
-# The third stops a test writing into the installation's own instances. `paths.WORKSPACES_DIR`
-# is the checkout's `workspaces/`, and every slug a test invents resolves under it: a `Job`
-# carrying `workspace="aula"` had the bus mkdir `workspaces/aula/instance/.runs/` and append
-# its event log there, so a full run left two invented instances sitting beside the real ones.
-# `paths.LOGS_DIR` travels with it for exactly the same reason: since 2026-08-31 a job also
-# opens `logs/<slug>/jobs.log`, and an invented slug would leave a directory of its own there.
+# The third stops a test writing into the installation's own instances. Every slug a test
+# invents resolves under `paths.WORKSPACES_DIR`: a `Job` carrying an invented workspace has
+# the bus mkdir `workspaces/<slug>/instance/.runs/` and append its event log there.
+# `paths.LOGS_DIR` travels with it for the same reason — a job also opens
+# `logs/<slug>/jobs.log`.
 #
 # Redirected rather than cleaned up afterwards: deleting directories under `workspaces/` is
-# the one operation this project already treats as unforgiving, and a suite that never
-# reaches the real tree needs no such pass. Everything reads the module attribute at call
-# time, so patching it is enough. The `corpus` tests are unaffected — they open
-# `workspaces/default/` by relative path, deliberately measuring the shipped instance.
+# the one operation this project already treats as unforgiving. Everything reads the module
+# attribute at call time, so patching it is enough; the `corpus` tests are unaffected, since
+# they open a workspace by relative path to measure the instance itself.
 #
 # SESSION-scoped, unlike the other two, and that is the whole reason it works: a `JobRunner`
-# publishes from a worker thread, and with a per-test redirect the last events of a job
-# outlived the fixture that had moved the tree — six files still landed in the real
-# `workspaces/` on a full run. The environment variable travels beside the attribute so a
+# publishes from a worker thread, so with a per-test redirect the tail of a job outlives the
+# fixture that moved the tree. The environment variable travels beside the attribute so a
 # subprocess reads the same root.
 @pytest.fixture(autouse=True, scope="session")
 def _isolated_workspaces(tmp_path_factory):

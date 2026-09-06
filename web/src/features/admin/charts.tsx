@@ -62,7 +62,7 @@ export interface BarRow {
  * One named row per category, sorted by nothing — the caller's order is the palette's.
  *
  * A reference line is drawn where a null hypothesis lives (1/3 for a three-way blind
- * choice). It is the whole point of the chart: «ganó 12 veces» means nothing until you
+ * choice). It is the whole point of the chart: "ganó 12 veces" means nothing until you
  * can see it against what pure chance would have produced.
  */
 export function BarRows({
@@ -153,7 +153,7 @@ export interface DayPoint {
 /**
  * How many comparisons happened each day, and how many of them were judged.
  *
- * Two steps of ONE hue rather than two categorical slots: «decidida» and «pendiente» are
+ * Two steps of ONE hue rather than two categorical slots: "decidida" and "pendiente" are
  * not two entities, they are one thing in two states, and colouring them with the arm
  * scale would spend the identity channel on something that has no identity.
  *
@@ -291,7 +291,7 @@ export interface Segment {
 }
 
 /**
- * The distribution of ONE ordinal answer — «ninguno / alguno / muchos», 1 to 5 — as a
+ * The distribution of ONE ordinal answer — "ninguno / alguno / muchos", 1 to 5 — as a
  * single bar cut into its rungs, with the legend under it.
  *
  * Steps of one hue and not the arm palette: the rungs are one thing at several degrees,

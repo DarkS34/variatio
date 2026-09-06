@@ -1,9 +1,8 @@
 """The job log on disk: one file per workspace, opened by the jobs that write into it.
 
-The run drawer's «Registro» tab was removed on 2026-08-31 (explicit user request) and this
-is where those lines go instead. What the module has to get right is the sharing: a lane
-with room runs several jobs at once, so a second job of the same workspace must join the
-sink that is open rather than open a second one over the same file.
+What the module has to get right is the SHARING: a lane with room runs several jobs at once,
+so a second job of the same workspace must join the sink that is open rather than open a
+second one over the same file.
 """
 
 import threading

@@ -2,7 +2,7 @@
  * Whether the job now running REPLACES the artifact or only patches it.
  *
  * `JOB_ARTIFACT` puts both kinds under the same artifact, which is what lets the chain say
- * «este banco está ocupado» whoever is writing it. The two are not the same thing on screen,
+ * "este banco está ocupado" whoever is writing it. The two are not the same thing on screen,
  * though: a rebuild has a phase plan and throws the previous artifact away, while `tag`
  * rewrites the items in place, keeps every decision it has already made, and declares no
  * plan at all — drawing the builder's segments for it leaves a bar frozen at zero.
@@ -29,11 +29,11 @@ export function stepPercent(
 /**
  * How full a meter is, or `null` when the total is not known yet.
  *
- * «No sé cuánto hay» and «hay cero» are different facts and only the first one may sweep:
+ * "No sé cuánto hay" and "hay cero" are different facts and only the first one may sweep:
  * a bar that sweeps says work is under way. The two were one condition (`!max`), so an
  * empty exemplars bank drew `0/0` as the indeterminate sweep and the bank screen animated
- * for ever over a workspace where nothing at all was happening — read, correctly, as «se
- * ha quedado cargando». Deleting the last item of a bank is exactly how one gets there.
+ * for ever over a workspace where nothing at all was happening — read, correctly, as "se
+ * ha quedado cargando". Deleting the last item of a bank is exactly how one gets there.
  *
  * A known total of zero is complete, not unmeasurable: the meter reads 0 % and stops.
  * Unknown is `null` or `undefined`, which is what every caller that means it already passes.

@@ -139,7 +139,7 @@ def test_the_copy_arrives_unjudged(db):
 
 
 def test_the_copy_gets_an_order_of_its_own(db):
-    # Given a fixed seed the shuffle is deterministic, which is what makes «distinto orden»
+    # Given a fixed seed the shuffle is deterministic, which is what makes "distinto orden"
     # something a test can assert rather than a hope about randomness.
     copy = evaluation_store.assign(db, _source(db), user_id=2, assigned_by=3, seed=7)
     assert sorted(copy.shuffle) == sorted(SOURCE["shuffle"])
@@ -149,7 +149,7 @@ def test_the_copy_gets_an_order_of_its_own(db):
 
 
 def test_a_position_means_different_arms_for_the_two_evaluators(db):
-    # The point of the fresh shuffle: whatever «la propuesta A» is for one of them, it is
+    # The point of the fresh shuffle: whatever "la propuesta A" is for one of them, it is
     # not necessarily the same architecture for the other.
     seeds = [evaluation_store.assign(db, _source(db), 2, 3, seed=s, allow_repeat=True) for s in range(20)]
     assert any(copy.shuffle != SOURCE["shuffle"] for copy in seeds)

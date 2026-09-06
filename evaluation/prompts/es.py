@@ -26,10 +26,10 @@ def naive_generation_prompt(
 ) -> str:
     """Compose the sentence a person who had never seen this system would type.
 
-    It reads the three canonical facts by name AND, since 2026-09-04, pastes the subject's
-    own context under them (`context_block`, the same prose the pipeline's prompts carry):
-    without it the two baselines had to guess what the course is about — the programming
-    language included — and a session then measured that guess rather than the system.
+    It reads the three canonical facts by name AND pastes the subject's own context under
+    them (`context_block`, the same prose the pipeline's prompts carry): without it the two
+    baselines guess what the course is about — the programming language included — and a
+    session then measures that guess rather than the system.
     Sessions recorded before that date ran without the block; the memoria has to say so.
 
     It reads as somebody thinking out loud because that is what it is measuring. The pinned

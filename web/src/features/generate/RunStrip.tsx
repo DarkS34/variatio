@@ -12,33 +12,20 @@ import { jobName, phaseName, phasePlan, stepName } from "@/lib/names";
 import { CancelButton } from "@/components/CancelButton";
 
 /**
- * THE RUN, AS TWO LINES ABOVE THE THING IT PRODUCES.
+ * The run, as two lines above the thing it produces: what is running, how far it has got,
+ * how long it has been and how to stop it. What a person is on this screen for is the
+ * items.
  *
- * The generate screen used to be two columns: the five-step form on the left and, on the
- * right, a card carrying the timeline, the token stream, the technical details and an
- * activity feed — so while three items were being written the screen held a form nobody
- * was filling in, four live surfaces and the items themselves, side by side at half width
- * each. What one is there for is the items.
+ * What a RETRY is doing is not behind the disclosure. A rejected exercise is generated
+ * again, up to `CHECK_MAX_RETRIES` times, and each of those is a whole call — so the bar
+ * sits still for minutes, and saying why is the difference between "se ha quedado colgado"
+ * and "lo está rehaciendo porque menciona algo no impartido". Drawn in `--attention`, the
+ * one thing on the strip that is not merely a measurement, and it goes when the item lands.
  *
- * So the run collapses to what a person actually watches: what is running, how far it has
- * got, how long it has been and how to stop it.
- *
- * WHAT A RETRY IS DOING IS NOT BEHIND THE DISCLOSURE (2026-09-02, explicit user request).
- * A rejected variant is generated again — up to `CHECK_MAX_RETRIES` times — and each of
- * those is a whole call, so the bar sits still for minutes; saying why costs one line and
- * is the difference between «se ha quedado colgado» and «lo está rehaciendo porque
- * menciona algo no impartido». It is drawn in `--attention` because it is the one thing on
- * the strip that is not merely a measurement, and it goes when the item lands.
- *
- * WHAT IS BEHIND THE DISCLOSURE IS NOT DUPLICATED ANYWHERE, and that is why it is a
- * disclosure and not a deletion: the model's reasoning, the token stream, the technical
- * details and the exemplars the few-shot used are here and nowhere else — folding them
- * away is fine, dropping them is not. It opens by itself while the job runs, because that
- * is when watching the model write is worth a screen.
- *
- * AND IT OPENS INSIDE THIS BLOCK (2026-09-02, explicit user request): `children` are drawn
- * under a rule within the strip's own card, so pressing a disclosure grows the block it
- * belongs to instead of producing a second card beneath it.
+ * What IS behind the disclosure is duplicated nowhere — the reasoning, the token stream,
+ * the technical details and the few-shot exemplars — which is why it is a fold and not a
+ * deletion. It opens by itself while the job runs, and it opens INSIDE this block, so a
+ * disclosure grows the card it belongs to instead of producing a second one.
  */
 export function RunStrip({
   run,
@@ -55,7 +42,7 @@ export function RunStrip({
   wait: Wait | null;
   expanded: boolean;
   onToggle: () => void;
-  /** What «Detalle» opens. Drawn inside this card, never as a block of its own. */
+  /** What "Detalle" opens. Drawn inside this card, never as a block of its own. */
   children?: ReactNode;
 }) {
   const tr: Translate = useT();

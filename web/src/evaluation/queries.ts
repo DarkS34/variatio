@@ -187,7 +187,7 @@ export function useStageReview(artifact: string | undefined) {
  * Save this person's verdict, and put the answer straight into the cache.
  *
  * The response IS the new state of the form, so there is nothing to refetch: a second
- * round trip would only make the badge flicker between «guardada» and «sin contestar».
+ * round trip would only make the badge flicker between "guardada" and "sin contestar".
  *
  * IT MERGES ONTO WHAT IS THERE rather than replacing it, and that is a floor and not a
  * nicety. The save used to answer a shorter shape than the read — no `instrument` — and

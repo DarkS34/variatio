@@ -7,7 +7,7 @@ import { ensureCatalogue, LANGUAGES, localeStore, normalise, pluralise, translat
 // `en` is fetched on demand now, so asking for an English string before it lands answers
 // in Spanish — the deliberate fallback. Without this the suite would go on passing while
 // testing the wrong catalogue, which is exactly what it did when the split was written:
-// `pluralise("en", "count.items", 1)` came back «1 ítem».
+// `pluralise("en", "count.items", 1)` came back "1 ítem".
 beforeAll(() => ensureCatalogue("en"));
 
 describe("normalise", () => {

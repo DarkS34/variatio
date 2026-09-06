@@ -134,7 +134,7 @@ export function pluralise(language: Language, key: Key, n: number, params?: Para
 /**
  * What a PURE function takes instead of a hook.
  *
- * `lib/queue.ts` decides «is it waiting, and behind what», is covered by 30 vitest cases
+ * `lib/queue.ts` decides "is it waiting, and behind what", is covered by 30 vitest cases
  * and must not import React. Handing it a translator keeps its criterion testable — the
  * tests pass the Spanish one and their assertions go on meaning what they meant — and
  * keeps the sentences out of it.
@@ -157,7 +157,7 @@ export function useLanguage(): Language {
 
 /**
  * The hook every screen uses. `t` for a string, `plural` for anything counted — the two
- * are separate because «1 ítem» and «2 ítems» are one decision in Spanish and a different
+ * are separate because "1 ítem" and "2 ítems" are one decision in Spanish and a different
  * one in English, and a single function would have to guess which it was being asked.
  */
 export function useT(): Translate & { language: Language } {

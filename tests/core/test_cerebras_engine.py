@@ -487,8 +487,8 @@ def test_an_exhausted_day_stops_the_call_from_leaving(monkeypatch):
         sent.append(request)
         return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
 
-    # A ceiling the call would fit under, already spent: that is «agotado». A ceiling
-    # SMALLER than the call is the other refusal, «no cabe», pinned in the budget's tests.
+    # A ceiling the call would fit under, already spent: that is "agotado". A ceiling
+    # SMALLER than the call is the other refusal, "no cabe", pinned in the budget's tests.
     monkeypatch.setattr(config, "CEREBRAS_MAX_TOKENS_DAY", 2_000)
     cerebras_budget.shared().record(
         "gemma-4-31b", "kg_extract", prompt_tokens=1_900, completion_tokens=0, headers={}

@@ -6,7 +6,7 @@
  * is no runtime fallback to a missing translation, because there cannot be a missing one.
  *
  * A value is either a string or a `{ one, other }` pair. The pair exists because Spanish
- * writes «N ejercicio(s)» and English cannot: the parenthesised plural is a Spanish habit this
+ * writes "N ejercicio(s)" and English cannot: the parenthesised plural is a Spanish habit this
  * app uses everywhere, and it is exactly the kind of thing that does not survive a
  * word-for-word translation.
  */
@@ -73,8 +73,8 @@ export const es = {
   "account.identity.email.placeholder": "sin correo",
   "account.identity.email.help":
     "Solo sirve para recibir el enlace de restablecer la contraseña. No se entra con él y no lo ve nadie más.",
-  // Solo se ve cuando la cuenta YA tiene dirección en una instalación sin correo: el campo
-  // se esconde en cuanto está vacío, pero un dato guardado nunca se oculta.
+  // Only seen when the account ALREADY has an address on an installation with no mail: the
+  // field hides once it is empty, but stored data is never hidden.
   "account.identity.email.help.noMail":
     "Esta instalación no tiene correo configurado, así que aquí no se entrega nada: el enlace de restablecer se pide a quien administra. Puedes borrar la dirección si quieres.",
 
@@ -189,10 +189,9 @@ export const es = {
   "step.extract": "Un documento tras otro, guardando el banco después de cada uno.",
   "step.extract_batches": "El documento se trocea y cada trozo se extrae por separado para que quepa en contexto.",
   "run.whatItDoes": "Qué hace: {step}",
-  // EL NOMBRE QUE LEE UN PROFESOR, no el del artefacto. Un «perfil de ejemplares» es una
-  // pieza de la arquitectura y no dice nada a quien abre esto por primera vez; lo que sí
-  // dice algo es que ahí están los tipos de ejercicio que pone. La tabla es una sola, así
-  // que el vocabulario es el mismo en la barra, en los avisos y en cada pantalla.
+  // The name a TEACHER reads, never the artifact's. "Perfil de ejemplares" is a piece of
+  // the architecture and says nothing to somebody opening this for the first time. One
+  // table, so the vocabulary is the same on the bar, in the notices and on every screen.
   "artifact.profile": "Tipos de ejercicio",
   "artifact.graph": "El temario",
   "artifact.bank": "Etiquetado",
@@ -270,35 +269,33 @@ export const es = {
   },
   "nav.myVariants": "Mis ejercicios",
   "nav.needsApproved": "Antes hay que terminar la fase de construcción: preparar la asignatura",
-  // EL RECORRIDO, con las palabras de quien da clase. Ninguna nombra un artefacto: el
-  // profesor que abre esto por primera vez no sabe qué es un «perfil de ejemplares», y
-  // sabe perfectamente qué son los tipos de ejercicio que pone.
+  // The path, in the words of whoever teaches. Not one of them names an artifact: a teacher
+  // opening this for the first time does not know what an "exemplars profile" is, and knows
+  // perfectly well what the types of exercise they set are.
   "nav.step.raw": "Apuntes y ejercicios",
   "nav.step.profile": "Tipos de ejercicio",
   "nav.step.graph": "El temario",
   "nav.step.bank": "Etiquetado",
-  // Debajo del nombre, en una línea: dónde estás. Es lo que convierte cuatro destinos en
-  // un camino con un solo paso obvio.
+  // Under the name, in one line: where you are. It is what turns four destinations into a
+  // path with one obvious next step.
   "nav.state.done": "Hecho",
   "nav.state.now": "Te toca ahora",
   "nav.state.later": "Después",
-  // Mientras hay trabajo EN MARCHA en un paso, la rueda sustituye al número y esta es la
-  // palabra de debajo: construir una etapa, o leer los documentos del paso 1.
+  // While work is RUNNING on a step the wheel replaces the number, and this is the word
+  // under it: building a stage, or reading step 1's documents.
   "nav.state.building": "Construyendo",
   "nav.state.reading": "Leyendo",
-  // Las dos puertas de la fase de pruebas. Cerrada la construcción no llevan palabra
-  // debajo («cuando quieras» se probó y se quitó el mismo día); abierta, están medio
-  // apagadas, dicen «después» y no responden al clic (2026-09-02, petición explícita).
+  // The two doors of the testing phase. Once the construction is closed they carry no word
+  // under the name; while it is open they are half off, say "después" and answer no click.
   "nav.create": "Generar ejercicios",
   "nav.compare": "Evaluar el sistema",
-  // DOS FASES CON NOMBRE Y SIN NÚMERO (2026-09-02, petición explícita): la construcción,
-  // cuyos cuatro pasos sí van en orden y por eso se numeran 1–4, y las pruebas, que son dos
-  // acciones sin orden entre sí. Numerarlas 2 y 3 decía «después de», que era falso.
+  // Two phases, named and not numbered: the construction, whose four steps do go in order
+  // and are numbered 1–4, and the testing phase, whose two actions have no order between
+  // them. Numbering those 2 and 3 would claim one comes after the other.
   "nav.phase.build": "Fase de construcción",
   "nav.phase.test": "Fase de pruebas",
-  // LA CONSTRUCCIÓN SE PLIEGA CUANDO ESTÁ HECHA (2026-09-05, petición explícita): los cuatro
-  // pasos se reducen a una píldora con su marca y esta frase, y la palabra de debajo es la
-  // forma de volver a desplegarlos. Se recuerda en el navegador.
+  // The construction folds into one pill once it is done, and the word under the name is
+  // the way back to the four steps. Remembered in the browser.
   "nav.build.folded": "Asignatura preparada",
   "nav.build.unfold": "Ver los pasos",
   "nav.build.fold": "Ocultar los pasos",
@@ -330,7 +327,7 @@ export const es = {
   // The figures' own labels, and whatever a figure says the prose beside it does not
   // repeat: a drawing that enumerates over a paragraph enumerating the same things is one
   // thing said twice. The flow's three are full sentences with a subject, because the
-  // question they answer is who is expected to do what. «Propuesta A» is not here: the
+  // question they answer is who is expected to do what. "Propuesta A" is not here: the
   // blind figure reads `grid.proposal`, the comparison screen's own label.
   "tutorial.fig.yours": "Tú aportas tus apuntes y tus ejercicios",
   "tutorial.fig.learns": "El sistema analiza tu asignatura y aprende",
@@ -353,8 +350,8 @@ export const es = {
   "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
   "tutorial.s2.body":
     "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar material sobre tu asignatura: apuntes y ejercicios que ya tengas en PDF, en Word o en PowerPoint, tal y como estén.",
-  // «Sube solo un par de temas» y «esto tarda» van aquí, justo antes de ir a buscar los
-  // archivos, que es donde sirven de algo.
+  // "Sube solo un par de temas" and "esto tarda" belong here, right before somebody goes
+  // looking for the files, which is where they are worth anything.
   "tutorial.s2.b1":
     "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para probarlo: recuerda que estamos simplemente probándolo.",
   "tutorial.s2.b2":
@@ -372,9 +369,9 @@ export const es = {
   "tutorial.s3.step4":
     "Con lo que sale de los dos pasos anteriores, se etiquetan los ejercicios con los conceptos del temario que se practican o evalúan en cada uno. Así tus ejemplos sirven de modelo al generar ejercicios nuevos.",
 
-  // LA BISAGRA ES LA PRIMERA FRASE DE LA FASE DE PRUEBAS, no una diapositiva aparte: «con esto ya
-  // está preparado» seguido de «pedir ejercicios» era el mismo giro contado dos veces. Y
-  // las tres preguntas del encargo las dibuja la figura, así que aquí no se enumeran.
+  // The hinge is the FIRST SENTENCE of the testing phase and not a slide of its own: "con
+  // esto ya está preparado" followed by "pedir ejercicios" is one turn told twice. The
+  // commission's three questions are drawn by the figure, so they are not listed here.
   "tutorial.s4.title": "Fase de pruebas: generar ejercicios",
   "tutorial.s4.body":
     "Con la construcción terminada, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. Empieza la fase de pruebas, formada por dos tareas (puedes hacerlas en el orden que quieras, y ninguna necesita a la otra): generar ejercicios y evaluar el sistema. La primera: en «Generar ejercicios» le pides tantos como quieras y te quedas con los que te sirvan.",
@@ -388,10 +385,9 @@ export const es = {
   "tutorial.s5.title": "Fase de pruebas: evaluar el sistema",
   "tutorial.s5.body":
     "La segunda cosa que puedes hacer. En «Evaluar el sistema» se te dan tres versiones del mismo ejercicio, cada una generada con una IA distinta y solo una con el sistema de Variatio, sin decir cuál es cuál. Te pediremos que las leas y nos digas cuál te serviría mejor a tus propósitos. Solo al final se revela de dónde salía cada una.",
-  // LA DIFERENCIA CON GENERAR ES EL PRIMER PUNTO: las dos escriben ejercicios, y sin
-  // decirlo evaluar se lee como «generar con tres en vez de uno». Y es opcional y no
-  // depende de haber generado nada. Los nombres de las dos píldoras cambiaron por lo mismo
-  // (2026-09-02): «Crear ejercicios → Comparar» se leía como una cadena.
+  // The difference from generating is the FIRST point: both write exercises, so without
+  // saying it evaluating reads as "generating three instead of one". It also needs nothing
+  // generated beforehand.
   "tutorial.s5.b1":
     "Esta evaluación es independiente de si has generado ejercicios o no: eso no lo evaluaremos, y da igual que no hayas generado ninguno. En «Generar ejercicios» pides uno para usarlo en clase; aquí se escriben tres del mismo encargo, con tres métodos distintos, para que digas cuál te gusta más o consideras mejor, y lo que se guarda es tu juicio.",
   "tutorial.s5.b3":
@@ -399,18 +395,18 @@ export const es = {
   "tutorial.s5.aside":
     "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
 
-  // DE EXPLICAR EL PRODUCTO A PEDIR LA EVALUACIÓN, y de ahí a la puerta. La figura dibuja
-  // los cuatro tiempos de cada paso, así que el texto no los vuelve a recorrer: dice lo que
-  // la figura no puede, que corregir es opcional y que lo corregido a mano gana.
+  // From explaining the product to asking for the evaluation, and from there to the door.
+  // The figure draws the four beats of every step, so the prose does not walk them again:
+  // it says what the picture cannot — that correcting is optional and that a hand
+  // correction wins.
   "tutorial.s6.title": "Y ahora, tu parte en el estudio",
   "tutorial.s6.body":
     "Hasta aquí, qué hace y cómo se usa. Lo que se te pide ahora es que lo prepares con una asignatura tuya y contestes en cada paso unas pocas preguntas sobre los resultados que el sistema te ha ido proporcionando: esas respuestas nos ayudarán a mejorar el sistema, por lo que te pedimos rigor. ¡Muchas gracias por tu tiempo!",
   "tutorial.s6.b1":
     "Siempre que el sistema genera algo —el temario, los tipos de ejercicio…— te da la opción de corregirlo o modificarlo. Es totalmente opcional y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
-  // DOS SALIDAS, SEGÚN TENGA O NO ASIGNATURA quien lee (2026-09-02, explicit user request):
-  // a quien acaba de aceptar una invitación no se le puede decir «elige», que no hay nada
-  // que elegir. Desde el 2026-09-04 ninguna de las dos señala un sitio de la pantalla: bajo
-  // el mazo no se dibuja la cabecera, así que se dice qué hay que hacer y no dónde pulsar.
+  // Two ways out, depending on whether the reader has a subject: somebody who has just
+  // accepted an invitation cannot be told to "choose" one. Neither points at a place on the
+  // screen — the deck draws no header, so they say what to do and not where to press.
   "tutorial.s6.outro.create":
     "Todavía no tienes ninguna asignatura: lo primero es crear la tuya, y hasta que exista no hay nada que preparar. Al terminar esta explicación aparece la aplicación, con los cuatro pasos y las dos pruebas a mano; en el menú de tu cuenta están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
   "tutorial.s6.outro.choose":
@@ -418,12 +414,12 @@ export const es = {
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
-  // MIENTRAS SE MIRA, ESTO ES UNA VISTA. Ver y corregir son dos tareas y ahora son dos
-  // momentos: la etapa se abre en solo lectura y corregir es lo que la desbloquea.
+  // While it is being looked at, this is a VIEW. Seeing and correcting are two tasks and
+  // therefore two moments: a stage opens read-only, and correcting is what unlocks it.
   "stage.viewHint":
     "Ahora mismo esto es una vista. Para poder editarlo, pulsa «Quiero corregir algo» al final de la página.",
   // LAS DOS SALIDAS DEL PASO, al final y juntas: corregir es opcional, y avanzar no exige
-  // entender la palabra «aprobar».
+  // entender la palabra "aprobar".
   "stage.curate.title": "¿Quieres corregir algo?",
   "stage.curate.body":
     "Esto es una primera versión. Si corriges lo que no encaje, los ejercicios que se generen después se parecerán más a los tuyos. Si lo dejas como está, también puedes seguir.",
@@ -431,8 +427,8 @@ export const es = {
     "A partir de estos ejercicios se generan los nuevos, así que lo que corrijas aquí se nota en todo lo que venga después. Si lo dejas como está, puedes seguir igualmente, pero el resultado no será tan bueno, posiblemente.",
   "stage.curate.editing": "Guarda los cambios en la barra de abajo. Al continuar al paso siguiente también se guardan, y el paso se cierra.",
   "stage.curate.start": "Quiero corregir algo",
-  // LA BARRA DE CORRECCIÓN, fija al borde de abajo mientras se corrige: cómo están los
-  // cambios, la salida y «Guardar los cambios» donde hay algo que guardar.
+  // The correction bar, pinned to the foot of the window while correcting: the state of the
+  // changes, the way out, and "Guardar los cambios" where there is something to save.
   "stage.curate.editingTitle": "Cuando termines de corregir",
   "stage.curate.bar": "Estás corrigiendo",
   "stage.curate.unsaved": "Hay cambios sin guardar",
@@ -451,17 +447,17 @@ export const es = {
   "stage.continueGenerate": "Ya está: crear mi primer ejercicio",
   "stage.continueFailed":
     "No se ha podido cerrar este paso, así que no se ha avanzado. Vuelve a intentarlo.",
-  // EL CUESTIONARIO DE CADA PASO. Lo que se PREGUNTA viaja del servidor
-  // (`evaluation/api/stage_instruments.py`), porque es el instrumento y no una etiqueta: aquí
-  // solo está el armazón — el título, el estado y el botón.
+  // Each step's questionnaire. What is ASKED travels from the server
+  // (`evaluation/api/stage_instruments.py`), because it is the instrument and not a label:
+  // what is here is the frame — the title, the state and the button.
   "stageReview.title": "Tu valoración",
-  // El botón que la abre, al pie del artefacto: dice qué hay que hacer, no cómo se llama
-  // el bloque que abre.
+  // The button that opens it, at the foot of the artifact: it says what to do, not what the
+  // block it opens is called.
   "stageReview.openTitle": "Evalúa este paso",
   "stageReview.close": "Cerrar la valoración",
-  // EL NÚMERO SALE DEL INSTRUMENTO, no de aquí: era «Cinco» fijo en las tres etapas
-  // mientras el grafo preguntaba seis, así que el botón contradecía al formulario que
-  // abre. Lo cuenta `evaluation/api/stage_instruments.count()` y llega en el payload.
+  // The number comes from the INSTRUMENT and not from here: written into the string, the
+  // button contradicts the form it opens as soon as an instrument changes.
+  // `evaluation/api/stage_instruments.count()` counts it and it arrives in the payload.
   "stageReview.openPending": {
     one: "1 afirmación corta sobre lo que acabas de revisar: di cuánto estás de acuerdo",
     other: "{n} afirmaciones cortas sobre lo que acabas de revisar: di cuánto estás de acuerdo con cada una",
@@ -480,25 +476,22 @@ export const es = {
     other:
       "Cuando esté construido se te preguntará aquí qué tal ha salido. Son {n} afirmaciones cortas, del 1 al 5.",
   },
-  // LA ESCALA SE NOMBRA UNA VEZ, sobre todas las afirmaciones: cada botón lleva su
-  // peldaño como nombre accesible («3 · Ni de acuerdo ni en desacuerdo»), pero el texto
-  // visible es el número, porque cinco etiquetas por fila no caben y no se leerían.
+  // The scale is named ONCE, over every statement: each button carries its rung as its
+  // accessible name, but the visible text is the number — five labels per row would not fit
+  // and would not be read.
   "stageReview.rung": "{n} · {label}",
   "stageReview.failed": "No se ha podido guardar. Vuelve a intentarlo.",
   "stageReview.done.title": "Valoración guardada. Gracias.",
-  // CONTINUAR CIERRA EL PASO. Antes solo navegaba, y el paso siguiente se negaba a
-  // construirse por falta de una aprobación que nadie había pedido: el único botón que la
-  // pantalla ofrece llevaba a un callejón. El texto lo dice, porque un botón que firma
-  // algo sin decirlo es peor que uno que no firma.
+  // "Continuar" CLOSES the step. Navigating and nothing else leaves the next step refusing
+  // to build for want of an approval nobody was asked for. The copy says so: a button that
+  // signs something without saying it is worse than one that signs nothing.
   "stageReview.done.body":
     "Al continuar se da por bueno este paso, que es lo que hace falta para poder seguir. Tu valoración se queda guardada y puedes volver a este paso cuando quieras.",
-  // QUÉ ES ESTE PASO, en dos frases y sin nombrar una sola pieza del sistema. Va visible,
-  // bajo el título, y no detrás de una (i): lo que explica de qué va la pantalla no puede
-  // estar escondido en la pantalla que explica.
-  // El respaldo, y sólo el respaldo: se ve mientras el perfil carga, y en cuanto carga lo
-  // sustituyen las cuatro claves de debajo, que dicen lo mismo con la cuenta y los nombres
-  // reales. Se le quitó la mitad que ahora dicen ellas, y la frase de «es la plantilla»
-  // vive una sola vez, en «.why».
+  // What this step IS, in two sentences and without naming a single piece of the system.
+  // Visible under the title and never behind an (i): what says what a screen is about
+  // cannot be the one thing hidden on it.
+  // The fallback and only the fallback: it shows while the profile loads, and is replaced
+  // by the four keys below, which say the same thing with the real count and names.
   "stage.what.profile":
     "Es la plantilla con la que se escriben los ejercicios nuevos: las formas distintas que tienen tus ejercicios y qué partes lleva cada una.",
   "stage.what.profile.found": {
@@ -508,17 +501,15 @@ export const es = {
   "stage.what.profile.more": { one: "1 más", other: "{n} más" },
   "stage.what.profile.why":
     "Aquí abajo tienes la descripción y las reglas de redacción de cada uno: revísalas y, si lo crees necesario, corrige lo que consideres.",
-  // EL PASO 3 ES «EL TEMARIO» Y LO QUE SE SACA DE ÉL SON «CONCEPTOS» (2026-09-03, petición
-  // explícita). Lo que se analiza es el temario de la asignatura; lo que se extrae y se
-  // enseña fila a fila son sus conceptos. «Tema» sigue fuera (era la palabra de un nodo y
-  // decía «grafo de temas»), y «grafo» se reserva para hablar de la estructura —niveles,
-  // ciclos, el dibujo—, nunca para nombrar el paso.
+  // Step 3 is "el temario" and what comes out of it are "conceptos": what is analysed is
+  // the syllabus, what is extracted and shown row by row are its concepts. "Tema" is out of
+  // the product's vocabulary, and "grafo" names only the structure — levels, cycles, the
+  // drawing — never the step.
   "stage.what.graph":
     "Este es el grafo de conocimiento del temario tal como se ha extraído de tus apuntes: sus conceptos, agrupados en unidades y relacionados por dependencias, si las hay. Repasa los conceptos, mira con qué otros se relaciona cada uno y pulsa en cualquiera para leer su descripción. Al final se te pide una valoración de este paso.",
-  // DE DÓNDE SALEN LOS CONCEPTOS: del paso anterior. «El tema que practica» escondía justo
-  // eso —el único sitio donde se ve por qué los conceptos van antes que los ejercicios— y
-  // además decía uno donde hay varios. Lo demás es el mismo orden que en los otros pasos:
-  // qué se está mirando, qué hay que hacer con ello y qué se pide al final.
+  // Where the concepts come FROM: the step before. It is the one place a person sees why
+  // the concepts come before the exercises. The rest is the same order as every other step:
+  // what you are looking at, what to do with it, and what is asked at the end.
   "stage.what.bank":
     "Se han recogido uno a uno los ejercicios de tus documentos y a cada uno se le han puesto automáticamente uno o más conceptos del temario del paso anterior. Comprueba si los conceptos de cada ejercicio son los que de verdad practica: pulsa en uno para leerlo entero. Al final se te pide una valoración de este paso.",
   "stage.approved": "Aprobado",
@@ -544,16 +535,13 @@ export const es = {
   "build.sending": "Enviando…",
   "build.alreadyQueued": "{label} ya está en cola.{reason}",
   "build.create": "Construye {stage} a partir de tus apuntes y ejercicios.{note}",
-  // EL BOTÓN DE CONSTRUIR, grande y en el centro de la pantalla vacía: es lo único que hay
-  // que hacer en un paso sin construir. Un solo nombre para los cuatro pasos, y no se
-  // ofrece reconstruir: una segunda pasada sobre los mismos documentos no da otra cosa.
+  // The build button, big and in the middle of the empty screen: it is the only thing to do
+  // on an unbuilt step. One name for the four steps, and no rebuild is offered — a second
+  // pass over the same documents gives nothing different.
   "build.start": "Comenzar construcción",
-  // LA LLAMADA A CONSTRUIR, UNA POR PASO (2026-09-04, petición explícita). Era una sola
-  // frase con el nombre del paso interpolado — «Este paso todavía no está construido. Se
-  // construye Tipos de ejercicio leyendo tus apuntes y ejercicios.» — que decía dos veces
-  // lo mismo y no decía lo único que hace falta saber antes de pulsar: qué va a salir de
-  // ahí. Cada paso dice ahora qué es lo que todavía no existe y qué lee para hacerlo; la
-  // última frase, la del rato que tarda, es la misma en los tres porque es la misma.
+  // The call to build, one per step: each says what does not exist yet and which slot it
+  // reads to make it, since the four do not read the same one. The closing sentence about
+  // how long it takes is shared, which is why this is two keys.
   "build.callTitle": "Este paso todavía no está construido",
   "build.callBody": "Se construye {label} leyendo tus apuntes y ejercicios. Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
   "build.call.profile.title": "Todavía no hay una clasificación de tus tipos de ejercicio",
@@ -569,10 +557,9 @@ export const es = {
   "token.waiting": "Esperando al modelo",
   "token.toEnd": "Al final",
   "run.detail": "Detalle",
-  // EL REINTENTO SE DICE EN LA TIRA, no solo en el registro (2026-09-02, petición
-  // explícita): un reintento es otra generación entera, así que la barra se queda quieta
-  // varios minutos y sin esta línea eso se lee como que se ha colgado. Los motivos los
-  // escribe `checks.py` y se imprimen tal cual detrás de los dos puntos.
+  // The retry is said on the strip and not only in the log: a retry is another whole
+  // generation, so the bar sits still for minutes and without this that reads as a hang.
+  // The reasons are `checks.py`'s own and are printed verbatim after the colon.
   "run.retrying": "El ejercicio {index} no pasó las comprobaciones; se está generando otra vez (intento {attempt} de {max}):",
   "run.noSteps": "Sin pasos todavía.",
   "technical.retrieval": "Recuperación de conceptos",
@@ -621,8 +608,8 @@ export const es = {
   "raw.renamed": { one: "1 renombrado por nombre repetido", other: "{n} renombrados por nombre repetido" },
   "raw.invalid": { one: "1 descartado por extensión", other: "{n} descartados por extensión" },
   "raw.confirmDelete": "¿Eliminar «{name}» de {slot}?",
-  // ELEGIR VARIOS Y BORRARLOS DE GOLPE (2026-09-04, petición explícita): uno a uno son una
-  // pregunta y tres refrescos por documento, y vaciar un origen de veinte era una tarde.
+  // Picking several and deleting them in one go: one at a time is a confirmation and three
+  // refetches per document, and emptying an origin of twenty took an afternoon.
   "raw.confirmDeleteMany": "¿Eliminar los {n} documentos seleccionados de {slot}?",
   "raw.selectFile": "Seleccionar {name}",
   "raw.selectAll": "Seleccionar todos",
@@ -642,13 +629,13 @@ export const es = {
   "raw.screenIntro":
     "Sube lo que ya tienes: los apuntes de la asignatura y los ejercicios. Es el único paso en el que hace falta que busques archivos, porque todo lo demás sale de aquí. Con un par de temas basta: cada documento se lee entero, y cuanto más subas, más se tarda.",
   "raw.dropHere": "Arrastra los documentos aquí",
-  // EL BLOQUE QUE LLEVA AL PASO SIGUIENTE, al pie, cuando los dos orígenes tienen algo y
-  // todo está leído. Es la misma salida con la que se cierra cada paso, no un aviso.
+  // The block that leads to the next step, at the foot, once both origins hold something
+  // and everything is read. The same exit every step closes with, and never a notice.
   "raw.done.title": "Apuntes y ejercicios listos",
   "raw.done.body": "Todos tus documentos están subidos y leídos. Ya puedes pasar al paso siguiente, «{next}».",
-  // EL MISMO BLOQUE CON DOCUMENTOS SIN LEER: la salida se ofrece igual, porque leerlos no es
-  // una puerta — cada paso lee lo suyo por su cuenta — y el pie de cada etapa ofrece
-  // «Continuar» esté como esté la etapa.
+  // The same block with documents still unread: the exit is offered all the same, because
+  // reading them is not a gate — every step reads its own — and the foot of a stage offers
+  // "Continuar" whatever its state.
   "raw.next.title": "Puedes pasar al paso siguiente",
   "raw.next.body": "Quedan documentos por leer, pero no hace falta esperar: cada paso los lee por su cuenta cuando le hacen falta. Si prefieres adelantarlo, léelos desde el bloque de arriba.",
   "raw.orPick": "o haz clic para elegirlos en tu equipo",
@@ -1504,8 +1491,8 @@ export const es = {
   "kg.newConcept": "Nuevo concepto",
   "kg.newConcept.description": "Se añadirá al temario y podrá usarse ya para clasificar y para pedir ejercicios.",
   "kg.editError": "Error al editar el temario",
-  // Sin prefijo: la cuenta ya dice «conceptos» y el título de arriba dice «El temario», así que
-  // «Conceptos · 162 conceptos» era la misma palabra dos veces en la misma línea.
+  // No prefix: the count already says "conceptos" and the title above says "El temario", so
+  // "Conceptos · 162 conceptos" is the same word twice on one line.
   "kg.outlineHeader": "{concepts} · {taggable} se usan para etiquetar los ejercicios que has subido",
   "kg.search": "Buscar concepto",
   "kg.searchPlaceholder": "Buscar concepto",
@@ -1520,8 +1507,8 @@ export const es = {
   "kg.noDescriptionBadge": "Sin describir",
   "kg.descriptionPlaceholder": "Qué se practica cuando un ejercicio va de este concepto.",
   "kg.descriptionNote": "Es lo que se usa para decidir de qué va cada ejercicio. Corrígela si no describe lo que enseñas.",
-  // La misma frase sin la mitad que manda corregir: mientras el paso se está mirando, la
-  // descripción se lee, y ofrecer la corrección es la tarea del otro momento.
+  // The same sentence without the half that tells you to correct it: while the step is
+  // being looked at the description is read, and correcting belongs to the other moment.
   "kg.noDescription": "Este concepto todavía no tiene descripción.",
   "kg.descriptionSaved": "Descripción guardada",
   "kg.noRelations": "Este concepto no apunta a ningún otro.",
@@ -1699,9 +1686,8 @@ export const es = {
   "form.removeConcept": "Quitar {name}",
   "form.problem.itemType": "Elige el tipo de ejercicio.",
   "form.problem.concepts": "Elige al menos un concepto objetivo.",
-  // La divulgación se llama como lo único que guarda, `form.instructions.title`, desde
-  // que el currículo se fue al paso de conceptos; sólo queda lo que dice cuando está
-  // cerrada.
+  // The disclosure is named after the one thing it holds, `form.instructions.title`; what
+  // is left here is what it says while shut.
   "form.settings.none": "Ninguna",
   "form.settings.withInstructions": "con instrucciones",
   "form.outside.title": "Hay conceptos fuera del currículo",
@@ -1714,13 +1700,11 @@ export const es = {
   "form.type.none": "Ningún tipo elegido todavía",
   "form.taught.title": "¿Hasta dónde ha llegado la clase?",
   "form.taught.hint": "Sin marcar nada, el ejercicio puede apoyarse en cualquier concepto del temario; solo se le exige que practique lo que elijas y no algo posterior. Si la clase va por la mitad, marca hasta dónde ha llegado: entonces solo se da por sabido lo que marques, y lo de más adelante queda prohibido. Marcar un concepto marca también lo que va antes de él.",
-  // El nombre de la caja, en versalitas sobre su título (2026-09-05, petición explícita).
+  // The box's name, in small capitals over its title.
   "form.taught.name": "Currículo",
-  // DOS CONTROLES EN EL MISMO PASO NO PUEDEN LLAMARSE CASI IGUAL (2026-09-02, petición
-  // explícita). «Elegir los conceptos cubiertos» estaba a un centímetro de «Elegir
-  // conceptos» y hacían cosas distintas: uno acota el terreno, el otro elige el objetivo
-  // dentro de él. El primero se nombra ahora por lo que significa —lo que ya se ha dado
-  // en clase— y ni siquiera empieza por el mismo verbo.
+  // Two controls in one step may not be named almost alike: one bounds the ground and the
+  // other picks the target inside it, so this one is named after what it means and does not
+  // even open with the same verb.
   "form.taught.pick": "Marcar hasta dónde ha llegado la clase ({n})",
   "form.practise.title": "¿Qué hay que practicar?",
   "form.practise.hint": "Lo que el ejercicio debe hacer practicar, no lo que menciona. Sale del temario, y los ejemplos que se imitan se eligen entre tus ejercicios etiquetados con estos conceptos.",
@@ -1775,9 +1759,8 @@ export const es = {
   "generate.howItWorks": "Cómo se genera",
   "generate.noEngine": "Sin motor de inferencia",
   "generate.noEngineBody": "{reason} Arráncalo y vuelve a intentarlo.",
-  // LAS DOS SALIDAS DE UNA TANDA TERMINADA (2026-09-02, petición explícita): variar lo
-  // que se pidió, o empezar con el formulario en blanco. Repetir el mismo encargo tal cual
-  // es lo primero sin tocar nada, así que «Generar otros N» dejó de dibujarse.
+  // The two ways on from a finished batch: vary what was asked for, or start from a blank
+  // form. Repeating the same commission verbatim is the first one with nothing touched.
   "generate.vary": "Variar el encargo actual",
   "generate.startOver": "Empezar desde cero",
   "generate.ofRequested": " de {n}",
@@ -2025,8 +2008,8 @@ export const es = {
   "guide.group.daily": "Día a día",
   "guide.sec.start": "Qué es y cómo se recorre",
   "guide.sec.workspace": "Cada asignatura, por separado",
-  // El índice de la guía nombra los pasos como los nombra la barra: una guía que llama a
-  // las cosas de otra manera que la pantalla es una guía sobre otro programa.
+  // The guide's index names the steps as the bar names them: a guide that calls things
+  // something else is a guide about another program.
   "guide.sec.raw": "Paso 1 · Apuntes y ejercicios",
   "guide.sec.profile": "Paso 2 · Tipos de ejercicio",
   "guide.sec.graph": "Paso 3 · El temario",

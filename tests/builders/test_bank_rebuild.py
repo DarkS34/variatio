@@ -2,7 +2,7 @@
 
 Every build reads every document again, so anything already in `exemplars_bank.json` could
 only come back out of them a second time. The build writes aside and puts what it made in
-place whole, which is what makes «volver a extraer» mean what its confirmation says and a
+place whole, which is what makes "volver a extraer" mean what its confirmation says and a
 cancelled one leave the workspace as it found it.
 """
 

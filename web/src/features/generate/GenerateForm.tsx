@@ -63,12 +63,12 @@ import { CancelButton } from "@/components/CancelButton";
 import type { RunView } from "@/state/runStore";
 
 const MAX_ITEMS = 20;
-// One identity for «the payload has not arrived», so the effect below is not re-run by a
+// One identity for "the payload has not arrived", so the effect below is not re-run by a
 // fresh `[]` on every render.
 const NONE: string[] = [];
 /** Mirrors config.GENERATION_INSTRUCTIONS_MAX_CHARS. */
 const MAX_INSTRUCTIONS = 600;
-/** Un problema que bloquea el lanzamiento y se explica en otro sitio. Ver `problems`. */
+/** A problem that blocks the launch and is explained elsewhere. See `problems`. */
 const SILENT_OUTSIDE = "\u0000outside";
 
 /** The modality actually in force: what the form shows and what the run will produce. */
@@ -89,11 +89,10 @@ export function activeTypeSpec(
   return key && profile ? profile.item_types[key] : null;
 }
 
-// The curriculum in force, in words: the form step reads it and so does the one line that
-// replaces the whole form once it is collapsed. One derivation, because two of them drifted
-// apart exactly where it mattered — «currículo de 0» over a request that carries `[]`, which
-// is no restriction at all. `presetSize` is null when the workspace's own has not been read,
-// which is the collapsed line's case: it has the state, not the query.
+// The curriculum in force, in words, for the form step and for the line that replaces the
+// whole form once collapsed. One derivation: two of them drift apart exactly where it
+// matters, reading "currículo de 0" over a request carrying `[]`, which is no restriction.
+// `presetSize` is null where the workspace's own has not been read.
 function curriculumLabel(
   state: FormState,
   presetSize: number | null,
@@ -137,8 +136,8 @@ export function summarize(
   return parts.join(" · ");
 }
 
-// The two lists the graph derives are read as a contrast, not as prose: one is what the
-// item may lean on and the other what it may not name at all. Same shape, opposite tone.
+// The two lists the graph derives, read as a contrast: what the item may lean on, and what
+// it may not name at all. Same shape, opposite tone.
 function ConceptTrack({
   tone,
   icon,
@@ -156,9 +155,8 @@ function ConceptTrack({
       <span
         className={cn(
           "inline-flex items-center gap-1 text-micro font-condensed uppercase",
-          // The same two tones the curriculum view uses: what is settled behind you, and
-          // what is ahead and not reachable yet. The strikethrough already carries
-          // "forbidden"; the colour carries the POSITION, which is the whole thesis.
+          // The strikethrough carries "forbidden"; the colour carries the POSITION, which
+          // is the palette's own frontier.
           tone === "given" ? "text-settled" : "text-muted-foreground",
         )}
       >
@@ -182,8 +180,8 @@ function ConceptTrack({
   );
 }
 
-// What the full-screen selector left behind, read on the form itself: the overlay closes and
-// its tray goes with it, so without this the answer to the question would be a number.
+// What the full-screen selector left behind: the overlay closes and its tray goes with it,
+// so without this the answer to the question would be a number.
 function ChosenConcepts({
   names,
   colourFor,
@@ -229,8 +227,8 @@ export function Count({
   max?: number;
 }) {
   const { t } = useT();
-  // A stepper rather than a number box: emptying the box yields NaN, which compares
-  // false against every bound and used to travel all the way to the server as null.
+  // A stepper rather than a number box: an emptied box yields NaN, which compares false
+  // against every bound and travels to the server as null.
   const clamp = (next: number) => onChange(Math.min(max, Math.max(1, next)));
   return (
     <div className="flex items-center gap-1 rounded-lg border border-border p-1">
@@ -294,7 +292,7 @@ export function GenerateForm({
   variant?: "generate" | "evaluation";
   footnote?: ReactNode;
   /** Overrides the launch button's text. The panel commissions a BATCH of comparisons,
-   *  which «Comparar tres propuestas» would misreport as one. */
+   *  which "Comparar tres propuestas" would misreport as one. */
   launchLabel?: string;
   /** Which instance this commission is FOR, when it is not the one the tab is in. The
    *  concepts, the profile and the graph arrive as props, but two things the form reads
@@ -330,17 +328,14 @@ export function GenerateForm({
   const graphAdjacency = useMemo(() => adjacency(graph), [graph]);
   const chosen = state.concepts.length > 0;
 
-  // WHICH MODEL WRITES IT IS THE COMMISSION'S AGAIN (2026-09-01, explicit user request,
-  // reversing the removal of the same morning). The installation still decides everything
-  // AROUND the choice, in «Configuración → Modelos generadores»: which models are on offer,
-  // which of them is the default, and — new the same day — which of them let their effort
-  // be adjusted at all. Offering exactly one is what makes the chooser disappear, so an
-  // installation that wants to decide still does, without this screen changing shape.
+  // Which model writes it is the COMMISSION's; the installation decides everything around
+  // the choice in "Configuración → Modelos generadores". Offering exactly one makes the
+  // chooser disappear, so an installation that wants to decide still does.
   //
-  // It is read before the effort because the effort depends on it: which levels a family
-  // implements and which of them is worth a warning are the model's. Every read is
-  // defensive — an API older than this bundle sends no `offered` and no `fixed_effort`, and
-  // the screen degrades to «the installation decides» with the full scale, never to blank.
+  // Read BEFORE the effort, because the effort depends on it: which levels a family
+  // implements, and which are worth a warning, are the model's. Every read is defensive —
+  // an older API sends no `offered` and no `fixed_effort`, and the screen degrades to "the
+  // installation decides" with the full scale rather than to blank.
   const health = useHealth();
   const offered = health.data?.models.offered ?? NONE;
   const remoteModels = health.data?.models.remote ?? NONE;
@@ -348,25 +343,22 @@ export function GenerateForm({
   const fixedModels = health.data?.models.fixed_effort ?? NONE;
   const fixedLevels = health.data?.models.fixed_effort_levels;
   // The first offered one is what the server resolves an absent `model` to, so it is what
-  // the screen has to name while nobody has chosen. A stored choice the installation has
-  // stopped offering is not one: the panel edits that list while this form is open.
+  // the screen names while nobody has chosen.
   const generationModel =
     state.model && offered.includes(state.model) ? state.model : offered[0];
   const policy = effortPolicy(generationModel);
-  // Whether the slider is offered for THIS model. A measurement, and the installation's to
-  // record: see `generation.fixed_effort`.
+  // Whether the slider is offered for THIS model: a measurement the installation records
+  // in `generation.fixed_effort`.
   const adjustable = effortAdjustable(generationModel, fixedModels);
-  // And with which level a locked one is called: the installation's declaration, or — with
-  // none — the engine's own default, which travels as a bare `true` rather than as a level
-  // this form picked. Until 2026-09-04 the slider was merely HIDDEN and the last level it
-  // held was sent anyway, so «lo fija la instalación» was fixed by the browser.
+  // And with which level a locked one is called: the installation's declaration, or the
+  // engine's own default, which travels as a bare `true` and never as a level this form
+  // picked. Hiding the slider is not enough — its value would still be sent.
   const locked = adjustable ? null : fixedEffort(generationModel, fixedLevels, policy);
   const effort = adjustable ? clampEffort(state.effort, policy) : (locked ?? "low");
   const warning = adjustable ? effortWarning(effort, policy) : null;
 
-  // Same reconciliation the curriculum preset gets, and for the same reason: a value the
-  // form can no longer show must not be what the request carries. The panel edits the
-  // offered list while this form sits open.
+  // A value the form can no longer show must not be what the request carries: the panel
+  // edits the offered list while this form sits open.
   useEffect(() => {
     if (state.model && offered.length > 0 && !offered.includes(state.model)) {
       patch({ model: null });
@@ -374,16 +366,14 @@ export function GenerateForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.model, offered]);
 
-  // The curriculum that will actually be in force, resolved exactly as the server resolves
-  // it. An empty list is NOT a restriction there (`if curriculum:`), and it is truthy here,
-  // so it is collapsed to null now rather than at each of the three places that read it.
+  // The curriculum that will be in force, resolved exactly as the server resolves it. An
+  // empty list is NOT a restriction there and is truthy here, so it is collapsed to null
+  // once rather than at each of the three places that read it.
   //
-  // WHAT IS TICKED IS CLOSED DOWNWARDS (2026-09-04, explicit user request): covering «if»
-  // covers «Condición lógica» and what that rests on, exactly as the target selector marks
-  // a chosen concept's prerequisites. `server/curriculum.resolve` closes the same list
-  // before the generator reads it, so what this form counts, bounds the targets with and
-  // draws as given is what will run; `state.curriculum` keeps only the picks, which is
-  // what lets the selector MARK the rest instead of drawing it as chosen.
+  // What is ticked is CLOSED DOWNWARDS: covering "if" covers what "if" rests on.
+  // `server/curriculum.resolve` closes the same list before the generator reads it, so what
+  // this form counts is what runs. `state.curriculum` keeps only the picks, which is what
+  // lets the selector MARK the rest instead of drawing it as chosen.
   const coveredCurriculum = useMemo(
     () => covered(graphAdjacency, state.curriculum),
     [graphAdjacency, state.curriculum],
@@ -405,11 +395,10 @@ export function GenerateForm({
     [graphAdjacency, state.concepts, chosen],
   );
 
-  // The MARK is the bare closure, and independent of both switches: it says where a concept
-  // sits relative to the targets, which is a statement about the graph and not about
-  // coverage. It stopped being a LOCK on 2026-09-04 (explicit user request) — a prerequisite
-  // chosen as a target is a commission the generator already computes, because
-  // `KnowledgeGraph._closure` subtracts the targets from what it returns.
+  // The MARK is the bare closure and says where a concept sits relative to the targets: a
+  // statement about the graph, not about coverage. It is not a LOCK — a prerequisite chosen
+  // as a target is an ordinary commission, `KnowledgeGraph._closure` subtracting the targets
+  // from what it returns.
   const implied = useMemo(() => new Set(priorClosure), [priorClosure]);
   // The same mark on the curriculum selector: what the ticked coverage rests on. Here the
   // mark also COUNTS — see `coveredCurriculum` — where on the targets it only reports.
@@ -447,17 +436,10 @@ export function GenerateForm({
   // about each name that happens to have none.
   const wholeBatchZeroShot = chosen && zeroShot.length === state.concepts.length;
 
-  // The steps actually on screen, in order. It is derived and not a constant because which
-  // of them exist depends on the state: with a single modality declared there is nothing to
-  // ask first, and the last two only appear once something has been chosen. It is also the
-  // one place that order is written down — before this, the step after the concepts was
-  // hardcoded in two more.
-  // THE NUMBERED STEPS ARE THE COMMISSION, AND NOTHING OPTIONAL IS ONE OF THEM.
-  // «¿Qué se ha visto ya?» used to be the second of five — optional, three levels deep —
-  // in front of «¿Qué hay que practicar?», which is the only required answer and the whole
-  // reason for the screen. Both optional questions live in «Ajustes» now, folded, and the
-  // numbers describe the commission: modality if there is a choice, concepts, and the
-  // fields the profile leaves to whoever asks.
+  // The steps actually on screen, in order, and the one place that order is written down.
+  // Derived rather than constant: with a single modality declared there is nothing to ask
+  // first, and the last two appear only once something has been chosen.
+  // The numbered steps ARE the commission, and nothing optional is one of them.
   const steps = [
     types.length > 1 ? "itemType" : null,
     "concepts",
@@ -471,10 +453,9 @@ export function GenerateForm({
     onOpen: () => setOpen(openStep === id ? null : id),
   });
 
-  // Answering a step opens the next one. The rule is narrow on purpose: only a gesture that
-  // leaves NOTHING else to decide in that step calls this, because collapsing a question the
-  // person is still in the middle of is worse than the click it saves. Marking the curriculum
-  // is the case that proves it — it is not an answer, it changes what may be chosen next.
+  // Answering a step opens the next one, and only a gesture that leaves NOTHING else to
+  // decide in that step may call it: collapsing a question somebody is still in the middle
+  // of is worse than the click it saves. Marking the curriculum is not such a gesture.
   const advance = (from: string) => setOpen(steps[steps.indexOf(from) + 1] ?? null);
 
   // Changing modality changes which concepts have exemplars at all, so what was chosen
@@ -488,11 +469,10 @@ export function GenerateForm({
     advance("itemType");
   };
 
-  // Concepts that the curriculum leaves out. Since the curriculum moved ABOVE the targets
-  // (2026-09-02) the selector's `restrictTo` keeps it from arising the normal way round,
-  // so what is left is NARROWING the curriculum after choosing — and a commission restored
-  // from an older row. It is a correction and not a wall: the launch button still refuses,
-  // and the offer to drop them is one click.
+  // Concepts the curriculum leaves out. The selector's `restrictTo` keeps this from arising
+  // the normal way round, so what reaches here is narrowing the curriculum after choosing,
+  // or a commission restored from an older row. A correction and not a wall: the launch
+  // button refuses, and dropping them is one click.
   const outsideCurriculum = useMemo(() => {
     if (!activeCurriculum) return [];
     const inside = new Set(activeCurriculum);
@@ -509,9 +489,9 @@ export function GenerateForm({
     const found: string[] = [];
     if (types.length > 1 && !typeKey) found.push(t("form.problem.itemType"));
     if (state.concepts.length === 0) found.push(t("form.problem.concepts"));
-    // Este entra en la lista para que el botón se niegue, pero NO se imprime: el aviso
-    // del paso de conceptos dice lo mismo y además ofrece las dos formas de arreglarlo,
-    // así que repetirlo junto al botón es el mismo error dos veces en la misma pantalla.
+    // Listed so the button refuses, but never printed: the notice in the concepts step
+    // says the same thing and offers the two ways out, so repeating it beside the button
+    // is one error drawn twice on one screen.
     if (outsideCurriculum.length > 0) found.push(SILENT_OUTSIDE);
     if (state.instructions.trim().length > MAX_INSTRUCTIONS)
       found.push(t("form.problem.tooLong", { max: MAX_INSTRUCTIONS }));
@@ -523,34 +503,26 @@ export function GenerateForm({
     .join(" · ");
 
   // The box counts what is COVERED — the picks closed downwards — because that is what the
-  // button beside it counts and what will run; the collapsed bar keeps the picks.
+  // button beside it counts and what will run.
   const curriculumSummary =
     restricting && !state.usePresetCurriculum
       ? t("form.curriculum.ofN", { n: coveredCurriculum.length })
       : curriculumLabel(state, null, tr);
 
-  // What «Ajustes» says while it is shut: nothing set reads as «nada»; anything set is
-  // named, because a disclosure that hides a decision without saying so is where a
-  // decision goes to be forgotten. The curriculum left this summary with the control
-  // itself (2026-09-02) — it is answered in the concepts step and reported in its line.
+  // What "Ajustes" says while shut: anything set is named, because a disclosure that hides
+  // a decision without saying so is where a decision goes to be forgotten.
   const settingsSummary = state.instructions.trim()
     ? t("form.settings.withInstructions")
     : t("form.settings.none");
 
   let index = 0;
 
-  // THE FORM IS A SURFACE OF ITS OWN, AND NARROWER THAN THE PAGE (2026-09-01, explicit
-  // user request). It used to be a bare `space-y-1` on the page's own ground, so the only
-  // thing separating «the questions you answer» from «the header, the alerts and the
-  // results» was vertical space. One step of tint plus a border says it in both themes —
-  // `--muted` is BELOW `--background` in light and ABOVE it in dark — and it costs
-  // nothing, because the open step is `bg-card` and now reads as a card ON something
-  // rather than a card on the page.
+  // The form is a surface of its own, so what you answer is separated from the header, the
+  // alerts and the results by more than vertical space. One step of tint works in both
+  // themes — `--muted` is below `--background` in light and above it in dark.
   //
-  // The width is here and NOT on the screens' own column: `max-w-4xl` there is the
-  // reading width of a generated statement with a block of code in it, which is a
-  // different measurement from the reading width of a question with three options. Both
-  // screens that draw this form get the narrowing from one place.
+  // The width lives here and NOT on the screens' own column: the reading width of a
+  // question with three options is not that of a statement with a block of code in it.
   return (
     <div
       className={cn(
@@ -615,23 +587,18 @@ export function GenerateForm({
           .join(" · ")}
         {...step("concepts")}
       >
-        {/* HASTA DÓNDE HA LLEGADO LA CLASE VA ANTES DE ELEGIR LOS OBJETIVOS, Y EN EL
-            MISMO PASO (2026-09-02, petición explícita). Vivía plegado en «Ajustes», que
-            está DESPUÉS: se decidía qué practicar y sólo entonces, una sección más abajo,
-            se podía acotar el temario que sostiene esa elección — y lo normal era no
-            encontrarlo. Aquí es la primera mitad de una sola pregunta: primero el terreno,
-            después el objetivo dentro de él.
+        {/* How far the class has got comes BEFORE choosing the targets and in the same
+            step: it is the first half of one question — the ground first, then the target
+            inside it — and folded into a later section it was normally never found.
 
-            Es una caja propia y no una fila suelta: lo que la separa del botón grande de
-            debajo es que acota, no elige, y sin borde las dos cosas se leerían como una
-            lista de dos controles del mismo rango.
+            A box of its own and not a loose row: what separates it from the big button
+            below is that it BOUNDS rather than chooses, and without a border the two read
+            as two controls of one rank.
 
-            NO HAY INTERRUPTOR: EL CURRÍCULO ESTÁ EN VIGOR CUANDO TIENE CONCEPTOS
-            (2026-09-05, petición explícita). El interruptor permitía dos estados que no
-            decían nada — «restringido» sin marcar nada, y una lista marcada apagada —, y
-            los dos enviaban `[]`. Ahora la caja se llama por su nombre, «Currículo», dice
-            en una línea lo que tiene marcado, y lo marcado se ve debajo como píldoras con
-            su aspa: quitar la última es quitar la restricción. */}
+            There is no switch — the curriculum is in force when it holds concepts. A switch
+            allows two states that say nothing ("restricted" with nothing ticked, and a
+            ticked list turned off) and both send `[]`. Removing the last pill is what lifts
+            the restriction. */}
         <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
@@ -675,9 +642,9 @@ export function GenerateForm({
           ) : null}
         </div>
 
-        {/* La corrección, no el muro: el botón de lanzar ya se niega, y aquí está la forma
-            de arreglarlo sin volver al selector. Vive junto a los dos controles que la
-            producen, que es donde se puede actuar sobre ella. */}
+        {/* The correction and not the wall: the launch button already refuses, and this is
+            the way to put it right without going back to the selector. It sits beside the two
+            controls that produce it, which is where it can be acted on. */}
         {outsideCurriculum.length > 0 ? (
           <Alert tone="attention" title={t("form.outside.title")}>
             <p>{t("form.outside.body", { names: outsideCurriculum.join(", ") })}</p>
@@ -727,7 +694,7 @@ export function GenerateForm({
 
         {/* The chosen topics against what the bank can illustrate. It survives the filter
             becoming fixed because a commission can still be RESTORED with topics that have
-            no exemplar left — «Generar más como esta» over a bank that has changed since —
+            no exemplar left — "Generar más como esta" over a bank that has changed since —
             and nothing else on the screen says the batch will be written with no example
             to imitate. */}
         {wholeBatchZeroShot ? (
@@ -833,16 +800,10 @@ export function GenerateForm({
       ) : null}
 
 
-      {/* «INSTRUCCIONES ADICIONALES»: LO OPCIONAL, PLEGADO Y DESPUÉS DE LO OBLIGATORIO.
-
-          Se llamaba «Ajustes» y guardaba dos cosas, el currículo y el texto libre. El
-          currículo se fue al paso de conceptos (2026-09-02, petición explícita), así que
-          un nombre genérico para una sola cosa era una etiqueta que no decía cuál: la
-          divulgación se llama ahora como lo que contiene, y el rótulo de dentro se fue con
-          el cambio para no decir lo mismo dos veces a un centímetro.
-
-          Sigue detrás de una divulgación que dice si hay algo puesto, porque es opcional y
-          va después de la única pregunta obligatoria de la pantalla. */}
+      {/* "Instrucciones adicionales": the optional half, folded and after the required
+          one. The disclosure is named after the one thing it holds, and says whether
+          anything is set — a fold that hides a decision without saying so is where a
+          decision goes to be forgotten. */}
       {chosen ? (
         <details className="group rounded-xl border border-transparent open:border-border open:bg-card">
           <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3 py-2.5">
@@ -858,23 +819,17 @@ export function GenerateForm({
             <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
           </summary>
           <div className="space-y-4 px-3 pb-3">
-          {/* WHAT THE CLASS HAS COVERED IS CHOSEN IN THE CONCEPTS STEP AND NOWHERE ELSE
-              (2026-09-02, explicit user request). It used to be the first half of this
-              disclosure; what is left here is the free text alone.
+          {/* What the class has covered is chosen in the concepts step and nowhere else;
+              what is left here is the free text alone.
 
-              `usePresetCurriculum` survives in the form state and is never set true by
-              this screen: `fromParams` still reads it, so a row recorded before the
-              workspace curriculum stopped being offered — whose request carried no
-              `curriculum` at all and therefore ran against the workspace's own — is still
-              described faithfully in the collapsed bar and re-runs exactly as it ran. */}
+              `usePresetCurriculum` survives in the form state and is never set true by this
+              screen: `fromParams` still reads it, so a row whose request carried no
+              `curriculum` at all — and therefore ran against the workspace's own — is
+              described faithfully and re-runs exactly as it ran. */}
           <div className="space-y-2">
-            {/* THE CATALOGUE IS BEHIND THE (i) (2026-09-01, explicit user request).
-                What the free text may legitimately ask for — the four slots, the controls
-                that already decide the rest, and the three facts the subject fixes — is a
-                dozen lines of derived prose, and it sat UNDER the box as a permanent block
-                twice the height of the field it explains. It is read once, which is what
-                the hint is for; and it belongs beside the label rather than under the box,
-                because it answers «what do I write here», not «what did I write». */}
+            {/* The catalogue is behind the (i): it is a dozen lines of derived prose read
+                once, and it belongs beside the LABEL rather than under the box, because it
+                answers "what do I write here" and not "what did I write". */}
             <div className="flex items-start gap-1.5">
               <p className="min-w-0 flex-1 text-small text-muted-foreground">
                 {t("form.instructions.hint")}
@@ -950,15 +905,14 @@ export function GenerateForm({
             </div>
           ) : null}
 
-          {/* BEFORE THE EFFORT AND NOT AFTER IT: which levels exist, which of them is worth
-              a warning, and whether the slider is drawn at all are properties of the model
-              that was just chosen, so choosing it afterwards would silently re-clamp what
-              was just set. It draws nothing with a single model on offer.
+          {/* Before the effort and never after it: which levels exist, which are worth a
+              warning, and whether the slider is drawn at all are properties of the model
+              just chosen, so choosing it afterwards silently re-clamps what was just set.
+              Nothing is drawn with a single model on offer.
 
-              NOT in the evaluation variant: the writer of a comparison's two local proposals
-              is the installation's (`evaluation.local_model`, «Configuración → Evaluación»),
-              never the evaluator's — 2026-09-04, explicit user request, reversing the
-              chooser drawn there for an hour the same day. */}
+              Not in the evaluation variant: the writer of a comparison's two local
+              proposals is the installation's (`evaluation.local_model`), never the
+              evaluator's. */}
           {variant === "generate" ? (
             <ModelChoice
               offered={offered}
@@ -980,8 +934,8 @@ export function GenerateForm({
                   all, and this is the only place in the whole application where the writer
                   is named — which is why it sits outside the slider's guard rather than
                   inside it, where `gemma-4-31b` (locked effort, and the first of the
-                  shipped list) went unnamed everywhere. It reads as the badge in «Mis
-                  variantes» does, same icon and same `modelLabel`: the same fact before
+                  shipped list) went unnamed everywhere. It reads as the badge in "Mis
+                  variantes" does, same icon and same `modelLabel`: the same fact before
                   the run and after it. */}
               {generationModel && offered.length < 2 ? (
                 <div className="flex flex-wrap items-center gap-x-1.5 text-small text-muted-foreground">
@@ -1001,7 +955,7 @@ export function GenerateForm({
                 </Switch>
                 <span className="ml-auto text-[12px] nums text-muted-foreground">
                   {/* The level is named whenever anybody has decided it — the slider here,
-                      or «Modelos generadores» for a locked model. What reads plain is the
+                      or "Modelos generadores" for a locked model. What reads plain is the
                       one state where nothing has: locked with no level declared, which the
                       engine resolves. */}
                   {state.think
@@ -1011,13 +965,11 @@ export function GenerateForm({
                     : t("form.think.off")}
                 </span>
               </div>
-              {/* The slider only where it changes the answer, and WHICH models those are is
-                  the installation's since 2026-09-01 (`generation.fixed_effort`). On a
-                  model measured to answer the same at every level, drawing it offers a
-                  decision and then explains that it makes no difference. What is sent is
-                  whatever the form holds and the server has the last word on it — the same
-                  rule the model's own name follows, because the panel edits both lists
-                  while a job sits in the queue. */}
+              {/* The slider only where it changes the answer, and which models those are is
+                  the installation's (`generation.fixed_effort`): on a model measured to
+                  answer the same at every level it offers a decision and then explains that
+                  it makes none. The server has the last word on what is sent, the panel
+                  editing both lists while a job sits in the queue. */}
               {state.think && adjustable ? (
                 <EffortSlider
                   levels={policy.levels}
@@ -1074,13 +1026,11 @@ export function GenerateForm({
         </div>
       ) : null}
 
-      {/* THE CONCEPTS THE BANK CAN ILLUSTRATE ARE WHAT THE SELECTOR OPENS ONTO, AND THE
-          REST IS ONE SWITCH AWAY (2026-09-04, explicit user request, reversing the fixed
-          filter of 2026-09-01). The scope lives in the selector's own header — «Con
-          ejemplos» / «Todos los conceptos» — and resets to the bank's side on every opening;
-          in the default scope a prerequisite that comes in locked but has nothing to
-          imitate is not drawn either. A concept chosen without an example is what the
-          zero-shot notice in this step is about. */}
+      {/* The concepts the bank can illustrate are what the selector opens onto, and the
+          rest is one switch away. The scope lives in the selector's own header and resets
+          on every opening; in the default scope a prerequisite with nothing to imitate is
+          not drawn either. A concept chosen without an example is what the zero-shot notice
+          in this step is about. */}
       <ConceptSelector
         title={t("form.practise.title")}
         concepts={concepts}
@@ -1095,22 +1045,19 @@ export function GenerateForm({
         onClose={() => setPicking(null)}
         onConfirm={() => {
           setPicking(null);
-          // Confirming an empty selection answers nothing: the step stays open, which is
-          // where it already was. And so does a selection that CONTRADICTS the curriculum
-          // chosen just above it — the launch button refuses for it and says nothing (the
-          // notice inside this step is what explains it and offers the two ways out), so
-          // collapsing the step here would hide the only explanation there is.
+          // An empty selection answers nothing, and one that contradicts the curriculum
+          // above it is explained by the notice INSIDE this step — collapsing it would hide
+          // the only explanation there is.
           if (state.concepts.length > 0 && !hasOutside(state.concepts)) advance("concepts");
         }}
         confirmLabel={t("form.confirmContinue")}
       />
 
       {/* No `restrictTo`: a curriculum is declared whole and nothing narrows it. `implied`
-          marks what the ticked coverage rests on, and here the mark counts — the list in
-          force is `coveredCurriculum` (2026-09-04, explicit user request). `allowNonTaggable`
-          because a non-taggable concept can perfectly well have been taught, which is what
-          a curriculum states — a target, being what an item is ABOUT, is the one that must
-          stay taggable. */}
+          marks what the ticked coverage rests on, and here the mark COUNTS — the list in
+          force is `coveredCurriculum`. `allowNonTaggable`, because a non-taggable concept
+          can perfectly well have been taught; a target, being what an item is ABOUT, is the
+          one that must stay taggable. */}
       <ConceptSelector
         title={t("form.taught.title")}
         concepts={concepts}

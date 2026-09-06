@@ -112,9 +112,9 @@ def test_the_day_rolls_too(tmp_path):
 
 # WHAT THE HEADERS SAY ---------------------------------------------------------------------
 
-# Measured 2026-08-26 against the real API: `remaining-requests-*` matches the account's
-# effective budget exactly, while the token counters lag (a 74-token call moved the daily
-# remaining by 6). So a header may only ever LOWER what we believe is left.
+# Measured against the real API: the request counters are exact, while the token counters
+# lag (a 74-token call moved the daily remaining by 6). So a header may only ever LOWER what
+# we believe is left.
 
 
 def test_a_header_lowers_what_is_left(tmp_path):
@@ -198,9 +198,9 @@ def test_a_generous_remaining_does_not_stop_the_gate_from_closing(tmp_path):
     assert b.delay("gemma-4-31b", 10) > 0
 
 
-# A ledger written before 2026-08-29 carries the ceilings the ratchet learned. They are dead
-# state, and a reader who finds 499 in the file must not have to wonder which number is in
-# force, so the first write drops them.
+# An older ledger carries ceilings a ratchet once learned. They are dead state, and a reader
+# who finds one in the file must not have to wonder which number is in force, so the first
+# write drops them.
 def test_a_ledger_carrying_a_learned_ceiling_forgets_it(tmp_path):
     clock = Clock()
     path = tmp_path / "budget.json"
@@ -343,7 +343,7 @@ def test_the_estimate_grows_with_the_prompt():
 # Reachable in practice rather than hypothetically: gemma-4-31b takes a 131 072-token
 # context while the free tier allows 30 000 tokens a minute, so one large KG prompt is
 # simply outside this budget. Before the guard, `_relief` found no call to age out on an
-# empty window, reported relief «now», and let the request through to a 429 it would repeat
+# empty window, reported relief "now", and let the request through to a 429 it would repeat
 # for ever.
 
 
@@ -471,7 +471,7 @@ def test_several_calls_can_be_in_flight_at_once(tmp_path):
 
 
 # The card draws one, and the one worth drawing is the call the throttle is holding back:
-# «esperando presupuesto» is the state somebody can act on, and it is not always the oldest.
+# "esperando presupuesto" is the state somebody can act on, and it is not always the oldest.
 def test_the_call_being_held_is_the_one_the_card_is_shown(tmp_path):
     clock = Clock()
     b = budget(tmp_path, clock)

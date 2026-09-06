@@ -6,7 +6,7 @@ your workspace. So `busy` and `label` speak about another instance's job and `mi
 `queued` and `ahead` never do.
 
 `busy` means the lane is FULL and not that something is running on it: it is what every
-reader turns into «lo tuyo va a esperar», and on a remote lane with room to spare a third
+reader turns into "lo tuyo va a esperar", and on a remote lane with room to spare a third
 job waits for nothing. `running` and `capacity` are what report the activity itself. The
 stand pins the remote capacity at 1 unless a test says otherwise, so the two readings
 coincide and every rule below is the one the single-engine installation already had.

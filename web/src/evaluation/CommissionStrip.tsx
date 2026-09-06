@@ -12,12 +12,12 @@ import type { EvaluationSessionHead } from "./types";
  * pinned.
  *
  * It is the same for the three proposals, so it gives none of them away — and it is the
- * one thing a reader needs that is inside none of the cards: «practica de verdad los
- * conceptos pedidos» cannot be judged without knowing which they were. It sits OUTSIDE
+ * one thing a reader needs that is inside none of the cards: "practica de verdad los
+ * conceptos pedidos" cannot be judged without knowing which they were. It sits OUTSIDE
  * the cards for the same reason, once rather than three times.
  *
- * The level is drawn only when the commission pinned one. With «Cualquiera» the whole
- * group goes, separator included: a row reading «Nivel: cualquiera» reports the absence
+ * The level is drawn only when the commission pinned one. With "Cualquiera" the whole
+ * group goes, separator included: a row reading "Nivel: cualquiera" reports the absence
  * of a decision as though it were one. The free-text instructions are deliberately not
  * here — they are the judge's business, not the reader's.
  */

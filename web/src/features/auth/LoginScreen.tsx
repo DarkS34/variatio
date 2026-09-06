@@ -11,13 +11,11 @@ import { useT } from "@/lib/i18n";
 /**
  * The one door in: a username, a password, and nothing else.
  *
- * NO «HE OLVIDADO MI CONTRASEÑA» (2026-09-04, explicit user request). The link opened a
- * second form on this same screen that asked for a username and always answered the same
- * sentence — most accounts here have no address at all, so what it usually did was promise
- * a mail that nobody could receive. The way back in is the one this installation actually
- * uses: an administrator hands over a reset link from «Cuentas y accesos». `/reset` and
- * `POST /api/auth/forgot` are untouched — the endpoint is screenless now, not gone — so a
- * link already issued still works and nothing about the enumeration defences moved.
+ * There is no "he olvidado mi contraseña": most accounts here have no address at all, so
+ * the link promised a mail nobody could receive. The way back in is an administrator handing
+ * over a reset link from "Cuentas y accesos". `/reset` and `POST /api/auth/forgot` are
+ * untouched — screenless, not gone — so a link already issued still works and nothing about
+ * the enumeration defences moved.
  */
 export function LoginScreen() {
   const { t } = useT();

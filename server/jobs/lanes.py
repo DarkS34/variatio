@@ -72,9 +72,9 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
         "REPAIR_LLM",
     ),
     # The three arms together: the two baselines generate and repair, and the system arm is
-    # the whole generator, admissibility judge included. The writer of the two local arms
-    # is absent for the generate kind's reason: since 2026-09-04 it is the evaluation's own
-    # setting (`evaluation.local_model`), which `models_for` puts at the head of this list.
+    # the whole generator, admissibility judge included. The writer of the two local arms is
+    # absent for the generate kind's reason — it is the evaluation's own setting
+    # (`evaluation.local_model`), which `models_for` puts at the head of this list.
     "evaluate": (
         "ADMISSIBILITY_LLM",
         "CONCEPT_TAGGER_LLM",

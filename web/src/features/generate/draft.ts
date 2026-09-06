@@ -29,7 +29,7 @@ export function fromGeneration(row: GenerationRow): FormState {
     decisions: { ...row.fixed },
     instructions: row.instructions ?? "",
     think: row.think,
-    // «Otra como esta» means the same commission, and the model is part of it. A row from
+    // "Otra como esta" means the same commission, and the model is part of it. A row from
     // before it was recorded carries null, which is the default — the same thing that
     // commission ran with.
     model: row.model,

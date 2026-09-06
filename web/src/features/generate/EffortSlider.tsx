@@ -9,18 +9,18 @@ import { useT } from "@/lib/i18n";
  *
  * It replaced four segmented buttons, and the reason is not decoration: effort is an
  * ORDERED quantity, and four buttons of equal weight drew it as four unrelated options.
- * A track says «more to the right» before a single word is read, which is exactly what
- * the levels mean and what the warning above «Medio» is about.
+ * A track says "more to the right" before a single word is read, which is exactly what
+ * the levels mean and what the warning above "Medio" is about.
  *
  * The handle is a playhead — a short rule crossing the track — and not the usual circle.
  * A circle would be the one round thing on a screen whose radius is zero, and a bar has
  * a second advantage here: it is four pixels wide, so every stop can sit at a plain
  * percentage instead of at a percentage corrected by half a handle. The ends are the only
- * exception, and only for the LABELS: «Bajo» is flush left and «Máximo» flush right,
+ * exception, and only for the LABELS: "Bajo" is flush left and "Máximo" flush right,
  * because centring them on their own stop would hang half of each word outside the widget.
  *
- * The whole box is the grab area, labels included, so clicking the word «Alto» lands on
- * «Alto». Pointer capture is what keeps the drag alive once the cursor leaves the box,
+ * The whole box is the grab area, labels included, so clicking the word "Alto" lands on
+ * "Alto". Pointer capture is what keeps the drag alive once the cursor leaves the box,
  * which is most of them.
  */
 export function EffortSlider({
@@ -139,7 +139,7 @@ export function EffortSlider({
             className={cn(
               // `font-condensed uppercase` is what micro is paired with everywhere it acts
               // as a label — the rail, the badges, the table headers, the field labels — and
-              // it is also what keeps «MÁXIMO» narrow enough not to reach «ALTO».
+              // it is also what keeps "MÁXIMO" narrow enough not to reach "ALTO".
               "absolute top-0 text-micro font-condensed whitespace-nowrap uppercase",
               i === index ? "text-foreground" : "text-muted-foreground",
             )}

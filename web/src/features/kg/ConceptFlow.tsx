@@ -9,22 +9,20 @@ import { cn } from "@/lib/utils";
 /**
  * One concept's relations as horizontal flows, one band per relation type.
  *
- * It answers the questionnaire's «¿tiene sentido el orden?» for ONE concept without
- * asking anybody to read the whole graph (2026-09-04, explicit user request; the bands
- * and the other relation types the same day). Every band is a horizontal flow with the
- * concept in the same column, so the three read as one node seen through three
- * relations, and the bands are stacked in a fixed order — the prerequisite first, because
- * it is the one that says «antes de», then the hierarchy, then whatever else the schema
- * declares — with a rule between them. Colours are the canvas's own: a node in its unit's
- * colour, an edge in its relation's.
+ * It answers "¿tiene sentido el orden?" for ONE concept without asking anybody to read the
+ * whole graph. Every band puts the concept in the SAME column, so they read as one node
+ * seen through several relations, and they are stacked in a fixed order — the prerequisite
+ * first, being the one that says "antes de", then the hierarchy, then whatever else the
+ * schema declares. Colours are the canvas's own: a node in its unit's, an edge in its
+ * relation's.
  *
  * Two reading rules, and they differ on purpose. In the PREREQUISITE band the flow is the
  * order of learning: left of the concept what has to be known before it, followed down to
  * the leaves; right of it what leans on it; the axis words say so. In every OTHER band an
- * arrow reads as the sentence «left VERB right» — the in-neighbours (those that VERB this
+ * arrow reads as the sentence "left VERB right" — the in-neighbours (those that VERB this
  * concept) sit left and the out-neighbours (what this concept VERBs) sit right, followed
  * transitively when the relation is directed and one hop when it is not, where a closure
- * over «se relaciona con» would be most of the graph.
+ * over "se relaciona con" would be most of the graph.
  *
  * Layers are BFS distance, one column per layer; the concept's column is the widest left
  * depth over all bands, so it lines up. The drawing takes the width it needs and scrolls
@@ -90,8 +88,7 @@ function layers(start: number, edges: Edges, maxDepth: number): Map<number, numb
 
 /**
  * Measure names in the page's own face at the size the SVG draws them. Every name is drawn
- * whole (2026-09-04, explicit user request: «que salgan los nombres completos»), so each
- * column is as wide as its longest name and nothing else decides it.
+ * WHOLE, so each column is as wide as its longest name and nothing else decides it.
  */
 function measurer(): (text: string) => number {
   if (typeof document === "undefined") return (text) => text.length * GLYPH;
@@ -213,7 +210,7 @@ export function ConceptFlow({
 
       // The prerequisite band draws the edge REVERSED — from the prerequisite to what needs
       // it, which is the direction of learning — and every other band draws it as written,
-      // so that an arrow there reads «left VERB right».
+      // so that an arrow there reads "left VERB right".
       const edges: Edge[] = [];
       for (const [source, dest, kind] of graph.links) {
         if (kind !== relation || !nodes.has(source) || !nodes.has(dest)) continue;
@@ -293,7 +290,7 @@ export function ConceptFlow({
             {/* Sticky on the left: the verb is what makes the band legible, and a wide
                 flow is scrolled to its middle. Each caption says how its arrows are read:
                 the prerequisite band as the order of learning, every other one as the
-                sentence «izquierda VERBO derecha». */}
+                sentence "izquierda VERBO derecha". */}
             <div className="sticky left-0 inline-flex max-w-full items-center gap-2 px-2 pt-0.5 text-small">
               <span className="h-0.5 w-3.5 shrink-0 rounded-full" style={{ background: band.colour }} />
               <span className="whitespace-nowrap font-medium" style={{ color: band.colour }}>

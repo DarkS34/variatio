@@ -1,4 +1,4 @@
-﻿from contextlib import contextmanager
+from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pytest
@@ -110,9 +110,9 @@ def test_each_validated_item_is_saved_as_it_arrives(make, stubbed, monkeypatch):
     assert saved == [{"index": 1, "id": rows[0].id}, {"index": 2, "id": rows[1].id}]
 
 
-# A statement without its parameters can be read but neither judged nor reproduced, and
-# since 2026-08-29 the model is one of them: the two on offer differ by minutes and by how
-# much they deliberate, so a row that does not name one cannot be read beside the next.
+# A statement without its parameters can be read but neither judged nor reproduced, and the
+# model is one of them: two offered models differ by minutes and by how much they
+# deliberate, so a row that does not name one cannot be read beside the next.
 def test_the_row_records_the_model_the_commission_chose(make, stubbed, monkeypatch):
     monkeypatch.setattr(handlers.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
 
@@ -203,7 +203,7 @@ def test_a_database_failure_loses_the_record_and_nothing_else(make, stubbed, mon
 
 
 
-# `or 1` was wrong on a falsy zero: a commission of «genera 0 ítems» produced one and then
+# `or 1` was wrong on a falsy zero: a commission of "generate 0 items" produced one and then
 # reported `requested: 1`, so the row kept a commission nobody made. An absent `n` still
 # means one; a zero has to reach the generator, which is what refuses it.
 def test_a_count_of_zero_is_not_silently_turned_into_one(make, stubbed, monkeypatch):

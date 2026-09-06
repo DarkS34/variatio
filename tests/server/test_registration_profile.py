@@ -1,4 +1,4 @@
-"""Who answers «docente o alumno», and where the answer has to arrive.
+"""Who answers "docente o alumno", and where the answer has to arrive.
 
 The invitation carries nothing about it: the link binds the access and the person
 registering says whether they teach or study, which is the one moment they are in front of

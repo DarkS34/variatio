@@ -5,8 +5,8 @@ import { ConfirmDialog } from "./prompt";
 /**
  * `window.confirm`, replaced everywhere at once.
  *
- * There were eighteen of them across the app, guarding everything from «borrar una página
- * transcrita» to «eliminar la unidad y sus 28 conceptos» — while deleting a workspace
+ * There were eighteen of them across the app, guarding everything from "borrar una página
+ * transcrita" to "eliminar la unidad y sus 28 conceptos" — while deleting a workspace
  * opened a considered dialog that asks you to type the slug. Two visual languages for one
  * act, and the cheaper one happened to guard some of the more destructive operations.
  *
@@ -39,7 +39,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const settle = useRef<((answer: boolean) => void) | null>(null);
 
   const ask = useCallback<Ask>((next) => {
-    // A second question while one is open answers the first with «no» rather than
+    // A second question while one is open answers the first with "no" rather than
     // stacking: two confirmations on screen is never what a caller meant, and leaving the
     // first promise unsettled would hang whatever awaited it.
     settle.current?.(false);

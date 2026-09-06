@@ -61,7 +61,7 @@ def _connect_src(policy: str) -> list[str]:
 # `ws:` and `wss:` are SCHEME sources: they match every host there is, so the directive that
 # was meant to bound the socket bounded nothing. A `wss://host` is a different thing — it
 # names one origin — and that distinction is the whole point, so the check is on the shape
-# of each source and not on whether the string «wss» appears.
+# of each source and not on whether the string "wss" appears.
 def test_no_source_is_a_bare_scheme(monkeypatch):
     monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.example")
     sources = _connect_src(csp())

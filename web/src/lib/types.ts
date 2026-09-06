@@ -20,20 +20,18 @@ export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancell
  * The two queues, one per inference backend: the GPU and the hosted API.
  *
  * A job reserves the lanes of the generative models it calls — the embedder and the
- * guardrail reserve nothing — so two jobs on disjoint lanes run at the same time. This is
- * why «el motor está ocupado» stopped being one sentence: with a composite engine it is
- * true of one half and false of the other.
+ * guardrail reserve nothing — so two jobs on disjoint lanes run at the same time, and "el
+ * motor está ocupado" is never one sentence.
  *
- * A lane also has ROOM. Local is one job and cannot be more, because the GPU is one; remote
- * is `CEREBRAS_MAX_CONCURRENT_JOBS`, because what is shared there is a rolling quota that
- * the server already administers call by call. So `busy` is «this lane is FULL» and not
- * «something is running on it»: it is what predicts a wait, and on a lane with room to
- * spare a second job waits for nothing.
+ * A lane has ROOM: local is one job because the GPU is one, remote is
+ * `CEREBRAS_MAX_CONCURRENT_JOBS` because what is shared there is a quota the server
+ * administers call by call. So `busy` means the lane is FULL, not that something is
+ * running on it.
  */
 export type LaneName = "local" | "remote";
 
 export interface LaneState {
-  /** The lane is FULL: a job arriving now would wait. Not «something is running». */
+  /** The lane is FULL: a job arriving now would wait. Not "something is running". */
   busy: boolean;
   /** How many jobs hold it right now, whoever launched them. */
   running: number;
@@ -89,10 +87,9 @@ export interface Pipeline {
 /**
  * One phase of a build: what it is called and what share of the bar it owns.
  *
- * A weight is a share of the WORK, not of the clock. There is no time estimate anywhere
- * any more: what a phase costs depends on which models the instance is pointed at, and
- * those change — a figure measured against one set of models is a claim about that set,
- * so it goes stale silently the moment the config does.
+ * A weight is a share of the WORK and never of the clock. There is no time estimate
+ * anywhere: what a phase costs is a claim about the models the instance is pointed at, and
+ * it goes stale silently the moment the config does.
  */
 export interface BuildPhase {
   key: string;
@@ -145,9 +142,9 @@ export interface Job {
 /**
  * A model resident in the engine RIGHT NOW, as `/api/ps` reports it.
  *
- * It is the only real measure of what the machine is using: `required` only says what
- * `config.py` names, and a named constant is not a loaded model. `expires_at` is what tells
- * a VRAM eviction from the residency timer running out.
+ * The only real measure of what the machine is using: `required` says what the config
+ * names, and a named constant is not a loaded model. `expires_at` tells a VRAM eviction
+ * from the residency timer running out.
  */
 export interface RunningModel {
   model: string;
@@ -174,7 +171,7 @@ export interface Health {
     fixed_effort_levels?: Record<string, string>;
     installed: string[];
     missing: string[];
-    /** Required models a remote provider serves: never on this disk, never «sin instalar». */
+    /** Required models a remote provider serves: never on this disk, never "sin instalar". */
     remote: string[];
     running: RunningModel[];
   };
@@ -315,9 +312,8 @@ export interface KgSummary {
 /**
  * Where a concept came from: the literal piece of the theory corpus it appears in.
  *
- * The graph build writes it and the prompt that composes the description reads it, so it is
- * also what to look at to judge the description: whether the text describes the material or
- * what the model already knew about the topic.
+ * The graph build writes it and the description prompt reads it, so it is also what says
+ * whether a description describes the material or what the model already knew.
  */
 export interface ConceptSource {
   document: string;
@@ -563,8 +559,7 @@ export interface GenerationDetail {
 /**
  * What an account is asked when it compares proposals, and nothing else.
  *
- * It is NOT an authorisation: no route reads it, so an account that administers the
- * installation can be a teacher like any other. `null` means nobody said — the evaluation
+ * NOT an authorisation: no route reads it. `null` means nobody said, and the evaluation
  * reports it as unset and falls back to the teacher's wording.
  */
 export type EvaluatorProfile = "teacher" | "student";
@@ -833,10 +828,9 @@ export type ReasoningPhase = {
 /**
  * One column of the pipeline — or, when `shared`, the step above them all.
  *
- * A shared lane is not a builder's own: the transcription is the same three calls for the
- * three of them, so it is drawn once and across instead of at the head of each column.
- * Optional because an API older than this bundle sends no such flag and repeats those
- * phases inside every lane, which is exactly the drawing this replaces.
+ * A shared lane is no builder's own: the transcription is the same three calls for the
+ * three, so it is drawn once and across. Optional, because an API older than this bundle
+ * sends no such flag and repeats those phases inside every lane.
  */
 export type ReasoningLane = {
   key: string;

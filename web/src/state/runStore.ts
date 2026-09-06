@@ -38,7 +38,7 @@ export interface ProducedItem {
 /**
  * One bank item the tagger has just annotated.
  *
- * The count alone answered «cuántos van» and nothing else. Re-tagging is minutes of a
+ * The count alone answered "cuántos van" and nothing else. Re-tagging is minutes of a
  * screen with nothing on it, and the event already carries what was decided; keeping the
  * last few is what lets the bank draw the same live feed a build draws.
  */
@@ -77,12 +77,11 @@ export interface RunView {
   thinking: string;
   phase: StreamPhase;
   /**
-   * THE RETRY IN FLIGHT, so the strip can say one is happening and why (2026-09-02,
-   * explicit user request). The event reached nothing a person watching the bar could
-   * see, so a commission sat still through a second whole generation with no word of why.
+   * The retry IN FLIGHT, so the strip can say one is happening and why: without it a
+   * commission sits still through a second whole generation with no word of it.
    *
-   * It is cleared by `item.produced`, which is the moment the retrying stops: what
-   * happened afterwards is the card's own «Reintentada ×N» badge.
+   * Cleared by `item.produced`, which is the moment the retrying stops; what happened
+   * afterwards is the card's own "Reintentada ×N" badge.
    */
   retry: { index: number; attempt: number; max: number; reasons: string[] } | null;
   items: ProducedItem[];
@@ -383,9 +382,8 @@ class RunStore {
     return next;
   }
 
-  // The store kept the whole event stream beside the reduced run, so «Qué ha ido pasando»
-  // could narrate it. That section went on 2026-09-02 (explicit user request) and the array
-  // went with it: re-adding the feed means re-adding the state.
+  // The store keeps no copy of the event stream beside the reduced run: nothing narrates it
+  // any more, and re-adding such a feed means re-adding that state.
   private reduce(run: RunView, event: VgEvent): RunView {
     switch (event.kind) {
       case "job.queued":

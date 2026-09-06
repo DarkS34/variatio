@@ -328,15 +328,14 @@ class PasswordReset(Base):
 class Generation(Base):
     """One validated item, with the commission that produced it — a row per item, not per job.
 
-    A run of `n=5` is five things to read back, and the reason to keep them is that
-    generating one costs a minute of GPU nobody wants to pay twice. `item` is JSON rather
-    than columns because its shape is the exemplars profile's, which the user edits: a
-    variant has to survive the schema that made it. `model` is the one that WROTE it, never
-    the one the installation offers today: since 2026-08-29 the commission chooses, and the
-    models on offer differ by minutes and by how much they deliberate, so a row that does
-    not name one cannot be read beside the next — NULL is every row written before that.
-    `user_id` is `SET NULL` and not `CASCADE`, because deleting an account must not
-    silently delete the material a course was built on. The workspace is what cascades.
+    A run of `n=5` is five things to read back, and generating one costs a minute of GPU
+    nobody wants to pay twice. `item` is JSON rather than columns because its shape is the
+    exemplars profile's, which the user edits: an exercise has to survive the schema that
+    made it. `model` is the one that WROTE it and never the one the installation offers
+    today — the commission chooses, and two models differ by minutes and by how much they
+    deliberate, so a row that does not name one cannot be read beside the next. `user_id` is
+    `SET NULL` and not `CASCADE`: deleting an account must not silently delete the material
+    a course was built on. The workspace is what cascades.
     """
 
     __tablename__ = "generations"
@@ -458,32 +457,23 @@ class EvalSession(Base):
 class StageEvaluation(Base):
     """What one person answered about one BUILD of one artifact, right after reviewing it.
 
-    The blind comparison measures the variants; this measures the chain that produces them,
-    which nothing did before: a workspace could be prepared end to end and leave no record
-    of whether its profile, its graph or its bank were any good. The questions are asked on
-    the stage's own screen, next to the thing they are about, because a judgement about an
-    artifact collected anywhere else is a judgement about a memory of it.
+    The questions are asked on the stage's own screen, next to the thing they are about: a
+    judgement about an artifact collected anywhere else is a judgement about a memory of it.
 
-    `artifact_hash` is what makes the row a measurement rather than an opinion: it names the
-    build that was on screen. A rebuild produces a different hash and therefore a different
-    row, so «esto salió mal» and «lo rehíce y salió bien» are two data and not an edit of
-    one — which is the same reason `approvals` records hashes instead of trusting that the
-    file has not moved. The unique constraint is over the four together, so re-answering the
-    SAME build replaces your answer while a rebuild starts a new one.
+    `artifact_hash` is what makes the row a measurement rather than an opinion — it names
+    the build that was on screen — so a rebuild starts a NEW row and «esto salió mal» and
+    «lo rehíce y salió bien» are two data rather than an edit of one. The unique constraint
+    is over the four together, so re-answering the same build replaces your answer.
 
-    `instrument` is the version of the question set. Rewording a question changes what was
-    measured, so rows answered under different wordings must not be pooled by accident:
-    `evaluation.api.stage_instruments.VERSION` is what is stored here, and the analysis groups by
-    it. `overall` is a column and the rest of the answers are JSON for the reason
-    `EvalSession` splits the same way — the aggregates group by the single ordinal scale,
-    and everything else is read one row at a time.
+    `instrument` is the version of the question set: rewording a question changes what was
+    measured, so rows answered under different wordings must never be pooled. `overall` is a
+    column and the rest of the answers JSON, for the reason `EvalSession` splits the same
+    way — the aggregates group by the single ordinal scale.
 
-    `user_id` CASCADES, unlike the other two tables that record what a person produced
-    (2026-09-03, explicit user request). A generated exercise and a blind comparison are
-    material a course was built on or a session the evaluation counted; a form is one person's
-    verdict on a build and means nothing with nobody behind it — a row with no evaluator
-    cannot be filtered, grouped or withdrawn from the panel, which is how six of them were
-    found stranded in production. Deleting the account takes its forms with it.
+    `user_id` CASCADES, unlike the other two tables recording what a person produced: a
+    generated exercise and a blind comparison are material a course was built on, while a
+    form is one person's verdict and means nothing with nobody behind it — a row with no
+    evaluator cannot be filtered, grouped or withdrawn from the panel.
     """
 
     __tablename__ = "stage_evaluations"

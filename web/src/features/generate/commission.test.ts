@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { EMPTY_FORM, fromParams, toParams } from "./commission";
 
-/* WHICH MODEL WRITES IT travels in the request again since 2026-09-01 (explicit user
-   request, reversing the removal of the same morning). The claim worth pinning is the
-   ROUND TRIP plus the meaning of absence: null is «el de por defecto» and must not become
-   a name the browser guessed, because what a run RECORDS is what actually wrote it. */
+/* Which model writes it travels in the request. What is pinned is the ROUND TRIP plus the
+   meaning of absence: null is "el de por defecto" and must never become a name the browser
+   guessed, because what a run RECORDS is what actually wrote it. */
 
 describe("toParams", () => {
   it("carries the chosen model", () => {

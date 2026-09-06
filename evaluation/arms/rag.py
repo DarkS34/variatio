@@ -45,9 +45,8 @@ _LABELS = {
     EXEMPLARS: "Indexando los ejercicios para la propuesta comparativa",
 }
 
-# One step id per slot, because the client names a step by its id (`lib/names.ts`) and
-# not by the label the server sends: under a shared id both indices read as one and the
-# same row, and until 2026-09-04 that row still said «el banco».
+# One step id per slot, because the client names a step by its ID (`lib/names.ts`) and not
+# by the label the server sends: under a shared id both indices read as one row.
 _STEP_IDS = {
     CORPUS: "eval_rag_index_corpus",
     EXEMPLARS: "eval_rag_index_exemplars",

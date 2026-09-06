@@ -30,15 +30,12 @@ import { artifactName } from "@/lib/names";
  * removal, or the regenerable half of what they hold.
  *
  * Emptying a stage and deleting the workspace are one decision at two scopes, so they live
- * in the same row: the stage is emptied from its badge, the workspace from the button at the
- * end. Neither builds nor approves anything — for that one enters the instance, which is
+ * in the same row. Neither builds nor approves anything — for that one enters the instance,
  * where what is being touched can be seen.
  *
- * RENAMING IS HERE AND NOWHERE ELSE (2026-08-28, explicit user request). It used to be the
- * owner's, from the switcher; it is the administrator's now, and the owner-facing route is
- * gone rather than merely hidden — the client never decides a permission. This is the screen
- * where every instance is visible at once, which is what makes it the place to notice that a
- * new name collides with another.
+ * Renaming is here and NOWHERE else, and the owner-facing route is gone rather than merely
+ * hidden: the client never decides a permission. This is the screen where every instance is
+ * visible at once, which is what makes it the place to notice a name colliding.
  */
 export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const { t } = useT();
@@ -49,7 +46,7 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   // Which one this tab has open, which is the one deletion has consequences for on screen:
   // the header, the cache and the stream all belong to it.
   const here = useActiveWorkspace();
-  // There is deliberately no «it is the last one» guard, here or on the server: an
+  // There is deliberately no "it is the last one" guard, here or on the server: an
   // installation holding zero workspaces is a normal state the panel draws — it offers to
   // create one — and `leave` already reached it from the other side, by walking the last
   // member out. The guard refused the tidy way of doing what the untidy one allowed.
@@ -352,9 +349,9 @@ function ExportButton({ workspace }: { workspace: AdminWorkspace }) {
 /**
  * An instance's chain, and the place a stage is emptied from.
  *
- * Emptying leaves the artifact «missing» and its workspace standing: the curated file, the
+ * Emptying leaves the artifact "missing" and its workspace standing: the curated file, the
  * draft and the cache derivations that spoke of it are deleted. The copies under
- * `.history/` are untouched, so a mistaken deletion is undone from «Restaurar» on the
+ * `.history/` are untouched, so a mistaken deletion is undone from "Restaurar" on the
  * artifact's screen — and that is exactly what makes offering it here not reckless.
  */
 function ChainCell({ workspace }: { workspace: AdminWorkspace }) {

@@ -4,22 +4,17 @@ import type { Key, Translate } from "@/lib/i18n";
 /**
  * Who is waiting for what, derived once from the payload and nowhere else.
  *
- * The queue used to be one deep, so «hay algo en marcha» and «lo tuyo va a esperar» were
- * the same sentence and every screen could count `queue_length`. With one lane per
- * inference backend they are different sentences: the GPU being busy says nothing about a
- * job that only calls the hosted API. That is the complaint this module exists to answer —
- * a button that announces a wait which is not going to happen.
+ * With one lane per inference backend, "hay algo en marcha" and "lo tuyo va a esperar" are
+ * different sentences: the GPU being busy says nothing about a job that only calls the
+ * hosted API. A button that announces a wait which will not happen is what this answers.
  *
- * Nor is a lane one job deep any more. Local still is — the GPU is one — but remote holds
- * `CEREBRAS_MAX_CONCURRENT_JOBS`, because Cerebras is a rolling quota the server already
- * administers call by call. So `busy` here means the lane is FULL, and the arithmetic is
- * «those holding a slot, plus those in front, less the room»: at capacity 1 that is exactly
- * the rule this module always had, which is what lets an older API degrade into it.
+ * A lane has ROOM — local is one because the GPU is one, remote is
+ * `CEREBRAS_MAX_CONCURRENT_JOBS` — so `busy` means FULL and the arithmetic is "those
+ * holding a slot, plus those in front, less the room". At capacity 1 that reduces to the
+ * old single-slot rule, which is what lets an older API degrade into it.
  *
- * Everything here is a function of the payload, so the notice that appears on launching and
- * the state the button holds afterwards are two views of one truth rather than two rules
- * that drift. Nothing here estimates time: «2 por delante» is a count of jobs, and what a
- * job costs depends on models this project changes to find out what they do.
+ * Everything is a function of the payload, so the launch notice and the state the button
+ * holds afterwards are two views of one truth. Nothing here estimates time.
  */
 
 const LANE_ORDER: LaneName[] = ["local", "remote"];
@@ -32,9 +27,8 @@ const LANE_KEYS: Record<LaneName, Key> = {
 /**
  * Does this installation have two halves to tell apart?
  *
- * `cerebras+ollama` is a composite and its name says so, exactly as the «Motor» tab reads
- * it: with a single engine there is nothing to name, and «el motor local» beside no remote
- * one divides nothing.
+ * Read off the engine's own name, as the "Motor" tab reads it: "el motor local" beside no
+ * remote one divides nothing.
  */
 export function isSplitEngine(engine: string | null | undefined): boolean {
   return typeof engine === "string" && engine.includes("+");
@@ -50,9 +44,8 @@ function readLane(value: unknown): LaneState | null {
   const busy = raw.busy === true;
   return {
     busy,
-    // An API older than this bundle sends neither, and the pair it degrades to is exactly
-    // the shape it used to have: one slot, held or free. So every rule below reduces to
-    // what it computed before lanes had room.
+    // An API older than this bundle sends neither, and this degrades to the shape it had:
+    // one slot, held or free.
     running: typeof raw.running === "number" ? raw.running : busy ? 1 : 0,
     capacity: typeof raw.capacity === "number" && raw.capacity > 0 ? raw.capacity : 1,
     mine: raw.mine === true,
@@ -65,9 +58,9 @@ function readLane(value: unknown): LaneState | null {
 /**
  * The lanes as the pipeline reports them, or `null` when it does not report them.
  *
- * Read defensively on purpose: an API older than this bundle sends no `lanes`, and a bare
- * `data.lanes.local.busy` is what blanked a whole tab once already. `null` is not an error
- * — it is «this server does not split the queue», and every caller has a flat fallback.
+ * Read defensively: an API older than this bundle sends no `lanes`, and a bare
+ * `data.lanes.local.busy` blanks the whole tab. `null` is "this server does not split the
+ * queue" and never an error, and every caller has a flat fallback.
  */
 export function readLanes(pipeline: Pipeline | null | undefined): Lanes | null {
   const value = pipeline?.lanes as unknown;
@@ -108,7 +101,7 @@ function aheadIn(lane: LaneState, position: number | null): number {
   const place = position ?? lane.queued + 1;
   // How many have to finish before mine starts: everything holding a slot, plus everything
   // in front of it, less the room the lane has. The same arithmetic the server does, and at
-  // capacity 1 the same «one if the lane is held, plus those in front» it always did.
+  // capacity 1 the same "one if the lane is held, plus those in front" it always did.
   return Math.max(0, lane.running + place - lane.capacity);
 }
 
@@ -145,8 +138,8 @@ export function waitFor(
  * Is this job the given account's own?
  *
  * The stream is filtered by WORKSPACE, never by user, so every browser of an instance
- * hears every colleague's jobs — and a screen that adopts «the most recent run of my
- * kind» adopts theirs. This is the one criterion for telling them apart, and it fails
+ * hears every colleague's jobs — and a screen that adopts "the most recent run of my
+ * kind" adopts theirs. This is the one criterion for telling them apart, and it fails
  * OPEN: with either id unknown (an older API, an account deleted under the job) nobody's
  * run is hidden, because the failure this replaces is the second person's screen being
  * taken over, not a run showing to one person too many.
@@ -180,7 +173,7 @@ export function isLive(job: { status: JobStatus } | null | undefined): boolean {
  * in front of it — which includes the ordinary case of a job that started at once.
  *
  * The flat fallback matters: with no `lanes` the position alone still says how many are
- * ahead, and «en cola» is true whether or not the server can name the lane.
+ * ahead, and "en cola" is true whether or not the server can name the lane.
  */
 export function waitOf(job: Job | null | undefined, lanes: Lanes | null): Wait | null {
   if (!isQueued(job)) return null;
@@ -228,11 +221,11 @@ export function queuedNotice(
   };
 }
 
-// `queued` is this workspace's own share of the lane, which is why it is said as «tienes».
+// `queued` is this workspace's own share of the lane, which is why it is said as "tienes".
 function busyPhrase(lane: LaneState, name: LaneName, split: boolean, tr: Translate): string {
   const where = laneName(name, split, tr);
   const holder = lane.label ? tr.t("queue.withHolder", { label: lane.label }) : "";
-  // Not full is not «free», it is «there is still room»: on a remote lane holding two of
+  // Not full is not "free", it is "there is still room": on a remote lane holding two of
   // four, saying it is busy would announce a wait that is not going to happen, and saying
   // nothing is running there would be false. Only the full case names what holds it.
   if (!lane.busy) {
@@ -254,7 +247,7 @@ function busyPhrase(lane: LaneState, name: LaneName, split: boolean, tr: Transla
  * on that installation it was never wrong. With two lanes it reports what the machine is
  * doing and states the condition out loud instead: which half a build needs is the
  * server's to decide when the job is accepted, and announcing a wait that then does not
- * happen is the whole defect this replaces. `null` means «nothing to add».
+ * happen is the whole defect this replaces. `null` means "nothing to add".
  */
 export function prospectNote(
   lanes: Lanes | null,

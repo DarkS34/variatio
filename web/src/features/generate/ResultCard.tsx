@@ -80,21 +80,13 @@ export function ItemFields({
 }
 
 /**
- * What the pipeline could verify about a variant after writing it. None of it rejects:
- * the schema already did that, and what is left — a forbidden concept named, a near
- * copy, the tagger not recognising the objective — are signals for the person reading.
+ * What the pipeline could verify about an exercise after writing it. None of it rejects —
+ * the schema already did that — and what is left (a forbidden concept named, a near copy,
+ * the tagger not recognising the objective) are signals for the person reading.
  *
- * NOTHING IS DRAWN WHEN THERE IS NOTHING TO SAY (2026-09-02, explicit user request).
- * «Sin señales: el etiquetador la reconoce, nada prohibido, escenario propio» and the
- * line under it — «etiquetada como ValueError · más cercana a C046 (0.67)» — were on
- * every card of every batch: a reassurance nobody asked for and a similarity score
- * nobody preparing a subject decides anything with. A flag is worth a line because it
- * names something to look at; its absence is not.
- *
- * `detail` used to put both back for the evaluation's reveal panel, and that caller went on
- * 2026-09-04 (explicit user request: the reveal reads exactly as «Generar» does). With no
- * caller left the parameter is gone rather than kept for a reader that might return, and
- * so are the four strings only it drew.
+ * Nothing is drawn when there is nothing to say: a flag is worth a line because it names
+ * something to look at, and its absence is not. The reveal panel reads exactly the same
+ * way, which is why there is no "detail" variant of this.
  */
 export function ItemChecks({
   checks,
@@ -130,10 +122,8 @@ export function ItemChecks({
 /**
  * One generated item, as it is read.
  *
- * IT DOES NOT CARRY THE REASONING (2026-09-02, explicit user request). It had a
- * «Razonamiento» fold of its own under the fields, and the run's own «Detalle» has the
- * same text a screen above — the model reasons once and it was drawn twice. What is left
- * is the item.
+ * It does NOT carry the reasoning: the model reasons once, and the run's own "Detalle" a
+ * screen above is where that is read. What is left here is the item.
  */
 export function ResultCard({
   index,
@@ -150,7 +140,7 @@ export function ResultCard({
   checks?: ItemChecks | null;
   retried?: number;
   profile: ExemplarsProfile;
-  /** Whether the server has already kept this item as a row of «Mis variantes». */
+  /** Whether the server has already kept this item as a row of "Mis variantes". */
   saved?: boolean;
 }) {
   const { t } = useT();

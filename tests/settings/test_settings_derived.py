@@ -26,8 +26,8 @@ def derive_ok():
     return derived.derive(base())
 
 
-# There is no main model to fall back to since 2026-08-28: what the registry holds for a
-# phase is what the call site gets, and a phase cannot be left empty.
+# There is no main model to fall back to: what the registry holds for a phase is what the
+# call site gets, and a phase cannot be left empty.
 def test_every_phase_gets_exactly_what_its_setting_says():
     out = derive_ok()
     for name in derived.PHASES.values():
@@ -69,9 +69,8 @@ def test_a_model_no_phase_names_any_more_leaves_the_context():
     assert "principal" not in out["LLM_CONTEXT"]
 
 
-# The writer of a variant is the commission's since 2026-08-29, so it is not a phase model
-# any more: what the CLI, the evaluation's arms and a request naming none get is the FIRST of
-# the offered list.
+# The writer of an exercise is the commission's and not a phase model: what the CLI, the
+# evaluation's arms and a request naming none get is the FIRST of the offered list.
 def test_the_default_writer_is_the_first_model_offered():
     values = base()
     values["generation.models"] = ["el-primero", "el-segundo"]

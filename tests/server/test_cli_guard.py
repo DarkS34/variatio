@@ -21,8 +21,8 @@ def _dbapi(kind, message: str):
 
 
 # Telling somebody to start a Postgres they already have running is how a corrupt artifact
-# spent months looking like a connection problem: `import-instance` printed «no hay conexión
-# con la base de datos» while the database was up and had just refused a NUL byte.
+# spent months looking like a connection problem: `import-instance` printed "no connection to
+# the database" while the database was up and had just refused a NUL byte.
 @pytest.mark.parametrize("kind", [DataError, IntegrityError, ProgrammingError])
 def test_a_rejected_operation_is_not_reported_as_a_dead_database(kind, capsys):
     exc = _dbapi(kind, "unsupported Unicode escape sequence")

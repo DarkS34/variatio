@@ -43,7 +43,7 @@ export function slotLabelOf(kind: RawKind | null | undefined, t: (key: Key) => s
 /**
  * Why a transcription went stale, one key per code the stage sends.
  *
- * A badge saying «2 caducados» reports the state without the cause, and the cause is the
+ * A badge saying "2 caducados" reports the state without the cause, and the cause is the
  * half you act on — so the reason has to arrive, and it has to arrive in something the
  * reader's own language can be written from.
  */

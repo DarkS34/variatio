@@ -31,59 +31,13 @@ const STATE_KEY: Record<StepState, Key> = {
 };
 
 /**
- * ONE PATH, FOUR NUMBERED STOPS, AND TWO THINGS TO DO WITH WHAT THEY PRODUCE.
- *
- * The bar used to be four blocks — an overview pill, the raw material, a rail of three
- * stages, and the two consumers — and each of the four said something true about the
- * architecture. What it did not say was where a person is supposed to go NEXT, which is
- * the only question somebody opening this for the first time actually has.
- *
- * So the bar IS the path now. «Panel» is gone: it was the view of a chain from outside
- * it, and there is nothing left to watch from outside once the chain is the navigation.
- * The raw material stops being a pill of its own and becomes step 1 — it writes no
- * artifact and nobody approves it, which is exactly why it was excluded before, but a
- * teacher does not care what writes an artifact: they care that uploading their notes is
- * the first thing they do. And the rail goes with them, because what the rail encoded —
- * a dependency between stops — is now said by the numbers and by the one state word
- * under each name.
- *
- * WHAT REPLACES IT IS THE FRONTIER, WHICH IS WHAT THE PALETTE ALREADY MEANS. A counter
- * filled with `--settled` is behind you, one filled with `--attention` is where you act,
- * and a dashed outline is not reachable yet. That is the same calculation the generator
- * performs on every prompt (assumed known / target / not yet taught) and the same one the
- * mark draws in three squares, so the bar spends no colour it was not already spending.
- *
- * THE NUMBERS ARE A REVERSAL, and a deliberate one (2026-08-31, explicit user request).
- * The register says no stage carries an ordinal, and the reason it gave was that the app
- * shipped TWO contradictory numberings of one chain — `review.ARTIFACTS` reads profile,
- * graph, bank while the screen titles numbered it graph, profile, bank. There is one
- * numbering now, it is this one, and the tutorial promises it in the same order.
- *
- * The order is `review.ARTIFACTS` with the raw material in front, and it must stay so:
- * the profile leads because finishing the graph needs an APPROVED profile —
- * `routers/jobs.NEEDS_APPROVED` gates the taggability review on it — so starting at the
- * graph is starting at a stage you cannot finish.
- */
-/**
  * The step's number, in a box whose stroke says where you stand.
  *
- * A square and not a circle, because `--radius` is 0 and the corner is where this grid
- * either holds or does not. The strokes are the palette's own frontier and not a traffic
- * light: a fill in `--attention` where you act, a dashed outline on what is not reachable
- * yet, and a solid outline in `--settled` on what is behind you.
- *
- * A DONE STEP KEEPS ITS NUMBER AND CARRIES NO FILL (2026-09-02, explicit user request; it
- * amends the bare tick of 2026-09-01). The filled `--settled` square drew the eye to the
- * stops with nothing left to do on, and the bare tick that replaced it threw the number
- * away, so a finished construction was four anonymous ticks. A solid, quiet outline keeps
- * the identity and still recedes; the tick lives in the word under the name.
- *
- * A STEP WITH WORK RUNNING ON IT SPINS A WHEEL WHERE THE NUMBER WAS (2026-09-02, explicit
- * user request). «Building» is `--primary` plus motion — the palette's own rule — so the
- * wheel is ink and the box loses its tint while it turns: the frontier has not moved, only
- * the work has started. The animation is deliberately not switched off under
- * `prefers-reduced-motion`, for the reason the pulse is not: it is the one sign in the bar
- * that a build running for an hour is still alive.
+ * The strokes are the palette's frontier and not a traffic light: a fill in `--attention`
+ * where you act, a dashed outline on what is not reachable yet, a bare tick on what is
+ * behind you. The wheel of a running step is `--primary` plus motion, and it is
+ * deliberately not switched off under `prefers-reduced-motion`: it is the one sign in the
+ * bar that a build running for an hour is still alive.
  */
 export function StepCounter({
   state,
@@ -106,18 +60,13 @@ export function StepCounter({
       className={cn(
         COUNTER_BOX,
         "nums font-condensed text-small font-semibold",
-        // A DONE STEP IS A BARE TICK, WITH NO BOX AROUND IT (2026-09-04, explicit user
-        // request; the tick itself is 2026-09-03's, and the box it sat in was that entry's
-        // other half). A box is what says «there is something here to reach»: the number
-        // needs one and keeps it, in both its states, and what is behind you needs nothing
-        // drawn around it. `COUNTER_BOX` stays, so the glyph keeps its 22 px of height and
-        // 20 px of width and the four stops still line up — only the stroke goes.
+        // A box says "there is something here to reach", so what is behind you carries
+        // none. `COUNTER_BOX` stays either way, or the four stops stop lining up.
         state === "done" && "text-settled",
         state === "now"
           // The TOKEN and not its light-mode value: `--attention` is a light ground in dark
-          // mode, so the literal put a near-white number on it. This is the same defect the
-          // palette pass of 2026-09-01 found in two other places, and it is invisible to
-          // `check:color`, which reads `index.css` and not a class in a component.
+          // mode, so a literal puts a near-white number on it. `check:color` cannot see
+          // this — it reads `index.css`, not a class in a component.
           ? "bg-attention text-attention-foreground"
           : null,
         state === "later" && "border border-dashed border-input text-muted-foreground",
@@ -128,15 +77,15 @@ export function StepCounter({
   );
 }
 
-// `min-w` and not a fixed square: «1» and an icon are the same height, and the height is
+// `min-w` and not a fixed square: "1" and an icon are the same height, and the height is
 // what keeps the names of a row on one line.
 const COUNTER_BOX = "flex h-[22px] min-w-[20px] shrink-0 items-center justify-center px-1";
 
 /**
  * One stop of the path: its number, its name, and one word saying where you are.
  *
- * Two lines rather than one, and that is the «píldora bien explicada»: the name alone is
- * a destination, while the name with «te toca ahora» under it is an instruction. It costs
+ * Two lines rather than one, and that is the "píldora bien explicada": the name alone is
+ * a destination, while the name with "te toca ahora" under it is an instruction. It costs
  * the header 16 px of height and saves every screen a paragraph explaining the order.
  */
 function StepPill({
@@ -152,7 +101,7 @@ function StepPill({
   n: string;
   active: boolean;
   title?: string;
-  /** Work running on this step right now: the wheel, and «Construyendo» / «Leyendo» under the name. */
+  /** Work running on this step right now: the wheel, and "Construyendo" / "Leyendo" under the name. */
   busy?: boolean;
 }) {
   const { t } = useT();
@@ -196,13 +145,9 @@ function StepPill({
 
 // The three pieces a step and a door share, so the two kinds of pill are one height and one
 // shape and differ only in the mark: a number for a stop, an icon for a door.
-// MEASURED AT 1280 (2026-09-02): the flanks leave the strip 881 px and, at `px-2.5`,
-// `gap-2` and `text-body`, the six pills asked for 951 — the two doors grew a box and a
-// word each. `px-2`, `gap-1.5` and `text-small` on the name brought it under; the word line
-// keeps the micro step, so the hierarchy inside a pill is unchanged. RE-MEASURED 2026-09-04,
-// when small went to 14 px and micro to 12: the flanks left 874 and the strip asked 881, so
-// the pills went to `px-1.5` — 6 px per pill, 36 in all — and the phase caption's `pl`
-// moved with it, since the two are one alignment.
+// The paddings are measured: at 1280 the flanks leave the strip 874 px and at `px-1.5` the
+// six pills ask 857. Widening them overflows the row. The phase caption's `pl` is this
+// `px`, since the two are one alignment.
 const PILL =
   "flex shrink-0 flex-col gap-0.5 rounded-md px-1.5 py-1 transition-colors hover:bg-accent";
 const PILL_NAME = "flex items-center gap-1.5 whitespace-nowrap text-small";
@@ -217,29 +162,17 @@ const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
 /**
  * One door of the second phase: what you do with the construction once it is closed.
  *
- * The same two-line pill as a step, with an ICON where the step has its number — the two
- * doors have no order between them, and a number would have said they had one (2026-09-02,
- * explicit user request; they were `2` and `3` until then). Both are gated on the whole
- * construction being closed, which is why they sit under a caption of their own rather
- * than among the steps: what gates them is the phase as a whole, not the stop before them.
+ * An ICON where a step has its number, because the two doors have no order between them.
+ * Both are gated on the whole construction being closed, which is why they sit under a
+ * caption of their own rather than among the steps.
  *
- * WHILE THE CONSTRUCTION IS OPEN A DOOR IS HALF OFF AND ANSWERS NO CLICK (2026-09-02,
- * explicit user request: «el usuario no debería poder entrar a ninguna de las dos hasta
- * que no termine de construir; déjalo medio apagado y sin respuesta a la pulsación»). It is
- * a `span` and not a link, at half opacity, with the dashed box and «después» under the
- * name saying why, and the reason in its `title`. This reverses the earlier «they stay
- * reachable while locked»: a URL typed by hand still lands on `ChainGate`, which names the
- * stage in the way, so nothing is lost by the bar refusing. Closed, it is a link with no
- * word under the name at all — «cuando quieras» was tried there and rejected the same day
- * — and the name is CENTRED in a pill of the steps' own height (`PILL_HEIGHT`), so the two
- * doors stay level with the steps and nothing in the row moves when the construction
- * closes (2026-09-02, explicit user request: «el texto tiene que estar centrado»). The
- * two doors sit `gap-1` apart, the same 4 px the rule between the phases keeps on either
- * side, where the steps sit 2 px apart.
+ * While the construction is open a door is half off and answers no click: a `span` and not
+ * a link, the reason in its `title`. A URL typed by hand still lands on `ChainGate`, which
+ * names the stage in the way, so nothing is lost by the bar refusing. The name is centred
+ * in a pill of the steps' own height, so nothing in the row moves when the doors open.
  *
- * «Evaluar el sistema» carries `--evaluation`, tinted whether locked or not: what the tint says
- * is «this is a different kind of thing», which is true from wherever you look at it. It is
- * the one place in the navigation that spends a colour on identity.
+ * "Evaluar el sistema" carries `--evaluation` locked or not: the tint says "this is a
+ * different kind of thing", which is true from wherever you look at it.
  */
 function DoorPill({
   door,
@@ -321,10 +254,8 @@ function DoorPill({
 /**
  * A phase: its name as a caption, and its pills under it in a row.
  *
- * The caption is what carries the phase now that its number is gone. It is micro, condensed
- * and muted, so the row still reads as pills with a label over them and not as two rows of
- * navigation. Its `pl-1.5` is the pills' own `px-1.5`, so the caption starts exactly on the
- * first pill's box edge (2026-09-02, explicit user request: it was 2 px ahead of it).
+ * The caption carries the phase, which has no number. Its `pl-1.5` is the pills' own
+ * `px-1.5`, so it starts exactly on the first pill's box edge.
  */
 function PhaseGroup({
   label,
@@ -357,7 +288,7 @@ function NavRule() {
  * Whether the person asked to keep the four steps on the bar once they are all done.
  *
  * A per-browser convenience and not a setting: `localStorage`, guarded like `vg.theme`,
- * absent by default — which is the folded state — and «open» once somebody unfolds them.
+ * absent by default — which is the folded state — and "open" once somebody unfolds them.
  */
 const STEPS_KEY = "vg.buildSteps";
 
@@ -381,14 +312,8 @@ function writeStepsPreference(open: boolean) {
 /**
  * The construction phase, folded into one pill once its four steps are done.
  *
- * THE STEPS LEAVE THE BAR WHEN THE CONSTRUCTION IS CLOSED (2026-09-05, explicit user
- * request: «cuando la fase de construcción haya finalizado, que se oculten los pasos; que
- * solamente quede la fase de pruebas, pero si el usuario lo requiere puede desplegarlo de
- * nuevo»). Four stops with nothing left to do were most of the bar, on every screen, for
- * the whole life of a subject after its first afternoon — and at 1280 px they pushed
- * «Evaluar el sistema» past the edge of the strip. What stays is the phase's own caption,
- * a tick and the sentence that the subject is prepared, and the word under the name is
- * the way back: pressing the pill unfolds the four steps and remembers it. It is the same
+ * Four stops with nothing left to do were most of the bar for the whole life of a subject,
+ * and at 1280 px they pushed "Evaluar el sistema" past the edge of the strip. The same
  * two-line pill as a step, so unfolding moves nothing vertically.
  */
 function FoldedPhase({ onUnfold }: { onUnfold: () => void }) {
@@ -438,23 +363,20 @@ function MainNav({
   /** One flag per step of `STEPS`: whether work is running on it right now. */
   busy: boolean[];
   locked: string | null;
-  /** Whether both origins hold documents, which is what «paso 1 hecho» means. */
+  /** Whether both origins hold documents, which is what "paso 1 hecho" means. */
   rawStocked: boolean;
   /** What is still untranscribed, or null. A hint on step 1 and never a gate. */
   rawWaiting: string | null;
-  /** Whether the person asked to keep the four steps on the bar. Owned by `AppShell`,
-   *  because this navigation is MOUNTED TWICE — one instance per breakpoint, each hidden
-   *  by CSS — and two `useState`s over one `localStorage` key disagree the moment the
-   *  window is resized across `xl` after unfolding. */
+  /** Whether the person asked to keep the four steps on the bar. Owned by `AppShell`:
+   *  this navigation is mounted twice, one instance per breakpoint, so a `useState` here
+   *  would be two states over one `localStorage` key. */
   stepsOpen: boolean;
   onSteps: (open: boolean) => void;
   className?: string;
 }) {
   const { t } = useT();
-  // WHETHER THE STRIP IS CUT OFF ON THE RIGHT, so the fade below can say so. Measured at
-  // 390 px: the row needs more than the screen has, the scroller works, and its bar is
-  // hidden on purpose — so without this there is nothing at all to suggest the strip
-  // continues, and the two destinations that consume the whole path do not exist.
+  // Whether the strip is cut off on the right, so the fade below can say so. Its scrollbar
+  // is hidden on purpose, so without this nothing suggests the row continues.
   const strip = useRef<HTMLElement>(null);
   const [cut, setCut] = useState(false);
   useEffect(() => {
@@ -473,10 +395,8 @@ function MainNav({
 
   const states = stepStates(stages, rawStocked);
 
-  // FOLDED WHEN EVERYTHING IS DONE, unless the person unfolded it or is standing on one of
-  // the steps — a bar that hides the stop you are on is a bar that says you are nowhere.
-  // Leaving the step folds it again, which is the «hide them once finished» that was asked
-  // for; the preference is what keeps them out for good.
+  // Folded once everything is done, unless the person unfolded it or is standing on one of
+  // the steps — a bar that hides the stop you are on says you are nowhere.
   const allDone = stages.length > 0 && states.every((state) => state === "done");
   const onStep = STEPS.some((step) => step.path === path);
   const folded = allDone && !stepsOpen && !onStep;
@@ -516,10 +436,8 @@ function MainNav({
                 busy={busy[index]}
               />
             ))}
-            {/* The way back to the folded bar, drawn only where pressing it FOLDS
-                something: with a step still pending the four are the path and stay, and
-                standing on one of them the bar may not hide the stop you are on — there
-                it was a button that answered a press with nothing at all. */}
+            {/* Drawn only where pressing it folds something: with a step pending, or while
+                standing on one, it would answer a press with nothing at all. */}
             {allDone && !onStep ? (
               <button
                 type="button"
@@ -568,14 +486,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
 
-  // The tutorial's slide, read from the path: which parts of this header it has explained
-  // so far, and therefore which are on offer. Null everywhere else.
+  // The tutorial's slide, read from the path; null everywhere else.
   const tutorialAt = slideOf(path);
   const deck = tutorialAt !== null;
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
-  // like every route does, so it would only be refused — and a refusal reads as «la
-  // sesión ha caducado», which is the one thing that is not happening here.
+  // like every route does, so it would only be refused — and a refusal reads as "la
+  // sesión ha caducado", which is the one thing that is not happening here.
   useEffect(() => {
     if (hasWorkspace) runStore.connect();
   }, [hasWorkspace]);
@@ -597,46 +514,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     Object.values(stream.runs).flatMap((run) => (run.job ? [run.job] : [])),
   );
 
-  // WHETHER THE FLOATING PILL EXISTS AT ALL, and it is not a nicety: it made a real button
-  // unreachable. «Ver ejecución» is anchored to the bottom-right corner, and the CSV export
-  // of «Administración → Evaluaciones» is anchored to the right of its own row — measured,
-  // a real click on the centre of that button opened the run drawer and downloaded nothing.
-  // `main`'s `pb-20` keeps content from ENDING underneath, which is a different problem and
-  // never was this one.
-  //
-  // The condition is «has anything run in this session», not «is something running now»: a
-  // finished run is exactly what one goes to the drawer to read, and it would be perverse
-  // to hide the log the moment the job it belongs to ends. With nothing ever run there is
-  // nothing behind the pill, so the corner goes back to the page.
-
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
 
-  // Both "use" destinations are gated by the SAME condition — the whole chain approved —
-  // so the reason is derived once and handed to both pills. They stay reachable: the
-  // screens behind them explain what is missing, which a dimmed link cannot.
+  // Both doors are gated by the same condition — the whole chain approved — so the reason
+  // is derived once and handed to both pills.
   const locked = (pipeline.data?.generation_unlocked ?? false)
     ? null
     : t("nav.needsApproved");
 
-  // A HINT AND NOT A GATE, which is the whole reason it is a tooltip on a dimmed surface
-  // rather than a `disabledReason`: the sentence says the builds will run anyway. Only
-  // asked while the account is in a workspace — with none, the two queries behind it would
-  // just 403.
+  // A hint and not a gate — the builds run anyway — so it is a tooltip and never a
+  // `disabledReason`. Only asked inside a workspace; with none the queries would 403.
   const rawSlots = raw.data?.slots ?? [];
   const rawSummary = useTranscriptionSummary(hasWorkspace ? rawSlots : []);
   const rawWaiting =
     rawSummary.todo > 0 ? t("nav.rawWaiting", { n: rawSummary.todo }) : null;
-  // Qué significa «paso 1 hecho»: los dos orígenes tienen algo. No la transcripción, que
-  // es un acelerador y nunca una reja — un paso marcado como pendiente por algo que no
-  // impide seguir sería una promesa falsa en la única barra que la gente lee.
+  // What "step 1 done" means: both origins hold something. Never the transcription, which
+  // is an accelerator and not a gate.
   const rawStocked =
     rawSlots.length > 0 && rawSlots.every((slot) => slot.files.length > 0);
 
-  // ONE PREFERENCE FOR BOTH COPIES OF THE BAR. `MainNav` is rendered twice — the wide one
-  // and the narrow one, each hidden by CSS at the other's breakpoint — so a `useState`
-  // inside it is two states over one `localStorage` key: unfolding on a phone left the
-  // desktop copy folded until a reload.
+  // One preference for both copies of the bar: `MainNav` is rendered twice, each hidden by
+  // CSS at the other's breakpoint, so the state cannot live inside it.
   const [stepsOpen, setStepsOpen] = useState(readStepsPreference);
   const setSteps = (open: boolean) => {
     setStepsOpen(open);
@@ -648,38 +547,21 @@ export function AppShell({ children }: { children: ReactNode }) {
     // a foot — so under it the wrapper is a definite height and `main` a flex column with
     // no padding, where the two rails can reach the edges.
     <div className={cn("flex flex-col", deck ? "h-full" : "min-h-full")}>
-      {/* NOTHING BUT THE SLIDES UNDER THE DECK (2026-09-04, explicit user request: «borra
-          toda referencia del navbar del tutorial; borra las animaciones y oculta el
-          navbar»). The header is not drawn at all while the tutorial runs, which reverses
-          «the deck runs under the real header and the header unlocks as the deck goes» of
-          2026-09-02: the silhouettes, the `--attention` rule under the group being
-          explained and the `inert` that made the whole strip unpressable are gone with it,
-          and so is `reveal.ts`. What the tutorial explains, it explains in words and in
-          its own figures. */}
+      {/* Nothing but the slides under the deck: the header is not drawn at all while the
+          tutorial runs. What it explains, it explains in words and in its own figures. */}
       {deck ? null : (
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
-        {/* THREE COLUMNS, AND THE MIDDLE ONE IS THE CENTRE OF THE HEADER.
-            The navigation used to be a `flex-1` sitting after the logo and the workspace
-            switcher, so it started wherever those two happened to end: it read as pushed
-            to the left, and it MOVED sideways every time the switcher changed the length
-            of a workspace name. Here the two flanks are `flex-1 basis-0`, so they are
-            always the same width and the nav lands on the centre line of the header
-            whatever they contain.
-            The nav keeps its own scroll for the narrow case, and it is the only item that
-            may shrink: a flank with `basis-0` absorbs no negative free space, so the
-            squeeze lands where there is a scroller to absorb it.
-            The flanks carry NO `min-w-0`, and that is the load-bearing half. `flex-1`
-            makes them grow into whatever the nav leaves, and with `min-width: 0` they
-            grow to nothing and their contents simply paint OUTSIDE the box — measured
-            between 1024 and 1152 px, «Panel» was drawn on top of the workspace name and
-            «Evaluar» on top of «Mis variantes». Letting `min-width: auto` stand holds each
-            flank at its own min-content, which is bounded: the lockup is fixed, the
-            switcher is `max-w-44` and truncates. */}
+        {/* Three columns, and the middle one is the centre of the header: the flanks are
+            `flex-1 basis-0`, so they are always the same width and the nav lands on the
+            centre line whatever they contain. The nav is the only item that may shrink,
+            being the only one with a scroller to absorb the squeeze.
+            The flanks carry NO `min-w-0`, and that is load-bearing: with `min-width: 0`
+            they grow to nothing and their contents paint OUTSIDE the box, one flank over
+            the other. `min-width: auto` holds each at its own min-content, which is
+            bounded — the lockup is fixed and the switcher is `max-w-44` and truncates. */}
         <div className="mx-auto flex h-[4.5rem] w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
-          {/* THE LOCKUP AND THE INSTANCE ARE TWO DIFFERENT FACTS, so a rule separates them.
-              Side by side with only a gap between, the workspace name read as part of the
-              product's own name. The lockup itself is `ui/logo.tsx`'s, and `compact` is
-              what drops the wordmark below `lg`. */}
+          {/* A rule and not a gap: side by side, the subject's name read as part of the
+              product's own. `compact` drops the wordmark below `lg`. */}
           <div className="flex flex-1 basis-0 items-center gap-2 sm:gap-3">
             <Link
               to="/"
@@ -694,11 +576,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <WorkspaceSwitcher />
           </div>
 
-          {/* NOTHING TO NAVIGATE WITHOUT AN INSTANCE. All seven destinations render the
-              same «Todavía no tienes ninguna asignatura», so the bar was offering seven
-              doors into one room — and to a student account, five of them are the
-              teacher's preparation chain. `App` already gates the routes; this stops the
-              navigation from advertising them. */}
+          {/* Nothing to navigate without a subject: all six destinations render the same
+              "Todavía no tienes ninguna asignatura". `App` already gates the routes; this
+              stops the navigation from advertising them. */}
           {hasWorkspace ? (
             <MainNav
               path={path}
@@ -733,9 +613,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         ) : null}
 
-        {/* Whoever is seeing this while the door is closed is the account that closed it —
-            everybody else is looking at the notice — so the strip is a reminder rather than
-            a warning: the risk is forgetting it is on, not failing to notice. */}
+        {/* Whoever sees this is the account that closed the door — everybody else is
+            looking at the notice — so it is a reminder, not a warning. */}
         {maintenance.data?.active ? (
           <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 border-t border-border bg-[color-mix(in_oklch,var(--destructive)_12%,transparent)] px-3 py-1.5 text-center text-small sm:px-4">
             <Wrench className="size-3.5 shrink-0" />
@@ -746,13 +625,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
 
-        {/* The consequence goes in the sentence itself: it was all the (i) beside it said, and a
-            warning one has to open in order to understand is not a warning. */}
+        {/* The consequence goes in the sentence itself: a warning one has to open in order
+            to understand is not a warning. */}
         {offline || missingModels.length > 0 ? (
           <div className="flex items-start justify-center gap-1.5 border-t border-border bg-[color-mix(in_oklch,var(--attention)_12%,transparent)] px-3 py-1.5 text-center text-small sm:items-center sm:px-4">
             {/* Neither the host nor the model names belong here: the strip says what does
-                not work and what still does, and where the engine lives and which model is
-                missing are «Administración → Motor»'s, which is where one acts on them. */}
+                not work, and the detail is "Administración → Motor"'s, where one acts. */}
             <span>{offline ? t("shell.engineOffline") : t("shell.missingModels")}</span>
           </div>
         ) : null}

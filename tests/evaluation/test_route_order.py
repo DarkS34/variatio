@@ -2,10 +2,10 @@
 
 FastAPI matches routes in declaration order, so `/evaluations/{session_id}` declared before
 `/evaluations/accounts` makes the second unreachable: the request lands on `session_detail`
-with `session_id="accounts"` and answers 404 «No existe la sesión 'accounts'».
+with `session_id="accounts"` and answers 404 "No existe la sesión 'accounts'".
 
 That is the worst shape a bug can have — a plausible 404 from a route nobody meant to call,
-on a screen that then simply renders nothing. It cost one round of «sigo sin ver la opción»,
+on a screen that then simply renders nothing. It cost one round of "sigo sin ver la opción",
 and it will cost another the next time somebody appends a route to the end of the file,
 which is where anybody would naturally put one.
 """

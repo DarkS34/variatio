@@ -38,10 +38,10 @@ def build_prompt(commission: Commission, context) -> str:
     """Render the baseline prompt: the three canonical facts plus the subject's context.
 
     The context block is `content_context.prompt_block()`, the same prose every prompt of
-    the pipeline interpolates. It reaches this arm since 2026-09-04 because without it the
-    two baselines invented the material — a programming course's exercises came back in
-    whatever language the model favoured — and what was being measured was then the absence
-    of a paragraph, not the absence of the system. The rag arm builds on this same prompt.
+    the pipeline interpolates. Without it the two baselines invent the material — a
+    programming course's exercises come back in whatever language the model favours — and
+    what is measured is the absence of a paragraph rather than the absence of the system.
+    The rag arm builds on this same prompt.
     """
     item_type = context.exemplars_profile.item_type(commission.item_type)
     return evaluation_prompts.of(context.language).naive_generation_prompt(

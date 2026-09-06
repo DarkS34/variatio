@@ -15,7 +15,7 @@ const chain = (...statuses: ArtifactStatus[]) =>
 
 describe("stepStates", () => {
   it("marks exactly one step as the next move", () => {
-    // Lo que hace obvio un camino es UN movimiento siguiente, no una lista de pendientes.
+    // What makes a path obvious is ONE next move, not a list of things outstanding.
     const states = stepStates(chain("missing", "missing", "missing"), true);
     expect(states.filter((s) => s === "now")).toHaveLength(1);
     expect(states).toEqual(["done", "now", "later", "later"]);
@@ -26,14 +26,14 @@ describe("stepStates", () => {
   });
 
   it("only an approved stage counts as done", () => {
-    // Construido no es aprobado: mientras nadie lo dé por bueno, el paso sigue abierto.
+    // Built is not approved: until somebody closes it, the step stays open.
     const states = stepStates(chain("draft", "missing", "missing"), true);
     expect(states[1]).toBe("now");
   });
 
   it("a stale stage stops being done, and the path goes back to it", () => {
-    // Y el que va DETRÁS sigue marcado como hecho, que es la verdad: está aprobado. El
-    // camino te devuelve al que se ha quedado desfasado sin borrar lo que sí cerraste.
+    // And the one BEHIND it stays marked done, which is the truth: it is approved. The path
+    // sends you back to the stale one without un-doing what you did close.
     const states = stepStates(chain("approved", "stale", "approved"), true);
     expect(states).toEqual(["done", "done", "now", "done"]);
   });
@@ -54,8 +54,8 @@ describe("currentStepPath", () => {
   });
 
   it("answers with generation once everything is approved", () => {
-    // Es para lo que servía todo lo anterior; dejarlo en el último paso sería devolver a
-    // alguien a una pantalla que ya ha terminado.
+    // It is what everything before it was for; ending at the last step would send somebody
+    // back to a screen they have already finished.
     expect(currentStepPath(chain("approved", "approved", "approved"), true)).toBe("/generate");
   });
 
@@ -67,8 +67,8 @@ describe("currentStepPath", () => {
 
 describe("the order of the path", () => {
   it("is the raw material, then review.ARTIFACTS", () => {
-    // El perfil va antes que el temario porque cerrar el temario necesita el perfil
-    // APROBADO: empezar por el temario es empezar por un paso que no se puede terminar.
+    // The profile comes before the syllabus because closing the syllabus needs an APPROVED
+    // profile: starting at the syllabus is starting at a step you cannot finish.
     expect(STEPS.map((s) => s.artifact)).toEqual([
       null,
       "exemplars_profile",
@@ -80,7 +80,7 @@ describe("the order of the path", () => {
 
 describe("nextStepOf", () => {
   it("leads the raw material to the first stage, numbered", () => {
-    // El paso sin artefacto ofrece el mismo «Continuar» que los demás, leído de la misma lista.
+    // The step with no artifact offers the same "Continuar" as the rest, from the same list.
     expect(nextStepOf(null)).toEqual({
       path: "/prepare/profile",
       number: "2",
@@ -107,7 +107,7 @@ describe("stepBusy", () => {
   });
 
   it("does not spin over a build still waiting in the queue", () => {
-    // Un trabajo en cola no está en marcha, y la rueda afirma que algo está pasando.
+    // A queued job is not a running one, and the wheel claims something is happening.
     const busy = stepBusy(chain("approved", "building", "missing"), [
       job({ status: "queued", queue_position: 2 }),
     ]);

@@ -5,8 +5,8 @@ import type { ArtifactName, JobKind } from "@/lib/types";
  * WHAT THE SERVER NAMES, SAID IN THE READER'S LANGUAGE.
  *
  * The API sends a `label` with every stage and every job, and it is written in the API's
- * own language — so an account reading the interface in English still met «Perfil de
- * ejemplares» on the panel's cards and «Construir el grafo de conocimiento» in the run
+ * own language — so an account reading the interface in English still met "Perfil de
+ * ejemplares" on the panel's cards and "Construir el grafo de conocimiento" in the run
  * log. What identifies a stage is its ARTIFACT and a job its KIND, both stable strings
  * that say nothing about who is reading, so the wording belongs in the catalogue like
  * every other sentence and this is the table between the two.
@@ -27,17 +27,12 @@ const ARTIFACT_KEYS: Record<string, Key> = {
 };
 
 /**
- * THE CALL TO BUILD, ONE PER STEP (2026-09-04, explicit user request).
+ * The call to build, one per step: what does not exist yet and which slot is read to make
+ * it, since the four steps do not read the same one. The sentence about how long it takes
+ * is shared.
  *
- * It used to be one sentence with the step's name interpolated into it — «Este paso
- * todavía no está construido. Se construye Tipos de ejercicio leyendo tus apuntes y
- * ejercicios.» — which said the same thing twice and never said the one thing somebody
- * needs before pressing: what is going to come out. Each step now says what does not
- * exist yet and what is read to make it; the sentence about how long it takes is shared,
- * because it is the same sentence.
- *
- * Same fallback as every other table here: an artifact this bundle has never heard of
- * still gets the generic pair rather than nothing.
+ * Same fallback as every other table here: an artifact this bundle has never heard of still
+ * gets the generic pair rather than nothing.
  */
 const BUILD_CALL: Record<string, { title: Key; body: Key }> = {
   exemplars_profile: { title: "build.call.profile.title", body: "build.call.profile.body" },

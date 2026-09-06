@@ -200,8 +200,8 @@ def test_the_office_fingerprint_records_whether_metafiles_could_be_rendered(tmp_
 @pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice is not on the PATH")
 def test_libreoffice_renders_the_reference_equation(tmp_path):
     # The 588-byte WMF the reference workbook embeds for `ax² + bx + c = 0`. What is
-    # measured: it comes out at vector resolution — 380×54 of content at 384 dpi on
-    # 2026-09-02 — and not as the 96×13 Pillow could never have opened anyway.
+    # measured: it comes out at VECTOR resolution — 380×54 of content at 384 dpi — and not
+    # as the 96×13 Pillow could never have opened anyway.
     from PIL import Image
 
     source = _docx(

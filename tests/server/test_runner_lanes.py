@@ -309,11 +309,10 @@ def test_two_concurrent_jobs_do_not_share_an_emitter(make):
 
 
 def test_two_concurrent_jobs_write_to_their_own_workspace_log(make):
-    """The loguru mirror is a FILE per workspace since 2026-08-31, not a tab on a drawer.
+    """The loguru mirror is a FILE per workspace, and no screen shows it.
 
-    What it has to keep apart is the same thing it always did — two jobs running side by
-    side — only the destination changed: filtering by thread is still what decides whose
-    line it is.
+    What it has to keep apart is two jobs running side by side, and filtering by THREAD is
+    what decides whose line it is.
     """
     f = make({"aqui": {LOCAL}, "alla": {REMOTE}})
     barrier = threading.Barrier(2, timeout=WAIT)

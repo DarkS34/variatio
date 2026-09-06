@@ -20,12 +20,10 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
 /**
  * `autoGrow` makes the box the height of its own text, with no inner scrollbar.
  *
- * Opt-in and not the default, which is the whole design: a textarea holding a whole
- * transcribed page would grow to several thousand pixels and take the screen's scrollbar
- * with it. Where it IS right is a box being READ as much as written — the profile's field
- * descriptions and its writing rules, four to six lines each, which arrived clipped at two
- * with a scrollbar of their own, so reviewing what the builder wrote meant scrolling
- * inside every one of a dozen little windows (2026-09-01, explicit user request).
+ * Opt-in and never the default: a textarea holding a whole transcribed page would grow to
+ * several thousand pixels and take the screen's scrollbar with it. Where it IS right is a
+ * box being READ as much as written — the profile's field descriptions and writing rules,
+ * otherwise clipped at two lines with a scrollbar of their own.
  *
  * `resize-none` goes with it: a handle that fights an effect resetting the height on every
  * keystroke is a control that does not work.

@@ -87,7 +87,7 @@ def test_anybody_else_gets_exactly_the_workspaces_they_are_a_member_of(db):
 
 def test_an_account_with_no_membership_is_listed_with_nowhere_to_be_assigned(db):
     session, _ = db
-    # Listed rather than hidden: the screen has to be able to say «dale acceso primero»,
+    # Listed rather than hidden: the screen has to be able to say "dale acceso primero",
     # which it cannot do about somebody it never shows.
     assert _accounts(session)["nadie"]["workspaces"] == []
 
@@ -106,9 +106,9 @@ def test_a_deleted_workspace_is_never_offered(db):
 
 # WHETHER ANYTHING CAN BE COMMISSIONED THERE ----------------------------------------------
 #
-# Since 2026-08-27 the commission form reads the workspace CHOSEN in step 2 rather than the
-# one the tab is standing in, so each instance has to say whether it can take a commission
-# at all — otherwise the only way to find out is a 409 after composing the whole thing.
+# The commission form reads the workspace CHOSEN in step 2 and not the one the tab is
+# standing in, so each instance has to say whether it can take a commission at all —
+# otherwise the only way to find out is a 409 after composing the whole thing.
 
 
 def test_each_workspace_says_whether_a_commission_can_be_composed_in_it(db):
@@ -139,7 +139,7 @@ def test_the_gate_is_read_once_per_workspace_and_not_once_per_account(db, monkey
     session, _ = db
     # It touches the filesystem, and this endpoint loops over every account of the
     # installation: three accounts over two instances used to mean three reads, of which
-    # one was «default» measured twice.
+    # one was "default" measured twice.
     asked = []
     monkeypatch.setattr(
         "evaluation.api.admin.gate_error",

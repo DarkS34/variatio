@@ -30,7 +30,7 @@ export function Progress({
   className?: string;
   tone?: "primary" | "settled" | "attention" | "danger";
 }) {
-  // `null` is «todavía no sé cuánto hay» and it is the only thing that may sweep. A max of
+  // `null` is "todavía no sé cuánto hay" and it is the only thing that may sweep. A max of
   // ZERO is a total that is known and happens to be zero — an empty bank, a graph with no
   // taggable concepts — and drawing it as the sweep made every one of those screens claim
   // to be loading something for ever. `barFill` is where the two are told apart.
@@ -67,7 +67,7 @@ export function Progress({
 /**
  * The same 0-100 as `Progress`, cut into the phases that produce it.
  *
- * A single bar answers «how much is left» and nothing else; a build is seven very
+ * A single bar answers "how much is left" and nothing else; a build is seven very
  * different jobs in a row, and which one it is stuck on is half of what you want to
  * know. Each segment is as wide as that phase's share of the plan — the builders'
  * measured weights — so the bar keeps being an honest picture of the time, not a row
@@ -155,8 +155,8 @@ export function PhaseBar({
  * THE LABEL IS A CHILD, NOT A STRING PROPERTY, and that is what the callers were missing.
  * This used to be a bare `<button aria-label={label}>` with no children, so every screen
  * wrote the words a second time in a `<span>` next to it — and that span was not a
- * `<label>`, so it did nothing. Measured before the fix: clicking «Restringir a un
- * currículo» left `aria-checked` at `false`, and the accessible name was announced twice
+ * `<label>`, so it did nothing. Measured before the fix: clicking "Restringir a un
+ * currículo" left `aria-checked` at `false`, and the accessible name was announced twice
  * because the visible text repeated the `aria-label` verbatim.
  *
  * With `children` the whole row is the target — 36×20 px becomes the width of the
@@ -344,9 +344,9 @@ export function EmptyState({
  * A READ THAT FAILED SAYS SO. NO SCREEN MAY RENDER NOTHING INSTEAD.
  *
  * The rule is the evaluation panel's, learned from a route-ordering bug that turned into a card
- * with a heading and no body — «esta función no existe» rather than «esto falló». It was
+ * with a heading and no body — "esta función no existe" rather than "esto falló". It was
  * fixed there and nowhere else: with `/api/kg` down, the graph screen still drew its header,
- * its APROBADO badge and «Grafo listo para etiquetar» over an empty page, which is worse
+ * its APROBADO badge and "Grafo listo para etiquetar" over an empty page, which is worse
  * than silence — it asserts that the stage is fine while showing none of it. Measured in a
  * browser with the request cut; `/admin` did the same.
  *

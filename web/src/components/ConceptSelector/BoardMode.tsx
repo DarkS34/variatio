@@ -19,7 +19,7 @@ export function BoardMode({
 }: {
   groups: [string, KgConcept[]][];
   chosen: Set<string>;
-  /** Everything the selector is showing. Since 2026-09-04 a prerequisite is in it too. */
+  /** Everything the selector is showing, prerequisites included. */
   selectable: Set<string>;
   /**
    * Concepts the graph places before what is already chosen. They are MARKED — dashed and
@@ -32,7 +32,7 @@ export function BoardMode({
   exemplarType?: string | null;
   /**
    * Draw a concept with nothing to imitate as such — dashed, muted, its title saying so.
-   * Under the «all» scope it is what tells a concept the bank illustrates from one it
+   * Under the "all" scope it is what tells a concept the bank illustrates from one it
    * does not; a chosen concept whose exemplars have gone since is marked the same way.
    */
   markMissingExemplars?: boolean;
@@ -55,9 +55,9 @@ export function BoardMode({
   return (
     <div className="mx-auto grid max-w-[110rem] gap-4 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
       {groups.map(([domain, items]) => {
-        // Over the selectable chips. Since a prerequisite became pickable (2026-09-04) that
-        // is every chip on the board, but the filter stays: it is what keeps «todos» from
-        // claiming a total it cannot reach if anything ever stops being selectable again.
+        // Over the selectable chips, which today is every chip on the board. The filter
+        // stays: it keeps "todos" from claiming a total it cannot reach should anything
+        // stop being selectable again.
         const picked = items.filter((concept) => chosen.has(concept.name)).length;
         const free = items.filter((concept) => selectable.has(concept.name));
         const allChosen = free.length > 0 && free.every((concept) => chosen.has(concept.name));
@@ -136,10 +136,9 @@ export function BoardMode({
                     title={title}
                     className={cn(
                       "relative inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-small transition-colors",
-                      // A CHIP NEVER CHANGES WIDTH (2026-09-04, explicit user request:
-                      // «que se quede donde está»). Both marks are the border and the
-                      // ground and cost no inline space; a glyph used to sit in the corner
-                      // and widened the chip by 18 px, re-wrapping nineteen of them.
+                      // A chip never changes width: both marks are the border and the
+                      // ground and cost no inline space. An inline glyph widens it by 18 px
+                      // and re-wraps the whole board.
                       state === "selected" && "border-primary bg-primary text-primary-foreground",
                       state === "prerequisite" &&
                         "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20",

@@ -83,7 +83,7 @@ def test_the_installations_writer_reaches_every_arm_on_the_commission(offered, m
     session = evaluation_run.evaluate(_Context(), concepts=["Función"], seed=7)
     assert len(seen) == 3
     assert {c.model for c in seen} == {"el-que-delibera"}
-    # Locked at «high»: reasoning ON runs at the declared level, OFF stays off.
+    # Locked at "high": reasoning ON runs at the declared level, OFF stays off.
     assert {c.effort for c in seen} == ({"high"} if session.think else {False})
 
 

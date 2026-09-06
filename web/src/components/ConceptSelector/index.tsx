@@ -20,28 +20,24 @@ export interface ConceptSelectorProps {
   selected: string[];
   onChange: (next: string[]) => void;
   /**
-   * Concepts the graph places BEFORE what is already chosen. They are MARKED and remain
-   * fully selectable (2026-09-04, explicit user request, reversing the lock of the same
-   * week).
+   * Concepts the graph places BEFORE what is already chosen: MARKED and fully selectable.
    *
-   * The lock was a UI invention with nothing behind it: `KnowledgeGraph._closure` subtracts
-   * the targets from the closure it returns, so choosing a prerequisite as a target is
-   * exactly the commission the generator already computes — it stops being «se da por
-   * sabido» and becomes one more objective. What the lock actually did was refuse ordinary
-   * commissions («if» with «elif», «Recursividad» with «Función») and, being TRANSITIVE, do
-   * it to concepts several hops away whose connection to the chosen one is invisible on the
-   * board.
+   * Never a lock. `KnowledgeGraph._closure` subtracts the targets from the closure it
+   * returns, so choosing a prerequisite as a target is a commission the generator already
+   * computes — it stops being assumed known and becomes one more objective. Locking it
+   * refuses ordinary commissions, and transitively, at concepts several hops away whose
+   * connection is invisible on the board.
    *
-   * It is disjoint from `selected` — `priors()` subtracts its own seeds — so a chosen
-   * concept never draws the mark.
+   * Disjoint from `selected` — `priors()` subtracts its own seeds — so a chosen concept
+   * never draws the mark.
    */
   implied?: Set<string>;
   /** When given, only these are offered. It is the active curriculum. */
   restrictTo?: string[] | null;
   /**
    * Offer the exemplar SCOPE, and open in it. The selector then owns a two-way switch in
-   * its header — «Con ejemplos», the default, keeps to the concepts the bank can
-   * illustrate, prerequisites included; «Todos los conceptos» lifts it — and goes back to
+   * its header — "Con ejemplos", the default, keeps to the concepts the bank can
+   * illustrate, prerequisites included; "Todos los conceptos" lifts it — and goes back to
    * the default every time it opens.
    */
   onlyWithExemplars?: boolean;
@@ -95,9 +91,9 @@ export function ConceptSelector({
   const [scope, setScope] = useState<Scope>("exemplars");
   const panel = useRef<HTMLDivElement>(null);
 
-  // THE DEFAULT IS THE BANK'S SIDE, EVERY TIME (2026-09-04, explicit user request): what a
-  // person opens onto is the concepts with something to imitate, and lifting the scope is a
-  // decision for one visit, not a setting.
+  // The default is the bank's side every time: what a person opens onto is the concepts
+  // with something to imitate, and lifting the scope is a decision for one visit, not a
+  // setting.
   useEffect(() => {
     if (open) setScope("exemplars");
   }, [open]);
@@ -112,7 +108,7 @@ export function ConceptSelector({
   // A FILTER THAT WOULD LEAVE NOTHING FILTERS NOTHING. On a bank whose items are all
   // untagged, or whose modality has no example yet, the exemplar scope would empty the
   // board outright; there it is not offered at all — no switch, no count — and everything
-  // the caller's OWN restrictions allow is on the board, which is what «all» would show.
+  // the caller's OWN restrictions allow is on the board, which is what "all" would show.
   const scopeOffered = useMemo(() => {
     if (!onlyWithExemplars) return false;
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
@@ -124,17 +120,14 @@ export function ConceptSelector({
   }, [concepts, onlyWithExemplars, restrictTo, allowNonTaggable, exemplarType]);
   const filterByExemplars = scopeOffered && scope === "exemplars";
 
-  // The one place that decides what state a concept is in. `selected` is shown always,
-  // and every filter only decides what ELSE is offered — otherwise a concept a filter
-  // stopped matching after it was chosen silently disappears from the screen while still
-  // counting. Neither mode nor the tray may re-derive any part of this.
+  // The one place that decides what state a concept is in. `selected` is shown always and
+  // every filter only decides what ELSE is offered, or a concept a filter stopped matching
+  // after it was chosen disappears while still counting. Neither mode nor the tray may
+  // re-derive any part of this.
   //
-  // A PREREQUISITE IS ONE MORE CONCEPT HERE (2026-09-04, explicit user request). It used to
-  // have a branch of its own — drawn whatever the curriculum said, and never selectable —
-  // and the whole branch existed to explain a lock that has no business existing (see
-  // `implied` above). With the lock gone it follows the ordinary rules: the curriculum
+  // A prerequisite is ONE MORE CONCEPT here and gets no branch of its own: the curriculum
   // bounds what may be a TARGET, and a prerequisite outside it is no more legitimate a
-  // target than any other concept outside it.
+  // target than anything else outside it.
   const state = useMemo(() => {
     const allowed = restrictTo && restrictTo.length > 0 ? new Set(restrictTo) : null;
     const visible: KgConcept[] = [];
@@ -152,7 +145,7 @@ export function ConceptSelector({
     return { visible, selectable };
   }, [concepts, restrictTo, filterByExemplars, exemplarType, allowNonTaggable, chosen]);
 
-  // What the tray lists under «Vienen antes». Derived from the graph and NOT from the
+  // What the tray lists under "Vienen antes". Derived from the graph and NOT from the
   // board, because it states a fact about the choice — these come before what you picked —
   // and not about what happens to be on screen: a prerequisite the exemplar scope is
   // hiding is still one, and the tray is where somebody sees it without scrolling.
@@ -283,10 +276,9 @@ export function ConceptSelector({
             </div>
           ) : null}
 
-          {/* THE SCOPE IS A VISIBLE SWITCH, NOT A SETTING (2026-09-04, explicit user
-              request). It sits beside the view switch because it is the same kind of
-              control — how the syllabus is shown — and it is drawn only where the bank can
-              illustrate something at all. */}
+          {/* The scope is a visible SWITCH and not a setting. It sits beside the view
+              switch, being the same kind of control — how the syllabus is shown — and is
+              drawn only where the bank can illustrate something at all. */}
           {scopeOffered ? (
             <div
               role="group"

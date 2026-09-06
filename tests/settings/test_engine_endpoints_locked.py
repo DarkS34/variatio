@@ -5,7 +5,7 @@ from variatio.settings.registry import BY_KEY
 from variatio.settings.store import resolve, validate_patch
 
 # The two settings that name WHERE this process sends its model traffic. Both used to be
-# hot-editable from «Administración → Configuración», which made `PUT /api/admin/config` a
+# hot-editable from "Administración → Configuración", which made `PUT /api/admin/config` a
 # way to redirect it: the Cerebras client is built with the base URL AND the
 # `Authorization: Bearer CEREBRAS_API_KEY` header, so moving the URL delivers the key that
 # `engine.cerebras_api_key` is `secret=True, editable=False` to protect; and `OLLAMA_HOST`
@@ -37,7 +37,7 @@ def test_the_refusal_survives_being_hidden_among_editable_keys():
         )
 
 
-# Non-editable is not «unreachable»: pointing at a proxy, at a mock in tests, or at the port
+# Non-editable is not "unreachable": pointing at a proxy, at a mock in tests, or at the port
 # the tunnel opens is the documented purpose, and the environment is where that is done —
 # the environment wins over `config.json` for every setting, which is what already made the
 # panel's control inert on an installation whose `.env` sets these.

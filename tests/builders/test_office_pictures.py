@@ -2,7 +2,7 @@
 
 Docling translates the Office formats faithfully and writes `<!-- image -->` for every
 picture, which on the reference exemplars was a formula, another formula and the expected
-output of a «write a program that prints this» exercise — the part of each document the
+output of a "write a program that prints this" exercise — the part of each document the
 extractor most needed and the part it never saw. Each picture is now one model call under
 `IMAGE_RULES`, put back where the picture stood. What is pinned here is the splice, the
 cache and the marks; what the model answers is the prompt's business and is measured

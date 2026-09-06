@@ -1,7 +1,6 @@
-"""Filtering the bank by rung, which is what the screen asks now instead of sorting by it.
+"""Filtering the bank by rung, which is what the screen asks instead of sorting by it.
 
-«Ordenar por dificultad» was replaced on 2026-09-01 (explicit user request) by a filter:
-with three rungs an order only groups the list, where «enséñame los avanzados» is the
+With three rungs an order only groups the list, where "enséñame los avanzados" is the
 question somebody actually asks. The sort survives on the API and has its own file; this
 one covers the filter, its counts and the refusal.
 """
@@ -54,7 +53,7 @@ def _listing(ws, **kwargs):
 
 
 def test_the_filter_keeps_one_rung_across_modalities(ws):
-    # The whole point of the shared ladder: «avanzado» is one value, so one filter reads
+    # The whole point of the shared ladder: "avanzado" is one value, so one filter reads
     # over a mixed list instead of over several interleaved scales.
     ids = [i["id"] for i in _listing(ws, difficulty="avanzado")["items"]]
     assert ids == ["C001", "C003"]

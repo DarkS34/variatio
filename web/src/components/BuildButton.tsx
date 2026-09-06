@@ -23,22 +23,18 @@ import { cn } from "@/lib/utils";
 /**
  * The one way to launch a build, and it is offered ONLY while there is nothing built.
  *
- * The rules for *not* offering it — an unapproved upstream, an empty raw slot, no engine,
- * this build already waiting — live here once. A disabled button always says why in its
- * tooltip and in the (i) beside it; that is the whole point of centralising it.
+ * The reasons for NOT offering it — an unapproved upstream, an empty raw slot, no engine,
+ * this build already waiting — live here once, and a disabled button always says why in its
+ * tooltip and in the (i) beside it.
  *
- * THERE IS NO REBUILD (2026-09-02, explicit user request). The button used to have two
- * halves — «Construir» over an empty stage and «Reconstruir» over a built one — and the
- * second is gone: a second pass over the same documents does not give a different result,
- * so the control was a way to throw away a person's corrections for nothing. With one half
- * left there is one label for the four steps, «Comenzar construcción», and one size —
- * `xl`, because on an unbuilt stage this is the whole screen's decision and it is drawn in
- * the middle of it (`StageGate`), not in the header's corner.
+ * There is no REBUILD: a second pass over the same documents gives no different result, so
+ * the control was only a way to throw a person's corrections away. One label for the four
+ * steps, at `xl`, because on an unbuilt stage this is the whole screen's decision.
  *
- * A busy engine is NOT one of the reasons and never was: the job queues behind whatever is
- * there, so what the button owes the person is how many jobs it goes behind. With two lanes
- * which jobs count depends on a lane the server assigns at submit, so the tooltip reports
- * the machine and only predicts when there is one engine (`prospectNote`).
+ * A busy engine is NOT one of the reasons: the job queues behind whatever is there, so what
+ * the button owes the person is how many jobs it goes behind. With two lanes that depends
+ * on a lane the server assigns at submit, so the tooltip reports the machine and only
+ * predicts with one engine (`prospectNote`).
  */
 export function BuildButton({ stage, className }: { stage: StageState; className?: string }) {
   const { t } = useT();

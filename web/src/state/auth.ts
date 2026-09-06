@@ -44,11 +44,10 @@ export function useIsUnauthenticated(query: ReturnType<typeof useSession>) {
 /**
  * Whether this account is in any instance at all.
  *
- * A `null` role is a real state since 2026-08-26, when the default workspace stopped
- * existing: nothing picks an instance for an account that belongs to none, so «ninguno»
- * is what the server answers rather than somebody else's. Everything that reads instance
- * data hangs off this — the panel offers to create one, the queries do not fire, and the
- * socket is not opened, because all three would only earn the same 403.
+ * A `null` role is a REAL state: nothing picks an instance for an account that belongs to
+ * none, so "ninguno" is what the server answers rather than somebody else's. Everything
+ * that reads instance data hangs off this — the offer to create one, the queries, the
+ * socket — because all three would only earn the same 403.
  */
 export function useHasWorkspace() {
   return useSession().data?.role != null;
@@ -67,8 +66,8 @@ const isSessionKey = (key: readonly unknown[]) =>
  * *destroys* it and drops it from the cache. The gate's observer stays bound to the
  * destroyed object, so the fresh query `setQueryData` builds underneath it never notifies
  * anybody: the login form keeps rendering against a session that has already arrived, and
- * only a reload — which builds a new observer — makes it go away. That was the «entro y la
- * página no cambia hasta que la refresco» bug. Writing into the live query instead keeps
+ * only a reload — which builds a new observer — makes it go away. That was the "entro y la
+ * página no cambia hasta que la refresco" bug. Writing into the live query instead keeps
  * the observer and the data on the same object, which is the whole contract.
  */
 function useAdopt() {
@@ -183,7 +182,7 @@ export const ROLE_LABEL_KEYS: Record<Role, Key> = {
   owner: "role.owner",
 };
 
-// «Invitar» left this list when invitations became the administrator's alone: a role that
+// "Invitar" left this list when invitations became the administrator's alone: a role that
 // still advertised it would be describing a button nobody with that role can press.
 export const ROLE_HINT_KEYS: Record<Role, Key> = {
   viewer: "role.viewer.hint",

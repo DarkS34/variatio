@@ -1,18 +1,15 @@
 /**
  * Reading the difficulty criterion a profile wrote, one rung at a time.
  *
- * The criterion is ONE string in the artifact and stays one — the shape of the field did
- * not change when the ladder became mandatory, which is what kept extraction, `fixed=`
- * and the admissibility owners working with no migration. What changed is who reads it:
- * since 2026-09-01 a person picks the rung of the exercise they are commissioning, so the
- * text has to be readable BESIDE THE OPTION IT DESCRIBES rather than as one paragraph.
+ * The criterion is ONE string in the artifact and stays one, which is what keeps extraction,
+ * `fixed=` and the admissibility owners working with no migration. A person picks the rung
+ * of the exercise they are commissioning, so the text has to be readable BESIDE THE OPTION
+ * IT DESCRIBES rather than as one paragraph.
  *
- * So the prompt legislates a shape (`variatio/prompts/{es,en}/profile.py`: an opening
- * sentence, then every rung opened by its own value between « » and a colon) and this
- * splits it. It is deliberately lenient — `'basico':`, `"basico":`, `«Básico»:` and a bare
- * `basico:` all count — and deliberately all-or-nothing: a text it cannot take apart is
- * handed back whole, because half a criterion under one option and nothing under the other
- * two is worse than the paragraph.
+ * The prompt legislates the shape (`variatio/prompts/{es,en}/profile.py`) and this splits
+ * it. Deliberately lenient — `'basico':`, `"basico":`, `"Básico":` and a bare `basico:` all
+ * count — and deliberately all-or-nothing: a text it cannot take apart is handed back
+ * WHOLE, since half a criterion under one option is worse than the paragraph.
  */
 
 export interface Rung {
@@ -74,7 +71,7 @@ function marks(description: string, levels: string[]) {
 /**
  * What a clause inherits from the mark that follows it: the joining punctuation, and the
  * OPENING delimiter of the next rung — `from` points at the rung's own first letter, so
- * without this the axis ends «Grado de exigencia del ejercicio. '».
+ * without this the axis ends "Grado de exigencia del ejercicio. '".
  */
 const TRAILING = /[\s.,;:·—–\-"'«‹(\[]+$/u;
 
@@ -97,7 +94,7 @@ export function splitCriterion(
   return {
     lead: text.slice(0, found[0].from).trim().replace(TRAILING, ""),
     // The LADDER's order and not the text's: what a screen draws is the scale, and a
-    // criterion that happened to name «avanzado» first must not reorder the options.
+    // criterion that happened to name "avanzado" first must not reorder the options.
     rungs: levels.filter((level) => byLevel.has(level)).map((level) => ({
       level,
       text: byLevel.get(level)!,

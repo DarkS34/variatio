@@ -33,26 +33,20 @@ import {
 import type { WorkspaceRow } from "@/lib/types";
 
 /**
- * Everything that belongs to the person using the app, in one place.
+ * Everything that belongs to the person using the app, in one page: one tab per question.
  *
- * It exists because these three things were scattered: the password was a dialog in the
- * avatar menu, the saved variants were a route of their own, and which instances an
- * account may enter was nowhere at all. None of them is a step of the chain — the navbar
- * is the chain — so none of them belongs in the navbar, and a menu of four destinations
- * is a menu, not an answer. This is the answer: one page, one tab per question.
+ * None of it is a step of the chain — the navbar is the chain — so none of it belongs in
+ * the navbar. There is deliberately no list of open sessions: this is a closed group with
+ * accounts handed out by hand, and changing the password already revokes every other
+ * session in the same transaction.
  *
- * The list of open sessions used to be a fourth card and is gone (2026-08-17, explicit
- * user request). It answered a question nobody here was asking — this is a closed group
- * with accounts handed out by hand — and «cerrar las demás» is already covered by changing
- * the password, which revokes every other session as part of the same transaction.
- *
- * The tab lives in the URL rather than in state so that «mis variantes» stays a link that
- * can be sent, bookmarked and reloaded.
+ * The tab lives in the URL and not in state, so each stays a link that can be sent,
+ * bookmarked and reloaded.
  */
 export const ACCOUNT_TABS = [
   { value: "cuenta", label: "tabs.account", path: "/account" },
-  // Before the variants (2026-08-28, explicit user request): a variant belongs to an
-  // instance, so which instances this account can open is the question that comes first.
+  // Before the exercises: one belongs to an instance, so which instances this account can
+  // open is the question that comes first.
   { value: "workspaces", label: "tabs.workspaces", path: "/account/workspaces" },
   { value: "variantes", label: "tabs.variants", path: "/account/variants" },
 ] as const satisfies readonly { value: string; label: Key; path: string }[];
@@ -69,14 +63,10 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
 
   return (
     <div className="space-y-5">
-      {/* THREE LINES, AND WHO YOU ARE IS THE THIRD (2026-08-28, explicit user request).
-          The title, its (i) and the guide link are about the SCREEN; the username and the
-          administrator badge are about the ACCOUNT the screen is showing. They were all
-          wrapping in one flow, so the identity landed on the same line as the guide link
-          and read as part of it. Same shape as a stage's header, which learned this first:
-          the title row carries the (i), the guide link gets a line of its own below it,
-          and anything that is not about the screen goes under both — here with a step of
-          separation, because it is a different subject and not one more chip. */}
+      {/* Three lines, and who you are is the third: the title, its (i) and the guide link
+          are about the SCREEN, while the username and the administrator badge are about the
+          ACCOUNT it is showing. In one flow the identity wraps onto the guide link's line
+          and reads as part of it. */}
       <header className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <h1 className="font-display font-expanded text-display">{t("account.title")}</h1>
@@ -113,7 +103,7 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
  * Deliberately a card here and not a row in the avatar menu, unlike the theme: the theme
  * is a property of the screen somebody is sitting at and changes twice a day, while this
  * is a property of the person and is set once. The warning under it is the point of the
- * card — the obvious reading of «idioma» is that it changes everything, and it changes
+ * card — the obvious reading of "idioma" is that it changes everything, and it changes
  * exactly one half: what the workspace's prompts are written in is the workspace's own
  * declaration, fixed when it was created.
  */
@@ -177,15 +167,13 @@ function LanguageCard() {
 }
 
 /**
- * The three cards of «Cuenta», in two columns that are each their own stack.
+ * The three cards of "Cuenta", in two columns that are each their own stack.
  *
- * TWO COLUMNS, NOT THREE CELLS OF A GRID (2026-09-04, explicit user request). Three cards
- * in a two-column grid put the third on a row of its own, and a grid row is as tall as its
- * tallest cell — so «Idioma» started below the FOOT of «Contraseña» and left a hand's
- * width of nothing under «Identidad», which is the hole this closes. Each column is a flex
- * stack now, so a card begins where the one above it ended. The pairing is by size and not
- * by subject: the password card is the tall one on its own, the two short ones share the
- * other track, and below `lg` all three stack in this same order.
+ * Two columns and NOT three cells of a grid: a grid row is as tall as its tallest cell, so
+ * the third card starts below the foot of the second and leaves a hand's width of nothing.
+ * A flex stack starts each card where the one above it ended. The pairing is by SIZE and
+ * not by subject — the tall password card alone, the two short ones sharing the other
+ * track — and below `lg` all three stack in this same order.
  */
 function AccountTabView() {
   return (
@@ -202,18 +190,15 @@ function AccountTabView() {
 /**
  * The fields an account may change about itself.
  *
- * The username is not one of them and is shown as text: it is what every message prints
- * and what every row points at, so renaming it would quietly rewrite who wrote what. The
- * address is optional on purpose — invitations are handed over by hand here — and it says
- * what it is *for* rather than pretending to be a second identity.
+ * The username is not one of them and is shown as text: it is what every message prints and
+ * what every row points at, so renaming it would quietly rewrite who wrote what. The
+ * address is optional — invitations are handed over by hand here — and says what it is FOR
+ * rather than pretending to be a second identity.
  *
- * THE ADDRESS IS ONLY OFFERED WHERE IT COULD ARRIVE (2026-08-28, explicit user request).
- * Its single use is receiving the password-reset link, and with no SMTP configured
- * `mail.send` writes that link to the log and the API hands it back in the response — so
- * on an installation without mail the field collects something nothing will ever read,
- * under help text promising a delivery that cannot happen. It is HIDDEN there, not
- * removed: the column, the `/forgot` flow and `mail.py` are untouched, so configuring
- * `SMTP_HOST` brings the field back with no migration and no code change.
+ * It is only offered where it could arrive: with no SMTP the reset link is logged and
+ * handed back in the response, so the field would collect something nothing will ever read.
+ * HIDDEN there and not removed — the column, `/forgot` and `mail.py` are untouched, so
+ * configuring `SMTP_HOST` brings it back with no migration.
  *
  * The `||` is the half that matters and is not belt-and-braces: an account that already
  * HAS an address keeps seeing it even where nothing can deliver, because hiding a field
@@ -418,29 +403,18 @@ function PasswordCard() {
 /* Accesos ----------------------------------------------------------------------------- */
 
 /**
- * Which instances this account may enter, and on what grounds.
+ * Which instances this account may enter, on what grounds, and the one thing it may do to
+ * them: dispose of the ones it owns.
  *
- * It reads `/api/workspaces` rather than the session's membership list, because those two
- * are not the same question for an administrator: the session appends whichever workspace
- * they are standing in even when they are not a member of it, and it labels that
- * «Propietario» — which is what the bypass grants, not what anybody wrote in a row. The
- * listing carries `as_admin`, so the row can say «por administración» and be true.
+ * It reads `/api/workspaces` and not the session's membership list, which are different
+ * questions for an administrator: the session appends whichever workspace they are standing
+ * in and labels it "Propietario", which is what the bypass grants and not what anybody
+ * wrote in a row. The listing carries `as_admin`, so the row can say "por administración".
  *
- * Read-only on purpose: a membership is a row only the installation's administrator
- * writes, and a screen that offered to change it here would be offering a 403.
- */
-/**
- * Which instances this account can open, and the one thing it may do to them: dispose of
- * the ones it owns.
- *
- * Deleting used to have a route and no way to reach it — `DELETE /api/workspaces/{slug}`
- * was written and never wired to a button — so «borrar un workspace mío» was not something
- * the application could do at all. It belongs here and not in the switcher: the switcher is
- * for moving between instances mid-work, and a destructive action one row away from the one
- * you press twenty times a day is a mis-click waiting to happen.
- *
- * Renaming is deliberately NOT here. A workspace is named when it is created and only an
- * administrator renames it afterwards, from «Administración».
+ * Membership itself is read-only — only the installation's administrator writes those rows,
+ * so offering to change one here would be offering a 403 — and renaming is deliberately not
+ * here either. Deleting belongs here and not in the switcher: a destructive action one row
+ * from the control you press twenty times a day is a mis-click waiting to happen.
  */
 function MyWorkspacesTab() {
   const { t } = useT();
@@ -457,17 +431,12 @@ function MyWorkspacesTab() {
     <div className="space-y-4">
       {listing.isLoading ? <Spinner /> : null}
 
-      {/* NOT TO AN ADMINISTRATOR (2026-09-01, explicit user request). `mine` excludes every
-          workspace reached through the admin bypass, so an administrator with no membership
-          of their own lands here and was told that «an administrator can give you access» —
-          addressed to the one person on the installation who does the giving. The notice is
-          for the account that has to WAIT for somebody; an administrator does not, and the
-          rows below already say «no eres miembro: entras porque administras la instalación».
-          What it costs is the admin who genuinely has no workspace at all, and that one is
-          not left in the dark either: `/` still draws `NoWorkspace` with its create button.
-          The body's own pointer had to be corrected with it — it named «el panel», deleted
-          on 2026-08-31, and the switcher is not the answer either: it returns null with no
-          workspaces, so the account this notice is FOR never sees one. */}
+      {/* Not to an ADMINISTRATOR. `mine` excludes every workspace reached through the admin
+          bypass, so an administrator with no membership of their own lands here — and
+          "an administrator can give you access" is addressed to the one person who does the
+          giving. The notice is for the account that has to WAIT for somebody. An
+          administrator with no workspace at all is not left in the dark either: `/` draws
+          `NoWorkspace` with its create button. */}
       {!listing.isLoading && mine.length === 0 && !session.data?.user.is_admin ? (
         <Alert tone="attention" title={t("access.none.title")}>
           <p>{t("access.none.body")}</p>
@@ -514,7 +483,7 @@ function MyWorkspacesTab() {
                 </Button>
               )}
               {/* Only over what you own. An administrator disposes of anybody's from
-                  «Administración», where the whole installation is on one screen. */}
+                  "Administración", where the whole installation is on one screen. */}
               {workspace.role === "owner" && !workspace.as_admin ? (
                 <Button
                   size="icon-sm"
@@ -529,7 +498,7 @@ function MyWorkspacesTab() {
 
               {/* The subject's context, beside the instance it describes. It is the whole
                   reason this list is more than a row of slugs: two workspaces called
-                  «Compiladores» and «CS0» say nothing about which course each one is. */}
+                  "Compiladores" and "CS0" say nothing about which course each one is. */}
               <WorkspaceContext slug={workspace.slug} />
             </li>
           ))}
@@ -546,7 +515,7 @@ function MyWorkspacesTab() {
 /**
  * What goes and what stays, said before it happens and confirmed by typing the slug.
  *
- * The slug rather than an «are you sure»: this deletes a course's worth of work, and a
+ * The slug rather than an "are you sure": this deletes a course's worth of work, and a
  * dialog whose confirmation is one click away from the button that opened it is not a
  * confirmation. It is the same device the administrator's own deletion uses.
  *

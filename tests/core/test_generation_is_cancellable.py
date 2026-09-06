@@ -1,13 +1,10 @@
 """A model call in flight can be stopped, and abandoning it closes the connection.
 
-The defect this pins was measured on 2026-09-01 against the reference installation: two
-transcriptions cancelled at 01:22:39 and 01:25:31 released their lane 164 s and 166 s
-later, and in each of those windows exactly ONE page file was written. Cancellation is
-cooperative — every per-item loop calls `progress.checkpoint()` between its units — so with
-the answer arriving in one blocking read the smallest unit was a whole model call, and a
-call was 165 s with the GPU shared with somebody else's training run.
+Cancellation is cooperative — every per-item loop calls `progress.checkpoint()` between its
+units — so with the answer arriving in one blocking read the smallest interruptible unit is
+a whole model call, which on a contended GPU is minutes.
 
-So `generate` streams internally: nothing is emitted, the reassembled answer is what the
+So `generate` streams INTERNALLY: nothing is emitted, the reassembled answer is what the
 plain request returned, and the stop lands on the next token instead of the next call.
 """
 
@@ -162,9 +159,8 @@ def test_the_drain_survives_a_stream_that_cannot_be_closed():
 
 # THE OUTPUT CAP ----------------------------------------------------------------------------------
 #
-# Measured on 2026-09-05: nine transcribed pages of two exam papers each came back with
-# exactly 40 960 tokens — the engine's whole budget — of one repeated `\_`, the fill-in
-# line of the header. Nothing in the text says «this was cut»; the final chunk's
+# A page whose header carries a fill-in line can be copied stroke for stroke for the
+# engine's whole budget. Nothing in the TEXT says "this was cut"; the final chunk's
 # `done_reason` does, and that is what the flag carries.
 
 

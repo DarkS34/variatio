@@ -1,22 +1,16 @@
-"""The job log on disk: where a run's loguru output goes now that no screen shows it.
-
-The run drawer used to carry a «Registro» tab fed by a loguru sink that published every
-line on the bus (2026-08-31, explicit user request: the tab is gone and the lines are
-written to `logs/<slug>/jobs.log` instead). Two things follow from that and are the whole
-design here.
+"""The job log on disk, `logs/<slug>/jobs.log`: no screen shows a run's loguru output.
 
 **One sink per WORKSPACE, shared by every job of it.** A lane with room runs several jobs
 at once, and two loguru file sinks on one path would each own a handle and each try to
-rotate it. So the sink is opened by the first job of a workspace, its filter reads a live
-set of thread ids, and it is closed when the last one leaves.
+rotate it. The sink is opened by the first job of a workspace and closed when the last one
+leaves.
 
-**Filtering by thread is what keeps two workspaces apart.** The core logs with loguru and
-knows nothing about jobs, so the thread the record was emitted on is the only thing that
-says whose log it is — exactly as the bus mirror this replaces did.
+**Filtering by THREAD is what keeps two workspaces apart.** The core logs with loguru and
+knows nothing about jobs, so the thread a record was emitted on is the only thing that says
+whose log it is.
 
-The build worker writes into the same file from its own process (`build_worker.main`);
-appends are line-atomic, and the only thing the two writers can race on is a rotation,
-which costs a few lines their file and nothing else.
+The build worker writes into the same file from its own process; appends are line-atomic,
+and the only thing the two writers can race on is a rotation, which costs a few lines.
 """
 
 import threading

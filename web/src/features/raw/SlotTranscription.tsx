@@ -9,24 +9,14 @@ import { useTranscribePhases, useTranscribeRun, useTranscribing, useTranscriptio
 import { useT } from "@/lib/i18n";
 
 /**
- * THE TRANSCRIPTION OF ONE RAW SLOT, IN THE TWO PIECES ITS CARD ARRANGES.
+ * The transcription of one raw slot, in the two pieces its card arranges.
  *
  * Each answers one question about the slot — what state is it in, and what is happening
  * right now — and they read the same query, which react-query dedupes, so `SlotCard` can
- * place them where it needs them without threading state through props.
+ * place them without threading state through props.
  *
- * There is no per-origin BUTTON any more (2026-09-01, explicit user request). Reading the
- * documents is one press for the whole screen, in the block at the top, and two buttons
- * doing the same work on two halves of one action is exactly the kind of choice this
- * branch exists to remove. Nothing is lost with it: the global one appears under the same
- * condition the two used to, and it fans out per slot.
- *
- * Two more pieces used to live here and are gone rather than moved. `TranscriptionNote`
- * deduplicated the staleness reasons across the whole slot because the panel had one row
- * per origin and nowhere to put a per-document cause; with one row per DOCUMENT the cause
- * sits on the row it belongs to, which is where it was always meant to be. `DocumentList`
- * went the same way — it listed the same filenames a second time, beside a size it did not
- * know about.
+ * There is no per-origin BUTTON: reading the documents is one press for the whole screen,
+ * which fans out per slot. A per-document staleness cause sits on the row it belongs to.
  */
 
 
@@ -61,13 +51,11 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
     return <Badge variant="attention">{plural("transcribe.staleCount", data.stale)}</Badge>;
   if (data.pending > 0)
     return <Badge variant="outline">{plural("transcribe.pendingCount", data.pending)}</Badge>;
-  // A TICK AND NOT THE WORDS «al día» (2026-09-01, explicit user request), and since
-  // 2026-09-02 a FILLED one (also explicit user request: «más vistoso»). The state with
-  // nothing left to do is the one a person scans past, and a mark reads faster than a word
-  // in a row of words. It was the 8 % badge tint; that tint is the whole card's now
-  // (`SlotCard`), so the mark on that ground has to be solid to be seen at all —
-  // `--attention` under its own foreground, the pair `check:color` measures. The word
-  // survives as the accessible name — colour and shape are not a channel for a screen
+  // A filled tick and not the words "al día": the state with nothing left to do is the one
+  // a person scans past, and a mark reads faster than a word in a row of words. Solid,
+  // because the 8 % tint is the whole card's (`SlotCard`) and a tinted mark on it would
+  // vanish — `--attention` under its own foreground, the pair `check:color` measures. The
+  // word survives as the accessible name: colour and shape are not a channel for a screen
   // reader.
   return (
     <span
@@ -81,19 +69,12 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
 }
 
 /**
- * The slot's transcription while it runs, drawn as EVERY OTHER JOB IS.
+ * The slot's transcription while it runs, drawn as every other job is: one `JobProgress`
+ * card for the four steps of the construction.
  *
- * It was a bordered block of its own — two bars, no clock, no percentage, no job name —
- * and the stop button sat in the alert at the top of the screen under the word «Detener»,
- * while a building stage draws a `JobProgress` card with «Cancelar» inside it. One card
- * for the four steps now (2026-09-02, explicit user request: the same convention for every
- * step of the construction). Nothing is lost by it: the step timeline the card draws
- * already groups the document loop and the inner one (pages, pictures, seams) as one row
- * each, with the counter and the bar the old block drew by hand.
- *
- * The stop button takes BOTH live runs, not this slot's alone: «Leerlos todos ahora» starts
- * one job per origin, and a stop on one card that left the other running is what had the
- * button pressed twice for one press of the launcher.
+ * The stop button takes BOTH live runs and not this slot's alone: "Leerlos todos ahora"
+ * starts one job per origin, so stopping one card and leaving the other running means the
+ * button has to be pressed twice for one press of the launcher.
  */
 export function RunningBlock({ slot }: { slot: RawSlot }) {
   const { t } = useT();

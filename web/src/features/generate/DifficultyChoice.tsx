@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * is the only field whose values come with a written criterion per rung, which is worth
  * reading beside the option it describes rather than as one paragraph above four chips.
  *
- * `undefined` means unpinned, and that is what «Cualquiera» sets: silently pinning the
+ * `undefined` means unpinned, and that is what "Cualquiera" sets: silently pinning the
  * first rung because it happens to be first would put a decision in the prompt that
  * nobody made.
  */

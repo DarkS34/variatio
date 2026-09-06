@@ -36,7 +36,7 @@ import { useT } from "@/lib/i18n";
  * from different subjects and different years there is no rule that can share a workload
  * out: only the administrator knows who teaches what, and asking somebody to judge a
  * syllabus they have never taught produces an answer of convenience, which is worse than
- * producing none. Starting from the person is what makes «¿puede juzgar esto?» the first
+ * producing none. Starting from the person is what makes "¿puede juzgar esto?" the first
  * question instead of an afterthought.
  *
  * What a copy shares with its source is the three EXERCISES; what it does not share is the
@@ -44,7 +44,7 @@ import { useT } from "@/lib/i18n";
  * includes it is not an agreement about the exercises.
  */
 
-// The label is shared with «Cuentas y accesos», which is where it is set; what belongs to
+// The label is shared with "Cuentas y accesos", which is where it is set; what belongs to
 // this screen is the MARK on an account nobody classified — here it decides which wording
 // that person will be asked, so it is something to act on before handing anything over.
 function Profile({ value }: { value: EvaluatorProfile | null }) {
@@ -177,10 +177,10 @@ function WorkspaceStep({
   //
   // An instance whose chain is not approved is drawn, and drawn UNSELECTABLE with the
   // stages it is waiting on underneath. Hiding it would be the worse of the three options
-  // on offer: «no aparece» is indistinguishable from «no tiene acceso», and the thing to
+  // on offer: "no aparece" is indistinguishable from "no tiene acceso", and the thing to
   // do about it — approve the profile, the graph, the bank — is exactly what the row would
   // have said. It carries no colour: `--attention` is the screen's scarcest ink and means
-  // «act here», which an option that cannot be chosen is not.
+  // "act here", which an option that cannot be chosen is not.
   return (
     <div className="flex flex-wrap gap-2">
       {account.workspaces.map((entry) => (
@@ -198,8 +198,8 @@ function WorkspaceOption({
   onChoose: (slug: string) => void;
 }) {
   const { t } = useT();
-  // `false` and not falsy: an API older than this bundle sends no verdict at all, and «no
-  // lo sabe» is not «no». Unknown stays selectable, and the server refuses the commission
+  // `false` and not falsy: an API older than this bundle sends no verdict at all, and "no
+  // lo sabe" is not "no". Unknown stays selectable, and the server refuses the commission
   // with the same gate if it turns out not to be ready.
   const blocked = entry.ready === false;
   const pending = (entry.pending ?? []).map((artifact) => artifactName(artifact, t));
@@ -308,8 +308,8 @@ export function AdminSetsPanel() {
   const [picked, setPicked] = useState<string[]>([]);
   const [composing, setComposing] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  // ITS OWN NUMBER, and that is the whole point of it being here. «¿Cuántas comparaciones?»
-  // is not «¿cuántos ítems produce este encargo?» — an evaluation always produces one per
+  // ITS OWN NUMBER, and that is the whole point of it being here. "¿Cuántas comparaciones?"
+  // is not "¿cuántos ítems produce este encargo?" — an evaluation always produces one per
   // arm — so the form hides its counter, and reading that hidden counter as this one is
   // what made a single commission arrive as two sessions.
   const [comparisons, setComparisons] = useState(1);
@@ -319,22 +319,15 @@ export function AdminSetsPanel() {
   const generate = useGenerateEvaluations();
   const toast = useToast();
 
-  // THE CHOSEN WORKSPACE DRIVES THE DATA, not the one the tab happens to be standing in
-  // (2026-08-27, explicit user request, reversing the rule that used to be written here).
+  // The CHOSEN workspace drives the data and not the one the tab is standing in. The three
+  // reads a commission is composed from take a slug, which goes into the header and into
+  // the query key, so composing against one graph and running in another cannot happen. An
+  // administrator reaches another instance through the bypass in `auth.deps.access_for`,
+  // the same door `assign_set` uses.
   //
-  // What made this a restriction was that the graph, the profile and the concept list all
-  // travelled on the single `X-Workspace` header the tab sets once, so a commission
-  // composed here was always about the ACTIVE instance — and running it in another would
-  // either 422 at job time or, where the two share a concept name, quietly produce an
-  // exercise about the wrong syllabus. The fix is to name the instance on the request
-  // rather than to forbid the combination: `useProfile`/`useKg`/`useKgGraph` take a slug,
-  // it goes into the header and into the query key, and `GenerateForm` carries it into the
-  // two reads it makes for itself. An administrator reaches another instance through the
-  // bypass in `auth.deps.access_for`, which is the same door `assign_set` already uses.
-  //
-  // What still cannot happen is commissioning in an instance whose chain is not approved,
-  // and that is the WHERE step's business now: it draws such a workspace unselectable with
-  // the stages it is waiting on, from the same `gate_error` the endpoint enforces.
+  // What still cannot happen is commissioning in an instance whose chain is not approved:
+  // the WHERE step draws such a workspace unselectable with the stages it waits on, from
+  // the same `gate_error` the endpoint enforces.
   const profileQuery = useProfile(workspace);
   const kg = useKg(workspace);
   const kgGraph = useKgGraph(workspace);
@@ -406,8 +399,8 @@ export function AdminSetsPanel() {
 
   if (accounts.isLoading) return <Skeleton className="h-40" />;
   // NEVER a silent `null`. Rendering nothing is what turned a 404 from a route-ordering
-  // bug into a card with a heading and no body — which reads as «esta función no existe»
-  // rather than «esto falló», and cost a round of «sigo sin ver la opción».
+  // bug into a card with a heading and no body — which reads as "esta función no existe"
+  // rather than "esto falló", and cost a round of "sigo sin ver la opción".
   if (accounts.isError) {
     return (
       <LoadError

@@ -45,12 +45,10 @@ INADMISSIBLE = [
 ]
 
 
-# WHICH INSTANCE THE TWELVE MEASUREMENTS ARE TAKEN AGAINST, and it is named rather than
-# resolved. They used to call `paths.default_workspace()`, which was deleted on 2026-08-26
-# with the whole idea of a default instance — so from that day these twelve errored at
-# setup with an `AttributeError` instead of running, and being deselected by default
-# nobody saw it. The slug is overridable because `workspaces/` is gitignored: a checkout
-# has whatever its owner built, under whatever they called it.
+# Which instance the twelve measurements are taken against, NAMED rather than resolved:
+# there is no default workspace to fall back to, and being deselected by default these would
+# error at setup without anybody seeing it. Overridable because `workspaces/` is gitignored —
+# a checkout has whatever its owner built, under whatever they called it.
 WORKSPACE = os.environ.get("VARIATIO_MODEL_WORKSPACE", "default")
 
 
@@ -59,8 +57,8 @@ def instance():
     """The owners of the reference instance, or a skip saying what is missing.
 
     Every precondition is checked here rather than left to blow up inside a test: these
-    are measurements of a MODEL against a real instance, so «this checkout does not have
-    that instance» is not a failure of the judge and must not read as one.
+    are measurements of a MODEL against a real instance, so "this checkout does not have
+    that instance" is not a failure of the judge and must not read as one.
     """
     ws = paths.workspace(WORKSPACE)
     graph_path = _artifacts.knowledge_graph_path(ws)

@@ -66,7 +66,7 @@ const notStock = (run: RunView) => run.job?.params?.stock !== true;
  * logs — so the server does not publish any of it during an evaluation. Saying so out
  * loud matters: silence that is not explained reads as an app that has frozen. And a
  * comparison waiting its turn is exactly that silence: nothing is being written yet, so
- * it says «en cola» instead of counting proposals that are not being produced.
+ * it says "en cola" instead of counting proposals that are not being produced.
  */
 function Running({
   run,
@@ -230,7 +230,7 @@ export function EvaluationScreen() {
   // A student is not asked to write a commission WHILE SOMEBODY ELSE FILLS THEIR QUEUE:
   // the form speaks the system's vocabulary — concepts of the graph, a modality — and
   // theirs is the queue. With cross evaluation off nobody fills one, so withholding it
-  // leaves a student on an empty «Mis sesiones» with no way to compare anything at all,
+  // leaves a student on an empty "Mis sesiones" with no way to compare anything at all,
   // which is what it did: the flag hid the queue tab and this line hid the other one.
   const canCompose = CROSS_EVALUATION ? instruments?.profile !== "student" : true;
 
@@ -239,7 +239,7 @@ export function EvaluationScreen() {
   };
 
   // A comparison that is over has one honest way on: ordering the next one. Landing on
-  // «Mis evaluaciones» left somebody looking at a table of what they had already judged,
+  // "Mis evaluaciones" left somebody looking at a table of what they had already judged,
   // one more click away from the only thing there is to do here.
   const orderAnother = () => {
     setSessionId(null);
@@ -268,8 +268,8 @@ export function EvaluationScreen() {
    * The one way on from a finished comparison, as icon and label read off ONE choice.
    *
    * They are decided together because they are one statement. The header used to draw
-   * `Plus` whatever the label said, so a session opened from «Mis evaluaciones» read
-   * «+ Volver a la lista» — a plus sign on the one control that adds nothing; the foot
+   * `Plus` whatever the label said, so a session opened from "Mis evaluaciones" read
+   * "+ Volver a la lista" — a plus sign on the one control that adds nothing; the foot
    * had the same defect for an evaluator who is not offered the form.
    */
   const wayOn = (kind: "queue" | "order" | "list") => {
@@ -307,9 +307,8 @@ export function EvaluationScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        {/* The (i) rides on the TITLE and the guide link comes after it (2026-09-04,
-            explicit user request). What the hint holds is one sentence about this screen;
-            the link is a destination, and a destination reads as the end of a line rather
+        {/* The (i) rides on the TITLE and the guide link comes after it: the hint is one
+            sentence about this screen, and a destination reads as the end of a line rather
             than as something with a glyph hanging off it. */}
         <h1 className="w-full font-display font-expanded text-display">
           {t("eval.title")}
@@ -320,7 +319,7 @@ export function EvaluationScreen() {
         <GuideLink slug="evaluate" />
         {/* The button is named after where it LANDS: closing a session leaves you on the
             tab you came from, and with the form as the default that was the one control on
-            the screen reading «Volver a la lista» while returning to the form. */}
+            the screen reading "Volver a la lista" while returning to the form. */}
         {showComparison ? (
           <Button
             variant="outline"

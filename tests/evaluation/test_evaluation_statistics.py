@@ -122,7 +122,7 @@ def test_the_triage_is_counted_per_arm_and_not_per_position():
     summary = store.triage_summary(rows)
     assert summary["system"]["counts"] == {"yes": 2, "partly": 0, "no": 0}
     assert summary["system"]["outright"] == 1.0
-    # «Con retoques» still saves the teacher work, so it counts as usable; «no» does not.
+    # "Con retoques" still saves the teacher work, so it counts as usable; "no" does not.
     assert summary["naive"]["usable"] == 0.5
 
 
@@ -151,7 +151,7 @@ def test_a_declined_session_is_not_a_vote_for_nobody():
 
     assert result["declined"] == 1
     assert result["decided"] == 1
-    # The one that matters: «no me veo capacitado» must not become a «ninguna me convence».
+    # The one that matters: "I do not feel qualified" must not become "none convinces me".
     assert result["preferences"]["none"] == 0
     assert result["preferences"]["system"] == 1
 

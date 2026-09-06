@@ -28,8 +28,8 @@ export function clampEffort(level: EffortLevel, policy: ModelFamily): EffortLeve
 /**
  * Whether the slider is offered for this model, or its effort is whatever the engine picks.
  *
- * The list is the installation's (`generation.fixed_effort`, «Configuración → Modelos
- * generadores»), and it travels on `/api/health`. Names are compared WHOLE: both lists hold
+ * The list is the installation's (`generation.fixed_effort`, "Configuración → Modelos
+ * generadores"), and it travels on `/api/health`. Names are compared WHOLE: both lists hold
  * engine names and the panel writes the exact row it was told to lock, so a prefix rule
  * would silently lock a quantisation nobody measured.
  *

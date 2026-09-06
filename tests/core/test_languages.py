@@ -18,7 +18,7 @@ def test_the_two_languages_are_the_declared_ones():
 
 
 def test_every_language_has_a_name_in_its_own_language():
-    # A language picker that says «Inglés» to somebody who only reads English is a picker
+    # A language picker that says "Inglés" to somebody who only reads English is a picker
     # they cannot use, so each name is written in the language it names.
     assert set(languages.NAMES) == set(languages.LANGUAGES)
     assert all(name.strip() for name in languages.NAMES.values())
@@ -48,7 +48,7 @@ def test_what_the_installation_does_not_speak_is_not_normalised_into_something(r
 
 def test_resolve_falls_back_and_normalise_does_not():
     # The difference is the point: `resolve` is for a caller that must end up with A
-    # language, `normalise` for one that has to be able to tell «unknown» apart.
+    # language, `normalise` for one that has to be able to tell "unknown" apart.
     assert languages.resolve("fr") == languages.DEFAULT
     assert languages.resolve(None) == languages.DEFAULT
     assert languages.resolve(None, "en") == "en"

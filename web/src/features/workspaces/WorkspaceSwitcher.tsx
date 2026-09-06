@@ -46,31 +46,23 @@ export function WorkspaceSwitcher() {
     setOpen(false);
   };
   if (listing.isLoading) return null;
-  // WITH NO INSTANCE THE CONTROL STILL STANDS (2026-09-02), reading «Sin asignatura», and
-  // its menu is the create form and nothing else. It used to render nothing at all, so an
-  // account that has just accepted an invitation — which is the state somebody arrives in
-  // — found no door in the header at all, only the panel's form in the middle of the page.
-  // The tutorial no longer points at it (2026-09-04, the header is not drawn under the
-  // deck), but the reason it stands has nothing to do with the deck: it is the one place
-  // that is in the same spot on every screen.
+  // With NO instance the control still stands, reading "Sin asignatura", and its menu is
+  // the create form and nothing else: an account that has just accepted an invitation would
+  // otherwise find no door in the header at all. It is the one control that is in the same
+  // place on every screen.
   const empty = workspaces.length === 0;
 
   return (
     <div className="relative shrink-0" ref={holder}>
-      {/* THE CONTROL SAYS WHAT IT IS, INSIDE ITSELF (2026-09-01, explicit user request,
-          and the second placement in a day: the caption sat above the button first). The
-          axis the header has no room on is the horizontal one — the flanks hold at their
-          own min-content and the nav sits on the centre line between them, so every
-          character added to that row moves the navigation sideways. Stacked INSIDE the
-          control, the caption costs the flank nothing at all: `max-w-44` is untouched and
-          the button measured 160.6 px wide either way, because what sets its width is the
-          caption and not the name. It is 42.5 px tall against the old 35.7, which the row
-          absorbs — it went to `h-16` the same day, so there are 10.75 px above and below.
+      {/* The control says what it is, INSIDE itself. The axis the header has no room on is
+          the horizontal one — the flanks hold at their own min-content and the nav sits on
+          the centre line between them, so every character added to that row moves the
+          navigation sideways. Stacked inside, the caption costs the flank nothing: what sets
+          the button's width is the caption, not the name.
 
-          There is no `aria-labelledby` any more, and that is the point of the move rather
-          than an oversight: with the caption inside, the button's own text names it —
-          «ESPACIO DE TRABAJO Compiladores» — where pointing at the caption alone would
-          have thrown the name away.
+          No `aria-labelledby`, and that is the point of the arrangement: with the caption
+          inside, the button's own text names it, where pointing at the caption alone would
+          throw the name away.
 
           The menu is anchored `top-full` rather than at a fixed offset, so it opens under
           whatever this block happens to be tall. */}
@@ -152,7 +144,7 @@ export function WorkspaceSwitcher() {
           {empty ? null : <Separator />}
           {/* Creating is offered here and renaming is NOT, and there is no owner-facing
               route left for it either: a workspace is named when it is created, and after
-              that only an administrator renames it, from «Administración». What the name is
+              that only an administrator renames it, from "Administración". What the name is
               worth is that everybody means the same instance by it. */}
           {creating || empty ? (
             <CreateForm onDone={close} />

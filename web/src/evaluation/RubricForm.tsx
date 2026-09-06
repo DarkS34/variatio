@@ -12,25 +12,21 @@ import { useT } from "@/lib/i18n";
 /**
  * Four questions about OUR variant, after the reveal, and deliberately OPTIONAL.
  *
- * Each dimension answers to a clause the system's prompt claims to enforce — «practicar
- * no es usar» becomes `concept_fit`, self-sufficiency becomes `soundness`, the
- * prerequisite scaffolding (lean on what comes before, never on what comes after)
- * becomes `prerequisites`, calibration becomes `complexity`. That is what connects the
- * numbers to the design chapter instead of to a generic quality survey; `originality`
- * was the one scale with no clause behind it and left on 2026-09-03.
+ * Every dimension answers to a clause the system's prompt claims to enforce — "practicar no
+ * es usar" is `concept_fit`, self-sufficiency is `soundness`, the prerequisite scaffolding
+ * is `prerequisites`, calibration is `complexity` — which is what connects the numbers to
+ * the design chapter rather than to a generic quality survey. A scale with no clause behind
+ * it does not belong here.
  *
- * The WORDING comes from the server and is not written here: a teacher and a student are
- * asked the same four things in different words, and the wording is the instrument — one
- * edit in `evaluation/api/instruments.py`, never two copies drifting apart.
+ * The WORDING comes from the server: a teacher and a student are asked the same four things
+ * in different words, and the wording IS the instrument — one edit in
+ * `evaluation/api/instruments.py`, never two copies drifting apart.
  *
- * ONE SCALE PER ROW, at full measure. They were a two-by-two grid in a half column, which
- * put each question at a quarter of the window with its ends clipped; the form now has a
- * track of its own beside the exercise it rates, and the four read top to bottom.
+ * One scale per row, at full measure, in a track of its own beside the exercise it rates.
  *
- * Optional is the point. Everything blind was collected before the reveal, so somebody in
- * a hurry has already left a complete datum and this is depth for whoever has the appetite
- * for it. The usability question is gone from here: it moved to the blind per-card triage,
- * and asking it twice about the same item in one session asks somebody to contradict
+ * Optional is the point: everything blind was collected before the reveal, so somebody in a
+ * hurry has already left a complete datum. Usability is not asked here — it is the blind
+ * per-card triage, and asking it twice in one session asks somebody to contradict
  * themselves.
  */
 function Scale({

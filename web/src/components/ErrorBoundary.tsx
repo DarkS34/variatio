@@ -6,7 +6,7 @@ import { Component, type ReactNode } from "react";
  * Without it an uncaught exception unmounts the whole tree and the person sees a white
  * page with nothing to act on — which is exactly how the concurrent-user bug presented.
  * This does not fix any crash; it turns the next one into a sentence and a button, and
- * prints the message so a report can say more than «se quedó en blanco».
+ * prints the message so a report can say more than "se quedó en blanco".
  *
  * A class because React only hands errors to class boundaries; the copy is hardcoded
  * Spanish on purpose — if the crash came from the i18n layer itself, a translated
@@ -23,7 +23,7 @@ interface State {
  * its contents — so a build replaces the whole set and deletes the previous one. A tab left
  * open across that deploy is still running the old document, which names chunks the server
  * no longer has: the moment somebody navigates to a lazy route, the import rejects with
- * «Failed to fetch dynamically imported module» and the boundary catches it. Nothing is
+ * "Failed to fetch dynamically imported module" and the boundary catches it. Nothing is
  * broken; the page is simply out of date, and the fix is the reload the person was about to
  * be asked to perform.
  *

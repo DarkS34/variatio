@@ -15,31 +15,19 @@ import { useStartAllTranscriptions, useTranscriptionSummary } from "./queries";
 import { SlotCard } from "./SlotCard";
 
 /**
- * THE RAW MATERIAL, AS A DESTINATION OF ITS OWN.
+ * The raw material, as a destination of its own: a document is one row with its state and
+ * the two operations on it, and the transcription is a first-class step.
  *
- * It was the last card of the panel until now, and that placement was a compromise between
- * two true things: the raw documents are touched once at the start of an instance's life,
- * and they are also the thing that decides how long every build takes. Folded into a card
- * it could only serve the first. As a screen it can serve both — a document is one row
- * with its state and the two operations on it, and the transcription is a first-class step
- * rather than a disclosure inside a disclosure.
- *
- * IT IS DRAWN LIKE THE OTHER THREE STEPS (2026-09-02, explicit user request: one
- * convention for buttons, notices and blocks across the whole construction). The work of
- * the step — reading the documents — used to be a small button in the corner of a notice,
- * where a stage draws its «Comenzar construcción» as a big button in the middle of an
- * empty block; it is that block now. The running state is a notice with no control plus
- * the same progress card a build draws, with the stop button inside the card; and the
- * foot is `ClosingSection`, the block every stage ends with. What has NO equivalent on a
+ * It is drawn like the other three steps of the construction — the work starts from the
+ * same `EmptyState` with the same `xl` button, the running state is the same progress card
+ * with the stop inside it, and the foot is `ClosingSection`. What has no equivalent on a
  * stage is not invented for it: the empty subject says so through the two dropzones, which
- * are the only «Importar» this screen has.
+ * are the only "Importar" this screen has.
  *
- * What this screen must NOT become is a gate. Transcribing is an accelerator: every
- * builder keeps its own conversion phase, so nothing here is ever a precondition for
- * anything, and the copy says so where a person can read it before pressing. That is also
- * why the foot offers «Continuar» with documents still unread — the way on is offered on a
- * stage whatever its state, and hiding it here until everything was read made the foot
- * behave like the gate the copy above it denies.
+ * What it must NOT become is a GATE. Transcribing is an accelerator — every builder keeps
+ * its own conversion phase — and the copy says so where a person reads it before pressing.
+ * That is also why the foot offers "Continuar" with documents still unread: withholding it
+ * makes the foot behave like the gate the copy above it denies.
  */
 export function RawScreen() {
   const { t, plural } = useT();
@@ -83,12 +71,11 @@ export function RawScreen() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        {/* LA MISMA CABECERA QUE LAS OTRAS TRES: ordinal, título, explicación, enlace a
-            la guía. Esta pantalla no pasa por `StageGate` — no escribe artefacto y nadie
-            la aprueba — así que la repite a mano, y el ordinal es lo que la mete en el
-            recorrido: es el Paso 1 aunque no sea una etapa. El título deja de ser
-            `text-display`: cuatro pasos con la misma pinta, y este era el único que
-            gritaba. */}
+        {/* The same header as the other three: ordinal, title, explanation, guide link.
+            This screen does not go through `StageGate` — it writes no artifact and nobody
+            approves it — so it repeats the shape by hand, and the ORDINAL is what puts it on
+            the path: it is step 1 even though it is not a stage. The title is deliberately
+            not `text-display`, or one of the four steps would be the only one shouting. */}
         <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: stepNumber(0) })}</p>
         <h1 className="text-title">{t("nav.step.raw")}</h1>
         <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
@@ -99,8 +86,8 @@ export function RawScreen() {
           control while it runs — the stop button is in each origin's progress card, as a
           build's is — and the big button in the middle of an empty block while there is
           something to read. With the subject empty there is nothing here at all: the two
-          dropzones below are the action, and a block above them repeating «suelta los
-          documentos» said what they already say. */}
+          dropzones below are the action, and a block above them repeating "suelta los
+          documentos" said what they already say. */}
       {summary.running ? (
         <Alert tone="info" title={t("transcribe.runningTitle")}>
           <p>{t("transcribe.runningNote")}</p>
@@ -131,7 +118,7 @@ export function RawScreen() {
       ) : null}
 
       {/* Stretched cells on purpose: an empty origin's dropzone grows to the height of the
-          stocked one beside it, which is what makes «importa aquí» the whole card rather
+          stocked one beside it, which is what makes "importa aquí" the whole card rather
           than a strip at the top of a blank one. */}
       <div className="grid items-stretch gap-4 lg:grid-cols-2">
         {slots.map((slot) => (
@@ -151,7 +138,7 @@ export function RawScreen() {
  * The way on, in the block every step closes with.
  *
  * Two sentences for two states — everything read, or something still unread — and the same
- * «Continuar» under both, because reading is not a gate. There is no «Quiero corregir algo»
+ * "Continuar" under both, because reading is not a gate. There is no "Quiero corregir algo"
  * here: a document is corrected on its own row, and the step as a whole has nothing to
  * unlock.
  */

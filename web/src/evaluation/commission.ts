@@ -26,7 +26,7 @@ export function toEvaluationParams(form: FormState): EvaluationParams {
  * It shipped answering it with `form.n`, and that is the whole bug: `variant="evaluation"`
  * hides the item counter, a hidden control keeps its default, and the default is 2. One
  * commission became two sessions, so the same exercise appeared twice in the list to hand
- * out and twice in «Mis sesiones» — differing only in the reasoning condition each session
+ * out and twice in "Mis sesiones" — differing only in the reasoning condition each session
  * had drawn for itself, which is exactly what made it look like a duplicate rather than
  * like a second comparison.
  */

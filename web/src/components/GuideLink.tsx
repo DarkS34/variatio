@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  * title, on every screen that has a section to point at.
  *
  * It takes a `GuideSlug` and not a string, so a section that is renamed or removed breaks
- * the build at every call site rather than silently landing readers on «Empezar»:
+ * the build at every call site rather than silently landing readers on "Empezar":
  * `GuideScreen` falls back to the first section for an unknown slug, which is the right
  * behaviour for a typed URL and the wrong one for a link we wrote ourselves.
  *

@@ -78,10 +78,9 @@ function DocumentRow({
           {name}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          {/* «leído» is a grey tick and the other two states keep their words (2026-09-01,
-              explicit user request): what a person scans this column for is the rows that
-              still need something, and a word on every finished row is what buries them.
-              Grey is `--settled`, which is the palette's own «behind you, resolved». */}
+          {/* "leído" is a grey tick and the other two states keep their words: what a
+              person scans this column for is the rows that still need something, and a word
+              on every finished row buries them. Grey is `--settled`. */}
           {!busy && state === "done" ? (
             <span title={t("transcribe.state.done")} className="flex items-center px-1">
               <Check aria-hidden className="size-4 text-settled" />
@@ -179,20 +178,18 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   const visible = expanded ? rows : rows.slice(0, VISIBLE);
 
   /**
-   * WHAT IS PICKED, AND HOW IT STOPS EXISTING.
+   * What is picked, and how it stops existing.
    *
-   * Deleting was one document at a time, with its own question and its own refetch of
-   * three queries, so emptying a slot of twenty took minutes of clicking (2026-09-04,
-   * explicit user request). A box per row and one «Eliminar» over the lot is what that
-   * costs instead: one question, one pass, one refresh.
+   * A box per row and one "Eliminar" over the lot: one question, one pass, one refresh,
+   * where deleting one at a time is a confirmation and three refetches per document.
    *
-   * The picks are held as NAMES and are intersected with the listing after every write,
-   * because that listing is what the delete changes underneath them — a stale name would
-   * keep a count alive over a file that is already gone. The delete drops the whole
-   * selection itself, so this only ever catches what somebody else removed.
+   * The picks are held as NAMES and intersected with the listing after every write, since
+   * the delete changes that listing underneath them and a stale name keeps a count alive
+   * over a file that is gone. The delete drops the selection itself, so this only catches
+   * what somebody else removed.
    *
-   * A document being re-read cannot be picked at all: `_write_pages` rewrites its whole
-   * directory at the end, and the row already says so with its spinner.
+   * A document being re-read cannot be picked: `_write_pages` rewrites its whole directory
+   * at the end, and the row already says so with its spinner.
    */
   const deletable = rows.filter((row) => busy !== row.name).map((row) => row.name);
   const selected = picked.filter((name) => deletable.includes(name));
@@ -206,14 +203,13 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   }, [rows]);
 
   // The boxes are for somebody who can delete, and only where there is more than one thing
-  // to pick: over a single document the column would be a control that says «choose which
-  // of the one».
+  // to pick: over a single document the column would be a control that says "choose which
+  // of the one".
   const picking = canEdit && rows.length > 1;
-  // UP TO DATE TINTS THE WHOLE CARD (2026-09-02, explicit user request): the same 8 % of
-  // `--attention` the tick's badge used to carry, mixed INTO the card (`oklab`, so the hue
-  // does not drift through chroma zero) so the ground stays opaque, with the border at the
-  // tint every attention alert uses. Only the finished state — a card still owing something
-  // keeps the plain ground its rows are scanned against.
+  // Up to date tints the whole card: 8 % of `--attention` mixed INTO it (`oklab`, so the
+  // hue does not drift through chroma zero) so the ground stays opaque. Only the finished
+  // state — a card still owing something keeps the plain ground its rows are scanned
+  // against.
   const upToDate =
     !empty &&
     !running &&

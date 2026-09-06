@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        // The ultramarine is the one colour this palette spends on «act here», and it
+        // The ultramarine is the one colour this palette spends on "act here", and it
         // belongs to frontier actions — going to the stage that is holding the chain up,
         // approving a draft, launching the taggability review — never to an ordinary one;
         // the moment it is used for "save" it stops meaning anything.
@@ -31,7 +31,7 @@ const buttonVariants = cva(
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-small",
         lg: "h-10 rounded-md px-6",
-        // The one move a screen leads to — «Continuar al Paso N», «Comenzar construcción»:
+        // The one move a screen leads to — "Continuar al Paso N", "Comenzar construcción":
         // a size for a button that is the decision, not one of several controls.
         xl: "h-12 rounded-md px-7 text-heading [&_svg]:size-5",
         icon: "h-9 w-9",

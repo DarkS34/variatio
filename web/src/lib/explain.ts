@@ -4,13 +4,8 @@ import type { Key } from "@/lib/i18n";
  * What the pipeline is doing, in words.
  *
  * The core emits step ids written for whoever wrote the code. This is the other half: for
- * every step that reaches the UI, one sentence saying what is happening and why it takes
- * as long as it does.
- *
- * Two things it used to hold are gone with their readers, which is this repo's rule about
- * dead code: `describeEvent` went with «Qué ha ido pasando» on 2026-09-02, and `JOB_EXPLAIN`
- * — three sentences per job kind — on 2026-09-05, having outlived the run drawer that drew
- * them by four days and the panel by longer. Its 27 keys per catalogue went with it.
+ * every step that reaches the UI, one sentence saying what is happening and why it takes as
+ * long as it does.
  */
 
 const STEP_IDS = [

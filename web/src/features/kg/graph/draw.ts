@@ -41,7 +41,7 @@ export interface Scene {
    *  its name is set in pixels and so grows relative to the frame as the frame gets smaller —
    *  at preview size the names cover the very regions they label. */
   hullLabels: boolean;
-  /** «N sin relaciones», already in the reader's language. The painter takes the sentence
+  /** "N sin relaciones", already in the reader's language. The painter takes the sentence
    *  rather than the catalogue: it runs once per frame and must not know about i18n. */
   isolatedCaption: string;
   selected: number;
@@ -90,14 +90,11 @@ const FONT_DISPLAY = '"Archivo Variable", "Archivo", ui-sans-serif, system-ui';
 /**
  * A node's radius in WORLD units, for the zoom it is drawn at.
  *
- * Divided by the square root of the scale (2026-09-05, explicit user request: «más
- * pequeños relativamente a cuánto zoom se está haciendo»): drawn under `context.scale`,
- * a fixed world radius grows on screen exactly as fast as the zoom, so at 3× a hub was a
- * coin covering its own neighbours' labels. On screen it now grows with √scale — at 1× it
- * is what it was, at 4× twice as big instead of four times — and zoomed OUT it shrinks
- * more slowly than the drawing, which is what keeps a node legible at 0.5×. The floor on
- * the scale is what stops a very zoomed-out view from drawing a node bigger than its
- * edges.
+ * Divided by √scale: drawn under `context.scale`, a fixed world radius grows on screen as
+ * fast as the zoom, so a hub becomes a coin over its neighbours' labels. This way it grows
+ * with the square root — twice as big at 4×, not four times — and zoomed out it shrinks
+ * more slowly than the drawing, which keeps a node legible at 0.5×. The floor on the scale
+ * stops a very zoomed-out view drawing a node bigger than its edges.
  */
 export function radiusOf(degree: number, scale = 1) {
   return (3 + Math.min(7, Math.sqrt(degree) * 1.9)) / Math.sqrt(Math.max(0.3, scale));
@@ -107,10 +104,9 @@ export function readPalette(): Palette {
   const styles = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) =>
     styles.getPropertyValue(name).trim() || fallback;
-  // The fallbacks are the CURRENT tokens, not older ones. They stood at a violet, a moss
-  // green and a marigold — the primary of the third material and two colours of the second
-  // — so a canvas that painted before the stylesheet landed drew a palette the file had
-  // deliberately retired. `check:color` cannot see a literal outside `index.css`.
+  // The fallbacks must be the CURRENT tokens: a canvas that paints before the stylesheet
+  // lands otherwise draws a palette the file has retired, and `check:color` cannot see a
+  // literal outside `index.css`.
   return {
     foreground: read("--foreground", "oklch(0.18 0.008 265)"),
     muted: read("--muted-foreground", "oklch(0.47 0.012 265)"),

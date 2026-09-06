@@ -10,8 +10,8 @@ const FOCUSABLE =
  * autofocuses its own search box has already taken the focus by the time an effect runs.
  * And a single remembered slot is not enough either, because React applies `autoFocus`
  * while it is still mutating the DOM and only attaches refs afterwards — so at the instant
- * the search box announces itself the panel's own ref is still `null`, and any «is it
- * inside the panel?» test answers no. The list survives that: by the time it is READ the
+ * the search box announces itself the panel's own ref is still `null`, and any "is it
+ * inside the panel?" test answers no. The list survives that: by the time it is READ the
  * ref exists, and the answer is the most recent focus that is outside the panel and still
  * on the page.
  */

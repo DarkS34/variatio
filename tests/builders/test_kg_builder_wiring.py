@@ -31,8 +31,8 @@ def test_the_three_phases_take_the_prompt_set():
     )
 
 
-# `run` hands the set down; the two it calls demand it, and neither takes a default. The
-# migration of 2026-08-27 left all three unwired and nothing failed until a real build ran.
+# `run` hands the set down; the two it calls demand it and neither takes a default. Left
+# unwired, nothing fails until a real build runs.
 @pytest.mark.parametrize(
     "fn, args, kwargs",
     [

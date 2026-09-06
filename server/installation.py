@@ -2,12 +2,7 @@
 
 Everything here is the installation's rather than a workspace's, and everything that reads
 the environment reads it through one function, so there is a single switch to get wrong
-rather than five.
-
-Named `settings.py` until 2026-09-06, which was the wrong word twice over: none of this
-is a setting — they are workspace trees, cookies, mail and the environment — and
-`variatio/settings/` one import away IS the settings registry, so two files called
-`settings` meant opposite things and the tests that touched both had to alias them.
+rather than five. None of it is a SETTING — `variatio/settings/` is the settings registry.
 """
 
 import os

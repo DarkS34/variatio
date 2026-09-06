@@ -10,17 +10,13 @@ import { FewShotPanel } from "./FewShotPanel";
 import { useT } from "@/lib/i18n";
 
 /**
- * What «Detalle» opens, and it is the BODY of the strip rather than a card under it.
+ * What "Detalle" opens, and it is the BODY of the strip rather than a card under it: a
+ * disclosure that produces a second card repeats the title and the job's name a centimetre
+ * below where the strip already says them.
  *
- * It was a `Card` of its own until 2026-09-02, so pressing a disclosure on one block
- * produced a second block below it — with its own title and its own copy of the job's
- * name, both of which the strip a centimetre above was already saying.
- *
- * It is also the one place the model's reasoning is read. The result cards carried a
- * «Razonamiento» fold of their own and the two were on screen at once; what survives is
- * this one, which shows the reasoning of the item being written (the store resets it at
- * every prompt), the token stream beside it, the timeline, the exemplars the few-shot
- * used and the prompt that went out.
+ * It is also the ONE place the model's reasoning is read — of the item being written, since
+ * the store resets it at every prompt — along with the token stream, the timeline, the
+ * exemplars the few-shot used and the prompt that went out.
  */
 export function RunPanel({
   run,

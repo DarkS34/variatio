@@ -3,8 +3,8 @@
 A workspace with no knowledge graph is normal — it is the first artifact anybody builds,
 so it does not exist yet — and the three reads a screen makes on arrival all have to say
 so with a 404. `read` and `graph` did; `read_curriculum` did not, and its `KGError` came
-out of the ASGI stack as a 500 with a traceback in the log, once per visit to «Crear
-ejercicios» (the generate form reads the curriculum on every mount).
+out of the ASGI stack as a 500 with a traceback in the log, once per visit to "Crear
+ejercicios" (the generate form reads the curriculum on every mount).
 """
 
 import inspect

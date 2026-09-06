@@ -37,49 +37,16 @@ export type CurriculumPlace = "covered" | "frontier" | "ahead";
 /** The grid, declared once: the header and every row read from the same string, so a column
  *  cannot drift from its own heading. */
 //
-// Below `md` it is FOUR columns and not seven, and the three that go are chosen rather
-// than truncated: where a concept falls in the curriculum, whether it has a description
-// and its degree are all things you read while comparing rows on a wide screen. What is
-// left is the row's identity and the one control that acts on it — the taggability
-// switch — because a column you cannot press is worth less on a phone than one you can.
-// The cells themselves carry `hidden md:…`, so a hidden cell occupies no track and the
-// four that remain land on the four the narrow template declares.
-// THREE COLUMNS LEFT ON 2026-09-01, by explicit user request, and one arrived. «Currículo»
-// went with the curriculum editor itself; «Descr.» reported whether a description exists,
-// which is now written by the build and edited on the concept; and «Grado» is a number out
-// of graph theory that decides nothing for a teacher. What replaces them is the one thing a
-// person actually judges row by row — whether the concept works as a label — said in words
-// and a tick rather than only by the shape of a dot.
-//
-// IT IS A CONTROL AGAIN SINCE 2026-09-01 (explicit user request), reversing the
-// «this column reports» of 2026-08-27. What that decision weighed was 36 px of chrome on
-// every one of 131 rows against a dot that already said the same thing; what it did not
-// weigh is that the state it reports is the one a person sets ROW BY ROW while reading the
-// syllabus down — the taggability review is a pass over the whole list — and the setting
-// lived one click away, inside the concept. The switch is now the only place it is set.
-// It is drawn at EVERY width, unlike the tick it replaces: a control hidden on a phone is
-// a state that cannot be changed there at all, which is what the dialog's switch used to
-// cover.
-// The wide track is 11rem and was 9: «SIRVE DE ETIQUETA» measures 143.3 px at `micro` with
-// its tracking, so with the (i) beside it the header wrapped to two lines inside a row
-// 32 px tall. 143.3 + 4 gap + 14 icon + the 8 px this column keeps to ITS OWN RIGHT is
-// 169.3, which is what sets 11rem rather than 10.5. The 32 px come out of the name column,
-// which is `minmax(0,1fr)`.
+// Below `md` it is FOUR columns, and the cells carry `hidden md:…` so a hidden one occupies
+// no track and the survivors land on the four the narrow template declares. What is kept
+// there is the row's identity and the one control that acts on it: the taggability switch
+// is drawn at EVERY width, because a control hidden on a phone is a state that cannot be
+// changed there at all, and this row is the only place it is set.
+// The wide track is 11rem: "SIRVE DE ETIQUETA" measures 143.3 px at `micro` with its
+// tracking, plus the gap, the (i) and the 8 px the column keeps to its own right.
 const COLUMNS =
   "grid grid-cols-[1.25rem_minmax(0,1fr)_2.25rem_1rem] items-center gap-x-2 px-2 " +
   "md:grid-cols-[1.5rem_minmax(0,1fr)_11rem_1.25rem] md:px-3";
-
-/**
- * WHERE A CONCEPT FALLS RELATIVE TO WHAT THE COURSE HAS COVERED — no longer drawn.
- *
- * The three places (covered / frontier / ahead) are still exactly what the generator
- * computes on every prompt, and `CurriculumPlace` survives as the name of that calculation
- * because the canvas's curriculum layout reads it. What went (2026-09-01, explicit user
- * request) is the COLUMN reporting it row by row and the key under the map explaining what
- * the three marks mean. It is derived from the taught-concepts list, and that list stopped
- * being edited here at the same time — a legend for a state nothing on the screen sets is a
- * paragraph explaining a colour that never appears.
- */
 
 function UnitMenu({
   unit,
@@ -330,12 +297,12 @@ export function ConceptOutline({
   /** The canvas's own domain order, so a row's dot is the colour of its node. */
   groups: string[];
   /** The unit as it stands in the graph, NOT as the filter left it. A search narrows what is
-   *  drawn and changes nothing about what a unit contains, so the count in «eliminar la
-   *  unidad y sus N» has to come from the whole thing. */
+   *  drawn and changes nothing about what a unit contains, so the count in "delete the unit
+   *  and its N concepts" has to come from the whole thing. */
   unitStats: (unit: string) => { total: number };
   /** Whether `concepts` is a NARROWED list. It is what makes a search work against units
-   *  that are shut by default: a query that draws six headers and no rows reads as «no hay
-   *  nada», which is the opposite of what it found. */
+   *  that are shut by default: a query that draws six headers and no rows reads as "there is
+   *  nothing", which is the opposite of what it found. */
   filtering: boolean;
   selected: string | null;
   onSelect: (name: string | null) => void;
@@ -343,8 +310,8 @@ export function ConceptOutline({
   onMoveUnit: (name: string, delta: number) => void;
   onDeleteUnit: (name: string, count: number) => void;
   onAddConcept: (unit: string) => void;
-  /** Mark a concept as serving — or not serving — as a label. It is the row's own switch
-   *  since 2026-09-01: the concept card no longer carries one. */
+  /** Mark a concept as serving — or not serving — as a label. The row's switch is the only
+   *  place it is set; the concept card carries none. */
   onSetTaggable: (name: string, next: boolean) => void;
 }) {
   const { plural, t } = useT();
@@ -361,7 +328,7 @@ export function ConceptOutline({
    * `overrides` holds only what a person has DECIDED, so it never fights the two states
    * that open a unit on their own — a search narrowing the list, and the unit holding the
    * concept that is selected. A click always wins over both, in either direction, which is
-   * what keeps «lo cerré a propósito» from being undone by the next keystroke.
+   * what keeps "lo cerré a propósito" from being undone by the next keystroke.
    */
   const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map());
   const selectedUnit = useMemo(

@@ -35,7 +35,7 @@ import type { ConfigPayload, ConfigSetting, ReasoningLane } from "@/lib/types";
 
 const REASONING_GROUP = "Razonamiento";
 const MODELS_GROUP = "Modelos";
-// A group of its own and not a card inside «Modelos», because it answers a different
+// A group of its own and not a card inside "Modelos", because it answers a different
 // question: those rows say which model serves each phase of the pipeline, this one says
 // between which models the PERSON asking for an item may choose.
 const OFFERED_GROUP = "Modelos generadores"; // i18n-exempt
@@ -189,7 +189,7 @@ export function ConfigTab() {
   });
 
   // Back to the registry's default, one setting at a time: the key leaves the file, so the
-  // row reads «por defecto» again rather than a file value that happens to equal it.
+  // row reads "por defecto" again rather than a file value that happens to equal it.
   const reset = useMutation({
     mutationFn: (key: string) => api.resetAdminConfig([key]),
     onSuccess: (payload, key) => {
@@ -229,10 +229,9 @@ export function ConfigTab() {
   );
   const byGroup = (group: string) =>
     payload.settings.filter((setting) => setting.group === group && !hidden.has(setting.key));
-  // «Motor» and «Túnel SSH» moved to «Administración → Motor» on 2026-08-28, so that each
-  // setting sits beside the thing it governs. They are claimed here WITHOUT a section, or
-  // the unclaimed-group fallback below would helpfully hand them a page of their own again
-  // and the move would silently undo itself.
+  // "Motor" and "Túnel SSH" are drawn in "Administración → Motor", beside the meters that
+  // give them meaning. They are claimed here WITHOUT a section, or the unclaimed-group
+  // fallback below hands them a page of their own again and the move undoes itself.
   const claimed = new Set([
     ...SECTIONS.flatMap((section) => section.groups),
     ...ENGINE_GROUPS,
@@ -296,7 +295,7 @@ export function ConfigTab() {
       )
     : null;
 
-  // The offered models AS THEY STAND IN THE DRAFT, so «Esfuerzo ajustable» follows a model
+  // The offered models AS THEY STAND IN THE DRAFT, so "Esfuerzo ajustable" follows a model
   // added or removed above it in the same visit rather than the last save.
   const offeredNow = (() => {
     const setting = payload.settings.find((entry) => entry.key === "generation.models");
@@ -591,12 +590,10 @@ function PipelineCard({
           </details>
         ) : null}
         {rest.map(row)}
-        {/* THE TWO RESIDENT MODELS GO LAST, AND THEY ARE READ-ONLY (2026-09-05, explicit
-            user request). They led the card, which put the two rows nobody may edit above
-            the pipeline the whole section is about. Neither serves a phase — the guardrail
-            screens the free text, the embedder writes the index — so they are what is left
-            over once the drawing has said everything, and that is where they now sit. The
-            rows still READ: the value, its source and the measurement behind it. */}
+        {/* The two resident models go LAST and are read-only: neither serves a phase — the
+            guardrail screens the free text, the embedder writes the index — so they are
+            what is left once the pipeline has said everything. The rows still read: the
+            value, its source and the measurement behind it. */}
         {residents.map(row)}
       </CardContent>
     </Card>

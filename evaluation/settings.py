@@ -17,9 +17,8 @@ SETTINGS: list[Setting] = [
         scope="engine",
         impact=Impact.NONE,
         doc="""QUÉ MODELO ESCRIBE LAS DOS PROPUESTAS LOCALES de una comparación (la de solo RAG y la del
-sistema). Lo fija la instalación, no quien encarga la evaluación: el formulario de
-«Evaluar el sistema» no ofrece ningún selector (2026-09-04, petición explícita del
-usuario, que revocó la elección por encargo del mismo día).
+sistema). Lo fija la instalación y no quien encarga la evaluación: el formulario de
+«Evaluar el sistema» no ofrece ningún selector.
 
 Es UN modelo para las dos, y eso no es un detalle: lo que se compara son arquitecturas, y
 un modelo distinto en cada propuesta lo convertiría en una comparación de modelos. La
@@ -44,13 +43,11 @@ así que la memoria puede decirlo sesión a sesión.""",
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_EXTERNAL_PROVIDER",
-        doc="""Este bloque lo declara `evaluation/settings.py` y lo lee `evaluation/config.py`: vive con el código
-que lo consume, fuera del paquete que mide.
+        doc="""Este bloque lo declara `evaluation/settings.py` y lo lee `evaluation/config.py`: vive con el
+código que lo consume, fuera del paquete que mide.
 
-Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
-`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
-exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
-modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.
+Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos
+los reclama Ollama, y estos modelos los sirve un proveedor externo y nunca se descargan.
 
 `EVAL_EXTERNAL_PROVIDER` es una CADENA en orden de preferencia, no un único nombre. Los
 planes gratuitos en los que corre este brazo responden 429 a mitad de una sesión de
@@ -64,7 +61,7 @@ lo que mide ya no es lo mismo — por eso `ArmResult` guarda quién respondió y
 tiene que decirlo.
 
 Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
-cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible. `none` (o un valor
+cruzarse. `none` (o un valor
 vacío) desactiva el brazo.
 
 Las claves vienen del entorno (o del `.env` ignorado por git) y por defecto están vacías:
@@ -78,13 +75,11 @@ sin ninguna clave el brazo naive se registra como `unavailable` y la sesión cor
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_GEMINI_MODEL_ID",
-        doc="""Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
-`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
-exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
-modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.
+        doc="""Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos
+los reclama Ollama, y estos modelos los sirve un proveedor externo y nunca se descargan.
 
 Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
-cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.""",
+cruzarse.""",
     ),
     Setting(
         key="evaluation.models.mistral",
@@ -98,14 +93,12 @@ cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.""",
 mitad de una recogida de datos. Habla el `/chat/completions` de OpenAI, igual que Groq,
 pero sirve un modelo propietario y de pago, que es lo que mide este brazo.
 
-`mistral-medium-latest` es un alias: apunta siempre a la última versión de esa gama, así
-que dos sesiones separadas por meses pueden estar medidas contra pesos distintos. Fija una
+`mistral-medium-latest` es un ALIAS: apunta siempre a la última versión de la gama, así que
+dos sesiones separadas por meses pueden estar medidas contra pesos distintos. Fija una
 versión concreta si la memoria necesita reproducibilidad.
 
-Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
-`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
-exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
-modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.""",
+Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos
+los reclama Ollama, y estos modelos los sirve un proveedor externo y nunca se descargan.""",
     ),
     Setting(
         key="evaluation.models.groq",
@@ -115,13 +108,11 @@ modelo nunca instalado — estos los sirve un proveedor externo y nunca se desca
         group="Evaluación",
         impact=Impact.NONE,
         env="EVAL_GROQ_MODEL_ID",
-        doc="""Los nombres `*_MODEL_ID` terminan a propósito ni en `_MODEL` ni en `_LLM`:
-`inference.required_models()` recogía ambos sufijos por introspección y `/api/health` los
-exigía a Ollama, así que cualquiera de los dos nombres aparecería en la interfaz como un
-modelo nunca instalado — estos los sirve un proveedor externo y nunca se descargan.
+        doc="""Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos
+los reclama Ollama, y estos modelos los sirve un proveedor externo y nunca se descargan.
 
 Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
-cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.""",
+cruzarse.""",
     ),
     Setting(
         key="evaluation.keys.gemini",
@@ -134,7 +125,7 @@ cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.""",
         secret=True,
         editable=False,
         doc="""Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
-cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible. `none` (o un valor
+cruzarse. `none` (o un valor
 vacío) desactiva el brazo.
 
 Las claves vienen del entorno (o del `.env` ignorado por git) y por defecto están vacías:
@@ -157,7 +148,7 @@ por git.""",
 para este brazo, que hace una llamada por sesión.
 
 Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
-cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible.
+cruzarse.
 
 Nunca se serializan en `config.json` ni salen de la API: viven solo en el `.env` ignorado
 por git.""",
@@ -173,7 +164,7 @@ por git.""",
         secret=True,
         editable=False,
         doc="""Cada proveedor trae su propia clave y su propio id de modelo, así que nunca pueden
-cruzarse — lo que la única `EVAL_EXTERNAL_API_KEY` hacía imposible. `none` (o un valor
+cruzarse. `none` (o un valor
 vacío) desactiva el brazo.
 
 Las claves vienen del entorno (o del `.env` ignorado por git) y por defecto están vacías:

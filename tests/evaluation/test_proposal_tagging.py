@@ -1,10 +1,10 @@
 """What the graph says each proposal is about, and what it should not have used.
 
 The line under a revealed card is only worth reading if the set behind it is the one the
-system arm was actually told to avoid, so what is pinned here is that identity: `off_limits`
-is `variatio.runtime.generator.forbidden` over the dependent closure and nothing of its own — read
-under the same rule `checks.run` reads it: any MENTION when a curriculum was given, only
-the PRACTISED concept when none was (2026-09-04).
+system arm was told to avoid, so what is pinned here is that identity: `off_limits` is
+`variatio.runtime.generator.forbidden` over the dependent closure and nothing of its own,
+read under the same rule `checks.run` reads it — any MENTION when a curriculum was given,
+only the PRACTISED concept when none was.
 """
 
 import json
@@ -128,7 +128,7 @@ def test_every_proposal_with_an_item_is_tagged_and_its_trespasses_named(graph):
 def test_a_concept_the_text_names_counts_even_when_the_tagger_did_not_tag_it(graph):
     """The lexical half of the union — `checks.forbidden_mentions`, the pipeline's own rule.
 
-    Without it the line contradicts the system's own «menciona lo no impartido» flag on the
+    Without it the line contradicts the system's own "mentions what was not taught" flag on the
     same screen, and a proposal that names a later concept in passing reads as clean.
     """
     tagger = _Tagger(
@@ -151,13 +151,13 @@ def test_a_concept_the_text_names_counts_even_when_the_tagger_did_not_tag_it(gra
 
 
 def test_without_a_curriculum_only_what_is_practised_counts(graph):
-    """Practicar ≠ usar, on the far side of the scaffolding (2026-09-04).
+    """Practicar ≠ usar, on the far side of the scaffolding.
 
     Nobody said what the class has seen, so the closure is the graph's guess and a mention
     holds nothing against a proposal; what does is the tagger's PRIMARY concept lying after
-    the target. Measured on the reference bank: the teacher's own exercises on «Condición
-    lógica» use `if`, `else` and `while`, so the mention rule flagged exactly the exercises
-    the course itself sets.
+    the target. Measured on the reference bank, the mention rule flags exactly the exercises
+    the course itself sets — a teacher's own exercises on the foundations use the constructs
+    that come after them.
     """
     tagger = _Tagger(
         {

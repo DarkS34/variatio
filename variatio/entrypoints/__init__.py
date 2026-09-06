@@ -11,7 +11,7 @@ auto-build belongs to the caller. Two properties hold across the package and bot
 grep away: nothing under `builders/` or `runtime/` imports an entry point back, and no
 module here imports the engine — every model call is delegated to the component or the
 builder that owns it, which is what lets the orchestration be read without reading a prompt.
-`build.py` is the only one that reaches a builder; `transcribe.py` reaches `documents`,
+`build.py` is the only one that reaches a builder; `transcribe.py` reaches `source_docs`,
 the document plumbing the three builders share.
 
     _artifacts.py    curated-over-draft path choice, and what is missing

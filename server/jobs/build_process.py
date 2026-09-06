@@ -21,8 +21,8 @@ MAX_LOG_CHARS = 500
 # The list is what the worker ACTUALLY emits: `core/progress.py`'s four step events and its
 # percentage, the builders' `artifact.progress`, the `retrieval` / `item.tagged` / `repair`
 # the bank's tagging hook reaches, and the Cerebras budget's wait. Generation's own events
-# are emitted by no build, so they stay out. `log` left on 2026-08-31: the child writes its
-# loguru output into `logs/<slug>/jobs.log` itself and nothing of it travels this pipe.
+# are emitted by no build, so they stay out; so does `log`, the child writing its loguru
+# output into `logs/<slug>/jobs.log` itself.
 EVENT_KINDS = frozenset(
     {
         "step.started",

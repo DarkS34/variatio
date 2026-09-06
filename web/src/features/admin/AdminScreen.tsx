@@ -24,9 +24,9 @@ import { jobName } from "@/lib/names";
 /**
  * The installation seen from outside: five tabs, one per thing an administrator runs.
  *
- * «Evaluaciones» is the evaluation; «Cuentas» decides who exists and where they get in;
- * «Workspaces» lists the instances and what they weigh; «Motor» is the machine and the
- * process — the GPU, the tunnel, the models on disk, the queue; «Configuración» is every
+ * "Evaluaciones" is the evaluation; "Cuentas" decides who exists and where they get in;
+ * "Workspaces" lists the instances and what they weigh; "Motor" is the machine and the
+ * process — the GPU, the tunnel, the models on disk, the queue; "Configuración" is every
  * value the registry exposes. Each tab is its own file, because the screen that crosses
  * every account and every workspace is also the one that grows.
  */
@@ -34,8 +34,8 @@ export function AdminScreen() {
   const { t } = useT();
   const session = useSession();
   const [tab, setTab] = useState("evaluation");
-  // The evaluation's reading filter lives here and not in its tab, because «Cuentas» sets it
-  // («ver sus sesiones») before switching over.
+  // The evaluation's reading filter lives here and not in its tab, because "Cuentas" sets it
+  // ("ver sus sesiones") before switching over.
   const [filters, setFilters] = useState<EvaluationFilters>({});
 
   const overview = useAdminOverview();

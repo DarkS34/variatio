@@ -116,9 +116,9 @@ describe("the warning above a model's comfortable level", () => {
   });
 });
 
-/* WHETHER THE SLIDER IS DRAWN is the installation's since 2026-09-01, not the table's. The
-   rule is whole-name and not prefix, unlike `familyOf`: both lists hold engine names, so a
-   prefix would lock a quantisation nobody measured. */
+/* Whether the slider is drawn is the INSTALLATION's and not this table's. The rule is
+   whole-name and not prefix, unlike `familyOf`: both lists hold engine names, so a prefix
+   would lock a quantisation nobody measured. */
 describe("effortAdjustable", () => {
   it("is true for a model nobody locked", () => {
     expect(effortAdjustable("qwen3.8:27b-q8_0", ["gemma-4-31b"])).toBe(true);
@@ -138,9 +138,9 @@ describe("effortAdjustable", () => {
   });
 });
 
-/* WITH WHICH LEVEL a locked model is called is the other half of it, and the installation's
-   too since 2026-09-04 (`generation.fixed_effort_levels`). Absent means the engine resolves
-   it, which is what the lock did silently before there was anywhere to say otherwise. */
+/* With WHICH LEVEL a locked model is called is the other half of it, and the
+   installation's too (`generation.fixed_effort_levels`). Absent means the engine resolves
+   it. */
 describe("fixedEffort", () => {
   const gemma = familyOf("gemma-4-31b");
 

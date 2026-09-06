@@ -78,7 +78,7 @@ def test_what_fits_is_still_written(corpus):
     assert result["rejected"] == []
 
 
-# A cap is a 413 and not the 404 every other `RawError` means: «no existe» about a request
+# A cap is a 413 and not the 404 every other `RawError` means: "no existe" about a request
 # that exists and was refused reads as a bug in the client.
 def test_the_route_answers_413_and_names_the_limit(corpus):
     access = Access(

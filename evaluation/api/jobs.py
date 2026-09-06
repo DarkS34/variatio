@@ -80,16 +80,12 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
 
     # Warmed BEFORE the blind section: built inside the arm, this one-off cost would land in
     # the RAG baseline's `elapsed_ms` and its step would be swallowed by the filter. Both
-    # slots, and by WORKSPACE: the arm stopped retrieving over the bank on 2026-09-04 and
-    # this call was left naming the old one-index signature, so every evaluation job died
-    # here with a TypeError before a single proposal was written.
+    # slots, and by WORKSPACE, which is what the arm retrieves over.
     rag_arm.warm(context.workspace)
 
-    # `_BlindEmitter` is the whole of the blinding now. The loguru mirror it also had to
-    # silence published «few-shot seleccionado» on the bus, which gave away which proposal
-    # was the system's; since 2026-08-31 that mirror writes to `logs/<slug>/jobs.log` and
-    # reaches no screen, so there is nothing left to mute — and the file keeps everything,
-    # which is what one wants when a session has to be explained afterwards.
+    # `_BlindEmitter` is the whole of the blinding: the loguru output reaches no screen, it
+    # goes to `logs/<slug>/jobs.log`, so there is nothing else to mute — and that file keeps
+    # everything, which is what one wants when a session has to be explained afterwards.
     with progress.emitting(_BlindEmitter(control)):
         session = evaluation_run.evaluate(
             context,

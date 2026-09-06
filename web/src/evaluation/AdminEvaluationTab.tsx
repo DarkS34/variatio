@@ -95,10 +95,10 @@ export function EvaluationTab({
 
   return (
     <div className="space-y-8">
-      {/* Repartir comparaciones entre evaluadores es la mitad CRUZADA del estudio, apagada
-          en esta rama (`evaluation/config.ts`). Se va la sección entera y no solo su contenido:
-          un encabezado sobre una tarjeta vacía dice que la función está rota, que es
-          justo lo contrario de que no esté. */}
+      {/* Handing comparisons out between evaluators is the CROSS half of the study, switched
+          off in this build (`evaluation/config.ts`). The whole section goes and not merely its
+          contents: a heading over an empty card says the feature is broken, which is the
+          opposite of it not being there. */}
       {CROSS_EVALUATION ? (
         <Section
           eyebrow={t("adminEvaluation.handOut.eyebrow")}
@@ -126,7 +126,7 @@ export function EvaluationTab({
       />
 
       {/* The evaluators come FIRST, before either instrument: the reading starts from a
-          person, and this table is what turns «este evaluador» into a filter over the
+          person, and this table is what turns "este evaluador" into a filter over the
           whole tab. It carries both instruments in one row, because the same person
           answered both. */}
       <Card
@@ -201,10 +201,10 @@ export function EvaluationTab({
 /**
  * WHO → which KIND of who → WHERE. Three selects on one line, each with its caption.
  *
- * The account list follows the profile: with «Docentes» chosen it offers teachers only,
+ * The account list follows the profile: with "Docentes" chosen it offers teachers only,
  * and choosing a profile the chosen account does not have drops the account rather than
  * keeping a filter that matches nobody. An account already in the filter but absent
- * from the list — set from «Cuentas» on an API older than the bundle — is still offered,
+ * from the list — set from "Cuentas" on an API older than the bundle — is still offered,
  * by its id, so the filter can always be seen and cleared.
  */
 function FilterBar({
@@ -441,7 +441,7 @@ function pValue(p: number | null | undefined, language: Language): string {
  * The blind per-card answer, and the only quality signal the evaluation has for ALL THREE
  * architectures — the rubric below describes the system's variant alone.
  *
- * «Usaría» folds «tal cual» and «con retoques» together, because that is the question a
+ * "Usaría" folds "tal cual" and "con retoques" together, because that is the question a
  * teacher is really answering: would this save me work. The stricter reading sits beside
  * it rather than instead of it.
  */
@@ -1158,7 +1158,7 @@ function StageForms({ data }: { data: AdminStageEvaluations }) {
 }
 
 /**
- * One stage: «en conjunto» first, then the four statements in the order asked — each a
+ * One stage: "en conjunto" first, then the four statements in the order asked — each a
  * mean over the one agreement scale and its rungs as a bar, best rung darkest — then the
  * two facts a mean hides: whether the person had corrected the artifact first, and how
  * long they took.
@@ -1217,8 +1217,8 @@ function StageCard({ summary }: { summary: StageArtifactSummary }) {
                     </p>
                   ) : null}
                 </div>
-                {/* The scale reads upwards — 5 is «totalmente de acuerdo» and the best
-                    rung — so the darkest segment is the LAST, exactly as «en conjunto». */}
+                {/* The scale reads upwards — 5 is "totalmente de acuerdo" and the best
+                    rung — so the darkest segment is the LAST, exactly as "en conjunto". */}
                 <Segments
                   best="last"
                   segments={question.options.map((option) => ({
@@ -1255,7 +1255,7 @@ function StageCard({ summary }: { summary: StageArtifactSummary }) {
               </dd>
             </div>
             {/* A median of zero is a form saved the instant it opened — a clock that
-                measured nothing — and «0 ms» would report it as a speed. */}
+                measured nothing — and "0 ms" would report it as a speed. */}
             {summary.seconds.median ? (
               <div className="flex flex-wrap gap-x-2">
                 <dt>{t("adminEvaluation.stages.time")}</dt>

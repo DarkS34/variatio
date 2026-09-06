@@ -34,7 +34,7 @@ def test_every_declared_kind_reaches_the_bus(kind):
     assert control.events == [(kind, {"id": "x"})]
 
 
-# The forged ones are the point: `item.saved` puts a card in somebody's «Mis variantes»
+# The forged ones are the point: `item.saved` puts a card in somebody's "Mis variantes"
 # panel, `token` writes into the run drawer, and both are broadcast to every member of the
 # workspace by a bus that never asked who wrote the line.
 @pytest.mark.parametrize(

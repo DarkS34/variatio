@@ -23,13 +23,11 @@ export interface Frame {
 
 export const PADDING = 52;
 
-// Fruchterman-Reingold constants, measured against this graph (118 concepts, 182
-// edges) rather than guessed. Unbounded, the relaxation spread to ~5000 units and the
-// camera had to zoom out to 0.2 to show it. Bounding it to the canvas and tuning these
-// two makes the layout fill the frame with a single node touching the border:
-// REPULSION sets the edge length (~104 px; it was 0.45 and ~78 until 2026-09-05, when
-// the nodes shrank and the user asked for more room between them), GRAVITY keeps the
-// periphery off the boundary.
+// Fruchterman-Reingold constants, measured against this graph (118 concepts, 182 edges)
+// rather than guessed. Unbounded, the relaxation spreads to ~5000 units and the camera has
+// to zoom out to 0.2 to show it. Bounded to the canvas, these two make the layout fill the
+// frame with a single node touching the border: REPULSION sets the edge length (~104 px),
+// GRAVITY keeps the periphery off the boundary.
 const REPULSION = 0.6;
 const GRAVITY = 0.5;
 

@@ -54,14 +54,14 @@ export function GenerateScreen() {
   const kgGraph = useKgGraph();
   const submit = useSubmitJob();
   const offline = useEngineOffline();
-  // ITS OWN run, by kind, and not «lo que la máquina esté haciendo»: two lanes mean a build
+  // ITS OWN run, by kind, and not "lo que la máquina esté haciendo": two lanes mean a build
   // can be running beside this generation, and the screen used to take whichever job the
   // stream had heard from last and then find no items in it.
   //
   // AND ITS OWN VISIT. The stream outlives the screen, and a reload replays it whole, so
-  // «mi última generación» opened this page on a batch finished an hour ago with the form
+  // "mi última generación" opened this page on a batch finished an hour ago with the form
   // collapsed behind it: work already collected, in the one place one comes to ask for
-  // more. A finished batch belongs to the visit that ran it, and to «Mis variantes»
+  // more. A finished batch belongs to the visit that ran it, and to "Mis variantes"
   // afterwards; one still going is adopted whenever it started, because a made commission
   // has to stay on screen or the form would offer to queue a second copy of it — leaving
   // and coming back mid-generation must not lose it. Membership only ever grows, so what
@@ -80,7 +80,7 @@ export function GenerateScreen() {
   const split = useSplitEngine();
   const client = useQueryClient();
 
-  // A draft left by «Generar más como esta» in «Mis variantes» is the form's starting point;
+  // A draft left by "Generar más como esta" in "Mis variantes" is the form's starting point;
   // it is read once and consumed, so a reload starts clean. It also opens the form: a run
   // from before is still in the store, and its collapsed bar would hide the very commission
   // one came here to launch.
@@ -94,8 +94,8 @@ export function GenerateScreen() {
 
   const status = run?.job?.status;
   const running = status === "running";
-  // A commission that is waiting its turn has already been made. Treating it as «nothing
-  // is happening» left the form open over it, so pressing again queued a second copy of
+  // A commission that is waiting its turn has already been made. Treating it as "nothing
+  // is happening" left the form open over it, so pressing again queued a second copy of
   // the same batch behind the first — which is the bug, not the wait.
   const queued = isQueued(run?.job);
   const active = running || queued;
@@ -125,21 +125,18 @@ export function GenerateScreen() {
     [run],
   );
 
-  // AL VOLVER AL FORMULARIO, LA TANDA ANTERIOR SE VA DE LA PANTALLA (2026-09-05, explicit
-  // user request). Esto revoca el «los resultados siguen a la vista hasta que la siguiente
-  // tanda los sustituya» que traía «Variar el encargo actual»: las dos salidas abren un
-  // encargo NUEVO, así que lo que quedaba debajo era la respuesta a uno viejo, encima del
-  // formulario que se está rellenando. No se pierde nada — cada ítem se guarda solo en
-  // cuanto se valida, y «Mis ejercicios» es donde se leen. Se limpia al lanzar, que es
-  // cuando vuelve a haber algo que enseñar.
+  // Going back to the form takes the previous batch off the screen: both ways out open a
+  // NEW commission, so what stayed below was the answer to an old one, over the form being
+  // filled in. Nothing is lost — every item saves itself as it validates, and "Mis
+  // ejercicios" is where they are read. Cleared on launch, when there is something to show
+  // again.
   //
-  // VA CON EL RESTO DE LOS HOOKS y no junto a los dos botones que lo mueven: debajo del
-  // `return` temprano de la carga sería un hook condicional, y React se cae entero con
-  // «Rendered more hooks than during the previous render» en cuanto el perfil termina de
-  // cargar. Medido: la pantalla no se dibujaba.
+  // It belongs with the rest of the hooks and not beside the two buttons that move it:
+  // below the loading `return` it is a conditional hook, and React unmounts the whole
+  // screen with "Rendered more hooks than during the previous render".
   const [dismissed, setDismissed] = useState(false);
 
-  // Each item becomes a row of «Mis variantes» the moment it validates; the archive is
+  // Each item becomes a row of "Mis variantes" the moment it validates; the archive is
   // told so that opening it during a run already lists what arrived.
   useEffect(() => {
     if (savedCount > 0) client.invalidateQueries({ queryKey: ["generations"] });
@@ -186,12 +183,9 @@ export function GenerateScreen() {
   // fall back to the form.
   const again = commission ?? form;
 
-  // TWO WAYS ON, AND BOTH ARE PROMINENT (2026-09-02, explicit user request). What used to
-  // sit here was «Cambiar el encargo» beside «Generar otros N» at `sm`, so the likelier
-  // next move — adjust what you asked for and ask again — was the quieter of the two and
-  // repeating a commission verbatim was the loud one. Now the choice is the one a person
-  // actually faces once a batch has landed: vary THIS commission, or start from an empty
-  // form. Repeating it unchanged is the first of those with nothing touched.
+  // Two ways on, both prominent, and they are the choice a person actually faces once a
+  // batch has landed: vary THIS commission, or start from an empty form. Repeating one
+  // unchanged is the first of those with nothing touched.
   const vary = () => {
     setForm(again);
     setEditing(true);
@@ -207,10 +201,6 @@ export function GenerateScreen() {
     !dismissed && Boolean(run) && (active || results.length > 0 || status === "failed");
   const collapsed = hasRun && !editing;
 
-  // El aviso «Parte del encargo anterior», con su segundo «Empezar desde cero» al lado, se
-  // borró con la retirada de arriba (2026-09-05, explicit user request): decía que los
-  // ejercicios de abajo estaban guardados y que la siguiente tanda los sustituiría, y ya no
-  // hay ninguno abajo del que decirlo; el botón era el mismo que se acababa de pulsar.
   const formPanel = (
     <div className="space-y-3">
       <GenerateForm
@@ -230,10 +220,8 @@ export function GenerateScreen() {
     </div>
   );
 
-  // THE COMMISSION SITS DIRECTLY ABOVE WHAT IT ASKED FOR (2026-09-02, explicit user
-  // request). It was the first block of the screen, above the strip — so between «1
-  // ejercicio · … · avanzado» and the exercise it describes there were a progress bar, a
-  // clock and a disclosure. It is the heading of the result, not a line about the run.
+  // The commission sits directly above what it asked for: it is the heading of the result
+  // and not a line about the run, so nothing — bar, clock, disclosure — comes between.
   const commissionBar = (
     <div className="space-y-3 rounded-xl border border-border bg-card px-3 py-2.5">
       <p className="truncate text-body text-muted-foreground">{summarize(again, profile, tr)}</p>
@@ -430,7 +418,7 @@ function Results({
             {t("generate.partial", { produced, requested })}
           </Badge>
         ) : null}
-        {/* One control where there were three. «Copiar JSON», «JSON» and «Markdown» sat in
+        {/* One control where there were three. "Copiar JSON", "JSON" and "Markdown" sat in
             a row above the items at the same weight as everything else on the line, and the
             three of them are one question — how do I take this out of here — asked once. */}
         <ExportMenu

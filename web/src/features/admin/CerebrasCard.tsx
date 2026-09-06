@@ -18,11 +18,11 @@ import { useT } from "@/lib/i18n";
  *
  * WHAT THE METERS ARE FOR is one question: am I about to be held back, and by which
  * window. So the four run first and the per-phase breakdown sits under them as support —
- * it answers what comes next («qué fase se lo está comiendo») and leaves in a spreadsheet.
+ * it answers what comes next ("qué fase se lo está comiendo") and leaves in a spreadsheet.
  *
  * Colour follows the palette's own rule rather than a severity scale: a meter is ink while
  * it is merely a quantity, --attention on the ONE window currently holding a call back
- * (that is literally «act here»), and --destructive only when a call is being refused.
+ * (that is literally "act here"), and --destructive only when a call is being refused.
  * Tinting every near-full meter would spend colour on something nobody can act on.
  */
 export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
@@ -32,7 +32,7 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
     (entry) => entry.windows.day.requests_remaining <= 0 || entry.windows.day.tokens_remaining <= 0,
   );
 
-  // Only ever rendered while the engine routes here, so there is no «motor inactivo» state
+  // Only ever rendered while the engine routes here, so there is no "motor inactivo" state
   // to name: with the plain `ollama` engine the whole half is gone from the tab.
   const state = blocked
     ? { label: t("cere.state.exhausted"), tone: "danger" as const }

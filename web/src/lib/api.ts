@@ -44,9 +44,9 @@ import type {
 /**
  * What both deletions answer. `rehomed` is about everybody who was inside the instance;
  * `landed` is the one entry the tab that made the request needs — where THIS account ends
- * up — so the browser can move there at once instead of blanking to «ninguna asignatura»
- * until `me` comes back. `null` means it stays where it was, which covers both «I was not
- * in it» and «I have nowhere left to go».
+ * up — so the browser can move there at once instead of blanking to "ninguna asignatura"
+ * until `me` comes back. `null` means it stays where it was, which covers both "I was not
+ * in it" and "I have nowhere left to go".
  *
  * `files_removed` says whether the directory tree went with the row. The administrator's
  * deletion always takes it; an owner's own takes it only when nobody else was a member,
@@ -339,7 +339,7 @@ export const api = {
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
 
-  // No `scope`: the endpoint answers your own and nothing else (2026-09-04).
+  // No `scope`: the endpoint answers your own rows and nothing else.
   generations: (params: {
     concept?: string;
     item_type?: string;

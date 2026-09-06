@@ -48,18 +48,14 @@ export function AccountMenu() {
 
   return (
     <div className="relative" ref={holder}>
-      {/* WHO IS LOGGED IN, SAID RATHER THAN IMPLIED (2026-09-01, explicit user request).
-          It was a bare 32 px circle with a generic figure in it — the same drawing for
-          everybody, on an installation where two accounts read the same instance and one
-          of them is the administrator. The pill carries the username beside the mark, and
-          what makes it stand out is WEIGHT AND GROUND rather than a colour: the mark is
-          filled in the ink, which is the palette's rule that colour is evidence and
-          structure is achromatic.
+      {/* Who is logged in, said rather than implied: the pill carries the username beside
+          the mark, and what makes it stand out is WEIGHT AND GROUND rather than a colour —
+          the palette's rule that colour is evidence and structure is achromatic.
 
-          The name is dropped below `sm` and the circle stands alone there. The header's
-          flanks hold at their own min-content and the nav sits on the centre line between
-          them, so on a phone the name would push the navigation off centre for a fact the
-          account menu states anyway the moment it opens. */}
+          The name is dropped below `sm` and the circle stands alone. The header's flanks
+          hold at their own min-content with the nav on the centre line between them, so on a
+          phone the name would push the navigation off centre for a fact the menu states the
+          moment it opens. */}
       <button
         onClick={() => setOpen((was) => !was)}
         title={user.username}
@@ -99,13 +95,10 @@ export function AccountMenu() {
 
           <Separator />
 
-          {/* THE ORDER IS WHERE EACH ENTRY REACHES (2026-09-04, explicit user request:
-              «mueve Theme justo antes de Salir; el botón de administración, justo antes de
-              theme»). The account's own pages first, then what is only to be read, then
-              the one entry that reaches beyond this account, then the screen's own
-              setting, and leaving last. The theme sits by the exit because it is the only
-              row of the menu that is not a destination: it changes the page you are
-              already on. */}
+          {/* The order is where each entry REACHES: the account's own pages, then what is
+              only to be read, then the one entry that reaches beyond this account, then the
+              screen's own setting, and leaving last. The theme sits by the exit because it
+              is the only row that is not a destination — it changes the page you are on. */}
           <div className="p-1">
             <MenuItem
               icon={<UserRound className="size-4" />}

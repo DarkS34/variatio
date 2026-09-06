@@ -11,7 +11,7 @@ import { usePipeline, useRaw } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 
 // Every screen except the panel loads on demand: the router is ours, so the split
-// happens here rather than in a route table. The panel stays static because «/» is
+// happens here rather than in a route table. The panel stays static because "/" is
 // where a session lands, and a fallback flash on the landing route helps nobody.
 const AccountScreen = lazy(() =>
   import("@/features/account/AccountScreen").then((m) => ({ default: m.AccountScreen })),
@@ -46,7 +46,7 @@ const TutorialScreen = lazy(() =>
 
 // Which destinations need an instance to mean anything. Everything not listed here is
 // about the person or the installation and works with no workspace at all: the guide is
-// reading, «Mi perfil» is the account, and administration is where an administrator hands
+// reading, "Mi perfil" is the account, and administration is where an administrator hands
 // out access in the first place — locking them behind a workspace would leave the state
 // with no way out of itself.
 const NEEDS_WORKSPACE = [
@@ -67,10 +67,8 @@ export function App() {
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
-    // THE TUTORIAL RUNS INSIDE THE SHELL (2026-09-02, explicit user request; it used to be
-    // outside, with a header of its own). The header above it is the real one, and the
-    // deck unlocks its parts as it explains them — the shell reads the slide from the
-    // path, which is why one route per slide.
+    // The tutorial runs inside the shell, and the shell reads its slide from the PATH,
+    // which is why there is one route per slide.
     const slide = slideOf(path);
     if (slide !== null) return <TutorialScreen at={slide} />;
 
@@ -83,11 +81,10 @@ export function App() {
     if (!hasWorkspace && NEEDS_WORKSPACE.includes(path)) return <NoWorkspace />;
 
     switch (path) {
-      // «/» YA NO ES UNA PANTALLA, ES UNA RESPUESTA. El panel era la vista de la cadena
-      // desde fuera, y desde que la barra ES la cadena no queda nada que mirar desde
-      // fuera; lo que sí queda es la única pregunta que tiene quien entra — «¿y ahora
-      // qué?» —, que esto contesta llevándote allí. Con la cadena entera aprobada lleva
-      // a «Crear ejercicios», que es para lo que servía todo lo anterior.
+      // "/" is not a screen but an ANSWER. The bar IS the chain, so there is nothing left
+      // to watch from outside it; what is left is the only question somebody entering has —
+      // "and now what?" — which this answers by taking them there. With the whole chain
+      // approved it lands on generating, which is what everything before it was for.
       case "/":
         return <Landing />;
       // The raw material is not a stage — it writes no artifact and nobody approves it —
@@ -105,7 +102,7 @@ export function App() {
       case "/evaluate":
         return <EvaluationScreen />;
       // The account of whoever is looking: their data, the instances they can open and their
-      // variants. Each tab is a route so that «mis variantes» stays a link that can be
+      // variants. Each tab is a route so that "mis variantes" stays a link that can be
       // bookmarked.
       case "/account":
         return <AccountScreen tab="cuenta" />;
@@ -113,7 +110,7 @@ export function App() {
         return <AccountScreen tab="workspaces" />;
       case "/account/variants":
         return <AccountScreen tab="variantes" />;
-      // Where the accesses lived while the tab was called «Accesos».
+      // Where the accesses lived while the tab was called "Accesos".
       case "/account/access":
         return <Redirect to="/account/workspaces" />;
       // Where the variants lived when they were a screen of their own. Redirected rather than
@@ -162,7 +159,7 @@ function Redirect({ to }: { to: string }) {
  * Where a session lands: the step that is next.
  *
  * It waits for both readings before deciding — `currentStepPath` over an empty pipeline
- * answers «step 1» for every workspace in existence, and redirecting there and then
+ * answers "step 1" for every workspace in existence, and redirecting there and then
  * bouncing away is worse than a second of nothing.
  */
 function Landing() {

@@ -179,14 +179,13 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
 def delete_user(session: Session, user: User) -> None:
     """Delete the account row, and only the account row.
 
-    What the account *did* is not the account: `generations.user_id` and
-    `evaluation_sessions.user_id` are `SET NULL`, so a course built on somebody's
-    variants survives their leaving and the evaluation keeps the sessions it counted. What
-    cascades is what only means anything while the account exists — its memberships, its
-    open sessions, its pending reset links and, since 2026-09-03, its stage forms: a
-    verdict on a build with nobody behind it cannot be read or withdrawn from the panel.
-    Disabling stays the reversible answer; this one is for an account that should not
-    have existed.
+    What the account DID is not the account: `generations.user_id` and
+    `evaluation_sessions.user_id` are `SET NULL`, so a course built on somebody's exercises
+    survives their leaving and the evaluation keeps the sessions it counted. What cascades
+    is what only means anything while the account exists — its memberships, its open
+    sessions, its pending reset links and its stage forms, a verdict on a build with nobody
+    behind it being impossible to read or withdraw from the panel. Disabling is the
+    reversible answer; this is for an account that should not have existed.
     """
     session.delete(user)
     session.flush()

@@ -24,11 +24,9 @@ export interface FormState {
    */
   usePresetCurriculum: boolean;
   /**
-   * What the class has covered, as the person ticked it. IN FORCE EXACTLY WHEN IT HOLDS
-   * SOMETHING (2026-09-05, explicit user request: «no lo detecte con un switch sino que
-   * sea si hay conceptos dentro o no»). There used to be a `useCurriculum` switch beside
-   * it, so the form could be «restricted» with nothing ticked and a ticked list could be
-   * switched off; both states sent `[]`, which is what an empty list sends now.
+   * What the class has covered, as the person ticked it, and in force exactly when it holds
+   * something. A switch beside it allows two states that say nothing — "restricted" with
+   * nothing ticked, and a ticked list turned off — and both send `[]` anyway.
    */
   curriculum: string[];
   decisions: Record<string, unknown>;
@@ -40,15 +38,13 @@ export interface FormState {
   /**
    * Which offered model writes it.
    *
-   * Null is «el de por defecto», the first of `generation.models`. The form does not know
-   * that list well enough to resolve it — the server does, and what a run RECORDS is the
-   * model that actually wrote it, never the one a browser guessed. Only the "generate"
-   * variant sets it: a comparison's two local proposals are written by the installation's
-   * own `evaluation.local_model`, and `evaluation/commission.ts` strips the field on the way.
+   * Null is "el de por defecto", the first of `generation.models`. The server resolves it,
+   * never the form: what a run RECORDS is the model that actually wrote it and not one a
+   * browser guessed. Only the "generate" variant sets it — a comparison's two local
+   * proposals are written by the installation's own `evaluation.local_model`, and
+   * `evaluation/commission.ts` strips the field on the way.
    *
-   * IT WENT AWAY ON 2026-09-01 AND CAME BACK THE SAME DAY, both by explicit user request.
-   * What the removal was for survives in the offer: an installation that wants to decide
-   * offers one model, and then nothing is drawn.
+   * An installation that would rather decide offers ONE model, and then nothing is drawn.
    */
   model: string | null;
 }
@@ -57,11 +53,10 @@ export const EMPTY_FORM: FormState = {
   n: 1,
   concepts: [],
   itemType: null,
-  // FALSE, since 2026-09-01: the workspace's stored list can no longer be edited, so
-  // nothing may resolve to it by default. It stays in the shape because `fromParams` reads
-  // it — a run recorded before the change carried no `curriculum` field at all and did run
-  // against the workspace's own, and describing that faithfully is what lets it be re-run
-  // exactly as it ran.
+  // Always false: the workspace's stored list can no longer be edited, so nothing may
+  // resolve to it by default. It stays in the shape because `fromParams` reads it — a run
+  // recorded with no `curriculum` field at all DID run against the workspace's own, and
+  // describing that faithfully is what lets it be re-run exactly as it ran.
   usePresetCurriculum: false,
   curriculum: [],
   decisions: {},
@@ -94,7 +89,7 @@ export function toParams(state: FormState): GenerateParams {
   // parameter unchanged whenever it is given — the empty list included, which is how one
   // says "no restriction" — and only falls back to the workspace's stored curriculum when
   // nothing arrives at all. So the preset case sends no field, not an empty one, and a
-  // list with nothing ticked sends the empty one, which is «sin restricción».
+  // list with nothing ticked sends the empty one, which is "sin restricción".
   if (!state.usePresetCurriculum) params.curriculum = state.curriculum;
   if (state.instructions.trim()) params.instructions = state.instructions.trim();
   return params;
@@ -115,7 +110,7 @@ export function fromParams(params: Record<string, unknown>): FormState {
     n: Number(params.n) || 1,
     concepts: Array.isArray(params.concepts) ? [...(params.concepts as string[])] : [],
     itemType: (params.item_type as string) || null,
-    // Absent is the workspace's own and `[]` is «sin restricción», exactly as the server
+    // Absent is the workspace's own and `[]` is "sin restricción", exactly as the server
     // resolves them.
     usePresetCurriculum: curriculum === undefined,
     curriculum: curriculum ? [...curriculum] : [],

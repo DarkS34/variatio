@@ -1,10 +1,9 @@
 """`order=recent` has no reader in the browser, and it is still an order this API serves.
 
-The build's live feed — «Ejercicios que van saliendo» — was the only caller, and it was
-removed on 2026-09-01 by explicit user request. The parameter stays for the same reason the
-`concept` filter does: the bank listing is an API and not only a screen, and «newest first»
-is a real question to ask of it. This file is what keeps it from being swept up as dead
-code, so deleting the branch means deleting these tests on purpose rather than by accident.
+The parameter stays for the reason the `concept` filter does: the bank listing is an API and
+not only a screen, and "newest first" is a real question to ask of it. This file keeps it
+from being swept up as dead code, so deleting the branch means deleting these tests on
+purpose rather than by accident.
 """
 
 import json

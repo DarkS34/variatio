@@ -17,22 +17,19 @@ import type { EvaluationPosition, EvaluationSessionHead, Instruments, TriageValu
 /**
  * One proposal at reading size, over the comparison.
  *
- * The three cards share a row, so each gets a third of the window — and an exercise with
- * a grammar and a table in it does not read at a third of a window. This is the one
- * surface in the app that is a READING surface rather than dense chrome, so the body
- * steps up from 14 to 15 px and the measure is capped at about 62 characters.
+ * The three cards share a row, so each gets a third of the window — and an exercise with a
+ * grammar and a table in it does not read at that width. This is the one READING surface in
+ * the app, so the body steps up to 15 px and the measure is capped at about 62 characters.
  *
- * Answering from here is the point: reading it in full and judging it are the same
- * moment, so the question comes with it in the footer instead of waiting behind the
- * close button. ←/→ page through the three, because the three are read against each
- * other and closing to open the next one is three clicks per comparison.
+ * Answering from here is the point: reading it in full and judging it are the same moment,
+ * so the question comes with it in the footer. ←/→ page through the three, which are read
+ * against each other.
  *
- * Before the reveal it knows nothing the card did not: a letter, the commission, the
- * fields. After it the header names the arm, in its colour, the footer shows the answer
- * back instead of asking again, and a foot under the exercise says where it came from —
- * the arm's own description, what the checks raised and the fragments it was handed. That
- * foot is what the card's «Detalle» used to unfold (2026-09-04, explicit user request:
- * one button per card), minus the exact prompt and the retry count, which went with it.
+ * Before the reveal it knows nothing the card did not. After it, the header names the arm
+ * in its colour, the footer shows the answer back instead of asking again, and a foot under
+ * the exercise says where it came from — the arm's description, what the checks raised and
+ * the fragments it was handed. It is the one door per card; the exact prompt and the retry
+ * count are deliberately not on this screen.
  */
 export function ProposalDialog({
   position,

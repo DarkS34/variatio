@@ -73,9 +73,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # The package installs a colourised stdout sink on import, and stdout here is the
     # protocol pipe: anything it prints becomes an unmarked line for the parent to forward.
-    # So the child writes to ONE place, the same file its parent writes — no `log` events
-    # travel the pipe any more (2026-08-31), and nothing of a build reaches a screen as a
-    # raw console line.
+    # So the child writes to ONE place, the same file its parent writes, and no `log` event
+    # travels the pipe.
     logger.remove()
     joblog.attach(args.workspace)
 

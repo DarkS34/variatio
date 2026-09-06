@@ -1,4 +1,4 @@
-"""The «Constructores» settings: transcription, chunking and each builder's own knobs."""
+"""The "Constructores" settings: transcription, chunking and each builder's own knobs."""
 
 from ..types import Impact, Setting
 
@@ -16,8 +16,7 @@ de `raw/`. Docling lee estos PDF como texto y pierde tres cosas a la vez: separa
 de código de la pregunta que los cita, aplana sus saltos de línea y deja caer el color que
 marca la opción correcta. Renderizar la página y leerla como imagen recupera las tres.
 
-Desde el 2026-08-27, por petición explícita del usuario, el corpus del grafo va por esta
-misma ruta: los dos slots se transcriben con el mismo motor y el mismo algoritmo, y a
+El corpus del grafo va por esta misma ruta: los dos slots se transcriben con el mismo motor y el mismo algoritmo, y a
 Docling le quedan el `.docx` y el `.pptx`, que no tienen página que renderizar — sus
 imágenes se leen aparte, una llamada por imagen, con el mismo modelo y las mismas reglas.
 No se renderizan, así que esta resolución no las afecta.""",
@@ -62,14 +61,12 @@ lo que tropezar es mejor que una página que parece vacía.""",
         group="Constructores",
         impact=Impact.NONE,
         minimum=256,
-        doc="""Techo de tokens de SALIDA de la llamada que transcribe una página o una imagen. Sin él
-el modelo dispone de todo su presupuesto, y lo gasta: el 2026-09-05, en `compiladores`,
-nueve páginas de dos exámenes salieron con exactamente 40.960 tokens cada una — el tope
-del motor — porque la línea de puntos donde el alumno escribe su nombre («Nombre: ____»)
-se transcribió como una racha de `\\_` que el modelo no supo dónde parar. Cada una costó
-0,063 $ y ~65 s en vez de 0,003 $ y ~1 s, y los 738.832 caracteres de basura resultantes
-pasaron enteros al perfil y al banco, que gastaron el 80 % de sus llamadas en leerlos:
-~1,9 $ de los 5,48 $ de esa construcción, y un examen que aportó 0 ítems.
+        doc="""Techo de tokens de SALIDA de la llamada que transcribe una página o una imagen. Sin él el
+modelo dispone de todo su presupuesto, y lo gasta: la línea de puntos donde el alumno
+escribe su nombre («Nombre: ____») se transcribe como una racha de `\\_` que el modelo no
+sabe dónde parar, y una página así consume el tope entero del motor — veinte veces el coste
+y sesenta veces el tiempo de una página real, con la basura pasando entera al perfil y al
+banco.
 
 El valor sale de la medición y no del gusto: de las 537 páginas PDF legítimas de las tres
 asignaturas de referencia la más larga son 6.871 caracteres (~1.900 tokens), y en
@@ -110,19 +107,13 @@ costuras.""",
         impact=Impact.LOCKED,
         editable=False,
         minimum=1,
-        doc="""Súbelo al cambiar transcribe_page_prompt o transcribe_image_prompt: forma parte de la
-huella de la caché de páginas y de la de imágenes, y subirlo caduca las dos.
+        doc="""Súbelo al cambiar transcribe_page_prompt o transcribe_image_prompt: forma parte de la huella
+de la caché de páginas y de la de imágenes, y subirlo caduca las dos — o sea, vuelve a leer
+cada página PDF de cada asignatura.
 
-Lo sube quien edita el prompt, no quien mira una pantalla. 3 desde el 2026-09-02: el bloque
-`IMAGE_RULES` que comparten los dos prompts (una imagen se transcribe por lo que contiene y
-solo se describe cuando no hay nada que copiar). OJO: `config.json` guarda este valor como
-cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo también en el
-fichero de la instalación no caduca nada. 4 desde el 2026-09-03: el prompt de página pide los
-ENCABEZADOS con `#` según la jerarquía visual (sección `# ESTRUCTURA`). Hasta entonces no los
-pedía y quedaban al criterio del modelo; con la versión 3 dejó de marcar las portadas de tema
-(medido sobre `apuntes.pdf` de `cs0-examenes`, T=0, dos pasadas: v2 marcaba «# Tema I», «# Tema
-II» y «# Tema V», v3 solo «# Tema V»), y sin ellos `segment_syllabus` abría las unidades del
-grafo por apartados.""",
+Lo sube quien edita el prompt, no quien mira una pantalla. OJO: `config.json` guarda este
+valor como cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo
+también en el fichero de la instalación no caduca nada.""",
     ),
     Setting(
         key="builders.exemplars_ocr",

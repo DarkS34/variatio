@@ -2,7 +2,7 @@
 
 The bug this pins: every `evaluate` job recorded its session under whoever launched it,
 so a batch an administrator prepared FOR SOMEBODY ELSE landed in that administrator's own
-«Mis sesiones», offered itself in «Evaluar», and could be answered there unassigned. Worse
+"Mis sesiones", offered itself in "Evaluar", and could be answered there unassigned. Worse
 than an inconvenience: `record_choice` rewrites the row without ever touching `user_id`,
 so the judgement would have been filed under the name of whoever the row already said —
 and an administrator answering a colleague's session filed it under the colleague.
@@ -179,8 +179,8 @@ def test_the_evaluator_it_was_assigned_to_may_answer_it(db):
 
 def test_an_administrator_may_answer_a_set_once_it_is_assigned_to_them(db):
     session, users = db
-    # The user's own wording: «no puede ser respondida por ese mismo administrador A MENOS
-    # QUE se le asigne desde el panel». Stocking it must not count as already holding it.
+    # A stocked session cannot be answered by the administrator who stocked it unless it is
+    # assigned to them from the panel: stocking is not holding.
     copy = evaluation_store.assign(
         session, _stock(session), users["admin"].id, assigned_by=users["admin"].id
     )
@@ -210,7 +210,7 @@ def test_an_assignment_is_what_makes_a_holder(db):
 def test_stock_is_reported_as_having_no_evaluator_and_not_as_a_deleted_account(db):
     session, users = db
     # `account_id` goes null for two different reasons — nobody was ever handed these
-    # items, or the account that held them was deleted (`user_id` is SET NULL). «Cuenta
-    # borrada» is only true of the second and reads as data loss when said of the first.
+    # items, or the account that held them was deleted (`user_id` is SET NULL). "Cuenta
+    # borrada" is only true of the second and reads as data loss when said of the first.
     groups = evaluation_store.by_account(evaluation_store.headers(session))
     assert [group["label"] for group in groups] == ["Sin evaluador"]

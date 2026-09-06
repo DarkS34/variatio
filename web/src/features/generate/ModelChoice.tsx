@@ -9,25 +9,17 @@ import { familyOf } from "./models";
 /**
  * Which of the offered models writes the item, chosen before how hard it thinks.
  *
- * The two questions are asked in that order because the second depends on the first: the
- * levels a model accepts, and what is worth warning about at each of them, are the model's
- * (`models.ts`), so picking a writer after setting the effort would silently re-clamp it.
+ * That order is forced: the levels a model accepts, and what is worth warning about at each
+ * of them, are the model's (`models.ts`), so picking a writer afterwards re-clamps the
+ * effort that was just set.
  *
- * It is drawn as cards and not as a dropdown because what separates two models here is not
- * their names — it is a trade-off in one sentence, and a select can hold a name and nothing
- * else. The link is OUTSIDE the button rather than inside it: an anchor nested in a button
- * is not a control a browser can resolve, and reading about a model is not choosing it.
+ * Cards and not a dropdown: what separates two models here is a trade-off in one sentence,
+ * and a select holds a name and nothing else. The link is OUTSIDE the button — an anchor
+ * nested in a button is not a control a browser can resolve, and reading about a model is
+ * not choosing it.
  *
- * It renders nothing at all when the installation offers a single model, for the same
- * reason the bank hides its modality filter with one modality declared: a choice of one is
- * not a choice, and the reasoning block below still names the model that will write.
- *
- * REMOVED ON 2026-09-01 AND PUT BACK THE SAME DAY, both by explicit user request. What the
- * removal answered — that the installation should decide — is now answered by the offer
- * itself: «Configuración → Modelos generadores» bounds the list, declares which of them is
- * the default and, since the same day, declares which of them let their effort be adjusted.
- * Offering one model is what makes this disappear, so an installation that wants to decide
- * still decides, without anybody's screen changing shape.
+ * It renders nothing at all where the installation offers a single model: a choice of one
+ * is not a choice, and the reasoning block below still names the model that will write.
  */
 export function ModelChoice({
   offered,

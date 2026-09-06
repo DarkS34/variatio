@@ -17,9 +17,9 @@ export function SelectionTray({
 }: {
   selected: string[];
   /**
-   * What the graph places before the chosen concepts. Reported, never withheld: since
-   * 2026-09-04 these are pickable like any other, so this is a statement about the choice
-   * and not the explanation of a refusal.
+   * What the graph places before the chosen concepts. Reported and never withheld: these
+   * are pickable like any other, so it is a statement about the choice and not the
+   * explanation of a refusal.
    */
   implied: string[];
   total: number;
@@ -48,11 +48,9 @@ export function SelectionTray({
             {implied.length > 0 ? (
               <span className="text-primary">{t("tray.byPrerequisite", { n: implied.length })}</span>
             ) : null}
-            {/* WHAT IS NOT ON THE BOARD, SAID ON THE BOARD. Without it «0 de 42» is the
-                whole truth a person has, over a graph of 162 concepts. The count is the
-                statement; the lever is the scope switch in the header alone — the
-                «Mostrar todos» link that sat beside the count went on 2026-09-05
-                (explicit user request). */}
+            {/* What is not on the board, said on the board: without it "0 de 42" is the
+                whole truth a person has over a graph of 162 concepts. The count is the
+                statement; the lever is the scope switch in the header alone. */}
             {hidden > 0 ? (
               <span>
                 {" · "}

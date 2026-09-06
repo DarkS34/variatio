@@ -45,12 +45,9 @@ TRIAGE: dict[str, dict] = {
 }
 
 # The keys never change: renaming one strands every session already judged. What varies per
-# profile is only the prose. `prerequisites` REPLACED `originality` on 2026-09-03 (explicit
-# user request to review the instrument) with two rated sessions in the database, both
-# checked before the swap: what the syllabus buys the system is that an exercise leans only
-# on what comes before its concept, and the rubric never asked it — while «originality» was
-# the one scale with no clause of the prompt behind it. The two old rows keep their
-# `originality` in the JSON and the export no longer prints it.
+# profile is only the prose. Every scale answers to a clause of the system's own prompt —
+# `prerequisites` is what the syllabus buys, an exercise leaning only on what comes before
+# its concept — and a scale with no clause behind it does not belong here.
 RATING_SCALES: tuple[str, ...] = ("prerequisites", "complexity", "concept_fit", "soundness")
 
 # `complexity` is the one scale whose best answer is the middle. Carried as data so the

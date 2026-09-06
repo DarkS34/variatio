@@ -145,10 +145,9 @@ function ConceptDetail({
               ))}
             </Select>
           </Field>
-          {/* NO TAGGABILITY SWITCH HERE since 2026-09-01 (explicit user request): it is on the
-              concept's own row in the list, where the state is judged — a pass down the
-              syllabus deciding which concepts work as labels — instead of one click inside
-              each concept. Its (i) went to the column header with it. */}
+          {/* No taggability switch here: it is on the concept's own row in the list, where
+              the state is judged — a pass down the syllabus — instead of one click inside
+              each concept. Its (i) sits on that column's header. */}
           {dirty ? (
             <Button
               size="sm"
@@ -237,16 +236,10 @@ function ConceptDetail({
         <h4 className="text-micro font-condensed uppercase text-muted-foreground">
           {t("kg.relations")}
         </h4>
-        {/* UNA FRASE POR RELACIÓN, Y SÓLO LAS QUE SALEN DE ESTE CONCEPTO (2026-09-01,
-            explicit user request). Antes era una rejilla de distintivos con «→» y «←»
-            delante de cada vecino, agrupados por verbo: para leer «Algoritmo tiene como
-            prerrequisito Pensamiento computacional» había que componer la frase uno mismo a
-            partir de un título, una flecha y un nombre.
-
-            Las entrantes se van con las flechas. Son las mismas aristas vistas del otro
-            lado — si «Algoritmo de búsqueda se engloba en Algoritmo», eso es algo que dice
-            «Algoritmo de búsqueda» — y listarlas aquí duplicaba cada arista en las dos
-            fichas, que es exactamente de donde venía la necesidad de la flecha. */}
+        {/* One SENTENCE per relation, and only the ones leaving this concept. Incoming
+            edges are the same edges seen from the other side, so listing them here draws
+            every edge on both concepts' cards — which is what made an arrow necessary in
+            the first place. */}
         {neighbours.isLoading ? (
           <Spinner />
         ) : outgoing.length === 0 ? (
@@ -457,7 +450,7 @@ function GraphExplorer() {
   const [addingIn, setAddingIn] = useState<string | null>(null);
   // The three unit operations, as dialogs of this application rather than the browser's.
   // `window.prompt` cannot validate — it does not know which names are taken — and
-  // `window.confirm` guarded «eliminar la unidad y sus 28 conceptos» with one click while
+  // `window.confirm` guarded "eliminar la unidad y sus 28 conceptos" with one click while
   // deleting an empty workspace asks you to type its slug.
   const [newUnit, setNewUnit] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -480,14 +473,12 @@ function GraphExplorer() {
   const domains = (kg.data?.domains ?? []).map((d) => d.name);
   const relations = (kg.data?.relations ?? []).map((r) => r.name);
 
-  // Where a concept falls relative to the frontier is no longer DRAWN here (2026-09-01,
-  // explicit user request) — neither as a column nor as a key under the map. The canvas
-  // still receives `curriculumSet` and still tints its own curriculum layout with it,
-  // which is the one place the three sets are visible; what left is the reporting of them
-  // row by row, along with the editor that used to set the list.
+  // Where a concept falls relative to the frontier is not drawn here. The canvas still
+  // receives `curriculumSet` and tints its curriculum layout with it, which is the one
+  // place the three sets are visible.
 
   // Built from the whole graph, never from the filtered list: what a unit contains does not
-  // change because a search is narrowing what is drawn, and «eliminar la unidad y sus N»
+  // change because a search is narrowing what is drawn, and "eliminar la unidad y sus N"
   // has to name the number that will actually be deleted.
   const unitStats = useMemo(() => {
     const stats = new Map<string, { total: number }>();
@@ -573,25 +564,16 @@ function GraphExplorer() {
         </Alert>
       ) : null}
 
-      {/* THREE COLUMNS: THE LIST, THE MAP, AND THE CONCEPT (2026-09-04, explicit user
-          request: «posiciona el grafo a la derecha de la lista de conceptos y a la izquierda
-          del menú de un concepto; ahora mismo hay mucho espacio desaprovechado»). The map
-          used to be folded under the list, on the argument that the first thing seen of a
-          syllabus should be the syllabus — true, and the list still leads and still takes
-          the wider track — but on a wide screen the fold left the right half of the page
-          empty until a concept was chosen. The graph is a permanent column now, the same
-          height as the list, at the RIGHT edge; the concept's card opens BETWEEN the two
-          (same day, explicit user request), so it sits beside the row that was clicked and
-          the drawing keeps the edge, where its size costs nothing. The concept's card is a
-          fixed `26rem` (it took everything the list could spare for an hour the same day, and
-          was asked back down: «reduce el ancho de la ficha»), and the list keeps the rest. Below `xl` the three
-          stack, list first, which is the one width where nothing fits beside anything.
+      {/* Three columns: the list, the concept, and the map at the RIGHT edge. The list
+          leads and takes the wider track — the first thing seen of a syllabus is the
+          syllabus — and the concept's card opens BETWEEN the two, so it sits beside the row
+          that was clicked. Below `xl` the three stack, list first.
 
-          `minmax(0, …)` on every fr track is load-bearing, not tidiness: a grid item
-          defaults to `min-width: auto`, and every row in the outline truncates — which means
-          `white-space: nowrap`, which means a min-content width of the longest concept name
-          in the graph. Without it the card grew to 2 940 px and put a horizontal scrollbar
-          on the whole page. */}
+          `minmax(0, …)` on every fr track is load-bearing and not tidiness: a grid item
+          defaults to `min-width: auto`, and every row in the outline truncates — so
+          `white-space: nowrap` gives it the min-content width of the longest concept name.
+          Without it the card grows past 2 900 px and puts a horizontal scrollbar on the
+          whole page. */}
       <div
         className={cn(
           "grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]",
@@ -690,17 +672,15 @@ function GraphExplorer() {
             </Card>
           </aside>
         ) : null}
-        {/* ONE CARD, NOT THREE. The map and the key to its edges were separate boxes once,
-            each with its own border and its own micro heading — and the key is a legend that
-            only means anything ABOUT the drawing beside it. It is the map's foot, as a wrap
-            of chips rather than a column of rows, so the drawing keeps the height. THE CARD
-            IS A FIXED SIZE — a `24rem` track and `25rem` tall, `self-start` so the row does
-            not stretch it — and nothing about the concept's card changes it (2026-09-04,
-            explicit user request: «estático… la mitad de lo que es ahora me sirve»). A
-            canvas whose frame grows while the list loads re-parks and re-heats its layout
-            on every size change, which is half of what read as «tarda en cargar». The
-            layout controls stay one click away in «Ampliar»: `compact` drops the chrome,
-            and a column this wide has room for the graph or for the toolbars, not both. */}
+        {/* One card, not three: the key is a legend that only means anything about the
+            drawing beside it, so it is the map's foot — a wrap of chips rather than a column
+            of rows, so the drawing keeps the height.
+
+            THE CARD IS A FIXED SIZE (`24rem` × `25rem`, `self-start` so the row does not
+            stretch it) and nothing about the concept's card changes it: a canvas whose frame
+            grows while the list loads re-parks and re-heats its layout on every size change.
+            The layout controls stay one click away in "Ampliar" — a column this wide has
+            room for the graph or for the toolbars, not both. */}
         <Card className="flex h-[25rem] min-w-0 flex-col overflow-hidden xl:self-start">
           <div className="flex items-center justify-between gap-2 p-3">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
@@ -758,14 +738,11 @@ function GraphExplorer() {
 
       </div>
 
-      {/* THE RELATION BANDS ARE A BLOCK OF THEIR OWN UNDER THE THREE COLUMNS (2026-09-04,
-          explicit user request, after an hour inside the concept's card: «sacar el flow de
-          la ficha y posicionarlo en algún punto fuera»). A band is as wide as its longest
-          names, five columns of them, and the card is 26rem: inside it a third of the flow
-          was in view at a time. Here it has the page's width, which is what a horizontal
-          flow needs, and it mirrors the expanded view, where the bands sit under the canvas.
-          It scrolls into view on selection — `nearest`, so a flow already on screen moves
-          nothing — because the grid is ~74vh tall and the block starts below the fold. */}
+      {/* The relation bands are a block of their own under the three columns: a band is as
+          wide as its longest names, five columns of them, so inside a 26rem card a third of
+          the flow is in view at a time. Here it has the page's width, which is what a
+          horizontal flow needs. It scrolls into view on selection — `nearest`, so a flow
+          already on screen moves nothing — the grid being ~74vh tall. */}
       {selectedConcept ? (
         <Card ref={flowCard} className="scroll-mt-20 overflow-hidden">
           <div className="flex items-center gap-2 border-b border-border p-3">
@@ -796,10 +773,9 @@ function GraphExplorer() {
             the larger half either way, because the inspector is what you read AFTER
             choosing a node on it. */}
         <div className="flex h-[70vh] flex-col gap-3 lg:h-[68vh] lg:flex-row lg:gap-4">
-          {/* THE BANDS GO UNDER THE CANVAS HERE, NOT IN THE INSPECTOR (2026-09-04, explicit
-              user request): at the canvas's width a flow of five columns fits without
-              scrolling, where the 23rem inspector could show a third of it. The inspector
-              keeps the sentences and the editing. */}
+          {/* The bands go under the CANVAS here and not in the inspector: at the canvas's
+              width a flow of five columns fits without scrolling, where a 23rem inspector
+              shows a third of it. The inspector keeps the sentences and the editing. */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
             <div className="min-h-0 min-w-0 flex-1">{canvas(false)}</div>
             {selectedConcept ? (
@@ -911,23 +887,19 @@ function GraphExplorer() {
  *
  * It is a child of `StageGate` rather than a block of `KgScreen` because that is the only
  * side of the boundary where the lock is readable: `curating` lives inside the header and
- * travels down as context. Out of the static view entirely: «Quiero corregir algo» at the
+ * travels down as context. Out of the static view entirely: "Quiero corregir algo" at the
  * foot is what brings it back, closed stage or not.
  */
 /**
- * THE JOB THAT PATCHES THE GRAPH, BESIDE THE NOTICE THAT EXPLAINS IT.
+ * The job that patches the graph, beside the notice that explains it.
  *
- * The notice («falta decidir qué conceptos sirven de etiqueta») sat at the FOOT of the
- * explorer and the button at its head, so the two halves of one thing were a screen apart.
- * One block now (2026-09-02, explicit user request: one convention for the four steps),
- * shaped like every other secondary job of the construction — the bank's re-tag beside its
- * meter: a small outline button beside the number it acts on. While the graph is only
- * being looked at the notice still reports and the button is not drawn, which is the same
- * rule the bank's re-tag follows.
+ * One block, shaped like every other secondary job of the construction: a small outline
+ * button beside the number it acts on. While the graph is only being looked at the notice
+ * still reports and the button is not drawn.
  *
  * The flag is absent from every graph written before it existed, so it reads `false` even
- * on one whose exclusion list proves the old in-build pass ran; the second half of the
- * condition is what tells those apart, and it mirrors `stages/initialize.py`.
+ * on one whose exclusion list proves the old in-build pass ran. The second half of the
+ * condition is what tells those apart, mirroring `entrypoints/initialize.py`.
  */
 function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
   const { t, plural } = useT();
@@ -990,13 +962,10 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
   const reviewRun = useJobRun("review_taggability");
   const reviewing = useJobRunning("review_taggability");
   const reviewPhases = useJobPhases("review_taggability");
-  // THE BUILD DOES NOT END WITH THE GRAPH, AND THE SCREEN HAS TO SAY SO (2026-09-01,
-  // explicit user request). `jobs/chain.py` already queues `describe_concepts`, then the
-  // taggability review, then the index behind every `build_kg`; what was missing is that
-  // only the middle one had anywhere to report itself, and the description job lost its
-  // last home when the «Descripciones» tab went. So the two that a person waits for are
-  // one block with one sentence: the graph is there, this is what is still being finished,
-  // and nothing below is blocked by it.
+  // The build does not end with the graph and the screen has to say so: `jobs/chain.py`
+  // queues describing, the taggability review and the index behind every `build_kg`, and
+  // only the middle one has a screen of its own. The two a person waits for are one block
+  // with one sentence — nothing below is blocked by them.
   const describeRun = useJobRun("describe_concepts");
   const describing = useJobRunning("describe_concepts");
   const describePhases = useJobPhases("describe_concepts");
@@ -1004,18 +973,12 @@ export function KgScreen({ stage }: { stage: StageState | undefined }) {
 
   return (
     <StageGate stage={stage}>
-      {/* ONE VIEW, AND ONE THING TO DO TO IT (2026-09-01, explicit user request).
-          The three-way tab strip is gone. «Descripciones» was a screen-wide review of a
-          derived file the build already writes on its own — a description is corrected on
-          the concept it belongs to, in the panel beside the list — and «Currículo» went
-          with the saved taught-concepts list, which is chosen per commission on the
-          generate and comparison screens instead. With one view left there is nothing to
-          switch between, exactly as when the profile's raw-JSON tab went.
+      {/* One view, and one thing to do to it. A description is corrected on the concept it
+          belongs to, in the panel beside the list, and what the class has covered is chosen
+          per commission — so there is one view left and nothing to switch between.
 
-          The review button stays where the tabs were: it is something done TO the graph, it
-          exists in both states (a first pass and a re-run), and the notice below exists in
-          only one of them. What reports — the finishing notice and the two bars — stays in
-          every state, because it says what is happening to what is being read. */}
+          The review button is something done TO the graph and exists in both states (a first
+          pass and a re-run), where the notice below exists in only one. */}
       <TaggabilityReview stage={stage} />
 
       {finishing ? (

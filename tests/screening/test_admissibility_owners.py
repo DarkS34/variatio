@@ -53,12 +53,12 @@ def test_every_slot_declares_a_label_and_an_example():
 
 
 def test_the_difficulty_owns_its_control_without_decided_by(graph, context, tmp_path):
-    """A profile built before the ladder became mandatory still owns «hazlo avanzado».
+    """A profile built before the ladder became mandatory still owns "hazlo avanzado".
 
-    `decided_by` is absent on four of the six modalities of `cs0-examenes`, and since
-    2026-09-01 the generate form offers the rung on those too — it reads the field, not
-    that key. The judge has to see the same catalogue the screen does, or the free text
-    would be admissible on exactly the instances where the control exists.
+    `decided_by` is absent on most modalities built before the rule, and the generate form
+    offers the rung on those too — it reads the FIELD, not that key. The judge has to see the
+    same catalogue the screen does, or the free text would be admissible on exactly the
+    instances where the control exists.
     """
     profile_data = json.loads(json.dumps(PROFILE))
     del profile_data["item_types"]["ejercicio"]["fields"]["nivel_dificultad"]["decided_by"]

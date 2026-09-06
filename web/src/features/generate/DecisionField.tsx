@@ -35,7 +35,7 @@ function Choice({
  * The control for one field the profile marks `decided_by: "user"`.
  *
  * `undefined` is the whole point: it means the field is not pinned, so the model picks
- * it. That is why every control offers «Cualquiera» explicitly instead of defaulting to
+ * it. That is why every control offers "Cualquiera" explicitly instead of defaulting to
  * the first option — silently pinning "básico" because it happens to be first would put
  * a decision in the prompt that nobody made.
  */

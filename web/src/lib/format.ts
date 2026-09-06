@@ -60,7 +60,7 @@ export const ARTIFACT_STATUS: Record<
   draft: { labelKey: "status.draft", tone: "attention" },
   approved: { labelKey: "status.approved", tone: "settled" },
   // `attention` and not `danger`, like `lib/status.ts`'s mark for the same state: what
-  // went stale is «lo de arriba cambió, vuelve a cerrarlo», which is a move to make and not
+  // went stale is "lo de arriba cambió, vuelve a cerrarlo", which is a move to make and not
   // information lost — the two tables used to disagree, so the badge printed red text
   // beside a blue mark.
   stale: { labelKey: "status.stale", tone: "attention" },

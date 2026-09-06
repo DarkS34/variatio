@@ -10,7 +10,7 @@ from variatio.core import paths
 
 @pytest.fixture
 def nobody(monkeypatch):
-    """An account that belongs to no workspace, which is a normal account since 2026-08-26."""
+    """An account that belongs to no workspace, which is a normal account."""
     monkeypatch.setattr(deps.identity, "memberships_for", lambda *args: [])
     monkeypatch.setattr(deps.identity, "membership", lambda *args: None)
     return SimpleNamespace(id=2, is_admin=False, active_workspace_id=None)
@@ -46,7 +46,7 @@ def test_the_first_membership_is_still_where_an_account_lands(monkeypatch):
 
 
 # A request that names no workspace is answered, not guessed at: there is no instance left
-# to fall back to, and the message is what the panel turns into «crea el tuyo».
+# to fall back to, and the message is what the panel turns into "crea el tuyo".
 def test_a_request_that_names_none_is_told_so(nobody):
     with pytest.raises(HTTPException) as raised:
         deps.resolve_workspace(None, nobody, None)

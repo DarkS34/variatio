@@ -24,7 +24,7 @@ export function InfoHint({
 }: {
   children: ReactNode;
   className?: string;
-  /** What the trigger announces. Defaults to the generic «more information». */
+  /** What the trigger announces. Defaults to the generic "more information". */
   label?: string;
 }) {
   const { t } = useT();

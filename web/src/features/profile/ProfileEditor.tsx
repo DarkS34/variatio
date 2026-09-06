@@ -92,7 +92,7 @@ function AddInline({
  * The types, as the tabs that choose which one is being read.
  *
  * Choosing one is not correcting anything, so the strip is drawn in both states; what
- * lives only in the correcting one is what ADDS and REMOVES a type. «Añadir un tipo» sat
+ * lives only in the correcting one is what ADDS and REMOVES a type. "Añadir un tipo" sat
  * against the tabs of a screen somebody had opened to read it, where it reads as a
  * question about the tab beside it rather than as an offer.
  */
@@ -312,12 +312,12 @@ export function ProfileEditor() {
     },
   });
 
-  // THIS SCREEN HAS NO «Guardar» OF ITS OWN: what writes the file is `StageGate`'s
-  // correction bar — «Guardar los cambios», pinned to the foot of the window — and
-  // «Continuar», which saves first and closes the stage after. What is offered upwards is
+  // THIS SCREEN HAS NO "Guardar" OF ITS OWN: what writes the file is `StageGate`'s
+  // correction bar — "Guardar los cambios", pinned to the foot of the window — and
+  // "Continuar", which saves first and closes the stage after. What is offered upwards is
   // the draft, so those buttons know there is something pending and why it may not be
   // written — the sentence is the pipeline validator's own, because refusing without saying
-  // why is what this screen exists to avoid. `discard` is what «Dejar de corregir» does once
+  // why is what this screen exists to avoid. `discard` is what "Dejar de corregir" does once
   // it has asked. `draft` is null only before the first read, where `dirty` is false and
   // `save` unreachable.
   useRegisterPendingEdit({
@@ -331,7 +331,7 @@ export function ProfileEditor() {
 
   if (query.isLoading) return <Skeleton className="h-96" />;
 
-  // «No hay perfil todavía» and «no se pudo leer» look the same from here and are not the
+  // "No hay perfil todavía" and "no se pudo leer" look the same from here and are not the
   // same thing: the first is the state a new workspace starts in and its screen is the build
   // button above; the second used to render nothing at all.
   if (query.isError)
@@ -350,9 +350,9 @@ export function ProfileEditor() {
 
   // THE DIFFICULTY IS NOT ONE MORE FIELD. Every modality carries one, its ladder is shared
   // by all of them and only its criterion is its own — so what a person edits is that
-  // criterion, once, up in «Qué tipo es», and not a row in the list with a name, a type and
+  // criterion, once, up in "Qué tipo es", and not a row in the list with a name, a type and
   // an obligatoriedad it does not get to choose. Editing it in two places is what the
-  // «(i) and visible text never say the same thing» rule is about.
+  // "(i) and visible text never say the same thing" rule is about.
   const difficultyField = difficultyFieldOf(spec) ?? query.data?.difficulty?.field ?? null;
   const difficultyLevels = difficultyLevelsOf(spec).length
     ? difficultyLevelsOf(spec)
@@ -462,11 +462,6 @@ export function ProfileEditor() {
 
   return (
     <div className="space-y-4">
-      {/* THE STICKY BAR AT THE TOP IS GONE (2026-09-02): what it carried — the unsaved
-          badge, the validator's sentence, the saving spinner — is what `StageGate`'s
-          correction bar says at the foot of the window, beside the save button that acts on
-          it. Two bars saying one thing a screen apart is the rule about the (i) and the
-          visible text. */}
       {save.isError ? (
         <Alert tone="danger" title={t("profileEditor.saveFailed")}>
           <p>{(save.error as Error).message}</p>
@@ -540,16 +535,10 @@ export function ProfileEditor() {
                 </div>
               )}
 
-              {/* THE LADDER IS SHARED AND THE CRITERION IS THE TYPE'S OWN. The sentence
-                  that used to say so between the two halves went on 2026-09-02 (explicit
-                  user request): the rungs are drawn above and the criterion below, and a
-                  paragraph explaining that arrangement is one a person preparing a subject
-                  reads once and then steps over for ever.
-
-                  The rungs are shown and not offered — that is what lets one level mean one
-                  thing across the whole list and lets the list be ordered by it. The
-                  render-prop form is not decoration: the label has to reach the textarea,
-                  and `Field` only injects into a single element child. */}
+              {/* The ladder is shared and the criterion is the type's own: the rungs are
+                  shown and NOT offered, which is what lets one level mean one thing across
+                  the whole list. The render-prop form is not decoration — the label has to
+                  reach the textarea, and `Field` only injects into a single element child. */}
               {editing ? (
                 <Field label={t("modality.difficulty")}>
                   {(props) => (
@@ -586,14 +575,10 @@ export function ProfileEditor() {
 
           <Card>
             <CardHeader>
-              {/* BEHIND THE (i) since 2026-09-01, by explicit user request, reversing the
-                  «visible, not hidden» this card carried. What it explains is what a rule
-                  HAS TO BE — checkable against an item already written, naming its field,
-                  useless if it would fit any subject — which is read once, when writing
-                  the first one, and then sits over the list for ever. The rule it bends is
-                  the app's own «visible beats hidden»; what keeps it honest is that
-                  nothing else on the screen says it, so the (i) is the only carrier and
-                  not a second copy. */}
+              {/* Behind the (i): what it explains is what a rule HAS TO BE — checkable
+                  against an item already written, naming its field, useless if it would fit
+                  any subject — which is read once and then sits over the list for ever.
+                  Nothing else on the screen says it, so the (i) is its only carrier. */}
               <CardTitle className="flex items-center gap-1.5">
                 {t("modality.rules")}
                 <InfoHint label={t("modality.rules.hintLabel")}>{t("modality.rules.body")}</InfoHint>
@@ -664,12 +649,10 @@ export function ProfileEditor() {
           </Card>
         </div>
 
-        {/* «Campos de …» IS DRAWN ONLY WHILE CORRECTING (explicit user request). An editor
-            per field — its identifier, its type, whether it is obligatory — is the most
-            technical question the whole path asks, and it was greeting somebody who had
-            opened the screen to read it. What was worth learning from them is asked where
-            it belongs: «¿Las partes de cada tipo son las correctas?» is in the
-            questionnaire beside this, so nothing is lost by not offering the editor. */}
+        {/* "Campos de …" is drawn only while CORRECTING: an editor per field — identifier,
+            type, whether it is obligatory — is the most technical question the whole path
+            asks, and it greeted somebody who had opened the screen to read it. The
+            questionnaire beside this asks what was worth learning from it. */}
         {editing ? (
           <>
           <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -691,12 +674,10 @@ export function ProfileEditor() {
             </Button>
           </div>
 
-          {/* LA TARJETA «CAMPOS QUE SE INDEXAN» YA NO ESTÁ (2026-09-01, explicit user
-              request). Qué campos entran en el índice es una decisión sobre la recuperación,
-              no sobre la asignatura, y quien prepara una instancia no tiene con qué
-              decidirla: se queda lo que el perfil traiga, que es lo que el constructor
-              dedujo. `embed_fields` sigue en el artefacto y `toggleIndexed` sigue existiendo
-              para cuando haya que volver a ofrecerlo. */}
+          {/* Which fields enter the index is a decision about retrieval and not about the
+              subject, and whoever prepares an instance has nothing to decide it with, so it
+              is not offered: what the profile brings is what the builder inferred.
+              `embed_fields` stays in the artifact and `toggleIndexed` still exists. */}
           {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
             <Alert tone="attention" title={t("modality.primaryNotText")}>
               <p>
@@ -760,23 +741,16 @@ export function ProfileEditor() {
 const MAX_NAMED_TYPES = 6;
 
 /**
- * WHAT CAME OUT OF THE BUILD, COUNTED AND NAMED (explicit user request).
+ * What came out of the build, counted and named.
  *
- * The sentence under the title was the same paragraph whatever the profile turned out to
- * hold, so it could not say the one thing somebody opening this screen has to know: how
- * many shapes of exercise were found and what they are called. Only this screen holds
- * those, which is why it hands the sentence up rather than the header reaching down.
+ * Only this screen holds those numbers, so it hands the sentence up rather than the header
+ * reaching down for them. `undefined` while there is no profile yet, because `StageGate`
+ * falls back on its own generic sentence and "se han detectado 0 tipos" is worse.
  *
- * `undefined` while there is no profile yet, because that is what `StageGate` falls back
- * on: «se han detectado 0 tipos» for half a second is worse than the generic sentence.
- * With ONE type the tabs are not a way of filtering anything, so nothing invites a press.
- *
- * What it counts is the file, twice over. Not the editor's draft — «se han detectado» is
- * about what the build produced, not about a name somebody is halfway through typing, and
- * the two can only differ while the bar below is saying «sin guardar». And not the file at
- * all during a REBUILD: the builder writes at the end, so the query still serves the
- * profile about to be replaced, and the header would spend the build naming types on their
- * way out — under a screen that hides that very artifact for exactly that reason.
+ * It counts the FILE, twice over: never the editor's draft, since "se han detectado" is
+ * about what the build produced and not about a name somebody is halfway through typing;
+ * and not the file at all during a rebuild, where the query still serves the profile about
+ * to be replaced and the header would spend the build naming types on their way out.
  */
 function useProfileIntro(stage: StageState | undefined): ReactNode {
   const { t, plural, language } = useT();
@@ -790,7 +764,7 @@ function useProfileIntro(stage: StageState | undefined): ReactNode {
 
   const shown = names.slice(0, MAX_NAMED_TYPES);
   const rest = names.length - shown.length;
-  // The list joiner is the language's own: Spanish puts «y» before the last name and
+  // The list joiner is the language's own: Spanish puts "y" before the last name and
   // English an Oxford comma, and neither belongs in a catalogue string.
   const listed = new Intl.ListFormat(language, { type: "conjunction" }).format(
     rest ? [...shown, plural("stage.what.profile.more", rest)] : shown,

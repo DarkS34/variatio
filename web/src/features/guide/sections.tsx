@@ -42,7 +42,7 @@ export interface GuideSection {
  * THE TREES ARE FETCHED, THE REGISTRY IS NOT.
  *
  * Each prose tree is ~46 kB of the guide's 102 kB chunk, and a reader needs one of them.
- * `GUIDE_SECTIONS` below stays static because the index, the search and the «Siguiente»
+ * `GUIDE_SECTIONS` below stays static because the index, the search and the "Siguiente"
  * link are drawn from it before any body is read.
  *
  * `React.lazy` wraps the LOOKUP rather than the module, which is what lets both 1 300-line
@@ -84,7 +84,7 @@ export const GUIDE_SECTIONS = [
     groupKey: "guide.group.start",
     icon: Layers,
   },
-  // First of «Preparar», because it is genuinely the first thing a new workspace does and
+  // First of "Preparar", because it is genuinely the first thing a new workspace does and
   // the one step that decides how long all three builds feel. It is not a stage — it
   // produces no artifact and nobody approves it — which is why it is here and not on the
   // rail.
@@ -126,9 +126,9 @@ export const GUIDE_SECTIONS = [
     groupKey: "guide.group.daily",
     icon: UserRound,
   },
-  // The other two administrator-only sections, and both sit in «Día a día» rather than
-  // «Fase de pruebas» because neither is something an evaluator ever does. This one first: it is the
-  // panel as a whole, and «repartir» is one of its five tabs read in detail.
+  // The other two administrator-only sections, and both sit in "Día a día" rather than
+  // "Fase de pruebas" because neither is something an evaluator ever does. This one first: it is the
+  // panel as a whole, and "repartir" is one of its five tabs read in detail.
   {
     slug: "admin",
     labelKey: "guide.sec.admin",
@@ -148,7 +148,7 @@ export const GUIDE_SECTIONS = [
  *
  * `GuideScreen` falls back to the first section for a slug it does not know, which is
  * right for a URL somebody typed and wrong for a link the application wrote: a renamed
- * section would go on «working», landing every reader on «Empezar». `GuideLink` takes this
+ * section would go on "working", landing every reader on "Empezar". `GuideLink` takes this
  * type, so the rename is a build error at every call site instead.
  */
 export type GuideSlug = (typeof GUIDE_SECTIONS)[number]["slug"];

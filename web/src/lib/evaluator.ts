@@ -18,8 +18,8 @@ export const PROFILE_LABEL_KEYS: Record<EvaluatorProfile, Key> = {
 
 /**
  * The same two, said in the first person, for the one screen where somebody classifies
- * THEMSELVES. Verbs and not nouns because a noun has to pick a gender — «alumno» — and the
- * installation does not know one; «¿das clase o estudias?» asks the same thing of anybody.
+ * THEMSELVES. Verbs and not nouns because a noun has to pick a gender — "alumno" — and the
+ * installation does not know one; "¿das clase o estudias?" asks the same thing of anybody.
  */
 export const PROFILE_SELF_LABEL_KEYS: Record<EvaluatorProfile, Key> = {
   teacher: "profile.self.teacher",

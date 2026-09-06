@@ -95,7 +95,7 @@ def test_only_the_accounts_that_were_inside_it_are_moved(db):
     assert fuera.active_workspace_id == aula.id
 
 
-# An administrator gets in anywhere, but «where do I land» is still their own memberships:
+# An administrator gets in anywhere, but "where do I land" is still their own memberships:
 # dropping them into the first workspace of the installation is entering somebody else's
 # instance without having asked, and that step was removed on purpose.
 def test_an_administrator_with_no_membership_lands_nowhere_either(db):
@@ -123,7 +123,7 @@ def test_the_last_workspace_of_the_installation_can_be_deleted(db):
 
 
 # `rehomed` is about everybody; `landed` is the one entry the tab that made the request
-# needs. Without it the browser blanks to «ninguna asignatura» until `me` answers, which is
+# needs. Without it the browser blanks to "ninguna asignatura" until `me` answers, which is
 # the flicker this field exists to remove.
 def test_the_answer_says_where_the_caller_itself_lands(db):
     aula = _workspace(db, "aula")

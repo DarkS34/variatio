@@ -74,10 +74,9 @@ def resolve(ws: Workspace, graph: KnowledgeGraph, param: list[str] | None) -> li
 
     Absent and `[]` are different requests and only absent falls back: an empty list is how
     a single commission says «sin restricción». A non-empty list is closed under the
-    prerequisite relation (2026-09-04): what the class has covered includes what that rests
-    on, which is what the selector marks on screen and what the row must record as having
-    run. The file's own list was closed when it was saved with the option, so closing it
-    again changes nothing.
+    prerequisite relation — what the class has covered includes what that rests on, which is
+    what the selector marks on screen and what the row must record as having run. Closing an
+    already-closed list changes nothing.
     """
     if param is not None:
         return closure(param, graph, locale.prerequisite_relation(ws)) if param else param

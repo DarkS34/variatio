@@ -11,8 +11,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
-// VOCABULARY RULE: the verb is kept. The button says «Aprobar», the notice says
-// «Aprobado». Never «Operación completada con éxito», which names neither the operation
+// VOCABULARY RULE: the verb is kept. The button says "Aprobar", the notice says
+// "Aprobado". Never "Operación completada con éxito", which names neither the operation
 // nor why it is appearing now. If the notice cannot name the action, the action did not
 // need a notice.
 type Tone = "settled" | "attention" | "danger";
@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={push}>
       {children}
       {/* Two regions rather than one: `assertive` interrupts whatever the screen reader is
-          reading, which is right for a failure and rude for «Aprobado». */}
+          reading, which is right for a failure and rude for "Aprobado". */}
       <div
         aria-live="polite"
         aria-atomic="false"

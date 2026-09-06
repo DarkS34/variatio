@@ -100,13 +100,13 @@ def test_the_statements_are_counted_rung_by_rung_in_the_instruments_own_order():
     assert precision["mean"] == 4.0
     assert [o["label"] for o in precision["options"]] == list(instruments.SCALE_LABELS)
     assert precision["statement"] == instruments.QUESTIONS[GRAPH][0]["statement"]
-    # «de acuerdo» y «totalmente de acuerdo» con «lo podría usar tal cual»: 2 de 3.
+    # "de acuerdo" y "totalmente de acuerdo" con "lo podría usar tal cual": 2 de 3.
     assert graph["usable"] == round(2 / 3, 3)
     assert graph["overall"]["statement"] == "En conjunto, ha salido bien."
 
 
 def test_the_usable_share_is_over_answers_on_the_scale_only():
-    """«none» was the best rung of the wording before the scale: it must not read as a no."""
+    """"none" was the best rung of the wording before the scale: it must not read as a no."""
     rows = [
         _form(answers={"effort": 5}, id=1),
         _form(answers={"effort": "none"}, id=2),

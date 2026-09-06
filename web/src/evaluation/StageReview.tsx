@@ -13,35 +13,27 @@ import { useOpenStageReview, useSaveStageReview, useStageReview } from "./querie
 import { questionCount, type StageInstrument, type StageScale } from "./types";
 
 /**
- * WHAT THE TEACHER SAYS ABOUT THE BUILD THEY ARE LOOKING AT.
+ * What the teacher says about the build they are looking at.
  *
  * The blind comparison measures the variants; this measures the chain that produces them,
- * and it is asked HERE — beside the artifact, on the stage's own screen — because a
- * judgement collected anywhere else is a judgement about a memory of it. That is also why
- * it is a column and not a page: what is being scored has to be on screen while the
- * scoring happens.
+ * and it is asked HERE, beside the artifact, because a judgement collected anywhere else is
+ * a judgement about a memory of it.
  *
- * NOTHING IN THE WORDING LIVES IN THIS FILE. The statements, the scale's rungs and their
- * order come from `evaluation/api/stage_instruments.py`, because rewording one changes what
- * was measured and that has to be one edit in one place. What is here is the frame: the
- * title, the state, the button, and what to do next.
+ * NOTHING in the wording lives in this file: the statements, the rungs and their order come
+ * from `evaluation/api/stage_instruments.py`, because rewording one changes what was
+ * measured. What is here is the frame — the title, the state, the button, what comes next.
  *
- * IT IS A LIKERT FORM (2026-09-04, explicit user request): every item is a statement and
- * the answer is how far the person agrees, on ONE five-rung scale shared by all of them,
- * «en conjunto» included. The rungs are named once, in a header row aligned to the same
- * five columns every row of buttons uses, and each button carries its rung as its
- * accessible name — five labels under every statement would not fit and would not be
- * read. The number is the score, 5 being best, so the columns read upwards left to right.
+ * A Likert form: every item is a statement and the answer is how far the person agrees, on
+ * ONE five-rung scale shared by all of them, "en conjunto" included. The rungs are named
+ * once in a header row aligned to the five columns every row of buttons uses, and each
+ * button carries its rung as its accessible name. The number IS the score, 5 being best.
  *
- * `--attention` is spent once and on the last thing: the button while there is something
- * to save, and then the step that follows. A form whose every row shouts is a form nobody
- * reads to the end.
+ * `--attention` is spent once and on the last thing: the button while there is something to
+ * save, then the step that follows. A form whose every row shouts is one nobody finishes.
  *
- * NO GROUND OF ITS OWN (2026-09-01, explicit user request, reversing the tint added the
- * same day). `--evaluation` moved to the BUTTON that opens this panel, in `StageGate`, which is
- * where it now does the work the tint was doing: saying that this block is the evaluation's and
- * not the artifact's. A coloured ground under a form is the wrong place for it anyway —
- * every control inside then has to fight it, and the selected radios did.
+ * No ground of its own — `--evaluation` is on the BUTTON that opens this panel, which is
+ * where it does the work: a coloured ground under a form is fought by every control inside
+ * it, the selected radios first.
  */
 export function StageReview({
   artifact,
@@ -104,7 +96,7 @@ export function StageReview({
   }
 
   // A panel that cannot load its data says so; it never renders null. An API older than
-  // the bundle does not serve this route, and a blank column reads as «esto no existe».
+  // the bundle does not serve this route, and a blank column reads as "esto no existe".
   if (review.isError || !instrument) return null;
 
   if (!review.data?.built) {
@@ -140,7 +132,7 @@ export function StageReview({
         <CardHeader className="gap-1 pb-3">
           <div className="flex items-center gap-2">
             <CardTitle className="flex-1 text-evaluation">{t("stageReview.title")}</CardTitle>
-            {/* Only «guardada», never «sin contestar»: the button that opens this panel is
+            {/* Only "guardada", never "sin contestar": the button that opens this panel is
                 already filled while the form is unanswered and quiet once it is not, so a
                 badge repeating it inside was the same fact twice, a centimetre apart. What
                 survives is the half the opener cannot say — that what you typed persisted. */}
@@ -235,7 +227,7 @@ export function StageReview({
 
       {/* THE VERDICT IS SAVED AND THAT IS ALL THIS SAYS. The forward button used to live
           here and navigate without closing the stage, which walked a person into a step
-          that then refused to build. There is ONE «continuar» now and it is at the foot of
+          that then refused to build. There is ONE "continuar" now and it is at the foot of
           the screen, beside the offer to correct — two exits together, as they were asked
           for. */}
       {answered ? (

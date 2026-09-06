@@ -56,8 +56,8 @@ import { jobName } from "@/lib/names";
  * Everything here is global to the installation: the one GPU and what it holds, the port
  * forward that reaches it, the models on the engine's disk, the contexts this process keeps
  * warm, the queue and its past, and the database. None of it belongs to a workspace, which
- * is why it was scattered — a count on the panel's «Sistema» card, the queue under
- * «Workspaces» — and why it is gathered here.
+ * is why it was scattered — a count on the panel's "Sistema" card, the queue under
+ * "Workspaces" — and why it is gathered here.
  */
 export function EngineTab({ overview }: { overview: AdminOverview }) {
   const { t } = useT();
@@ -70,37 +70,28 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
     );
   const data = engine.data;
 
-  // THE TAB IS ABOUT ONE ENGINE, AND THE ENGINE DECIDES HOW MANY HALVES IT HAS. Until
-  // 2026-08-26 every card here spoke about the GPU, while the installation could be routing
-  // its heaviest phases to Cerebras with nothing on screen saying so.
+  // The tab is about ONE engine, and the engine decides how many halves it has. What makes
+  // the two one subject rather than two lists is the question they both answer — what
+  // limits the work here — so "Local" leads with the VRAM three models share and "Remoto"
+  // with the quota, drawn with the same meters at a very different magnitude.
   //
-  // What makes the two one subject rather than two lists is the question they both answer —
-  // what limits the work here — so «Local» leads with the VRAM three models have to share
-  // and «Remoto» with the quota, drawn with the same meters at a very different magnitude.
+  // The split is drawn only where there ARE two halves, headings included: "Local" with no
+  // "Remoto" beside it divides nothing, and a Cerebras card kept alive by yesterday's
+  // spending would describe an engine this installation is no longer running. The ledger
+  // keeps that history either way.
   //
-  // THE SPLIT IS DRAWN ONLY WHEN THERE ARE TWO HALVES (2026-08-26, explicit user request).
-  // On the plain `ollama` engine the tab goes back to being one panel about one machine,
-  // headings included: «Local» with no «Remoto» beside it divides nothing, and a Cerebras
-  // card kept alive by yesterday's spending would describe an engine this installation is
-  // no longer running. The ledger keeps that history either way — switching back brings it
-  // straight back, and `GET /engine/cerebras/export.csv` never stopped serving it.
-  //
-  // `cerebras` is read defensively because it can genuinely be absent: an API older than
-  // this bundle does not send it, and a bare `data.cerebras.active` took the WHOLE tab down
-  // with a blank screen — the failure this project already refuses elsewhere («un panel que
-  // no puede cargar sus datos lo dice; nunca renderiza null»). Missing simply means no
-  // remote half, which is the same thing the plain `ollama` engine means.
+  // `cerebras` is read defensively: an older API does not send it, and a bare
+  // `data.cerebras.active` takes the WHOLE tab down with a blank screen. Missing means no
+  // remote half, which is what the plain `ollama` engine means.
   const remote = data.cerebras?.active ?? false;
 
-  // THE TWO COLUMNS ENCODE A DISTINCTION, NOT A WIDTH (2026-08-28, explicit user request):
-  // the left one MEASURES — the VRAM three models share, the quota, the queue — and the
-  // right one SETS, holding the engine's own settings that used to live one tab away in
-  // «Configuración». Each one therefore sits beside the thing it governs.
+  // The two columns encode a DISTINCTION and not a width: the left one MEASURES — the VRAM
+  // three models share, the quota, the queue — and the right one SETS, so each setting sits
+  // beside the thing it governs.
   //
-  // The remote half is drawn from TWO different readings on purpose. Its meters need the
-  // engine to be actually running Cerebras (`data.cerebras.active`), while its settings
-  // need only that somebody is ABOUT to: reading the draft is what lets a person switch the
-  // engine and fill in the key before saving, instead of saving blind and coming back.
+  // The remote half is drawn from TWO readings on purpose: its meters need the engine to be
+  // actually running Cerebras, its settings only that somebody is ABOUT to. Reading the
+  // draft is what lets a person switch engine and fill in the key before saving.
   const engineName = String(
     ("engine.name" in config.draft ? config.draft["engine.name"] : config.stored.get("engine.name")) ??
       "ollama",
@@ -191,7 +182,7 @@ function TunnelCard({
 
   // The engine answering on the local port while this process runs no ssh means the port is
   // reached some other way — a tunnel opened by hand, or Ollama on this machine. That is
-  // not «apagado», and offering «Conectar» would launch an ssh onto a port already taken.
+  // not "apagado", and offering "Conectar" would launch an ssh onto a port already taken.
   const external = available && !tunnel.running && !tunnel.wanted;
   const state = external
     ? { labelKey: "tunnel.external" as const, tone: "settled" as const }
@@ -368,7 +359,7 @@ function ResidencyCard({ engine }: { engine: AdminEngine }) {
 /**
  * What the GPU is holding, as one bar plus its legend.
  *
- * IT IS A PROPORTION AND NOT A FRACTION, and that is the whole reason it has no «de 45 GB»:
+ * IT IS A PROPORTION AND NOT A FRACTION, and that is the whole reason it has no "de 45 GB":
  * `/api/ps` reports how much each resident model occupies and never how much the card has,
  * and `nvidia-smi` here answers about a different machine — the engine is reached through a
  * forwarded port. So the bar divides the resident total between the models and the total is
@@ -534,9 +525,8 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
               <TBody>
                 {engine.installed.map((model) => {
                   // Still read, and only for the delete guard: a model some setting names
-                  // cannot be removed. WHICH setting names it left the table on 2026-08-28
-                  // (explicit user request) — the reasoning pipeline says it in full, and
-                  // there it can also be changed.
+                  // cannot be removed. WHICH setting names it is read in the reasoning
+                  // pipeline, where it can also be changed.
                   const asked = model.asked_by.length > 0;
                   return (
                     <TR key={model.model}>

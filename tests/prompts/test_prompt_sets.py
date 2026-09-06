@@ -197,9 +197,9 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
     assert len(RELATION_SCHEMA_ES) == len(RELATION_SCHEMA_EN) == 3
 
 
-# CLAUDE.md states it as a property of the whole system: «every prompt receives the
+# CLAUDE.md states it as a property of the whole system: "every prompt receives the
 # context's `prompt_block()` and is told to take register, level and language from it. That
-# is how they stay subject-agnostic while sounding native to the subject.» Two did not, and
+# is how they stay subject-agnostic while sounding native to the subject." Two did not, and
 # they were the two whose output came back in the wrong language — measured on a workspace
 # whose material and `locale.json` are both English, where the graph, the concept
 # descriptions and the bank all came out English and only the profile's `description` and
@@ -275,7 +275,7 @@ def test_the_ladder_is_three_rungs_of_plain_ascii(code):
 
 def test_the_two_sets_agree_on_how_many_rungs_there_are():
     # The criterion is per modality and the ladder is shared; a set with four rungs would
-    # make «advanced» mean something else depending on the language a workspace was built in.
+    # make "advanced" mean something else depending on the language a workspace was built in.
     sizes = {len(module.DIFFICULTY_LEVELS) for module in SETS.values()}
     assert len(sizes) == 1
 
@@ -312,10 +312,9 @@ def test_the_fallbacks_are_prose_and_not_a_criterion(code):
 def test_the_criterion_is_asked_for_in_the_shape_the_browser_splits(code):
     """The rung markers the prompt legislates are the ones `lib/difficulty.ts` reads.
 
-    Since 2026-09-01 a person picks the rung of the exercise they are commissioning and
-    the criterion is drawn beside the option it describes, one clause each. That only
-    works while the two agree on the marker, so the prompt spells every rung as
-    `«rung»:` and the splitter looks for exactly that.
+    A person picks the rung of the exercise they are commissioning and the criterion is drawn
+    beside the option it describes, one clause each. That only works while the two agree on
+    the marker, so the prompt spells every rung as `"rung":` and the splitter looks for it.
     """
     module = prompts.of(code)
     rendered = module.consolidate_exemplars_profile_prompt("x", 1)
@@ -340,7 +339,7 @@ HEADINGS = {
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
 def test_the_closure_is_forbidden_only_when_a_curriculum_says_it_is_untaught(code):
-    """One list, two readings (2026-09-04): `checks.closure_rule` keeps the same condition."""
+    """One list, two readings, and `checks.closure_rule` keeps the same condition."""
     function = prompts.of(code).generate_content_prompt
     kwargs = {
         name: "x"

@@ -34,12 +34,11 @@ const STATE_HINTS: Record<StatusKey, string> = {
 const ARM_ORDER = ["naive", "rag", "system"] as const;
 
 /**
- * El plan real del constructor del grafo, leído de la API como lo lee el panel.
+ * The graph builder's real plan, read from the API as the panel reads it.
  *
- * Estuvo copiado a mano en este fichero y se quedó atrás: dibujaba la conversión al 10 %
- * cuando pesa un tercio, y no dibujaba la fase de contexto en absoluto. La guía lee las
- * fuentes de la aplicación en vez de repetirlas, así que aquí tampoco hay respaldo escrito
- * a mano: sin plan, un esqueleto.
+ * The guide reads the application's own sources rather than repeating them, so there is no
+ * hand-written fallback here either: with no plan, a skeleton. A copy kept by hand falls
+ * behind — drawing a phase at 10 % when it weighs a third, or omitting one altogether.
  */
 function BuildPlanBar() {
   const phases = useBuildPhases("knowledge_graph");
@@ -89,9 +88,8 @@ function Start() {
       </SectionHead>
 
       <Block title="El recorrido, de un vistazo">
-        {/* Es la barra de arriba, dibujada aquí: los pasos salen de `STEPS` y las dos
-            puertas de `USES`, así que esta figura no puede prometer un orden que la
-            navegación no tenga. */}
+        {/* The bar above, drawn here: the steps come from `STEPS` and the two doors from
+            `USES`, so this figure cannot promise an order the navigation does not have. */}
         <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
           <div className="space-y-1.5">
             <p className="font-condensed text-micro uppercase text-muted-foreground">
@@ -624,9 +622,8 @@ function Raw() {
 }
 
 /**
- * Cómo termina cada uno de los tres pasos que construyen algo. Es el mismo bloque en las
- * tres secciones porque es la misma tarea: la única diferencia son las preguntas, que las
- * escribe el servidor.
+ * How each of the three building steps ends. The same block in all three sections because
+ * it is the same task: the only difference is the questions, which the server writes.
  */
 function Verdict({ artifact }: { artifact: string }) {
   const { t } = useT();

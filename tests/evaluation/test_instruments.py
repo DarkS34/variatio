@@ -21,14 +21,14 @@ def test_every_declared_profile_has_both_instruments():
 
 def test_the_two_profiles_share_the_ordinal_shape():
     # Same values in the same order, best first. This is what lets `triage_summary` fold
-    # «yes» and «partly» together without a per-profile table.
+    # "yes" and "partly" together without a per-profile table.
     for profile in EVALUATOR_PROFILES:
         values = [option["value"] for option in instruments.TRIAGE[profile]["options"]]
         assert tuple(values) == instruments.TRIAGE_VALUES
 
 
 def test_the_two_profiles_are_asked_different_questions():
-    # The whole point of the profile: a student does not teach, so «¿la pondrías en clase?»
+    # The whole point of the profile: a student does not teach, so "¿la pondrías en clase?"
     # would get an answer of convenience rather than none.
     assert (
         instruments.TRIAGE[TEACHER]["question"] != instruments.TRIAGE[STUDENT]["question"]
@@ -79,7 +79,7 @@ def test_the_rubric_payload_marks_the_middle_target_and_nothing_else():
 
 
 def test_the_decline_is_worded_about_the_subject_and_not_the_person():
-    # «No me veo capacitado» says something about them, and says it in the masculine, which
+    # "I do not feel qualified" says something about them, and says it in the masculine, which
     # the installation has no way of knowing. It is also the wrong claim: what is being
     # reported is the match between this panel and these three items.
     assert "capacitado" not in instruments.DECLINE_LABEL

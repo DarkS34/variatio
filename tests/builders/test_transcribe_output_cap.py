@@ -1,14 +1,12 @@
-"""A transcription answer that hits the output cap is a failed page, not a short one.
+"""A transcription answer that hits the output cap is a FAILED page, not a short one.
 
-Measured on 2026-09-05 in `compiladores`: nine pages of two exam papers came back with
-exactly 40 960 tokens each — the engine's whole budget — of one repeated `\\_`, because the
-header's fill-in line («Nombre: ____») was copied stroke for stroke and never stopped. Each
-cost 0.063 $ and ~65 s instead of 0.003 $ and ~1 s, and the 738 832 characters of garbage
-then went through the profile and the bank as if they were text: ~1.9 $ of that build's
-5.48 $, and one exam that contributed 0 items.
+Measured on the reference subject: a page whose header carries a fill-in line ("Nombre:
+____") can be copied stroke for stroke for the engine's whole budget — 40 960 tokens of one
+repeated `\\_`, at twenty times the cost and sixty times the time of a real page — and the
+garbage then goes through the profile and the bank as if it were text.
 
 `TRANSCRIBE_MAX_OUTPUT_TOKENS` bounds the call, and `truncated` — the engine's own stop
-reason — turns the cut answer into `FAILED_PAGE_PREFIX`: visible in «Apuntes y ejercicios»,
+reason — turns the cut answer into `FAILED_PAGE_PREFIX`: visible in "Apuntes y ejercicios",
 counted in `failed_pages`, never handed downstream. Not retried, because at temperature 0
 the same image produces the same run.
 """

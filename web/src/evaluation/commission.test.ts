@@ -7,10 +7,10 @@ import { toEvaluationParams, toStockParams } from "./commission";
 /**
  * The two ways a comparison is commissioned, and the field that must never travel.
  *
- * `FormState.n` is «cuántos ítems produce este encargo», a question an evaluation never
+ * `FormState.n` is "cuántos ítems produce este encargo", a question an evaluation never
  * asks: one item per arm is what makes the session the statistical unit, so the form hides
  * the counter in `variant="evaluation"` — and a hidden control keeps whatever it was left
- * at. The panel then read that hidden 2 as «cuántas comparaciones», so one commission
+ * at. The panel then read that hidden 2 as "cuántas comparaciones", so one commission
  * silently became two sessions and the same exercise appeared twice in the list.
  */
 describe("what an evaluation commission carries", () => {

@@ -5,181 +5,108 @@ from ..types import Impact, Setting
 _IDLE_DOC = """Cuánto puede estar el servidor sin ejecutar un solo trabajo antes de soltar la GPU
 (`inference.unload_all()`, que es `ollama stop` de cada modelo residente).
 
-`OLLAMA_KEEP_ALIVE=24h` es lo que mantiene los tres modelos calientes durante una sesión
-de trabajo, y eso es lo que se quiere mientras se está trabajando: los 29 GiB residentes
-no se pagan dos veces. Lo que no tiene sentido es que sigan ahí toda la noche porque
-alguien dejó la pestaña abierta, en una tarjeta que es de todos.
+`OLLAMA_KEEP_ALIVE=24h` mantiene los modelos calientes durante una sesión de trabajo, que
+es lo que se quiere mientras se trabaja; esto solo termina una sesión que ya ha acabado.
+30 minutos es la escala de la pausa que NO es una pausa de trabajo: entre dos etapas de la
+cadena pasan minutos, no media hora. Recargar los tres modelos cuesta ~30 s. 0 lo desactiva."""
 
-30 minutos porque es la escala de la pausa que NO es una pausa de trabajo: entre dos
-etapas de la cadena pasan minutos, no media hora, así que a este umbral no se llega
-revisando un grafo — se llega habiéndose ido. Recargar los tres modelos cuesta ~30 s, que
-es ruido al lado de cualquier construcción y de sobra tolerable en una generación suelta.
-0 lo desactiva."""
-
-_TEMPERATURE_DOC = """HASTA DÓNDE PUEDE DIVAGAR EL MUESTREADOR. El valor por defecto de Ollama es 0.8, y unos
-cuantos Modelfiles declaran 1.0 — una temperatura de REDACCIÓN, aplicada sin distinción a
-llamadas que no redactan nada: leer los conceptos de un fragmento, decidir si dos nombres
-son el mismo concepto, responder sí o no. Con ese valor por defecto, esas llamadas
-redibujan un grafo distinto a partir del mismo corpus en cada construcción, y la diferencia
-entre dos ejecuciones no es evidencia de nada. Toda llamada generativa del proyecto nombra
-ahora una de estas tres.
+_TEMPERATURE_DOC = """HASTA DÓNDE PUEDE DIVAGAR EL MUESTREADOR. El valor por defecto de Ollama es 0.8 —una
+temperatura de REDACCIÓN— aplicada sin distinción a llamadas que no redactan nada, y con
+él un mismo corpus produce un grafo distinto en cada construcción. Toda llamada generativa
+del proyecto nombra una de estas tres:
 
 1. DETERMINISTA — la respuesta es una lectura de la entrada y solo hay una correcta:
-   extracción, los nombres de dominio y su asignación, los escaneos del banco y del perfil,
-   el veredicto del guardarraíl, las descripciones de concepto que se embeben y se
-   cachean. Voraz, para que reconstruir sea reconstruir y no volver a dibujar. Lo que hace
-   que 0 sea seguro en todos estos sitios y no en los de abajo es que todos son
-   `think=False` Y están acotados por una gramática: la respuesta empieza en `{` y el
-   esquema limita cuánto puede seguir.
-2. RAZONAMIENTO — los juicios con `think=True` sobre un inventario que ya está fijado:
-   fusionar alias, descartar lo que no nombra un concepto, ordenar prerrequisitos,
-   etiquetabilidad. Deliberadamente NO es 0, y es el único valor de aquí elegido en contra
-   del determinismo. La decodificación voraz dentro de un canal de razonamiento es donde la
-   deliberación degenera en un bucle de repetición, y degenera EN SILENCIO en esta pila —
-   `KG_DOMAINS_MODEL` documenta una llamada que razonó durante 36 929 caracteres, alcanzó
-   su token de parada y devolvió una respuesta vacía que nada aguas arriba podía distinguir
-   de una de verdad. Es entropía suficiente para salir de un bucle así y queda muy por
-   debajo del 0.6 que la ficha del modelo sugiere para pensar sin límites, porque ninguna
-   de estas llamadas es abierta: el inventario que juzgan está cerrado.
-3. GENERACIÓN — el final del pipeline, y la única llamada del proyecto que redacta de
-   verdad. Aun así se queda baja, porque lo que hace que una variante merezca guardarse es
-   que obedezca su encargo — los conceptos objetivo, los campos fijados, el currículo, las
-   instrucciones — y la temperatura es exactamente lo que compra desviarse de los cuatro.
-   La variedad entre los `n` ítems de una misma tanda se paga en el PROMPT, que le enseña
-   al modelo los enunciados que ya ha escrito, y en la muestra aleatoria de ejemplos; aquí
-   no es tarea del muestreador."""
+   extracción, dominios, escaneos, guardarraíl, descripciones. Lo que hace 0 seguro aquí es
+   que todas son `think=False` Y están acotadas por una gramática.
+2. RAZONAMIENTO — los juicios con `think=True` sobre un inventario ya fijado. NO es 0, y es
+   el único valor elegido en contra del determinismo: la decodificación voraz dentro de un
+   canal de razonamiento degenera EN SILENCIO en un bucle de repetición (véase
+   `KG_DOMAINS_MODEL`: 36 929 caracteres de deliberación y respuesta vacía). Queda por
+   debajo del 0.6 que sugiere la ficha del modelo, porque el inventario que juzgan es
+   cerrado.
+3. GENERACIÓN — la única llamada que redacta de verdad, y aun así baja: lo que hace que un
+   ejercicio merezca guardarse es que obedezca su encargo, y la temperatura es exactamente
+   lo que compra desviarse de él. La variedad dentro de una tanda se paga en el PROMPT, que
+   enseña al modelo lo que ya ha escrito."""
 
-_RESIDENT_MODELS_DOC = """UN SOLO modelo generativo, desde el 2026-08-17: los tres niveles no cabían juntos en la A40
-(~45 GiB) y se desalojaban entre sí todo el día, y `gemma4:e4b-it-q8_0` (10.1 GiB) tampoco
-cabía junto a uno de clase 30B, lo que hacía que cada reparación de JSON dentro del bucle
-de extracción costase DOS cargas de ~10 s. Esa decisión sigue en pie; lo único que cambió
-es CUÁL es el modelo.
+_RESIDENT_MODELS_DOC = """UN SOLO modelo generativo por trabajo: los tres niveles antiguos no cabían juntos en la A40
+(~45 GiB) y se desalojaban entre sí. Lo que queda residente son tres modelos que SÍ caben a
+la vez — medidos en 29.05 GiB de ~45 con las ventanas de abajo: este, el guardarraíl y el
+embebedor. Esa aritmética ya no describe los perfiles que se envían, donde las fases que
+leen documentos nombran un MoE de 34.88 GiB: vuelve a medir `/api/ps` antes de citarla.
 
-Lo que queda residente son tres modelos que SÍ caben a la vez — medidos en 29.05 GiB de
-~45 con las ventanas de contexto de abajo —, así que nada desaloja nada: este, el
-guardarraíl y el embebedor. Ahora quedan 16 GiB de margen, donde el MoE anterior dejaba 3.5.
-
-La medición vigente frente a un MoE de clase 30B era la etiquetabilidad: sobre el dominio
-más grande del borrador de referencia (73 no etiquetables) `gemma4:31b` devolvió 75 y
-`qwen3.6:35b-a3b` 66, es decir, el MoE excluye de MENOS, que es justo la dirección contra
-la que legisla `review_taggable_concepts_prompt`. `qwen3.8:27b` es denso y razona, así que
-se espera que aquí lo haga mejor — pero eso es una PREDICCIÓN, no una medición, y es lo
-primero que hay que volver a comprobar en una construcción real.
-
-`qwen3.8:27b` desde el 2026-08-18, en sustitución de `qwen3.6:35b-a3b-q8_0` y
-revirtiendo la vuelta atrás del 2026-08-16, por petición explícita del usuario. Lo que
-reabrió la cuestión es que Ollama ya puede acotar cuánto delibera un modelo de
-razonamiento: `think` acepta un NIVEL DE ESFUERZO y no solo un booleano, y los ajustes por
-fase `reasoning.effort.*` fijan por defecto cada llamada con razonamiento en el más barato.
-
-Los motivos de aquella vuelta atrás eran reales y solo están respondidos EN PARTE, así que
-los números van aquí enteros. Todos en la A40, sobre la misma llamada —
-`link_domain_relations_prompt` sobre el dominio más grande del borrador de referencia, 43
-conceptos, 5 441 caracteres, temperatura 0:
+Medición vigente frente a un MoE de clase 30B, sobre la misma llamada de curación
+(43 conceptos, 5 441 caracteres, temperatura 0, A40):
 
   qwen3.6:35b-a3b-q8_0  think=true    128 s   37 264 car. de razonamiento   92.0 tok/s
   qwen3.8:27b-q4_K_M    think="low"   443 s   40 894                        29.1 tok/s
   qwen3.8:27b-q8_0      think="low"   649 s   38 796                        19.0 tok/s
   qwen3.8:27b-q8_0      think="high"  777 s   58 953        RESPUESTA VACÍA 19.2 tok/s
 
-Tres cosas que leer en esa tabla antes de tocar nada de esto:
+Tres cosas que leer ahí antes de tocar nada:
 
-1. EL NIVEL DE ESFUERZO NO REDUCE MUCHO LA DELIBERACIÓN. `low` sigue emitiendo ~41 000
-   caracteres, o sea más o menos lo que emitía el MoE antiguo con un `think=true` a secas.
-   Lo que mueve el nivel es el TECHO (58 953 en `high`), no el suelo. Quien espere abaratar
-   este modelo bajando más el esfuerzo se encontrará con que por debajo de `low` no hay
-   nada salvo `think=False`, que apaga el razonamiento del todo.
-2. EL COSTE ES LA DECODIFICACIÓN DENSA, y es el precio de esta decisión: 29.1 tok/s frente
-   a los 92.0 del MoE, así que una llamada de curación pasa de 128 s a 443 s y una
-   construcción se alarga ~3.5x. Aceptado a sabiendas el 2026-08-18.
-3. LA CUANTIZACIÓN SE PAGA, Y DESDE EL 2026-08-29 SE PAGA A PROPÓSITO. La q4_K_M es un
-   53 % más rápida que la q8_0 (29.1 frente a 19.0 tok/s) y ocupa 16.5 GB contra 27.9, y
-   obedece el nivel de esfuerzo exactamente igual — medido, no supuesto, en la tabla de
-   tokens de `reasoning.effort.*`. Aun así las fases pasaron a la q8_0 por petición
-   explícita del usuario, revirtiendo el «no la mejores a la q8» que esta nota decía antes.
-   Lo que lo forzó es que la q4_K_M NO ESTÁ INSTALADA en esta máquina: el perfil `ollama`
-   nombraba diecisiete fases contra un modelo que no existe, de modo que cambiar de motor
-   desde el panel disparaba una descarga de ~16 GB o un fallo. Las dos filas de la tabla de
-   arriba siguen midiendo lo que miden, así que el coste está cuantificado: una llamada de
-   curación pasa de 443 s a 649 s, y con ella la construcción entera.
+1. EL NIVEL DE ESFUERZO NO REDUCE MUCHO LA DELIBERACIÓN: `low` sigue emitiendo ~41 000
+   caracteres. Lo que mueve el nivel es el TECHO, no el suelo, y por debajo de `low` no hay
+   nada salvo `think=False`.
+2. EL COSTE ES LA DECODIFICACIÓN DENSA: 29.1 tok/s frente a 92.0, así que la construcción
+   se alarga ~3.5x. Aceptado a sabiendas.
+3. LA CUANTIZACIÓN SE PAGA A PROPÓSITO: la q4_K_M es un 53 % más rápida y ocupa 16.5 GB
+   contra 27.9, y obedece el esfuerzo igual — pero NO está instalada en esta máquina, así
+   que nombrarla dejaba diecisiete fases apuntando a un modelo inexistente. En calidad de
+   etiquetabilidad, un MoE excluye de MENOS (66 frente a 75 sobre 73 no etiquetables), que
+   es la dirección contra la que legisla `review_taggable_concepts_prompt`.
 
-   Lo que NO cambia es la otra mitad de aquella nota, que era sobre otro modelo: la
-   `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres, y
-   por eso el MoE de transcripción es la q8_0 y no la q4."""
+La `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres, y
+por eso el MoE de transcripción es la q8_0 y no la q4."""
 
-_TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no está ahí por el mismo
-motivo y no se movería con ella: reparar es un bucle de REINTENTO, y un reintento a 0 no es
-un reintento. El prompt del intento N+1 es la salida del intento N, así que un modelo que
-devuelve lo que se le dio reconstruye el prompt idéntico y, siendo voraz, escribe la
-respuesta idéntica — el presupuesto entero gastado en una sola réplica byte a byte igual,
-que es el fallo que `parse_with_repair` ya documenta haber pagado una vez."""
+_TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no se movería con ella:
+reparar es un bucle de REINTENTO, y un reintento a 0 no es un reintento. El prompt del
+intento N+1 es la salida del intento N, así que un modelo voraz reconstruye el prompt
+idéntico y escribe la respuesta idéntica — el presupuesto entero gastado en una réplica
+byte a byte, que es el fallo que `parse_with_repair` documenta haber pagado una vez."""
 
-_CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en
-la A40 a través de `/api/ps`, el modelo de juicio a 65536 + guardarraíl + embebedor suman 29.05 GiB
-de ~45 (19.49 + 5.49 + 4.07). La del guardarraíl era 8192, que costaba 1 GiB de caché KV y
-subía el total antiguo a 45.17 — pasado por poco, y el síntoma era que filtrar un encargo
-desalojaba al embebedor. Como mucho lee `GENERATION_INSTRUCTIONS_MAX_CHARS` (600
-caracteres, ~200 tokens), así que 4096 sigue siendo un margen de diez veces.
+_CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en la
+A40 a través de `/api/ps`, el modelo de juicio a 65536 + guardarraíl + embebedor suman
+29.05 GiB de ~45 (19.49 + 5.49 + 4.07). La del guardarraíl a 8192 costaba 1 GiB de caché KV
+y subía el total a 45.17, con el síntoma de que filtrar un encargo desalojaba al embebedor;
+como mucho lee `GENERATION_INSTRUCTIONS_MAX_CHARS` (600 caracteres, ~200 tokens), así que
+4096 es un margen de diez veces.
 
-La del modelo de juicio (hoy `context_window.overrides`, que la heredó al desaparecer
-`context_window.main` el 2026-08-28) se dobló desde 32768 el 2026-08-18, con el paso a un modelo de
-razonamiento. La regla cambió por debajo: con `think` encendido, la ventana ya no la
-dimensiona el PROMPT sino prompt + deliberación, y la deliberación es la mitad grande — el
-prompt más largo del pipeline son ~8 000 tokens, mientras que una sola llamada de curación
-en `low` gasta ~13 000 solo en razonar. El margen que liberó la q4, más ligera, es lo que
-lo paga, así que mantenerla no cuesta nada.
+Con `think` encendido la ventana ya no la dimensiona el PROMPT sino prompt + deliberación,
+y la deliberación es la mitad grande: el prompt más largo del pipeline son ~8 000 tokens y
+una sola llamada de curación en `low` gasta ~13 000 solo en razonar.
 
-Lo que NO arregla, medido, es la respuesta vacía que daba `curate_graph_domains_prompt`
-mientras seguía pidiendo la partición entera: sobre 203 conceptos, esa llamada devolvió
-`response == ""` a 32768 Y a 65536, byte a byte lo mismo (36 929 caracteres de
-razonamiento, 11 611 tokens — unos 13 200 en total, una quinta parte de la ventana más
-pequeña). Allí la ventana nunca fue la restricción; véase `KG_DOMAINS_MODEL`.
+Bajarla trunca EN SILENCIO, y trunca primero el razonamiento, así que el síntoma es una
+respuesta vacía o a medio escribir y no una cola de prompt que falta."""
 
-Bajarla trunca en silencio, como siempre — y ahora trunca primero el razonamiento, así que
-el síntoma es una respuesta vacía o a medio escribir, y no una cola de prompt que falta."""
+_CONTEXT_WINDOW_OVERRIDES_DOC = """La ventana de todo modelo de fase que no sea el guardarraíl o el embebedor. Sin ella, Ollama
+dimensiona la caché KV a partir del Modelfile, lo que para `qwen3.6:35b-a3b-q8_0` (34.88 GiB
+solo de pesos) es la diferencia entre caber junto al embebedor y no caber.
 
-_CONTEXT_WINDOW_OVERRIDES_DOC = """La ventana de todo modelo de fase que NO sea el principal, el guardarraíl o el embebedor.
-Antes de que esto existiera, un modelo así no tenía entrada en `LLM_CONTEXT` y Ollama
-dimensionaba su caché KV a partir del Modelfile, lo que para `qwen3.6:35b-a3b-q8_0` (34.88
-GiB solo de pesos) es la diferencia entre caber junto al embebedor y no caber. Un único
-valor y no uno por fase: a 2026-08-23 la única sobrescritura es ese MoE, puesto en las
-fases de construcción que leen documentos (`transcribe`, `ep_scan`, `eb_extract`,
-`kg_extract`, las dos `kg_clean_*` y las dos `kg_link_*`), mientras las fases de juicio y
-generación siguen en `qwen3.8:27b-q8_0`. Los dos nunca necesitan estar residentes a la
-vez — una construcción carga el MoE una vez y el 27b vuelve en la siguiente generación —,
-así que la aritmética de convivencia sigue siendo de tres modelos.
+Un único valor y no uno por fase: el MoE está en las fases que leen documentos y el modelo
+de juicio en las demás, y los dos nunca necesitan estar residentes a la vez — una
+construcción carga el MoE una vez y el 27b vuelve en la siguiente generación.
 
-65536 porque aplica la misma regla de siempre (prompt más deliberación allí donde una fase
-razona), y porque bajarla trunca en silencio. Desde el 2026-08-28 es también la ventana de
-las fases que antes seguían al modelo principal: `context_window.main` se fue con él, y su
-medición —doblada desde 32768 el 2026-08-18— es la de arriba, con el mismo número."""
+65536 por la misma regla de arriba (prompt más deliberación allí donde una fase razona), y
+porque bajarla trunca en silencio."""
 
 _TRANSCRIBE_DOC = """Transcripción de una página a partir de su imagen renderizada — compartida por LOS TRES
 constructores y por LOS DOS orígenes en bruto, así que hay una sola constante y no tres que
-pudieran divergir y producir dos markdowns distintos del mismo fichero. Desde el
-2026-08-27, por petición explícita del usuario, `raw/raw_corpus/` pasa también por esta
-ruta: la calidad pesa más que la velocidad, y a Docling le quedan el `.docx` y el `.pptx`,
-que no tienen página que renderizar. Desde el 2026-09-02 (petición explícita del usuario)
-las IMÁGENES de esos dos formatos también pasan por este modelo, una llamada por imagen y
-bajo el mismo bloque de reglas que la página (`IMAGE_RULES`), con caché por hash de contenido
-para que el logotipo repetido en cada documento se lea una vez por asignatura.
+pudieran divergir y producir dos markdowns distintos del mismo fichero. A Docling le quedan
+el `.docx` y el `.pptx`, que no tienen página que renderizar; sus IMÁGENES pasan también
+por este modelo, una llamada por imagen y bajo el mismo bloque de reglas que la página
+(`IMAGE_RULES`), con caché por hash de contenido.
 
-Lo que sostiene la fidelidad aquí es el PROMPT, no el modelo. Medido sobre Prog1_PEC1 p.1:
-sin la cláusula de copia carácter a carácter de `transcribe_page_prompt`, gemma4:31b
-reescribió `a -= 1` como `a = a - 1`, se inventó `8 - (n-i)` donde había `(n-i)` y
-convirtió `x = x - 1` en `x = x + 1` — lo que invierte la respuesta de la mismísima
-pregunta que estaba transcribiendo. Con la cláusula, los dos modelos de clase 30B vuelven
-fieles. Debilitar esa instrucción reintroduce en silencio código corrupto en el banco.
+Lo que sostiene la fidelidad aquí es el PROMPT, no el modelo. Medido: sin la cláusula de
+copia carácter a carácter de `transcribe_page_prompt`, gemma4:31b reescribió `a -= 1` como
+`a = a - 1`, se inventó `8 - (n-i)` donde había `(n-i)` y convirtió `x = x - 1` en
+`x = x + 1` — lo que invierte la respuesta de la pregunta que estaba transcribiendo.
+Debilitar esa instrucción reintroduce en silencio código corrupto en el banco.
 
-La comparación de fidelidad que hay detrás (acentos y el salto de línea de un docstring
-conservados donde gemma4:31b perdió ambos, 20s frente a 31s por página) se midió sobre
-`qwen3.6:35b-a3b-q8_0`, que ya no ocupa este puesto — pasó a
-`qwen3.8:27b` el 2026-08-18. El modelo nuevo tiene la capacidad `vision`,
-comprobado, así que la llamada funciona; si transcribe con la misma fidelidad NO está
-medido todavía. Es lo más barato de volver a comprobar de todo el pipeline (una página) y
-lo más dañino si se falla, porque una transcripción corrupta aterriza en el banco como un
-ejercicio cuya respuesta ha cambiado y, desde que el corpus se sumó a esta ruta, en el
-grafo como un concepto que el temario nunca enseñó."""
+Que el modelo de este puesto transcriba con la misma fidelidad que el medido NO está
+comprobado. Es lo más barato de volver a comprobar de todo el pipeline (una página) y lo
+más dañino si se falla: una transcripción corrupta aterriza en el banco como un ejercicio
+cuya respuesta ha cambiado, y en el grafo como un concepto que el temario nunca enseñó."""
 
 _TRANSCRIBE_SEAM_DOC = """La costura entre dos páginas transcritas por separado: el modelo CLASIFICA cómo se pegan
 —`none`/`space`/`newline`/`paragraph`— y cuántas líneas iniciales de la segunda son
@@ -188,12 +115,10 @@ transcripción está construido sobre «copia carácter a carácter», y un segu
 permiso para redactar lo tiraría por la borda. La respuesta se verifica contra el catálogo
 de separadores antes de creerla, y lo que no se pueda leer cae al detector determinista.
 
-SIN MEDIR. Esta fase existe desde el 2026-08-27 por petición explícita del usuario y no
-tiene todavía ni una medición de calidad ni una de coste: lo único comprobado es que el
-detector determinista solo, que es lo que había antes, mete un salto de párrafo en mitad de
-una frase o de un bloque de código cada vez que un ejercicio ocupa dos páginas. Una llamada
-por costura y solo cuando el detector no tiene certeza (una valla de código abierta sí lo
-es), así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
+SIN MEDIR en calidad y en coste. Lo único comprobado es que el detector determinista solo
+mete un salto de párrafo en mitad de una frase o de un bloque de código cada vez que un
+ejercicio ocupa dos páginas. Una llamada por costura y solo cuando el detector no tiene
+certeza, así que un documento de N páginas paga como mucho N-1 llamadas cortas."""
 
 
 # Seed value only: it is read once, when a phase has no stored model. Nothing resolves
@@ -203,35 +128,27 @@ _MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
 
 OFFERED_GROUP = "Modelos generadores"
 
-_FIXED_EFFORT_DOC = """QUÉ MODELOS NO DEJAN AJUSTAR EL ESFUERZO DE RAZONAMIENTO al pedir un ejercicio. Un
-nombre de esta lista sigue ofreciéndose para generar y sigue razonando si el encargo lo
-enciende; lo que pierde es el deslizador: se llama con el nivel que resuelva el motor y la
-pantalla lo dice en una palabra, «activado», en vez de «activado · bajo».
+_FIXED_EFFORT_DOC = """QUÉ MODELOS NO DEJAN AJUSTAR EL ESFUERZO DE RAZONAMIENTO al pedir un ejercicio. Un nombre de
+esta lista sigue ofreciéndose para generar y sigue razonando si el encargo lo enciende; lo
+que pierde es el deslizador.
 
-ESTO ERA UNA TABLA EN EL CÓDIGO hasta el 2026-09-01 (petición explícita del usuario). Vivía
-en `web/src/features/generate/models.ts` como el campo `effortMatters` de cada familia, indexada
-por el principio del nombre, así que declarar que un modelo nuevo ignora los niveles era un
-cambio de código y un despliegue. Es una propiedad medida del modelo, sí, pero quien la mide
-es quien administra la instalación y quien la sufre es quien pide el ejercicio, de modo que
-declararla es administrar y no programar.
+Es una propiedad medida del modelo, pero quien la mide es quien administra la instalación y
+quien la sufre es quien pide el ejercicio, así que declararla es administrar y no programar.
 
 LO QUE HAY QUE MEDIR PARA PONER UN NOMBRE AQUÍ: la misma llamada, temperatura 0 y semilla
 fija, en cada nivel. Si dos niveles devuelven byte a byte lo mismo, el deslizador ofrece una
 decisión que no cambia nada. Así se midió `gemma-4-31b` —de ahí que sea el único valor por
-defecto, y sólo en el perfil de `cerebras+ollama`, que es donde se sirve— y así se midió que
-`qwen3.8:27b-q8_0` SÍ los distingue en tres (`max` es `high` con otro nombre, que es cosa de
-`levels` y no de este ajuste).
+defecto, y sólo en el perfil de `cerebras+ollama`— y así se midió que `qwen3.8:27b-q8_0` SÍ
+los distingue en tres.
 
-LOS NOMBRES SON LOS DEL MOTOR y se comparan enteros, no por prefijo: la lista de ofrecidos
-también lo son, y el panel escribe aquí exactamente el nombre de la fila que se marca. De
-ámbito `engine` por lo mismo que la lista de ofrecidos — `gemma-4-31b` no existe en Ollama.
+LOS NOMBRES SON LOS DEL MOTOR y se comparan enteros, no por prefijo; de ámbito `engine` por
+lo mismo que la lista de ofrecidos, porque `gemma-4-31b` no existe en Ollama.
 
-NOMBRAR AQUÍ UN MODELO QUE NO SE OFREZCA no es un error y no se rechaza: se ofrece y se
-retira un modelo mucho más a menudo de lo que se vuelve a medir su razonamiento, y perder la
-medición al quitarlo de la lista un rato obligaría a repetirla.
+NOMBRAR AQUÍ UN MODELO QUE NO SE OFREZCA no es un error y no se rechaza: se retira un modelo
+mucho más a menudo de lo que se vuelve a medir su razonamiento.
 
 CON QUÉ NIVEL SE LE LLAMA lo dice `generation.fixed_effort_levels`, que es el otro lado de
-esta misma decisión: aquí se dice que el encargo no lo elige y allí, con cuál se llama."""
+esta misma decisión."""
 
 
 _FIXED_LEVEL_DOC = """CON QUÉ NIVEL SE LLAMA A UN MODELO DE ESFUERZO FIJO. Un mapa de nombre de modelo a nivel
@@ -240,66 +157,51 @@ en `generation.fixed_effort`: bloquear el deslizador y decidir con qué nivel se
 misma decisión vista por sus dos caras, y quien la toma es quien administra la instalación.
 
 UN MODELO BLOQUEADO SIN NIVEL DECLARADO se llama con el que resuelva el motor
-(`inference.DEFAULT_THINK_EFFORT`, «low» en los dos), que es lo que la documentación de
-`generation.fixed_effort` ha prometido siempre y lo que el encargo hacía sin decirlo: hasta
-el 2026-09-04 el navegador escondía el deslizador pero seguía mandando el último nivel que
-tuviera puesto, así que el bloqueo decía «lo fija la instalación» y lo fijaba el navegador.
+(`inference.DEFAULT_THINK_EFFORT`, «low» en los dos). Sin este ajuste el navegador esconde
+el deslizador pero sigue mandando el último nivel que tuviera puesto, así que el bloqueo
+diría «lo fija la instalación» y lo fijaría el navegador.
 
-ES UN AJUSTE APARTE de la lista de bloqueados, y no un mapa que sustituya a la lista, por la
-misma razón que la lista es aparte de la de ofrecidos: quitar el candado un rato no debe
-tirar la medición de con qué nivel conviene llamar a ese modelo.
+ES UN AJUSTE APARTE de la lista de bloqueados, por la misma razón que la lista es aparte de
+la de ofrecidos: quitar el candado un rato no debe tirar la medición.
 
-UN NOMBRE QUE NO ESTÉ BLOQUEADO no es un error y no se rechaza — se guarda y no se lee. De
-ámbito `engine`, como las otras dos listas, porque los nombres son los del motor."""
+UN NOMBRE QUE NO ESTÉ BLOQUEADO no es un error — se guarda y no se lee. De ámbito `engine`,
+como las otras dos listas, porque los nombres son los del motor."""
 
 
-_OFFERED_DOC = """QUÉ MODELOS PUEDE ELEGIR QUIEN PIDE UN ÍTEM, y en qué orden se le ofrecen. Sustituye desde
-el 2026-08-29, por petición explícita del usuario, al ajuste `models.phases.variant_generation`:
-la redacción de una variante era la única fase del pipeline cuyo modelo decidía la instalación
-en lugar de decidirlo el encargo, y es también la única en la que la diferencia se nota sin
-medir nada — un modelo servido en remoto contesta en segundos y uno denso en la GPU local
-tarda minutos, y a cambio delibera. Elegir entre esas dos cosas es exactamente la decisión
-que tiene quien pide el ejercicio, no la que tiene quien administra la instalación; lo que
-sigue siendo suya es ACOTAR la lista, que es lo que este ajuste declara.
+_OFFERED_DOC = """QUÉ MODELOS PUEDE ELEGIR QUIEN PIDE UN ÍTEM, y en qué orden se le ofrecen. La redacción de
+un ejercicio es la única fase cuyo modelo decide el encargo y no la instalación, porque es
+la única en la que la diferencia se nota sin medir nada: un modelo servido en remoto
+contesta en segundos y uno denso en la GPU local tarda minutos, y a cambio delibera. Lo que
+sigue siendo de la instalación es ACOTAR la lista.
 
-EL PRIMERO ES EL DE POR DEFECTO. `VARIANT_GENERATION_LLM` ya no es un ajuste: lo deriva
-`settings.derived` del primer elemento de esta lista, así que sigue existiendo para todo lo
-que no elige — la CLI, un encargo que no nombra ninguno y los tres brazos del estudio, que
-comparan arquitecturas y no modelos. La memoria tiene que decir CUÁL era el primero cuando
-se grabaron las sesiones, igual que dice qué motor las produjo.
+EL PRIMERO ES EL DE POR DEFECTO. `VARIANT_GENERATION_LLM` no es un ajuste: lo deriva
+`settings.derived` del primer elemento, así que sigue existiendo para todo lo que no elige —
+la CLI, un encargo que no nombra ninguno y los tres brazos del estudio, que comparan
+arquitecturas y no modelos. La memoria tiene que decir cuál era el primero cuando se
+grabaron las sesiones, igual que dice qué motor las produjo.
 
-LOS NOMBRES SON LOS DEL MOTOR, así que el ajuste es de ámbito `engine` como los veintiún
-modelos de fase: `gemma-4-31b` es el nombre de Cerebras y no existe en Ollama, cuyo nombre
-para esa misma familia sería `gemma4:31b-it-q4_K_M`. Cambiar de motor cambia la lista entera,
-y volver recupera la anterior intacta.
+LOS NOMBRES SON LOS DEL MOTOR, así que el ajuste es de ámbito `engine` como los modelos de
+fase: `gemma-4-31b` es el nombre de Cerebras y no existe en Ollama. Cambiar de motor cambia
+la lista entera, y volver recupera la anterior intacta.
 
-OFRECER UN MODELO NO LO DESCARGA. Nada llama aquí a `ensure_models` —solo lo hacen los tres
-constructores, con los suyos—, así que un modelo que no esté en el disco aparecerá como «sin
-instalar» en «Motor» y fallará en la primera llamada. A cambio, lo que sí hace este ajuste es
-PROTEGERLO: `required_models()` cuenta esta lista, de modo que el panel se niega a borrar del
-disco un modelo que la generación ofrece.
+OFRECER UN MODELO NO LO DESCARGA: nada llama aquí a `ensure_models`, así que uno que no esté
+en el disco aparece como «sin instalar» y falla en la primera llamada. Lo que sí hace es
+PROTEGERLO — `required_models()` cuenta esta lista, de modo que el panel se niega a borrar
+del disco un modelo que la generación ofrece.
 
-La lista está acotada por abajo a uno: vaciarla dejaría a la generación sin modelo y a
-`VARIANT_GENERATION_LLM` sin valor. Por arriba no hay límite, pero dos o tres es lo que cabe
-leerse en la pantalla antes de pedir un ítem; la nota y el enlace de cada familia conocida
-los pone el cliente (`web/src/features/generate/models.ts`), y un modelo que no reconozca se
-ofrece igual, con su nombre y sin nota."""
+Acotada por abajo a uno: vaciarla dejaría a la generación sin modelo. Por arriba no hay
+límite, pero dos o tres es lo que cabe leerse antes de pedir un ítem."""
 
-_PHASE_SHARED_DOC = """Una constante por llamada al modelo sigue siendo la unidad de reajuste, y esa es toda la
-razón de que sobrevivan a una consolidación: apuntar varias al mismo modelo es una decisión,
-no un colapso, y cualquier fase suelta puede moverse sin tocar las otras veinte. Desde el
-2026-08-28, por petición explícita del usuario, NO HAY MODELO PRINCIPAL: cada fase nombra el
-suyo y ninguna admite un valor vacío, así que lo que un constructor va a cargar se lee en el
-propio ajuste y no resolviendo un defecto. Lo que sigue es la medición que vivía en aquel
-ajuste, porque es la del modelo que la mayoría de las fases comparten. Léela sabiendo que su
-primera premisa —«un solo modelo generativo»— ya no describe los perfiles que se envían: hoy
-las fases que leen documentos nombran un modelo distinto del que juzga y genera.
+_PHASE_SHARED_DOC = """Una constante por llamada al modelo es la unidad de reajuste: apuntar varias al mismo modelo
+es una decisión, no un colapso, y cualquier fase suelta puede moverse sin tocar las otras
+veinte. NO HAY MODELO PRINCIPAL — cada fase nombra el suyo y ninguna admite un valor vacío,
+así que lo que un constructor va a cargar se lee en el propio ajuste y no resolviendo un
+defecto. Lo que sigue es la medición del modelo que la mayoría de las fases comparten.
 
 """ + _RESIDENT_MODELS_DOC
 
-_GUARDRAIL_DOC = """NO SE CAMBIA DESDE EL PANEL, desde el 2026-09-05 y por petición explícita del usuario: es
-uno de los dos modelos que no sirven a ninguna fase del pipeline, y los dos son decisiones
-cerradas con una medición detrás. El guardarraíl es un clasificador que lee como mucho
+_GUARDRAIL_DOC = """NO SE CAMBIA DESDE EL PANEL: es uno de los dos modelos que no sirven a ninguna fase del
+pipeline, y los dos son decisiones cerradas con una medición detrás. El guardarraíl es un clasificador que lee como mucho
 `GENERATION_INSTRUCTIONS_MAX_CHARS` (600 caracteres, ~200 tokens), así que su
 `context_window.guardrail` está en 4096 —un margen de diez veces— y es parte de lo que hace
 que los tres modelos residentes quepan a la vez. Cambiarlo desde un navegador es cambiar esa
@@ -317,8 +219,8 @@ casilla.
 
 """ + _RESIDENT_MODELS_DOC
 
-_EMBEDDING_DOC = """NO SE CAMBIA DESDE EL PANEL, desde el 2026-09-05 y por petición explícita del usuario, por
-la misma razón que el guardarraíl: el modelo de embebido es una decisión cerrada y medida.
+_EMBEDDING_DOC = """NO SE CAMBIA DESDE EL PANEL, por la misma razón que el guardarraíl: el modelo de embebido
+es una decisión cerrada y medida.
 `qwen3-embedding:4b` sustituyó a `embeddinggemma` después de una sonda de 18 consultas sobre
 14 conceptos en la que pasó de 15/18 a 18/18 en top-1 y más que dobló el margen entre el
 acierto y el mejor fallo (0,069 → 0,152); el 8b se midió y se DESCARTÓ —mismo top-1, margen
@@ -365,25 +267,22 @@ SETTINGS: list[Setting] = [
         group="Motor",
         impact=Impact.ENGINE,
         choices=("ollama", "cerebras+ollama"),
-        doc="""Qué implementación de motor de inferencia respalda generate()/embed()/embed_batch().
-`config.INFERENCE_ENGINE` la selecciona y la lógica de negocio nunca llama a un SDK
-directamente — todo pasa por `variatio.core.inference`.
+        doc="""Qué implementación respalda generate()/embed()/embed_batch(). La lógica de negocio nunca
+llama a un SDK: todo pasa por `variatio.core.inference`.
 
-'ollama' es el motor local de siempre. 'cerebras+ollama' es un motor compuesto: los modelos
-listados en CEREBRAS_MODELS van a la API de Cerebras (api.cerebras.ai, OpenAI-compatible) y
-todo lo demás —el guardián y el embedder incluidos— sigue en Ollama. La residencia, la
-descarga de la GPU y el pull/borrado de modelos son siempre de la mitad Ollama: en Cerebras
-no hay nada que cargar ni descargar.
+'cerebras+ollama' es un motor compuesto — el catálogo de Cerebras y lo que nombre
+CEREBRAS_MODELS van a su API, y todo lo demás, guardarraíl y embebedor incluidos, sigue en
+Ollama. La residencia, la descarga de la GPU y el pull/borrado son siempre de la mitad
+Ollama: en Cerebras no hay nada que cargar.
 
-CADA MOTOR TIENE SU PERFIL DE CONFIGURACIÓN. Los ajustes de ámbito «engine» (los modelos,
-las fases, las ventanas de contexto y los interruptores de razonamiento con sus esfuerzos) se
-guardan en `config.json` bajo `profiles.<motor>`, así que cambiar de motor cambia de perfil
-completo y volver atrás recupera el anterior tal cual se dejó.
+CADA MOTOR TIENE SU PERFIL: los ajustes de ámbito «engine» se guardan bajo
+`profiles.<motor>`, así que cambiar de motor cambia el perfil entero y volver recupera el
+anterior tal cual.
 
 Elegir 'cerebras+ollama' saca los prompts y el corpus de la máquina hacia un servicio
-externo: es una decisión explícita del 2026-08-24 que revoca, solo para quien lo active, el
-«open-source only / stack local» del registro de decisiones. El motor por defecto sigue
-siendo 'ollama'.""",
+externo, y revoca —solo para quien lo active— el «open-source only / stack local» del
+registro de decisiones. La memoria tiene que decir con qué motor se produjo lo que
+reporte.""",
     ),
     Setting(
         key="engine.cerebras_base_url",
@@ -431,25 +330,21 @@ la necesitan.""",
         default=["gemma-4-31b"],
         group="Motor",
         impact=Impact.ENGINE,
-        doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama' ADEMÁS de su catálogo. Desde el
-2026-09-03 todo modelo que la API de Cerebras lista en `/models` se sirve allí sin declararlo
-aquí — el panel ya ofrecía el catálogo entero en cada selector de fase, pero el enrutado solo
-miraba esta lista, así que elegir `qwen-3.8-27b` lo mandaba a Ollama, que no lo tiene. Esta
-lista es lo que manda cuando el catálogo no se puede leer (se recuerda la última lectura, y
-sin ninguna vale esto), y lo que nombra un modelo que el catálogo no lista. Todo lo demás va
-a Ollama.
+        doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama' ADEMÁS de su catálogo: todo modelo
+que la API lista en `/models` se sirve allí sin declararlo aquí. Esta lista es lo que manda
+cuando el catálogo no se puede leer (se recuerda la última lectura, y sin ninguna vale esto)
+y lo que nombra un modelo que el catálogo no lista. Todo lo demás va a Ollama.
 
-`gemma-4-31b` por defecto: es el id exacto del catálogo de Cerebras (~1.850 tok/s medidos
-por Artificial Analysis, ventana de 131.072, salida máxima 40.000, structured outputs con
-`strict` y razonamiento vía `reasoning_effort`).
+`gemma-4-31b` por defecto: el id exacto del catálogo de Cerebras (~1.850 tok/s, ventana de
+131.072, salida máxima 40.000, structured outputs con `strict` y razonamiento vía
+`reasoning_effort`).
 
 LAS CUOTAS SON POR MODELO, y las de la cuenta no son las que anuncia la página del modelo.
-Medido contra la API el 2026-08-26: `gemma-4-31b` declara 500 peticiones/min y 250.000
-tokens uncached/min, mientras la cuenta admite 5 peticiones/min, 30.000 tokens/min, 2.400
-peticiones/día y 1.000.000 de tokens/día. Un build entero no cabe ahí. Los headers no
-sirven para averiguarlo — remedido el 2026-08-29, `remaining-*` también cuenta contra la
-cuota del modelo — así que quien lo administra son los CEREBRAS_MAX_* de más abajo, y son
-un tope rígido: nada los sube solo.""",
+Medido contra la API: `gemma-4-31b` declara 500 peticiones/min y 250.000 tokens
+uncached/min, mientras la cuenta admite 5 peticiones/min, 30.000 tokens/min, 2.400
+peticiones/día y 1.000.000 de tokens/día — un build entero no cabe ahí. Los headers no
+sirven para averiguarlo: `remaining-*` también cuenta contra la cuota del MODELO, así que
+quien lo administra son los CEREBRAS_MAX_* de abajo, y son un tope rígido.""",
     ),
     # The four ceilings that actually bind, seeded with the free tier's figures. They are a
     # hard cap: no Cerebras header states the account's own quota — `limit-*` and
@@ -465,17 +360,16 @@ un tope rígido: nada los sube solo.""",
         impact=Impact.NONE,
         doc="""Cuántas peticiones por minuto admite la cuenta para CADA modelo enrutado a Cerebras.
 
-5 en el nivel gratuito (medido 2026-08-26: la primera llamada dejó
+5 en el nivel gratuito (medido: la primera llamada dejó
 `x-ratelimit-remaining-requests-minute` en 4, mientras el header `limit-` anunciaba 1000).
 Es el techo que más ata: 5/min es un suelo de 12 segundos entre llamadas, así que un build
 con cientos de llamadas pasa a durar horas. El limitador espera a que ruede la ventana en
 vez de comerse un 429, y lo dice en «Motor».
 
-Es un TOPE RÍGIDO: manda este número y nada lo sube. Hasta el 2026-08-29 era un suelo que
-la API podía levantar si informaba de que quedaba más, y eso es exactamente lo que rompió
-el limitador — `remaining-*` pasó a contar contra la cuota del MODELO, así que la primera
-respuesta subía el techo a 499 y no se retenía ni una llamada más. Lo que la API informe
-solo puede BAJAR lo que creemos que queda, nunca subirlo.
+Es un TOPE RÍGIDO: manda este número y nada lo sube. Dejar que la API lo levante es lo que
+rompe el limitador — `remaining-*` cuenta contra la cuota del MODELO, así que la primera
+respuesta subiría el techo a 499 y no se retendría ni una llamada más. Lo que la API informe
+solo puede BAJAR lo que creemos que queda.
 
 No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.""",
     ),
@@ -488,7 +382,7 @@ No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.""",
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántos tokens por minuto admite la cuenta para cada modelo enrutado a Cerebras. 30.000 en
-el nivel gratuito (medido 2026-08-26).
+el nivel gratuito, medido.
 
 Se cuentan con el `usage` exacto que trae cada respuesta, no con los headers: medido, el
 contador de tokens del servidor va con retraso — una llamada de 74 tokens y otra de 20
@@ -496,8 +390,8 @@ movieron `remaining-tokens-day` exactamente 6 las dos veces. El header solo se u
 BAJAR lo que creemos que queda, nunca para subirlo.
 
 Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
-creemos que queda; que informe de que queda más no levanta el techo (hasta el 2026-08-29 sí
-lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada).""",
+creemos que queda; dejar que un `remaining` generoso levante el techo es lo que deja al
+limitador sin efecto desde la primera llamada.""",
     ),
     Setting(
         key="engine.cerebras_max_requests_day",
@@ -508,16 +402,16 @@ lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada)
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántas peticiones al día admite la cuenta para cada modelo enrutado a Cerebras. 2.400 en el
-nivel gratuito (medido 2026-08-26: `remaining-requests-day` en 2399 tras una llamada,
-mientras el header `limit-` anunciaba 720.000).
+nivel gratuito (medido: `remaining-requests-day` en 2399 tras una llamada, mientras el header
+`limit-` anunciaba 720.000).
 
 La ventana es deslizante de 24 h, no un día natural: la API no manda ningún header de
 `reset`, así que la única ventana reconstruible es la que sale de nuestras propias marcas
 de tiempo. Ser deslizante es lo conservador — nunca gasta de más.
 
 Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
-creemos que queda; que informe de que queda más no levanta el techo (hasta el 2026-08-29 sí
-lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada).""",
+creemos que queda; dejar que un `remaining` generoso levante el techo es lo que deja al
+limitador sin efecto desde la primera llamada.""",
     ),
     Setting(
         key="engine.cerebras_max_tokens_day",
@@ -528,15 +422,15 @@ lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada)
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántos tokens al día admite la cuenta para cada modelo enrutado a Cerebras. 1.000.000 en el
-nivel gratuito (medido 2026-08-26).
+nivel gratuito, medido.
 
 Es el techo que decide si un build cabe: con prompts de ~8.000 tokens salen unas 125
 llamadas al día. El desglose por fase de «Motor» existe para responder a la pregunta que
 sigue — QUÉ fase se lo está comiendo — y se descarga en CSV.
 
 Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
-creemos que queda; que informe de que queda más no levanta el techo (hasta el 2026-08-29 sí
-lo hacía, y era lo que dejaba el limitador sin efecto desde la primera llamada).""",
+creemos que queda; dejar que un `remaining` generoso levante el techo es lo que deja al
+limitador sin efecto desde la primera llamada.""",
     ),
     Setting(
         key="engine.cerebras_max_wait_seconds",
@@ -563,18 +457,13 @@ respondiendo mientras se aguanta.""",
         minimum=1,
         group="Motor",
         impact=Impact.NONE,
-        doc="""Cuántos trabajos pueden usar Cerebras A LA VEZ. El carril local sigue siendo de uno y no
-es ajustable: la GPU es una, y dos trabajos encima no harían más que intercambiarse pesos.
+        doc="""Cuántos trabajos pueden usar Cerebras A LA VEZ. El carril local sigue siendo de uno y no es
+ajustable: la GPU es una, y dos trabajos encima solo se intercambiarían pesos.
 
-Aquí lo escaso es otra cosa. Cerebras no es una máquina que haya que repartir, es una cuota
-rodante, y de esa cuota ya se encarga el limitador llamada a llamada: cada llamada reserva
-su hueco en el libro antes de salir, así que dos trabajos en paralelo no gastan más que dos
-trabajos seguidos — solo dejan de esperarse el uno al otro. Con 1 aquí, la segunda persona
-que pide algo espera a que termine la primera sin que ninguna máquina esté ocupada.
-
-Subirlo no aumenta el presupuesto ni acelera un build: los cuatro CEREBRAS_MAX_* siguen
-mandando, y con la cuota llena lo que pasa es que esperan varias llamadas en vez de una. Lo
-que compra es que varias personas trabajen a la vez.
+Cerebras no es una máquina que repartir sino una cuota rodante, y de ella ya se encarga el
+limitador llamada a llamada — cada una reserva su hueco antes de salir, así que dos trabajos
+en paralelo no gastan más que dos seguidos: solo dejan de esperarse. Subirlo no aumenta el
+presupuesto ni acelera un build; lo que compra es que varias personas trabajen a la vez.
 
 No hace falta reiniciar nada: se lee cada vez que la cola mira si algo puede empezar.""",
     ),
@@ -587,20 +476,15 @@ No hace falta reiniciar nada: se lee cada vez que la cola mira si algo puede emp
         impact=Impact.ENGINE,
         env="OLLAMA_HOST",
         editable=False,
-        doc="""El host de Ollama como `host:puerto` (o una URL `http(s)://` completa). `config.py` lo
-lee de la variable de entorno `OLLAMA_HOST` y normaliza un `host:puerto` desnudo
-anteponiéndole `http://`; el registro guarda el valor desnudo y ese prefijo se añade en
-otro sitio, no aquí.
+        doc="""El host de Ollama como `host:puerto` (o una URL `http(s)://` completa). El registro guarda
+el valor desnudo y el `http://` se antepone en otro sitio, no aquí.
 
-SOLO DEL ENTORNO: no se puede cambiar en caliente. Es la dirección a la que este proceso
-manda TODAS sus llamadas al motor, así que reescribirla desde el panel es pedirle al
-servidor que llame a donde diga quien la reescribe —cualquier dirección de la red interna a
-la que la máquina llegue— y devolver por pantalla lo que conteste. Es la misma razón por la
-que el bloque `tunnel.*`, que describe el resto de la dirección de esta instalación, tampoco
-se toca desde el panel.
+SOLO DEL ENTORNO, y no por comodidad: es la dirección a la que este proceso manda TODAS sus
+llamadas al motor, así que reescribirla desde el panel es pedirle al servidor que llame a
+cualquier dirección de la red interna y devuelva por pantalla lo que conteste. Por eso el
+bloque `tunnel.*` tampoco se toca desde el panel.
 
-Apuntarlo a otra máquina, o al puerto local que abre el túnel, se hace por la variable de
-entorno `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
+Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
     ),
     Setting(
         key="engine.idle_unload_seconds",

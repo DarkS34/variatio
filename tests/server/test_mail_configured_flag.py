@@ -1,6 +1,6 @@
 """Whether the installation can deliver mail, said once and on the session payload.
 
-The optional address on «Mi perfil» has exactly one use — receiving the password-reset
+The optional address on "Mi perfil" has exactly one use — receiving the password-reset
 link — and with no SMTP configured `mail.send` writes that link to the log and the API
 hands it back in the response instead. A field promising a delivery that cannot happen is
 worse than no field, so the client hides it; what it needs in order to decide is this
@@ -61,7 +61,7 @@ def test_it_is_an_installation_fact_and_not_the_account_s(db, user, monkeypatch)
 
 
 def test_the_flag_is_the_one_mail_itself_reads(db, user, monkeypatch):
-    """Two readings of «is there mail here?» that could disagree would put the field on
+    """Two readings of "is there mail here?" that could disagree would put the field on
     screen exactly where `send` then refuses to deliver, so the payload asks
     `mail.configured` rather than testing the setting a second time of its own."""
     monkeypatch.setattr(mail, "configured", lambda: True)

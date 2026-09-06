@@ -53,7 +53,7 @@ def test_the_rank_is_the_position_in_the_modality_s_own_ladder(tmp_path):
 
 
 def test_a_value_off_the_ladder_ranks_last_instead_of_passing_for_the_entry_level(tmp_path):
-    # Sorting it to 0 would put an item nobody could classify at the top of «easiest first».
+    # Sorting it to 0 would put an item nobody could classify at the top of "easiest first".
     item_type = _profile(tmp_path).item_types["escritura"]
     assert item_type.difficulty_rank({"nivel_dificultad": "imposible"}) == UNRANKED_DIFFICULTY
     assert item_type.difficulty_rank({"nivel_dificultad": ""}) == UNRANKED_DIFFICULTY

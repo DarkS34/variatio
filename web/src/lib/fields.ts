@@ -38,11 +38,10 @@ export function inputToField(raw: string, wasList: boolean): unknown {
 /**
  * Whether a value carries C0 control characters, which in this corpus means damage.
  *
- * Banks extracted before 2026-08-29 hold text mangled by Cerebras' constrained decoding:
- * every non-ASCII character came back as `\u00` plus two wrong hex digits, so «¿Qué»
- * reached the file as `\x1fQu\x10\x10`. It is not recoverable in place — the information
- * is gone and only a re-extraction restores it — but until this, the screen painted those
- * items exactly like the sound ones and a person had to read every statement to find them.
+ * A bank extracted under Cerebras' constrained decoding holds text where every non-ASCII
+ * character came back as `\u00` plus two wrong hex digits, so "¿Qué" reached the file as
+ * `\x1fQu\x10\x10`. It is not recoverable in place — only a re-extraction restores it — and
+ * without this the screen paints those items exactly like sound ones.
  *
  * Tab, newline and carriage return are legitimate in a statement and are not damage.
  */

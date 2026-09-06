@@ -44,7 +44,7 @@ const ROLES: Role[] = ["viewer", "editor", "owner"];
 /**
  * The one screen that decides who exists and who gets in.
  *
- * It used to be two: an owner's «Personas e invitaciones» dialog, which handed out access
+ * It used to be two: an owner's "Personas e invitaciones" dialog, which handed out access
  * to one workspace, and this table, which listed the same accounts and could only switch
  * them off. Two places to answer one question is how the two answers drift apart, so the
  * dialog is gone and this is the whole of it — issuing invitations, moving people between
@@ -194,7 +194,7 @@ function AccountRows({
               className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
             />
             {/* For an administrator account the membership list does not describe what it can enter:
-                it enters everything. Saying «sin acceso a ninguno» there would be false. */}
+                it enters everything. Saying "sin acceso a ninguno" there would be false. */}
             {account.is_admin ? (
               <span className="text-muted-foreground">{t("acc.fullAccess")}</span>
             ) : account.workspaces.length === 0 ? (

@@ -30,29 +30,22 @@ import { useHasWorkspace } from "@/state/auth";
 import { useT } from "@/lib/i18n";
 
 /**
- * Everything this workspace has generated, kept.
+ * Everything this account has generated, kept.
  *
- * Until phase 3 a variant lived exactly as long as the tab that produced it: reload and a
- * minute of GPU was gone. Every validated item is now a row, and the row carries the
- * commission that produced it — concepts, currículo, campos fijados, instrucciones y si el
- * modelo razonó — because a statement without its parameters can be read but not judged
- * and not reproduced.
+ * Every validated item is a row, and the row carries the commission that produced it —
+ * concepts, curriculum, fixed fields, instructions, whether the model reasoned — because a
+ * statement without its parameters can be read but neither judged nor reproduced.
  *
- * YOURS AND NOBODY ELSE'S (2026-09-04, explicit user request). There were two scopes and
- * a pair of tabs to flip between them; the endpoint now answers your own rows and only
- * those, so there is nothing left to flip and no author to print on a row — every row here
- * is yours. What went with the tabs is the count of the whole instance, which reported how
- * much other people had produced.
+ * YOURS AND NOBODY ELSE'S: the endpoint answers your own rows and only those, so there is
+ * no scope to flip and no author to print on a row.
  *
- * A panel and not a screen: it is a tab of «Mi perfil», which already carries the page's
- * title, so this one heads its own section and does not claim to be the page.
+ * A panel and not a screen: it is a tab of "Mi perfil", which already carries the page's
+ * title.
  *
- * WITH NO SUBJECT IT ASKS FOR NONE (2026-09-04, explicit user request). «Mi perfil» is
- * reachable without belonging to an instance — that is the whole point of `NO_WORKSPACE`
- * being a state the app can express — so this tab used to fire two reads that could only
- * answer 403, and what a person read was the SERVER's sentence, in Spanish whatever their
- * interface language. The list is a child component so that its hooks do not run at all in
- * that state, and what is drawn instead is this application's own copy.
+ * With no subject it asks for NOTHING. "Mi perfil" is reachable without belonging to an
+ * instance, and the two reads would only answer 403 — with the server's sentence, in
+ * Spanish whatever the reader's language. The list is a child component so that its hooks
+ * do not run at all in that state.
  */
 export function GenerationsPanel() {
   const { t } = useT();
@@ -168,7 +161,7 @@ function GenerationsList() {
         <Skeleton className="h-64" />
       ) : rows.length === 0 ? (
         <EmptyState
-          // The same glyph the header's «Mis variantes» pill carries: an empty state is
+          // The same glyph the header's "Mis variantes" pill carries: an empty state is
           // the first thing a new account sees of this screen, and it should be looking at
           // the icon it just pressed. `Sparkles` stays below, where it means GENERATING.
           icon={<Archive className="size-6" />}
@@ -217,17 +210,12 @@ function GenerationCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
-          {/* THE MODALITY FIRST, THEN THE CONCEPTS (2026-09-04, explicit user request).
-              The row reads as an answer to «¿qué clase de ejercicio es, y sobre qué?», and
-              that is the order those two are asked in: the modality is one word from a
-              closed list and the concepts are a list of names, so a badge after them
-              landed at whatever width the names happened to end at.
-
-              Three chips left this row on 2026-09-02 (also by request): «razonó», the
-              model that wrote it and the date. All three are still on the row's data and
-              in the expanded commission, where somebody reproducing the exercise reads
-              them. Who asked left with them on 2026-09-04, when the list became private:
-              it is always you. */}
+          {/* The modality first, then the concepts: the row answers "¿qué clase de
+              ejercicio es, y sobre qué?", which is the order those two are asked in — and
+              the modality is one word from a closed list, so a badge after a list of names
+              lands at whatever width they happen to end at. Whether the model reasoned,
+              which one wrote it and when are in the expanded commission, where somebody
+              reproducing the exercise reads them. */}
           {manyTypes && profile ? (
             <Badge variant="outline">{typeLabel(profile, row.item_type, t)}</Badge>
           ) : null}
@@ -236,9 +224,8 @@ function GenerationCard({
           </CardTitle>
 
           <div className="ml-auto flex gap-1">
-            {/* A row promoted before the button went keeps saying so: that is data about
-                the bank, not a control. The promotion itself left the screen (2026-09-02,
-                explicit user request); the endpoint stays, screenless. */}
+            {/* A promoted row keeps saying so: that is data about the bank and not a
+                control. Promotion itself has no screen; the endpoint stays. */}
             {row.promoted_item_id ? (
               <Badge variant="secondary" className="gap-1 self-center">
                 <Library className="size-3" />
@@ -300,7 +287,7 @@ function GenerationCard({
 }
 
 /** The parameters the item was asked for with. Without them the statement is unreadable
- *  as evidence: «demasiado fácil» means nothing until you know what curriculum it had. */
+ *  as evidence: "demasiado fácil" means nothing until you know what curriculum it had. */
 function Commission({ row }: { row: GenerationRow }) {
   const { t } = useT();
   const entries: [string, string][] = [];

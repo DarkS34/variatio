@@ -23,14 +23,14 @@ import type { ProposalTagging } from "./types";
  * It carries no chrome of its own — the card wraps it in its own foot and the reading
  * dialog drops it into a stack — and it is deliberately NOT drawn beside the rubric: the
  * `prerequisites` scale asks the evaluator almost exactly what `off_limits` answers
- * («¿se resuelve con lo que va antes en el temario?»), and putting the machine's answer
+ * ("¿se resuelve con lo que va antes en el temario?"), and putting the machine's answer
  * against the scale would stop the two from being independent readings of one exercise.
  */
 export function TaggedConcepts({ tagging }: { tagging: ProposalTagging }) {
   const { t, plural } = useT();
   const trespasses = tagging.off_limits;
-  // What the line SAYS follows the rule the pass applied: «usa» when a curriculum made the
-  // closure untaught, «practica» when nobody said where the class stands and only the
+  // What the line SAYS follows the rule the pass applied: "usa" when a curriculum made the
+  // closure untaught, "practica" when nobody said where the class stands and only the
   // practised concept was held against the proposal. An older record has no rule and was
   // read under the first.
   const practises = tagging.rule === "practises";

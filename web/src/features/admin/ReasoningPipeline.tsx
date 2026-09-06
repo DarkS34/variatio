@@ -100,8 +100,8 @@ export function ReasoningPipeline({
  * A BUILDER's lane runs DOWN and not across, and that is the whole of the layout. Across,
  * the mark was a fixed width and the spacing between marks was elastic, so how the drawing
  * looked was a function of how many stops a lane happened to have — and they have 3, 11, 2
- * and 4. The long one overflowed into a scroller with every label clipped to «TRANSCRIPCI»
- * and every select to «gemm», and the short ones were left with holes. Down the page each
+ * and 4. The long one overflowed into a scroller with every label clipped to "TRANSCRIPCI"
+ * and every select to "gemm", and the short ones were left with holes. Down the page each
  * stop is the width of its column whatever its neighbours do, a model name fits without
  * being cut, and nothing has to scroll sideways to be read.
  *
@@ -138,7 +138,7 @@ function PhaseNode({
         : modelSetting.value ?? modelSetting.default)
     : null;
   // A node whose model is a LIST is the variant's: what a commission may be written with,
-  // in offer order. Read here and edited in «Modelos generadores», like every other node
+  // in offer order. Read here and edited in "Modelos generadores", like every other node
   // that does not own its model.
   const residentName = Array.isArray(modelValue)
     ? modelValue.map(String).join(" · ")
@@ -166,7 +166,7 @@ function PhaseNode({
           {phase.label}
         </span>
         {/* Effort and model share one line and the label has its own. The other way round
-            left «ETIQUETABILIDAD» 83px at the narrowest column, which is the clipping this
+            left "ETIQUETABILIDAD" 83px at the narrowest column, which is the clipping this
             layout exists to end — and a node is identified by its name long before it is
             identified by how hard it thinks. */}
         <span className="flex items-center gap-1.5">
@@ -242,8 +242,8 @@ function NodeEffort({
 
 const OTHER = "__other__";
 
-// The same choice the «Modelos» rows offered, shrunk to fit under a node: what the engine has
-// on disk, «principal» (null) first for an override, «Otro…» for a model not pulled yet. The
+// The same choice the "Modelos" rows offered, shrunk to fit under a node: what the engine has
+// on disk, "principal" (null) first for an override, "Otro…" for a model not pulled yet. The
 // select shows only the name; residency and size travel in the option text and the title.
 function NodeModel({
   phase,

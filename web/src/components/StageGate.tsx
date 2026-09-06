@@ -75,26 +75,16 @@ const GUIDE: Record<string, GuideSlug> = {
 };
 
 /**
- * WHY THE SCREEN BELOW MAY NOT BE WRITTEN TO RIGHT NOW.
+ * Why the screen below may not be written to right now.
  *
- * READ-ONLY STOPPED MEANING «APPROVED» (explicit user request). A stage used to open as a
- * form from top to bottom and ask, in the same breath, for a verdict on it — so the one
- * question a person could not answer was «what have I reviewed, if I have reviewed
- * nothing?». Viewing and correcting are two tasks, so they are two moments: the stage
- * opens as a STATIC VIEW, and correcting is what unlocks it.
+ * Read-only does not mean "approved": viewing and correcting are two tasks, so a stage
+ * opens as a STATIC VIEW — closed or not — and one button at the foot unlocks it. What
+ * closing means lives on the server: what is approved is the file's hash, and every hand
+ * edit withdraws the approval by itself, so a corrected stage reads as open again.
  *
- * ONE REASON, ONE WAY OUT (2026-09-02, explicit user request). A closed stage used to be
- * a second lock with a door of its own — «Reabrir» in the header — and having to press it
- * before being allowed to press «Quiero corregir algo» was a click nobody could explain.
- * Closed or not, the stage opens as a view and the same button at the foot unlocks it.
- * What closing still means lives on the SERVER: what is approved is the file's hash, and
- * every hand edit withdraws the approval by itself (`review.invalidate`), so a corrected
- * stage reads as open again and «Continuar» closes it once more. While viewing, a control
- * that only corrects is HIDDEN rather than greyed — nothing is wrong, it is simply not this
- * moment's task.
- *
- * What does NOT rewrite the artifact stays live in both states: the concept descriptions
- * and the curriculum are separate files and do not revoke anything.
+ * While viewing, a control that only corrects is HIDDEN rather than greyed: nothing is
+ * wrong, it is simply not this moment's task. What does not rewrite the artifact stays
+ * live in both states — the concept descriptions and the curriculum are separate files.
  */
 export type StageLockReason = "reviewing" | null;
 
@@ -111,11 +101,9 @@ export function useStageLocked() {
 /**
  * What a control that is disabled RIGHT NOW should say about itself.
  *
- * A key and not a sentence, because it is read by four screens and each one has its own
- * `t`. Preferably nothing reads it at all: a control that exists only to correct the
- * artifact is HIDDEN while the stage is being looked at, because nothing is wrong and
- * greying it out claims something is. What survives is the one way out, which every screen
- * names the same: «Quiero corregir algo», at the foot of the page.
+ * A key and not a sentence: four screens read it and each has its own `t`. Preferably
+ * nothing reads it at all — a control that only corrects is hidden while the stage is being
+ * looked at, since greying it out claims something is wrong.
  */
 export function useStageLockedHint(): Key {
   return "stage.viewHint";
@@ -124,17 +112,13 @@ export function useStageLockedHint(): Key {
 /**
  * What a screen is holding that the artifact on disk does not have yet.
  *
- * TWO BUTTONS WRITE IT AND NEITHER IS THE SCREEN'S OWN: «Guardar los cambios» in the
- * correction bar pinned to the foot of the window (2026-09-02, explicit user request — a
- * save button somewhere it can be seen), and «Continuar», which saves first and closes
- * after. That order is forced rather than preferred — what is approved is the file's HASH,
- * so closing while a change sits in the browser would stamp the artifact that is about to
- * be replaced, and the very next write would revoke the approval just given.
+ * Two buttons write it and neither is the screen's own: "Guardar los cambios" in the
+ * correction bar, and "Continuar", which saves FIRST and closes after. That order is
+ * forced: what is approved is the file's hash, so closing over an unwritten change would
+ * stamp the artifact about to be replaced and the next write would revoke the approval.
  *
- * It is a REGISTRATION and not a prop because the draft lives in the editor, under the
- * header that draws the buttons: passing it down would mean lifting a whole artifact's
- * state into `ProfileScreen` so that one button could read one boolean off it. The mirror
- * of `StageLock`, which travels the other way through the same children.
+ * A registration and not a prop, because the draft lives in the editor under the header
+ * that draws the buttons. The mirror of `StageLock`, which travels the other way.
  */
 export interface PendingEdit {
   /** Whether the screen is holding something the file does not have. */
@@ -143,18 +127,15 @@ export interface PendingEdit {
   blocked: string | null;
   /** Write it. `approve` awaits this and never approves if it rejects. */
   save: () => Promise<unknown>;
-  /** Drop it, back to what the file holds — what «Dejar de corregir» does once it has asked. */
+  /** Drop it, back to what the file holds — what "Dejar de corregir" does once it has asked. */
   discard: () => void;
 }
 
 const StagePending = createContext<((edit: PendingEdit | null) => void) | null>(null);
 
 /**
- * The two contexts every stage screen sits in, as ONE element.
- *
- * They compose here rather than nesting around the header's JSX so that adding the second
- * one did not re-indent three hundred lines of it. The lock travels down (what may be
- * edited) and the pending edit travels up (what is not written yet).
+ * The two contexts every stage screen sits in, as ONE element: the lock travels down (what
+ * may be edited) and the pending edit travels up (what is not written yet).
  */
 function StageScope({
   locked,
@@ -173,11 +154,11 @@ function StageScope({
 }
 
 /**
- * Offer this screen's unsaved edit to the «Aprobar» button above it.
+ * Offer this screen's unsaved edit to the buttons above it.
  *
  * `save` is a fresh closure over the draft on every render, so it is kept in a ref and the
- * effect re-runs only when `dirty` or `blocked` actually change: registering on every
- * keystroke would re-render the header for each character typed.
+ * effect re-runs only when `dirty` or `blocked` change: registering on every keystroke
+ * would re-render the header for each character typed.
  */
 export function useRegisterPendingEdit({ dirty, blocked, save, discard }: PendingEdit) {
   const register = useContext(StagePending);
@@ -199,12 +180,10 @@ const REVIEW_UNFOLD_MS = 300;
 
 /**
  * A stage is visible before it is available, and says exactly why it is not.
- * A disabled control with no explanation is the thing this screen exists to avoid.
  *
- * What the stage *is* is the guide's (`GuideLink`, under the title): the (i) that used to
- * hold a paragraph beside the heading is gone (2026-08-31, explicit user request), and with
- * it the `description` the three screens passed in. What is wrong with the stage right now
- * stays on the page, because that is the part you have to act on.
+ * A disabled control with no explanation is the thing this screen exists to avoid. What the
+ * stage IS belongs to the guide, linked under the title; what is wrong with it right now
+ * stays on the page, because that is the part you act on.
  */
 export function StageGate({
   stage,
@@ -216,10 +195,9 @@ export function StageGate({
   /**
    * What this stage is, when the screen can say it better than a fixed sentence can.
    *
-   * `WHAT` below is the same paragraph whatever came out of the build, and «se han
-   * detectado tres tipos de ejercicio: …» is worth more than any wording that cannot
-   * count. Only the screen holds those numbers, so it passes the sentence up rather than
-   * the header reaching down for data it has no business fetching.
+   * `WHAT` is the same paragraph whatever came out of the build, and "se han detectado tres
+   * tipos de ejercicio: …" is worth more. Only the screen holds those numbers, so it passes
+   * the sentence up rather than the header fetching data it has no business fetching.
    */
   intro?: ReactNode;
   /**
@@ -239,28 +217,20 @@ export function StageGate({
   const toast = useToast();
   const confirm = useConfirm();
   const { navigate } = useRouter();
-  // EL CUESTIONARIO EMPIEZA CERRADO Y SE ABRE DESDE SU BOTÓN (2026-09-01, explicit user
-  // request). Vivía siempre desplegado; lo que cambia es que ahora hay que pedirlo, y el
-  // botón que lo pide está al pie del artefacto, donde «lo que acabas de revisar» es
-  // cierto.
+  // The questionnaire starts shut. Its button is at the FOOT of the artifact, which is the
+  // only place "lo que acabas de revisar" is true.
   const [reviewOpen, setReviewOpen] = useState(false);
-  // CORREGIR ES UN ACTO, NO EL ESTADO POR DEFECTO. The stage opens as a static view and
-  // this is what opens it for writing. It belongs to the visit and not to the artifact:
-  // it is «estoy corrigiendo ahora», which nothing on disk records.
+  // Correcting is an act and not the default state. It belongs to the visit and not to the
+  // artifact: "estoy corrigiendo ahora" is nothing anything on disk records.
   const [curating, setCurating] = useState(false);
   const reviewPanel = useRef<HTMLDivElement>(null);
-  // WHETHER THIS PERSON CORRECTED BEFORE JUDGING, which is the evaluation's own contrast:
-  // «cómo lo valoran los que curaron y cómo lo valoran los que no». It is the header that
-  // knows — the verdict panel only sees its own form — and it is a WRITE that counts, not
-  // merely having opened the controls.
-  //
-  // It states what THIS visit did, which is what the contrast asks and not quite the same
-  // as what the person ever did: correcting, leaving without answering and coming back
-  // records a «no». The server only ever lets the mark climb, so any verdict given after
-  // a correction in the same visit settles it for good.
+  // Whether this person corrected before judging, which is the evaluation's own contrast.
+  // A WRITE counts, not merely having opened the controls, and it states what THIS visit
+  // did: correcting, leaving without answering and coming back records a "no". The server
+  // only ever lets the mark climb.
   const [curated, setCurated] = useState(false);
-  // Whether the bar's own «Guardar» has written once this visit — what lets it say «Cambios
-  // guardados» over a draft that is clean again, instead of «todavía no has cambiado nada».
+  // Whether the bar's "Guardar" has written once this visit: what lets it say "Cambios
+  // guardados" over a clean draft instead of "todavía no has cambiado nada".
   const [savedOnce, setSavedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
   // Another artifact is another stage: what was open for correcting was the one you left.
@@ -270,20 +240,17 @@ export function StageGate({
     setSavedOnce(false);
     setReviewOpen(false);
   }, [stage?.artifact]);
-  // The panel opens directly under the button that asks for it, and the button is at the
-  // foot of the artifact, so what is under it is below the fold: the WRAPPER — button and
-  // panel — is brought to the top of the window, under the sticky header (`scroll-mt-20`),
-  // and the form unfolds beneath. Measured before: `block: "nearest"` on the panel alone
-  // scrolled nothing, because the panel is 0 px tall at the instant it is asked to open.
+  // The WRAPPER — button and panel — is what is scrolled to, under the sticky header
+  // (`scroll-mt-20`): the panel alone is 0 px tall at the instant it is asked to open, so
+  // scrolling to it scrolls nowhere.
   useEffect(() => {
     if (!reviewOpen) return;
     // `scrollIntoView` does not honour the media query on its own, unlike a CSS transition.
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const scroll = () =>
       reviewPanel.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
-    // AFTER the unfold, not at the click: the panel grows over `REVIEW_UNFOLD_MS` and the
-    // page is only as tall as its content, so a scroll asked for at the click stops where
-    // the short page ends — measured, the button landed at y=630 instead of at the top.
+    // AFTER the unfold and not at the click: the page is only as tall as its content, so a
+    // scroll asked for before the panel has grown stops where the short page ends.
     if (still) {
       scroll();
       return;
@@ -293,22 +260,17 @@ export function StageGate({
   }, [reviewOpen]);
   const review = useStageReview(stage?.artifact);
   const answeredReview = review.data?.mine?.answered ?? false;
-  // How many the form asks, from the form itself. It was «Cinco» written into the string
-  // for all three stages while the graph asks six, so the button promised one thing and
-  // opened another.
+  // How many the form asks, from the form itself: a number written into the string promises
+  // one thing and opens another as soon as an instrument changes.
   const reviewCount = review.data ? questionCount(review.data.instrument) : 0;
   // What the screen below is holding, if it holds anything. See `PendingEdit`.
   const [advanceFailed, setAdvanceFailed] = useState(false);
   const [curateFailed, setCurateFailed] = useState(false);
   const [pending, setPending] = useState<PendingEdit | null>(null);
   const register = useCallback((edit: PendingEdit | null) => setPending(edit), []);
-  // The verb is kept: the button says «Aprobar», the notice says «Aprobado». Both of these
-  // changed the state of the whole chain and said nothing, and invalidating a query does
-  // not always change anything visible on the screen you pressed the button from.
   const approve = useMutation({
-    // SAVE FIRST, AND ONLY THEN APPROVE — and never approve if the write fails, which is
-    // what awaiting it buys: an approval over the previous file is worse than no approval,
-    // because it reads as done.
+    // Save first, approve second, and never approve if the write fails: an approval over
+    // the previous file is worse than none, because it reads as done.
     mutationFn: async () => {
       if (pending?.dirty) await pending.save();
       return api.approve(stage!.artifact);
@@ -332,26 +294,23 @@ export function StageGate({
   const missing = stage.status === "missing";
   const ready = !building && !missing;
   const approved = stage.status === "approved";
-  // Closed or not, the same door: «Quiero corregir algo» unlocks a closed stage too, and the
+  // Closed or not, the same door: "Quiero corregir algo" unlocks a closed stage too, and the
   // first write withdraws the approval on the server (see `StageLockReason`).
   const locked: StageLockReason = curating ? null : "reviewing";
-  // «Building» covers a job that has not started: a queued build already marks the
-  // artifact, which is right — it is about to be rewritten — but a bar and «se está
-  // construyendo» over a job waiting its turn says work is happening that is not.
+  // "Building" covers a job that has not started, so a queued build is told apart here: a
+  // bar over a job waiting its turn says work is happening that is not.
   const waitingJob = building && isQueued(busyRun?.job) ? busyRun!.job! : null;
   const wait = waitOf(waitingJob, lanes);
-  // What the build is about to replace, which «building» hides: the hash is of the file on
+  // What the build is about to replace, which "building" hides: the hash is of the file on
   // disk and stays null through a first build, when there is nothing to replace at all.
   const hasPrevious = Boolean(stage.hash);
   // Where moving on goes, and what it is called there. Read from `STEPS` so the number on
   // the button and the screen it opens cannot drift apart.
   const next = nextStepOf(stage.artifact);
 
-  // MOVING ON CLOSES THE STAGE. The verdict panel's forward button used to navigate and
-  // nothing else, so the one control the screen offers led to a step that then refused to
-  // build for want of an approval nobody had been asked for. Closing is the same operation
-  // «Aprobar» performs — the pending write first, and no approval at all if it is refused
-  // — so it is that mutation and not a second path to the same endpoint.
+  // Moving on CLOSES the stage, or the one control the screen offers would lead to a step
+  // that then refuses to build for want of an approval nobody was asked for. It reuses the
+  // approve mutation rather than opening a second path to the same endpoint.
   const advance = {
     blocked: (pending?.dirty && pending.blocked) || null,
     running: approve.isPending,
@@ -368,29 +327,18 @@ export function StageGate({
     <StageScope locked={locked} register={register}>
       <div className="space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-4">
-          {/* The guide link goes UNDER the title, on a line of its own. Beside it, it was one
-              more chip in a row of chips — badge, (i), link — and the one thing there that
-              is not about this stage's state read as though it were. The (i) itself left on
-              2026-08-31: a link to the guide says the same thing where the whole answer is,
-              instead of a paragraph nobody can search hidden behind a glyph. Under the title it is
-              plainly what it is: where to go and read about this screen.
-
-              The «autogenerado» badge is gone from all three stages. Where the file being
-              read comes from is a fact about the pipeline, not about the work: it said
-              nothing a person acts on, and it sat in the row that reports whether the stage
-              is built, approved or stale — which is what that row is for. */}
+          {/* The guide link goes UNDER the title, on a line of its own: beside it, it is one
+              more chip in a row of chips and the only one there not about the stage's state.
+              It replaces an (i) — a paragraph behind a glyph can be neither read at length
+              nor searched. */}
           <div className="min-w-0 space-y-1.5">
             {stepNumberOf(stage.artifact) ? (
               <p className="text-micro text-muted-foreground">
                 {t("nav.stepNumber", { n: stepNumberOf(stage.artifact)! })}
               </p>
             ) : null}
-            {/* NO TAG OF ANY KIND BESIDE THE TITLE (2026-09-03, explicit user request).
-                The state badge — «Aprobado», «Borrador», «Obsoleto» — is gone from the
-                four steps' headers: the bar at the top already says the state under each
-                step's name, and what a state ASKS of the person is said by the notices
-                below (stale, blocked). A word that names a state a person cannot act on
-                from here was one more chip in the row. */}
+            {/* No tag of any kind beside the title: the bar already says the state under
+                each step's name, and what a state ASKS is said by the notices below. */}
             <h1 className="text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
             {intro ?? (
               WHAT[stage.artifact] ? (
@@ -402,17 +350,14 @@ export function StageGate({
             {GUIDE[stage.artifact] ? <GuideLink slug={GUIDE[stage.artifact]} /> : null}
           </div>
 
-          {/* THE HEADER CARRIES NO CONTROL AT ALL (2026-09-02, explicit user request). The
-              build button lived here, small, in the top-right corner of a screen whose whole
-              body was empty — it is the one thing to do on an unbuilt stage, so it is drawn in
-              the middle of that emptiness and at a size that says so. «Reabrir» lived here too
-              and is gone: a closed stage is corrected through the same button as an open one,
-              at the foot. And nothing offers a rebuild any more — a second pass over the same
-              documents does not give a different result, so the control was a way to throw
-              away corrections for nothing. */}
+          {/* The header carries no control at all: the build button is the one thing to do
+              on an unbuilt stage, so it is drawn in the middle of the emptiness at a size
+              that says so, and correcting is one button at the foot. Nothing offers a
+              rebuild — a second pass over the same documents gives no different result and
+              would throw the corrections away. */}
         </header>
 
-        {/* `attention` and not `danger`: stale is «lo de arriba cambió, vuelve a cerrarlo»,
+        {/* `attention` and not `danger`: stale is "lo de arriba cambió, vuelve a cerrarlo",
             a move to make — the same tone the badge, the status mark and a re-read document
             on `/raw` already give it. Red here said information had been lost. */}
         {stage.stale_because.length > 0 ? (
@@ -433,7 +378,7 @@ export function StageGate({
         ) : null}
 
         {/* Only the notice that says something the header does not already say survives: that the
-            raw material is missing, and where to upload it. The other was «Sin construir» plus a
+            raw material is missing, and where to upload it. The other was "Sin construir" plus a
             second build button, with the badge and the header's button a hand's width away — two
             blocks for one action. The header's button explains itself: with no corpus it is disabled
             and its tooltip says exactly that. */}
@@ -442,9 +387,6 @@ export function StageGate({
             icon={<UploadCloud />}
             title={t("stage.rawMissing")}
             action={
-              // «Datos en bruto» and NOT the panel. This pointed at «/» for as long as the
-              // raw material was the panel's last card; now it is a screen of its own, and
-              // sending somebody to the panel to look for it is sending them to look.
               <Link to="/raw">
                 <Button variant="attention" size="xl">
                   <UploadCloud />
@@ -460,19 +402,16 @@ export function StageGate({
           </EmptyState>
         ) : null}
 
-        {/* THE ONE THING TO DO, IN THE MIDDLE OF THE SCREEN (2026-09-02, explicit user
-            request). With nothing built the body was blank and the button sat in the
-            header's corner; the emptiness is now where it is said what building does, and
-            the button is the size of the decision. With the raw material missing the block
-            above takes its place, because «Importar» is the only way to make this one
-            pressable — still one control per unbuilt stage. */}
+        {/* The one thing to do, in the middle of the screen. With the raw material missing
+            the block above takes its place, "Importar" being the only way to make this one
+            pressable: still one control per unbuilt stage. */}
         {missing && !rawMissing ? <BuildCall stage={stage} /> : null}
 
         {/* A stage that is not built has no content, and asking the screen for it is asking it to
             read a file that does not exist: the bank answered with a 404 and painted it as a red
             error, with the skeletons pulsing behind, while the graph and the profile simply painted
-            nothing. Nothing is broken here — a step is missing — so the header, with its «Sin
-            construir» badge and its button, is all there is to see.
+            nothing. Nothing is broken here — a step is missing — so the header, with its "Sin
+            construir" badge and its button, is all there is to see.
 
             While rebuilding, the previous artifact disappears from the screen: what is on it would
             stop being what one is looking at as soon as the build ends, and editing it would be
@@ -481,12 +420,12 @@ export function StageGate({
             it is said here instead of left to be assumed. */}
         {building ? (
           <>
-            {/* Three jobs land in the same «building» state and they are not the same thing.
+            {/* Three jobs land in the same "building" state and they are not the same thing.
                 A rebuild throws the previous artifact away and cancelling brings it back
                 untouched; a job that patches in place — tagging — rewrites the items one by
-                one and saves after each, so «si cancelas, vuelve tal cual» was flatly false
+                one and saves after each, so "si cancelas, vuelve tal cual" was flatly false
                 for it: what it had already decided stays decided. And a FIRST build has
-                nothing behind it at all, so promising that «el que hay ahora sigue guardado»
+                nothing behind it at all, so promising that "el que hay ahora sigue guardado"
                 was false on the one screen where it is read most: an empty stage. */}
             {waitingJob ? (
               <Alert tone="info" title={t("stage.queued")}>
@@ -516,41 +455,32 @@ export function StageGate({
             {livePreview}
           </>
         ) : missing ? null : (
-          /* Bloqueada y construida a la vez — el paso anterior se reabrió después — se lee
-             igual que abierta: lo que hay está en el disco y es lo que se valora. Se
-             atenuaba entera hasta el 2026-09-03, y con ella se escondía el cuestionario;
-             lo que la bloquea lo dice el aviso de arriba, y «Continuar» no se ofrece. */
+          /* Blocked and built at once — the step before it was reopened afterwards — reads
+             exactly as open: what is there is on disk and is what gets judged. Dimming it
+             would hide the questionnaire too; the notice above says what blocks it, and
+             "Continuar" is simply not offered. */
           <div className="min-w-0 space-y-5">{children}</div>
         )}
 
-        {/* EL BOTÓN QUE ABRE LA VALORACIÓN, AL FINAL Y NO AL ENTRAR (explicit user
-            request, revoking the placement of 2026-09-01). Arriba decía «preguntas sobre
-            lo que acabas de revisar» encima de algo que todavía no se había mirado, y la
-            objeción fue literal: «le doy aquí, pero ¿qué he revisado, si yo no he revisado
-            nada?». Debajo del artefacto la frase es cierta.
+        {/* The button that opens the questionnaire, at the FOOT and never on entering:
+            "preguntas sobre lo que acabas de revisar" over something nobody has looked at
+            yet is a promise the screen cannot keep.
 
-            Aquí es donde se gasta `--evaluation`: es el token de la evaluación en toda la
-            aplicación — la píldora «Comparar» del navbar se dibuja en él. Relleno mientras
-            no se ha contestado y sobrio en cuanto se contesta, que es la única diferencia
-            que importa. No se dibuja con la etapa sin construir — no habría nada que
-            juzgar — pero SÍ con la etapa bloqueada (2026-09-03, explicit user request:
-            «los formularios tienen que aparecer en todos los constructores
-            independientemente de si se ha enviado el anterior o no»): un paso ya
-            construido cuyo anterior se reabrió sigue teniendo algo que valorar, y el
-            cuestionario es lo que se está midiendo. */}
-        {/* Y EL CUESTIONARIO SE ABRE DEBAJO DEL BOTÓN, COMO UN ACORDEÓN (2026-09-02,
-            explicit user request: «que se abran de manera natural y en la posición
-            correcta; ahora mismo se abren al lado y rompe todo el flow»). Fue una columna a
-            la derecha que arrancaba arriba del todo, así que pulsar al pie abría algo en
-            la otra punta de la pantalla y había que desplazar la página hasta ello. La
-            lectura de la etapa es vista → valoración → corrección, de arriba abajo, y el
-            formulario cae ahora donde está el botón que lo pide, con el ancho del botón.
-            El chevrón ya giraba hacia abajo al abrirse: prometía esto.
+            This is where `--evaluation` is spent — the same token the navbar's "Comparar"
+            pill carries. Filled while unanswered and quiet once answered, which is the only
+            difference that matters. Not drawn with the stage unbuilt, since there would be
+            nothing to judge, but DRAWN with the stage blocked: a built step whose
+            predecessor was reopened still has something to judge, and the questionnaire is
+            what is being measured.
 
-            Se monta siempre y sólo se recorta: desmontarlo perdería lo que la persona
-            lleve escrito en el cuadro de texto cada vez que cierre. Un solo bloque para el
-            botón y el panel, o el `space-y` del contenedor abriría un hueco bajo el botón
-            con el panel cerrado. */}
+            It unfolds directly under its button, as an accordion and at the button's own
+            width. The reading order of a stage is view → verdict → correction, top to
+            bottom, so a panel opening at the other end of the screen breaks it.
+
+            It is always mounted and merely clipped: unmounting it would throw away whatever
+            the person has typed into the box every time they close it. Button and panel are
+            ONE block, or the container's `space-y` opens a gap under the button while the
+            panel is shut. */}
         {!missing ? (
           <div ref={reviewPanel} className="scroll-mt-20">
             {review.data?.built ? (
@@ -616,21 +546,17 @@ export function StageGate({
           </div>
         ) : null}
 
-        {/* LAS DOS SALIDAS, JUNTAS Y AL FINAL (explicit user request). «Pulsa aquí para
-            curar, o pulsa para pasar al siguiente paso sin curar»: corregir es opcional y
-            avanzar no exige entender la palabra «aprobar», que es lo que este bloque
-            sustituye. El orden de toda la pantalla queda vista → valoración → ¿quieres
-            corregir algo? → corrección.
+        {/* The two ways out, together and at the foot: correcting is optional, and moving
+            on asks nobody to understand the word "aprobar". The whole screen reads view →
+            verdict → do you want to correct anything? → correction.
 
-            Avanzar CIERRA la etapa, porque el paso siguiente no se puede construir sin eso
-            y quedarse a medias era el callejón que traía a la gente de vuelta. Guardar y
-            cerrar son la misma operación de siempre: primero la escritura pendiente, y
-            ninguna aprobación si la escritura se rechaza.
+            Moving on CLOSES the stage, because the next step cannot be built without that.
+            Saving and closing are one operation: the pending write first, and no approval
+            at all if the write is refused.
 
-            «CONTINUAR» ES EL BOTÓN GRANDE Y AZUL (2026-09-02, explicit user request): es el
-            único movimiento que lleva a algún sitio, y era un botón de tinta del tamaño de
-            «Quiero corregir algo», que no lleva a ninguno. Un paso CERRADO ofrece los dos
-            igual: corregirlo lo vuelve a abrir con el primer cambio guardado. */}
+            "Continuar" is the big blue button — it is the only control here that leads
+            anywhere. A CLOSED step offers both the same: correcting it reopens it with the
+            first saved change. */}
         {ready && !blocked ? (
           <ClosingSection
             title={t(
@@ -678,16 +604,13 @@ export function StageGate({
           </ClosingSection>
         ) : null}
 
-        {/* LA BARRA DE CORRECCIÓN, PEGADA AL BORDE DE ABAJO MIENTRAS SE CORRIGE (2026-09-02,
-            explicit user request: «un botón de Guardar en algún sitio vistoso»). Un temario
-            tiene 131 filas y el pie de la página queda lejos de la fila que se acaba de
-            tocar; una barra fija al borde inferior de la ventana está siempre a la vista,
-            que es la única definición de «vistoso» que sirve. Lleva las tres cosas que hacen
-            falta mientras se corrige y ninguna más: cómo están los cambios, la salida, y
-            «Guardar los cambios» — solo donde hay algo que guardar, porque el temario y el
-            etiquetado escriben cada cambio al momento y un «Guardar» apagado para siempre es
-            una promesa falsa. Dejar de corregir con cambios sin guardar pregunta antes de
-            descartarlos: es lo único aquí que puede perder algo. */}
+        {/* The correction bar, pinned to the foot of the WINDOW while correcting: a
+            syllabus is 131 rows, so the foot of the page is far from the row just touched.
+            It carries three things and no more — the state of the changes, the way out, and
+            "Guardar los cambios", drawn only where there is something to save, since the
+            syllabus and the tagging write each change on the spot and a save button disabled
+            for ever is a false promise. Leaving with an unsaved draft asks first: it is the
+            only thing here that can lose anything. */}
         {ready && !blocked && curating ? (
           <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border border-border border-l-[3px] border-l-primary bg-card px-4 py-3 shadow-overlay">
             <Pencil aria-hidden className="size-4 shrink-0" />
@@ -766,12 +689,11 @@ export function StageGate({
 }
 
 /**
- * THE BLOCK EVERY STEP ENDS WITH, and the only shape it may have.
+ * The block every step ends with, and the only shape it may have: a title, one sentence,
+ * the failure if the move failed, and the controls.
  *
- * A title, one sentence, the failure if the move failed, and the controls — with the big
- * blue «Continuar» among them. `/raw` used to copy the markup by hand and had already
- * drifted (no failure line, no spinner); one component is what keeps the foot of the four
- * steps of the construction the same block (2026-09-02, explicit user request).
+ * Shared by the three stages and `/raw`, which is what keeps the foot of the four steps of
+ * the construction one block instead of four that drift.
  */
 export function ClosingSection({
   title,
@@ -794,7 +716,7 @@ export function ClosingSection({
   );
 }
 
-/** What «Continuar» says: the next step's number, or the way into the testing phase after the last. */
+/** What "Continuar" says: the next step's number, or the way into the testing phase after the last. */
 export function continueLabel(
   next: { number: string | null },
   t: (key: Key, vars?: Record<string, string | number>) => string,
@@ -816,14 +738,11 @@ export function StaleWarning({ children }: { children: ReactNode }) {
 }
 
 /**
- * WHAT THIS STEP WOULD BUILD, IN THE MIDDLE OF THE EMPTY SCREEN.
+ * What this step would build, in the middle of the empty screen.
  *
- * The block is the same one every unbuilt stage has opened with since 2026-09-02 — a
- * dashed frame, the hammer, the `xl` button — and what changed is the sentence: it is the
- * step's own now (`lib/names.buildCall`), so it says what does not exist yet and what is
- * read to make it instead of interpolating the step's name into one generic line. The
- * trailing sentence about how long it takes is shared by the three and is the only reason
- * this is two keys rather than one.
+ * The sentence is the step's own (`lib/names.buildCall`): it names what does not exist yet
+ * and which slot is read to make it, since the four steps do not read the same one. The
+ * trailing sentence about how long it takes is shared, which is why this is two keys.
  */
 function BuildCall({ stage }: { stage: StageState }) {
   const { t } = useT();

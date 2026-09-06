@@ -1,27 +1,20 @@
 /**
  * Where a formula starts and stops, and — mostly — where it does not.
  *
- * The generator writes TeX because the corpus does: an item about automata comes back with
- * `$\Sigma = \{0, 1\}$` and `$\delta(q_0, 1) = q_1$` in its statement, and until this
- * existed the card showed the source. Splitting is a pure function so the rule can be
- * pinned by a test, which matters more here than in most places: `$` is not only a
- * delimiter in this corpus. The reference bank is full of LR parsing tables where it is the
- * END-OF-INPUT MARKER — `| a | b | e | x | y | $ | S | A |`, `Arcs: 8 --> $ --> Accept`,
- * `Siguiente (A): $+x` — and two of those on one line must never pair up into a formula
- * that swallows the row between them.
+ * `$` is NOT only a delimiter in this corpus: the reference bank is full of LR parsing
+ * tables where it is the end-of-input marker (`| a | b | $ | S |`, `Arcs: 8 --> $ -->
+ * Accept`), and two of those on one line must never pair into a formula that swallows the
+ * row between them. Pure, so the rule can be pinned by a test.
  *
- * Four conditions do that, and each one is paying for a real line above:
+ * Five conditions do it, each paying for a real line of the corpus:
  * - the opening `$` is not glued to a word and is not itself escaped (`US$5`, `\$`);
  * - what follows it is not whitespace, so `| $ | S |` opens nothing;
  * - the partner is on the SAME line and is not preceded by whitespace, so `--> $ -->`
  *   closes nothing;
- * - no backtick inside, so a code span quoted mid-sentence cannot be eaten by a stray `$`
- *   in front of it;
- * - a pipe on the outside closes the door too: `|a|$|S|$|b|` is an unpadded table row of
- *   those same end-of-input cells, and it is the one shape that got past the other three.
- *   The cost is a formula in an unpadded cell (`|$x$|`), which no page in this corpus
- *   writes — every real table pads — and the gain is that the formula's own content stays
- *   unrestricted, so `$1(0|1)^*0$` and `$|x|$` both survive.
+ * - no backtick inside, so a code span cannot be eaten by a stray `$` in front of it;
+ * - a pipe on the OUTSIDE closes the door: `|a|$|S|$|b|` is an unpadded table row of those
+ *   same cells. The cost is a formula in an unpadded cell, which no page here writes; the
+ *   gain is that a formula's own content stays unrestricted, so `$1(0|1)^*0$` survives.
  *
  * `\$` inside a formula is a literal dollar and does not close it, which is what the
  * `\\[^\n]` branch is for.

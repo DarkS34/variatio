@@ -71,7 +71,7 @@ def test_answering_the_same_build_twice_corrects_one_row(db, ws):
 
 
 def test_a_rebuild_opens_a_second_row(db, ws):
-    """«Salió mal» y «lo rehíce y salió bien» son dos datos, no una edición de uno."""
+    """"It came out wrong" and "I rebuilt it and it came out fine" are two data, not an edit of one."""
     _save(db, ws, "aaa", 2)
     _save(db, ws, "bbb", 5)
     db.commit()
@@ -96,14 +96,14 @@ def test_each_artifact_is_its_own_row(db, ws):
 
 
 def test_opening_twice_does_not_move_the_stamp(db, ws):
-    """Una recarga no reinicia el cronómetro: es la misma regla que `opened_at` del estudio."""
+    """A reload does not restart the clock: the same rule the study's own `opened_at` has."""
     first = queries.mark_opened(db, ws.id, 1, GRAPH, "aaa").opened_at
     again = queries.mark_opened(db, ws.id, 1, GRAPH, "aaa").opened_at
     assert first == again
 
 
 def test_an_opened_form_is_a_row_before_it_is_answered(db, ws):
-    """«Lo abrió y no lo contestó» es un dato, y `overall is None` es lo que lo dice."""
+    """"Opened it and never answered" is a datum, and `overall is None` is what says so."""
     queries.mark_opened(db, ws.id, 1, GRAPH, "aaa")
     db.commit()
     row = db.query(StageEvaluation).one()
@@ -122,13 +122,13 @@ def test_saving_after_opening_keeps_the_same_row(db, ws):
 
 # CURATING, WHICH IS THE CONTRAST -------------------------------------------------------
 #
-# Curar dejó de hacer falta para avanzar, así que pasa a ser una variable: cómo valora
-# quien corrigió el artefacto frente a cómo valora quien lo dejó tal cual salió. La escala
-# es «nadie lo dijo» < «no» < «sí», y un guardado solo puede subir por ella.
+# Correcting is not required in order to move on, so it becomes a VARIABLE: how somebody who
+# corrected the artifact rates it against somebody who left it as it came out. The scale is
+# "nobody said" < "no" < "yes", and a save may only ever climb it.
 
 
 def test_a_verdict_that_says_nothing_does_not_know_whether_they_curated(db, ws):
-    """La ausencia es «no se sabe», que no es lo mismo que «no curó»."""
+    """Absence is "not known", which is not the same as "did not correct"."""
     row = _save(db, ws, "aaa", 4)
     db.commit()
     assert row.curated is None
@@ -140,11 +140,11 @@ def test_the_mark_arrives_with_the_answers(db, ws):
 
 
 def test_curating_never_unsays_itself_on_the_same_build(db, ws):
-    """Quien curó, curó: una re-respuesta sobre el mismo build no puede bajar la marca.
+    """Whoever corrected, corrected: re-answering the same build may not lower the mark.
 
-    Es el caso real: se contesta tras corregir, y más tarde se retoca la nota desde una
-    pantalla que ya no sabe que hubo edición. Sin la trinquete, ese segundo guardado movería
-    la fila al otro lado del contraste.
+    The real case is answering after correcting and then touching up the note from a screen
+    that no longer knows an edit happened. Without the ratchet, that second save moves the
+    row to the other side of the contrast.
     """
     _save(db, ws, "aaa", 4, curated=True)
     assert _save(db, ws, "aaa", 5, curated=False).curated is True
@@ -154,19 +154,19 @@ def test_curating_never_unsays_itself_on_the_same_build(db, ws):
 
 
 def test_a_no_survives_a_later_silence(db, ws):
-    """Un «no» tampoco se pierde: la ausencia no borra nada, ni hacia arriba ni hacia abajo."""
+    """Un "no" tampoco se pierde: la ausencia no borra nada, ni hacia arriba ni hacia abajo."""
     _save(db, ws, "aaa", 4, curated=False)
     assert _save(db, ws, "aaa", 2).curated is False
 
 
 def test_the_first_no_is_recorded_over_a_silence(db, ws):
-    """Lo único que no se sabía era la primera vez; decirlo después sí escribe."""
+    """What was unknown was only unknown the first time; saying it later does write."""
     _save(db, ws, "aaa", 4)
     assert _save(db, ws, "aaa", 4, curated=False).curated is False
 
 
 def test_a_rebuild_starts_without_a_mark(db, ws):
-    """Otro build es otra fila, y nadie ha curado todavía lo que acaba de salir."""
+    """Another build is another row, and nobody has yet corrected what has just come out."""
     _save(db, ws, "aaa", 4, curated=True)
     _save(db, ws, "bbb", 4)
     db.commit()
@@ -175,7 +175,7 @@ def test_a_rebuild_starts_without_a_mark(db, ws):
 
 
 def test_the_mark_is_this_persons_own(db, ws):
-    """Es una variable del evaluador, no del artefacto: dos cuentas, dos respuestas."""
+    """It is a variable of the EVALUATOR and not of the artifact: two accounts, two answers."""
     _save(db, ws, "aaa", 4, user=1, curated=True)
     _save(db, ws, "aaa", 4, user=2, curated=False)
     db.commit()
@@ -187,14 +187,14 @@ def test_the_mark_is_this_persons_own(db, ws):
 
 
 def test_a_request_that_omits_the_mark_is_perfectly_valid():
-    """El cliente puede no mandarla, y entonces no afirma nada."""
+    """The client may not send it, and then it asserts nothing."""
     assert stages.AnswersBody().curated is None
     assert stages.AnswersBody(**{"overall": 4}).curated is None
     assert stages.AnswersBody(**{"curated": True}).curated is True
 
 
 def test_the_form_reads_the_mark_back(db, ws):
-    """Va dentro de `mine`, que es lo que el formulario recibe como estado propio."""
+    """It travels inside `mine`, which is what the form receives as its own state."""
     row = _save(db, ws, "aaa", 4, curated=True)
     db.commit()
     assert stages._mine(row)["curated"] is True
@@ -203,14 +203,14 @@ def test_the_form_reads_the_mark_back(db, ws):
 
 
 def test_the_route_carries_the_mark_from_the_body_to_the_row(db, ws, monkeypatch):
-    """El PUT la pasa a `save`, y la contesta: es el estado con el que se queda el cliente."""
+    """The PUT hands it to `save` and answers with it: that is the state the client keeps."""
     monkeypatch.setattr(stages, "_digest", lambda access, artifact: "aaa")
     access = SimpleNamespace(ws=None, workspace=ws, user=SimpleNamespace(id=1))
 
     saved = stages.write(GRAPH, stages.AnswersBody(overall=4, curated=True), access, db)
     assert saved["mine"]["curated"] is True
 
-    # Y la re-respuesta muda que llegue después tampoco la borra por el camino largo.
+    # And a later silent re-answer does not clear it by the long route either.
     again = stages.write(GRAPH, stages.AnswersBody(overall=5), access, db)
     assert again["mine"]["curated"] is True
     db.commit()
@@ -227,11 +227,11 @@ def test_every_artifact_of_the_chain_has_questions():
 
 
 def test_the_count_is_the_instruments_own_and_includes_overall():
-    """El botón que abre el formulario dice cuántas preguntas hay, y se le manda la cuenta.
+    """The button that opens the form says how many questions there are, and is sent the count.
 
-    Decía «cinco» fijo en las tres etapas mientras el temario preguntaba seis, así que el
-    control contradecía al formulario que abre. `overall` cuenta: está en el formulario, es
-    lo último que se contesta y es lo que significa «contestada».
+    A number written into the string contradicts the form it opens as soon as one instrument
+    changes. `overall` counts: it is on the form, it is answered last, and it is what
+    "answered" means.
     """
     for artifact in approvals.ARTIFACTS:
         expected = len(instruments.QUESTIONS[artifact]) + 1
@@ -240,13 +240,11 @@ def test_the_count_is_the_instruments_own_and_includes_overall():
 
 
 def test_the_three_stages_ask_five_statements_on_the_same_axes():
-    """Cinco por etapa y los mismos cinco ejes (2026-09-03, explicit user request), y desde
-    2026-09-04 como afirmaciones sobre UNA escala Likert compartida.
+    """Five per stage, on the same five axes, as statements over ONE shared Likert scale.
 
-    Pocas para no sobrecargar, y cada una con una conclusión detrás: precisión, cobertura,
-    la función propia del artefacto, el esfuerzo y la de conjunto. El mismo orden y LAS
-    MISMAS CLAVES en las tres, que es lo que deja ponerlas en una tabla lado a lado sin
-    traducir nada.
+    Few enough not to overload, and each with a conclusion behind it: precision, recall, the
+    artifact's own function, the effort and the overall. The same order and the SAME KEYS on
+    all three, which is what lets them go side by side in a table with nothing translated.
     """
     for artifact in approvals.ARTIFACTS:
         assert instruments.count(artifact) == 5, artifact
@@ -257,14 +255,14 @@ def test_the_three_stages_ask_five_statements_on_the_same_axes():
 
 
 def test_the_preamble_says_the_number_the_instrument_actually_asks():
-    """La cifra de la prosa sale de `count()`, así que no puede desfasarse al añadir una."""
+    """The figure in the prose comes from `count()`, so adding a question cannot strand it."""
     for artifact in approvals.ARTIFACTS:
         spelled = instruments._SPELLED[instruments.count(artifact)]
         assert instruments.preamble(artifact).startswith(spelled + " afirmaciones"), artifact
 
 
 def test_one_scale_for_every_statement_and_for_overall():
-    """Una escala de cinco peldaños, con sus etiquetas, y la misma para todo el formulario."""
+    """One five-rung scale, with its labels, shared by the whole form."""
     assert instruments.SCALE_VALUES == (1, 2, 3, 4, 5)
     assert len(instruments.SCALE_LABELS) == 5
     assert instruments.SCALE_LABELS[0].lower().startswith("totalmente en desacuerdo")
@@ -279,7 +277,7 @@ def test_one_scale_for_every_statement_and_for_overall():
 
 
 def test_the_two_comparable_items_are_asked_of_all_three():
-    """`effort` y la de conjunto son lo que la memoria puede poner en una tabla."""
+    """`effort` and the overall are what the memoria can put in a table."""
     for artifact in approvals.ARTIFACTS:
         keys = [q["key"] for q in instruments.QUESTIONS[artifact]]
         assert "effort" in keys, artifact
@@ -287,7 +285,7 @@ def test_the_two_comparable_items_are_asked_of_all_three():
 
 
 def test_effort_is_worded_identically_everywhere():
-    """Comparar entre etapas exige que la afirmación sea LA MISMA, no una parecida."""
+    """Comparing across stages needs the statement to be THE SAME one, not a similar one."""
     asked = {
         next(q["statement"] for q in instruments.QUESTIONS[a] if q["key"] == "effort")
         for a in approvals.ARTIFACTS
@@ -302,7 +300,7 @@ def test_no_question_key_repeats_within_an_artifact():
 
 
 def test_every_statement_is_a_sentence_and_carries_no_options_of_its_own():
-    """Una afirmación Likert no trae opciones: la escala es una y va aparte."""
+    """A Likert statement carries no options of its own: the scale is one and sits apart."""
     for artifact in approvals.ARTIFACTS:
         for question in instruments.QUESTIONS[artifact]:
             assert question["statement"].strip().endswith("."), (artifact, question["key"])
@@ -310,7 +308,7 @@ def test_every_statement_is_a_sentence_and_carries_no_options_of_its_own():
 
 
 def test_no_question_names_an_artefact_or_a_model():
-    """El vocabulario es el del profesor: ninguna afirmación nombra una pieza del sistema."""
+    """The vocabulary is the teacher's: no statement names a piece of the system."""
     forbidden = ("grafo", "perfil de ejemplares", "banco de ejemplares", "artefacto", "modelo",
                  "workspace", "etiquetabilidad", "corpus", "prompt")
     for artifact in approvals.ARTIFACTS:
@@ -335,7 +333,7 @@ def test_an_invented_answer_is_dropped_and_the_good_ones_survive():
 
 
 def test_a_value_off_the_scale_does_not_travel():
-    """0, 6, un booleano o una palabra no son un peldaño, aunque la clave exista."""
+    """0, 6, a boolean or a word are not a rung, even where the key exists."""
     assert instruments.clean(GRAPH, {"precision": 0, "recall": 6}) == {}
     assert instruments.clean(GRAPH, {"precision": True, "recall": "muchos"}) == {}
     assert instruments.clean(GRAPH, {"precision": "none"}) == {}

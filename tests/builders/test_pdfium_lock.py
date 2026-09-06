@@ -1,8 +1,8 @@
 """PDFium is not thread-safe, so every call into it goes through one process-wide lock.
 
-Measured on the reference installation (2026-09-02): the request thread counting pages for
-`/raw` while the job thread rendered them corrupted PDFium's global state, and from that
-moment every PDF of the process failed to load («Data format error») until a restart.
+Measured: the request thread counting pages for `/raw` while the job thread rendered them
+corrupts PDFium's global state, and from that moment every PDF of the process fails to load
+("Data format error") until a restart.
 """
 
 import sys

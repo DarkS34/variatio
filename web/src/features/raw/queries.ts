@@ -40,7 +40,7 @@ export function useTranscribePhases(): BuildPhase[] {
 /**
  * A slot's reading, refreshed while its job runs and read ONCE MORE the moment it stops.
  *
- * The poll is what draws the documents turning «leído» one by one; the last read is what
+ * The poll is what draws the documents turning "leído" one by one; the last read is what
  * makes the end of the job visible. `_meta.json` is written at the very end, so the last
  * poll of the run can land before it and the poll stops with the job — without this the
  * screen kept the state of that poll until somebody reloaded the page.
@@ -84,10 +84,8 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
   const stale = states.reduce((sum, entry) => sum + entry.stale, 0);
   const pending = states.reduce((sum, entry) => sum + entry.pending, 0);
 
-  // `known` is back with `done` (2026-09-02, explicit user request): the foot of the screen
-  // offers the next step once everything is read, and it must not do so during the first
-  // second of a load, when a slot's reading has not landed and «nada pendiente» would be
-  // true by absence.
+  // `known` guards `done`: the foot of the screen reads it, and during the first second of
+  // a load — before a slot's reading has landed — "nada pendiente" is true by ABSENCE.
   const known = (["corpus", "exemplars"] as const).every(
     (kind) => !stocked(kind) || (kind === "corpus" ? corpus.data : exemplars.data) !== undefined,
   );
@@ -103,7 +101,7 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
     stocked: stockedAll && known,
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
     // Both origins hold something, every document is read and nothing is running: what the
-    // next step actually wants, and not merely «no queda nada pendiente».
+    // next step actually wants, and not merely "no queda nada pendiente".
     done: stockedAll && known && !running && stale + pending === 0,
   };
 }

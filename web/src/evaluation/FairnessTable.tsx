@@ -19,10 +19,10 @@ const ROWS: { fieldKey: Key; naive: boolean | Key; rag: boolean | Key; system: b
   // The rag arm's prompt IS the naive one plus its sections, so the pinned fields reach it
   // spoken in prose exactly as they reach the commercial model; only the system pins them.
   { fieldKey: "fair.row.decisions", naive: "fair.v.asText", rag: "fair.v.asText", system: true },
-  // SINCE 2026-09-04 ALL THREE GET `content_context.prompt_block()` WHOLE (explicit user
-  // request): `naive.build_prompt` still speaks the three facts by name and pastes the
-  // prose under them, and the rag prompt is built on it. Until then the two baselines had
-  // the facts alone and invented the rest — the programming language included.
+  // All three get `content_context.prompt_block()` WHOLE: `naive.build_prompt` speaks the
+  // three facts by name and pastes the prose under them, and the rag prompt is built on it.
+  // With the facts alone the two baselines invent the rest, the programming language
+  // included.
   {
     fieldKey: "fair.row.context",
     naive: "fair.v.fullProse",
@@ -36,15 +36,15 @@ const ROWS: { fieldKey: Key; naive: boolean | Key; rag: boolean | Key; system: b
     system: "fair.v.schemaGuide",
   },
   { fieldKey: "fair.row.noGreetings", naive: true, rag: true, system: true },
-  // THE PROFILE'S PROSE IS THE SYSTEM'S ALONE since 2026-09-04: the rules block left
-  // `rag_generation_prompt` with the field descriptions and the difficulty criterion, and
-  // the modality's own description was never in it. Without these two rows the table would
-  // still be claiming the `naive → rag` step measures «bank + profile».
+  // The profile's prose is the SYSTEM's alone: `rag_generation_prompt` carries neither the
+  // rules block, the field descriptions, the difficulty criterion nor the modality's own
+  // description. Without these two rows the table would claim the `naive → rag` step
+  // measures "bank + profile".
   { fieldKey: "fair.row.modality", naive: false, rag: false, system: true },
   { fieldKey: "fair.row.rules", naive: false, rag: false, system: true },
-  // WHAT THE RAG ARM RETRIEVES OVER IS THE RAW DOCUMENTS, not the bank (2026-09-04): the
-  // slots read with a plain extractor, cut, embedded flat and searched by cosine. The bank
-  // is the system's few-shot and nobody else's.
+  // What the rag arm retrieves over is the RAW DOCUMENTS and not the bank: the slots read
+  // with a plain extractor, cut, embedded flat and searched by cosine. The bank is the
+  // system's few-shot and nobody else's.
   { fieldKey: "fair.row.rawDocs", naive: false, rag: "fair.v.flatCosine", system: false },
   { fieldKey: "fair.row.examples", naive: false, rag: false, system: "fair.v.byLabel" },
   { fieldKey: "fair.row.prerequisites", naive: false, rag: false, system: true },

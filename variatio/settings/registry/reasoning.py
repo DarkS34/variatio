@@ -1,4 +1,4 @@
-"""The «Razonamiento» settings: one switch and one effort per phase, plus the lane table.
+"""The "Razonamiento" settings: one switch and one effort per phase, plus the lane table.
 
 `PIPELINE` is what the panel draws as the reasoning pipeline. A phase's lane says what the
 call is ABOUT, not which job pays for it.
@@ -110,9 +110,8 @@ Va en el carril del grafo porque es del grafo: una descripción por concepto, ca
 `cache/concept_descriptions.json` y listada en `review.DERIVED[KNOWLEDGE_GRAPH]`. Lo que
 no hace es correr dentro de `build_kg` — la escribe el embebedor al levantarse
 (`Embedder.__init__` → `describer.ensure()`), así que la llamada la pagan `index`, `tag`,
-`generate` y `evaluate`, que es lo que `server/jobs/lanes.py` declara. Estuvo dibujada en
-el carril de generación por eso hasta el 2026-08-28, y se movió por petición explícita del
-usuario: el carril dice de qué es la llamada, no qué trabajo la paga."""
+`generate` y `evaluate`, que es lo que `server/jobs/lanes.py` declara. Aun así se dibuja en
+el carril del GRAFO: el carril dice de qué es la llamada, no qué trabajo la paga."""
 
 _CONCEPT_TAGGER_DOC = """El etiquetador hace una primera pasada con gramática y sin razonar; esto decide si, cuando
 esa pasada no concluye (JSON inválido o rechaza a todos los candidatos), se reintenta una vez
@@ -163,11 +162,9 @@ def _toggle(phase: str) -> Setting:
     )
 
 
-_EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta
-nada. Sustituye al THINK_EFFORT global desde el 2026-08-24 (petición explícita del
-usuario) y hereda su medición entera; los booleanos que quedan (el `think` del encargo,
-la columna `generations.think`, el interruptor de la UI) se traducen al «low» fijo de
-`inference.DEFAULT_THINK_EFFORT`.
+_EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta nada.
+Los booleanos que quedan (el `think` del encargo, la columna `generations.think`, el
+interruptor de la UI) se traducen al «low» fijo de `inference.DEFAULT_THINK_EFFORT`.
 
 `low` por defecto y no algo más alto, medido en la A40 con /api/generate:
 
@@ -177,32 +174,26 @@ la columna `generations.think`, el interruptor de la UI) se traducen al «low» 
     qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15 /   -
 
 Léase en cuatro partes. `medium` ES el defecto del modelo — mismos tokens que `true`, no es
-un peldaño sino su ausencia. `high` gastó 58 953 caracteres de deliberación en la llamada
+un peldaño sino su ausencia. `high` gastó 58 953 caracteres de deliberación en una llamada
 de curación real (777 s) y devolvió una respuesta VACÍA; `low` sigue emitiendo ~41 000 ahí
 — el nivel mueve el TECHO de la deliberación, no el suelo — así que subir de `low` en una
-fase que corre en local es reabrir esa medición, no un ajuste fino.
+fase que corre en local es reabrir esa medición y no un ajuste fino.
 
-`max` NO ES UN NIVEL DE `qwen3.8`: es `high` con otro nombre. Medido el 2026-08-29 sobre
-`qwen3.8:27b-q8_0` (Ollama 0.32.13, temperatura 0 y semilla fija), los dos rinden el mismo
-prompt de 56 tokens y devuelven una respuesta byte a byte idéntica, mientras que `low` (44)
-y `medium` (14) sí difieren entre sí y de ellos. O sea, este modelo tiene TRES niveles
-efectivos. La fila de la q4_K_M se queda porque es una medición y no una
-referencia: esa cuantización dejó de usarse el 2026-08-29 y ni siquiera está instalada, y
-borrar lo medido sobre ella no lo haría menos cierto. Su columna `max` lleva guion porque
-no se midió allí; sus otras cifras son de la medición del 2026-08-24 y difieren en un token de las de hoy porque el
-prompt de prueba no era el mismo — lo que importa de la tabla son las DIFERENCIAS entre
-columnas de una misma fila, no su valor absoluto.
+`max` NO ES UN NIVEL DE `qwen3.8`: es `high` con otro nombre. Medido sobre la q8_0
+(temperatura 0, semilla fija), los dos rinden el mismo prompt de 56 tokens y devuelven una
+respuesta byte a byte idéntica, mientras que `low` (44) y `medium` (14) sí difieren. Este
+modelo tiene TRES niveles efectivos. La fila de la q4_K_M se queda porque es una medición y
+no una referencia; lo que importa de la tabla son las DIFERENCIAS entre columnas de una
+misma fila, no su valor absoluto.
 
-Y el nivel lo implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro
+El nivel lo implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro
 (cuatro valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
 Por eso las opciones de aquí siguen siendo cuatro: son las que ACEPTA el motor, y qué hace
-cada modelo con ellas se declara donde se sabe de qué modelo se habla —
-`web/src/features/generate/models.ts` para el que elige el encargo, que ofrece tres.
+cada modelo con ellas se declara donde se sabe de qué modelo se habla.
 
 Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa:
-`xhigh` NO existe («invalid think value»), ni tampoco `none`. Cerebras no tiene `max`
-(`reasoning_effort` lo baja a «high») y en `gemma-4-31b` los tres niveles activos son
-equivalentes."""
+`xhigh` NO existe, ni tampoco `none`. Cerebras no tiene `max` (`reasoning_effort` lo baja a
+«high») y en `gemma-4-31b` los tres niveles activos son equivalentes."""
 
 
 def _effort(phase: str) -> Setting:
@@ -280,12 +271,9 @@ _IMAGE_NOTE = (
 )
 _SEAM_NOTE = "Clasifica cómo se pega una página con la siguiente, una llamada por costura."
 
-# LA LECTURA DE LOS DOCUMENTOS ES UN PASO APARTE, y desde el 2026-09-05 se dibuja como tal
-# (petición explícita del usuario). Las tres fases son las mismas para los tres
-# constructores —un ajuste cada una, no tres— y estaban repetidas a la cabeza de cada
-# carril, así que la pantalla enseñaba nueve nodos para tres decisiones y ninguna de las
-# tres columnas empezaba por lo suyo. Ahora es un carril `shared`, dibujado una vez y en
-# horizontal encima de los demás; lo que cambia es el dibujo, no lo que corre.
+# Reading the documents is a step of its own, drawn as a `shared` lane above the other four.
+# Its three phases are the SAME three settings for the three builders — one each, not three
+# — so repeating them at the head of every column draws nine nodes for three decisions.
 _TRANSCRIPTION = Lane(
     "transcription",
     "Transcripción",
@@ -376,10 +364,9 @@ PIPELINE: tuple[Lane, ...] = (
                 "generation.models",
                 fixed=COMMISSION,
                 note=(
-                    "El razonamiento lo decide cada encargo; el modelo no, desde el "
-                    "2026-09-01: lo escribe el primero de esta lista, y los demás sólo "
-                    "quedan reservados. El estudio mide el razonamiento en ambas "
-                    "posiciones."
+                    "El razonamiento lo decide cada encargo; el modelo lo escribe el "
+                    "primero de esta lista, y los demás sólo quedan reservados. El estudio "
+                    "mide el razonamiento en ambas posiciones."
                 ),
             ),
             Phase(

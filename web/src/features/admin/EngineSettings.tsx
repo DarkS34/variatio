@@ -10,17 +10,12 @@ import { api } from "@/lib/api";
 import { useT, type Key } from "@/lib/i18n";
 import type { ConfigPayload, ConfigSetting } from "@/lib/types";
 
-/* THE ENGINE'S OWN SETTINGS, ON THE ENGINE'S OWN TAB (2026-08-28, explicit user request).
-   They used to live in «Configuración → Motor», one tab away from the meters that say what
-   they do: the VRAM three models share, the quota, the tunnel's stderr. Here each setting
-   sits in the right-hand column of the half it governs — the local ones beside the GPU, the
-   Cerebras ones beside the quota — which is what the two columns of this tab ENCODE: the
-   left one measures, the right one sets.
+/* The engine's own settings, on the engine's own tab, so each sits beside the meter that
+   says what it does: the local ones beside the GPU, the Cerebras ones beside the quota.
+   That is what the two columns of this tab encode — the left one measures, the right sets.
 
-   They are addressed by KEY and not by group because the registry's «Motor» group spans
-   both halves: `engine.name` and the four Cerebras limits are one group and two different
-   subjects. Splitting by group here would have put the remote quota's ceilings under the
-   local GPU. */
+   Addressed by KEY and not by group: the registry's "Motor" group spans both halves, so
+   splitting by group puts the remote quota's ceilings under the local GPU. */
 export const LOCAL_KEYS = [
   "engine.name",
   "engine.ollama_host",

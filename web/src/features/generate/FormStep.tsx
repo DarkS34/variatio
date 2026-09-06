@@ -50,7 +50,7 @@ export function FormStep({
     >
       {/* THE WHOLE ROW OPENS THE STEP, AND THE (i) IS NOT PART OF IT. It used to be — an
           `InfoHint` nested inside this button — which is invalid HTML, stuttered the step's
-          accessible name («1 ¿Qué tipo de ítem? ¿Qué tipo de ítem?») and, because the click
+          accessible name ("1 ¿Qué tipo de ítem? ¿Qué tipo de ítem?") and, because the click
           reached the header underneath, made tapping the (i) navigate the form instead of
           explaining it. On a touch screen `onClick` is the only way to read a hint at all,
           so that was the one path guaranteed to interrupt itself.
@@ -70,15 +70,10 @@ export function FormStep({
         />
 
         <div className="pointer-events-none relative flex w-full items-center gap-2.5 px-3 py-2.5 text-left">
-          {/* THE ORDINAL STAYS, AND THE CHECK GOES BESIDE IT (2026-08-31).
-              The mark used to REPLACE the number once a step was answered and closed, so
-              a half-filled form read «✓ · 2 · ✓ · 4 · 5»: two of the five steps had no
-              number at all, and the ones that did no longer described a sequence. Measured
-              on the real form — choose a modality and two concepts and that is exactly what
-              is on screen.
-              A number that disappears is not an ordinal. The step keeps it for as long as
-              it exists, and «answered» is said by the tint plus a small check on the
-              corner, which is additive rather than substitutive. */}
+          {/* The ordinal stays and the check goes BESIDE it: a mark replacing the number
+              leaves a half-filled form reading "✓ · 2 · ✓ · 4 · 5", where the steps that
+              keep a number no longer describe a sequence. A number that disappears is not an
+              ordinal, so "answered" is additive — the tint plus a check on the corner. */}
           <span
             className={cn(
               "relative flex size-6 shrink-0 items-center justify-center rounded-full text-small font-semibold nums transition-colors",

@@ -6,18 +6,14 @@ import { useT, type Key } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
- * THE SIZE EVERY SENTENCE OF THE TUTORIAL IS SET AT, and the face it is set in.
+ * The size every sentence of the tutorial is set at, and the face it is set in.
  *
- * It lives here rather than in the screen because a figure contains sentences too — the
- * two piles of documents on slide 2 are described in prose, not labelled — and the rule
- * they follow is the one that separates this whole file from the screen beside it: a
- * LABEL QUOTED FROM THE APP is drawn in the app's own face at the app's own size, because
- * it is a picture of something the reader is about to go and look at; a SENTENCE WRITTEN
- * FOR THE READER is set in the reading face at the reading size, wherever it happens to
- * sit. Mixing those two up is what made slide 2 read as a diagram with a caption when it
- * is two answers to one question — and what made the first slide's three moments and the
- * last slide's four beats read as footnotes to their own paragraph (2026-09-02): they
- * were sentences for the reader drawn at 12 and 14 px under 21 px of prose.
+ * It lives here and not in the screen because a figure contains sentences too, and the rule
+ * is what separates this file from the screen beside it: a LABEL QUOTED FROM THE APP is
+ * drawn in the app's own face at its own size, being a picture of something the reader is
+ * about to go and look at, while a SENTENCE WRITTEN FOR THE READER is set in the reading
+ * face wherever it sits. Mixing the two makes a figure's own prose read as a footnote to
+ * the paragraph beside it.
  */
 export const PROSE = "font-reading text-[1.1875rem] leading-[1.65] sm:text-[1.3125rem]";
 
@@ -46,8 +42,8 @@ const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text-[1.312
 /**
  * A labelled box: the unit every figure here is made of.
  *
- * `bare` drops the frame and the ground and keeps only the layout. A box says «this is a
- * thing with an edge» — a drop zone, a card, a proposal — and where there is no edge in
+ * `bare` drops the frame and the ground and keeps only the layout. A box says "this is a
+ * thing with an edge" — a drop zone, a card, a proposal — and where there is no edge in
  * the product there should be none in the drawing either: the first slide's three moments
  * are a story, not three containers, and framing them made the opening picture read as a
  * form. What still separates them there is the arrow, which is the only thing that was
@@ -67,9 +63,8 @@ function Box({
   return (
     <div
       className={cn(
-        // `justify-center` y no sólo `items-center`: las cajas de una fila se estiran a la
-        // altura de la más alta, así que una con menos dentro dejaba su texto pegado
-        // arriba. Es lo que se veía en la diapositiva de «los cuatro terminan igual».
+        // `justify-center` and not only `items-center`: the boxes of a row stretch to the
+        // height of the tallest, so one with less inside leaves its text against the top.
         "flex min-w-0 flex-col items-center justify-center gap-2 text-center",
         !bare && "border px-3 py-4",
         !bare && marked
@@ -117,7 +112,7 @@ function Chain({ children }: { children: React.ReactNode[] }) {
  * WHO DOES WHAT: the whole product in one line.
  *
  * The three labels are SENTENCES WITH A SUBJECT and not noun phrases, because the first
- * question somebody has here is who is expected to do what — «tus apuntes» does not say
+ * question somebody has here is who is expected to do what — "tus apuntes" does not say
  * whether they are wanted or produced. The person is drawn in the first box for the same
  * reason: the pile of documents is theirs, and it is the only box the reader has to act on.
  */
@@ -185,9 +180,9 @@ export function SourcesFigure() {
 /**
  * WHAT ASKING FOR AN EXERCISE ACTUALLY LOOKS LIKE.
  *
- * It replaces a drawing of the hinge — three ticked artifacts with «Fase 2» beside them —
+ * It replaces a drawing of the hinge — three ticked artifacts with "Fase 2" beside them —
  * which said in a picture exactly what the slide's own title now says in words, and left
- * the reader's real question unanswered: «and what do I have to give it?». Three chips and
+ * the reader's real question unanswered: "and what do I have to give it?". Three chips and
  * an arrow. The three are the generate form's OWN questions, read from `form.*.title`, so
  * they are the words on the screen the reader is about to open and cannot drift from it.
  */
@@ -219,13 +214,12 @@ export function AskFigure() {
 }
 
 /**
- * HOW EVERY STEP GOES, in four beats.
+ * How every step goes, in four beats.
  *
- * The marked one is «lo valoras», which is the only beat the reader is being asked for:
- * the other three are what the step does around it. It is the contract the tutorial states
- * once — each step announces this before it happens — rather than repeating it four times.
- * The prose beside it therefore does NOT walk the four beats again (2026-09-02): it says
- * what the picture cannot, that correcting is optional and that a hand correction wins.
+ * The marked one is "lo valoras", the only beat the reader is being asked for; the other
+ * three are what the step does around it. The prose beside it does NOT walk the four beats
+ * again — it says what the picture cannot, that correcting is optional and that a hand
+ * correction wins.
  */
 export function CloseFigure() {
   const { t } = useT();

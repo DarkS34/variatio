@@ -146,7 +146,7 @@ export function QueueTab({
               className="flex w-full items-center gap-3.5 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-accent/40"
             >
               {/* A decline is NOT drawn in --destructive. Red is this palette's correction
-                  colour, and «no tengo criterio» is a fact about which subject this panel
+                  colour, and "no tengo criterio" is a fact about which subject this panel
                   can judge — not a mistake by whoever said it. */}
               <span
                 className={cn(

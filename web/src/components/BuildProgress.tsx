@@ -38,8 +38,8 @@ export function BuildProgress({
    * Drop the step timeline and the stop button, for a caller that already has both.
    *
    * The panel is the one place where three drawings of one job used to coexist: this card
-   * inside the stage's own card (with a `RunTimeline` and a «Cancelar»), `ActivityCard`
-   * beside it (with a second «Cancelar»), and the run drawer behind the floating pill
+   * inside the stage's own card (with a `RunTimeline` and a "Cancelar"), `ActivityCard`
+   * beside it (with a second "Cancelar"), and the run drawer behind the floating pill
    * (with the same timeline again). Two stop buttons for one job, thirty centimetres
    * apart and in different variants, is not redundancy that helps.
    *
@@ -76,12 +76,10 @@ export function BuildProgress({
 /**
  * Whether the step timeline is unfolded, remembered per browser.
  *
- * CLOSED BY DEFAULT (2026-09-03, explicit user request). The card's own header already
- * says which phase is running, how far and for how long; the step-by-step list under it is
- * detail for whoever wants it, and on a build of thirteen phases it was most of the card.
- * `localStorage` and not state, so the choice survives moving between the four steps: a
- * person who opened it once is reading builds, and one who shut it is not. Every access is
- * guarded, because the accessor itself throws in some browsers' private modes.
+ * Closed by default: the card's header already says which phase is running, how far and for
+ * how long, and on a build of thirteen phases the list under it is most of the card.
+ * `localStorage` and not state, so the choice survives moving between the four steps. Every
+ * access is guarded — the accessor itself throws in some browsers' private modes.
  */
 const STEPS_KEY = "vg.steps";
 
@@ -120,10 +118,10 @@ export function JobProgress({
   /**
    * What the stop button undoes, when that is not exactly this run.
    *
-   * «Transcribir todo» starts one job per origin, and the card of either origin has to
+   * "Transcribir todo" starts one job per origin, and the card of either origin has to
    * stop BOTH — a stop that reached one left the other running and the person pressed the
    * button twice for one press of the launcher. `word` and `hint` are `CancelButton`'s
-   * own: «Detener», and what stopping costs, for a job chewing through a slot.
+   * own: "Detener", and what stopping costs, for a job chewing through a slot.
    */
   cancel?: { runs?: (RunView | null)[]; word?: "cancel" | "stop"; hint?: string };
 }) {
@@ -150,10 +148,10 @@ export function JobProgress({
   const step = run.steps.filter((s) => s.status === "running").at(-1);
   const position = phases.findIndex((phase) => phase.key === overall?.key);
   // With no plan the running step is the only thing that knows how far this is, and it
-  // does know: it counts what it is iterating over. `null` is «todavía no medible».
+  // does know: it counts what it is iterating over. `null` is "todavía no medible".
   //
   // The two measures never mix. A build that has a plan but has not emitted its first
-  // `build.progress` yet keeps saying «—»: taking the step's number there would print a
+  // `build.progress` yet keeps saying "—": taking the step's number there would print a
   // percentage beside a segmented bar still drawn at zero, and the two would disagree.
   const percent = overall?.percent ?? (phases.length === 0 ? stepPercent(step) : null);
   // The running phase, or the running step when there is no plan. Both arrive with the

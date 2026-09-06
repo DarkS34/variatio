@@ -67,10 +67,9 @@ const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
 const SETTLED = 0.4;
 const COOLING = 0.975;
-// Force steps per animation frame. One per frame cooled from width/10 to SETTLED in ~200
-// frames — 3.3 s of visible drifting on a 630 px canvas, which read as «tarda en
-// renderizarse» once the graph stopped being folded (2026-09-04, explicit user request).
-// Four per frame is the same relaxation in ~0.8 s; the drawing is still one per frame.
+// Force steps per animation frame. One per frame cools from width/10 to SETTLED in ~200
+// frames — 3.3 s of visible drifting on a 630 px canvas. Four is the same relaxation in
+// ~0.8 s; the drawing is still one per frame.
 const STEPS_PER_FRAME = 4;
 // Upper bound on the synchronous relaxation; the cooling reaches SETTLED in ~200.
 const MAX_PRESETTLE_STEPS = 260;
@@ -207,14 +206,11 @@ export function GraphCanvas({
     [wake],
   );
 
-  // THE FIRST FRAME IS A SETTLED GRAPH, NOT A SEED (2026-09-04, explicit user request:
-  // «el bloque aparece en blanco, se empieza a estirar y como en 2 s aparece el grafo»).
-  // The bodies used to be seeded, drawn, and relaxed over ~200 animation frames, so what a
-  // person saw was a dot in the middle swelling into the graph. The relaxation is cheap —
-  // 162 bodies, ~200 steps, a few tens of milliseconds — so it runs here, synchronously,
-  // and the loop is left with nothing to animate. Returns false while the frame is still
-  // unmeasured, which is what happens on the first render: the mount effect runs it again
-  // the moment the size is known.
+  // The first frame is a SETTLED graph and not a seed: relaxed over animation frames, what
+  // a person sees is a dot in the middle swelling into the graph. The relaxation is cheap —
+  // 162 bodies, ~200 steps, tens of milliseconds — so it runs here, synchronously, and the
+  // loop is left with nothing to animate. Returns false while the frame is unmeasured,
+  // which is the first render: the mount effect runs it again once the size is known.
   const settleNow = useCallback(() => {
     const { width } = size.current;
     if (width === 0 || bodies.current.length === 0) return false;

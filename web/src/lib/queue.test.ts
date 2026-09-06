@@ -255,7 +255,7 @@ describe("prospectNote", () => {
   });
 
   // The complaint, in the one place a person reads before pressing: a busy remote engine
-  // must not turn into «se pondrá en cola» over a build that may well be local.
+  // must not turn into "se pondrá en cola" over a build that may well be local.
   it("never promises a wait it cannot know about", () => {
     const note = prospectNote(lanes({}, { busy: true }), true, 1, ES);
     expect(note).not.toContain("Se pondrá en cola");

@@ -23,10 +23,8 @@ import type {
 import { cn } from "@/lib/utils";
 
 /* The field-level machinery of the configuration, shared by the two screens that edit
-   settings: «Configuración» and, since 2026-08-28, the «Motor» tab — which took the
-   engine's own settings so that each one sits beside the thing it governs. It left
-   `ConfigTab.tsx` rather than being imported from it: a page is not a library, and a
-   second reader is exactly when that stops being a matter of taste. */
+   settings: "Configuración" and the "Motor" tab. It is not imported from either — a page is
+   not a library, and a second reader is when that stops being a matter of taste. */
 
 export const SOURCE_LABELS: Record<ConfigSource, Key> = {
   default: "cfg.source.default",
@@ -69,7 +67,7 @@ export function formatValue(value: unknown, t: Translate["t"]): string {
   if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
   if (typeof value === "boolean") return t(value ? "cfg.on" : "cfg.off");
   // A map reads as its pairs: the one setting shaped like this is the effort each locked
-  // model is called with, and `String()` on it says «[object Object]» in the save bar.
+  // model is called with, and `String()` on it says "[object Object]" in the save bar.
   if (typeof value === "object") {
     const pairs = Object.entries(value as Record<string, unknown>);
     return pairs.length ? pairs.map(([key, item]) => `${key}: ${String(item)}`).join(", ") : "—";
@@ -143,14 +141,14 @@ export function isModelSetting(setting: ConfigSetting): boolean {
 }
 
 /** The evaluation's own model setting: the writer of a comparison's two local proposals. Its
- *  null reads «the same model that writes a generation», not «follow the main». */
+ *  null reads "the same model that writes a generation", not "follow the main". */
 const EVALUATION_WRITER = "evaluation.local_model";
 
 const OTHER = "__other__";
 
 // The choice is among what the engine has on disk, because a name typed by hand is a typo
-// waiting for the first call. «Otro…» keeps the free text for a model not pulled yet, and
-// a phase keeps «Seguir al principal» (null) as its first option, which is what every
+// waiting for the first call. "Otro…" keeps the free text for a model not pulled yet, and
+// a phase keeps "Seguir al principal" (null) as its first option, which is what every
 // override defaults to.
 export function ModelSelect({
   id,
@@ -335,25 +333,19 @@ export function CerebrasModelsField({
 /**
  * Which models a commission may be written with, and which of them is the default.
  *
- * A list and not a single model since 2026-08-29: what a variant is written with stopped
- * being the installation's decision and became the person's, because the difference
- * between the two on offer is minutes of waiting against how much the model deliberates —
- * which is the trade-off of whoever is asking for the exercise, not of whoever administers
- * the machine. What stays here is the SHORTLIST.
+ * A LIST and not a single model: the difference between two offered models is minutes of
+ * waiting against how much the model deliberates, which is the trade-off of whoever asks
+ * for the exercise. What stays the installation's is the SHORTLIST.
  *
- * ORDER IS MEANING: the first one is what everything that does not choose is written with
- * — the CLI, the evaluation's three arms and any request naming none — so the chosen ones are
- * listed first, in their stored order, and «Poner primero» is how that is edited. Checking
- * one appends it; a list of one is legal and simply hides the chooser on the generate
- * screen.
+ * ORDER IS MEANING — the first one is what everything that does not choose is written with:
+ * the CLI, the evaluation's arms and any request naming none. Chosen ones are listed first,
+ * in their stored order; checking one appends it. A list of one is legal and simply hides
+ * the chooser on the generate screen.
  *
- * A NAME CAN BE TYPED, and that is not a convenience: the rows are the engine's listing,
- * which is empty whenever the engine does not answer — a tunnel down, the box off — and
- * that is exactly when somebody comes here to point the installation at another model.
- * With the checkboxes as the only way in, the field then offers what is already offered
- * and nothing else. It is the same escape `ModelSelect` keeps as «Otro…», and it also
- * covers the model that is not pulled yet: an offered model that is absent is a supported
- * state, drawn as «sin instalar».
+ * A name CAN BE TYPED, and that is not a convenience: the rows are the engine's listing,
+ * which is empty whenever the engine does not answer — exactly when somebody comes here to
+ * point the installation at another model. It also covers the model that is not pulled yet,
+ * which is a supported state drawn as "sin instalar".
  */
 export function GenerationModelsField({
   id,
@@ -482,24 +474,21 @@ export function GenerationModelsField({
 /**
  * Which offered models let their reasoning effort be adjusted when an exercise is asked for.
  *
- * ONE ROW PER OFFERED MODEL, and the rows come from the OTHER setting's draft rather than
- * from what is saved: unchecking a model above and locking it below in the same visit has
- * to work, and the save bar sends both keys in one request anyway.
+ * One row per offered model, and the rows come from the OTHER setting's DRAFT rather than
+ * from what is saved: unchecking a model above and locking it below in one visit has to
+ * work, and the save bar sends both keys in one request.
  *
- * The switch is phrased the positive way — «se puede ajustar» — while the setting stores
- * the negative, the models that may NOT. That is not a mismatch to tidy: the list is short
- * because locking is the exception, and a setting that stores the exception is one whose
- * default is the empty list. What a person reads is the question they are answering.
+ * The switch is phrased positively — "se puede ajustar" — while the setting stores the
+ * negative. Not a mismatch to tidy: locking is the exception, so the setting's default is
+ * the empty list, and what a person reads is the question they are answering.
  *
  * A name in the setting that is no longer offered keeps its row, at the foot and marked:
- * dropping it silently would throw away a measurement the next save could not recover, and
- * the setting deliberately does not validate against the offer for the same reason.
+ * dropping it silently throws away a measurement the next save cannot recover, which is
+ * also why the setting does not validate against the offer.
  *
- * A LOCKED ROW ALSO SAYS WITH WHICH LEVEL IT IS CALLED (2026-09-04, explicit user request),
- * which is the other half of the same decision and therefore the same row rather than a
- * field of its own further down. It writes into a SECOND setting, `generation.fixed_effort_
- * levels`, so the level survives taking the lock off for an afternoon — the level is kept
- * when the switch goes back on, and it is simply not read.
+ * A locked row also says with WHICH LEVEL it is called — the other half of the same
+ * decision, so the same row. It writes into a second setting, so the level survives taking
+ * the lock off for an afternoon: it is kept and simply not read.
  */
 export function FixedEffortField({
   id,
@@ -529,7 +518,7 @@ export function FixedEffortField({
   const set = (model: string, adjustable: boolean) =>
     onChange(adjustable ? fixed.filter((name) => name !== model) : [...fixed, model]);
 
-  // An empty choice is «the one the engine resolves», which is an absence and not a value:
+  // An empty choice is "the one the engine resolves", which is an absence and not a value:
   // it is what the setting means by a locked model it does not name.
   const setLevel = (model: string, level: string) => {
     if (level) {
@@ -864,7 +853,7 @@ export function DiffSummary({
 
 
 /* THE DRAFT IS PER SCREEN, NOT PER APPLICATION. Only one admin tab is mounted at a time,
-   so two drafts can never be open at once; what this buys is that the «Motor» tab saves
+   so two drafts can never be open at once; what this buys is that the "Motor" tab saves
    its sixteen settings without owning the other hundred and twenty-five. `sameValue` is
    what keeps a value typed back to what was stored from ever counting as a change. */
 export function useConfigDraft(stored: Map<string, unknown>) {

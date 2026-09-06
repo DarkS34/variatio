@@ -5,8 +5,8 @@ import type { GraphView } from "@/lib/types";
 import { adjacency, covered, priors } from "./prerequisites";
 
 // Variable ← Función ← Recursividad ← Memoización: the chain from `tests/conftest.py`,
-// the only shape where one hop and the closure differ. `[source, target]` reads «source
-// has target as prerequisite».
+// the only shape where one hop and the closure differ. `[source, target]` reads "source
+// has target as prerequisite".
 const GRAPH = {
   nodes: [["Variable"], ["Función"], ["Recursividad"], ["Memoización"], ["Suelto"]],
   links: [

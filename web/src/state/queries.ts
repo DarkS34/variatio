@@ -84,15 +84,11 @@ export function useArtifactRun(artifact: ArtifactName | undefined): RunView | nu
 /**
  * The most recent run of a job of this kind, running or not.
  *
- * `useArtifactRun` cannot answer this: it keys on the artifact a build writes, and the
- * jobs that have no artifact — describing concepts, indexing, tagging — are exactly the
- * ones whose screen has nowhere else to show that something is happening.
- *
- * It is also how a screen finds ITS run now that two lanes let two jobs run at once:
- * «el trabajo en curso» is no longer a single thing, so the generate screen asks for a
- * generation and the evaluation screen for a comparison instead of both taking whatever
- * the stream last heard from. `accept` narrows further — pass a module-level function, or
- * the memo re-runs every render.
+ * `useArtifactRun` cannot answer this: it keys on the artifact a build writes, and the jobs
+ * with no artifact — describing, indexing, tagging — are exactly the ones with nowhere else
+ * to say something is happening. With two lanes there is more than one run at a time, so a
+ * screen asks for its own kind rather than for whatever the stream last heard from.
+ * `accept` must be a module-level function, or the memo re-runs every render.
  */
 export function useJobRun(
   kind: JobKind,
@@ -111,11 +107,9 @@ export function useJobRun(
 /**
  * The most recent run of this kind that THIS account launched.
  *
- * The stream carries the whole workspace, so `useJobRun` alone adopts a colleague's run:
- * with two evaluators on `/evaluate`, the second one's screen collapsed onto the first
- * one's comparison — and then onto its 404. The generate and evaluation screens are
- * about a commission somebody made, so they filter by author; the build screens stay on
- * `useJobRun`, because an artifact under construction is under construction for everyone.
+ * The stream carries the whole workspace, so `useJobRun` alone adopts a colleague's run.
+ * A screen about a commission somebody made filters by author; a build screen stays on
+ * `useJobRun`, an artifact under construction being under construction for everyone.
  * `ownedBy` fails open when either id is unknown, so an older API degrades to the shared
  * behaviour instead of hiding the run.
  */
@@ -153,10 +147,9 @@ export function useElapsed(startedAt: number | null | undefined, live: boolean) 
   return Math.max(0, (now - startedAt) * 1000);
 }
 
-// `enabled` on both of the shell's queries, and on nothing else: with no workspace every
-// route that reads an instance answers 403, and these two are the ones that fire from the
-// header on every screen — polled, at that. The screens' own queries stay as they are,
-// because a screen that reads an instance is not reached in that state.
+// `enabled` on both of the shell's queries, and on nothing else: they fire from the header
+// on every screen, and with no workspace they would only 403. A screen that reads an
+// instance is never reached in that state.
 export function useHealth() {
   return useQuery({
     queryKey: keys.health,
@@ -169,11 +162,10 @@ export function useHealth() {
 /**
  * Is the installation closed?
  *
- * Asked without a session and by every tab, because the state can change while somebody is
- * working: the poll is what turns a screen into the notice a couple of dozen seconds after
- * the switch is thrown, instead of at the next reload. `retry: false` for the same reason
- * the session query has it — a server that is not answering is not the same statement as a
- * closed door, and the gate treats a failure here as «open», never as «closed».
+ * Asked without a session and by every tab: the poll is what turns a screen into the notice
+ * seconds after the switch is thrown rather than at the next reload. `retry: false` because
+ * a server that is not answering is not a closed door, and the gate reads a failure here as
+ * "open", never as "closed".
  */
 export function useMaintenance() {
   return useQuery({
@@ -189,9 +181,8 @@ export function useMaintenance() {
 /**
  * The same door, read by the account that can close it.
  *
- * A second query rather than a parameter on the first, because the two answers are not the
- * same answer: the public one deliberately omits WHO closed it, and the panel is the one
- * place that gets to say so. No poll — the panel is where it changes.
+ * A second query and not a parameter: the public answer deliberately omits WHO closed it.
+ * No poll — the panel is where it changes.
  */
 export function useAdminMaintenance() {
   return useQuery({ queryKey: keys.adminMaintenance, queryFn: api.adminMaintenance });
@@ -213,10 +204,10 @@ export function useSetMaintenance() {
 /**
  * Why no job can be launched right now, or `null`.
  *
- * All nine job kinds call a model, so without an engine none can succeed. It lives here and
- * not in each screen because the server already refuses with a 503: this is what keeps the
- * button from even asking. While `/health` has not answered yet nothing is blocked — a
- * button disabled out of ignorance is worse than one that fails once.
+ * Every job kind calls a model, so without an engine none can succeed; the server already
+ * refuses with a 503 and this only keeps the button from asking. While `/health` has not
+ * answered nothing is blocked: a button disabled out of ignorance is worse than one that
+ * fails once.
  */
 export function useEngineOffline(): Key | null {
   const health = useHealth();
@@ -236,17 +227,16 @@ export function usePipeline() {
 /**
  * The state of the two queues, one per inference backend, or null.
  *
- * Null is «this server does not split the queue», not a failure: an API older than this
- * bundle sends no `lanes` and every reader has a flat fallback. Reading `data.lanes.local`
- * straight would blank the screen on exactly that skew, which is a failure this project
- * has already made once.
+ * Null is "this server does not split the queue" and not a failure: an API older than this
+ * bundle sends no `lanes`, and reading `data.lanes.local` straight would blank the screen
+ * on that skew.
  */
 export function useLanes(): Lanes | null {
   const pipeline = usePipeline();
   return useMemo(() => readLanes(pipeline.data), [pipeline.data]);
 }
 
-/** Whether «el motor» is two halves worth telling apart, as the engine's own name says. */
+/** Whether "el motor" is two halves worth telling apart, as the engine's own name says. */
 export function useSplitEngine(): boolean {
   return isSplitEngine(useHealth().data?.engine);
 }
@@ -254,12 +244,9 @@ export function useSplitEngine(): boolean {
 /**
  * The three reads a commission is composed from, optionally about a NAMED instance.
  *
- * With no argument they are what they always were: the tab's workspace, the tab's cache
- * entry. With one, the slug goes into the query key as well as into the header — two
- * instances sharing `["kg"]` would serve one graph as the other's, which is the whole
- * class of bug the `X-Workspace` header exists to prevent, moved into the cache. The base
- * key stays a prefix of the named one, so every `invalidateQueries` already written
- * reaches both.
+ * With a slug it goes into the query key as well as into the header: two instances sharing
+ * `["kg"]` would serve one graph as the other's. The base key stays a PREFIX of the named
+ * one, so every `invalidateQueries` already written reaches both.
  */
 const scoped = <K extends readonly unknown[]>(key: K, workspace?: string | null) =>
   workspace ? ([...key, workspace] as const) : key;
@@ -293,10 +280,8 @@ export function useCoverage() {
   return useQuery({ queryKey: keys.coverage, queryFn: api.coverage });
 }
 
-// Gated like `useHealth`, and it became necessary the moment the shell started reading it:
-// `/api/raw` resolves a membership like every route, so an account that belongs to no
-// workspace would only ever get a 403 out of it. Every other consumer already sits behind
-// a screen that needs an instance.
+// Gated like `useHealth`: the shell reads it, and `/api/raw` resolves a membership like
+// every route, so an account in no workspace would only ever get a 403.
 export function useRaw() {
   return useQuery({ queryKey: keys.raw, queryFn: api.raw, enabled: useHasWorkspace() });
 }
@@ -313,10 +298,9 @@ export function useBuildPlans() {
 /**
  * A plan with every phase named in the reader's language.
  *
- * Named here rather than in `PhaseBar`: the bar is handed a plan with no idea WHICH plan it
- * is, and a phase key only means something inside its own — `convert` is three different
- * phases across the three builders. The two hooks below are the one place that holds both
- * halves, and naming it here is also what covers every bar at once.
+ * Named here rather than in `PhaseBar`: a phase key only means something inside its own
+ * plan — `convert` is three different phases across the three builders — and the bar is
+ * handed a plan with no idea which one it is.
  */
 function namedPhases(
   plan: string,
@@ -339,8 +323,8 @@ export function useBuildPhases(artifact: ArtifactName | undefined): BuildPhase[]
 /**
  * What the commission's free-text field may ask for, for one modality.
  *
- * `staleTime: Infinity` like the phase plan: it is derived from artifacts a generation
- * run cannot change, and switching workspace clears the whole cache anyway.
+ * `staleTime: Infinity`: it is derived from artifacts a generation run cannot change, and
+ * switching workspace clears the whole cache anyway.
  */
 export function useScope(itemType: string | null, workspace?: string | null) {
   return useQuery<CommissionScope>({
@@ -361,10 +345,9 @@ export function useJobPhases(kind: JobKind): BuildPhase[] {
 /**
  * The KIND of the raw slot this artifact needs and that has no documents, or null.
  *
- * Which slot feeds which artifact is declared by the server (`slot.feeds`), so the
- * screens never carry a second copy of that mapping. What comes back is the kind and not
- * the label, because the label is the API's own language: `lib/raw.slotLabelOf` is where
- * it becomes the reader's.
+ * Which slot feeds which artifact is the server's (`slot.feeds`), so no screen carries a
+ * second copy of that mapping. The kind and not the label, because the label arrives in the
+ * API's own language: `lib/raw.slotLabelOf` is where it becomes the reader's.
  */
 export function useRawMissingFor(artifact: ArtifactName | undefined): RawKind | null {
   const raw = useRaw();
@@ -378,12 +361,10 @@ export function useRawMissingFor(artifact: ArtifactName | undefined): RawKind | 
 /**
  * Everything an artifact write can invalidate, in one place.
  *
- * EL CUESTIONARIO DE LA ETAPA ESTÁ AQUÍ PORQUE VA CON EL ARTEFACTO. Su carga responde dos
- * cosas que dejan de ser ciertas en cuanto una construcción termina: si hay algo
- * construido que valorar, y bajo qué hash se archiva la respuesta. Sin invalidarlo, el
- * `built: false` que se leyó cuando la etapa no existía sobrevivía a la construcción —y
- * con `refetchOnWindowFocus: false` la única forma de refrescarlo era recargar la página,
- * así que el formulario no aparecía al terminar de construir.
+ * The stage questionnaire belongs here because it goes with the artifact: its read answers
+ * whether there is anything built to judge and under which hash the answer is filed, and
+ * both stop being true the moment a build ends. With `refetchOnWindowFocus: false` nothing
+ * else would refresh it short of a reload.
  */
 export function useInvalidateChain() {
   const client = useQueryClient();
@@ -405,35 +386,19 @@ export function useWorkspaces() {
 }
 
 /**
- * Land this tab in an instance — another one, a new one, or none at all.
+ * What survives leaving an instance: the session, and the state of the installation's door.
  *
- * Three things have to happen together and in this order: the tab starts sending the new
- * header, everything cached under the old one is dropped, and `me` is asked again. Doing
- * the second one first would refetch with the old header; skipping it would leave the
- * previous graph on screen under the new name.
- *
- * `removeQueries` and NEVER `client.clear()`, which is the part that had to change when
- * the default workspace went away. Clearing does not empty a query, it DESTROYS it and
- * drops it from the cache, so the observers of `["auth","me"]` — the gate and
- * `useHasWorkspace` — stay bound to a dead object and never hear the fresh answer. That
- * did not show while every account always had an instance and `role` never changed as one
- * moved between them. Now it does: entering the first workspace turns `null` into a role
- * and deleting the last one turns it back, and a screen that misses that either keeps
- * offering «crea el tuyo» over a workspace that already exists or the reverse.
- *
- * What survives is what is not about an instance: the session, and the state of the
- * installation's door. `["maintenance"]` is read by the gate itself, so dropping it puts
- * the whole app back on its loading spinner for as long as the poll takes — a blink of
- * «cargando» over a change that only concerns which graph is on screen.
+ * `["maintenance"]` is read by the gate itself, so dropping it would put the whole app back
+ * on its loading spinner for as long as the poll takes.
  */
 const NOT_ABOUT_AN_INSTANCE = ["auth", "maintenance"];
 
 /**
  * Drop everything the instance we have just left put on screen.
  *
- * `removeQueries`, and never `client.clear()`: clearing does not empty a query, it
- * DESTROYS it, so the observers of `["auth","me"]` — the gate and `useHasWorkspace` —
- * stay bound to a dead object and never hear the fresh answer.
+ * `removeQueries`, and NEVER `client.clear()`: clearing does not empty a query, it DESTROYS
+ * it, so the observers of `["auth","me"]` — the gate and `useHasWorkspace` — stay bound to
+ * a dead object and never hear the fresh answer.
  */
 function dropInstanceQueries(client: QueryClient) {
   client.removeQueries({
@@ -444,11 +409,9 @@ function dropInstanceQueries(client: QueryClient) {
 /**
  * Put the stream back wherever the account has ended up.
  *
- * The tab is pointing at nothing, and where it lands next is `me`'s answer rather than
- * this tab's — the server reassigns the account when the workspace it was in disappears.
- * So the socket waits for that answer instead of reconnecting into the void: a handshake
- * for an account in no workspace is refused with 4401, and «la sesión ha caducado» is the
- * one thing that is not happening. `useSession` adopts the new slug as it arrives.
+ * Where it lands next is `me`'s answer and not this tab's, so the socket waits for it
+ * instead of reconnecting into the void: a handshake for an account in no workspace is
+ * refused with 4401, which reads as "la sesión ha caducado".
  */
 function relandStream(client: QueryClient) {
   runStore.forget();
@@ -461,14 +424,9 @@ function relandStream(client: QueryClient) {
  * Move the tab out of an instance that has just stopped existing.
  *
  * The deletion's own answer says where this account lands, so the tab goes STRAIGHT there
- * instead of to `null` and back — `me` would say the same thing a round trip later, and in
- * between the header reads «ninguna asignatura» and the panel offers to create one, over a
- * change that only moved you to the workspace next door. `set` before dropping the queries,
- * so what refetches afterwards already carries the new `X-Workspace`.
- *
- * `relandStream` is still what reconnects: `me` is the authority on whether the landing is
- * real, and a socket opened for an account in no workspace closes with 4401 — which reads
- * as «la sesión ha caducado», the one thing that is not happening.
+ * rather than to `null` and back through `me` — in between, the header would read "ninguna
+ * asignatura" over a change that only moved you to the workspace next door. `set` before
+ * dropping the queries, so what refetches afterwards carries the new `X-Workspace`.
  */
 function leaveDeleted(client: QueryClient, landed: string | null) {
   workspaceStore.set(landed);
@@ -476,6 +434,14 @@ function leaveDeleted(client: QueryClient, landed: string | null) {
   relandStream(client);
 }
 
+/**
+ * Land this tab in an instance — another one, a new one, or none at all.
+ *
+ * Three things happen together and in this order: the tab starts sending the new header,
+ * everything cached under the old one is dropped, and `me` is asked again. The other order
+ * refetches with the old header; skipping the drop leaves the previous graph on screen
+ * under the new name.
+ */
 function useLandIn<TInput, TResult extends object>(
   mutationFn: (input: TInput) => Promise<TResult>,
 ) {
@@ -510,15 +476,11 @@ export function useCreateWorkspace() {
 }
 
 /**
- * The owner disposing of one of their own instances, which since 2026-08-28 is any one they
- * own and not only the one they are standing in — the call carries its own `X-Workspace`.
+ * The owner disposing of one of their own instances, which is any one they own: the call
+ * carries its own `X-Workspace`.
  *
- * So it cannot go through `useLandIn` any more: that forgets the tab's slug unconditionally,
- * which is right when what went is the instance on screen and pure churn when it is not.
- * Deleting the one you are in takes the same door as switching — the tab drops its slug and
- * `me` says where the account wakes up — and never `client.clear()`, which destroys
- * `["auth","me"]` instead of emptying it and leaves the header naming a workspace that no
- * longer exists.
+ * So it cannot go through `useLandIn`, which forgets the tab's slug unconditionally —
+ * right when what went is the instance on screen, pure churn when it is not.
  */
 export function useDeleteWorkspace() {
   const client = useQueryClient();
@@ -601,8 +563,7 @@ export function useAdminJobHistory() {
 
 /**
  * The engine's reading, polled: residency and the tunnel change on their own, and a model
- * being pulled moves every second. Five seconds while something is in flight, thirty when
- * nothing is.
+ * being pulled moves every second.
  */
 export function useAdminEngine() {
   return useQuery({
@@ -717,9 +678,8 @@ export function useRevokeInvite() {
 /**
  * Granting and revoking access, from the one screen that does it.
  *
- * Both refresh the overview — which is where the roles are read from — and also the
- * session, because the account being moved may be the administrator's own and the
- * workspace switcher would otherwise keep offering an instance they just left.
+ * Both refresh the session as well as the overview: the account being moved may be the
+ * administrator's own, and the switcher would keep offering an instance they just left.
  */
 export function useMembershipActions() {
   const client = useQueryClient();
@@ -745,9 +705,8 @@ export function useMembershipActions() {
 /**
  * Removing an account for good.
  *
- * The whole `["admin", …]` prefix goes, not just the overview: the deleted account was a
- * row in the accounts table, a group in «por cuenta» and possibly the current filter of
- * the evaluation tab, and leaving any of those cached shows a name that no longer exists.
+ * The whole `["admin", …]` prefix goes and not just the overview: the account was also a
+ * group in "por cuenta" and possibly the evaluation tab's current filter.
  */
 export function useDeleteAccount() {
   const client = useQueryClient();
@@ -760,9 +719,8 @@ export function useDeleteAccount() {
 /**
  * Empty a stage from the administration panel.
  *
- * Invalidates `["admin"]` and the chain too: the affected workspace may be the one this tab
- * has open, and then what is on screen — the graph, the profile, the bank — has just stopped
- * existing on disk.
+ * Invalidates the chain as well as `["admin"]`: the workspace may be the one this tab has
+ * open, and then what is on screen has just stopped existing on disk.
  */
 export function useDeleteArtifact() {
   const client = useQueryClient();
@@ -778,24 +736,10 @@ export function useDeleteArtifact() {
 }
 
 /**
- * Remove a whole workspace from the panel, which is any one and not the active one.
+ * Renaming an instance, which only an administrator does.
  *
- * It is the administrator's version of `useDeleteWorkspace`, and cannot be the same one:
- * that one deletes the instance you are in and therefore empties the whole cache and
- * releases the switcher. Here that only applies when the one gone turns out to be this tab's;
- * in the normal case the deletion is of another instance and dropping the cache would reload
- * the screen for no reason.
- *
- * Deleting the one you are IN used to `client.clear()`, which is the one thing the login
- * gate's rule forbids: it destroys `["auth","me"]` instead of emptying it, so the very
- * query that says where this account lands next notifies nobody and the header keeps the
- * name of a workspace that no longer exists. It takes the same door as switching now — the
- * tab forgets its slug, the instance's queries go, and `me` says where it wakes up.
- */
-/**
- * Renaming an instance, which only an administrator does (2026-08-28, explicit user
- * request). It invalidates the panel AND the switcher: the header carries the name of the
- * workspace this tab has open, and it is the same row.
+ * It invalidates the panel AND the switcher: the header carries the name of the workspace
+ * this tab has open, and it is the same row.
  */
 export function useAdminRenameWorkspace() {
   const client = useQueryClient();
@@ -810,6 +754,13 @@ export function useAdminRenameWorkspace() {
   });
 }
 
+/**
+ * Remove any workspace from the panel, active or not.
+ *
+ * The administrator's version of `useDeleteWorkspace` and deliberately not the same hook:
+ * emptying the cache is right only when the one gone is this tab's, and pure churn when the
+ * deletion is of another instance.
+ */
 export function useAdminDeleteWorkspace() {
   const client = useQueryClient();
   return useMutation({
@@ -830,10 +781,8 @@ export function useAdminDeleteWorkspace() {
 /**
  * Say, once and briefly, that what was just launched is going to wait.
  *
- * The notice is about the WAIT and not about the launch: a job that starts straight away
- * has nothing to announce, and the criterion for «is it waiting» is the payload's, shared
- * with the pending state every button holds afterwards. Every launcher goes through here,
- * so no screen carries a second copy of the rule.
+ * About the WAIT and not the launch: a job that starts straight away has nothing to
+ * announce. Every launcher goes through here, so no screen keeps a second copy of the rule.
  */
 export function useQueuedNotice() {
   const toast = useToast();

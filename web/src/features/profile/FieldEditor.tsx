@@ -208,9 +208,9 @@ function Segmented({
     <div
       title={title}
       className={cn(
-        // `flex w-full` y no `inline-flex`: el fondo ya ocupaba el ancho del contenedor
-        // mientras los botones se apelotonaban a la izquierda, así que la mitad derecha
-        // era gris y no era nada. Con `flex-1` cada opción se lleva su parte exacta.
+        // `flex w-full` and not `inline-flex`: the ground already fills the container, so
+        // with the buttons bunched to the left the right half is grey and means nothing.
+        // With `flex-1` each option takes exactly its share.
         "flex w-full items-center gap-1 rounded-lg bg-muted p-1",
         disabled && "opacity-60",
       )}
@@ -446,22 +446,18 @@ export function FieldEditor({
 
       {open ? (
         <div className="animate-fade-in space-y-4 border-t border-border p-4">
-          {/* QUÉ SE LLAMA Y QUÉ ES, en dos columnas y en ese orden. «Obligatoriedad» pasa
-              a la columna izquierda, bajo el nombre (2026-09-01, explicit user request):
-              el selector de tipo son siete botones en dos filas más su explicación, así
-              que la columna de al lado se quedaba con un campo de texto y un palmo de
-              hueco debajo mientras la obligatoriedad ocupaba una fila entera para sí
-              sola. Ahora las dos columnas acaban a la misma altura y las tres preguntas
-              sobre la FORMA del campo están juntas.
+          {/* What it is called and what it is, in two columns and in that order, with
+              "Obligatoriedad" under the name: the type picker is seven buttons in two rows
+              plus its explanation, so the column beside it would be a text field over a
+              hand's width of nothing. The three questions about the FORM of a field are
+              together and the two columns end level.
 
-              NI «LONGITUD» NI «RANGO» NI «QUIÉN LO DECIDE» (2026-09-01, explicit user
-              request). Los tres son la forma del esquema, no la de la asignatura: un
-              mínimo y un máximo de caracteres son una restricción que nadie sabe fijar
-              sin medir, y quién decide un campo es una decisión sobre el formulario de
-              generación, no sobre el ejercicio. Lo que el perfil traiga se conserva —
-              nada de esto se borra del artefacto, sólo deja de preguntarse — y los dos
-              avisos de abajo siguen, porque un perfil importado puede traer un rango
-              imposible y hay que poder verlo. */}
+              Neither "Longitud" nor "Rango" nor "Quién lo decide" is asked: all three are
+              the shape of the schema and not of the subject — a minimum and a maximum of
+              characters are a constraint nobody can set without measuring, and who decides a
+              field is a decision about the generate form. What the profile brings is kept in
+              the artifact and simply not asked about; the two notices below stay, because an
+              imported profile can carry an impossible range and it has to be visible. */}
           <div className="grid gap-4 md:grid-cols-[16rem_1fr]">
             <div className="space-y-4">
               <Row

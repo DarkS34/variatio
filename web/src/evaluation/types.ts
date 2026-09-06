@@ -41,16 +41,12 @@ export interface EvaluationPosition {
 /**
  * What the graph makes of one proposal, run over the three alike after they are all in.
  *
- * `off_limits` is not a second opinion about the exercise: it is what the proposal brought
- * in from the set the commission put out of bounds — `forbidden` over the dependent
- * closure, the very block the system arm's prompt carries — so the same rule is applied to
- * the three even though only one of them was told about it. Under `rule: "mentions"` (the
- * commission carried a curriculum, so the closure is «no impartido») a concept counts
+ * `off_limits` is what the proposal brought in from the set the commission put out of
+ * bounds — the very block the system arm's prompt carries — so the same rule is applied to
+ * all three even though only one was told about it. Under `"mentions"` a concept counts
  * whether the tagger says the exercise is ABOUT it or the text merely NAMES it, so it may
- * not be among `concepts`; under `"practises"` (no curriculum, so the closure is only
- * «viene después») nothing but the primary concept can be there. A session recorded before
- * the rule existed carries no `rule` and was read as `"mentions"`. Absent on a session
- * recorded before the pass existed and on an arm that produced no item.
+ * not be among `concepts`; under `"practises"` only the primary concept can be there.
+ * Absent on an arm that produced no item, and on a session recorded before the pass.
  */
 export type ClosureRule = "mentions" | "practises";
 
@@ -76,8 +72,7 @@ export type { EvaluatorProfile };
  * What this account is asked, served by the API rather than written here.
  *
  * The wording IS the instrument: rewording it changes what was measured, so it lives in
- * `evaluation/api/instruments.py` and arrives with the listing. A second copy in the browser
- * is a second thing to keep in step with the analysis.
+ * `evaluation/api/instruments.py` and arrives with the listing.
  */
 export interface Instruments {
   profile: EvaluatorProfile;
@@ -127,7 +122,7 @@ export interface EvaluationSessionHead {
   choice: number | null;
   choice_arm: EvaluationArm | null;
   chosen_at: number | null;
-  /** «No tengo criterio»: the session is over and no preference was ever expressed. */
+  /** "No tengo criterio": the session is over and no preference was ever expressed. */
   declined_at: number | null;
   evaluator_note: string | null;
   rating: EvaluationRating | null;
@@ -163,9 +158,8 @@ export interface EvaluationSummary {
 /**
  * One entry of the queue: what somebody handed this evaluator.
  *
- * Who handed it over is deliberately absent — it is recorded and the administration panel
- * reads it, but on this screen it would invite reading the judgement as owed to a person
- * rather than to the evaluation.
+ * Who handed it over is deliberately absent: it is recorded and the panel reads it, but on
+ * this screen it invites reading the judgement as owed to a person.
  */
 export interface QueueItem {
   id: string;
@@ -212,7 +206,7 @@ export interface ArmSignificance {
 export interface TriageSlice {
   n: number;
   counts: Record<TriageValue, number>;
-  /** «Tal cual» and «con retoques» together: would this save the teacher work at all. */
+  /** "Tal cual" and "con retoques" together: would this save the teacher work at all. */
   usable: number;
   outright: number;
   ci95_usable: Interval | null;
@@ -262,9 +256,8 @@ export interface EvaluationAggregates {
 /**
  * The evaluator's own sessions and nothing else.
  *
- * `aggregates` is deliberately gone from this payload: showing somebody the running score
- * of the thing they are about to judge invites them to even it out. The evaluation's numbers
- * live in the administration panel, over `AdminEvaluations`.
+ * No `aggregates`: showing somebody the running score of what they are about to judge
+ * invites them to even it out. The numbers live in the administration panel.
  */
 export interface EvaluationListing {
   sessions: EvaluationSummary[];
@@ -397,10 +390,9 @@ export interface AssignableAccount {
  * One instance this account can open, and whether anything can be commissioned in it.
  *
  * `ready` is the same gate `POST /evaluations/generate` enforces, so the screen never
- * offers what the endpoint would refuse; `pending` names the stages still to be approved
- * as ARTIFACT KEYS, which `lib/names.ts` says in the reader's own language rather than
- * the API's. Both are optional because an API older than this bundle sends neither, and
- * the panel reads that as «no lo sabe» — offered, not blocked.
+ * offers what the endpoint would refuse; `pending` names the stages still to be approved as
+ * ARTIFACT KEYS, which `lib/names.ts` says in the reader's language. Both optional: an
+ * older API sends neither, and the panel reads that as offered rather than blocked.
  */
 export interface AssignableWorkspace {
   slug: string;
@@ -440,10 +432,9 @@ export interface StageInstrument {
   artifact: string;
   version: string;
   preamble: string;
-  /** How many the form asks, `overall` included. The button that OPENS the form says it,
-   *  and it may not count for itself: a constant here promised five on all three stages
-   *  while the graph asked six. Optional because an API older than the bundle does not
-   *  send it — `questionCount()` derives exactly the same number from `questions`. */
+  /** How many the form asks, `overall` included: the button that OPENS the form says it,
+   *  and a constant here would promise a number the instrument does not keep. Optional —
+   *  `questionCount()` derives the same number from `questions`. */
   count?: number;
   scale: StageScale;
   questions: StageQuestion[];
@@ -454,9 +445,8 @@ export interface StageInstrument {
 /**
  * How many questions a stage's form asks, `overall` included.
  *
- * The server sends it (`stage_instruments.count`) and this recomputes it when an older API
- * does not: `overall` is on the form, it is the last thing answered, and it is what
- * «contestada» means, so a count that left it out would be short by one.
+ * The server sends it and this recomputes it for an older API. `overall` counts: it is on
+ * the form, it is answered last, and it is what "contestada" means.
  */
 export function questionCount(instrument: StageInstrument): number {
   return instrument.count ?? instrument.questions.length + 1;
@@ -470,8 +460,8 @@ export interface StageAnswers {
   /** `overall` is set, which is the last question: the person reached the end. */
   answered: boolean;
   /** Whether this person corrected the artifact before judging it — the evaluation's own
-   *  contrast, «cómo lo valoran los que curaron y cómo los que no». `null` is «nadie lo
-   *  dijo», which every row written before the question existed carries. */
+   *  contrast, "cómo lo valoran los que curaron y cómo los que no". `null` is "nadie lo
+   *  dijo", which every row written before the question existed carries. */
   curated: boolean | null;
   instrument: string;
   updated_at: string | null;
@@ -512,10 +502,10 @@ export interface StageArtifactSummary {
   artifact: string;
   opened: number;
   answered: number;
-  /** The «en conjunto» statement, its mean and a count per rung. */
+  /** The "en conjunto" statement, its mean and a count per rung. */
   overall: { statement: string; n: number; mean: number | null; counts: Record<string, number> };
   questions: StageQuestionSummary[];
-  /** «Nada» and «algún retoque» together: the share that leaves the artifact usable. */
+  /** "Nada" and "algún retoque" together: the share that leaves the artifact usable. */
   usable: number | null;
   /** The contrast the `curated` column exists for; `unknown` predates the question. */
   curation: Record<"yes" | "no" | "unknown", StageCurationSlice>;

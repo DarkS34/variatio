@@ -64,11 +64,11 @@ def test_an_explicit_curriculum_replaces_the_stored_one(tmp_path):
 
 
 def test_the_curriculum_in_force_is_closed_under_prerequisites(tmp_path):
-    """Covering «Recursividad» covers what it rests on (2026-09-04).
+    """Covering "Recursividad" covers what it rests on.
 
-    The selector marks the prerequisites of what is picked, and the row records what ran,
-    so the list in force is the closed one on both doors — the commission's own and the
-    file's, which the old editor closed at save time and closing again leaves alone.
+    The selector marks the prerequisites of what is picked and the row records what ran, so
+    the list in force is the CLOSED one on both doors — the commission's own and the file's,
+    which was closed at save time and which closing again leaves alone.
     """
     ws, graph = workspace(tmp_path)
     assert curriculum.resolve(ws, graph, ["Recursividad"]) == ["Función", "Recursividad", "Variable"]

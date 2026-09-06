@@ -46,13 +46,13 @@ export function adjacency(graph: GraphView | undefined): Adjacency | null {
 }
 
 /**
- * The transitive closure, in whichever direction is asked for. Both sides of the graph
- * reading have been closures since 2026-08-19: at one hop, a concept two steps away was
- * neither allowed nor forbidden, and the forbidden side is the safety-relevant one.
+ * The transitive closure, in whichever direction is asked for. Both sides are closures and
+ * not one hop: at one hop a concept two steps away is neither allowed nor forbidden, and
+ * the forbidden side is the safety-relevant one.
  *
- * The result is never narrowed to the taggable concepts: it mirrors the server's prompt,
- * which applies no such filter, so hiding a non-taggable prerequisite here would disagree
- * with what the model is actually told.
+ * Never narrowed to the taggable concepts: it mirrors the server's prompt, which applies no
+ * such filter, so hiding a non-taggable prerequisite would disagree with what the model is
+ * told.
  */
 function closure(adj: Adjacency, concepts: string[], edges: Edges): string[] {
   const start = new Set(concepts);

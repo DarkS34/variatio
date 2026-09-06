@@ -1,6 +1,6 @@
 """Which backend each job kind competes for.
 
-The claim under test is not «this kind uses that model» — that is the builders' and the
+The claim under test is not "this kind uses that model" — that is the builders' and the
 handlers' business — but the two properties the parallel queue rests on: with one engine
 everything shares one lane and the queue behaves exactly as it did, and with the hybrid
 engine a kind reserves a lane for each backend its GENERATIVE models resolve to. The
@@ -108,10 +108,10 @@ def test_every_model_the_table_names_is_one_the_registry_declares():
     assert named <= MODEL_SETTINGS
 
 
-# The writer of a variant is the commission's since 2026-08-29, and with one offered model
-# served remotely and another on the GPU that is the whole lane calculation of a generate
-# job: reading the installation's default instead would send it to wait behind the wrong
-# queue, or reserve a lane it never touches.
+# The writer of an exercise is the COMMISSION's, and with one offered model served remotely
+# and another on the GPU that is the whole lane calculation of a generate job: reading the
+# installation's default instead sends it behind the wrong queue, or reserves a lane it
+# never touches.
 def test_a_generate_job_reserves_the_lane_of_the_model_its_commission_names(hybrid, monkeypatch):
     monkeypatch.setattr(config, "GENERATION_MODELS", ["remoto", "local-escritor"])
     monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "remoto")
@@ -144,9 +144,9 @@ def test_transcribing_reserves_the_lane_of_the_model_that_reads_the_pages(ollama
     assert lanes.backends_for("transcribe") == frozenset({lanes.LOCAL})
 
 
-# An evaluation's two local proposals are written by the installation's own setting since
-# 2026-09-04 (`evaluation.local_model`), so the lane it reserves is that model's and never
-# the generation default's alone.
+# An evaluation's two local proposals are written by the installation's own setting
+# (`evaluation.local_model`), so the lane it reserves is that model's and never the
+# generation default's alone.
 def test_an_evaluate_job_reserves_the_lane_of_the_installations_writer(hybrid, monkeypatch):
     monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "remoto")
     monkeypatch.setattr(lanes, "_evaluation_writer", lambda: "local-escritor")

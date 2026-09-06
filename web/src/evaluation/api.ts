@@ -65,7 +65,7 @@ export const evaluationApi = {
   /** The reveal: the response already carries the origins of the three proposals. */
   chooseEvaluation: (id: string, choice: number | null, comment?: string) =>
     post<EvaluationDetail>(`/api/evaluation/${id}/choice`, { choice, comment }),
-  /** «No tengo criterio»: closes the session without ever recording a preference. */
+  /** "No tengo criterio": closes the session without ever recording a preference. */
   declineEvaluation: (id: string, comment?: string) =>
     post<EvaluationDetail>(`/api/evaluation/${id}/decline`, { comment }),
   rateEvaluation: (id: string, rating: Partial<EvaluationRating>) =>

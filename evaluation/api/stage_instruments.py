@@ -1,20 +1,13 @@
 """What a teacher is asked about each artifact, right after building it.
 
-The blind comparison measures the variants. This measures the CHAIN that produces them,
-which nothing did before: a workspace could be prepared end to end and leave no record of
-whether its profile, its graph or its bank came out any good — so a poor comparison could
-never be told apart from a poor instance underneath it.
+The blind comparison measures the variants; this measures the CHAIN that produces them, so
+a poor comparison can be told apart from a poor instance underneath it.
 
-A LIKERT SCALE, FIVE STATEMENTS PER STAGE, THE SAME FIVE AXES ON ALL THREE (2026-09-04,
-explicit user request, over the five multiple-choice questions of 2026-09-03). Every item
-is a STATEMENT the person agrees or disagrees with on one five-point scale — «totalmente
-en desacuerdo» to «totalmente de acuerdo» — and the same scale is drawn once for the whole
-form. What that buys over per-question options is a number on every axis that means the
-same thing everywhere: a 4 on precision and a 4 on effort are the same amount of agreement,
-so the memoria can average, compare across stages and compare across people without a
-table that translates «alguno suelto» into a rank first. The axes are what a builder can
-get wrong, and they are the same for any artifact that is a list the system extracted from
-somebody's documents:
+A Likert scale: five statements per stage, on the same five axes on all three, each
+answered on one five-point scale drawn once for the whole form. That is what makes a 4 on
+precision and a 4 on effort the same amount of agreement, so the memoria can average and
+compare across stages and people with no table translating options into ranks first. The
+axes are what a builder can get wrong about a list extracted from somebody's documents:
 
   1. `precision` — is what is here right? (nothing that should not be)
   2. `recall` — is everything that should be here present?
@@ -24,38 +17,27 @@ somebody's documents:
   5. `overall` — «en conjunto, ha salido bien», the one column shared with the rest of
      the evaluation.
 
-EVERY STATEMENT IS WORDED SO THAT AGREEING IS THE GOOD ANSWER. Reverse-scored items were
-considered and left out: they guard against a person ticking the same column all the way
-down, at the cost of a scale the analysis has to flip item by item, and on a form of five
-statements read beside the artifact they describe the guard is not worth the trap. So the
-value IS the score, 5 being best, and «lo usaría sin apenas corregir» is stated rather than
-«tendría que rehacerlo». Precision and recall are still asked APART because they are
-opposite conclusions about the extractor — over-generating and under-generating are fixed
-in different places. The graph's order statement no longer offers «no lo he mirado»: the
-middle of the scale is what somebody who has not looked leaves it on, and the hint says so.
-The optional note is not a statement and is not counted.
+Every statement is worded so that AGREEING is the good answer, so the value IS the score
+with 5 best. Reverse-scored items were considered and left out: they guard against ticking
+one column all the way down, at the cost of a scale the analysis has to flip item by item.
+Precision and recall are asked APART, being opposite conclusions about the extractor that
+are fixed in different places. The optional note is not a statement and is not counted.
 
-Not one statement names an artifact, a model or a phase. The person answering has never
-seen this tool and is being asked about their own subject: «tipos de ejercicio», «el
-temario», «tus ejercicios». The vocabulary is the screen's, and it is the same one.
+Not one statement names an artifact, a model or a phase: the person answering has never
+seen this tool and is asked about their own subject, in the screen's own vocabulary.
 
-The wording lives here and not in the browser for the reason `instruments.py` says: it IS
-the instrument and not a label, so rewording it changes what was measured. `VERSION` is
-stored on every row precisely so that two wordings are never pooled by accident — bump it
-whenever a statement, the scale or their ORDER changes, and never edit a wording in place
-without doing so.
+The wording lives here and not in the browser because it IS the instrument and not a label:
+rewording it changes what was measured. `VERSION` is stored on every row so two wordings
+are never pooled by accident — bump it whenever a statement, the scale or their ORDER
+changes, and never edit a wording in place without doing so.
 """
 
 from server import approvals
 
-# Stored in `stage_evaluations.instrument`. Bump on ANY change to the statements below.
-# «4» since 2026-09-04: the five questions became five Likert statements on one shared
-# agreement scale, with the keys renamed to the axis they measure — so nothing under «3»
-# (options such as «none» / «touch_up») is ever pooled with a 1-5 under «4». «3»
-# (2026-09-03) cut the instrument to five questions per stage on the five axes; «2»
-# (2026-09-02) reworded the bank's tagging question from «tema» to «concepto»; «1» was the
-# original wording. Rows under «» are a pre-existing oddity of the save path, all dated
-# 2026-09-02.
+# Stored in `stage_evaluations.instrument`. Bump on ANY change to the statements below, or
+# two wordings are pooled by accident: rows under an earlier version hold option keys such
+# as «none» / «touch_up» and must never be averaged with a 1-5 rung. A row under «» was
+# opened and never answered — `mark_opened` writes it before `save` stamps the version.
 VERSION = "4"
 
 # The one scale, for every statement and for `overall` alike. The index is the score — 1 is

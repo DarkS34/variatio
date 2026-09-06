@@ -1,21 +1,18 @@
-"""The variants this workspace has produced, kept so they can be read back.
+"""The exercises this account has generated, kept so they can be read back.
 
 Declares `auth.VIEW` for the whole router; promoting and deleting add `auth.EDIT`.
 
 Every validated item is a row carrying the commission that produced it — concepts,
 curriculum, fixed fields, extra instructions, which model wrote it and whether it
-deliberated — because a variant without its parameters can be read but neither judged nor
+deliberated — because a statement without its parameters can be read but neither judged nor
 reproduced.
 
-EVERY ROUTE HERE IS SCOPED TO THE ACCOUNT THAT ASKS (2026-09-04, explicit user request:
-«un único usuario puede ver solamente sus ejercicios generados en su workspace, todo
-privado»). There was a second scope — `workspace`, everything the instance had produced —
-and it is gone rather than defaulted away: a filter somebody can flip is not privacy. The
-membership still bounds the workspace, and the author now bounds the rows inside it, so
-two accounts preparing one subject no longer read each other's exercises. The owner is not
-an exception and neither is the administrator: `_require` answers 404 for a row that is
-not yours, exactly as it does for a row of another instance, because «existe pero no es
-tuya» is itself something this refuses to say.
+EVERY ROUTE IS SCOPED TO THE ACCOUNT THAT ASKS, and there is no second scope to flip: a
+filter somebody can turn off is not privacy. The membership bounds the workspace and the
+author bounds the rows inside it, so two accounts preparing one subject do not read each
+other's exercises. Neither the owner nor the administrator is an exception — `_require`
+answers 404 for a row that is not yours, because «existe pero no es tuya» is itself
+something this refuses to say.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query

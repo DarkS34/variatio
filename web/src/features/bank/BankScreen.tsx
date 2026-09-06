@@ -54,9 +54,8 @@ import { useT } from "@/lib/i18n";
 /**
  * A control that exists only to CORRECT the bank.
  *
- * Hidden — never greyed — while the stage is being looked at: nothing on screen is wrong,
- * and a dimmed button says otherwise. It comes back with «Quiero corregir algo» at the foot
- * of the page, closed stage or not (2026-09-02): the first write reopens it on the server.
+ * Hidden and never greyed while the stage is being looked at: nothing on screen is wrong,
+ * and a dimmed button says otherwise.
  */
 function Correction({ children }: { children: ReactNode }) {
   return useStageLockReason() === "reviewing" ? null : <>{children}</>;
@@ -79,18 +78,6 @@ interface ItemDialogProps {
   onSaved: () => void;
 }
 
-/**
- * ONE EXERCISE, WHOLE: the form, or the reading of it.
- *
- * Two components rather than one with every field refused. A dialog of greyed textareas
- * over an item nobody has objected to is the «atenuar en vez de ocultar» failure at full
- * size — it reports damage where there is none.
- *
- * The reading is not a control taken away either, and that is why it survives the hiding
- * pass: the row clamps the statement to two lines and draws three of its temas, so this is
- * the only place an exercise can be read entire with everything it was tagged with. Reading
- * one is precisely what this step asks of the person.
- */
 /** One field as it is READ: the key as its label, code in a block, prose as prose. The
  *  dialog and the expanded row both draw fields with it, so opening an exercise one way or
  *  the other cannot show the same field two ways. */
@@ -132,11 +119,8 @@ function ItemReading({ item, fields, primaryField, onClose }: ItemDialogProps) {
         </Button>
       }
     >
-      {/* ONE COLUMN, THE CONCEPTS FIRST (2026-09-04, explicit user request to fix how an
-          exercise looks when opened). The right column used to hold the tagger's trace
-          beside the concepts; with the trace gone it held three badges and a hand's width
-          of nothing, while the exercise was read through half the dialog. The concepts
-          are the answer of this step, so they lead, and the fields take the width. */}
+      {/* One column, the concepts FIRST: they are the answer of this step, and the fields
+          take the width rather than being read through half a dialog. */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2 border-b border-border pb-4">
           <Label>{t("bank.concepts")}</Label>
@@ -320,23 +304,19 @@ function ItemRow({
   const { t } = useT();
   const locked = useStageLocked();
   const lockedHint = useStageLockedHint();
-  // A selection made while correcting survives going back to the view, where the box that
-  // made it is no longer drawn — and a tinted row whose cause is off screen reads as the
-  // table having decided something. Nothing is lost: the picks come back with the boxes.
+  // A selection made while correcting outlives the boxes that made it, and a tinted row
+  // whose cause is off screen reads as the table having decided something.
   const reviewing = useStageLockReason() === "reviewing";
   const [open, setOpen] = useState(false);
   const untagged = !item.concepts || item.concepts.length === 0;
   const text = fieldText(item[primaryField]);
-  // Extracted before the grammar was dropped from remote bank extraction: the statement
-  // holds control characters where its accents used to be. Nothing here can repair it —
-  // only a re-extraction can — but until this the row looked exactly like a sound one.
+  // Extracted before the grammar was dropped from remote bank extraction, so the statement
+  // holds control characters where its accents were. Only a re-extraction repairs it; this
+  // is what keeps the row from looking sound.
   const broken = hasBrokenText(item);
-  // A CHEVRON THAT OPENS ONTO NOTHING IS NOT DRAWN. What the fold holds is the fields the
-  // modality declares beside the statement, and an item may carry none of them — on the
-  // reference bank `solucion` and `explicacion` came back null for every exercise, so with
-  // the tagger's trace gone (2026-09-04, explicit user request) the control would have been
-  // a button down forty rows that answers with an empty box. The whole item is still one
-  // click away: the statement itself opens it.
+  // A chevron that opens onto nothing is not drawn: the fold holds the fields the modality
+  // declares beside the statement, and an item may carry none of them. The whole item is
+  // still one click away — the statement itself opens it.
   const ordered = orderedConcepts(item);
   const shownConcepts = ordered.slice(0, MAX_ROW_CONCEPTS);
   const restConcepts = ordered.slice(MAX_ROW_CONCEPTS);
@@ -353,35 +333,22 @@ function ItemRow({
       <TR
         selected={selected && !reviewing}
         className={cn(
-          // THE CHEVRON MAY NOT MOVE WHEN IT IS PRESSED (2026-09-04, explicit user request:
-          // «se abre y luego no se puede cerrar o abrir otro»). `TR`'s own `align-top` never
-          // reached a cell — `vertical-align` is not inherited, and `TD` sets `align-middle`
-          // itself — so every cell was centred in a row that GROWS on opening: measured, the
-          // chevron slid 48 px down on a 176 px row, out from under the pointer that had
-          // just clicked it, and a second click landed on the empty top of the same cell and
-          // did nothing. With a code field in the detail the row is several hundred pixels
-          // tall and the control ends up in the middle of nowhere. `[&>td]` is what actually
-          // reaches the cells: `.row > td` outranks `.align-middle` on specificity, so it
-          // wins wherever the two meet.
+          // The chevron may not move when it is pressed, and a row GROWS on opening. `TR`'s
+          // own `align-top` reaches no cell — `vertical-align` is not inherited and `TD`
+          // sets `align-middle` itself — so it takes `[&>td]`, whose `.row > td` outranks
+          // `.align-middle` wherever the two meet.
           "group align-top [&>td]:align-top",
-          // EVERY COLLAPSED ROW IS THE SAME HEIGHT (2026-09-01, explicit user request).
-          // A table whose rows breathe with the length of a statement cannot be scanned
-          // down a column, and the two cells that made them breathe are bounded rather
-          // than shortened: the statement is clamped to two lines and the concepts to two
-          // rows of badges. `height` on a table row is a MINIMUM, so it only does half the
-          // work — the clamping is the other half, and without it a long statement would
-          // still push past. An open row drops it: the detail it reveals is the point.
-          // 5.5rem is the MEASURED ceiling of a full one since the scale moved on
-          // 2026-09-04 (5rem before it): the id's line box is the table's own 21px and
-          // not micro's 16.2 (an inline in a block sits on the parent's strut), plus two
-          // clamped lines at 23.25, `py-2` either side and the border — 84.5 measured,
-          // and at 5rem a one-line statement sat at 80 beside them.
+          // Every collapsed row is the same height, or the table cannot be scanned down a
+          // column. `height` on a table row is a MINIMUM and does half the work: the other
+          // half is the clamping below, without which a long statement still pushes past.
+          // 5.5rem is the measured ceiling of a full row — the id's line box at the table's
+          // own 21 px, two clamped lines at 23.25, `py-2` either side and the border.
           !open && "h-[5.5rem]",
           untagged && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
         )}
       >
         {/* The box goes with what it is a handle for. Selecting rows has exactly one
-            consumer, «Re-etiquetar selección», so with that hidden the column would be a
+            consumer, "Re-etiquetar selección", so with that hidden the column would be a
             control down every row that does nothing at all. */}
         <Correction>
           <TD className="py-2 pl-3">
@@ -401,13 +368,10 @@ function ItemRow({
           </span>
           <button
             onClick={onEdit}
-            // NOT `block`: `line-clamp-2` works by setting `display: -webkit-box`, and a
-            // `block` beside it wins in the cascade and switches the clamp off in silence
-            // — measured, `display` computed `block` and a long statement ran to a third
-            // line. `-webkit-box` is block-level anyway, so nothing else needed it. An
-            // OPEN row drops both the clamp and the 200-character cut: the fold is where
-            // the exercise is read, and a statement cut at «…» over its own solution was
-            // the row saying less in the state that exists to say more.
+            // Never `block` beside `line-clamp-2`: the clamp works by setting `display:
+            // -webkit-box`, so a `block` wins the cascade and switches it off in silence.
+            // An open row drops the clamp and the 200-character cut both — the fold is
+            // where the exercise is read.
             className={cn(
               "text-left text-body whitespace-pre-wrap hover:underline",
               // `block` only when the clamp is off: clamped, `-webkit-box` is already
@@ -429,15 +393,14 @@ function ItemRow({
         </TD>
         {typeLabel ? (
           <TD className="py-2 pl-2">
-            {/* UNA INSIGNIA NO SE PARTE EN VARIAS LÍNEAS. La columna es fija y hay nombres
-                de tipo largos («Problema de construcción formal»), así que la insignia
-                crecía a dos y tres líneas: con `--radius: 0` las únicas formas posibles son
-                la píldora y el rectángulo a escuadra, y una píldora de tres líneas es un
-                lozenge con las esquinas comiéndose el texto. Se corta con puntos
-                suspensivos y el nombre entero va en el `title`, que es la misma regla que
-                el `+N` de la celda de al lado: lo que se recorta se nombra, no se esconde.
-                El `truncate` va en un hijo y no en la insignia, porque `text-overflow` no
-                actúa sobre los ítems de un contenedor flex. */}
+            {/* A badge is never broken over several lines. The column is fixed and a
+                teacher writes the type's name, so a long one grows to two and three lines —
+                and with `--radius: 0` the only shapes there are are the pill and the square
+                rectangle, so a three-line pill is a lozenge whose round corners eat the
+                text. It is cut with an ellipsis and the whole name goes in the `title`,
+                which is the rule the `+N` beside it already follows: what is trimmed is
+                named, never hidden. The `truncate` goes on a CHILD and not on the badge,
+                because `text-overflow` does not act on the items of a flex container. */}
             <Badge variant="outline" className="max-w-full" title={typeLabel}>
               <span className="truncate">{typeLabel}</span>
             </Badge>
@@ -463,11 +426,10 @@ function ItemRow({
               </Badge>
             ) : (
               <>
-                {/* EL PRINCIPAL SE DICE AL PASAR EL RATÓN, Y SÓLO ÉL. La diferencia entre
-                    `default` y `secondary` es un tono, y un tono no se nota en una fila de
-                    insignias: el `title` es lo que dice qué significa. Los demás no llevan
-                    ninguno — un rótulo en cada uno sería ruido, y es el mismo criterio que
-                    `ConceptPicker` ya aplica. */}
+                {/* The PRIMARY concept says so on hover, and only it. The difference between
+                    `default` and `secondary` is a tone, and a tone is not noticed in a row of
+                    badges, so the `title` is what says what it means. The rest carry none — a
+                    label on every one is noise, which is the rule `ConceptPicker` follows. */}
                 {shownConcepts.map((concept) => (
                   <Badge
                     key={concept}
@@ -489,7 +451,7 @@ function ItemRow({
         {showDifficulty ? (
           <TD className="py-2 pr-3">
             {/* The rung as the profile spells it, never a word invented here: what the
-                three mean is written per type in «Tipos de ejercicio», and a label of our
+                three mean is written per type in "Tipos de ejercicio", and a label of our
                 own would be a second copy of it. An item nobody classified says so rather
                 than passing for the entry level. */}
             {difficulty ? (
@@ -501,17 +463,12 @@ function ItemRow({
         ) : null}
         <TD className="whitespace-nowrap py-2 pr-3 text-right">
           <div className="inline-flex">
-            {/* THE CHEVRON IS ALWAYS DRAWN, AND THE DELETE IS NOT (2026-09-04, explicit user
-                request: «se abre y luego no se puede cerrar o abrir cualquier otro»). The
-                row's two controls were one `group-hover` block together, on the rule that
-                per-row chrome repeated forty times is furniture — true of the bin, and
-                false of this one. Opening a row is how the rest of an exercise is read,
-                which is the task of the whole step, and a control that only exists under a
-                pointer is a control nobody can find: measured in the lab, with no hover
-                every one of the seven chevrons computes `opacity: 0`, so after opening one
-                row there is visibly nothing to press on any other — and on a touch screen
-                there is no hover to recover them with. It is `--muted-foreground` at rest
-                and full ink on hover, so a column of forty still reads as chrome. */}
+            {/* The chevron is always drawn and the delete is not. Per-row chrome repeated
+                forty times is furniture — true of the bin, false of this: opening a row is
+                how the rest of an exercise is read, which is the task of the whole step, and
+                a control that exists only under a pointer cannot be found at all on a touch
+                screen. `--muted-foreground` at rest and full ink on hover, so a column of
+                forty still reads as chrome. */}
             {hasDetail ? (
               <Button
                 variant="ghost"
@@ -544,46 +501,16 @@ function ItemRow({
   );
 }
 
-/**
- * WHAT THE BANK IS WORTH, AS ONE STRIP.
- *
- * It was three cards across a full row — tagging, coverage, thresholds — each with its own
- * heading, border and (i), sitting above a forty-row table. Three boxes is what you build
- * when three numbers arrive from three places, and it reads as three subjects; there is
- * only one, «is this bank good enough to generate from», and the three answer it in
- * descending order of how much you can do about it.
- *
- * So: the two that are progress get the width and the meters, and the thresholds — which
- * are read here and changed in «Configuración» — become the small print they always were.
- *
- * THE TWO GLOBAL RE-TAG ACTIONS MOVE HERE, next to the number they act on. They were in
- * different places at different weights: «Re-etiquetar los N» inside the tagging card,
- * «Re-etiquetar todo» beside it, and «Re-etiquetar selección» in a bar that appears at the
- * bottom of the page — three affordances for one verb, and the only way to know which
- * scope you were about to hit was to notice where you had clicked. The selection one stays
- * where it is on purpose: it is contextual, it appears only when there is a selection, and
- * it belongs to the rows it acts on rather than to the totals.
- */
-/** Cuántos ejemplares se dibujan de una vez. */
+/** How many exemplars are drawn at once: what fits beside the questionnaire, which is
+ *  where they are read. */
 const PAGE_SIZE = 7;
 
-/** How many concepts a row draws before the rest become «+N». Three of ~10 characters is
+/** How many concepts a row draws before the rest become "+N". Three of ~10 characters is
  *  what fits in two rows of the column, measured over the two reference banks (219 items,
  *  median name 10 characters, 90th percentile 19). */
 const MAX_ROW_CONCEPTS = 3;
 
-/** What the listing may be ordered by. `recent` is the live view's and is never offered
- *  here; `difficulty` only appears when the profile declares one. */
-
-/**
- * WHICH PAGE OF THE BANK, AND THE TWO STEPS EITHER SIDE OF IT.
- *
- * Drawn TWICE — over the table and under it (2026-09-01, explicit user request) — because
- * a page here is forty rows tall and the only way to reach the next one was to scroll to
- * the bottom of the one you had just read. That is not a duplicated control in the sense
- * the house rule forbids: it is one control at both ends of a long list, which is what a
- * pager is for, and both ends read the same `page`.
- */
+/** Which page of the bank, and the two steps either side of it. */
 function Pager({
   page,
   pages,
@@ -657,10 +584,9 @@ function BankMeters({
 
   return (
     <Card className="flex flex-col divide-y divide-border lg:flex-row lg:divide-x lg:divide-y-0">
-      {/* SÓLO MIENTRAS FALTE ALGUNO (2026-09-01, explicit user request). Un medidor a
-          120/120 informa de que no hay nada que hacer, que es la definición de ruido; lo
-          que hay que ver es el resto, y para eso está. Con el banco vacío sí se dibuja,
-          porque ahí «0 de 0» no es «terminado» sino «no hay banco». */}
+      {/* Only while some item is still missing a concept: a meter at 120/120 reports that
+          there is nothing to do. With an EMPTY bank it is drawn, because there "0 of 0" is
+          not "finished" but "there is no bank". */}
       {untagged > 0 || items === 0 ? (
         <div className="flex-[1.2] space-y-2 p-4">
           <div className="flex items-baseline justify-between gap-2 text-body">
@@ -693,17 +619,17 @@ function BankMeters({
             {coverage ? `${coverage.covered}/${coverage.total}` : "—"}
           </span>
         </div>
-        {/* El rótulo ERA la línea de debajo: «Cobertura del currículo» arriba y «Conceptos
-            con ejemplo» debajo decían lo mismo dos veces, y la de abajo lo decía mejor. */}
+        {/* The heading IS the line that used to sit under it: a title and a caption saying
+            the same thing twice, where the lower one said it better. */}
         <Progress value={coverage?.covered ?? 0} max={coverage?.total ?? null} tone="settled" />
       </div>
 
-      {/* LOS DOS RE-ETIQUETADOS GLOBALES SON CORRECCIÓN, y desaparecen enteros mientras la
-          etapa se mira: son las dos únicas cosas de esta franja que ESCRIBEN. Lo que dicen
-          no se pierde al ocultarlos, y por eso pueden ocultarse — cuántos ejercicios están
-          sin tema lo dice el medidor de al lado, y «Ver los N sin concepto», que es un
-          filtro, sigue ahí. La columna entera se va con ellos: vacía sería un cuarto de
-          tarjeta con su borde y su relleno anunciando que aquí había algo. */}
+      {/* The two global re-tag controls are CORRECTION, and they disappear entirely while
+          the stage is being looked at: they are the only two things on this strip that
+          WRITE. Nothing they say is lost by hiding them — how many exercises have no concept
+          is what the meter beside them reports, and the filter that shows them is still
+          there. The whole column goes with them: empty, it would be a quarter of a card with
+          its border and its padding announcing that something used to be here. */}
       <Correction>
         <div className="flex flex-[0.9] flex-col items-start gap-2 p-4">
           <div className="flex flex-wrap gap-2">
@@ -734,11 +660,9 @@ function BankMeters({
               </Button>
             ) : null}
           </div>
-          {/* «Umbral 0.4 · 10 candidatos» ya no se dibuja (2026-09-01, explicit user
-              request). Son dos ajustes de recuperación que se leían aquí y se cambian en
-              «Configuración»: quien prepara una asignatura no decide nada con ellos, y en la
-              franja que responde «¿sirve ya este banco?» eran la única línea que no lo
-              respondía. Siguen en el payload del listado. */}
+          {/* The retrieval thresholds are not drawn: they are read here and changed in
+              "Configuración", and whoever prepares a subject decides nothing with them. They
+              are still in the listing's payload. */}
         </div>
       </Correction>
     </Card>
@@ -746,11 +670,10 @@ function BankMeters({
 }
 
 /**
- * WHAT TO DO WITH THE ROWS PICKED BY HAND, at the foot of the table they were picked from.
+ * What to do with the rows picked by hand, at the foot of the table they were picked from.
  *
- * The third scope of one verb and the only contextual one, so it stays down here rather
- * than joining the two global re-tags in the strip above. It is correction all the same and
- * goes with the boxes that feed it while the stage is only being looked at.
+ * The one contextual scope of the re-tag verb, so it stays with the rows rather than
+ * joining the global ones among the totals.
  */
 function SelectionActions({
   selected,
@@ -814,26 +737,20 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const workspace = useActiveWorkspace();
   useEffect(() => {
     setItemType("");
-    // Same rule as the modality: a rung is a value THIS profile declares, and the endpoint
-    // answers 422 for one it does not — so carrying it into another instance would greet
-    // the screen with an error about a filter nobody set here.
+    // Same rule as the modality: a rung is a value THIS profile declares and the endpoint
+    // answers 422 for one it does not, so carrying it across instances greets the screen
+    // with an error about a filter nobody set.
     setDifficulty("");
     setPage(1);
   }, [workspace]);
 
-  // Re-tagging puts the bank into «building» like a rebuild does, so StageGate hides the
-  // whole screen and only the live preview survives. What belongs there is NOT the file
-  // — re-tagging rewrites labels on the same items, so `order=recent` returns the
-  // same ten rows from beginning to end — but the order the tagger works in, which
-  // only the event stream knows.
+  // Re-tagging puts the bank into "building", so only the live preview survives. What
+  // belongs there is the order the tagger works in, which only the event stream knows:
+  // it rewrites labels on the same items, so the file's own order never moves.
   const tagRun = useJobRun("tag");
   const tagStatus = tagRun?.job?.status;
   const tagging = tagStatus === "running" || tagStatus === "queued";
 
-  // SIETE POR PÁGINA (2026-09-01, explicit user request). Cuarenta filas era un listado
-  // que se recorría con la rueda del ratón y en el que la paginación no pintaba nada;
-  // siete caben de una vez en la mitad izquierda de la pantalla, junto al cuestionario,
-  // que es donde se leen.
   const params = { q: query, item_type: itemType, source, untagged, difficulty, page, page_size: PAGE_SIZE };
   const bank = useQuery({
     queryKey: ["bank", workspace, params],
@@ -861,11 +778,8 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // Which field carries an item's text is a property of its modality, not of the bank:
   // two modalities can name their primary differently, so every row resolves its own.
   const itemTypes: BankItemType[] = listing?.item_types ?? [];
-  // WHETHER THE MODALITY COLUMN CARRIES INFORMATION. With one modality declared it never
-  // did; with several it stops doing so the moment the filter above pins one, and then it
-  // is the same two-line badge repeated down all forty rows — 135 px of width saying what
-  // the filter already says. The column is about variation, so it is drawn only where
-  // there is any.
+  // Whether the modality column carries information: with one declared, or with the filter
+  // pinning one, it is the same badge down every row saying what the filter already says.
   const manyTypes = itemTypes.length > 1 && !itemType;
   const severalDeclared = itemTypes.length > 1;
   const typeOf = (item: BankItem | null): BankItemType | undefined => {
@@ -926,12 +840,10 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   // `StageGate`'s own state and this component is the one that renders it, so the hooks that
   // answer only work below. Every control that writes therefore reads it for itself.
 
-  // NOTHING IS SHOWN WHILE THE BANK IS BEING EXTRACTED (2026-09-01, explicit user request).
-  // `BankLive` — «Ejercicios que van saliendo» — polled the file every three seconds and let
-  // the items in one at a time under the progress bar; it is deleted, and what is left in
-  // that state is the phase bar and the notice beside it. The sliding window itself lives on
-  // in `TagLive`, which is a different job: tagging patches items that are ALREADY in the
-  // bank, so its feed says what is being decided rather than what is appearing.
+  // Nothing is shown while the bank is being EXTRACTED: what is left in that state is the
+  // phase bar and the notice beside it. The sliding window lives on in `TagLive`, which is a
+  // different job — tagging patches items that are ALREADY in the bank, so its feed says
+  // what is being decided rather than what is appearing.
   const livePreview = tagging ? <TagLive run={tagRun} /> : null;
 
   return (
@@ -998,15 +910,12 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               </option>
             ))}
           </Select>
-          {/* THE DIFFICULTY IS A FILTER AND NOT AN ORDER (2026-09-01, explicit user
-              request, reversing the sort asked for two days earlier). «Ordenar por
-              dificultad» answered a question nobody has — the rungs are three, so ordering
-              by them only groups the list — where «enséñame los avanzados» is the question
-              somebody actually asks. It stands where the order select stood, and the order
-              control went with it: the list is by id, which is extraction order.
+          {/* The difficulty is a FILTER and not an order: the rungs are three, so ordering
+              by them only groups the list, where "enséñame los avanzados" is the question
+              somebody actually asks. The list is by id, which is extraction order.
 
-              Offered only where a modality declares rungs, like the column and the sort
-              before it: a filter with one option filters nothing. */}
+              Offered only where a modality declares rungs: a filter with one option filters
+              nothing. */}
           {rungs.length > 0 ? (
             <Select
               aria-label={t("bank.filterByDifficulty")}
@@ -1025,10 +934,9 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               ))}
             </Select>
           ) : null}
-          {/* LAST OF THE ROW (2026-09-01, explicit user request). It is the only one of the
-              four that is not a property of an item but a state of the WORK — what still has
-              to be tagged — and it is a toggle among selects, so it reads as the end of the
-              row rather than as one more dropdown that lost its label. */}
+          {/* Last of the row: the only one of the four that is not a property of an item
+              but a state of the WORK, and a toggle among selects, so it reads as the end of
+              the row rather than as a dropdown that lost its label. */}
           <Button
             variant={untagged === true ? "default" : "outline"}
             size="sm"
@@ -1073,14 +981,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                     </TH>
                   </Correction>
                   <TH>{primaryHeader}</TH>
-                  {/* 15rem y no 10, y el número está medido: los nueve nombres de tipo de
-                      las dos asignaturas de referencia miden entre 142 y 262 px dibujados
-                      como insignia, y a 10rem se recortaban TODOS. A 15 caben ocho de los
-                      nueve enteros y el recorte vuelve a ser la excepción — que es lo que
-                      justifica resolverlo con puntos suspensivos y un `title`. Lo paga el
-                      enunciado, que va recortado a dos líneas y tenía 766 px; `minWidth`
-                      sube con ello, o en una ventana estrecha la columna del enunciado se
-                      quedaría sin nada. */}
+                  {/* 15rem and not 10, and the number is measured: the nine type names of
+                      the two reference subjects run from 142 to 262 px drawn as a badge, so
+                      at 10rem every one of them was cut. At 15 eight of the nine fit whole
+                      and the ellipsis goes back to being the exception, which is what
+                      justifies solving it with a `title`. The statement pays for it — it is
+                      clamped to two lines and had 766 px — and `minWidth` rises with it, or
+                      in a narrow window the statement column is left with nothing. */}
                   {manyTypes ? <TH className="w-60">{t("bank.column.modality")}</TH> : null}
                   <TH className="w-72">{t("bank.column.concepts")}</TH>
                   {difficultyField ? (
@@ -1116,24 +1023,15 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               </p>
             ) : null}
 
-            {/* THE FOOT OF THE TABLE, and both things it says are about the table.
-                The selection used to be a bar of its own BELOW the pagination, so a page
-                could carry the filters at the top, a floating bar at the bottom and the
-                page controls between them — three strips around one list. Where you are in
-                the bank and what you have picked out of it belong on the same line, and
-                the line belongs inside the card they describe.
+            {/* The foot of the table, and both things it says are about the table: where
+                you are in the bank and what you have picked out of it belong on one line,
+                inside the card they describe. There is no second pager at the top — for a
+                page of seven rows the whole list is in view.
 
-                THE ONE AT THE TOP IS GONE (2026-09-01, explicit user request). Two pagers
-                for a page of seven rows is one control drawn twice a screen apart: the
-                whole list is in view, so the one at the end of it is the one under your
-                eyes when you run out of rows. What went with it is the second copy of
-                «N ejercicios · página M de P», which is the same reading in both places.
-
-                What has NOT come back is a whole-bank «Etiquetar pendientes»: extracting
-                and tagging are one job since the extractor tags each document as it comes
-                out. The scoped retries are the strip above (what the verifier rejected, and
-                the whole bank with a confirmation) and this one, which re-runs the tagger
-                over items chosen by hand, whatever their state. */}
+                There is deliberately no whole-bank "Etiquetar pendientes": extracting and
+                tagging are one job, the extractor tagging each document as it comes out. The
+                scoped retries are the strip above and this one, which re-runs the tagger
+                over items chosen by hand whatever their state. */}
             {listing.items.length > 0 ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3 py-2.5 text-body">
                 <Pager

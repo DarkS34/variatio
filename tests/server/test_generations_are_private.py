@@ -1,14 +1,13 @@
 """A generated exercise belongs to whoever asked for it, and to nobody else.
 
-Two accounts may share a subject — that is what a membership is for — and until 2026-09-04
-the listing had a second scope that showed everything the instance had produced, with «mine»
-merely as the default. A filter somebody can flip is not privacy, so the scope is gone and
-the author bounds the rows the way the membership bounds the workspace.
+Two accounts may share a subject — that is what a membership is for — so the AUTHOR bounds
+the rows the way the membership bounds the workspace. There is no scope to flip: a filter
+somebody can turn off is not privacy.
 
 The four routes are pinned together because they are one rule seen from four sides: what is
 listed, what can be read, what can be promoted and what can be deleted. The owner is not an
-exception and the answer for a row that is not yours is 404, not 403 — a 403 would confirm
-that the id names something.
+exception, and the answer for a row that is not yours is 404 and not 403 — a 403 would
+confirm that the id names something.
 """
 
 from types import SimpleNamespace
@@ -134,7 +133,7 @@ def test_promoting_somebody_elses_row_is_refused(db):
     assert response.status_code == 404
 
 
-# THE «NO REPITAS ESTOS» BLOCK --------------------------------------------------------------------
+# THE "NO REPITAS ESTOS" BLOCK --------------------------------------------------------------------
 
 
 def test_the_recent_reminder_reads_your_own_statements_only(db):

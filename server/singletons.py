@@ -1,14 +1,10 @@
 """Process-wide singletons: one bus and one queue, both serving many workspaces.
 
 They stay single because they model this installation's whole capacity — one ordered stream
-of events, and one arbiter of what may run beside what. That arbiter is not a single file
-of work: `jobs/lanes.py` serialises per backend, so a local job and a remote one hold
-different lanes and run at once. The `Approvals` reader is deliberately NOT a singleton — it is
-one per workspace, built where it is used.
-
-Named `runtime.py` until 2026-09-06: `variatio/runtime/` is the package of components
-that consume the artifacts, and two modules called `runtime` one import apart said two
-different things. The docstring's own first word is what this is.
+of events, and one arbiter of what may run beside what. That arbiter is not a single file of
+work: `jobs/lanes.py` serialises per backend, so a local job and a remote one hold different
+lanes and run at once. The `Approvals` reader is deliberately NOT a singleton — it is one
+per workspace, built where it is used.
 """
 
 from variatio.core.workspace import Workspace
