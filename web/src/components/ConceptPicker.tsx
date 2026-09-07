@@ -64,7 +64,14 @@ export function ConceptPicker({
   );
   const chosen = useMemo(() => new Set(selected), [selected]);
   const searching = query.trim().length > 0;
-  const visible = showAllSelected ? selected : selected.slice(0, MAX_VISIBLE_CHIPS);
+  // THE PRIMARY ONE FIRST, or it is the chip the cap cuts. Fifteen concepts on an item is
+  // ordinary and the list is drawn in the order it was tagged, so the one concept the whole
+  // step is about could sit behind "+N" — the only chip on the row that could not be spared.
+  const ordered = useMemo(
+    () => (primary ? [...selected].sort((a, b) => Number(b === primary) - Number(a === primary)) : selected),
+    [selected, primary],
+  );
+  const visible = showAllSelected ? ordered : ordered.slice(0, MAX_VISIBLE_CHIPS);
 
   const grouped = useMemo(() => {
     const needle = query.trim().toLowerCase();

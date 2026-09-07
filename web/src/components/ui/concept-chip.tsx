@@ -1,6 +1,8 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -70,5 +72,58 @@ export function ConceptChip({
         </button>
       ) : null}
     </span>
+  );
+}
+
+/**
+ * A concept where a `ConceptChip` does not fit: uppercase, condensed, on one line.
+ *
+ * THERE ARE TWO DRAWINGS OF A CONCEPT AND ONLY TWO, and which one is used is decided by the
+ * room available, never by the meaning. The chip above is the reading one; this is the badge
+ * the BANK'S ROW needs — its two-line badge box measures 50 px and a chip is 26, so two
+ * chips do not fit in it — and the two feeds that read the same tagging: the tagger's live
+ * decisions and the exemplars a generation was shown.
+ *
+ * The primary concept is FILLED in both, which is the one thing they must never disagree on.
+ *
+ * IT IS NEVER BROKEN OVER TWO LINES. A concept's name is written by a teacher, so it is as
+ * long as they like — measured over the 474 distinct names of the reference graphs, a badge
+ * runs from a median of 139 px to 353 ("Eliminación de la recursividad por la izquierda") —
+ * and with `--radius: 0` the only shapes there are are the pill and the square rectangle, so
+ * a two-line pill is a lozenge whose round corners eat its own text, in a row whose height is
+ * fixed. It is cut with an ellipsis and the whole name goes in the `title`: what is trimmed
+ * is named, never hidden, which is the rule the `+N` beside it already follows.
+ *
+ * `max-w-64` is measured and not chosen: it is exactly the width of the bank's concepts cell,
+ * and over those 474 names it cuts 21 — 4.4 %, so the ellipsis stays the exception, which is
+ * what justifies answering it with a `title` at all. It bounds the two feeds as well, where
+ * the container is far wider and a 353 px badge would otherwise sit there whole.
+ *
+ * The `truncate` goes on a CHILD and not on the badge, because `text-overflow` does not act
+ * on the items of a flex container and a badge is `inline-flex`.
+ */
+export function ConceptBadge({
+  primary = false,
+  /** What the OTHER concepts are drawn as. `outline` where the ground is too close to
+   *  `--secondary` for a filled grey to read as a pill of its own. */
+  rest = "secondary",
+  children,
+}: {
+  primary?: boolean;
+  rest?: "secondary" | "outline";
+  children: string;
+}) {
+  const { t } = useT();
+  return (
+    <Badge
+      variant={primary ? "primary" : rest}
+      className="max-w-64"
+      // The NAME is on every one of them, and the label only on the primary. That narrows
+      // the rule that the others carry no `title` — a repeated label is noise, but any of
+      // these can be the one that is cut, and a clipped name is information lost.
+      title={primary ? `${children} · ${t("concept.isPrimary")}` : children}
+    >
+      <span className="truncate">{children}</span>
+    </Badge>
   );
 }

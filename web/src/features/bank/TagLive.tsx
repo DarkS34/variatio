@@ -1,7 +1,7 @@
 import { Tags } from "lucide-react";
 import { useMemo } from "react";
 
-import { Badge } from "@/components/ui/badge";
+import { ConceptBadge } from "@/components/ui/concept-chip";
 import { Card, CardContent } from "@/components/ui/card";
 import type { RunView } from "@/state/runStore";
 import { FeedRow, SlidingList, useSlidingWindow, VISIBLE } from "./LiveWindow";
@@ -50,14 +50,20 @@ export function TagLive({ run }: { run: RunView | null }) {
                     {t("bank.noConcept")}
                   </span>
                 ) : (
-                  item.concepts.map((concept) => (
-                    <Badge
-                      key={concept}
-                      variant={concept === item.primary_concept ? "default" : "secondary"}
-                    >
-                      {concept}
-                    </Badge>
-                  ))
+                  /* The primary one FIRST and filled, like the bank's own row: this feed
+                     says what the tagger is deciding, and which concept an exercise
+                     PRACTISES is the decision — drawn in the raw order and in a tone, it
+                     was neither first nor visible. */
+                  [...item.concepts]
+                    .sort(
+                      (a, b) =>
+                        Number(b === item.primary_concept) - Number(a === item.primary_concept),
+                    )
+                    .map((concept) => (
+                      <ConceptBadge key={concept} primary={concept === item.primary_concept}>
+                        {concept}
+                      </ConceptBadge>
+                    ))
                 )}
               </FeedRow>
             )}

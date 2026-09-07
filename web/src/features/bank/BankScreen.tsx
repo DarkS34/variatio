@@ -19,6 +19,7 @@ import {
 } from "@/components/StageGate";
 import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
+import { ConceptBadge, ConceptChip } from "@/components/ui/concept-chip";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
@@ -131,14 +132,18 @@ function ItemReading({ item, fields, primaryField, onClose }: ItemDialogProps) {
               {t("bank.noConcept")}
             </Badge>
           ) : (
+            /* A `ConceptChip` and not a `Badge`, unlike the table's row: this is the same
+               dialog the EDITOR draws, and there the concepts are `ConceptPicker`'s chips —
+               so reading an exercise and correcting it showed one list two ways. The row
+               keeps its badges because its two-line box is 50 px and a chip is 26. */
             concepts.map((concept) => (
-              <Badge
+              <ConceptChip
                 key={concept}
-                variant={concept === item.primary_concept ? "default" : "secondary"}
+                tone={concept === item.primary_concept ? "primary" : "default"}
                 title={concept === item.primary_concept ? t("concept.isPrimary") : undefined}
               >
                 {concept}
-              </Badge>
+              </ConceptChip>
             ))
           )}
         </div>
@@ -426,18 +431,17 @@ function ItemRow({
               </Badge>
             ) : (
               <>
-                {/* The PRIMARY concept says so on hover, and only it. The difference between
-                    `default` and `secondary` is a tone, and a tone is not noticed in a row of
-                    badges, so the `title` is what says what it means. The rest carry none — a
-                    label on every one is noise, which is the rule `ConceptPicker` follows. */}
+                {/* THE PRIMARY CONCEPT IS THE FILLED BADGE. It used to be `default` against
+                    `secondary`, which is a tone — measured on these very rows, 1.03:1 of
+                    ground and 1.10:1 of text, so the two were the same badge and the `title`
+                    was carrying the whole distinction alone. Filled it is 15.88:1, at no
+                    extra width, which is what a row with a two-line badge box can afford.
+                    `ConceptBadge` owns the fill, the cut and the `title`; the three lists
+                    that read this same tagging share it so they cannot drift again. */}
                 {shownConcepts.map((concept) => (
-                  <Badge
-                    key={concept}
-                    variant={concept === item.primary_concept ? "default" : "secondary"}
-                    title={concept === item.primary_concept ? t("concept.isPrimary") : undefined}
-                  >
+                  <ConceptBadge key={concept} primary={concept === item.primary_concept}>
                     {concept}
-                  </Badge>
+                  </ConceptBadge>
                 ))}
                 {restConcepts.length > 0 ? (
                   <Badge variant="outline" title={restConcepts.join(", ")}>

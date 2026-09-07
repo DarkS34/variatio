@@ -15,6 +15,19 @@ const badgeVariants = cva(
       // mode, which is why one value rather than one per hue.
       variant: {
         default: "border-transparent bg-primary/8 text-primary",
+        // THE ONE VARIANT THAT IS NOT A TINT, and it is exempt for a reason rather than by
+        // oversight: every other variant reports a STATE in its own hue, where this one
+        // separates ONE badge from its siblings — the primary concept of an exercise among
+        // the concepts it merely uses. A tint cannot do that. Measured on the bank's own
+        // rows, `default` against `secondary` is **1.03:1** of ground and 1.10:1 of text,
+        // which is the same badge twice; filled it is **15.88:1**, and the text on it
+        // 17.34:1. It is a figure/ground inversion and not a hue, so it survives greyscale
+        // and every colour vision, and the pair is `--primary`/`--primary-foreground`,
+        // which `check:color` already verifies in both themes. It is the same drawing as
+        // `ConceptChip`'s `primary` tone, deliberately: the primary concept looks the same
+        // wherever it is read, and which of the two components draws it is decided by the
+        // room available and never by the meaning.
+        primary: "border-transparent bg-primary text-primary-foreground",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "border-border text-muted-foreground",
         settled:

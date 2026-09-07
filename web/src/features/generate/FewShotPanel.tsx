@@ -1,8 +1,9 @@
-import { BookOpenText, ChevronRight, Target } from "lucide-react";
+import { BookOpenText, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Badge } from "@/components/ui/badge";
+import { ConceptBadge } from "@/components/ui/concept-chip";
 import { Label } from "@/components/ui/input";
 import { itemTypeOf, typeKeyOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, FewShotExemplar, ItemTypeSpec } from "@/lib/types";
@@ -56,12 +57,7 @@ function Exemplar({
             {showType ? (
               <Badge variant="outline">{typeLabel(profile, typeKeyOf(profile, item), t)}</Badge>
             ) : null}
-            {primaryConcept ? (
-              <Badge variant="default" className="gap-1">
-                <Target />
-                {primaryConcept}
-              </Badge>
-            ) : null}
+            {primaryConcept ? <ConceptBadge primary>{primaryConcept}</ConceptBadge> : null}
             {exemplar.origin === "neighbour" ? (
               <Badge variant="outline">concepto previo</Badge>
             ) : null}
@@ -99,15 +95,18 @@ function Exemplar({
           {concepts.length > 0 ? (
             <div className="space-y-1">
               <Label>{t("bank.column.concepts")}</Label>
+              {/* Primary first and filled, as the bank draws it: this is the same tagging,
+                  read from the other side — what the generator was shown. `outline` for the
+                  rest because this block sits on `--background`, which `--secondary` is too
+                  close to for a filled grey to read as a pill of its own. */}
               <div className="flex flex-wrap gap-1">
-                {concepts.map((concept) => (
-                  <Badge
-                    key={concept}
-                    variant={concept === primaryConcept ? "default" : "outline"}
-                  >
-                    {concept}
-                  </Badge>
-                ))}
+                {[...concepts]
+                  .sort((a, b) => Number(b === primaryConcept) - Number(a === primaryConcept))
+                  .map((concept) => (
+                    <ConceptBadge key={concept} primary={concept === primaryConcept} rest="outline">
+                      {concept}
+                    </ConceptBadge>
+                  ))}
               </div>
             </div>
           ) : null}
