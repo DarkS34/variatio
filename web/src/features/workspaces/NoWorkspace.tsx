@@ -31,15 +31,21 @@ export function NoWorkspace() {
   const slug = slugify(name);
   const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug);
 
+  // THE EMPTY STATE IS THE SCREEN, so it carries the `h1` and there is no header above it.
+  // The heading that was here said "Panel" — `t("nav.dashboard")`, the name of the panel
+  // deleted on 2026-08-31, whose entry in the register is "THERE IS NO PANEL" — so the first
+  // word an account read after redeeming an invitation named a screen this application has
+  // not had for a week, sitting over "Todavía no tienes ninguna asignatura", which is what
+  // the page actually says. Deleting it outright left the page with no heading at all, since
+  // `EmptyState` titles with a `p`: hence `titleAs`, which puts the `h1` on the sentence that
+  // was already the title rather than inventing a second one. `nav.dashboard` had no other
+  // reader and left both catalogues with it.
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-2">
-        <h1 className="font-display font-expanded text-display">{t("nav.dashboard")}</h1>
-      </header>
-
       <EmptyState
         icon={<FolderPlus />}
         title={t("workspace.noneYet")}
+        titleAs="h1"
         action={
           <form
             className="w-full max-w-sm space-y-2 text-left"

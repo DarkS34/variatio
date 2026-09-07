@@ -239,7 +239,6 @@ export const en: Catalogue = {
   "step.eval.tagging.label": "Tagging the proposals",
   "step.eval_rag_index_corpus.label": "Indexing the lecture notes for the comparison proposal",
   "step.eval_rag_index_exemplars.label": "Indexing the exercises for the comparison proposal",
-  "nav.dashboard": "Dashboard",
   "nav.rawWaiting": {
     one: "1 document is still untranscribed. You can build anyway: every build transcribes what it needs.",
     other: "{n} documents are still untranscribed. You can build anyway: every build transcribes what it needs.",
@@ -675,6 +674,7 @@ export const en: Catalogue = {
   },
   "eval.pendingCount": { one: "1 pending", other: "{n} pending" },
   "sets.assignedCount": { one: "1 comparison", other: "{n} comparisons" },
+  "sets.workspaceCount": { one: "1 subject", other: "{n} subjects" },
   "sets.accountsFailed": "The accounts could not be read",
   "sets.failedCount": { one: "; 1 failed", other: "; {n} failed" },
   "sets.launchLabel": {
@@ -816,6 +816,7 @@ export const en: Catalogue = {
   "doc.emptyPage": "It may be a genuinely empty page of the original —a cover, a separator— or something the model could not read. Check it before building.",
   "fewshot.title": "Exercises of yours shown to it as examples",
   "fewshot.none": "No exercise of the bank carries these concepts: the model generates with no examples.",
+  "fewshot.neighbour": "prior concept",
   "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated exercise saves itself in «My exercises».",
   "workspace.switcher.label": "Subject",
   "workspace.switcher.choose": "Choose subject",
@@ -1147,7 +1148,7 @@ export const en: Catalogue = {
   "eval.tab.queue": "Assigned",
   "eval.tab.compose": "Order an evaluation",
   "eval.tab.history": "My evaluations",
-  "eval.title": "Evaluation",
+  "eval.title": "Evaluate the system",
   "eval.whatFor": "What it is for",
   "eval.whatFor.body": "The same commission is solved three ways: a commercial model with an ordinary prompt, a similarity search over the bank, and this system with the syllabus. You choose blind and only afterwards is it revealed which was which.",
   "eval.backToList": "Back to the list",

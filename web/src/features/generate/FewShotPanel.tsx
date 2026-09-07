@@ -59,7 +59,7 @@ function Exemplar({
             ) : null}
             {primaryConcept ? <ConceptBadge primary>{primaryConcept}</ConceptBadge> : null}
             {exemplar.origin === "neighbour" ? (
-              <Badge variant="outline">concepto previo</Badge>
+              <Badge variant="outline">{t("fewshot.neighbour")}</Badge>
             ) : null}
           </span>
           <span

@@ -119,8 +119,18 @@ export function RawScreen() {
 
       {/* Stretched cells on purpose: an empty origin's dropzone grows to the height of the
           stocked one beside it, which is what makes "importa aquí" the whole card rather
-          than a strip at the top of a blank one. */}
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+          than a strip at the top of a blank one.
+
+          `grid-cols-1` IS LOAD-BEARING BELOW `lg`, and it is not the same as declaring
+          nothing. With no column declared the single implicit track is sized `auto`, whose
+          floor is the min-content of the item in it, and a card is a grid item — so it
+          carries `min-width: auto` and never shrinks below that floor. Measured on the
+          reference subject: the track computed 507.5 px inside a 366 px container, and the
+          BODY scrolled sideways by 200 px at 320, 130 at 390 and 90 at 430, which is every
+          phone held upright. Tailwind's `grid-cols-1` is `repeat(1, minmax(0, 1fr))`, and
+          the 0 is the whole fix. Nothing is lost by it: the card's real min-content is
+          247 px, so the content fits and it is the track that was refusing to. */}
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
         {slots.map((slot) => (
           <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
         ))}

@@ -67,7 +67,7 @@ function PersonStep({
   chosen: AssignableAccount | null;
   onChoose: (account: AssignableAccount | null) => void;
 }) {
-  const { t } = useT();
+  const { plural, t } = useT();
   const [query, setQuery] = useState("");
 
   // Username AND display name, folded on both sides: the administrator handing sets out
@@ -126,10 +126,14 @@ function PersonStep({
               <span className="block text-body font-medium">{account.username}</span>
               <span className="block">
                 <Profile value={account.evaluator_profile} />
+                {/* Through the catalogue, and "asignatura" rather than "workspace": this
+                    was the one string of the screen written straight into the JSX, with an
+                    English plural sewn on by hand — so it said "3 workspaces" whatever the
+                    account read in, using the word retired on 2026-09-02. It is behind
+                    `CROSS_EVALUATION`, which is off, which is exactly why nobody saw it. */}
                 <span className="text-small text-muted-foreground">
-                  {" "}
-                  · {account.workspaces.length} workspace
-                  {account.workspaces.length === 1 ? "" : "s"}
+                  {" · "}
+                  {plural("sets.workspaceCount", account.workspaces.length)}
                 </span>
               </span>
             </button>

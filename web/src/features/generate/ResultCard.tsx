@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
 import { fieldText, isEmptyField } from "@/lib/fields";
-import { itemTypeOf, typeLabel } from "@/lib/profile";
+import { fieldLabel, itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, ItemChecks, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
@@ -70,7 +70,7 @@ export function ItemFields({
         if (isEmptyField(value)) return null;
         return (
           <div key={field} className="space-y-1">
-            <Label>{spec?.fields?.[field]?.label || field}</Label>
+            <Label>{fieldLabel(field, spec)}</Label>
             <FieldValue field={field} value={fieldText(value)} reading={reading} />
           </div>
         );

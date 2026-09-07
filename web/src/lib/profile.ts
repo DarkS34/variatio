@@ -39,6 +39,24 @@ export function typeLabel(
   return profile?.item_types[key]?.label || key;
 }
 
+/**
+ * How a field is NAMED where an exercise is read: its declared label, else its key as prose.
+ *
+ * ONE conversion for the three readings of one item — the bank's dialog, the bank's expanded
+ * row and the card on "Generar ejercicios" — because a field named two ways is the same
+ * exercise looking like two. It replaced a bare `{field}` in the first two and a
+ * `label || field` in the third, so the underscore reached the screen: `nivel_dificultad`
+ * was drawn as "NIVEL_DIFICULTAD" beside a column of the very same table headed
+ * "DIFICULTAD" and a step 2 that calls it "NIVEL DE DIFICULTAD".
+ *
+ * `spec` is optional because the two bank readers are handed a field list rather than the
+ * modality; passing it where it IS known is what keeps a declared `label` winning, which is
+ * the half `ItemFields` already had and the bank ignored.
+ */
+export function fieldLabel(field: string, spec?: ItemTypeSpec | null): string {
+  return spec?.fields?.[field]?.label || field.replace(/_/g, " ");
+}
+
 /** Mirrors ItemType.embed_fields: absent means the primary field alone. */
 export function embedFields(spec: ItemTypeSpec | null | undefined): string[] {
   if (!spec) return [];

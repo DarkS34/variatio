@@ -262,7 +262,6 @@ export const es = {
   "step.eval.tagging.label": "Etiquetando las propuestas",
   "step.eval_rag_index_corpus.label": "Indexando los apuntes para la propuesta comparativa",
   "step.eval_rag_index_exemplars.label": "Indexando los ejercicios para la propuesta comparativa",
-  "nav.dashboard": "Panel",
   "nav.rawWaiting": {
     one: "Queda 1 documento sin transcribir. Puedes construir igualmente: cada construcción transcribe lo que le falte.",
     other: "Quedan {n} documentos sin transcribir. Puedes construir igualmente: cada construcción transcribe lo que le falte.",
@@ -797,6 +796,7 @@ export const es = {
   },
   "eval.pendingCount": { one: "1 pendiente", other: "{n} pendientes" },
   "sets.assignedCount": { one: "1 comparación", other: "{n} comparaciones" },
+  "sets.workspaceCount": { one: "1 asignatura", other: "{n} asignaturas" },
   "sets.accountsFailed": "No se pudieron leer las cuentas",
   "sets.failedCount": { one: "; 1 falló", other: "; {n} fallaron" },
   "sets.launchLabel": {
@@ -939,6 +939,7 @@ export const es = {
   "doc.emptyPage": "Puede ser una página realmente vacía del original —una portada, un separador— o algo que el modelo no supo leer. Compruébalo antes de construir.",
   "fewshot.title": "Ejercicios tuyos que se le enseñaron como ejemplo",
   "fewshot.none": "Ningún ejercicio del banco lleva estos conceptos: el modelo genera sin ejemplos.",
+  "fewshot.neighbour": "concepto previo",
   "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada ejercicio validado se guarda solo en «Mis ejercicios».",
   "workspace.switcher.label": "Asignatura",
   "workspace.switcher.choose": "Elegir asignatura",
@@ -1270,7 +1271,7 @@ export const es = {
   "eval.tab.queue": "Asignadas",
   "eval.tab.compose": "Encargar evaluación",
   "eval.tab.history": "Mis evaluaciones",
-  "eval.title": "Evaluación",
+  "eval.title": "Evaluar el sistema",
   "eval.whatFor": "Para qué sirve",
   "eval.whatFor.body": "El mismo encargo se resuelve de tres formas: un modelo comercial con un prompt corriente, una búsqueda por similitud sobre el banco, y este sistema con el temario. Eliges a ciegas y solo después se revela cuál era cuál.",
   "eval.backToList": "Volver a la lista",

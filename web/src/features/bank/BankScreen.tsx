@@ -30,6 +30,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { fieldText, hasBrokenText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
 import { truncate } from "@/lib/format";
+import { fieldLabel } from "@/lib/profile";
 import { readableValue } from "@/lib/text";
 import type {
   BankItem,
@@ -79,15 +80,16 @@ interface ItemDialogProps {
   onSaved: () => void;
 }
 
-/** One field as it is READ: the key as its label, code in a block, prose as prose. The
- *  dialog and the expanded row both draw fields with it, so opening an exercise one way or
- *  the other cannot show the same field two ways. */
+/** One field as it is READ: its name through `fieldLabel`, code in a block, prose as prose.
+ *  The dialog and the expanded row both draw fields with it, so opening an exercise one way
+ *  or the other cannot show the same field two ways — and `fieldLabel` is what extends that
+ *  to the third reading, the card on "Generar ejercicios". */
 function FieldBlock({ field, value, primary = false }: { field: string; value: unknown; primary?: boolean }) {
   const { t } = useT();
   return (
     <div className="space-y-1">
       <Label>
-        {field}
+        {fieldLabel(field)}
         {primary ? t("bank.primaryField") : ""}
       </Label>
       {isCodeField(field) ? (
