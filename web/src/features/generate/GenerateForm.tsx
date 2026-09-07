@@ -562,8 +562,21 @@ export function GenerateForm({
                   <span className="mt-0.5 block font-mono text-[12px] text-muted-foreground">
                     {key}
                   </span>
+                  {/* CLIPPED AT THREE LINES, with the browser's own ellipsis. A
+                      modality's description is written by the consolidator and runs to
+                      several hundred characters — measured over the reference profiles,
+                      329 to 781 — so three whole cards read at full length filled the
+                      window before the question below them was even in view. What three
+                      lines hold is what tells one modality from another: the deliverable,
+                      which every one of those descriptions names in its first clause. The
+                      whole text is read and corrected in step 2, «Tipos de ejercicio»,
+                      which is where a modality is defined; here it is a label.
+
+                      Never `block` beside `line-clamp-3`: the clamp works by setting
+                      `display: -webkit-box`, and `block` wins in the cascade, so the
+                      clamp is off and silent. */}
                   {spec.description ? (
-                    <span className="mt-1 block text-small text-muted-foreground">
+                    <span className="mt-1 line-clamp-3 text-small text-muted-foreground">
                       {spec.description}
                     </span>
                   ) : null}

@@ -560,8 +560,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             the other. `min-width: auto` holds each at its own min-content, which is
             bounded — the lockup is fixed and the switcher is `max-w-44` and truncates. */}
         <div className="mx-auto flex h-[4.5rem] w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
-          {/* A rule and not a gap: side by side, the subject's name read as part of the
-              product's own. `compact` drops the wordmark below `lg`. */}
+          {/* `compact` drops the wordmark below `lg`. The rule that separates the product's
+              name from the subject's is the SWITCHER's own, and goes with it: with nothing
+              to switch between there is nothing to separate. */}
           <div className="flex flex-1 basis-0 items-center gap-2 sm:gap-3">
             <Link
               to="/"
@@ -570,8 +571,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Lockup compact />
             </Link>
-
-            <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
 
             <WorkspaceSwitcher />
           </div>

@@ -563,7 +563,6 @@ export const en: Catalogue = {
   "workspace.subjectName": "Name of the subject",
   "workspace.name": "Name of the subject",
   "workspace.name.placeholder": "Name, e.g. «Algebra 2026»",
-  "workspace.slug": "Identifier of the subject",
   "workspace.newName": "New name of the subject",
   "workspace.nameRequired": "Give the subject a name so it can be created.",
   "workspace.noneYet": "You do not have a subject yet",

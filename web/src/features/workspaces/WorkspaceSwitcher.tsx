@@ -46,157 +46,169 @@ export function WorkspaceSwitcher() {
     setOpen(false);
   };
   if (listing.isLoading) return null;
-  // With NO instance the control still stands, reading "Sin asignatura", and its menu is
-  // the create form and nothing else: an account that has just accepted an invitation would
-  // otherwise find no door in the header at all. It is the one control that is in the same
-  // place on every screen.
-  const empty = workspaces.length === 0;
+  // WITH NOTHING TO SWITCH BETWEEN THE CONTROL IS NOT DRAWN, the separating rule with it.
+  // It used to stand reading "Sin asignatura" with the create form as its whole menu, so a
+  // new account was offered the same thing twice: here, and in the middle of the screen
+  // `NoWorkspace` fills with it. Creating the first subject is the one thing there is to do
+  // on that screen, so it is the screen that offers it; a header control whose only content
+  // is the door the page already is, is a second door to one room.
+  //
+  // An ADMINISTRATOR is not in that state even with no membership of their own: the listing
+  // carries every instance of the installation, so there is something to switch into and the
+  // button stands, reading "Sin asignatura" until one is picked.
+  if (workspaces.length === 0) return null;
 
   return (
-    <div className="relative shrink-0" ref={holder}>
-      {/* The control says what it is, INSIDE itself. The axis the header has no room on is
-          the horizontal one — the flanks hold at their own min-content and the nav sits on
-          the centre line between them, so every character added to that row moves the
-          navigation sideways. Stacked inside, the caption costs the flank nothing: what sets
-          the button's width is the caption, not the name.
+    <>
+      {/* The rule belongs to the switcher and not to the header: it separates the product's
+          name from the subject's, so with no switcher there is nothing to separate. */}
+      <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
+      <div className="relative shrink-0" ref={holder}>
+        {/* The control says what it is, INSIDE itself. The axis the header has no room on is
+            the horizontal one — the flanks hold at their own min-content and the nav sits on
+            the centre line between them, so every character added to that row moves the
+            navigation sideways. Stacked inside, the caption costs the flank nothing: what
+            sets the button's width is the caption, not the name.
 
-          No `aria-labelledby`, and that is the point of the arrangement: with the caption
-          inside, the button's own text names it, where pointing at the caption alone would
-          throw the name away.
+            No `aria-labelledby`, and that is the point of the arrangement: with the caption
+            inside, the button's own text names it, where pointing at the caption alone would
+            throw the name away.
 
-          The menu is anchored `top-full` rather than at a fixed offset, so it opens under
-          whatever this block happens to be tall. */}
-      <button
-        onClick={() => setOpen((was) => !was)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        title={
-          active
-            ? t("workspace.switcher.current", { name: active.name })
-            : empty
-              ? t("ws.createOne")
+            The menu is anchored `top-full` rather than at a fixed offset, so it opens under
+            whatever this block happens to be tall. */}
+        <button
+          onClick={() => setOpen((was) => !was)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          title={
+            active
+              ? t("workspace.switcher.current", { name: active.name })
               : t("workspace.switcher.choose")
-        }
-        className={cn(
-          "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1 text-body transition-colors hover:bg-accent",
-          open && "bg-accent",
-        )}
-      >
-        {switching.isPending ? (
-          <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-        ) : null}
-        <span className="min-w-0 flex-1 text-left">
-          <span className="block truncate text-[12px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
-            {t("workspace.switcher.label")}
-          </span>
-          <span className="mt-1 block truncate font-medium leading-tight">
-            {active?.name ?? t("workspace.none")}
-          </span>
-        </span>
-        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-      </button>
-
-      {open ? (
-        <div
-          role="menu"
-          className="absolute left-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+          }
+          className={cn(
+            "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1 text-body transition-colors hover:bg-accent",
+            open && "bg-accent",
+          )}
         >
-          {empty ? null : (
-          <div className="max-h-72 overflow-y-auto p-1">
-            {workspaces.map((workspace) => (
-              <button
-                key={workspace.slug}
-                role="menuitem"
-                disabled={switching.isPending}
-                onClick={() => {
-                  setOpen(false);
-                  if (!workspace.active) switching.mutate(workspace.slug);
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent disabled:opacity-60"
-              >
-                <Check
-                  className={cn(
-                    "size-3.5 shrink-0",
-                    workspace.active ? "text-primary" : "opacity-0",
-                  )}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">{workspace.name}</span>
-                  <span className="block truncate font-mono text-[12px] text-muted-foreground">
-                    {workspace.slug}
-                  </span>
-                </span>
-                {workspace.as_admin ? (
-                  <Badge variant="secondary" className="shrink-0 gap-1">
-                    <Shield className="size-3" />
-                    {t("workspace.adminBadge")}
-                  </Badge>
-                ) : workspace.role ? (
-                  <Badge variant="outline" className="shrink-0">
-                    {t(ROLE_LABEL_KEYS[workspace.role])}
-                  </Badge>
-                ) : null}
-              </button>
-            ))}
-          </div>
-          )}
+          {switching.isPending ? (
+            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+          ) : null}
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block truncate text-[12px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
+              {t("workspace.switcher.label")}
+            </span>
+            <span className="mt-1 block truncate font-medium leading-tight">
+              {active?.name ?? t("workspace.none")}
+            </span>
+          </span>
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+        </button>
 
-          {empty ? null : <Separator />}
-          {/* Creating is offered here and renaming is NOT, and there is no owner-facing
-              route left for it either: a workspace is named when it is created, and after
-              that only an administrator renames it, from "Administración". What the name is
-              worth is that everybody means the same instance by it. */}
-          {creating || empty ? (
-            <CreateForm onDone={close} />
-          ) : (
-            <div className="p-1">
-              <button
-                role="menuitem"
-                onClick={() => setCreating(true)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
-              >
-                <FolderPlus className="size-4 text-muted-foreground" />
-                {t("ws.createOne")}
-              </button>
+        {open ? (
+          <div
+            role="menu"
+            className="absolute left-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+          >
+            <div className="max-h-72 overflow-y-auto p-1">
+              {workspaces.map((workspace) => (
+                <button
+                  key={workspace.slug}
+                  role="menuitem"
+                  disabled={switching.isPending}
+                  onClick={() => {
+                    setOpen(false);
+                    if (!workspace.active) switching.mutate(workspace.slug);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent disabled:opacity-60"
+                >
+                  <Check
+                    className={cn(
+                      "size-3.5 shrink-0",
+                      workspace.active ? "text-primary" : "opacity-0",
+                    )}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{workspace.name}</span>
+                    <span className="block truncate font-mono text-[12px] text-muted-foreground">
+                      {workspace.slug}
+                    </span>
+                  </span>
+                  {workspace.as_admin ? (
+                    <Badge variant="secondary" className="shrink-0 gap-1">
+                      <Shield className="size-3" />
+                      {t("workspace.adminBadge")}
+                    </Badge>
+                  ) : workspace.role ? (
+                    <Badge variant="outline" className="shrink-0">
+                      {t(ROLE_LABEL_KEYS[workspace.role])}
+                    </Badge>
+                  ) : null}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
-      ) : null}
-    </div>
+
+            <Separator />
+            {/* Creating is offered here and renaming is NOT, and there is no owner-facing
+                route left for it either: a workspace is named when it is created, and after
+                that only an administrator renames it, from "Administración". What the name
+                is worth is that everybody means the same instance by it. */}
+            {creating ? (
+              <CreateForm onDone={close} />
+            ) : (
+              <div className="p-1">
+                <button
+                  role="menuitem"
+                  onClick={() => setCreating(true)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-body transition-colors hover:bg-accent"
+                >
+                  <FolderPlus className="size-4 text-muted-foreground" />
+                  {t("ws.createOne")}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </>
   );
 }
 
 /**
  * A new workspace is a new instance: empty corpus, empty graph, empty bank.
  *
- * The slug is derived from the name and stays editable, because it is what the paths on
- * disk are named after and what the `X-Workspace` header carries — a value the user will
- * see again in the health panel, so letting them choose it beats inventing one.
+ * IT ASKS FOR THE SUBJECT'S NAME AND NOTHING ELSE. The slug used to be a second field,
+ * pre-filled from the name and left editable on the argument that it is what the paths on
+ * disk are named after and what `X-Workspace` carries — true, and none of it is a decision
+ * a teacher naming their subject has any way to make. It is derived from the name now, the
+ * way `NoWorkspace` has always derived it, and the switcher's own list is where anybody who
+ * needs to see one reads it.
+ *
+ * A name that slugifies to nothing usable (under three characters, or all punctuation) is
+ * refused on the PRESS and says so, rather than greying the button out while somebody is
+ * still typing the first letter.
  */
 function CreateForm({ onDone }: { onDone: () => void }) {
   const { t } = useT();
   const create = useCreateWorkspace();
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
+  // Whether the form has been submitted once: the error only appears after a press.
   const [touched, setTouched] = useState(false);
   // What the model will be instructed in throughout this instance's whole construction.
   // It defaults to what the person reads because that is the common case, and it is asked
   // HERE because it cannot be asked later: see `api.createWorkspace`.
   const [language, setLanguage] = usePromptLanguage();
 
-  const effective = touched ? slug : slugify(name);
-  const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(effective);
+  const slug = slugify(name);
+  const valid = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(slug);
 
   return (
     <form
       className="space-y-2 p-3"
       onSubmit={(event) => {
         event.preventDefault();
+        setTouched(true);
         if (valid)
-          create.mutate(
-            { slug: effective, name: name.trim() || effective, language },
-            { onSuccess: onDone },
-          );
+          create.mutate({ slug, name: name.trim(), language }, { onSuccess: onDone });
       }}
     >
       <Input
@@ -205,16 +217,6 @@ function CreateForm({ onDone }: { onDone: () => void }) {
         placeholder={t("workspace.name.placeholder")}
         value={name}
         onChange={(event) => setName(event.target.value)}
-      />
-      <Input
-        aria-label={t("workspace.slug")}
-        placeholder="identificador"
-        value={effective}
-        onChange={(event) => {
-          setTouched(true);
-          setSlug(event.target.value.toLowerCase());
-        }}
-        className="font-mono text-small"
       />
       <div className="flex flex-col gap-1">
         <span className="text-[12px] text-muted-foreground">{t("workspace.language.title")}</span>
@@ -243,13 +245,13 @@ function CreateForm({ onDone }: { onDone: () => void }) {
 
       {create.isError ? (
         <p className="text-small text-destructive">{(create.error as Error).message}</p>
+      ) : touched && !valid ? (
+        <p className="text-small text-destructive">{t("workspace.nameRequired")}</p>
       ) : (
-        <p className="text-[12px] text-muted-foreground">
-          {t("workspace.startsEmpty")}
-        </p>
+        <p className="text-[12px] text-muted-foreground">{t("workspace.startsEmpty")}</p>
       )}
       <div className="flex gap-2">
-        <Button type="submit" size="sm" className="flex-1" disabled={!valid || create.isPending}>
+        <Button type="submit" size="sm" className="flex-1" disabled={create.isPending}>
           {create.isPending ? <Loader2 className="size-4 animate-spin" /> : <FolderPlus />}
           {t("common.create")}
         </Button>

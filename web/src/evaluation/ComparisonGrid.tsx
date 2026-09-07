@@ -1,4 +1,4 @@
-import { ChevronDown, CircleSlash, Maximize2 } from "lucide-react";
+import { ArrowDown, CircleSlash, Maximize2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -78,7 +78,10 @@ function ProposalCard({
         {hasItem && !answered ? (
           <span className="ml-auto flex shrink-0 items-center gap-1 text-micro font-condensed text-attention uppercase">
             {t("grid.missing")}
-            <ChevronDown className="size-3.5" strokeWidth={2.5} aria-hidden />
+            {/* An ARROW and not a chevron: a bare "v" beside a label reads as a disclosure
+                — "this opens" — where what it does is point at the triage buttons under
+                the card. The shaft is what makes it a direction. */}
+            <ArrowDown className="size-3.5" strokeWidth={2.5} aria-hidden />
           </span>
         ) : null}
         {hasItem ? (
