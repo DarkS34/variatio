@@ -31,7 +31,7 @@ def workspace_logs_dir(slug: str) -> Path:
     """
     slug = (slug or "").strip()
     if not slug:
-        raise ValueError("Un workspace se nombra: no hay instancia por defecto.")
+        raise ValueError("Una asignatura se nombra: no hay instancia por defecto.")
     target = LOGS_DIR / slug
     target.mkdir(parents=True, exist_ok=True)
     return target
@@ -44,5 +44,5 @@ def workspace(slug: str) -> Workspace:
     """
     slug = (slug or "").strip()
     if not slug:
-        raise ValueError("Un workspace se nombra: no hay instancia por defecto.")
+        raise ValueError("Una asignatura se nombra: no hay instancia por defecto.")
     return Workspace(WORKSPACES_DIR / slug, slug=slug)

@@ -1,25 +1,46 @@
 """Reading the raw documents: a page transcribed, a seam decided, a fragment made items."""
 
-from ..marks import CORRECT_ANSWER_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
+from ..marks import CORRECT_ANSWER_MARK, EMPTY_IMAGE_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 
 __all__ = [
     "CORRECT_ANSWER_MARK",
+    "EMPTY_IMAGE_MARK",
     "EMPTY_PAGE_MARK",
+    "IMAGE_RULES",
     "SEAM_SEPARATORS",
     "format_content_prompt",
     "merge_pages_prompt",
+    "transcribe_image_prompt",
     "transcribe_page_prompt",
 ]
+
+# ONE block for the two prompts that meet an image: the page prompt, where the image is a
+# figure on the page, and the image prompt, where it arrives alone out of a Word or
+# PowerPoint file. An image is transcribed by what it CONTAINS and described only when
+# nothing can be copied — a description of a formula cannot be solved from, and a
+# description of a screenshot destroys the "write a program that prints this" exercise
+# whose expected output was the screenshot.
+IMAGE_RULES = """\
+# IMAGES AND FIGURES
+An image is transcribed by what it CONTAINS, and described only when there is nothing to copy:
+- A formula or mathematical expression typeset as an image is transcribed in LaTeX, symbol by symbol — `$…$` inline, `$$…$$` on its own.
+- A screenshot of code, of a terminal or of a program's output is transcribed as a ``` block with its exact line breaks and indentation. Only the content counts: leave out everything that belongs to the application and not to the document (menus, toolbars, ruler, tabs, the editor's line numbers, window borders, taskbar).
+- A table is transcribed as a Markdown table, cell by cell.
+- Text (a scanned statement, a note, a label) is transcribed as text.
+- Only what cannot be copied as text — a diagram, a plot, a schematic, a photograph — is noted in its place as `[figure: what it shows]`, in one sentence. Say what is SEEN (the axes and magnitudes of a plot, the components of a schematic, the labels it carries) without reading values that cannot be read clearly or interpreting what it means. The note never replaces the text accompanying the figure, which is transcribed like everything else.
+- The same fidelity rules hold inside an image: copy character by character, do not solve, do not complete, do not correct, and `[illegible]` marks what cannot be read."""
 
 
 def transcribe_page_prompt(page_number: int, page_count: int) -> str:
     """Ask for one page image copied into Markdown, character by character.
 
-    The whole route stands on «copy, do not interpret»: a later extractor reads the
+    The whole route stands on "copy, do not interpret": a later extractor reads the
     transcription believing it is the original document, so anything changed becomes false
     teaching material. The only mark the model may add is `CORRECT_ANSWER_MARK`, on a
     visually highlighted answer option; a page carrying nothing but logos and page numbers
     comes back as `EMPTY_PAGE_MARK`, which `pages.py` matches. The answer is bare Markdown.
+    A figure on the page follows `IMAGE_RULES`, the same block the standalone image prompt
+    carries, so an image is read the same way whichever route brought it.
     """
     return f"""\
 Transcribe into Markdown PAGE {page_number} of {page_count} of a teaching-material document. You have it in front of you as an image.
@@ -28,6 +49,9 @@ Your job is to COPY what is on the page, not to interpret it. A later extractor 
 
 # READING ORDER
 Transcribe in the order a person would read it. Each statement must stay next to the code, table, image or options that belong to it, in the place where they appear. If the page has columns, follow a whole column before moving to the next.
+
+# STRUCTURE
+The page's titles and headings are marked with `#` following the original's visual hierarchy (size, bold, numbering): `#` for the title of a unit, topic or chapter — the large line it opens with, such as «Unit 2 – Modularity» or «Chapter 3. Recursion» —, `##` for a section and `###` for a subsection. A heading is a line on its own that titles what comes under it; a sentence of the text, a label inside an exercise, the statement of a question or an answer option are NOT headings. The later extractor locates each unit through these headings, so a title transcribed as a loose line vanishes from the corpus's index.
 
 # FIDELITY — THE MOST IMPORTANT PART
 - Copy CHARACTER BY CHARACTER. `a -= 1` is not `a = a - 1`. `x = x - 1` is not `x = x + 1`. `range (0,8)` keeps its space. Do not normalise, do not modernise, do not fix the style.
@@ -41,8 +65,7 @@ Code goes in blocks delimited by ``` keeping its line breaks and indentation EXA
 # MATHEMATICAL NOTATION
 Formulas and mathematical expressions are copied with their notation, symbol by symbol and unit by unit. If the original typesets them (fractions, subscripts, integrals, vectors), transcribe them in LaTeX — `$…$` inline, `$$…$$` on their own — and use that same convention through the WHOLE document. If the original writes them in plain text, leave them in plain text. Do not solve, do not simplify, do not swap the notation for an equivalent one.
 
-# FIGURES
-A figure that cannot be transcribed as text (a diagram, a plot, a schematic, a photograph) is noted in its place as `[figure: what it shows]`, in one sentence. Say what is SEEN — the axes and magnitudes of a plot, the components of a schematic — without reading values that cannot be read clearly: `[illegible]` is already there for an illegible datum. The note never replaces the text accompanying the figure, which is transcribed like everything else.
+{IMAGE_RULES}
 
 # MARKED ANSWERS
 If one answer option is visually highlighted with respect to the others — a different colour, bold, underline, a box, a mark in the margin — add ` {CORRECT_ANSWER_MARK}` at the end of that line and nothing else. It is the only mark you may add to the text. If none is highlighted, mark none: do not deduce which one is correct.
@@ -55,6 +78,35 @@ Transcribe only what you see on THIS page. If an exercise starts here and contin
 
 # OUTPUT
 Only the page's Markdown. No preamble, no comments of your own, no ```markdown wrapping the whole, no saying «Here is the transcription». If the page contains nothing but omittable elements, answer exactly `{EMPTY_PAGE_MARK}`.
+
+Markdown:"""
+
+
+def transcribe_image_prompt(image_number: int, image_count: int) -> str:
+    """Ask for one image of a Word or PowerPoint document copied into Markdown.
+
+    The image reaches the model alone — Docling keeps the text around it — and what comes
+    back is spliced into the document exactly where the image was, so the answer has to be
+    the content itself in the form the surrounding Markdown would give it: LaTeX for a
+    formula, a fence for a screenshot of code, a table for a table, `[figure: …]` only for
+    what cannot be copied. A logo, a crest or an ornament comes back as `EMPTY_IMAGE_MARK`,
+    which `pages.py` matches and drops.
+    """
+    return f"""\
+Transcribe into Markdown IMAGE {image_number} of {image_count} of a teaching-material document (a Word or PowerPoint file). You have it in front of you; you do not see the text around it.
+
+Your job is to COPY what is in the image, not to interpret it. What you return will be inserted into the document in the exact place the image occupied, and a later extractor will read it believing it is the original document, so anything you change becomes false teaching material.
+
+{IMAGE_RULES}
+
+# MARKED ANSWERS
+If the image contains answer options and one is visually highlighted with respect to the others — a different colour, bold, underline, a box, a mark in the margin — add ` {CORRECT_ANSWER_MARK}` at the end of that line and nothing else. It is the only mark you may add. If none is highlighted, mark none.
+
+# WHAT NOT TO TRANSCRIBE
+A logo, a crest, an ornament, a decorative rule, an icon or a photograph with no teaching content: answer exactly `{EMPTY_IMAGE_MARK}` and nothing else.
+
+# OUTPUT
+Only the Markdown that replaces the image. No preamble, no comments of your own, no ```markdown wrapping the whole, no saying «Here is the transcription». If the image has nothing to transcribe, answer exactly `{EMPTY_IMAGE_MARK}`.
 
 Markdown:"""
 
@@ -143,9 +195,10 @@ Choose the modality by what the item ASKS OF THE STUDENT, not by its topic or it
 - Copy the values literally from the source text. Do not rewrite, do not translate, do not summarise, do not invent content. What is extracted is real teaching material: altering it destroys exactly what makes it useful as an example.
 - If a field admits null and the content does not appear in the source, set it to null. Never fabricate content to fill it in: a statement with no solution in the material is a legitimate item, one with an invented solution is false teaching material.
 - Do not mix fields from two modalities in the same object: the only valid fields are those of the modality you declared in `item_type`.
-- The material may come from a transcription that marks the correct option of a closed question with `✔`. That mark is NOT part of the text: use it to know which answer is correct and remove it from the value you extract.
+- The material may come from a transcription that marks the correct option of a closed question with `{CORRECT_ANSWER_MARK}`. That mark is NOT part of the text: use it to know which answer is correct and remove it from the value you extract.
 - Remove leading enumeration markers (`1.`, `2)`, `Exercise 3:`, `Ejercicio 4.`, `Problem 5 -`, `Part 6:`, `Section 7 –`, etc.) from the text fields. Values must start with the first real character of the content, not with a number or a label.
 - For multiline strings (code, prose with paragraphs): escape line breaks as `\\n` and inner quotes as `\\"`.
+- Non-ASCII characters — accents, «ñ», «→», «≤», typographic quotes — are written as themselves, as text, and NEVER as `\\uXXXX` escape sequences: a mis-escaped accent is not a formatting error, it is a letter lost from the material.
 - Respect the schema's constraints (`minLength`, `maxLength`, `pattern`, etc.).
 
 # OUTPUT RULES

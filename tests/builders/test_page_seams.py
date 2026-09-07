@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio.builders._source_docs import chunking, markdown, pages
+from variatio.builders.source_docs import chunking, markdown, pages
 from variatio.core import inference
 from variatio.prompts import SEAM_SEPARATORS
 
@@ -62,7 +62,7 @@ def test_a_finished_sentence_is_not_a_continuation():
 
 
 def test_an_empty_page_is_skipped_without_leaving_a_seam():
-    assert pages.join_pages(["Uno.", "   ", "Dos."]) == "Uno.\n\n<!-- pág. 3 -->\n\nDos."
+    assert pages.join_pages(["Uno.", "   ", "Dos."]) == "Uno.\n\n<!-- page 3 -->\n\nDos."
 
 
 # THE PAGE MARK -----------------------------------------------------------------------------------
@@ -79,9 +79,9 @@ def test_a_continuation_seam_carries_no_mark():
 def test_the_mark_never_reaches_a_block_or_a_section():
     joined = pages.join_pages(["# Tema 1\n\nUno.", "# Tema 2\n\nDos."])
     assert markdown.page_mark(2) in joined
-    assert all("pág." not in block for block in markdown.split_blocks(joined))
-    assert all("pág." not in body for _, _, body in chunking.split_sections(joined))
-    assert all("pág." not in chunk for chunk in chunking.chunk_text(joined, 1000))
+    assert all("page" not in block for block in markdown.split_blocks(joined))
+    assert all("page" not in body for _, _, body in chunking.split_sections(joined))
+    assert all("page" not in chunk for chunk in chunking.chunk_text(joined, 1000))
 
 
 def test_a_mark_inside_a_code_block_is_not_stripped():
@@ -163,7 +163,7 @@ def test_unreadable_json_falls_back_to_the_rule(monkeypatch):
     answer(monkeypatch, "no soy json en absoluto")
     records = pages.review_seams(["Uno.", "Dos."], ES, model="m")
     assert records == [{"page": 2, "failed": True}]
-    assert pages.join_pages(["Uno.", "Dos."], records) == "Uno.\n\n<!-- pág. 2 -->\n\nDos."
+    assert pages.join_pages(["Uno.", "Dos."], records) == "Uno.\n\n<!-- page 2 -->\n\nDos."
 
 
 def test_the_prompt_shows_only_the_tail_and_the_head(monkeypatch):

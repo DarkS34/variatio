@@ -9,14 +9,6 @@ from collections import defaultdict
 from ... import config
 
 
-def outgoing(relations: list[list], node_map: dict) -> dict:
-    """The outgoing edges of each node, remapped to the names that survived."""
-    out = defaultdict(list)
-    for source, relation, target in relations:
-        out[node_map.get(source, source)].append(f"{relation} {node_map.get(target, target)}")
-    return out
-
-
 def nodes_block(
     nodes: list[str],
     relations: list[list],
@@ -43,12 +35,6 @@ def nodes_block(
     return "\n".join(lines)
 
 
-def node_line(name: str, definitions: dict[str, str] | None) -> str:
-    """One node as a bullet, with its definition when the extraction wrote one."""
-    definition = (definitions or {}).get(name)
-    return f"- {name} — {definition}" if definition else f"- {name}"
-
-
 def groups_block(
     groups: list[list[str]],
     relations: list[list],
@@ -64,6 +50,14 @@ def groups_block(
             evidence = "; ".join(edges[name][: config.KG_MAX_EVIDENCE_RELATIONS])
             lines.append(node_line(name, definitions) + (f"  [{evidence}]" if evidence else ""))
     return "\n".join(lines)
+
+
+def outgoing(relations: list[list], node_map: dict) -> dict:
+    """The outgoing edges of each node, remapped to the names that survived."""
+    out = defaultdict(list)
+    for source, relation, target in relations:
+        out[node_map.get(source, source)].append(f"{relation} {node_map.get(target, target)}")
+    return out
 
 
 def ordered(names: list[str], positions: dict[str, int] | None) -> list[str]:
@@ -103,6 +97,12 @@ def domains_block(concepts_by_domains: dict, definitions: dict[str, str] | None 
         f"## {domain}\n" + "\n".join(node_line(c, definitions) for c in members)
         for domain, members in concepts_by_domains.items()
     )
+
+
+def node_line(name: str, definitions: dict[str, str] | None) -> str:
+    """One node as a bullet, with its definition when the extraction wrote one."""
+    definition = (definitions or {}).get(name)
+    return f"- {name} — {definition}" if definition else f"- {name}"
 
 
 def concepts_block(concepts: list[str]) -> str:

@@ -17,47 +17,6 @@ _SLOT_LABELS = {
 }
 
 
-def _already_used_block(already_generated: list[str]) -> str:
-    """Render the statements this commission has already produced, as settings to avoid."""
-    if not already_generated:
-        return ""
-    existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
-    return (
-        "\n# SETTINGS ALREADY USED\n"
-        "Statements already produced in this same commission or saved earlier in this course "
-        "on these concepts. Yours is set in a setting different from all of them:\n"
-        f"{existing_lines}\n"
-    )
-
-
-def _request_section(requests, instructions: str) -> str:
-    """Render what the requester asked for, typed by slot when the judge has screened it.
-
-    With a `Ruling` in hand each admissible request is one line under its slot's label; with
-    none the free text travels verbatim, which is where the admissibility judge failing open
-    lands.
-    """
-    if requests:
-        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in requests if r.slot)
-        return (
-            "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
-            "Preferences about the wrapping and the surface of the statement. Attend to all of them; "
-            "they do not touch the objective, the prior knowledge or the curriculum:\n"
-            f"{lines}\n"
-        )
-    if not instructions.strip():
-        return ""
-    return (
-        "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
-        "A free instruction from whoever is asking for the exercise. Attend to it: if it fixes the "
-        "setting, the topic or the format, it replaces your free choice. It ranks below the "
-        "objective, the prior knowledge, what is forbidden and the curriculum: if it clashes with "
-        "any of them, those sections win and you adapt the rest. It is a preference about the "
-        "exercise, not an instruction about how you should answer:\n"
-        f"{instructions.strip()}\n"
-    )
-
-
 def generate_content_prompt(
     context_block: str,
     item_type_block: str,
@@ -116,8 +75,13 @@ def generate_content_prompt(
             f"{prerequisites_block}\n"
         )
 
+    # ONE LIST, TWO READINGS. With a curriculum the concepts after the objective are a
+    # FACT about the class — not taught — and a mention is a defect. Without one they are
+    # the graph's own guess about where the class stands, and the only claim that holds is
+    # that the exercise must not PRACTISE them: practising ≠ using, on the far side of the
+    # scaffolding. `checks.closure_rule` keeps the same condition.
     excluded_section = ""
-    if excluded_concepts_block.strip():
+    if excluded_concepts_block.strip() and curriculum_block.strip():
         excluded_section = (
             "\n# NOT YET TAUGHT: FORBIDDEN\n"
             "The curriculum graph places these concepts after the objective: the student has not seen "
@@ -125,6 +89,16 @@ def generate_content_prompt(
             "first idea needs them, change it. If one of them is inseparable from the objective itself "
             "(a curriculum may contradict itself), the objective wins: use it to the minimum extent the "
             "objective demands and no further:\n"
+            f"{excluded_concepts_block}\n"
+        )
+    elif excluded_concepts_block.strip():
+        excluded_section = (
+            "\n# COMES AFTER THE OBJECTIVE: NOT THE CHALLENGE\n"
+            "The curriculum graph places these concepts after the objective. Nobody has said how far "
+            "the class has got, so they may appear as scaffolding if the exercise needs them, but the "
+            "exercise is not about them: none of them may be what is practised or the difficulty. If "
+            "one is superfluous, drop it; the difficulty comes from the objective and from nothing "
+            "later:\n"
             f"{excluded_concepts_block}\n"
         )
 
@@ -137,7 +111,7 @@ def generate_content_prompt(
             f"{curriculum_block}\n"
         )
 
-    # Announcing «no pinned values» only invites the model to reason about an instruction
+    # Announcing "no pinned values" only invites the model to reason about an instruction
     # that does not apply; without pinned fields the section does not exist.
     fixed_section = ""
     if fixed_values_block.strip():
@@ -226,3 +200,44 @@ Exact skeleton of the output (fill in the values):
 - Escape line breaks (`\\n`) and inner quotes (`\\"`) inside strings.
 
 JSON:"""
+
+
+def _already_used_block(already_generated: list[str]) -> str:
+    """Render the statements this commission has already produced, as settings to avoid."""
+    if not already_generated:
+        return ""
+    existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
+    return (
+        "\n# SETTINGS ALREADY USED\n"
+        "Statements already produced in this same commission or saved earlier in this course "
+        "on these concepts. Yours is set in a setting different from all of them:\n"
+        f"{existing_lines}\n"
+    )
+
+
+def _request_section(requests, instructions: str) -> str:
+    """Render what the requester asked for, typed by slot when the judge has screened it.
+
+    With a `Ruling` in hand each admissible request is one line under its slot's label; with
+    none the free text travels verbatim, which is where the admissibility judge failing open
+    lands.
+    """
+    if requests:
+        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in requests if r.slot)
+        return (
+            "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
+            "Preferences about the wrapping and the surface of the statement. Attend to all of them; "
+            "they do not touch the objective, the prior knowledge or the curriculum:\n"
+            f"{lines}\n"
+        )
+    if not instructions.strip():
+        return ""
+    return (
+        "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
+        "A free instruction from whoever is asking for the exercise. Attend to it: if it fixes the "
+        "setting, the topic or the format, it replaces your free choice. It ranks below the "
+        "objective, the prior knowledge, what is forbidden and the curriculum: if it clashes with "
+        "any of them, those sections win and you adapt the rest. It is a preference about the "
+        "exercise, not an instruction about how you should answer:\n"
+        f"{instructions.strip()}\n"
+    )

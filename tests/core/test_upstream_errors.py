@@ -7,9 +7,9 @@ from variatio.core import inference
 from variatio.core.cerebras import CerebrasEngine
 from variatio.core.inference import InferenceError, OllamaEngine
 
-# Lo que un motor contesta es SUYO, no nuestro: `ollama.ResponseError` lleva dentro el
-# cuerpo crudo de la respuesta y esos mensajes acaban en el panel, así que cualquier cosa
-# que conteste el host al que apunta OLLAMA_HOST se leería en la pantalla de quien mira.
+# What an engine answers is ITS text and not ours: `ollama.ResponseError` carries the raw
+# response body, and those messages reach the panel — so whatever the host `OLLAMA_HOST`
+# points at replies with would be read on somebody's screen.
 BODY = "<html>traza del motor con lo que haya dentro</html>"
 
 
@@ -45,9 +45,9 @@ def test_the_helper_says_it_could_not_reach_the_engine_when_there_is_no_status(m
     assert BODY not in message
 
 
-# Cada sitio que hablaba con Ollama reflejaba el `{e}` entero. La lista es la de verdad: el
-# listado y el borrado llegan al panel de «Motor», la descarga a través de `PullTracker`, la
-# residencia a `/api/health` y los dos de embedding al error de un trabajo.
+# Every place that talks to Ollama used to mirror the whole `{e}`. This list is the real
+# one: listing, deleting and pulling a model, reading residency, and the two embedding
+# calls, whose error is what a caller sees when an index cannot be built.
 @pytest.mark.parametrize(
     "call",
     [
@@ -67,10 +67,8 @@ def test_no_ollama_call_reflects_the_engines_own_body(engine, call):
     assert "500" in str(error.value)
 
 
-
-
-# La mitad remota tiene la misma regla, y la ruta que transmite es la que menos se prueba:
-# un no-200 en `stream` se leía entero con `response.read()` y se metía en el error.
+# The remote half follows the same rule, and the streaming path is the least exercised: a
+# non-200 in `stream` was read whole with `response.read()` and put into the error.
 def test_the_streaming_path_names_the_status_but_not_the_body(monkeypatch):
     monkeypatch.setattr(config, "CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
     engine = CerebrasEngine()

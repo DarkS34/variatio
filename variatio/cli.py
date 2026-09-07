@@ -1,6 +1,6 @@
 """The command line: argument parsing, the build-if-missing policy, and the reporting.
 
-Every `print()` and every exit code of the library lives here. The stages return data and
+Every `print()` and every exit code of the library lives here. The entry points return data and
 raise; deciding to build what is missing is this layer's call and never theirs.
 """
 
@@ -9,8 +9,47 @@ import json
 
 from loguru import logger
 
-from . import bootstrap, stages
-from .core import paths
+from . import entrypoints
+from .core import inference, paths
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run one subcommand and return its exit code."""
+    args = build_parser().parse_args(argv)
+
+    ws = paths.workspace(args.workspace)
+
+    try:
+        # `restamp-descriptions` calls no model, so it must not demand a live engine.
+        if args.command != "restamp-descriptions":
+            inference.require_engine()
+        
+        match args.command:
+            case "transcribe":
+                _transcribe_and_report(args, ws)
+            case "build":
+                built = entrypoints.build_missing(ws)
+                if built:
+                    logger.success(f"Artifacts built: {', '.join(built)}")
+                else:
+                    logger.info("Every artifact of the instance already exists")
+            case "init":
+                entrypoints.initialize(tag=True, ws=ws)
+            case "restamp-descriptions":
+                changed, total = entrypoints.restamp_descriptions(ws=ws, dry_run=args.dry_run)
+                logger.info(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
+            case "generate":
+                _generate_and_report(args, ws)
+            case "all":
+                entrypoints.build_missing(ws)
+                _generate_and_report(args, ws)
+    except entrypoints.MissingArtifactError as e:
+        logger.error(f"{e}; run `variatio build` first")
+        return 1
+    except (RuntimeError, ImportError, OSError, ValueError) as e:
+        logger.error(str(e))
+        return 1
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,16 +60,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     common = argparse.ArgumentParser(add_help=False)
-    # Required: there is no default workspace, and a build that guesses which instance
-    # it meant is a build that rewrites somebody else's graph.
+
     common.add_argument(
         "--workspace",
         metavar="SLUG",
-        required=True,
+        required=True, # Required: there is no default workspace
         help="operate on WORKSPACES_DIR/SLUG",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    transcribe = subparsers.add_parser(
+        "transcribe",
+        parents=[common],
+        help="read the raw documents into markdown pages, ahead of the builds that need them",
+    )
+    transcribe.add_argument(
+        "--slot",
+        choices=(*entrypoints.SLOTS, "all"),
+        default="all",
+        help="which raw origin to read (default: both)",
+    )
 
     subparsers.add_parser(
         "build", parents=[common], help="build the missing instance artifacts from the workspace's raw/"
@@ -97,36 +147,47 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _parse_fixed(pairs: list[str]) -> dict[str, object]:
-    """Parse the `FIELD=VALUE` pins, reading each value as JSON and else as a string.
+def _transcribe_and_report(args: argparse.Namespace, ws) -> None:
+    """Read one raw origin or both, and say what is left for a person to correct.
 
-    Raises ValueError on a pair with no `=`.
+    Reading ahead is an accelerator and never a gate: every builder keeps its own conversion
+    phase, which finds this cache done or does the work itself, so nothing chains off this
+    subcommand and no build refuses to run for want of it.
     """
-    fixed: dict[str, object] = {}
-    for pair in pairs:
-        field, sep, value = pair.partition("=")
-        if not sep or not field:
-            raise ValueError(f"--fixed expects FIELD=VALUE, got: {pair!r}")
-        try:
-            fixed[field] = json.loads(value)
-        except json.JSONDecodeError:
-            fixed[field] = value
-    return fixed
-
-
-def _report(results: list) -> None:
-    """Print each generated item, and its reasoning when the model produced any."""
-    for i, result in enumerate(results, 1):
-        print(f"\n============== ITEM {i} · {result.item_type} ==============")
-        print(result.item.model_dump_json(indent=2))
-        if result.thinking:
-            print(f"\n--- thinking ---\n{result.thinking}")
+    slots = entrypoints.SLOTS if args.slot == "all" else (args.slot,)
+    failed = 0
+    for slot in slots:
+        # The stage logs each slot's totals as it closes it; the one thing it does not say is
+        # what a person still has to do, which is this layer's job.
+        failed += entrypoints.transcribe_slot(ws, slot)["failed_pages"]
+    if failed:
+        logger.warning(
+            f"{failed} page(s) could not be read: each is marked inside its document and can "
+            f"be corrected by hand from the raw documents screen"
+        )
 
 
 def _generate_and_report(args: argparse.Namespace, ws) -> None:
     """Initialize the instance, generate what was asked for, and print the result."""
-    context = stages.initialize(tag=True, ws=ws)
-    results = stages.generate(
+    
+    def _parse_fixed(pairs: list[str]) -> dict[str, object]:
+        """Parse the `FIELD=VALUE` pins, reading each value as JSON and else as a string.
+
+        Raises ValueError on a pair with no `=`.
+        """
+        fixed: dict[str, object] = {}
+        for pair in pairs:
+            field, sep, value = pair.partition("=")
+            if not sep or not field:
+                raise ValueError(f"--fixed expects FIELD=VALUE, got: {pair!r}")
+            try:
+                fixed[field] = json.loads(value)
+            except json.JSONDecodeError:
+                fixed[field] = value
+        return fixed
+    
+    context = entrypoints.initialize(tag=True, ws=ws)
+    results = entrypoints.generate(
         context,
         concepts=args.concepts,
         item_type=args.item_type,
@@ -135,39 +196,12 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
         curriculum=args.curriculum,
         instructions=args.instructions,
     )
-    _report(results)
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Run one subcommand and return its exit code."""
-    args = build_parser().parse_args(argv)
-
-    ws = paths.workspace(args.workspace)
-
-    try:
-        # `restamp-descriptions` calls no model, so it must not demand a live engine.
-        if args.command != "restamp-descriptions":
-            bootstrap()
-        if args.command == "build":
-            built = stages.build_missing(ws)
-            if built:
-                logger.success(f"Artifacts built: {', '.join(built)}")
-            else:
-                logger.info("Every artifact of the instance already exists")
-        elif args.command == "init":
-            stages.initialize(tag=True, ws=ws)
-        elif args.command == "restamp-descriptions":
-            changed, total = stages.restamp_descriptions(ws=ws, dry_run=args.dry_run)
-            print(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
-        elif args.command == "generate":
-            _generate_and_report(args, ws)
-        elif args.command == "all":
-            stages.build_missing(ws)
-            _generate_and_report(args, ws)
-    except stages.MissingArtifactError as e:
-        logger.error(f"{e}; run `variatio build` first")
-        return 1
-    except (RuntimeError, ImportError, OSError, ValueError) as e:
-        logger.error(str(e))
-        return 1
-    return 0
+    
+    # Print each generated item, and its reasoning when the model produced any
+    for i, result in enumerate(results, 1):
+        print(f"\n============== ITEM {i} · {result.item_type} ==============")
+        if result.thinking:
+            print("\n-----------------")
+            print(f"--- THINKING ---\n{result.thinking}")
+            print("-----------------\n")
+        print(result.item.model_dump_json(indent=2))

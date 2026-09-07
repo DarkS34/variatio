@@ -139,8 +139,8 @@ def test_validate_patch_names_every_offender_not_just_the_first():
 # THE RENAMED KEYS ---------------------------------------------------------------------------------
 #
 # `config.json` at the root is the installation's own settings as they actually stand, and it
-# predates the 2026-08-27 rename of the transcription phase. Refusing to read the old names
-# would turn a rename into a silent reset of whatever the installation had chosen.
+# predates the rename of the transcription phase. Refusing to read the old names would turn a
+# rename into a silent reset of whatever the installation had chosen.
 
 
 def test_a_legacy_key_still_resolves(tmp_path):
@@ -215,3 +215,51 @@ def test_reading_a_legacy_file_and_writing_it_back_migrates_the_name(tmp_path):
     store.write_file(path, settings, values)
     written = json.loads(path.read_text(encoding="utf-8"))
     assert written["models"]["phases"] == {"transcribe": "un-modelo"}
+
+
+# A MAP SETTING IS A VALUE AND NOT A NAMESPACE, and the file cannot tell the two apart on
+# its own: `{"gemma-4-31b": "high"}` reads exactly like `{"main": "…"}`. Without the leaf
+# set the walk turns one declared key into one undeclared key per entry, so the setting
+# reads as absent and every model in it warns.
+MAPPED = [
+    make("engine.name", "ENGINE", "str", "ollama", choices=("ollama", "hibrido")),
+    make(
+        "generation.fixed_effort_levels",
+        "FIXED_EFFORT_LEVELS",
+        "dict[str,str]",
+        {},
+        scope="engine",
+        choices=("low", "high"),
+    ),
+]
+
+
+def test_a_map_setting_is_read_whole(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {"profiles": {"hibrido": {"generation": {"fixed_effort_levels": {"gemma": "high"}}}}}
+        ),
+        encoding="utf-8",
+    )
+    maps = store.map_keys(MAPPED)
+    assert maps == {"generation.fixed_effort_levels"}
+    assert store.read_file(path, maps) == {
+        "profiles.hibrido.generation.fixed_effort_levels": {"gemma": "high"}
+    }
+    # And without the leaf set it is exactly the failure the argument exists to prevent.
+    assert store.read_file(path) == {
+        "profiles.hibrido.generation.fixed_effort_levels.gemma": "high"
+    }
+
+
+def test_a_map_setting_survives_the_round_trip_through_the_file(tmp_path):
+    path = tmp_path / "config.json"
+    store.write_file(
+        path,
+        MAPPED,
+        {"engine.name": "hibrido"},
+        {"hibrido": {"generation.fixed_effort_levels": {"gemma": "high"}}},
+    )
+    values, _ = store.resolve(MAPPED, store.read_file(path, store.map_keys(MAPPED)), {})
+    assert values["generation.fixed_effort_levels"] == {"gemma": "high"}

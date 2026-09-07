@@ -6,19 +6,25 @@ from variatio.settings.registry.reasoning import Phase
 
 PHASES = [phase for lane in PIPELINE for phase in lane.phases]
 
-# The two transcription nodes run in all three builders, so they are DRAWN three times and
-# are still one setting each. Everything else belongs to one lane.
-SHARED = {"transcribe", "transcribe_seam"}
+# The three transcription nodes are the step the three builders share, so they are one lane
+# of their own rather than a repeated head on each of the three.
+SHARED = {"transcribe", "transcribe_image", "transcribe_seam"}
 
 
-def test_only_the_shared_transcription_is_drawn_in_more_than_one_lane():
+def test_no_phase_is_drawn_in_more_than_one_lane():
     lanes_by_key: dict[str, list[str]] = {}
     for lane in PIPELINE:
         for phase in lane.phases:
             lanes_by_key.setdefault(phase.key, []).append(lane.key)
-    assert {key for key, lanes in lanes_by_key.items() if len(lanes) > 1} == SHARED
-    for key in SHARED:
-        assert lanes_by_key[key] == ["profile", "graph", "bank"]
+    assert {key: lanes for key, lanes in lanes_by_key.items() if len(lanes) > 1} == {}
+
+
+def test_the_transcription_is_the_one_shared_lane_and_holds_exactly_its_three_phases():
+    shared = [lane for lane in PIPELINE if lane.shared]
+    assert [lane.key for lane in shared] == ["transcription"]
+    assert {phase.key for phase in shared[0].phases} == SHARED
+    # It is drawn FIRST, which is what puts it above the columns rather than beside them.
+    assert PIPELINE[0].key == "transcription"
 
 
 def test_a_phase_drawn_twice_points_at_the_same_settings():
@@ -67,6 +73,15 @@ def test_every_phase_names_a_model_the_registry_declares():
             assert phase.model in derived.PHASES
 
 
+def test_the_pictures_are_read_with_the_page_model():
+    # One model per document whichever route its pieces take: a second model setting for
+    # the pictures would be a second thing to keep equal to the first.
+    image = next(phase for phase in PHASES if phase.key == "transcribe_image")
+    page = next(phase for phase in PHASES if phase.key == "transcribe")
+    assert image.model == page.model
+    assert image.setting != page.setting and image.effort != page.effort
+
+
 def test_only_the_three_documented_exceptions_are_fixed():
     fixed = {phase.key: phase.fixed for phase in PHASES if phase.fixed}
     assert fixed == {
@@ -97,7 +112,9 @@ def test_every_model_phase_is_drawn_in_the_pipeline():
 def test_the_serialised_pipeline_carries_the_same_shape():
     lanes = settings.pipeline()
     assert [lane["key"] for lane in lanes] == [lane.key for lane in PIPELINE]
+    assert [lane["shared"] for lane in lanes] == [lane.shared for lane in PIPELINE]
     for lane in lanes:
+        assert set(lane) == {"key", "label", "shared", "phases"}
         for phase in lane["phases"]:
             assert set(phase) == {"key", "label", "model", "setting", "effort", "fixed", "note"}
 

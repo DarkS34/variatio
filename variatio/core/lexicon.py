@@ -1,32 +1,21 @@
-"""Accent- and inflection-tolerant matching, shared by the KG extractor and `checks`."""
+"""Accent- and inflection-tolerant matching, shared by the KG extractor and `checks`.
+
+What a stopword IS depends on the language, so the set is the workspace's wording and not a
+constant here: with the Spanish list over an English corpus "the", "of" and "in" become
+needles that every stem has to satisfy, and a concept named "Order of growth" matches
+almost nothing.
+"""
 
 import re
 import unicodedata
 
-from .. import config
+from .. import config, wording as wording_sets
 
 MIN_NEEDLE_LENGTH = 3
 MAX_INFLECTION_SLACK = 2
 
-_STOPWORDS = frozenset(
-    {"de", "del", "la", "el", "los", "las", "en", "y", "o", "a", "un", "una", "por", "con", "para"}
-)
 
-
-def _singular(word: str) -> str:
-    """Strip one plural suffix from `word`, leaving anything shorter than a needle alone."""
-    for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
-        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
-            return word[: -len(suffix)]
-    return word
-
-
-def _stems(text: str) -> set[str]:
-    """Return the singularised, folded stems of every word in `text`."""
-    return {_singular(w) for w in re.findall(r"\w+", fold(text))}
-
-
-def mentions(text: str, concept: str) -> bool:
+def mentions(text: str, concept: str, wording=None) -> bool:
     """Return whether `text` mentions `concept`, tolerating accents and inflection.
 
     A word-adjacent literal match first; failing that, every stopword-stripped needle of
@@ -36,10 +25,11 @@ def mentions(text: str, concept: str) -> bool:
     """
     if re.search(rf"(?<!\w){re.escape(fold(concept))}(?!\w)", fold(text)):
         return True
+    stopwords = (wording or wording_sets.of(None)).STOPWORDS
     needles = [
         _singular(w)
         for w in re.findall(r"\w+", fold(concept))
-        if w not in _STOPWORDS and len(w) >= MIN_NEEDLE_LENGTH
+        if w not in stopwords and len(w) >= MIN_NEEDLE_LENGTH
     ]
     if not needles:
         return False
@@ -53,8 +43,21 @@ def mentions(text: str, concept: str) -> bool:
     )
 
 
+def _stems(text: str) -> set[str]:
+    """Return the singularised, folded stems of every word in `text`."""
+    return {_singular(w) for w in re.findall(r"\w+", fold(text))}
+
+
 def fold(text: str) -> str:
     """Return `text` lowercased, stripped of accents and with whitespace runs collapsed."""
     lowered = unicodedata.normalize("NFD", text.lower())
     stripped = "".join(c for c in lowered if unicodedata.category(c) != "Mn")
     return re.sub(r"\s+", " ", stripped)
+
+
+def _singular(word: str) -> str:
+    """Strip one plural suffix from `word`, leaving anything shorter than a needle alone."""
+    for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
+        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
+            return word[: -len(suffix)]
+    return word

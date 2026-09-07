@@ -15,6 +15,8 @@ from loguru import logger
 from pydantic import ValidationError
 
 from .. import config
+from .. import prompts as prompts_pkg
+from .. import wording as wording_sets
 from ..core import inference, progress
 from ..core.inference import ensure_models
 from ..core.json_io import write_json
@@ -23,16 +25,14 @@ from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
 from ..instance import locale
 from ..instance.content_context import ContentContext
-from .. import prompts as prompts_pkg
 from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from . import _source_docs
-
+from . import source_docs
 
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
 # plus a short one per seam, and `extract` also tags each document as it comes out.
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los documentos", 30),
-    ("extract", "Extrayendo y etiquetando los ítems", 70),
+    ("convert", "Reading the documents", 30),
+    ("extract", "Extracting and tagging the items", 70),
 )
 
 
@@ -61,6 +61,7 @@ class ExemplarsBankBuilder:
         """Resolve the workspace's prompt set and precompute the schema and prompt blocks."""
         self.workspace = workspace
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._wording = wording_sets.beside(self.prompts)
         self.exemplars_profile = exemplars_profile
         self.content_context = content_context or ContentContext()
 
@@ -71,9 +72,9 @@ class ExemplarsBankBuilder:
 
         # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
         # plain text needs no conversion, so on the usual corpus Docling is never built.
-        self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
+        self._docling = source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
         self._type_keys = exemplars_profile.type_keys
-        self._types_block = self._build_types_block(exemplars_profile)
+        self._types_block = self._build_types_block(exemplars_profile, self._wording)
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)
         self._id_counter = 0
 
@@ -99,27 +100,23 @@ class ExemplarsBankBuilder:
         return {"type": "array", "items": items}
 
     @staticmethod
-    def _build_types_block(exemplars_profile: ExemplarsProfile) -> str:
+    def _build_types_block(exemplars_profile: ExemplarsProfile, wording) -> str:
         """The prompt's catalogue of modalities: schema and per-field extraction guidance."""
         blocks = []
         for key, item_type in exemplars_profile.item_types.items():
             lines = [f"### `{key}` — {item_type.label}"]
             if item_type.description:
                 lines.append(item_type.description)
-            lines.append("Schema de un ítem de esta modalidad:")
+            lines.append(wording.ITEM_SCHEMA_HEADING)
             lines.append(item_type.schema_str())
             guidance = item_type.field_guidance("extraction")
             if guidance:
-                lines.append("Guía de extracción por campo — síguela literalmente:")
+                lines.append(wording.EXTRACTION_GUIDE_HEADING)
                 lines.extend(f"- `{name}`: {text}" for name, text in guidance.items())
             blocks.append("\n".join(lines))
         return "\n\n".join(blocks)
 
     # PUBLIC API ----------------------------------------------------------------------------------
-
-    def bootstrap(self) -> None:
-        """Check every model of the build is installed, the tagger's and embedder's included."""
-        ensure_models(build_models(), "exemplars bank")
 
     def build(
         self,
@@ -139,12 +136,12 @@ class ExemplarsBankBuilder:
 
         `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
         whole bank right after a document's items are written and returns that same bank
-        annotated. The builder knows neither the graph nor the tagger — `stages/build.py`
+        annotated. The builder knows neither the graph nor the tagger — `entrypoints/build.py`
         wires it, being the layer whose job is to orchestrate.
         """
         self.bootstrap()
 
-        files = _source_docs.list_source_files(input_dir)
+        files = source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported document in {input_dir}")
             return {}
@@ -164,15 +161,15 @@ class ExemplarsBankBuilder:
 
             progress.phase("extract", f"0/{len(files)} documento(s)")
             with progress.step(
-                "extract", "Extrayendo y etiquetando los ítems", len(files)
+                "extract", "Extracting and tagging the items", len(files)
             ) as reporter:
                 for idx, file_path in enumerate(files, 1):
                     progress.checkpoint()
                     tag = f"[{idx}/{len(files)} {file_path.name}]"
-                    reporter.tick(idx, detail=file_path.name)
+                    reporter.start(idx, detail=file_path.name)
                     progress.advance(
                         (idx - 1) / len(files),
-                        f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} ítem(s)",
+                        f"{file_path.name} ({idx}/{len(files)}) · {len(bank)} item(s)",
                     )
                     try:
                         new_items = self._process_file(
@@ -198,8 +195,8 @@ class ExemplarsBankBuilder:
                         # second — so the bar moves within a document and not only between two.
                         progress.advance(
                             (idx - 0.5) / len(files),
-                            f"{file_path.name} ({idx}/{len(files)}) · etiquetando "
-                            f"{len(new_items)} ítem(s)",
+                            f"{file_path.name} ({idx}/{len(files)}) · tagging "
+                            f"{len(new_items)} item(s)",
                         )
                         try:
                             bank = on_items(bank, list(new_items))
@@ -213,7 +210,7 @@ class ExemplarsBankBuilder:
                                 "artifact.progress", name="exemplars_bank", count=len(bank)
                             )
 
-            # An extraction that produced nothing may not replace what is there: `stages`
+            # An extraction that produced nothing may not replace what is there: `entrypoints`
             # turns it into an error, and the bank the workspace already had is what its
             # screen goes back to.
             if bank:
@@ -221,9 +218,13 @@ class ExemplarsBankBuilder:
         finally:
             working.unlink(missing_ok=True)
 
-        progress.advance(1.0, f"{len(bank)} ítem(s)")
+        progress.advance(1.0, f"{len(bank)} item(s)")
         logger.success(f"Bank finished: {len(bank)} item(s) in {Path(output_file_path).name}")
         return bank
+
+    def bootstrap(self) -> None:
+        """Check every model of the build is installed, the tagger's and embedder's included."""
+        ensure_models(build_models(), "exemplars bank")
 
     # PIPELINE ------------------------------------------------------------------------------------
 
@@ -237,14 +238,14 @@ class ExemplarsBankBuilder:
         progress.phase("convert", f"0/{len(files)} documento(s)")
         text_by_file: dict[Path, str] = {}
         with progress.step(
-            "convert", "Transcribiendo los documentos", len(files)
+            "convert", "Reading the documents", len(files)
         ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=file_path.name)
+                reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    text_by_file[file_path] = _source_docs.document_markdown(
+                    text_by_file[file_path] = source_docs.document_markdown(
                         file_path,
                         self.prompts,
                         converter=self._docling,
@@ -273,12 +274,12 @@ class ExemplarsBankBuilder:
         seen: set[str] = set()
         repeated = 0
         with progress.step(
-            "extract_batches", f"{file_path.name}: extrayendo lotes", len(batches)
+            "extract_batches", f"{file_path.name}: extracting batches", len(batches)
         ) as reporter:
             for b_idx, batch in enumerate(batches, 1):
                 progress.checkpoint()
                 b_tag = f"{tag} batch {b_idx}/{len(batches)}"
-                reporter.tick(b_idx)
+                reporter.start(b_idx)
                 try:
                     extracted = self._extract_batch(batch, b_tag)
                 except progress.Cancelled:
@@ -300,50 +301,6 @@ class ExemplarsBankBuilder:
         if repeated:
             logger.debug(f"{tag} {repeated} item(s) repeated by the overlap, discarded")
         return items
-
-    def _identity(self, raw: dict) -> str:
-        """What makes two extractions the same item: its modality and its primary field.
-
-        Compared FOLDED, because the same exercise read from two overlapping batches comes
-        back with the same words and not necessarily the same spacing.
-        """
-        key = raw.get(ITEM_TYPE_KEY) or self.exemplars_profile.default_type
-        try:
-            item_type = self.exemplars_profile.item_type(str(key))
-            text = item_type.primary_text(raw)
-        except (KeyError, ValueError):
-            return ""
-        return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
-
-    @staticmethod
-    def _grammar_costs_the_text(model: str) -> bool:
-        r"""Whether a grammar on `model` would mangle the prose it makes it copy.
-
-        Measured against Cerebras' constrained decoding: `gemma-4-31b` stops emitting raw
-        UTF-8 inside a JSON string and takes the grammar's `\uXXXX` branch for every
-        non-ASCII character, then writes the hex wrong. One real batch came back with 107
-        escapes, all of them `\u00` plus two arbitrary digits, so `á`, `é`, `ó`, `ñ` and
-        `→` all reached the bank as a single control character. It worsens with the length
-        of what is generated (107 escapes under the real schema, 17 under a one-field one,
-        0 on a short answer) and `json_object` mode is no cure (31), which is why the whole
-        `response_format` has to go rather than only its schema.
-        """
-        return model in inference.remote_models()
-
-    def _grammar(self) -> dict | None:
-        """The extraction schema, or nothing when a grammar would cost the text itself.
-
-        Reasoning silences a grammar as it does everywhere else. A remotely served model
-        drops it for the heavier reason above: this is the one phase that copies whole
-        paragraphs of the corpus verbatim, and losing the text is worse than losing the
-        decoder's guarantee, which `parse_with_repair` takes over exactly as it does for
-        the phases that reason.
-        """
-        if config.THINK_EB_EXTRACT:
-            return None
-        if self._grammar_costs_the_text(config.EB_EXTRACT_MODEL):
-            return None
-        return self._extraction_schema
 
     def _extract_batch(self, batch: str, tag: str) -> list[dict]:
         """Ask for one batch's items, raising when no repair produces usable JSON."""
@@ -381,6 +338,36 @@ class ExemplarsBankBuilder:
             raise ValueError(f"unrecoverable JSON after {self.max_repair_attempts} repairs: {err}")
         return items
 
+    def _grammar(self) -> dict | None:
+        """The extraction schema, or nothing when a grammar would cost the text itself.
+
+        Reasoning silences a grammar as it does everywhere else. A remotely served model
+        drops it for the heavier reason above: this is the one phase that copies whole
+        paragraphs of the corpus verbatim, and losing the text is worse than losing the
+        decoder's guarantee, which `parse_with_repair` takes over exactly as it does for
+        the phases that reason.
+        """
+        if config.THINK_EB_EXTRACT:
+            return None
+        if self._grammar_costs_the_text(config.EB_EXTRACT_MODEL):
+            return None
+        return self._extraction_schema
+
+    @staticmethod
+    def _grammar_costs_the_text(model: str) -> bool:
+        r"""Whether a grammar on `model` would mangle the prose it makes it copy.
+
+        Measured against Cerebras' constrained decoding: `gemma-4-31b` stops emitting raw
+        UTF-8 inside a JSON string and takes the grammar's `\uXXXX` branch for every
+        non-ASCII character, then writes the hex wrong. One real batch came back with 107
+        escapes, all of them `\u00` plus two arbitrary digits, so `á`, `é`, `ó`, `ñ` and
+        `→` all reached the bank as a single control character. It worsens with the length
+        of what is generated (107 escapes under the real schema, 17 under a one-field one,
+        0 on a short answer) and `json_object` mode is no cure (31), which is why the whole
+        `response_format` has to go rather than only its schema.
+        """
+        return model in inference.remote_models()
+
     def _parse_and_validate(self, response: str) -> tuple[list[dict] | None, str | None]:
         """Validate each raw object against the schema of the modality it declares.
 
@@ -415,6 +402,20 @@ class ExemplarsBankBuilder:
         except (json.JSONDecodeError, ValidationError, ValueError) as e:
             return None, f"{type(e).__name__}: {str(e)[:200]}"
 
+    def _identity(self, raw: dict) -> str:
+        """What makes two extractions the same item: its modality and its primary field.
+
+        Compared FOLDED, because the same exercise read from two overlapping batches comes
+        back with the same words and not necessarily the same spacing.
+        """
+        key = raw.get(ITEM_TYPE_KEY) or self.exemplars_profile.default_type
+        try:
+            item_type = self.exemplars_profile.item_type(str(key))
+            text = item_type.primary_text(raw)
+        except (KeyError, ValueError):
+            return ""
+        return f"{item_type.key}::{fold(text).strip()}" if text.strip() else ""
+
     # BATCHING ------------------------------------------------------------------------------------
 
     def _build_batches(self, content: str) -> list[str]:
@@ -425,7 +426,7 @@ class ExemplarsBankBuilder:
         by each; the price is items extracted twice, and `_identity` is what pays it. The
         ~10-character separator budget is charged to the first block of a batch too.
         """
-        blocks = _source_docs.split_blocks(content)
+        blocks = source_docs.split_blocks(content)
         if not blocks:
             return []
 

@@ -3,7 +3,8 @@ import os
 
 import pytest
 
-from variatio import admissibility, prompts
+from variatio import prompts
+from variatio.runtime import screening
 from variatio.core import cerebras_budget
 from variatio.instance.content_context import ContentContext
 from variatio.instance.exemplars_profile import ExemplarsProfile
@@ -40,8 +41,8 @@ CHAIN_GRAPH = {
 PREREQUISITE = "tiene como prerrequisito"
 
 
-# TWO AUTOUSE FIXTURES, and both are here for the same reason: the suite runs inside the
-# installation itself — its `.env`, its `workspaces/` — so whatever resolves a default
+# THREE AUTOUSE FIXTURES, and all three are here for the same reason: the suite runs inside
+# the installation itself — its `.env`, its `workspaces/` — so whatever resolves a default
 # resolves PRODUCTION.
 #
 # The first stops a test spending real money's worth of budget. `CerebrasEngine` records
@@ -55,24 +56,33 @@ def _isolated_cerebras_ledger(tmp_path):
     cerebras_budget.use(None)
 
 
-# The second stops a test writing into the installation's own instances. `paths.WORKSPACES_DIR`
-# is the checkout's `workspaces/`, and every slug a test invents resolves under it: a `Job`
-# carrying `workspace="aula"` had the bus mkdir `workspaces/aula/instance/.runs/` and append
-# its event log there, so a full run left two invented instances sitting beside the real ones.
-# `paths.LOGS_DIR` travels with it for exactly the same reason: since 2026-08-31 a job also
-# opens `logs/<slug>/jobs.log`, and an invented slug would leave a directory of its own there.
+# The second stops a test reading Cerebras' catalogue over the network. Routing asks the
+# catalogue — every model the API lists is served remotely — so a hybrid engine built by any
+# test would call `/models` with the installation's own key, and the lane tests would then
+# measure the real catalogue instead of the routing list they set up. The two tests of
+# `known_models` itself restore the real method on their own instance.
+@pytest.fixture(autouse=True)
+def _no_cerebras_catalogue(monkeypatch):
+    from variatio.core import cerebras
+
+    monkeypatch.setattr(cerebras.CerebrasEngine, "known_models", lambda self: frozenset())
+
+
+# The third stops a test writing into the installation's own instances. Every slug a test
+# invents resolves under `paths.WORKSPACES_DIR`: a `Job` carrying an invented workspace has
+# the bus mkdir `workspaces/<slug>/instance/.runs/` and append its event log there.
+# `paths.LOGS_DIR` travels with it for the same reason — a job also opens
+# `logs/<slug>/jobs.log`.
 #
 # Redirected rather than cleaned up afterwards: deleting directories under `workspaces/` is
-# the one operation this project already treats as unforgiving, and a suite that never
-# reaches the real tree needs no such pass. Everything reads the module attribute at call
-# time, so patching it is enough. The `corpus` tests are unaffected — they open
-# `workspaces/default/` by relative path, deliberately measuring the shipped instance.
+# the one operation this project already treats as unforgiving. Everything reads the module
+# attribute at call time, so patching it is enough; the `corpus` tests are unaffected, since
+# they open a workspace by relative path to measure the instance itself.
 #
-# SESSION-scoped, unlike the other one, and that is the whole reason it works: a `JobRunner`
-# publishes from a worker thread, and with a per-test redirect the last events of a job
-# outlived the fixture that had moved the tree — six files still landed in the real
-# `workspaces/` on a full run. The environment variable travels beside the attribute so a
-# subprocess reads the same root.
+# SESSION-scoped, unlike the other two, and that is the whole reason it works: a host that
+# publishes from a worker thread outlives a per-test redirect, so the tail of a run lands
+# outside the tree the fixture had moved. The environment variable travels beside the
+# attribute so a subprocess reads the same root.
 @pytest.fixture(autouse=True, scope="session")
 def _isolated_workspaces(tmp_path_factory):
     from variatio.core import paths
@@ -159,7 +169,7 @@ def graph(chain_graph_path):
 @pytest.fixture
 def owners_for(graph, profile, context):
     def build(targets=("Recursividad",), item_type="ejercicio"):
-        return admissibility.owners(
+        return screening.owners(
             graph, profile.item_type(item_type), profile, context, list(targets)
         )
 

@@ -2,7 +2,7 @@
 
 It is read BEFORE anything is built — it is what the builders' instructions are written in
 — which is the whole reason it cannot live in `content_context.json`, the artifact a build
-produces. Absent means «es», because that is what every workspace written before this
+produces. Absent means "es", because that is what every workspace written before this
 factually was, so the file arriving is a change and its absence is not.
 """
 

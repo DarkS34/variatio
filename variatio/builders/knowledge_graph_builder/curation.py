@@ -36,7 +36,7 @@ def run(
     definitions = cleaned.get("definitions") or {}
 
     progress.phase("domains", f"clasificando {len(concepts)} concepto(s)")
-    with progress.step("kg_domains", "Agrupando los conceptos en dominios"):
+    with progress.step("kg_domains", "Grouping the concepts into domains"):
         progress.checkpoint()
         concepts_by_domains, units = curate_units(cleaned, max_attempts=max_attempts, prompts=prompts)
         if not concepts_by_domains:
@@ -65,7 +65,7 @@ def run(
     )
 
     progress.phase("curate")
-    with progress.step("kg_curate", "Tipando las relaciones y rompiendo ciclos"):
+    with progress.step("kg_curate", "Typing the relations and breaking cycles"):
         universe = {c for cs in concepts_by_domains.values() for c in cs}
         typed = build_typed_relations(relations, universe, schema)
         report_against_order(typed, positions, schema.prerequisite_verbose)
@@ -128,6 +128,36 @@ def write_sources(
 
 
 MIN_UNITS = 2
+
+
+def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, list[dict]]:
+    """Group the concepts by the syllabus's own units; `({}, [])` if none can be found."""
+    outline = cleaned.get("outline") or []
+    units = segment_syllabus(
+        outline, cleaned.get("documents") or [], max_attempts=max_attempts,
+            prompts=prompts,
+    )
+    if not units:
+        return {}, []
+
+    concepts = sorted(cleaned["entities"])
+    by_unit, leftovers = assign_to_units(units, concepts, cleaned.get("occurrences") or {})
+    logger.info(
+        f"Syllabus: {len(concepts) - len(leftovers)} of {len(concepts)} concept(s) "
+        f"placed by the corpus; {len(leftovers)} left for the second pass"
+    )
+    if leftovers:
+        by_unit[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(leftovers)
+
+    placed = place_leftovers(
+        by_unit,
+        cleaned.get("relations") or [],
+        cleaned.get("definitions") or {},
+        max_attempts=max_attempts,
+            prompts=prompts,
+    )
+    positions = cleaned.get("positions") or {}
+    return {d: blocks.ordered(m, positions) for d, m in placed.items()}, units
 
 
 def segment_syllabus(
@@ -205,29 +235,6 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
     return units if len(units) >= MIN_UNITS else []
 
 
-def unit_at(units: list[dict], chunk: int) -> str | None:
-    """The unit a chunk falls in: the last one that opened at or before it."""
-    found = None
-    for unit in units:
-        if unit["chunk"] > chunk:
-            break
-        found = unit["name"]
-    return found
-
-
-def unit_of(units: list[dict], chunks: list[int]) -> str | None:
-    """The unit a concept belongs to: the one most of its chunks fall in, earliest wins."""
-    order = {unit["name"]: index for index, unit in enumerate(units)}
-    votes: Counter = Counter()
-    for chunk in chunks:
-        name = unit_at(units, chunk)
-        if name is not None:
-            votes[name] += 1
-    if not votes:
-        return None
-    return min(votes, key=lambda name: (-votes[name], order[name]))
-
-
 def assign_to_units(
     units: list[dict], concepts: list[str], occurrences: dict
 ) -> tuple[dict, list[str]]:
@@ -243,34 +250,27 @@ def assign_to_units(
     return by_unit, leftovers
 
 
-def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, list[dict]]:
-    """Group the concepts by the syllabus's own units; `({}, [])` if none can be found."""
-    outline = cleaned.get("outline") or []
-    units = segment_syllabus(
-        outline, cleaned.get("documents") or [], max_attempts=max_attempts,
-            prompts=prompts,
-    )
-    if not units:
-        return {}, []
+def unit_of(units: list[dict], chunks: list[int]) -> str | None:
+    """The unit a concept belongs to: the one most of its chunks fall in, earliest wins."""
+    order = {unit["name"]: index for index, unit in enumerate(units)}
+    votes: Counter = Counter()
+    for chunk in chunks:
+        name = unit_at(units, chunk)
+        if name is not None:
+            votes[name] += 1
+    if not votes:
+        return None
+    return min(votes, key=lambda name: (-votes[name], order[name]))
 
-    concepts = sorted(cleaned["entities"])
-    by_unit, leftovers = assign_to_units(units, concepts, cleaned.get("occurrences") or {})
-    logger.info(
-        f"Syllabus: {len(concepts) - len(leftovers)} of {len(concepts)} concept(s) "
-        f"placed by the corpus; {len(leftovers)} left for the second pass"
-    )
-    if leftovers:
-        by_unit[config.KG_BUILDER_UNCLASSIFIED_DOMAIN] = sorted(leftovers)
 
-    placed = place_leftovers(
-        by_unit,
-        cleaned.get("relations") or [],
-        cleaned.get("definitions") or {},
-        max_attempts=max_attempts,
-            prompts=prompts,
-    )
-    positions = cleaned.get("positions") or {}
-    return {d: blocks.ordered(m, positions) for d, m in placed.items()}, units
+def unit_at(units: list[dict], chunk: int) -> str | None:
+    """The unit a chunk falls in: the last one that opened at or before it."""
+    found = None
+    for unit in units:
+        if unit["chunk"] > chunk:
+            break
+        found = unit["name"]
+    return found
 
 
 # DOMAINS ---------------------------------------------------------------------------------
@@ -294,7 +294,7 @@ def curate_domains(
     load-bearing: asked to partition the whole inventory, the model turned the reasoning
     channel into the answer, enumerated for 36 929 characters, hit its stop token at concept
     60 and returned an empty `response` with `done_reason: "stop"` — indistinguishable
-    upstream from a real answer, with every concept landing in «Sin clasificar» in silence.
+    upstream from a real answer, with every concept landing in "Sin clasificar" in silence.
     """
     prompt = prompts.curate_graph_domains_prompt(
         blocks.nodes_block(concepts, [], {}, origins),
@@ -446,7 +446,7 @@ def order_domains(concepts_by_domains: dict, positions: dict[str, int]) -> dict:
 
     The order the material introduces things in is the oldest signal in prerequisite learning
     and it is free, since extraction recorded where each concept was first seen. It is what
-    makes the linking prompts' «the list follows the material» true.
+    makes the linking prompts' "the list follows the material" true.
     """
 
     def median(members: list[str]) -> float:
@@ -489,12 +489,12 @@ def link_relations(
     total = len(domains) + 1
 
     with progress.step(
-        "kg_link", "Enlazando conceptos y ordenando el temario", total
+        "kg_link", "Linking concepts and ordering the syllabus", total
     ) as reporter:
         for idx, domain in enumerate(domains, 1):
             progress.checkpoint()
             members = concepts_by_domains[domain]
-            reporter.tick(idx, detail=f"{domain} · {len(members)} concepto(s)")
+            reporter.start(idx, detail=f"{domain} · {len(members)} concept(s)")
             progress.advance((idx - 1) / total, f"{domain} ({idx}/{len(domains)})")
             known.update(
                 tuple(r)
@@ -510,7 +510,7 @@ def link_relations(
             )
 
         progress.checkpoint()
-        reporter.tick(total, detail="relaciones entre dominios")
+        reporter.start(total, detail="relaciones entre dominios")
         progress.advance((total - 1) / total, "relaciones entre dominios")
         known.update(
             tuple(r)
@@ -521,36 +521,8 @@ def link_relations(
         )
 
     logger.info(f"Linking added {len(known) - before} relation(s)")
-    progress.advance(1.0, f"{len(known) - before} relación(es) nuevas")
+    progress.advance(1.0, f"{len(known) - before} new relation(s)")
     return sorted(list(r) for r in known)
-
-
-def link_domain(
-    domain: str,
-    members: list[str],
-    relations: list[list],
-    definitions: dict[str, str] | None = None,
-    *,
-    schema,
-    max_attempts: int,
-    prompts,
-) -> list[list]:
-    """The relations the model finds inside one domain, restricted to its own members."""
-    if len(members) < 2:
-        return []
-    prompt = prompts.link_domain_relations_prompt(
-        domain, blocks.nodes_block(members, relations, {}, definitions=definitions), schema
-    )
-    response = inference.generate(
-        model=config.KG_LINK_DOMAIN_MODEL,
-        prompt=prompt,
-        think=config.THINK_KG_LINK_DOMAIN,
-        temperature=inference.judgement_temperature(config.THINK_KG_LINK_DOMAIN),
-    ).response
-    raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts, prompts)
-    if raw is None:
-        return []
-    return parsing.valid_relations(raw.get("relations", []), schema, allowed=set(members))
 
 
 def link_cross_domain(
@@ -590,6 +562,34 @@ def link_cross_domain(
     return crossing
 
 
+def link_domain(
+    domain: str,
+    members: list[str],
+    relations: list[list],
+    definitions: dict[str, str] | None = None,
+    *,
+    schema,
+    max_attempts: int,
+    prompts,
+) -> list[list]:
+    """The relations the model finds inside one domain, restricted to its own members."""
+    if len(members) < 2:
+        return []
+    prompt = prompts.link_domain_relations_prompt(
+        domain, blocks.nodes_block(members, relations, {}, definitions=definitions), schema
+    )
+    response = inference.generate(
+        model=config.KG_LINK_DOMAIN_MODEL,
+        prompt=prompt,
+        think=config.THINK_KG_LINK_DOMAIN,
+        temperature=inference.judgement_temperature(config.THINK_KG_LINK_DOMAIN),
+    ).response
+    raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts, prompts)
+    if raw is None:
+        return []
+    return parsing.valid_relations(raw.get("relations", []), schema, allowed=set(members))
+
+
 # TYPING AND CYCLES ---------------------------------------------------------------------------
 
 
@@ -623,7 +623,7 @@ def build_typed_relations(relations: list[list], universe: set, schema) -> list[
 def report_against_order(typed: list[dict], positions: dict, prerequisite: str | None) -> None:
     """Log how many prerequisite edges point at a concept the material introduces later.
 
-    `A → B` reads «B before A», so this measures the draft against the one witness that is
+    `A → B` reads "B before A", so this measures the draft against the one witness that is
     not a model. It is reported and never acted on: the order is evidence and not a verdict,
     and a textbook may well present a consequence before its foundation.
     """

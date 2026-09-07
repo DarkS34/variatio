@@ -7,6 +7,7 @@ it has produced different field sets across runs over the same corpus.
 
 import json
 import re
+import unicodedata
 from pathlib import Path
 
 from json_repair import repair_json
@@ -19,17 +20,18 @@ from ..core.json_io import write_json
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
 from ..instance import content_context, locale
-from ..instance.exemplars_profile import ExemplarsProfile
+from ..instance.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
-from . import _context, _source_docs
+from .. import wording as wording_sets
+from . import _context, source_docs
 
 
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los ejemplares", 40),
-    ("scan", "Buscando modalidades de ejercicio", 40),
-    ("consolidate", "Consolidando el perfil", 19),
+    ("convert", "Reading the exemplars", 40),
+    ("scan", "Looking for exercise types", 40),
+    ("consolidate", "Consolidating the profile", 19),
     # Last, and one call: it needs the modalities the consolidation has just written.
-    ("context", "Poniendo por escrito de qué asignatura es esto", 1),
+    ("context", "Writing down what subject this is", 1),
 )
 
 MAX_EXCERPTS_PER_TYPE = 3
@@ -40,8 +42,8 @@ CONTEXT_EXCERPTS = 3
 
 # The scan's shape is fixed, so it is stated as a schema. The CONSOLIDATION's is not: what it
 # returns is a profile, and a profile CONTAINS JSON Schemas the model writes itself, one per
-# field of each modality it invents. There is no schema for «an object whose values are
-# arbitrary schemas» that would constrain anything worth constraining, so that call gets
+# field of each modality it invents. There is no schema for "an object whose values are
+# arbitrary schemas" that would constrain anything worth constraining, so that call gets
 # `"json"` — the syntax guaranteed, the shape left to `_validate`, which already knows it.
 SCAN_SCHEMA = {
     "type": "object",
@@ -77,12 +79,6 @@ def build_models() -> list[str]:
     ]
 
 
-def _remember(values: list[str], value: str) -> None:
-    """Append `value` once, ignoring an empty one."""
-    if value and value not in values:
-        values.append(value)
-
-
 class ExemplarsProfileBuilder:
     """Scans the exemplars corpus for modalities and consolidates them into a draft profile."""
 
@@ -97,6 +93,7 @@ class ExemplarsProfileBuilder:
         """Resolve the workspace's prompt set and the three models of the build."""
         self.workspace = workspace
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._wording = wording_sets.beside(self.prompts)
         self._context_cache: str | None = None
         self.scan_model = scan_model or config.EP_SCAN_MODEL
         self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
@@ -108,25 +105,11 @@ class ExemplarsProfileBuilder:
 
         logger.enable(__name__) if verbose else logger.disable(__name__)
 
-        # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
-        # plain text needs no conversion, so on the usual corpus Docling is never built.
-        self._docling = _source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
+        # Only `.docx` and `.pptx` ever reach it: a PDF goes through the page-transcription
+        # route and plain text needs no conversion, so on a PDF corpus Docling is never built.
+        self._docling = source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
 
     # PUBLIC API ----------------------------------------------------------------------------------
-
-    def bootstrap(self) -> None:
-        """Check this build's own models are installed, the overridden ones included."""
-        ensure_models(
-            [
-                config.TRANSCRIBE_MODEL,
-                config.TRANSCRIBE_SEAM_MODEL,
-                self.scan_model,
-                self.consolidate_model,
-                self.context_model,
-                config.REPAIR_LLM,
-            ],
-            "exemplars profile",
-        )
 
     def build(self, input_dir: str, output_file_path: str) -> dict:
         """Scan the corpus, consolidate the draft profile, write it and return it.
@@ -136,7 +119,7 @@ class ExemplarsProfileBuilder:
         """
         self.bootstrap()
 
-        files = _source_docs.list_source_files(input_dir)
+        files = source_docs.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported document in {input_dir}")
             return {}
@@ -173,6 +156,20 @@ class ExemplarsProfileBuilder:
         self.synthesize_context(profile, findings)
         return profile
 
+    def bootstrap(self) -> None:
+        """Check this build's own models are installed, the overridden ones included."""
+        ensure_models(
+            [
+                config.TRANSCRIBE_MODEL,
+                config.TRANSCRIBE_SEAM_MODEL,
+                self.scan_model,
+                self.consolidate_model,
+                self.context_model,
+                config.REPAIR_LLM,
+            ],
+            "exemplars profile",
+        )
+
     def synthesize_context(self, profile: dict, found: dict[str, dict]) -> None:
         """Write the subject-context draft from what the profile knows that the graph does not.
 
@@ -185,10 +182,11 @@ class ExemplarsProfileBuilder:
         item_types = profile.get("item_types") or {}
         if not item_types:
             return
-        lines = [f"La asignatura plantea sus tareas en {len(item_types)} modalidad(es):"]
+        lines = [self._wording.modalities_heading(len(item_types))]
         for key, spec in item_types.items():
             label = spec.get("label") or key
-            lines.append(f"- {label}: {spec.get('description') or 'sin descripción'}")
+            description = spec.get("description") or self._wording.NO_DESCRIPTION
+            lines.append(f"- {label}: {description}")
 
         excerpts = [
             excerpt
@@ -202,7 +200,7 @@ class ExemplarsProfileBuilder:
         _context.synthesize(
             self.workspace,
             "\n".join(lines),
-            "EL PERFIL DE EJEMPLARES",
+            self._wording.CONTEXT_SOURCE_PROFILE,
             self.context_model,
             think=config.THINK_EP_CONTEXT,
         )
@@ -220,14 +218,14 @@ class ExemplarsProfileBuilder:
         progress.phase("convert", f"0/{len(files)} documento(s)")
         chunks: list[tuple[str, str]] = []
         with progress.step(
-            "convert", "Transcribiendo los ejemplares", len(files)
+            "convert", "Reading the exemplars", len(files)
         ) as reporter:
             for idx, file_path in enumerate(files, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=file_path.name)
+                reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    content = _source_docs.document_markdown(
+                    content = source_docs.document_markdown(
                         file_path,
                         self.prompts,
                         converter=self._docling,
@@ -243,7 +241,7 @@ class ExemplarsProfileBuilder:
                 if not content.strip():
                     logger.warning(f"[{file_path.name}] no content after the transcription")
                     continue
-                for heading, body in _source_docs.chunk_markdown(content, self.chunk_size):
+                for heading, body in source_docs.chunk_markdown(content, self.chunk_size):
                     location = f"{file_path.stem} > {heading}" if heading else file_path.stem
                     chunks.append((location, body))
 
@@ -259,36 +257,23 @@ class ExemplarsProfileBuilder:
         found: dict[str, dict] = {}
 
         with progress.step(
-            "scan", "Buscando modalidades de ejercicio", len(chunks)
+            "scan", "Looking for exercise types", len(chunks)
         ) as reporter:
             for idx, (location, body) in enumerate(chunks, 1):
                 progress.checkpoint()
-                reporter.tick(idx, detail=location)
+                reporter.start(idx, detail=location)
                 progress.advance(
                     (idx - 1) / len(chunks),
-                    f"{location} ({idx}/{len(chunks)}) · {len(found)} modalidad(es)",
+                    f"{location} ({idx}/{len(chunks)}) · {len(found)} exercise type(s)",
                 )
                 for entry in self._scan_chunk(body, location, f"[{idx}/{len(chunks)}] "):
                     self._merge_finding(found, entry, location)
 
-        progress.advance(1.0, f"{len(found)} modalidad(es)")
+        progress.advance(1.0, f"{len(found)} exercise type(s)")
         logger.success(
             f"Scan finished: {len(found)} candidate modality(ies) ({', '.join(sorted(found))})"
         )
         return found
-
-    def _context_block(self) -> str:
-        """The subject's context, or an empty block on the build that has none yet.
-
-        Read once per build and cached, because both phases ask for it and the file does
-        not change while a build runs. Empty is the ordinary state of a FIRST build: the
-        context is synthesised in this same builder's last phase, so there is nothing to
-        pass until there has been one build. From the second onwards the two phases know
-        the subject, the level and — the reason this exists — the language it is taught in.
-        """
-        if self._context_cache is None:
-            self._context_cache = content_context.load_for(self.workspace).prompt_block()
-        return self._context_cache
 
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
         """Ask one chunk for its modalities, `[]` when the answer cannot be repaired."""
@@ -317,6 +302,19 @@ class ExemplarsProfileBuilder:
             logger.warning(f"{tag}{location}: unusable scan ({err}); skipped")
             return []
         return entries
+
+    def _context_block(self) -> str:
+        """The subject's context, or an empty block on the build that has none yet.
+
+        Read once per build and cached, because both phases ask for it and the file does
+        not change while a build runs. Empty is the ordinary state of a FIRST build: the
+        context is synthesised in this same builder's last phase, so there is nothing to
+        pass until there has been one build. From the second onwards the two phases know
+        the subject, the level and — the reason this exists — the language it is taught in.
+        """
+        if self._context_cache is None:
+            self._context_cache = content_context.load_for(self.workspace).prompt_block()
+        return self._context_cache
 
     @staticmethod
     def _parse_scan(response: str) -> tuple[list[dict] | None, str | None]:
@@ -367,14 +365,14 @@ class ExemplarsProfileBuilder:
         for record in sorted(found.values(), key=lambda r: -r["seen"]):
             lines = [
                 f"## `{record['key']}` — {' / '.join(record['labels']) or record['key']}",
-                f"Visto en {record['seen']} fragmento(s).",
+                self._wording.seen_in_chunks(record["seen"]),
             ]
             if record["signals"]:
-                lines.append("Señales: " + " | ".join(record["signals"][:3]))
+                lines.append(self._wording.signals_line(record["signals"][:3]))
             if record["fields"]:
-                lines.append("Campos observados: " + ", ".join(record["fields"]))
+                lines.append(self._wording.fields_line(record["fields"]))
             for location, excerpt in record["excerpts"]:
-                lines.append(f"Ejemplar ({location}):\n{excerpt}")
+                lines.append(f"{self._wording.exemplar_heading(location)}\n{excerpt}")
             blocks.append("\n".join(lines))
         return "\n\n".join(blocks)
 
@@ -382,9 +380,9 @@ class ExemplarsProfileBuilder:
 
     def _consolidate(self, found: dict[str, dict]) -> dict:
         """Turn the candidate modalities into one profile, under its own progress step."""
-        progress.phase("consolidate", f"{len(found)} modalidad(es) candidata(s)")
-        with progress.step("consolidate", "Consolidando el perfil de ejemplares"):
-            profile = self._infer(self._findings_block(found))
+        progress.phase("consolidate", f"{len(found)} candidate exercise type(s)")
+        with progress.step("consolidate", "Consolidating the exemplars profile"):
+            profile = guarantee_difficulty(self._infer(self._findings_block(found)), self.prompts)
         progress.advance(1.0)
         return profile
 
@@ -464,3 +462,88 @@ class ExemplarsProfileBuilder:
             return None
         except (ValueError, KeyError, TypeError) as e:
             return f"{type(e).__name__}: {str(e)[:200]}"
+
+
+def _remember(values: list[str], value: str) -> None:
+    """Append `value` once, ignoring an empty one."""
+    if value and value not in values:
+        values.append(value)
+
+
+def guarantee_difficulty(profile: dict, prompts) -> dict:
+    """Give every modality the difficulty field, on the ladder every modality shares.
+
+    The prompt asks for it in a section of its own; this is what makes it true. Measured on
+    the real builds of two workspaces before either existed: the model already converged on
+    the field and on those three rungs by itself, so the ladder costs nothing — but one
+    draft spelled a rung `básico` with its accent (a different stored value from the same
+    builder on the same corpus), none of the four drafts set `decided_by`, and the criteria
+    were three words a rung. The first two are shape and are fixed here; the third is
+    judgement and only the prompt can produce it.
+
+    Everything it writes is a floor, never a rewrite: a criterion the model wrote survives
+    untouched, and the fallback is used only where there is nothing at all. A ladder that
+    does NOT fold onto the canonical one is replaced and said out loud, because the
+    description then enumerates rungs that no longer exist — kept rather than dropped,
+    since it is the modality's only reasoning and the profile screen now puts it where
+    somebody will read it.
+    """
+    field = prompts.DIFFICULTY_FIELD
+    levels = list(prompts.DIFFICULTY_LEVELS)
+    canonical = {_fold(level): level for level in levels}
+
+    for key, spec in (profile.get("item_types") or {}).items():
+        if not isinstance(spec, dict):
+            continue
+        fields = spec.get("fields")
+        if not isinstance(fields, dict):
+            continue
+
+        found = next((name for name in (field, *DIFFICULTY_FIELDS) if name in fields), None)
+        entry = fields.pop(found) if found else None
+        if not isinstance(entry, dict):
+            entry = {}
+        if found is None:
+            logger.warning(f"«{key}»: no difficulty field; adding '{field}' with no criterion")
+        elif found != field:
+            logger.warning(f"«{key}»: difficulty declared as '{found}'; renamed to '{field}'")
+
+        schema = entry.get("schema")
+        declared = schema.get("enum") if isinstance(schema, dict) else None
+        if isinstance(declared, list) and declared:
+            folded = [canonical.get(_fold(v)) for v in declared]
+            if sorted(v for v in folded if v) != sorted(levels) or None in folded:
+                logger.warning(
+                    f"«{key}»: difficulty declared {declared}; replaced by the shared ladder "
+                    f"{levels}. Its criterion still describes the old rungs — correct it by hand"
+                )
+        entry["schema"] = {"enum": levels}
+
+        if not str(entry.get("description") or "").strip():
+            entry["description"] = prompts.DIFFICULTY_FALLBACK_DESCRIPTION
+        guidance = entry.get("guidance")
+        guidance = dict(guidance) if isinstance(guidance, dict) else {}
+        if not str(guidance.get("extraction") or "").strip():
+            guidance["extraction"] = prompts.DIFFICULTY_FALLBACK_EXTRACTION
+        entry["guidance"] = {"extraction": guidance["extraction"]}
+        entry["decided_by"] = "user"
+
+        # Last of the fields, so the artifact reads the way the screens draw it.
+        fields[field] = entry
+
+        # It carries no concept and adds the same noise to every item, so indexing it can
+        # only hurt retrieval. The prompt says so twice; this is what makes it so.
+        embed = spec.get("embed_fields")
+        if isinstance(embed, list):
+            kept = [name for name in embed if name not in (field, *DIFFICULTY_FIELDS)]
+            if kept != embed:
+                logger.warning(f"«{key}»: '{field}' dropped from embed_fields")
+                spec["embed_fields"] = kept
+
+    return profile
+
+
+def _fold(value: str) -> str:
+    """Fold one enum value for comparison: lowercase, unaccented, trimmed."""
+    stripped = unicodedata.normalize("NFKD", str(value).strip().lower())
+    return "".join(c for c in stripped if not unicodedata.combining(c))

@@ -13,8 +13,8 @@ CALLERS = [
     "builders/knowledge_graph_builder/__init__.py",
 ]
 # An English noun phrase: ASCII lowercase words. It is not a style rule — the label lands
-# inside «Checking the {label} models», and a Spanish genitive produced «Checking the del
-# perfil de ejemplares models», which is neither language and reached the run drawer.
+# inside "Checking the {label} models", and a Spanish genitive produced "Checking the del
+# perfil de ejemplares models", which is neither language and reached the run drawer.
 ENGLISH_NOUN_PHRASE = re.compile(r"^[a-z]+(?: [a-z]+)*$")
 
 

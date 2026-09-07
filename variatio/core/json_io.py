@@ -11,7 +11,7 @@ from loguru import logger
 # return are left alone; everything else in the range is damage by the time it gets here —
 # in this system it arrives from a decoder, not from a document. `U+0000` is the one that
 # makes the whole artifact unstorable: Postgres refuses it in JSONB
-# («unsupported Unicode escape sequence»), so ONE of them anywhere in a bank is enough to
+# ("unsupported Unicode escape sequence"), so ONE of them anywhere in a bank is enough to
 # break `import-instance` for that workspace and to make every later mirror fail in
 # silence. Measured on a reference installation: a bank with four of them had been failing
 # to mirror for as long as the damage existed, and the row in the database still held a
@@ -24,29 +24,6 @@ _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 # cannot match here. A literal backslash-u in somebody's text matches too; that costs one
 # walk that removes nothing and says nothing.
 _ESCAPED = re.compile(r"\\u00(?:[01][0-9a-fA-F]|7[fF])")
-
-
-def _clean(value):
-    """Return `value` with every illegitimate control character gone, and how many went."""
-    if isinstance(value, str):
-        stripped = _CONTROL.sub("", value)
-        return stripped, len(value) - len(stripped)
-    if isinstance(value, dict):
-        out, removed = {}, 0
-        for key, item in value.items():
-            new_key, a = _clean(key)
-            new_item, b = _clean(item)
-            out[new_key] = new_item
-            removed += a + b
-        return out, removed
-    if isinstance(value, list):
-        out, removed = [], 0
-        for item in value:
-            new_item, count = _clean(item)
-            out.append(new_item)
-            removed += count
-        return out, removed
-    return value, 0
 
 
 def write_json(path: str | Path, data, sort_keys: bool = False) -> Path:
@@ -84,3 +61,26 @@ def write_json(path: str | Path, data, sort_keys: bool = False) -> Path:
         f.write(text)
     tmp.replace(path)
     return path
+
+
+def _clean(value):
+    """Return `value` with every illegitimate control character gone, and how many went."""
+    if isinstance(value, str):
+        stripped = _CONTROL.sub("", value)
+        return stripped, len(value) - len(stripped)
+    if isinstance(value, dict):
+        out, removed = {}, 0
+        for key, item in value.items():
+            new_key, a = _clean(key)
+            new_item, b = _clean(item)
+            out[new_key] = new_item
+            removed += a + b
+        return out, removed
+    if isinstance(value, list):
+        out, removed = [], 0
+        for item in value:
+            new_item, count = _clean(item)
+            out.append(new_item)
+            removed += count
+        return out, removed
+    return value, 0

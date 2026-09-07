@@ -1,0 +1,321 @@
+"""The scope judge for the commission's free-text field.
+
+Free text is admitted only where no other control already decides the matter: four
+fixed slots, judged against owners derived per instance. It runs AFTER the guardrail —
+that one reads the text alone with a 4096 window, this one is handed the whole concept
+list — and it fails open, so a judge that cannot answer never blocks a commission.
+"""
+
+import json
+from dataclasses import dataclass
+
+from json_repair import repair_json
+from loguru import logger
+
+from ... import config, wording as wording_sets
+from ...core import inference, progress
+from ...core.inference import InferenceError
+from ...core.lexicon import fold
+
+
+@dataclass(frozen=True)
+class Slot:
+    """One admissible kind of request, with the wording the prompt illustrates it by."""
+    
+    key: str
+    label: str
+    example: str
+
+
+@dataclass(frozen=True)
+class Owner:
+    """A control that already decides something, the terms it holds and where it lives."""
+    
+    key: str
+    label: str
+    where: str
+    terms: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Request:
+    """One request read out of the free text: admitted into a slot, or owned elsewhere."""
+    
+    text: str
+    slot: str | None
+    owner: Owner | None
+    term: str | None
+
+
+@dataclass(frozen=True)
+class Ruling:
+    """The verdict over one free-text field; `checked` is false when the judge failed open."""
+
+    requests: tuple[Request, ...]
+    checked: bool
+
+    @property
+    def blocked(self) -> tuple[Request, ...]:
+        """The requests that trespass on a control the screen already offers."""
+        return tuple(r for r in self.requests if r.owner is not None)
+
+    @property
+    def ok(self) -> bool:
+        """True when nothing trespasses."""
+        return not self.blocked
+
+
+SLOT_KEYS: tuple[str, ...] = tuple(key for key, _, _ in wording_sets.of(None).SLOTS)
+
+
+def screen(
+    text: str,
+    owners: list[Owner],
+    targets: list[str],
+    prompts,
+    context_block: str = "",
+) -> Ruling:
+    """Judge one free-text field and return what it is allowed to ask for.
+
+    Fails open three ways, each letting the commission through with `checked=False`: the
+    engine raises, the reply is unreadable, or no entry survives verification.
+    """
+    text = (text or "").strip()
+    if not text:
+        return Ruling(requests=(), checked=True)
+
+    prompt = prompts.classify_instructions_prompt(
+        instructions=text,
+        catalog=catalog(wording_sets.beside(prompts)),
+        owners=owners,
+        targets=targets,
+        context_block=context_block,
+    )
+
+    try:
+        response = inference.generate(
+            model=config.ADMISSIBILITY_LLM,
+            prompt=prompt,
+            think=config.THINK_ADMISSIBILITY,
+            format=None if config.THINK_ADMISSIBILITY else _schema(owners),
+            temperature=inference.judgement_temperature(config.THINK_ADMISSIBILITY),
+        ).response
+    except InferenceError as e:
+        logger.warning(f"[admissibility] The judge could not answer: {e}; the commission goes ahead")
+        return _unchecked()
+
+    entries = _parse(response)
+    if entries is None:
+        logger.warning(
+            f"[admissibility] Unreadable answer from the judge: {response[:120]!r}; "
+            "the commission goes ahead"
+        )
+        return _unchecked()
+
+    known = set(targets)
+    requests = tuple(r for r in (_accept(e, owners, known) for e in entries) if r is not None)
+    if not requests:
+        logger.warning(
+            "[admissibility] No entry from the judge held up; the commission goes ahead"
+        )
+        return _unchecked()
+
+    ruling = Ruling(requests=requests, checked=True)
+    _report(ruling)
+    return ruling
+
+
+def catalog(wording=None) -> tuple[Slot, ...]:
+    """Return the four admissible slots, worded in one language.
+
+    The KEYS are the catalogue and never move — the grammar pins them, the prompt's own
+    label table is checked against them by test, and `_accept` admits nothing else. What a
+    language owns is the label and the example the prompt illustrates each one by.
+    """
+    if wording is None:
+        wording = wording_sets.of(None)
+    return tuple(Slot(key, label, example) for key, label, example in wording.SLOTS)
+
+
+def _unchecked() -> Ruling:
+    """Return the fail-open ruling, telling the UI the check did not run."""
+    ruling = Ruling(requests=(), checked=False)
+    progress.emit("admissibility", ok=True, checked=False, slots=[], owner=None, term=None)
+    return ruling
+
+
+def _schema(owners: list[Owner]) -> dict:
+    """The grammar the judge answers under, with this instance's owners as an enum."""
+    return {
+        "type": "object",
+        "properties": {
+            "requests": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "slot": {"enum": [*SLOT_KEYS, None]},
+                        "owner": {"enum": [*(o.key for o in owners), None]},
+                        "term": {"type": ["string", "null"]},
+                    },
+                    "required": ["text", "slot", "owner", "term"],
+                },
+            }
+        },
+        "required": ["requests"],
+    }
+
+
+def _parse(response: str) -> list[dict] | None:
+    """Return the judge's `requests` entries, or None when the reply is unreadable."""
+    try:
+        data = json.loads(repair_json(response))
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    entries = data.get("requests")
+    if not isinstance(entries, list):
+        return None
+    return [e for e in entries if isinstance(e, dict)]
+
+
+def _accept(entry: dict, owners: list[Owner], targets: set[str]) -> Request | None:
+    """Return one verified request, or None when the judge's entry does not hold up.
+
+    The answer is checked against the derived catalogue before it is believed: the slot
+    must be in `SLOT_KEYS`, the owner in `owners`, and the term must fold-match one that
+    owner actually holds without being a target concept. An invented term is discarded,
+    never reported — a grammar pins the keys, not the values.
+    """
+    text = str(entry.get("text") or "").strip()
+    if not text:
+        return None
+
+    slot = entry.get("slot")
+    if slot in SLOT_KEYS:
+        return Request(text=text, slot=slot, owner=None, term=None)
+
+    owner = next((o for o in owners if o.key == entry.get("owner")), None)
+    if owner is None:
+        return None
+
+    wanted = fold(str(entry.get("term") or ""))
+    if not wanted:
+        return None
+    term = next((t for t in owner.terms if fold(t) == wanted), None)
+    if term is None or term in targets:
+        return None
+
+    return Request(text=text, slot=None, owner=owner, term=term)
+
+
+def owners(knowledge_graph, item_type, profile, content_context, concepts, wording=None) -> list[Owner]:
+    """Derive the controls that already decide something for this commission.
+
+    The terms belong to the instance, not to the code: the graph's non-target concepts,
+    the `decided_by: "user"` enums plus the difficulty, the modalities, and the three
+    context facts. Another workspace gets other owners with no change here, and the
+    wording of each one comes from the language the commission is judged in.
+    """
+    if wording is None:
+        wording = wording_sets.of(None)
+    concepts_label, concepts_where = wording.OWNER_CONCEPTS
+    item_type_label, item_type_where = wording.OWNER_ITEM_TYPE
+    context_label, context_where = wording.OWNER_CONTEXT
+    targets = set(concepts)
+    found: list[Owner] = []
+
+    others = tuple(c for c in knowledge_graph.all_concepts if c not in targets)
+    if others:
+        found.append(
+            Owner(
+                key="concepts",
+                label=concepts_label,
+                where=concepts_where,
+                terms=others,
+            )
+        )
+
+    # The difficulty owns its own step on the form, and it is offered there whether or not
+    # the artifact says `decided_by: "user"` — every modality carries it, so a profile built
+    # before that rule still gets the control. The judge has to see the same catalogue the
+    # screen does, or "hazlo avanzado" would pass as free text on exactly those instances.
+    difficulty = item_type.difficulty_field
+    for name, spec in item_type.field_specs.items():
+        if name != difficulty and spec.get("decided_by") != "user":
+            continue
+        values = tuple(str(v) for v in (spec.get("schema") or {}).get("enum") or ())
+        if not values:
+            continue
+        found.append(
+            Owner(
+                key=f"field:{name}",
+                label=name,
+                where=(
+                    wording.OWNER_DIFFICULTY_WHERE
+                    if name == difficulty
+                    else wording.OWNER_FIELD_WHERE
+                ),
+                terms=values,
+            )
+        )
+
+    modalities = tuple(
+        value
+        for key in profile.item_types
+        for value in (key, profile.item_type(key).label)
+    )
+    found.append(
+        Owner(
+            key="item_type",
+            label=item_type_label,
+            where=item_type_where,
+            terms=modalities,
+        )
+    )
+
+    facts = tuple(
+        value
+        for value in (
+            content_context.subject,
+            content_context.educational_level,
+            content_context.language_of_instruction,
+        )
+        if value
+    )
+    if facts:
+        found.append(
+            Owner(
+                key="context",
+                label=context_label,
+                where=context_where,
+                terms=facts,
+            )
+        )
+
+    return found
+
+
+def _report(ruling: Ruling) -> None:
+    """Log the verdict and emit it to the UI."""
+    blocked = ruling.blocked
+    if blocked:
+        first = blocked[0]
+        logger.info(
+            f"[admissibility] «{first.text}» trespasses on {first.owner.label} through «{first.term}»"
+        )
+    else:
+        logger.info(
+            f"[admissibility] {len(ruling.requests)} request(s) admitted: "
+            + ", ".join(r.slot for r in ruling.requests)
+        )
+    progress.emit(
+        "admissibility",
+        ok=ruling.ok,
+        checked=True,
+        slots=[r.slot for r in ruling.requests if r.slot],
+        owner=blocked[0].owner.label if blocked else None,
+        term=blocked[0].term if blocked else None,
+    )

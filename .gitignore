@@ -15,9 +15,9 @@ __pycache__
 *.md
 !README.md
 
-# Not this branch's, but this working tree is shared with `advanced-web`: `git switch` leaves
-# its build output, its node_modules and its UX-audit captures behind, and untracked noise on
-# every status is how a real leftover stops being noticed.
+# Not this branch's, but a working tree is often shared with `variatio-web`: switching back
+# leaves its build output, its node_modules and its working captures behind, and untracked
+# noise on every status is how a real leftover stops being noticed.
 /web/
 /auditoria-ux/
 /.maintenance.json

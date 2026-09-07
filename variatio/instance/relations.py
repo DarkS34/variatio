@@ -68,7 +68,7 @@ class RelationType:
         """Render this relation's entry of the catalogue the KG prompts interpolate.
 
         The scaffolding is chosen by language because the definition and reading below are
-        written in the schema's own: an English definition under a «Lectura:» heading,
+        written in the schema's own: an English definition under a "Lectura:" heading,
         beside ORIGEN and DESTINO, is the mismatch this pairing removes.
         """
         words = CATALOG_WORDS[language]

@@ -16,7 +16,7 @@ from loguru import logger
 
 from ... import config
 from ...core import inference, progress
-from ...embedder import embed_normalized
+from ...runtime.embedder import embed_normalized
 from . import blocks, parsing
 from .schemas import DROP_SCHEMA, MERGE_SCHEMA
 
@@ -31,7 +31,7 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
 
     det_map, representatives = deterministic_merge(nodes)
     logger.info(f"Mechanical merge: {len(nodes)} → {len(representatives)} node(s)")
-    progress.advance(0.1, f"{len(nodes)} → {len(representatives)} nodo(s) por fusión mecánica")
+    progress.advance(0.1, f"{len(nodes)} → {len(representatives)} node(s) after the mechanical merge")
 
     definitions = staging.get("definitions") or {}
     llm_map = propose_merges(
@@ -44,7 +44,7 @@ def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
     )
     canonicals = sorted({llm_map.get(n, n) for n in representatives})
     logger.info(f"Semantic merge: {len(representatives)} → {len(canonicals)} node(s)")
-    progress.advance(0.6, f"{len(canonicals)} nodo(s) tras la fusión semántica")
+    progress.advance(0.6, f"{len(canonicals)} node(s) after the semantic merge")
 
     surviving = {n: llm_map.get(det_map.get(n, n), det_map.get(n, n)) for n in nodes}
     drop = propose_drops(
@@ -72,6 +72,21 @@ def node_universe(graph: dict) -> list[str]:
     return sorted(nodes)
 
 
+def deterministic_merge(nodes: list[str]) -> tuple[dict, list[str]]:
+    """Merge the mechanical variants of a name; the survivor is the short capitalised form."""
+    groups = defaultdict(list)
+    for n in nodes:
+        groups[norm_key(n)].append(n)
+    variant_to_canon = {}
+    representatives = []
+    for members in groups.values():
+        canon = min(members, key=lambda x: (x[:1].islower(), len(x)))
+        representatives.append(canon)
+        for m in members:
+            variant_to_canon[m] = canon
+    return variant_to_canon, sorted(representatives)
+
+
 def norm_key(name: str) -> str:
     """The key two names must share to be merged mechanically.
 
@@ -88,21 +103,6 @@ def norm_key(name: str) -> str:
         if len(s) > MIN_SINGULARIZE_LENGTH and s.endswith(suffix):
             return s[: -len(suffix)]
     return s
-
-
-def deterministic_merge(nodes: list[str]) -> tuple[dict, list[str]]:
-    """Merge the mechanical variants of a name; the survivor is the short capitalised form."""
-    groups = defaultdict(list)
-    for n in nodes:
-        groups[norm_key(n)].append(n)
-    variant_to_canon = {}
-    representatives = []
-    for members in groups.values():
-        canon = min(members, key=lambda x: (x[:1].islower(), len(x)))
-        representatives.append(canon)
-        for m in members:
-            variant_to_canon[m] = canon
-    return variant_to_canon, sorted(representatives)
 
 
 # MERGE ---------------------------------------------------------------------------------------
@@ -133,11 +133,11 @@ def propose_merges(
     valid = set(nodes)
     alias_map: dict[str, str] = {}
     with progress.step(
-        "kg_merge", "Decidiendo qué nombres son el mismo concepto", len(batches)
+        "kg_merge", "Deciding which names are the same concept", len(batches)
     ) as reporter:
         for idx, batch in enumerate(batches, 1):
             progress.checkpoint()
-            reporter.tick(idx, detail=f"{len(batch)} grupo(s)")
+            reporter.start(idx, detail=f"{len(batch)} grupo(s)")
             progress.advance(
                 0.1 + 0.4 * (idx - 1) / len(batches), f"grupos {idx}/{len(batches)}"
             )
@@ -170,7 +170,7 @@ def merge_candidates(nodes: list[str]) -> list[list[str]]:
     if len(nodes) < 2:
         return []
     vectors = embed_normalized(
-        nodes, "los nombres de los nodos", model=config.EMBEDDING_LLM
+        nodes, "the node names", model=config.EMBEDDING_LLM
     )
     if vectors is None:
         return []
@@ -273,11 +273,11 @@ def propose_drops(
     drop: set[str] = set()
 
     with progress.step(
-        "kg_drop", "Descartando lo que no nombra un concepto", len(batches)
+        "kg_drop", "Dropping what does not name a concept", len(batches)
     ) as reporter:
         for idx, batch in enumerate(batches, 1):
             progress.checkpoint()
-            reporter.tick(idx, detail=f"{len(batch)} nodo(s)")
+            reporter.start(idx, detail=f"{len(batch)} nodo(s)")
             progress.advance(
                 0.6 + 0.35 * (idx - 1) / len(batches), f"lote {idx}/{len(batches)}"
             )
@@ -327,26 +327,6 @@ def compose_node_map(nodes: list[str], det_map: dict, llm_map: dict, drop: set) 
     return node_map
 
 
-def remap_relations(relations: list[list], node_map: dict, surviving: set) -> set[tuple]:
-    """The relations under their canonical names, keeping only those whose endpoints survive."""
-    out = set()
-    for source, relation, target in relations:
-        canon_source, canon_target = node_map.get(source), node_map.get(target)
-        if canon_source in surviving and canon_target in surviving:
-            out.add((canon_source, relation, canon_target))
-    return out
-
-
-def merge_origins(origins: dict, node_map: dict, surviving: set) -> dict:
-    """The documents each surviving concept was seen in, united over its aliases."""
-    merged: dict[str, set[int]] = defaultdict(set)
-    for name, sources in (origins or {}).items():
-        canonical = node_map.get(name)
-        if canonical in surviving:
-            merged[canonical].update(sources)
-    return {name: sorted(merged[name]) for name in sorted(merged)}
-
-
 def apply_node_map(graph: dict, node_map: dict) -> dict:
     """Rewrite the whole staging graph under the canonical names."""
     entities = sorted({c for c in node_map.values() if c})
@@ -369,6 +349,16 @@ def apply_node_map(graph: dict, node_map: dict) -> dict:
     }
 
 
+def remap_relations(relations: list[list], node_map: dict, surviving: set) -> set[tuple]:
+    """The relations under their canonical names, keeping only those whose endpoints survive."""
+    out = set()
+    for source, relation, target in relations:
+        canon_source, canon_target = node_map.get(source), node_map.get(target)
+        if canon_source in surviving and canon_target in surviving:
+            out.add((canon_source, relation, canon_target))
+    return out
+
+
 def merge_positions(positions: dict, node_map: dict, surviving: set) -> dict:
     """Where each surviving concept was introduced: the minimum over its aliases."""
     merged: dict[str, int] = {}
@@ -376,6 +366,38 @@ def merge_positions(positions: dict, node_map: dict, surviving: set) -> dict:
         canonical = node_map.get(name)
         if canonical in surviving:
             merged[canonical] = min(position, merged.get(canonical, position))
+    return {name: merged[name] for name in sorted(merged)}
+
+
+def merge_origins(origins: dict, node_map: dict, surviving: set) -> dict:
+    """The documents each surviving concept was seen in, united over its aliases."""
+    merged: dict[str, set[int]] = defaultdict(set)
+    for name, sources in (origins or {}).items():
+        canonical = node_map.get(name)
+        if canonical in surviving:
+            merged[canonical].update(sources)
+    return {name: sorted(merged[name]) for name in sorted(merged)}
+
+
+def merge_passages(passages: dict, node_map: dict, surviving: set) -> dict:
+    """The corpus evidence of every alias, carried onto the survivor and capped again.
+
+    The passage that justified "Listas anidadas" still justifies "Listas", and throwing it
+    away would leave the survivor with nothing to show; five aliases bring five lists, which
+    is why the cap is applied here too.
+    """
+    merged: dict[str, list[dict]] = defaultdict(list)
+    for name, entries in passages.items():
+        canonical = node_map.get(name)
+        if canonical not in surviving:
+            continue
+        for entry in entries:
+            kept = merged[canonical]
+            if len(kept) >= config.KG_MAX_SOURCE_PASSAGES:
+                break
+            if any(other["text"] == entry["text"] for other in kept):
+                continue
+            kept.append(entry)
     return {name: merged[name] for name in sorted(merged)}
 
 
@@ -402,25 +424,3 @@ def merge_definitions(
         if canonical not in best or candidate < best[canonical]:
             best[canonical] = candidate
     return {name: best[name][1] for name in sorted(best)}
-
-
-def merge_passages(passages: dict, node_map: dict, surviving: set) -> dict:
-    """The corpus evidence of every alias, carried onto the survivor and capped again.
-
-    The passage that justified «Listas anidadas» still justifies «Listas», and throwing it
-    away would leave the survivor with nothing to show; five aliases bring five lists, which
-    is why the cap is applied here too.
-    """
-    merged: dict[str, list[dict]] = defaultdict(list)
-    for name, entries in passages.items():
-        canonical = node_map.get(name)
-        if canonical not in surviving:
-            continue
-        for entry in entries:
-            kept = merged[canonical]
-            if len(kept) >= config.KG_MAX_SOURCE_PASSAGES:
-                break
-            if any(other["text"] == entry["text"] for other in kept):
-                continue
-            kept.append(entry)
-    return {name: merged[name] for name in sorted(merged)}

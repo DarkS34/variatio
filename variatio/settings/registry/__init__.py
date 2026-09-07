@@ -23,7 +23,7 @@ BY_NAME = {setting.name: setting for setting in REGISTRY if setting.name}
 GROUPS = (
     "Motor",
     "Modelos",
-    "Modelos ofrecidos",
+    "Modelos generadores",
     "Razonamiento",
     "Muestreo",
     "Ventana de contexto",

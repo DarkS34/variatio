@@ -1,4 +1,4 @@
-"""The «Razonamiento» settings: one switch and one effort per phase, plus the lane table.
+"""The "Razonamiento" settings: one switch and one effort per phase, plus the lane table.
 
 `PIPELINE` is what the panel draws as the reasoning pipeline. A phase's lane says what the
 call is ABOUT, not which job pays for it.
@@ -24,6 +24,14 @@ _TRANSCRIBE_DOC = """Copiar una página que se tiene delante como imagen no es u
 fidelidad es la cláusula carácter a carácter del prompt, no la deliberación. Apagado por
 defecto: cada página es una llamada, y razonar multiplica el coste de la fase más larga de
 los tres constructores sin nada que medir a cambio."""
+
+_TRANSCRIBE_IMAGE_DOC = """Leer una imagen de un documento de Word o de PowerPoint es la misma copia que leer una
+página, solo que la imagen llega sola: Docling se queda con el texto que la rodea y el modelo
+devuelve lo que la imagen CONTIENE —una fórmula en LaTeX, una captura de código como bloque,
+una tabla como tabla— y solo describe lo que no se puede copiar. Apagado por defecto, como la
+transcripción de páginas y por la misma razón: la fidelidad la sostiene el prompt, y cada
+imagen es una llamada. Comparte el modelo con la transcripción de páginas, que es la única
+constante que decide con qué se lee un documento."""
 
 _TRANSCRIBE_SEAM_DOC = """La revisión de la costura entre dos páginas contesta con gramática a una pregunta cerrada
 —con qué separador se pegan y cuántas líneas iniciales sobran— sobre unos 1.200 caracteres
@@ -102,9 +110,8 @@ Va en el carril del grafo porque es del grafo: una descripción por concepto, ca
 `cache/concept_descriptions.json` y listada en `review.DERIVED[KNOWLEDGE_GRAPH]`. Lo que
 no hace es correr dentro de `build_kg` — la escribe el embebedor al levantarse
 (`Embedder.__init__` → `describer.ensure()`), así que la llamada la pagan `index`, `tag`,
-`generate` y `evaluate`, que es lo que `server/jobs/lanes.py` declara. Estuvo dibujada en
-el carril de generación por eso hasta el 2026-08-28, y se movió por petición explícita del
-usuario: el carril dice de qué es la llamada, no qué trabajo la paga."""
+`generate` y `evaluate`, que es lo que `server/jobs/lanes.py` declara. Aun así se dibuja en
+el carril del GRAFO: el carril dice de qué es la llamada, no qué trabajo la paga."""
 
 _CONCEPT_TAGGER_DOC = """El etiquetador hace una primera pasada con gramática y sin razonar; esto decide si, cuando
 esa pasada no concluye (JSON inválido o rechaza a todos los candidatos), se reintenta una vez
@@ -118,6 +125,7 @@ falla abierto de todos modos. Apagado por defecto."""
 
 _DEFAULTS = {
     "transcribe": (False, _TRANSCRIBE_DOC),
+    "transcribe_image": (False, _TRANSCRIBE_IMAGE_DOC),
     "transcribe_seam": (False, _TRANSCRIBE_SEAM_DOC),
     "ep_scan": (False, _EP_SCAN_DOC),
     "ep_consolidate": (True, _EP_CONSOLIDATE_DOC),
@@ -154,11 +162,9 @@ def _toggle(phase: str) -> Setting:
     )
 
 
-_EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta
-nada. Sustituye al THINK_EFFORT global desde el 2026-08-24 (petición explícita del
-usuario) y hereda su medición entera; los booleanos que quedan (el `think` del encargo,
-la columna `generations.think`, el interruptor de la UI) se traducen al «low» fijo de
-`inference.DEFAULT_THINK_EFFORT`.
+_EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta nada.
+Los booleanos que quedan (el `think` del encargo, la columna `generations.think`, el
+interruptor de la UI) se traducen al «low» fijo de `inference.DEFAULT_THINK_EFFORT`.
 
 `low` por defecto y no algo más alto, medido en la A40 con /api/generate:
 
@@ -168,32 +174,26 @@ la columna `generations.think`, el interruptor de la UI) se traducen al «low» 
     qwen3.6:35b-a3b-q8_0                        15 /  15 /  15 /  15 /   -
 
 Léase en cuatro partes. `medium` ES el defecto del modelo — mismos tokens que `true`, no es
-un peldaño sino su ausencia. `high` gastó 58 953 caracteres de deliberación en la llamada
+un peldaño sino su ausencia. `high` gastó 58 953 caracteres de deliberación en una llamada
 de curación real (777 s) y devolvió una respuesta VACÍA; `low` sigue emitiendo ~41 000 ahí
 — el nivel mueve el TECHO de la deliberación, no el suelo — así que subir de `low` en una
-fase que corre en local es reabrir esa medición, no un ajuste fino.
+fase que corre en local es reabrir esa medición y no un ajuste fino.
 
-`max` NO ES UN NIVEL DE `qwen3.8`: es `high` con otro nombre. Medido el 2026-08-29 sobre
-`qwen3.8:27b-q8_0` (Ollama 0.32.13, temperatura 0 y semilla fija), los dos rinden el mismo
-prompt de 56 tokens y devuelven una respuesta byte a byte idéntica, mientras que `low` (44)
-y `medium` (14) sí difieren entre sí y de ellos. O sea, este modelo tiene TRES niveles
-efectivos. La fila de la q4_K_M se queda porque es una medición y no una
-referencia: esa cuantización dejó de usarse el 2026-08-29 y ni siquiera está instalada, y
-borrar lo medido sobre ella no lo haría menos cierto. Su columna `max` lleva guion porque
-no se midió allí; sus otras cifras son de la medición del 2026-08-24 y difieren en un token de las de hoy porque el
-prompt de prueba no era el mismo — lo que importa de la tabla son las DIFERENCIAS entre
-columnas de una misma fila, no su valor absoluto.
+`max` NO ES UN NIVEL DE `qwen3.8`: es `high` con otro nombre. Medido sobre la q8_0
+(temperatura 0, semilla fija), los dos rinden el mismo prompt de 56 tokens y devuelven una
+respuesta byte a byte idéntica, mientras que `low` (44) y `medium` (14) sí difieren. Este
+modelo tiene TRES niveles efectivos. La fila de la q4_K_M se queda porque es una medición y
+no una referencia; lo que importa de la tabla son las DIFERENCIAS entre columnas de una
+misma fila, no su valor absoluto.
 
-Y el nivel lo implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro
+El nivel lo implementa el renderer de cada modelo: el MoE antiguo ignoraba el parámetro
 (cuatro valores, respuesta idéntica byte a byte), así que no se puede asumir que exista.
 Por eso las opciones de aquí siguen siendo cuatro: son las que ACEPTA el motor, y qué hace
-cada modelo con ellas se declara donde se sabe de qué modelo se habla —
-`web/src/features/run/models.ts` para el que elige el encargo, que ofrece tres.
+cada modelo con ellas se declara donde se sabe de qué modelo se habla.
 
 Ollama 0.32.13 acepta high/medium/low/max/true/false y devuelve 400 a cualquier otra cosa:
-`xhigh` NO existe («invalid think value»), ni tampoco `none`. Cerebras no tiene `max`
-(`reasoning_effort` lo baja a «high») y en `gemma-4-31b` los tres niveles activos son
-equivalentes."""
+`xhigh` NO existe, ni tampoco `none`. Cerebras no tiene `max` (`reasoning_effort` lo baja a
+«high») y en `gemma-4-31b` los tres niveles activos son equivalentes."""
 
 
 def _effort(phase: str) -> Setting:
@@ -239,11 +239,17 @@ class Phase:
 
 @dataclass(frozen=True)
 class Lane:
-    """One column of the pipeline: the phases of a build, or of a run."""
+    """One column of the pipeline: the phases of a build, or of a run.
+
+    A `shared` lane is not a builder's own: it is the step every builder runs before its
+    own work, so the panel draws it ONCE and ACROSS, above the columns, instead of
+    repeating it at the head of each of them.
+    """
 
     key: str
     label: str
     phases: tuple[Phase, ...]
+    shared: bool = False
 
 
 def _switch(key: str, label: str, note: str = "") -> Phase:
@@ -258,28 +264,41 @@ def _switch(key: str, label: str, note: str = "") -> Phase:
     )
 
 
-_SHARED_TRANSCRIBE_NOTE = (
-    "Lee cada página como imagen; un solo ajuste compartido por los tres constructores."
+_PAGE_NOTE = "Lee cada página del documento como imagen, una llamada por página."
+_IMAGE_NOTE = (
+    "Lee una a una las imágenes de un Word o un PowerPoint, con el modelo de la página: "
+    "un documento se lee con un solo modelo tome la ruta que tome."
 )
-_SHARED_SEAM_NOTE = (
-    "Clasifica cómo se pega una página con la siguiente; compartida con los otros dos."
+_SEAM_NOTE = "Clasifica cómo se pega una página con la siguiente, una llamada por costura."
+
+# Reading the documents is a step of its own, drawn as a `shared` lane above the other four.
+# Its three phases are the SAME three settings for the three builders — one each, not three
+# — so repeating them at the head of every column draws nine nodes for three decisions.
+_TRANSCRIPTION = Lane(
+    "transcription",
+    "Transcripción",
+    (
+        _switch("transcribe", "Páginas", _PAGE_NOTE),
+        Phase(
+            key="transcribe_image",
+            label="Imágenes",
+            model="models.phases.transcribe",
+            setting="reasoning.phases.transcribe_image",
+            effort="reasoning.effort.transcribe_image",
+            note=_IMAGE_NOTE,
+        ),
+        _switch("transcribe_seam", "Costura", _SEAM_NOTE),
+    ),
+    shared=True,
 )
-
-
-def _transcription() -> tuple[Phase, ...]:
-    """Return the two transcription phases, drawn in all three lanes from one setting."""
-    return (
-        _switch("transcribe", "Transcripción", _SHARED_TRANSCRIBE_NOTE),
-        _switch("transcribe_seam", "Costura", _SHARED_SEAM_NOTE),
-    )
 
 
 PIPELINE: tuple[Lane, ...] = (
+    _TRANSCRIPTION,
     Lane(
         "profile",
         "Perfil de ejemplares",
         (
-            *_transcription(),
             _switch("ep_scan", "Escaneo"),
             _switch("ep_consolidate", "Consolidación"),
             _switch("ep_context", "Contexto"),
@@ -289,7 +308,6 @@ PIPELINE: tuple[Lane, ...] = (
         "graph",
         "Grafo de conocimiento",
         (
-            *_transcription(),
             _switch("kg_extract", "Extracción"),
             _switch("kg_clean_merge", "Fusión"),
             _switch("kg_clean_drop", "Descarte"),
@@ -320,7 +338,6 @@ PIPELINE: tuple[Lane, ...] = (
         "bank",
         "Banco de ejemplares",
         (
-            *_transcription(),
             _switch("eb_extract", "Extracción"),
             _switch(
                 "concept_tagger",
@@ -347,9 +364,9 @@ PIPELINE: tuple[Lane, ...] = (
                 "generation.models",
                 fixed=COMMISSION,
                 note=(
-                    "Lo decide cada encargo, el modelo incluido desde el 2026-08-29: aquí "
-                    "se lista lo que se le ofrece, y el primero es el de por defecto. El "
-                    "estudio mide el razonamiento en ambas posiciones."
+                    "El razonamiento lo decide cada encargo; el modelo lo escribe el "
+                    "primero de esta lista, y los demás sólo quedan reservados. El estudio "
+                    "mide el razonamiento en ambas posiciones."
                 ),
             ),
             Phase(

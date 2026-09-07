@@ -21,20 +21,21 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config
+from ... import prompts as prompts_pkg
+from ... import wording as wording_sets
 from ...core import progress
 from ...core.inference import ensure_models
 from ...core.workspace import Workspace
 from ...instance import locale
 from ...instance.relations import RelationSchema
-from ... import prompts as prompts_pkg
-from .. import _context, _source_docs
+from .. import _context, source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [
     "BUILD_PHASES",
-    "build_models",
     "KnowledgeGraphBuilder",
     "blocks",
+    "build_models",
     "cleaning",
     "curation",
     "extraction",
@@ -53,14 +54,13 @@ __all__ = [
 # extraction pass and below the whole-inventory reasoning after it. On later builds it flies
 # past, because the page cache answers instead of the model.
 BUILD_PHASES = (
-    ("convert", "Transcribiendo los documentos del corpus", 40),
-    ("extract", "Extrayendo conceptos y relaciones", 16),
-    ("clean", "Fusionando duplicados y normalizando nombres", 25),
-    ("domains", "Agrupando los conceptos en dominios", 9),
-    ("link", "Enlazando conceptos y ordenando el temario", 26),
-    ("curate", "Tipando las relaciones y rompiendo ciclos", 1),
-    # Last because it needs the names of the blocks, which no earlier phase has yet.
-    ("context", "Poniendo por escrito de qué asignatura es esto", 1),
+    ("convert", "Reading the corpus documents", 40),
+    ("extract", "Extracting concepts and relations", 16),
+    ("clean", "Merging duplicates and normalising names", 25),
+    ("domains", "Grouping the concepts into domains", 9),
+    ("link", "Linking concepts and ordering the syllabus", 26),
+    ("curate", "Typing the relations and breaking cycles", 1),
+    ("context", "Writing down what subject this is", 1), # Last because it needs the names of the blocks, which no earlier phase has yet.
 )
 
 def build_models() -> list[str]:
@@ -97,6 +97,7 @@ class KnowledgeGraphBuilder:
         # prompts interpolate is prose written in the schema's language, and its slot names
         # are the two words the prompts' own text uses.
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
+        self._wording = wording_sets.beside(self.prompts)
         self.schema = schema or locale.relation_schema(workspace)
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.KG_BUILDER_CHUNK_SIZE
@@ -105,13 +106,9 @@ class KnowledgeGraphBuilder:
 
         # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
         # plain text needs no conversion, so on the usual corpus Docling is never built.
-        self.converter = _source_docs.LazyConverter(table_structure=False)
+        self.converter = source_docs.LazyConverter(table_structure=False)
 
     # PUBLIC API ----------------------------------------------------------------------------------
-
-    def bootstrap(self) -> None:
-        """Check every model of the build is installed, so a failure comes at second zero."""
-        ensure_models(build_models(), "knowledge graph")
 
     def build(self, input_dir: str | Path) -> dict:
         """Run the whole build over a corpus directory and return the curated draft."""
@@ -133,33 +130,9 @@ class KnowledgeGraphBuilder:
         self.synthesize_context(graph)
         return graph
 
-    def synthesize_context(self, graph: dict) -> None:
-        """Write the subject-context draft from what the graph alone knows about the subject.
-
-        The names of the blocks the syllabus is divided into, and how big it is — NOT the
-        concepts themselves: the prompt forbids enumerating them, and the graph is right
-        there for whoever wants the list.
-        """
-        progress.phase("context")
-        domains = list(graph.get("concepts_by_domains") or {})
-        if not domains:
-            return
-        total = sum(len(members) for members in graph["concepts_by_domains"].values())
-        evidence = "\n".join(
-            [
-                f"El temario se divide en {len(domains)} bloque(s), "
-                f"con {total} concepto(s) en total. Se llaman:",
-                *(f"- {domain}" for domain in domains),
-            ]
-        )
-        _context.synthesize(
-            self.workspace,
-            evidence,
-            "EL GRAFO DEL TEMARIO",
-            config.KG_CONTEXT_MODEL,
-            think=config.THINK_KG_CONTEXT,
-        )
-        progress.advance(1.0)
+    def bootstrap(self) -> None:
+        """Check every model of the build is installed, so a failure comes at second zero."""
+        ensure_models(build_models(), "knowledge graph")
 
     def extract(self, input_dir: str | Path, recursive: bool = False) -> dict:
         """Phase 1: the corpus as a raw inventory of concepts and relation triples."""
@@ -198,3 +171,30 @@ class KnowledgeGraphBuilder:
             max_attempts=self.max_repair_attempts,
             prompts=self.prompts,
         )
+
+    def synthesize_context(self, graph: dict) -> None:
+        """Write the subject-context draft from what the graph alone knows about the subject.
+
+        The names of the blocks the syllabus is divided into, and how big it is — NOT the
+        concepts themselves: the prompt forbids enumerating them, and the graph is right
+        there for whoever wants the list.
+        """
+        progress.phase("context")
+        domains = list(graph.get("concepts_by_domains") or {})
+        if not domains:
+            return
+        total = sum(len(members) for members in graph["concepts_by_domains"].values())
+        evidence = "\n".join(
+            [
+                self._wording.syllabus_blocks(len(domains), total),
+                *(f"- {domain}" for domain in domains),
+            ]
+        )
+        _context.synthesize(
+            self.workspace,
+            evidence,
+            self._wording.CONTEXT_SOURCE_GRAPH,
+            config.KG_CONTEXT_MODEL,
+            think=config.THINK_KG_CONTEXT,
+        )
+        progress.advance(1.0)

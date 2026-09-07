@@ -12,14 +12,6 @@ from ... import config
 from ...core.repair import parse_with_repair
 
 
-def parse_json_object(text: str) -> tuple[dict | None, str | None]:
-    """Repair the text into a JSON object, or say why it is not one."""
-    raw = repair_json(text, return_objects=True)
-    if not isinstance(raw, dict):
-        return None, "model did not return a JSON object"
-    return raw, None
-
-
 def parse_object(
     response: str, log_prefix: str, format: dict, max_attempts: int, prompts
 ) -> dict | None:
@@ -39,16 +31,12 @@ def parse_object(
     return result
 
 
-def _triple(entry) -> list[str] | None:
-    """One well-formed `[source, relation, target]` of stripped strings, or `None`."""
-    if not (isinstance(entry, list) and len(entry) == 3):
-        return None
-    if not all(isinstance(x, str) for x in entry):
-        return None
-    source, relation, target = (x.strip() for x in entry)
-    if not (source and target) or source == target:
-        return None
-    return [source, relation, target]
+def parse_json_object(text: str) -> tuple[dict | None, str | None]:
+    """Repair the text into a JSON object, or say why it is not one."""
+    raw = repair_json(text, return_objects=True)
+    if not isinstance(raw, dict):
+        return None, "model did not return a JSON object"
+    return raw, None
 
 
 def valid_relations(raw: list, schema, allowed: set[str] | None) -> list[list[str]]:
@@ -62,6 +50,18 @@ def valid_relations(raw: list, schema, allowed: set[str] | None) -> list[list[st
             continue
         out.append(triple)
     return out
+
+
+def _triple(entry) -> list[str] | None:
+    """One well-formed `[source, relation, target]` of stripped strings, or `None`."""
+    if not (isinstance(entry, list) and len(entry) == 3):
+        return None
+    if not all(isinstance(x, str) for x in entry):
+        return None
+    source, relation, target = (x.strip() for x in entry)
+    if not (source and target) or source == target:
+        return None
+    return [source, relation, target]
 
 
 def concepts_with_definitions(raw: list) -> tuple[list[str], dict[str, str]]:

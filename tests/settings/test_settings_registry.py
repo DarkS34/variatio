@@ -6,9 +6,9 @@ DERIVED_ONLY = {
     "EMBEDDING_MODELS",
     "TEMPERATURE_DEFAULT",
     "LLM_CONTEXT",
-    # Not a setting since 2026-08-29: the commission picks its writer out of
-    # `generation.models`, and this is the first of them — what the CLI, the study's arms
-    # and a request naming none are written with.
+    # Not a setting: the commission picks its writer out of `generation.models`, and this is
+    # the FIRST of them — what the CLI, the evaluation's arms and a request naming none are
+    # written with.
     "VARIANT_GENERATION_LLM",
 }
 
@@ -76,39 +76,20 @@ def test_every_phase_key_is_declared_in_the_registry():
         assert key in BY_KEY, f"{key} lo deriva PHASES pero no lo declara nadie"
 
 
-# 106 since the seventeen per-phase reasoning switches (89 when the generation checks got
-# their retry budget, 88 when the admissibility judge became a phase of its own); the
-# study's six are still declared outside this package and picked up by name. 97 named, not
-# 111: the ten without one are the four context windows and the study's six, which the
-# study reads through `study.config`, so none of them lands in `variatio.config`.
-# The four SSH tunnel settings (2026-08-23) are all named. 112 since saved variants enter
-# the prompt as already-used scenarios (GENERATION_AVOID_RECENT, 2026-08-23). 115 since
-# the hybrid Cerebras engine (2026-08-24): base URL, API key and routing list, all named.
-# 132 since each reasoning switch gained a per-phase effort (2026-08-24), seventeen unnamed
-# `reasoning.effort.*` keys that only `derived` reads to resolve each `THINK_<FASE>`. 131
-# later the same day: the global THINK_EFFORT left, replaced by those per-phase efforts —
-# the boolean callers now map `True` to `inference.DEFAULT_THINK_EFFORT`. 134 since kg_units
-# (2026-08-25), a phase of its own for segmenting the syllabus: a named model setting, a
-# named reasoning switch and its unnamed per-phase effort. 139 since the Cerebras throttle
-# (2026-08-26): the four measured ceilings of the account's rate limit — requests and tokens,
-# per minute and per day — plus how long a call may wait for one to roll. All five named,
-# and all five Impact.NONE, because the limiter reads them on every call: changing a ceiling
-# has to take effect without resetting the engine or invalidating a single warm context.
-# 144 since the corpus joined the page-transcription route (2026-08-27): the transcription
-# phase was renamed `exemplars_transcribe` → `transcribe` because all three builders share
-# it now, which moves no count, and the seam between two pages became a phase of its own —
-# a named model, a named reasoning switch, its unnamed per-phase effort and how much of
-# each page the judge is shown. The fifth is the bank builder's batch overlap, which is
-# what makes the same seam survive the extractor's own cut.
+# The two counts are a tripwire, not a fact worth knowing: adding, removing or renaming a
+# setting has to be a deliberate edit here. `REGISTRY` is every declaration, `BY_NAME` only
+# those carrying a `name` and therefore becoming a `config` attribute — the four context
+# windows and the per-phase reasoning efforts feed derived values and never land in
+# `variatio.config`.
+#
+# 132 and 109 on this branch, which is the library alone: the web half's own eighteen
+# settings are declared where they are read, and there is nothing left here to read them.
+# Nine were the evaluation's, picked up by an optional import from a package this branch
+# does not carry; four were the SSH tunnel the API opened as a subprocess; three belonged
+# to the job queue — how long a server may sit idle before letting go of the GPU, how often
+# it looks, and how many jobs may hold the remote lane at once; and the last two were the
+# commission's, a cap on the item count that a route enforced and the recently saved
+# variants a handler read out of the database to feed the prompt as used-up scenarios.
 def test_the_registry_holds_what_this_work_transcribed():
-    # 128 since `main` became the library alone: the whole web half left, and with it the
-    # fifteen settings that configured nothing else. Six were the study's, declared in
-    # `study/settings.py` and picked up here by an optional import that no longer has
-    # anything to reach. Four were the SSH tunnel the API opened as a subprocess, and three
-    # more belonged to the job queue — how long the server may sit idle before letting go of
-    # the GPU, how often it looks, and how many jobs may hold the remote lane at once. The
-    # last two were the commission's own: a cap on the item count that `POST /api/jobs`
-    # enforced, and the recently saved variants a handler read out of the database to feed
-    # the prompt as already-used scenarios. 143 before that, with all of them.
-    assert len(REGISTRY) == 128
-    assert len(BY_NAME) == 106
+    assert len(REGISTRY) == 132
+    assert len(BY_NAME) == 109

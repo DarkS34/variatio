@@ -4,7 +4,7 @@
 def json_repair_prompt(broken_output: str, error_msg: str, shape: str = "array") -> str:
     """Ask the model to rewrite an unparseable reply as a JSON `shape`, losing nothing.
 
-    `shape` is the caller's own expectation («array», «object»), because a silent default is
+    `shape` is the caller's own expectation ("array", "object"), because a silent default is
     what let a component ask for one shape while its parser demanded the other. An
     unrecoverable reply is asked back as `{}` rather than as an apology.
     """
@@ -23,6 +23,7 @@ Your task: produce a corrected JSON {shape} that (1) parses as valid JSON, and (
 - Return a single JSON {shape}. Nothing before, nothing after.
 - No ```json, no backticks, no comments, no explanations.
 - Escape line breaks (`\\n`) and inner quotes (`\\"`) properly inside strings.
+- Non-ASCII characters (accents, «ñ», «→») are written as themselves, never as `\\uXXXX` escape sequences.
 - If the broken output is beyond recovery, return `{{}}`.
 
 JSON:"""

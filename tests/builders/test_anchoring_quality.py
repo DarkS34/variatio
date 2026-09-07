@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -6,7 +7,13 @@ import pytest
 from variatio import config
 from variatio.builders.knowledge_graph_builder import extraction
 
-SOURCES = Path("workspaces/default/cache/concept_sources.json")
+# WHICH INSTANCE IS MEASURED. `workspaces/` is gitignored in full, so a checkout has
+# whatever its owner built under whatever they called it; the reference slug stays the
+# default and the variable is the way to point these at a real one — the same variable the
+# `model`-marked measurements read.
+WORKSPACE = os.environ.get("VARIATIO_MODEL_WORKSPACE", "default")
+ROOT = Path("workspaces") / WORKSPACE
+SOURCES = ROOT / "cache" / "concept_sources.json"
 
 
 def load():

@@ -129,7 +129,7 @@ def glean_typed_graph_prompt(
     """Ask a SECOND reading of the same chunk for what the first one left out.
 
     Shown the inventory the first pass wrote, it is asked only for what is missing — the
-    «gleaning» pass of GraphRAG and LightRAG — and above all for relations the text supports
+    "gleaning" pass of GraphRAG and LightRAG — and above all for relations the text supports
     between concepts already named. Its answer is merged into the first and never replaces
     it: `concepts` carries only the new ones, while `relations` may name anything known.
     """

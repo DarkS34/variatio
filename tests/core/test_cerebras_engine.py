@@ -8,6 +8,9 @@ from variatio.core import cerebras, cerebras_budget, progress
 from variatio.core.cerebras import CerebrasEngine, HybridEngine
 from variatio.core.inference import InferenceError
 
+# Captured at collection, before the autouse fixture in `conftest.py` stubs it out.
+_REAL_KNOWN_MODELS = CerebrasEngine.known_models
+
 
 def test_strict_schema_closes_every_object():
     schema = {
@@ -214,6 +217,48 @@ def test_the_hybrid_routes_by_membership(hybrid):
     assert hybrid.remote_models() == frozenset({"gemma-4-31b"})
 
 
+def test_every_model_of_the_catalogue_is_routed_remote(monkeypatch):
+    monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
+    engine = HybridEngine()
+    engine._cerebras.known_models = lambda: frozenset({"gemma-4-31b", "qwen-3.8-27b"})
+    assert engine._backend("qwen-3.8-27b") is engine._cerebras
+    assert engine._backend("qwen3.8:27b-q8_0") is engine._ollama
+    assert engine.remote_models() == frozenset({"gemma-4-31b", "qwen-3.8-27b"})
+    assert {"model": "qwen-3.8-27b", "size": None, "remote": True} in [
+        info for info in _with_local(engine).installed_models_detail() if info.get("remote")
+    ]
+
+
+def _with_local(engine: HybridEngine) -> HybridEngine:
+    engine._ollama.installed_models_detail = lambda: [{"model": "qwen3.8:27b-q8_0", "size": 1}]
+    return engine
+
+
+def test_known_models_keeps_the_last_catalogue_through_a_blip(monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(200, json={"data": [{"id": "qwen-3.8-27b"}]})
+        return httpx.Response(503, text="down")
+
+    engine = _engine_with(handler)
+    assert engine.known_models() == frozenset({"qwen-3.8-27b"})
+    engine._catalog = (engine._catalog[0] - 10_000, engine._catalog[1])
+    assert engine.known_models() == frozenset({"qwen-3.8-27b"})
+    assert len(calls) == 2
+    # The failure is remembered: the next reading costs no round trip.
+    assert engine.known_models() == frozenset({"qwen-3.8-27b"})
+    assert len(calls) == 2
+
+
+def test_known_models_is_empty_when_nothing_was_ever_read():
+    engine = _engine_with(lambda request: httpx.Response(503, text="down"))
+    assert engine.known_models() == frozenset()
+    assert engine.known_models() == frozenset()
+
+
 def test_a_remote_model_cannot_embed(hybrid):
     with pytest.raises(InferenceError, match="embedding"):
         hybrid.embed("gemma-4-31b", "texto")
@@ -234,10 +279,12 @@ def test_the_remote_capabilities_are_declared_not_asked(hybrid):
     assert hybrid.supports_thinking("gemma-4-31b") is True
     assert hybrid.supports_vision("gemma-4-31b") is True
     assert hybrid._cerebras.supports_vision("otro-modelo-31b") is False
+    assert hybrid._cerebras.supports_vision("qwen-3.8-27b") is True
 
 
 def _engine_with(handler) -> CerebrasEngine:
     engine = CerebrasEngine()
+    engine.known_models = _REAL_KNOWN_MODELS.__get__(engine)
     engine._client = httpx.Client(
         transport=httpx.MockTransport(handler), base_url="https://api.cerebras.ai/v1"
     )
@@ -268,6 +315,23 @@ def test_generate_sends_the_translated_call_and_splits_the_reasoning():
     assert seen["messages"][-1] == {"role": "user", "content": "hola"}
     assert resp.response == '{"ok": true}'
     assert resp.thinking == "pensando…"
+
+
+def test_the_pictures_travel_ahead_of_the_text():
+    # Gemma 4's model card asks for image content BEFORE the text of the prompt, and Qwen's
+    # examples order the parts the same way; a text-first body was our own habit.
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    engine = _engine_with(handler)
+    engine.generate("gemma-4-31b", "transcribe", images=["AAAA", "BBBB"])
+    parts = seen["messages"][-1]["content"]
+    assert [part["type"] for part in parts] == ["image_url", "image_url", "text"]
+    assert parts[0]["image_url"]["url"] == "data:image/png;base64,AAAA"
+    assert parts[-1]["text"] == "transcribe"
 
 
 def test_generate_unwraps_the_reply_to_a_wrapped_array_schema():
@@ -423,8 +487,8 @@ def test_an_exhausted_day_stops_the_call_from_leaving(monkeypatch):
         sent.append(request)
         return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
 
-    # A ceiling the call would fit under, already spent: that is «agotado». A ceiling
-    # SMALLER than the call is the other refusal, «no cabe», pinned in the budget's tests.
+    # A ceiling the call would fit under, already spent: that is "agotado". A ceiling
+    # SMALLER than the call is the other refusal, "no cabe", pinned in the budget's tests.
     monkeypatch.setattr(config, "CEREBRAS_MAX_TOKENS_DAY", 2_000)
     cerebras_budget.shared().record(
         "gemma-4-31b", "kg_extract", prompt_tokens=1_900, completion_tokens=0, headers={}
@@ -454,3 +518,43 @@ def test_a_streamed_call_asks_for_its_usage():
     # call of the pipeline that streams — would be charged zero tokens.
     assert seen["stream_options"] == {"include_usage": True}
     assert cerebras_budget.shared().snapshot()["models"][0]["phases"][0]["tokens"] == 100
+
+
+def test_the_output_cap_travels_as_max_completion_tokens():
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
+        )
+
+    engine = _engine_with(handler)
+    answer = engine.generate("gemma-4-31b", "hola", max_output_tokens=4096)
+    assert seen["max_completion_tokens"] == 4096
+    assert answer.truncated is False
+
+
+def test_no_cap_sends_no_max_completion_tokens():
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _engine_with(handler).generate("gemma-4-31b", "hola")
+    assert "max_completion_tokens" not in seen
+
+
+def test_a_cut_answer_is_reported_as_truncated():
+    # `finish_reason: "length"` is the API saying the cap was hit — the engine's own reading,
+    # not a heuristic over the text, which is what lets a caller refuse the answer.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "\\_" * 50}, "finish_reason": "length"}]},
+        )
+
+    answer = _engine_with(handler).generate("gemma-4-31b", "hola", max_output_tokens=50)
+    assert answer.truncated is True
+    assert answer.response == "\\_" * 50

@@ -58,21 +58,6 @@ _emitter: contextvars.ContextVar["Emitter | None"] = contextvars.ContextVar(
 # INSTALLATION ------------------------------------------------------------------------------------
 
 
-def set_emitter(emitter: "Emitter | None") -> contextvars.Token:
-    """Install an emitter for this context; returns the token that undoes it."""
-    return _emitter.set(emitter)
-
-
-def current_emitter() -> "Emitter | None":
-    """Whoever is listening right now, so a caller can wrap it instead of replacing it."""
-    return _emitter.get()
-
-
-def reset_emitter(token: contextvars.Token) -> None:
-    """Undo the installation `token` came from."""
-    _emitter.reset(token)
-
-
 @contextmanager
 def emitting(emitter: "Emitter | None"):
     """Install an emitter for the duration of the block."""
@@ -81,6 +66,21 @@ def emitting(emitter: "Emitter | None"):
         yield
     finally:
         reset_emitter(token)
+
+
+def set_emitter(emitter: "Emitter | None") -> contextvars.Token:
+    """Install an emitter for this context; returns the token that undoes it."""
+    return _emitter.set(emitter)
+
+
+def reset_emitter(token: contextvars.Token) -> None:
+    """Undo the installation `token` came from."""
+    _emitter.reset(token)
+
+
+def current_emitter() -> "Emitter | None":
+    """Whoever is listening right now, so a caller can wrap it instead of replacing it."""
+    return _emitter.get()
 
 
 # EMISSION ----------------------------------------------------------------------------------------
@@ -93,16 +93,16 @@ def emit(kind: str, **payload) -> None:
         emitter.emit(kind, payload)
 
 
-def should_cancel() -> bool:
-    """Whether the host has asked to stop; False when nobody is listening."""
-    emitter = _emitter.get()
-    return bool(emitter is not None and emitter.should_cancel())
-
-
 def checkpoint() -> None:
     """Cooperative cancellation point: cheap to call, raises only when asked to stop."""
     if should_cancel():
         raise Cancelled("cancelled by the user")
+
+
+def should_cancel() -> bool:
+    """Whether the host has asked to stop; False when nobody is listening."""
+    emitter = _emitter.get()
+    return bool(emitter is not None and emitter.should_cancel())
 
 
 class _StepHandle:
@@ -117,8 +117,19 @@ class _StepHandle:
         self.current = 0
 
     def tick(self, current: int | None = None, detail: str | None = None) -> None:
-        """Report one more unit done, or jump to `current`."""
+        """Report one more unit DONE, or jump to `current` done."""
         self.current = self.current + 1 if current is None else current
+        emit("step.progress", id=self.id, current=self.current, total=self.total, detail=detail)
+
+    def start(self, index: int, detail: str | None = None) -> None:
+        """Report that unit `index` (1-based) is in flight: `index - 1` are done.
+
+        The counter and the bar say what is FINISHED, exactly as the phase bar does, and
+        the detail names what is being worked on. Reporting `index` itself here made the
+        step bar cover the unit still running while the phase bar waited for it, so the
+        two bars of one build disagreed by one unit for the whole loop.
+        """
+        self.current = max(index - 1, 0)
         emit("step.progress", id=self.id, current=self.current, total=self.total, detail=detail)
 
     def total_is(self, total: int | None) -> None:

@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
 
-from variatio import checks, config
-from variatio.concept_tagger import TRACE_KEY
+from variatio import config
+from variatio.runtime import checks
+from variatio.runtime.tagger import TRACE_KEY
 
 
 class _FakeEmbedder:
@@ -14,13 +15,16 @@ class _FakeEmbedder:
 
 
 class _FakeTagger:
-    def __init__(self, primary: str | None):
+    def __init__(self, primary: str | None, concepts: list[str] | None = None):
         self.primary = primary
+        # A tagger that ranks another concept first while still tagging the target is the
+        # ordinary case and the one the flag used to get wrong, so it has to be sayable.
+        self.concepts = concepts if concepts is not None else ([primary] if primary else [])
 
     def tag(self, text: str) -> dict:
         return {
             "primary_concept": self.primary,
-            "concepts": [self.primary] if self.primary else [],
+            "concepts": list(self.concepts),
             TRACE_KEY: {"method": "fake"},
         }
 
@@ -83,10 +87,34 @@ def test_an_off_target_tagger_alone_is_a_flag_and_never_a_retry(ejercicio):
     item = _item(ejercicio, "Escribe una función recursiva que invierta una cadena de texto.")
     result = _run(ejercicio, item, tagger=_FakeTagger("Variable"))
     assert result["tagger"]["on_target"] is False
-    assert result["flags"] == ["el etiquetador no la reconoce como Recursividad"]
+    assert result["flags"] == [
+        "el etiquetador no la reconoce como Recursividad; la etiqueta como «Variable»"
+    ]
     assert result["reasons"] == []
     assert result["verdict"] == "accept"
     assert not checks.needs_retry(result)
+
+
+def test_a_target_tagged_as_a_secondary_concept_is_not_flagged(ejercicio):
+    """Which target an item practises is the generator's business, not a defect.
+
+    Reading the PRIMARY here fires on every item whose tagger agrees about the concept and
+    disagrees about the ranking — measured over the reference installation, that was every
+    flag this check had ever raised.
+    """
+    item = _item(ejercicio, "Escribe una función recursiva que invierta una cadena de texto.")
+    result = _run(ejercicio, item, tagger=_FakeTagger("Cadena", ["Cadena", "Recursividad"]))
+    assert result["tagger"]["on_target"] is False
+    assert result["tagger"]["targets_found"] == ["Recursividad"]
+    assert result["flags"] == []
+    assert result["verdict"] == "accept"
+
+
+def test_a_tagger_that_names_nothing_is_flagged_without_naming_a_concept(ejercicio):
+    item = _item(ejercicio, "Escribe una función recursiva que invierta una cadena de texto.")
+    result = _run(ejercicio, item, tagger=_FakeTagger(None))
+    assert result["flags"] == ["el etiquetador no la reconoce como Recursividad"]
+    assert result["verdict"] == "accept"
 
 
 def test_the_flags_keep_every_signal_and_the_reasons_only_the_hard_ones(ejercicio):

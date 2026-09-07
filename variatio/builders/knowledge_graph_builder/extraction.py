@@ -15,7 +15,7 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.lexicon import mentions
-from .. import _source_docs
+from .. import source_docs
 from . import parsing
 from .schemas import EXTRACT_SCHEMA
 
@@ -72,9 +72,10 @@ def convert_corpus(
     Up front and not per file, so the extraction bar knows its own total: a 40-chunk lecture
     and a 3-chunk one weigh the same in a per-file bar. The corpus takes the same
     page-transcription route as the two exemplars builders — one engine and one algorithm
-    for both raw slots — so Docling is left with the `.docx`, which has no page to render.
+    for both raw slots — so Docling is left with the Office files, which have no page to
+    render and whose pictures are read one by one with the same model.
     """
-    files = _source_docs.list_source_files(input_dir, recursive=recursive)
+    files = source_docs.list_source_files(input_dir, recursive=recursive)
     if not files:
         logger.error(f"No supported document in {input_dir}")
         return []
@@ -84,14 +85,14 @@ def convert_corpus(
 
     converted: list[tuple[str, dict[int, list[str]], list[tuple[str, list[str], str]]]] = []
     with progress.step(
-        "kg_convert", "Transcribiendo los documentos del corpus", len(files)
+        "kg_convert", "Reading the corpus documents", len(files)
     ) as reporter:
         for idx, file_path in enumerate(files, 1):
             progress.checkpoint()
-            reporter.tick(idx, detail=file_path.name)
+            reporter.start(idx, detail=file_path.name)
             progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
             try:
-                text = _source_docs.document_markdown(
+                text = source_docs.document_markdown(
                     file_path,
                     prompts,
                     converter=converter,
@@ -104,11 +105,11 @@ def convert_corpus(
                 logger.exception(f"[{file_path.name}] skipped: {e}")
                 continue
 
-            chunks = _source_docs.chunk_sections(text, chunk_size)
+            chunks = source_docs.chunk_sections(text, chunk_size)
             if not chunks:
                 logger.warning(f"[{file_path.name}] produced no text")
                 continue
-            converted.append((file_path.name, _source_docs.headings_by_level(text), chunks))
+            converted.append((file_path.name, source_docs.headings_by_level(text), chunks))
 
     titles = select_titles([levels for _, levels, _ in converted])
     documents = [
@@ -166,18 +167,18 @@ def extract_documents(
     relations: set[tuple[str, str, str]] = set()
     done = 0
 
-    with progress.step("kg_extract", "Extrayendo conceptos y relaciones", total) as reporter:
+    with progress.step("kg_extract", "Extracting concepts and relations", total) as reporter:
         for di, (name, _, chunks) in enumerate(documents):
             for ci, (location, headings, chunk) in enumerate(chunks, 1):
                 progress.checkpoint()
                 done += 1
                 for heading in headings:
                     outline.append({"document": di, "heading": heading, "chunk": done})
-                reporter.tick(
+                reporter.start(
                     done,
                     detail=(
                         f"{name} · {location or f'fragmento {ci}'} · "
-                        f"{len(origins)} concepto(s), {len(relations)} relación(es)"
+                        f"{len(origins)} concept(s), {len(relations)} relation(s)"
                     ),
                 )
                 progress.advance(
@@ -216,10 +217,10 @@ def extract_documents(
                     "artifact.progress",
                     name="knowledge_graph",
                     count=len(origins),
-                    detail=f"{len(relations)} relación(es)",
+                    detail=f"{len(relations)} relation(s)",
                 )
 
-    progress.advance(1.0, f"{len(origins)} concepto(s), {len(relations)} relación(es)")
+    progress.advance(1.0, f"{len(origins)} concept(s), {len(relations)} relation(s)")
     return {
         "origins": dict(origins),
         "passages": dict(passages),
@@ -254,6 +255,34 @@ def remember_passage(
 _LEADER = re.compile(r"\.{4,}|·{4,}|…{2,}")
 _SENTENCE_END = re.compile(r"[.!?:](?=\s|$)")
 MIN_LEADER_RUNS = 3
+
+
+def excerpt(chunk: str, concept: str, max_chars: int) -> str:
+    """The passage of `chunk` that justifies `concept`, cut by paragraphs and not by characters.
+
+    Half a sentence quoted as proof that a concept exists in the material proves nothing,
+    and the model reading it has to be able to understand it. When the name occurs in no
+    non-navigation paragraph, NO passage is stored: a concept with no anchoring is honest
+    and the interface already reports it, whereas quoting the head of the chunk anchored
+    43 of 200 concepts to the table of contents.
+    """
+    paragraphs = [
+        p
+        for p in (p.strip() for p in re.split(r"\n\s*\n", chunk))
+        if p and not is_navigation(p)
+    ]
+    if not paragraphs:
+        return ""
+
+    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), None)
+    if hit is None:
+        return ""
+
+    text = clip_to_sentence(paragraphs[hit], max_chars)
+    if not text:
+        return ""
+
+    return _grow_into_neighbours(text, paragraphs, hit, max_chars).strip()
 
 
 def is_navigation(paragraph: str) -> bool:
@@ -297,34 +326,6 @@ def _grow_into_neighbours(text: str, paragraphs: list[str], hit: int, max_chars:
     return text
 
 
-def excerpt(chunk: str, concept: str, max_chars: int) -> str:
-    """The passage of `chunk` that justifies `concept`, cut by paragraphs and not by characters.
-
-    Half a sentence quoted as proof that a concept exists in the material proves nothing,
-    and the model reading it has to be able to understand it. When the name occurs in no
-    non-navigation paragraph, NO passage is stored: a concept with no anchoring is honest
-    and the interface already reports it, whereas quoting the head of the chunk anchored
-    43 of 200 concepts to the table of contents.
-    """
-    paragraphs = [
-        p
-        for p in (p.strip() for p in re.split(r"\n\s*\n", chunk))
-        if p and not is_navigation(p)
-    ]
-    if not paragraphs:
-        return ""
-
-    hit = next((i for i, p in enumerate(paragraphs) if mentions(p, concept)), None)
-    if hit is None:
-        return ""
-
-    text = clip_to_sentence(paragraphs[hit], max_chars)
-    if not text:
-        return ""
-
-    return _grow_into_neighbours(text, paragraphs, hit, max_chars).strip()
-
-
 
 
 def extract_from_chunk(
@@ -360,7 +361,7 @@ def glean_chunk(
     """Read the same chunk again, shown what the first pass found, until nothing is added.
 
     A model asked to list everything lists the obvious and closes the JSON; asked instead
-    «what is missing», with the inventory in front of it, it fills in the relations between
+    "what is missing", with the inventory in front of it, it fills in the relations between
     concepts it already named, which is where the graph was thin.
     """
     if not concepts:

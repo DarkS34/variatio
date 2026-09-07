@@ -14,7 +14,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-TREES = ("variatio", "server", "study")
+TREES = ("variatio", "server", "evaluation")
 
 
 def _frozen_defaults() -> list[str]:

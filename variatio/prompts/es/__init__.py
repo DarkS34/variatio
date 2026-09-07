@@ -4,6 +4,8 @@ Interchangeable with `en/` by construction: the same names, the same signatures 
 same JSON keys, which is what lets a caller hold one without knowing which.
 """
 
+LANGUAGE = "es"
+
 from .repair import (
     json_repair_prompt,
 )
@@ -12,10 +14,13 @@ from .admissibility import (
 )
 from .sources import (
     CORRECT_ANSWER_MARK,
+    EMPTY_IMAGE_MARK,
     EMPTY_PAGE_MARK,
+    IMAGE_RULES,
     SEAM_SEPARATORS,
     format_content_prompt,
     merge_pages_prompt,
+    transcribe_image_prompt,
     transcribe_page_prompt,
 )
 from .descriptions import (
@@ -32,6 +37,10 @@ from .context import (
     synthesize_content_context_prompt,
 )
 from .profile import (
+    DIFFICULTY_FALLBACK_DESCRIPTION,
+    DIFFICULTY_FALLBACK_EXTRACTION,
+    DIFFICULTY_FIELD,
+    DIFFICULTY_LEVELS,
     EXEMPLARS_PROFILE_FIELD_NAMING,
     EXEMPLARS_PROFILE_SCHEMA_GRAMMAR,
     consolidate_exemplars_profile_prompt,
@@ -52,10 +61,17 @@ from .knowledge_graph import (
 )
 
 __all__ = [
+    "LANGUAGE",
     "CORRECT_ANSWER_MARK",
+    "DIFFICULTY_FALLBACK_DESCRIPTION",
+    "DIFFICULTY_FALLBACK_EXTRACTION",
+    "DIFFICULTY_FIELD",
+    "DIFFICULTY_LEVELS",
+    "EMPTY_IMAGE_MARK",
     "EMPTY_PAGE_MARK",
     "EXEMPLARS_PROFILE_FIELD_NAMING",
     "EXEMPLARS_PROFILE_SCHEMA_GRAMMAR",
+    "IMAGE_RULES",
     "SEAM_SEPARATORS",
     "assign_leftover_concepts_prompt",
     "classify_instructions_prompt",
@@ -79,5 +95,6 @@ __all__ = [
     "segment_syllabus_prompt",
     "synthesize_content_context_prompt",
     "tag_concepts_prompt",
+    "transcribe_image_prompt",
     "transcribe_page_prompt",
 ]

@@ -68,7 +68,20 @@ def test_the_marks_are_shared_and_not_translated():
     for module in SETS.values():
         assert module.CORRECT_ANSWER_MARK is prompts.CORRECT_ANSWER_MARK
         assert module.EMPTY_PAGE_MARK is prompts.EMPTY_PAGE_MARK
+        assert module.EMPTY_IMAGE_MARK is prompts.EMPTY_IMAGE_MARK
         assert module.SEAM_SEPARATORS is prompts.SEAM_SEPARATORS
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_an_image_is_read_by_the_same_rules_on_both_routes(code):
+    # A figure on a rendered page and a picture pulled out of a Word file are the same
+    # question, so the two prompts that meet one carry ONE block: a rule changed in one and
+    # not the other would read the same formula two ways depending on the file it came in.
+    module = prompts.of(code)
+    assert module.IMAGE_RULES.strip()
+    assert module.IMAGE_RULES in module.transcribe_page_prompt(1, 2)
+    assert module.IMAGE_RULES in module.transcribe_image_prompt(1, 2)
+    assert module.EMPTY_IMAGE_MARK in module.transcribe_image_prompt(1, 2)
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
@@ -184,9 +197,9 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
     assert len(RELATION_SCHEMA_ES) == len(RELATION_SCHEMA_EN) == 3
 
 
-# CLAUDE.md states it as a property of the whole system: «every prompt receives the
+# CLAUDE.md states it as a property of the whole system: "every prompt receives the
 # context's `prompt_block()` and is told to take register, level and language from it. That
-# is how they stay subject-agnostic while sounding native to the subject.» Two did not, and
+# is how they stay subject-agnostic while sounding native to the subject." Two did not, and
 # they were the two whose output came back in the wrong language — measured on a workspace
 # whose material and `locale.json` are both English, where the graph, the concept
 # descriptions and the bank all came out English and only the profile's `description` and
@@ -227,3 +240,120 @@ def test_no_context_renders_no_empty_heading(code):
     ):
         assert "CONTEXTO DOCENTE" not in rendered
         assert "TEACHING CONTEXT" not in rendered
+
+
+# THE DIFFICULTY LADDER ----------------------------------------------------------------------
+
+# The one field every modality carries. The prompt owns the engineering — what the rungs
+# mean is per modality — but the LADDER is shared, so what can be checked mechanically is
+# that each set declares one, that the two are the same shape, and that each prompt asks for
+# its OWN. A set naming the other's field would produce a profile no reader recognises.
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_each_set_declares_a_difficulty_field_that_could_be_a_field_name(code):
+    from variatio.instance.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
+
+    module = prompts.of(code)
+    assert module.DIFFICULTY_FIELD in DIFFICULTY_FIELDS, (
+        "a reader resolves the field by name and knows only these; adding one means adding "
+        "it to DIFFICULTY_FIELDS too"
+    )
+    assert ExemplarsProfile.NAME_RE.match(module.DIFFICULTY_FIELD)
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_ladder_is_three_rungs_of_plain_ascii(code):
+    levels = prompts.of(code).DIFFICULTY_LEVELS
+    assert len(levels) == 3, "three rungs is the measured shape; five stop being observable"
+    assert len(set(levels)) == 3
+    for level in levels:
+        assert level == level.lower() and level.isascii(), (
+            f"«{level}» is a stored value: an accent makes two builds disagree about one rung"
+        )
+
+
+def test_the_two_sets_agree_on_how_many_rungs_there_are():
+    # The criterion is per modality and the ladder is shared; a set with four rungs would
+    # make "advanced" mean something else depending on the language a workspace was built in.
+    sizes = {len(module.DIFFICULTY_LEVELS) for module in SETS.values()}
+    assert len(sizes) == 1
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_consolidation_asks_for_its_own_field_and_its_own_rungs(code):
+    module = prompts.of(code)
+    rendered = module.consolidate_exemplars_profile_prompt("x", 1)
+    assert module.DIFFICULTY_FIELD in rendered
+    for level in module.DIFFICULTY_LEVELS:
+        assert f'"{level}"' in rendered, f"the rung «{level}» is never spelled out"
+    for other in SETS.values():
+        if other.DIFFICULTY_FIELD != module.DIFFICULTY_FIELD:
+            assert other.DIFFICULTY_FIELD not in rendered, "a set must not ask for the other's"
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_repair_is_told_not_to_drop_it(code):
+    module = prompts.of(code)
+    rendered = module.repair_exemplars_profile_prompt("{}", "err")
+    assert module.DIFFICULTY_FIELD in rendered
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_fallbacks_are_prose_and_not_a_criterion(code):
+    # They exist for the field to be honest about having none, not to classify a bank in
+    # silence: the words the criterion would be graded on must not appear as if measured.
+    module = prompts.of(code)
+    assert module.DIFFICULTY_FALLBACK_DESCRIPTION.strip()
+    assert module.DIFFICULTY_FALLBACK_EXTRACTION.strip()
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_criterion_is_asked_for_in_the_shape_the_browser_splits(code):
+    """The rung markers the prompt legislates are the ones `lib/difficulty.ts` reads.
+
+    A person picks the rung of the exercise they are commissioning and the criterion is drawn
+    beside the option it describes, one clause each. That only works while the two agree on
+    the marker, so the prompt spells every rung as `"rung":` and the splitter looks for it.
+    """
+    module = prompts.of(code)
+    rendered = module.consolidate_exemplars_profile_prompt("x", 1)
+    for level in module.DIFFICULTY_LEVELS:
+        assert f"«{level}»:" in rendered, f"«{level}» is never shown in the shape asked for"
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_fallback_carries_the_same_markers_as_a_written_criterion(code):
+    # It says there is no criterion, and it still has to READ as one rung per line: it is
+    # what the form draws until somebody writes the real thing.
+    module = prompts.of(code)
+    for level in module.DIFFICULTY_LEVELS:
+        assert f"«{level}»:" in module.DIFFICULTY_FALLBACK_DESCRIPTION
+
+
+HEADINGS = {
+    "es": ("# TODAVÍA NO IMPARTIDO: PROHIBIDO", "# VIENE DESPUÉS DEL OBJETIVO: NO ES EL RETO"),
+    "en": ("# NOT YET TAUGHT: FORBIDDEN", "# COMES AFTER THE OBJECTIVE: NOT THE CHALLENGE"),
+}
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_closure_is_forbidden_only_when_a_curriculum_says_it_is_untaught(code):
+    """One list, two readings, and `checks.closure_rule` keeps the same condition."""
+    function = prompts.of(code).generate_content_prompt
+    kwargs = {
+        name: "x"
+        for name, parameter in inspect.signature(function).parameters.items()
+        if parameter.default is inspect.Parameter.empty
+    }
+    kwargs["already_generated"] = []
+    forbidden, later = HEADINGS[code]
+
+    with_curriculum = function(**{**kwargs, "excluded_concepts_block": "- Bucle for"})
+    assert forbidden in with_curriculum and later not in with_curriculum
+
+    without = function(**{**kwargs, "excluded_concepts_block": "- Bucle for", "curriculum_block": ""})
+    assert later in without and forbidden not in without
+
+    nothing_after = function(**{**kwargs, "excluded_concepts_block": "", "curriculum_block": ""})
+    assert forbidden not in nothing_after and later not in nothing_after

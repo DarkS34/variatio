@@ -4,12 +4,40 @@ The two blocks below are interpolated by more than one of the three calls, so th
 described in one place and the repair cannot legislate differently from the call it repairs.
 """
 
+# The difficulty field's name and its rungs, as DATA, because the prompt below interpolates
+# them and the builder writes them: a prose-only declaration is one the guarantee can drift
+# from. The name is English here and Spanish in `es/`, like every other field name.
+DIFFICULTY_FIELD = "difficulty_level"
+DIFFICULTY_LEVELS = ("basic", "intermediate", "advanced")
+
+# What is written when the model returns no usable criterion: the field exists, says so, and
+# says what has to be filled in. Never a made-up criterion — a criterion nobody wrote is one
+# nobody can check, and it would classify the whole bank silently.
+DIFFICULTY_FALLBACK_DESCRIPTION = (
+    "How demanding the exercise is. No criterion written yet. "
+    "«basic»: the simplest thing this course actually sets in this modality. "
+    "«intermediate»: the ordinary case. "
+    "«advanced»: the most demanding it ever sets. "
+    "Write on each rung its observable signals, an example and its border with the neighbour."
+)
+DIFFICULTY_FALLBACK_EXTRACTION = (
+    "If the document brings an explicit difficulty label, use that one. If it does not, "
+    "apply the criterion in `description` to the exercise's content. It is never left empty."
+)
+
+_LEVELS_ENUM = "[" + ", ".join(f'"{level}"' for level in DIFFICULTY_LEVELS) + "]"
+_LOW, _HIGH = DIFFICULTY_LEVELS[0], DIFFICULTY_LEVELS[-1]
+# The shape the criterion has to be written in, derived from the ladder rather than
+# typed out: it is what `lib/difficulty.ts` splits in order to show one rung at a time.
+_LEVELS_TEMPLATE = "  ".join(f"«{level}»: …" for level in DIFFICULTY_LEVELS)
+
+
 EXEMPLARS_PROFILE_FIELD_NAMING = """\
 - KEYS IN ENGLISH, ASCII ONLY (NON-NEGOTIABLE): the field names — the keys of the `fields` object — go in ENGLISH, in snake_case and in pure ASCII; each one must match `^[a-z][a-z0-9_]*$`. No accents, no spaces, no capitals, no hyphens: they become code identifiers.
 - CANONICAL VOCABULARY: the names have to be stable across different courses, so that a programming exercise and a physics exercise are described with the same keys. If a field plays one of these roles, use EXACTLY that name instead of inventing a synonym:
   · the main text that sets the student the task, the problem or the question → `statement`
   · the answer, resolution or expected result → `solution`
-  · the degree of difficulty or demand → `difficulty_level`
+  · the degree of difficulty or demand → `difficulty_level`, MANDATORY in every modality and with a section of its own below; do not declare it under another name and do not duplicate it
   · the title or short name of the exercise → `title`
   · the alternatives of a closed question → `options`
   · which of the alternatives is the correct one → `correct_answer`
@@ -130,6 +158,11 @@ def consolidate_exemplars_profile_prompt(
     `guidance.generation` is deliberately never asked for: the modality's rules carry the
     generation, and that field is the exception a person writes by hand for one field.
 
+    `difficulty_level` has a section of its own because it is the one field the answer may
+    not decide: the LADDER is fixed and shared by every modality, and only the CRITERION is
+    per-modality. See the Spanish set for what was measured; this half of the pair is
+    unmeasured, like the rest of the English prompts.
+
     It receives the subject's context like every other prompt in the system. It did not,
     and it is the only thing that separated it from the ones that come out right: measured
     on a workspace whose material and `locale.json` are both English, the graph, the concept
@@ -161,7 +194,8 @@ A single JSON object with EXACTLY these top-level keys:
           "schema": {{ "type": "string" }},
           "description": "...",
           "guidance": {{ "extraction": "..." }}
-        }}
+        }},
+        "{DIFFICULTY_FIELD}": {{ "...": "mandatory in every modality; see its section" }}
       }}
     }}
   }}
@@ -192,7 +226,7 @@ One field per ESSENTIAL piece of information that makes up an exercise of that m
 - LESS IS MORE: include the MINIMUM set of fields that fully captures an exercise. Each field has to earn its place: do NOT add speculative, redundant, derivable or merely anecdotal fields. At the same time, do NOT leave out anything essential to represent or write the exercise (at the very least, the one carrying the main semantic load). When in doubt between adding a marginal field and leaving it out, leave it out. The usual is 3-5 fields per modality.
 - DERIVABILITY TEST (apply it to EACH field before including it): if its value can be computed from the other fields without looking at the document again, it is NOT a field — it is deduced, and it does not belong. Discard in particular: flags that only indicate whether another field has a value or is empty (`is_solved`, `has_solution`: that is already said by `solution` being null); counters, lengths or sizes of another field; and fields whose value is a restatement of another. If in describing a field you need to mention another field to define it, that is a near-certain sign that it is derivable.
 - NO CONCEPTS AND NO TOPICS: do not declare concept, topic, subject or thematic-tag fields (`topics`, `concepts`, `keywords`…). Which curriculum concept each exercise practises is annotated downstream by the system against a knowledge graph, and such a field would overlap with that annotation. Whatever situates the course as a whole (subject, educational level, language) goes neither in `fields` nor anywhere else in this profile.
-- MINIMUM COVERAGE: the profile has to suffice to (a) represent the exercise, (b) retrieve it semantically and (c) write a new PARAMETERISED one. In practice that nearly always requires: the statement carrying the semantic load (the `primary_field`, mandatory); the expected solution, when the material brings it or admits it; and at least one CLASSIFYING field that can be pinned as a parameter when asking for a new exercise (difficulty, level…). If the sample does not label that classifying axis but it is deducible by observing the exercise, declare it anyway and define the criterion (see NULL POLICY).
+- MINIMUM COVERAGE: the profile has to suffice to (a) represent the exercise, (b) retrieve it semantically and (c) write a new PARAMETERISED one. In practice that nearly always requires: the statement carrying the semantic load (the `primary_field`, mandatory) and the expected solution, when the material brings it or admits it. The classifying axis is already covered: `{DIFFICULTY_FIELD}` is mandatory in every modality and has a section of its own — do not count it among these fields and do not declare a second level, grade or category field saying the same thing.
 
 For each field:
 - `schema`: the shape of the value.
@@ -215,11 +249,60 @@ Two signs that do NOT prove a copied field is always present:
 - The inventory not bringing a single exemplar without it. The inventory is a SAMPLE of fragments, not the whole corpus.
 - What the documents are called. A whole corpus of "solutions" files typically resolves the theory part and leaves the practical part's statements bare.
 
-## Fields DEDUCED by observing the exercise (the CLASSIFYING ones: level, category…)
-Here `null` IS THE LAST RESORT, for the opposite reason: their value is not to be found in the document, it is to be judged, and it can always be judged. The document not LABELLING it explicitly is NOT a reason to admit `null`: it is a reason to define a criterion that allows it to be DEDUCED from the content itself.
-- Do NOT declare it optional by default. If its value is deducible by observing the exercise, the field does NOT carry `null`.
-- Its `description` must include an INTERNAL CLASSIFICATION CRITERION particular to the course: enumerate each possible value together with the OBSERVABLE SIGNALS that identify it (which constructs, what complexity, what demand or what prior knowledge the exercise presupposes). The criterion must cover ALL the material, so that any exercise can be classified without exception.
-- Its `guidance.extraction` must say: if the document brings an explicit label, that one is used; if it does NOT, the criterion defined in `description` is applied to the exercise's content. NEVER "if there is no label, null".
+## Fields DEDUCED by observing the exercise (the CLASSIFYING ones)
+Here `null` IS THE LAST RESORT, for the opposite reason: their value is not to be found in the document, it is to be judged, and it can always be judged. The document not LABELLING it explicitly is NOT a reason to admit `null`: it is a reason to define a criterion that allows it to be DEDUCED from the content itself. Never declare `null` on a deducible field, and always write in its `description` the criterion it is deduced by.
+
+The only classifying field this profile always carries is `{DIFFICULTY_FIELD}`, and it is not yours to decide: it has a section of its own immediately after this one. Everything in this part applies to it first.
+
+# {DIFFICULTY_FIELD} — MANDATORY IN EVERY MODALITY, AND THE LADDER IS THE SAME IN ALL OF THEM
+Every modality carries a `{DIFFICULTY_FIELD}` field, without exception. It is not one of the «essential» fields you have just decided: it goes apart, it always goes, and it does not count towards the 3-5 of the previous section. It is the axis a later request turns («an easier one», «a more demanding one»), and the axis the whole bank is read and sorted along.
+
+## The ladder is not yours to choose: it is this one, and it is the same in every modality
+"schema": {{"enum": {_LEVELS_ENUM}}}
+
+Exactly those three values, written exactly like that: lowercase, no accents, in that order, not one more and not one fewer, and no `null`.
+- THREE RUNGS because the criterion has to classify ALL the exercises of the modality, leaving none out and with no arguable boundaries. With five, the boundary between two neighbours stops being observable and the classification becomes noise.
+- THE SAME THREE IN ALL OF THEM because exercises of every modality are read together, in one list and sorted by this field. If each modality invented its own ladder, «{_HIGH}» would stop meaning anything the moment two exercises of different modalities are compared.
+
+## What you DO write, and it is what matters: the criterion of THIS modality
+Between modalities the values do not change: what changes is what makes an exercise fall on each one. What makes writing a program from scratch demanding is not what makes choosing between four alternatives demanding. That criterion goes in the field's `description`, and it is written looking at THIS modality's exemplars.
+
+TWO READERS, AND THE SECOND ONE IS NEW. One is the extraction, which classifies every exemplar of the bank. The other is a PERSON: commissioning a new exercise, they see the rungs in a menu, read this text and pick one. To that reader «{_LOW} (recognition)» says nothing at all — what they need is to know WHAT THEY WILL GET if they press that rung. Write it for whoever chooses, and the extraction will classify well too.
+
+EXACT SHAPE of the `description`, in this order:
+1. ONE OPENING SENTENCE saying what the axis is in this modality: what exactly grows from one rung to the next.
+2. THE THREE RUNGS IN ORDER, each opened by its value between angle quotes and a colon, like this:
+   {_LEVELS_TEMPLATE}
+
+AND EVERY RUNG CARRIES THE THREE THINGS, in one or two consecutive sentences:
+   a) WHAT IT DEMANDS there, in observable signals: which constructs appear, how many steps have to be chained, how many prior pieces have to be combined, whether the answer is read off directly or has to be derived, whether there is a single route or a choice between several.
+   b) A CONCRETE EXAMPLE taken from THIS modality's exemplars in the inventory, in brackets and in a few words.
+   c) WHERE THE BORDER IS with the neighbouring rung: what is no longer asked for there, or which signal is the one that moves it up.
+
+Observable means checkable BY LOOKING at the exercise. NOT observable: «it is hard for a beginner», «it requires maturity», «it demands critical thinking» — they cannot be checked and they classify nothing. And a bare taxonomy label — «recognition», «application», «analysis» — will not do either: it fits any course on earth equally, so name the SIGNAL, never the category.
+
+THREE WORDS PER RUNG ARE NOT ENOUGH. If the whole text fits on one line it carries neither example nor border, and then it neither classifies nor lets anybody choose.
+
+Five rules, and all five are broken often:
+1. THE AXIS IS HOW MUCH IT ASKS, NOT WHAT IT IS ABOUT NOR HOW LONG IT IS. A long statement is not a hard exercise, and one from the last unit is not hard for being at the end. What each exercise is ABOUT is recorded elsewhere, against the syllabus; here only the demand is measured.
+2. THE LADDER IS STRETCHED OVER THIS MATERIAL, not over the discipline. «{_LOW}» is the simplest thing this course ACTUALLY sets in this modality and «{_HIGH}» the most demanding it ever sets, not the absolute floor and ceiling of the subject. A criterion copied from another course's syllabus leaves all the material of an introductory course on «{_LOW}», and then the field says nothing at all.
+3. RUN THE TEST BEFORE WRITING IT. Apply your criterion to the exemplars the inventory brings for THIS modality. If they all fall on the same rung, the criterion does not separate: rewrite it with finer signals until it spreads them.
+4. NO GAPS AND NO OVERLAPS. Any exercise of the modality has to fall on one and only one rung. If two can fit at once, say so in the criterion itself and say which one wins (the natural one: the higher wins as soon as its signal appears).
+5. COMPARABLE ACROSS MODALITIES. Even though the criterion is its own, the rung reads the same in all of them: «{_LOW}» is always the way into its kind of exercise and «{_HIGH}» always the most demanding of its kind. Write it so that reading holds.
+
+## The field's other two keys
+- `guidance.extraction`: if the document brings an explicit difficulty label, that one is used; if it does not — which is the normal case — the criterion in `description` is applied to the exercise's content. NEVER «if there is no label, null»: this value is not looked for in the document, it is judged, and it can always be judged.
+- `decided_by`: `"user"`, always and in every modality. It is the field whoever commissions a new exercise pins.
+
+## How it ends up
+"{DIFFICULTY_FIELD}": {{
+  "schema": {{"enum": {_LEVELS_ENUM}}},
+  "description": "<opening sentence with the axis; then the three rungs in order, each with its observable signals, an example from THIS modality and its border>",
+  "guidance": {{"extraction": "<explicit label if there is one; if not, the criterion in description>"}},
+  "decided_by": "user"
+}}
+
+Two things you NEVER do with it: it NEVER goes into `embed_fields` — it carries no concept and adds the same noise to every exercise — and it is NEVER the `primary_field`.
 
 # general_generation_rules — HOW THIS COURSE WRITES (THE PART THAT MATTERS MOST)
 It is the ONLY thing the profile tells the generator about how an exercise of this modality is written. There is no second chance field by field here: whatever is not in these rules, the generator does not know. Give it more attention than any other part of the profile.
@@ -251,7 +334,7 @@ The list of fields that, TOGETHER, are read to decide which curriculum concept t
 - The field names (keys of `fields`) and the keys of `item_types` ALWAYS in English, snake_case, ASCII only. The rest of the human-facing text (`label`, `description`, `guidance`, `general_generation_rules`) in the language of the material.
 - Include only the ESSENTIAL fields: less is more, but without leaving out anything indispensable. None derivable from another. `null` on every field copied from the document that may be missing in some exercise, and on no deducible one.
 - Every text value on ONE SINGLE LINE: no real line breaks, no backticks and no code blocks inside the strings. Escape line breaks (`\\n`) and inner quotes (`\\"`).
-- BEFORE ANSWERING, check the seven things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`; (7) every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it.
+- BEFORE ANSWERING, check the eight things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`; (7) every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it; (8) EVERY modality declares `{DIFFICULTY_FIELD}` with exactly `{_LEVELS_ENUM}`, with `decided_by` `"user"`, with a criterion of its own in its `description` — an opening sentence and the three rungs each opened by its value between « » and a colon, each with its example and its border — and outside `embed_fields`.
 
 <<<INVENTORY>>>
 {findings}
@@ -288,6 +371,7 @@ The following EXEMPLARS PROFILE parses as valid JSON but does not satisfy the re
 - Exactly one top-level key: `item_types`. Nothing else at that level. If the profile brings a `content_context`, LEAVE IT where it is: it comes from an earlier version and another step migrates it; do not delete it and do not edit it.
 - `item_types` is a NON-EMPTY object. Each key matches `^[a-z][a-z0-9_]*$` and its value declares at least `primary_field` and `fields`, and optionally `label`, `description` and `general_generation_rules`.
 - Each modality's `primary_field` must be one of the keys of ITS OWN `fields`.
+- Do NOT delete `{DIFFICULTY_FIELD}` from any modality and do not change its name, its `enum` values or its `decided_by`. It is mandatory in all of them and its ladder is common to all; if one is missing it, add it by copying the shape from another and leave its `description` empty.
 - `embed_fields`, if present, is a non-empty list without repetitions that STARTS with that modality's `primary_field` and names only keys from ITS OWN `fields`.
 - Return ONE SINGLE JSON object. Nothing before, nothing after. No backticks, no comments, no explanations.
 

@@ -98,67 +98,6 @@ Un único objeto JSON con esta forma exacta:
 JSON:"""
 
 
-def _relations_block(relations: dict[str, list[str]]) -> str:
-    """Render the concept's neighbours in the graph, or nothing when it has none."""
-    with_neighbors = {v: ns for v, ns in relations.items() if ns}
-    if not with_neighbors:
-        return ""
-    lines = "\n".join(
-        f"- {verbose}: {', '.join(neighbors)}."
-        for verbose, neighbors in with_neighbors.items()
-    )
-    return f"\n# RELACIONES EN EL GRAFO DEL CURRÍCULO\n{lines}\n"
-
-
-def _siblings_block(siblings: dict[str, str]) -> str:
-    """Render the block's other concepts, the ones this description competes against.
-
-    They are shown so the description does not overlap them, never as a model of style: one
-    that already breaks the form rules must not be imitated.
-    """
-    if not siblings:
-        return ""
-    sibling_lines = []
-    for name, text in siblings.items():
-        written = " ".join((text or "").split())
-        sibling_lines.append(f"- {name}: {written}" if written else f"- {name}")
-    return (
-        "\n# OTROS CONCEPTOS DEL MISMO BLOQUE TEMÁTICO\n"
-        "Tu descripción compite con estas: se comparan todas contra el mismo ejercicio y solo una debe encajar. "
-        "Las que ya están escritas se muestran con su texto.\n"
-        "Están aquí SOLO para que no te solapes con ellas. No copies su estructura, su voz ni sus fórmulas: "
-        "si alguna incumple las reglas de forma de abajo, no la imites — las reglas mandan sobre el ejemplo.\n"
-        + "\n".join(sibling_lines)
-        + "\n"
-    )
-
-
-def _passages_block(passages: list[dict] | None, name_documents: bool) -> str:
-    """Render the corpus paragraphs this concept was extracted from, cited in place.
-
-    Without them the model describes from memory and drags in the vocabulary of its own
-    training. The document name is written only when the corpus holds more than one: with a
-    single document it distinguishes nothing and only spends context.
-    """
-    if not passages:
-        return ""
-    cited = []
-    for entry in passages:
-        place = entry.get("location") or ""
-        if name_documents:
-            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
-        cited.append((f"[{place}]\n" if place else "") + (entry.get("text") or "").strip())
-    return (
-        "\n# DE DÓNDE SALE ESTE CONCEPTO (MATERIAL DE TEORÍA, LITERAL)\n"
-        "Los fragmentos del temario en los que aparece. Son la única prueba de qué significa este concepto EN ESTA ASIGNATURA:\n"
-        "- Toma de aquí el vocabulario, la notación y el nivel; lo que no esté aquí ni se deduzca del contexto docente, no lo inventes.\n"
-        "- Si tu idea del concepto no coincide con lo que dice el material, manda el material.\n"
-        "- No los cites ni los resumas: describe la TAREA que se practica con esto.\n\n"
-        + "\n\n---\n\n".join(cited)
-        + "\n"
-    )
-
-
 def concept_description_prompt(
     concept: str,
     domain: str,
@@ -220,3 +159,64 @@ La descripción enuncia la tarea EN IMPERSONAL, empezando por un verbo en infini
 Un único objeto JSON: {{"description": "…"}}. Nada antes, nada después.
 
 JSON:"""
+
+
+def _relations_block(relations: dict[str, list[str]]) -> str:
+    """Render the concept's neighbours in the graph, or nothing when it has none."""
+    with_neighbors = {v: ns for v, ns in relations.items() if ns}
+    if not with_neighbors:
+        return ""
+    lines = "\n".join(
+        f"- {verbose}: {', '.join(neighbors)}."
+        for verbose, neighbors in with_neighbors.items()
+    )
+    return f"\n# RELACIONES EN EL GRAFO DEL CURRÍCULO\n{lines}\n"
+
+
+def _siblings_block(siblings: dict[str, str]) -> str:
+    """Render the block's other concepts, the ones this description competes against.
+
+    They are shown so the description does not overlap them, never as a model of style: one
+    that already breaks the form rules must not be imitated.
+    """
+    if not siblings:
+        return ""
+    sibling_lines = []
+    for name, text in siblings.items():
+        written = " ".join((text or "").split())
+        sibling_lines.append(f"- {name}: {written}" if written else f"- {name}")
+    return (
+        "\n# OTROS CONCEPTOS DEL MISMO BLOQUE TEMÁTICO\n"
+        "Tu descripción compite con estas: se comparan todas contra el mismo ejercicio y solo una debe encajar. "
+        "Las que ya están escritas se muestran con su texto.\n"
+        "Están aquí SOLO para que no te solapes con ellas. No copies su estructura, su voz ni sus fórmulas: "
+        "si alguna incumple las reglas de forma de abajo, no la imites — las reglas mandan sobre el ejemplo.\n"
+        + "\n".join(sibling_lines)
+        + "\n"
+    )
+
+
+def _passages_block(passages: list[dict] | None, name_documents: bool) -> str:
+    """Render the corpus paragraphs this concept was extracted from, cited in place.
+
+    Without them the model describes from memory and drags in the vocabulary of its own
+    training. The document name is written only when the corpus holds more than one: with a
+    single document it distinguishes nothing and only spends context.
+    """
+    if not passages:
+        return ""
+    cited = []
+    for entry in passages:
+        place = entry.get("location") or ""
+        if name_documents:
+            place = " · ".join(p for p in (entry.get("document") or "", place) if p)
+        cited.append((f"[{place}]\n" if place else "") + (entry.get("text") or "").strip())
+    return (
+        "\n# DE DÓNDE SALE ESTE CONCEPTO (MATERIAL DE TEORÍA, LITERAL)\n"
+        "Los fragmentos del temario en los que aparece. Son la única prueba de qué significa este concepto EN ESTA ASIGNATURA:\n"
+        "- Toma de aquí el vocabulario, la notación y el nivel; lo que no esté aquí ni se deduzca del contexto docente, no lo inventes.\n"
+        "- Si tu idea del concepto no coincide con lo que dice el material, manda el material.\n"
+        "- No los cites ni los resumas: describe la TAREA que se practica con esto.\n\n"
+        + "\n\n---\n\n".join(cited)
+        + "\n"
+    )

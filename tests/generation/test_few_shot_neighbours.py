@@ -1,4 +1,4 @@
-from variatio.variatio import NEIGHBOUR, VariantGenerator, build_few_shot_block
+from variatio.runtime.generator import NEIGHBOUR, VariantGenerator, build_few_shot_block
 
 from ..conftest import ES
 

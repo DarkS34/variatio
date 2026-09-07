@@ -23,12 +23,9 @@ def sources() -> dict[str, str]:
     return dict(_sources)
 
 
-def load() -> None:
-    """Resolve every setting from the registry, `config.json` and the environment."""
-    global _values, _sources
-    _values, _sources = store.resolve(
-        list(REGISTRY), store.read_file(store.CONFIG_PATH), dict(os.environ)
-    )
+# The keys whose value is a map, so `read_file` stops walking at them rather than turning
+# one setting into one undeclared key per entry. Computed once: the registry is a constant.
+_MAP_KEYS = store.map_keys(list(REGISTRY))
 
 
 def apply(namespace: dict) -> None:
@@ -43,12 +40,65 @@ def apply(namespace: dict) -> None:
     _write(namespace)
 
 
-def _write(namespace: dict) -> None:
-    """Write the named settings and everything derived into a namespace."""
-    for setting in REGISTRY:
-        if setting.name:
-            namespace[setting.name] = _values[setting.key]
-    namespace.update(derived.derive(_values))
+def reload() -> set[Impact]:
+    """Re-read the file and the environment, returning what that obliges."""
+    before = _reload_keeping_previous()
+    changed = {key for key in _values if _values[key] != before.get(key)}
+    logger.info(f"[config] Reloaded: {len(changed)} setting(s) changed")
+    return _impacts(changed)
+
+
+def update(patch: dict[str, object]) -> set[Impact]:
+    """Save a patch and re-resolve, returning what the change obliges the caller to redo.
+
+    The engine-scoped keys are written into the profile of the engine the patch leaves
+    active, and only there: the other profiles travel through the write untouched.
+    """
+    coerced = store.validate_patch(list(REGISTRY), patch)
+    flat = _read_file()
+    profiles = _stored_profiles(flat, active_engine())
+    target = str(coerced.get(store.ENGINE_KEY) or active_engine() or "") or None
+    scoped = {key: value for key, value in coerced.items() if BY_KEY[key].scope == "engine"}
+    if scoped and target:
+        profiles.setdefault(target, {}).update(scoped)
+    store.write_file(store.CONFIG_PATH, list(REGISTRY), _globals_after(coerced), profiles)
+    changed = {key for key, value in coerced.items() if _values.get(key) != value}
+    before = _reload_keeping_previous()
+    changed |= {key for key in _values if _values[key] != before.get(key)}
+    for key in sorted(changed):
+        logger.info(f"[config] «{key}» changed")
+    return _impacts(changed)
+
+
+def _globals_after(coerced: dict[str, object]) -> dict[str, object]:
+    """Return the global settings as they stand once the patch is applied."""
+    merged = {key: value for key, value in _values.items() if BY_KEY[key].scope == "global"}
+    merged.update(
+        {key: value for key, value in coerced.items() if BY_KEY[key].scope == "global"}
+    )
+    return merged
+
+
+def reset(keys: list[str]) -> set[Impact]:
+    """Remove keys from `config.json`, which is the only way a row reads "por defecto" again."""
+    _refuse_unresettable(keys)
+    engine = active_engine()
+    flat = _read_file()
+    profiles = _stored_profiles(flat, engine)
+    for key in keys:
+        if BY_KEY[key].scope == "engine" and engine:
+            profiles.get(engine, {}).pop(key, None)
+    kept = {
+        key: value
+        for key, value in flat.items()
+        if key not in keys and key in BY_KEY and BY_KEY[key].scope == "global"
+    }
+    store.write_file(store.CONFIG_PATH, list(REGISTRY), kept, profiles)
+    before = _reload_keeping_previous()
+    changed = {key for key in keys if _values.get(key) != before.get(key)}
+    for key in sorted(changed):
+        logger.info(f"[config] «{key}» back to its default")
+    return _impacts(changed)
 
 
 def _reload_keeping_previous() -> dict[str, object]:
@@ -60,23 +110,30 @@ def _reload_keeping_previous() -> dict[str, object]:
     return before
 
 
+def load() -> None:
+    """Resolve every setting from the registry, `config.json` and the environment."""
+    global _values, _sources
+    _values, _sources = store.resolve(
+        list(REGISTRY), _read_file(), dict(os.environ)
+    )
+
+
+def _read_file() -> dict[str, object]:
+    """Read `config.json` knowing which of its objects are values and not namespaces."""
+    return store.read_file(store.CONFIG_PATH, _MAP_KEYS)
+
+
+def _write(namespace: dict) -> None:
+    """Write the named settings and everything derived into a namespace."""
+    for setting in REGISTRY:
+        if setting.name:
+            namespace[setting.name] = _values[setting.key]
+    namespace.update(derived.derive(_values))
+
+
 def _impacts(changed: set[str]) -> set[Impact]:
     """Return what the changed settings oblige the caller to invalidate."""
     return {BY_KEY[key].impact for key in changed} - {Impact.NONE, Impact.LOCKED}
-
-
-def reload() -> set[Impact]:
-    """Re-read the file and the environment, returning what that obliges."""
-    before = _reload_keeping_previous()
-    changed = {key for key in _values if _values[key] != before.get(key)}
-    logger.info(f"[config] Reloaded: {len(changed)} setting(s) changed")
-    return _impacts(changed)
-
-
-def active_engine() -> str | None:
-    """Return the engine whose profile the engine-scoped settings resolve from."""
-    value = _values.get(store.ENGINE_KEY)
-    return str(value) if value else None
 
 
 def _stored_profiles(flat: dict[str, object], engine: str | None) -> dict[str, dict[str, object]]:
@@ -93,37 +150,6 @@ def _stored_profiles(flat: dict[str, object], engine: str | None) -> dict[str, d
     return profiles
 
 
-def _globals_after(coerced: dict[str, object]) -> dict[str, object]:
-    """Return the global settings as they stand once the patch is applied."""
-    merged = {key: value for key, value in _values.items() if BY_KEY[key].scope == "global"}
-    merged.update(
-        {key: value for key, value in coerced.items() if BY_KEY[key].scope == "global"}
-    )
-    return merged
-
-
-def update(patch: dict[str, object]) -> set[Impact]:
-    """Save a patch and re-resolve, returning what the change obliges the caller to redo.
-
-    The engine-scoped keys are written into the profile of the engine the patch leaves
-    active, and only there: the other profiles travel through the write untouched.
-    """
-    coerced = store.validate_patch(list(REGISTRY), patch)
-    flat = store.read_file(store.CONFIG_PATH)
-    profiles = _stored_profiles(flat, active_engine())
-    target = str(coerced.get(store.ENGINE_KEY) or active_engine() or "") or None
-    scoped = {key: value for key, value in coerced.items() if BY_KEY[key].scope == "engine"}
-    if scoped and target:
-        profiles.setdefault(target, {}).update(scoped)
-    store.write_file(store.CONFIG_PATH, list(REGISTRY), _globals_after(coerced), profiles)
-    changed = {key for key, value in coerced.items() if _values.get(key) != value}
-    before = _reload_keeping_previous()
-    changed |= {key for key in _values if _values[key] != before.get(key)}
-    for key in sorted(changed):
-        logger.info(f"[config] «{key}» changed")
-    return _impacts(changed)
-
-
 def _refuse_unresettable(keys: list[str]) -> None:
     """Raise SettingError when a key is not declared, or cannot be changed hot."""
     unknown = [key for key in keys if key not in BY_KEY]
@@ -132,28 +158,6 @@ def _refuse_unresettable(keys: list[str]) -> None:
     locked = [key for key in keys if not BY_KEY[key].editable]
     if locked:
         raise SettingError(f"No se pueden cambiar en caliente: {', '.join(locked)}")
-
-
-def reset(keys: list[str]) -> set[Impact]:
-    """Remove keys from `config.json`, which is the only way a row reads «por defecto» again."""
-    _refuse_unresettable(keys)
-    engine = active_engine()
-    flat = store.read_file(store.CONFIG_PATH)
-    profiles = _stored_profiles(flat, engine)
-    for key in keys:
-        if BY_KEY[key].scope == "engine" and engine:
-            profiles.get(engine, {}).pop(key, None)
-    kept = {
-        key: value
-        for key, value in flat.items()
-        if key not in keys and key in BY_KEY and BY_KEY[key].scope == "global"
-    }
-    store.write_file(store.CONFIG_PATH, list(REGISTRY), kept, profiles)
-    before = _reload_keeping_previous()
-    changed = {key for key in keys if _values.get(key) != before.get(key)}
-    for key in sorted(changed):
-        logger.info(f"[config] «{key}» back to its default")
-    return _impacts(changed)
 
 
 def snapshot() -> list[dict]:
@@ -187,12 +191,19 @@ def snapshot() -> list[dict]:
     return out
 
 
+def active_engine() -> str | None:
+    """Return the engine whose profile the engine-scoped settings resolve from."""
+    value = _values.get(store.ENGINE_KEY)
+    return str(value) if value else None
+
+
 def pipeline() -> list[dict]:
     """Serialise the reasoning pipeline: one lane per column, one phase per model call."""
     return [
         {
             "key": lane.key,
             "label": lane.label,
+            "shared": lane.shared,
             "phases": [
                 {
                     "key": phase.key,

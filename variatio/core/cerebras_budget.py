@@ -153,7 +153,7 @@ class Budget:
         A call needing more than a window's WHOLE ceiling can never fit, and is refused at
         once: emptying the window restores a ceiling that is already too small. Reachable
         in practice — a 131 072-token context against 30 000 tokens a minute — and without
-        the guard `_relief` finds nothing to age out, reports relief «now» and lets the
+        the guard `_relief` finds nothing to age out, reports relief "now" and lets the
         request through to a 429 it repeats for ever.
         """
         now = self._clock()
@@ -297,14 +297,6 @@ class Budget:
                 _waiting(state, claim, self._clock() + waiting)
             return claim
 
-    def finish(self, claim: Claim | None = None) -> None:
-        """Take a call out of the flight list. With no claim, take them all out."""
-        with self._transaction() as state:
-            if claim is None:
-                state["inflight"] = []
-            else:
-                _land(state, claim)
-
     def _announce(self, state: dict, model: str, phase: str | None) -> Claim:
         """Say somebody is trying, which is what the panel draws while a call is held back.
 
@@ -323,6 +315,14 @@ class Budget:
             }
         )
         return Claim(id=seq, model=model, phase=phase)
+
+    def finish(self, claim: Claim | None = None) -> None:
+        """Take a call out of the flight list. With no claim, take them all out."""
+        with self._transaction() as state:
+            if claim is None:
+                state["inflight"] = []
+            else:
+                _land(state, claim)
 
     def _book(self, state: dict, claim: Claim, estimated_tokens: int) -> None:
         """Spend the window at the estimate, under the transaction that found the room."""
@@ -349,7 +349,7 @@ class Budget:
         """What the panel draws: the meters per model and per window, and what is in flight.
 
         One flight is reported, and a call being HELD is the one worth drawing —
-        «esperando presupuesto» is the state somebody can act on, and with several jobs on
+        "esperando presupuesto" is the state somebody can act on, and with several jobs on
         the lane it is not always the oldest. The count says how many more there are.
         """
         with self._lock, self._flock():

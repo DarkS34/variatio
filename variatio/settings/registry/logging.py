@@ -1,4 +1,4 @@
-"""The «Registro» settings: the log level and the third-party loggers that are silenced."""
+"""The "Registro" settings: the log level and the third-party logger that is silenced."""
 
 from ..types import Impact, Setting
 
@@ -13,17 +13,21 @@ o un grafo de 350 conceptos lo desbordarían. VARIATIO_LOG_LEVEL=DEBUG lo devuel
 Cambiarlo en caliente afecta a los sumideros que lo releen; el nivel con el que arrancó
 el proceso no se puede deshacer sin reiniciar."""),
     Setting(key="logging.noisy_loggers", name="NOISY_LOGGERS", kind="list[str]",
-            default=["docling", "docling_core", "docling_ibm_models", "PIL"],
+            default=["docling"],
             group="Registro", impact=Impact.LOCKED, editable=False,
-            doc="""`variatio/__init__.py` lo lee por nombre en tiempo de importación
-(`from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES`) para configurar
-loguru una sola vez. Reescribir el atributo después no reconfigura nada, así que
-ofrecerlo como editable en caliente sería una mentira que la pantalla contaría."""),
-    Setting(key="logging.noisy_warning_modules", name="NOISY_WARNING_MODULES",
-            kind="list[str]", default=[r"docling.*", r"PIL.*"],
-            group="Registro", impact=Impact.LOCKED, editable=False,
-            doc="""`variatio/__init__.py` lo lee por nombre en tiempo de importación
-(`from .config import LOG_LEVEL, NOISY_LOGGERS, NOISY_WARNING_MODULES`) para configurar
-loguru una sola vez. Reescribir el atributo después no reconfigura nada, así que
-ofrecerlo como editable en caliente sería una mentira que la pantalla contaría."""),
+            doc="""`variatio/__init__.py` lo lee por nombre en tiempo de importación para configurar loguru una
+sola vez. Reescribir el atributo después no reconfigura nada, así que ofrecerlo como editable
+en caliente sería una mentira que la pantalla contaría.
+
+Solo `docling`, y está medido: sobre los 22 documentos Office de la instalación, por la ruta
+real y con un handler espía en la raíz, es el único que emite algo que llegue a imprimirse —
+27 WARNING de `docling.backend.msword_backend` («image cannot be loaded by Pillow», los
+logos de cabecera que el markdown no lleva). `docling_core` y `docling_ibm_models` no
+emiten nada en ningún nivel y `PIL` solo DEBUG. Como nadie configura un handler en la raíz,
+lo único que se imprime es lo que recoge `logging.lastResort`, de WARNING para arriba:
+silenciar INFO o DEBUG no ahorra una línea.
+
+Lo que sí ahorra: `build_process.py` funde stderr en stdout y el padre reemite con
+`logger.info` toda línea sin marcador, así que sin esto esos avisos acaban en
+`logs/<slug>/jobs.log` de cada relectura."""),
 ]

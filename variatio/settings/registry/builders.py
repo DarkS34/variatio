@@ -1,4 +1,4 @@
-"""The «Constructores» settings: transcription, chunking and each builder's own knobs."""
+"""The "Constructores" settings: transcription, chunking and each builder's own knobs."""
 
 from ..types import Impact, Setting
 
@@ -16,9 +16,10 @@ de `raw/`. Docling lee estos PDF como texto y pierde tres cosas a la vez: separa
 de código de la pregunta que los cita, aplana sus saltos de línea y deja caer el color que
 marca la opción correcta. Renderizar la página y leerla como imagen recupera las tres.
 
-Desde el 2026-08-27, por petición explícita del usuario, el corpus del grafo va por esta
-misma ruta: los dos slots se transcriben con el mismo motor y el mismo algoritmo, y a
-Docling solo le queda el `.docx`, que no tiene página que renderizar.""",
+El corpus del grafo va por esta misma ruta: los dos slots se transcriben con el mismo motor y el mismo algoritmo, y a
+Docling le quedan el `.docx` y el `.pptx`, que no tienen página que renderizar — sus
+imágenes se leen aparte, una llamada por imagen, con el mismo modelo y las mismas reglas.
+No se renderizan, así que esta resolución no las afecta.""",
     ),
     Setting(
         key="builders.transcribe_temperature",
@@ -35,7 +36,7 @@ en silencio lo que pide el ejercicio. Fijada a 0 por eso.
 
 Sigue siendo una constante propia en vez de `TEMPERATURE_DETERMINISTIC`, aunque tenga el
 mismo valor y por la misma razón: esta forma parte de la huella de la caché de páginas
-(`_source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
+(`source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
 todos los corpus. Unificarlas haría que esa consecuencia siguiera a una edición hecha
 pensando en otra cosa.""",
     ),
@@ -51,6 +52,33 @@ pensando en otra cosa.""",
 motor antes de que el constructor renuncie a esa página. Cuando renuncia deja en la caché
 un marcador de fallo, no un hueco: una página perdida son ejercicios perdidos, y algo con
 lo que tropezar es mejor que una página que parece vacía.""",
+    ),
+    Setting(
+        key="builders.transcribe_max_output_tokens",
+        name="TRANSCRIBE_MAX_OUTPUT_TOKENS",
+        kind="int",
+        default=4096,
+        group="Constructores",
+        impact=Impact.NONE,
+        minimum=256,
+        doc="""Techo de tokens de SALIDA de la llamada que transcribe una página o una imagen. Sin él el
+modelo dispone de todo su presupuesto, y lo gasta: la línea de puntos donde el alumno
+escribe su nombre («Nombre: ____») se transcribe como una racha de `\\_` que el modelo no
+sabe dónde parar, y una página así consume el tope entero del motor — veinte veces el coste
+y sesenta veces el tiempo de una página real, con la basura pasando entera al perfil y al
+banco.
+
+El valor sale de la medición y no del gusto: de las 537 páginas PDF legítimas de las tres
+asignaturas de referencia la más larga son 6.871 caracteres (~1.900 tokens), y en
+`compiladores` el p99 son 739 y la mayor sana 1.397 — entre 1.397 y 40.960 no hay ni una.
+4.096 deja 2,1× de margen sobre la peor página real y corta la desbocada al 10 % de su
+coste. Una respuesta que llega al techo se marca como PÁGINA FALLIDA (`FAILED_PAGE_PREFIXES`),
+no se guarda truncada: una página cortada en silencio es la pérdida que este proyecto no
+acepta, y una marcada sale en rojo en «Apuntes y ejercicios», donde se corrige a mano o se
+sube este valor si de verdad era una página larguísima. No se reintenta, porque a
+temperatura 0 la misma imagen produce la misma racha.
+
+No forma parte de la huella de la caché: subirlo o bajarlo no vuelve a transcribir nada.""",
     ),
     Setting(
         key="builders.transcribe_seam_chars",
@@ -74,14 +102,18 @@ costuras.""",
         key="builders.transcribe_prompt_version",
         name="TRANSCRIBE_PROMPT_VERSION",
         kind="int",
-        default=2,
+        default=4,
         group="Constructores",
         impact=Impact.LOCKED,
         editable=False,
         minimum=1,
-        doc="""Súbelo al cambiar transcribe_page_prompt: forma parte de la huella de la caché de páginas.
+        doc="""Súbelo al cambiar transcribe_page_prompt o transcribe_image_prompt: forma parte de la huella
+de la caché de páginas y de la de imágenes, y subirlo caduca las dos — o sea, vuelve a leer
+cada página PDF de cada asignatura.
 
-Lo sube quien edita el prompt, no quien mira una pantalla.""",
+Lo sube quien edita el prompt, no quien mira una pantalla. OJO: `config.json` guarda este
+valor como cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo
+también en el fichero de la instalación no caduca nada.""",
     ),
     Setting(
         key="builders.exemplars_ocr",

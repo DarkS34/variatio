@@ -29,15 +29,35 @@ def nest(flat: dict[str, object]) -> dict:
     return out
 
 
-def _flatten(node: object, prefix: str = "") -> dict[str, object]:
+def map_keys(settings: list[Setting]) -> frozenset[str]:
+    """Return the keys whose value IS a map, so the walk down the file stops at them.
+
+    A setting shaped like `{"gemma-4-31b": "high"}` is indistinguishable from a namespace
+    once it is on disk, and flattening it turns one declared key into as many undeclared
+    ones as it has entries — the setting then reads as absent and every entry warns.
+    """
+    return frozenset(setting.key for setting in settings if setting.kind.startswith("dict["))
+
+
+def _flatten(
+    node: object, prefix: str = "", maps: frozenset[str] = frozenset()
+) -> dict[str, object]:
     """Turn a nested object back into the dotted keys the registry declares."""
-    if not isinstance(node, dict):
+    if not isinstance(node, dict) or _is_map(prefix, maps):
         return {prefix: node}
     out: dict[str, object] = {}
     for key, value in node.items():
         child = f"{prefix}.{key}" if prefix else str(key)
-        out.update(_flatten(value, child))
+        out.update(_flatten(value, child, maps))
     return out
+
+
+def _is_map(prefix: str, maps: frozenset[str]) -> bool:
+    """Whether this dotted key names a map setting, inside a profile or at the top level."""
+    if prefix in maps:
+        return True
+    parts = prefix.split(".", 2)
+    return len(parts) == 3 and parts[0] == PROFILES_KEY and parts[2] in maps
 
 
 # The only place a setting answers to an old name: a file predating a rename must not read
@@ -49,27 +69,7 @@ LEGACY_KEYS = {
 }
 
 
-def _current_key(key: str) -> str:
-    """Return the registry's name for a key, bare or inside `profiles.<engine>.…`."""
-    for old, new in LEGACY_KEYS.items():
-        if key == old:
-            return new
-        if key.endswith(f".{old}"):
-            return f"{key[: -len(old)]}{new}"
-    return key
-
-
-def _rename_legacy(flat: dict[str, object]) -> dict[str, object]:
-    """Re-key any legacy name onto its current one; a file carrying both keeps the new."""
-    out = {key: value for key, value in flat.items() if _current_key(key) == key}
-    for key, value in flat.items():
-        current = _current_key(key)
-        if current != key and current not in out:
-            out[current] = value
-    return out
-
-
-def read_file(path: str | Path) -> dict[str, object]:
+def read_file(path: str | Path, maps: frozenset[str] = frozenset()) -> dict[str, object]:
     """Read `config.json` into flat keys; an unreadable or malformed file is no file."""
     path = Path(path)
     if not path.is_file():
@@ -82,13 +82,64 @@ def read_file(path: str | Path) -> dict[str, object]:
     if not isinstance(raw, dict):
         logger.error(f"[config] '{path}' does not hold an object")
         return {}
-    return _rename_legacy(_flatten(raw))
+    return _rename_legacy(_flatten(raw, maps=maps))
+
+
+def _rename_legacy(flat: dict[str, object]) -> dict[str, object]:
+    """Re-key any legacy name onto its current one; a file carrying both keeps the new."""
+    out = {key: value for key, value in flat.items() if _current_key(key) == key}
+    for key, value in flat.items():
+        current = _current_key(key)
+        if current != key and current not in out:
+            out[current] = value
+    return out
+
+
+def _current_key(key: str) -> str:
+    """Return the registry's name for a key, bare or inside `profiles.<engine>.…`."""
+    for old, new in LEGACY_KEYS.items():
+        if key == old:
+            return new
+        if key.endswith(f".{old}"):
+            return f"{key[: -len(old)]}{new}"
+    return key
 
 
 ENGINE_KEY = "engine.name"
 PROFILES_KEY = "profiles"
 
 _MISSING = object()
+
+
+def profiles_in(file_values: dict[str, object]) -> dict[str, dict[str, object]]:
+    """Return the stored `profiles.<engine>` sections, keyed by engine."""
+    out: dict[str, dict[str, object]] = {}
+    for key, value in file_values.items():
+        if not key.startswith(f"{PROFILES_KEY}."):
+            continue
+        parts = key.split(".", 2)
+        if len(parts) < 3:
+            continue
+        out.setdefault(parts[1], {})[parts[2]] = value
+    return out
+
+
+def resolve(
+    settings: list[Setting], file_values: dict[str, object], environ: dict[str, str]
+) -> tuple[dict[str, object], dict[str, str]]:
+    """Resolve every setting, returning its value and the layer that supplied it."""
+    values: dict[str, object] = {}
+    sources: dict[str, str] = {}
+    file_values = _rename_legacy(file_values)
+    engine = active_engine(settings, file_values, environ)
+    _warn_unknown(settings, file_values)
+
+    for setting in settings:
+        values[setting.key], sources[setting.key] = _resolve_one(
+            setting, file_values, environ, engine
+        )
+
+    return values, sources
 
 
 def active_engine(
@@ -114,19 +165,6 @@ def active_engine(
         except SettingError:
             pass
     return str(engine)
-
-
-def profiles_in(file_values: dict[str, object]) -> dict[str, dict[str, object]]:
-    """Return the stored `profiles.<engine>` sections, keyed by engine."""
-    out: dict[str, dict[str, object]] = {}
-    for key, value in file_values.items():
-        if not key.startswith(f"{PROFILES_KEY}."):
-            continue
-        parts = key.split(".", 2)
-        if len(parts) < 3:
-            continue
-        out.setdefault(parts[1], {})[parts[2]] = value
-    return out
 
 
 def _warn_unknown(settings: list[Setting], file_values: dict[str, object]) -> None:
@@ -176,24 +214,6 @@ def _resolve_one(
             logger.warning(f"[config] In the environment, {error}; using the previous value")
 
     return value, source
-
-
-def resolve(
-    settings: list[Setting], file_values: dict[str, object], environ: dict[str, str]
-) -> tuple[dict[str, object], dict[str, str]]:
-    """Resolve every setting, returning its value and the layer that supplied it."""
-    values: dict[str, object] = {}
-    sources: dict[str, str] = {}
-    file_values = _rename_legacy(file_values)
-    engine = active_engine(settings, file_values, environ)
-    _warn_unknown(settings, file_values)
-
-    for setting in settings:
-        values[setting.key], sources[setting.key] = _resolve_one(
-            setting, file_values, environ, engine
-        )
-
-    return values, sources
 
 
 def validate_patch(settings: list[Setting], patch: dict[str, object]) -> dict[str, object]:
