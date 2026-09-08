@@ -22,21 +22,21 @@ import { useT } from "@/lib/i18n";
  * only the system's arm produces interesting reasoning, which makes it a perfect tell.
  * Which rival this session holds is a tell too, so nothing here knows it either.
  *
- * THE CARD HAS NO SCROLLBAR OF ITS OWN. It used to clip at 30rem and scroll inside, so an
- * exercise with a grammar and a table in it was read through a slot a third of the window
- * wide and half a window tall, once per card. The page scrolls once and the cards stay
- * the same height, which keeps the blinding intent; what half a window cannot hold
- * is read through "Leer en grande", at reading size, over the comparison.
+ * THE CARD IS A FIXED-HEIGHT SCROLLER (2026-09-08, explicit user request, reversing the
+ * clip-and-fade of 2026-09-05 and the "no scrollbar of its own" before it). Both bodies
+ * are `BODY` tall whatever they hold — a short exercise sits in the same box as a long
+ * one, which is what keeps a longer statement from reading as "more complete" — and the
+ * body scrolls inside, so the whole proposal is reachable on the card; the reading dialog
+ * is the way to read it at size, and its button is the one blue control on the card.
  *
  * The LETTER CARRIES NO STATE, and that is not an oversight. It is the handle somebody
  * uses to say "la B"; filling it to mean "ya respondida" would make it a signal, which is
  * the one thing the blinding exists to keep it from being — and "respondida" is already
  * said twice over, by the card's own border and by the option that is pressed.
  */
-// How much of a proposal a card shows before the fade. Measured against the reference
-// exercises: a statement plus the head of its solution, which is what tells two
-// proposals apart at a glance; the whole thing is one press away.
-const CLIP = "max-h-[22rem]";
+// The height of every card's body, short or long: a statement plus the head of its
+// solution is in view, the rest scrolls, and two cards never differ by their length.
+const BODY = "h-[22rem]";
 
 /** How many cards a session prepared from now on holds: the system's and one rival's. */
 export const CARDS = 2;
@@ -95,36 +95,34 @@ function ProposalCard({
             <ArrowDown className="size-3.5" strokeWidth={2.5} aria-hidden />
           </span>
         ) : null}
+        {/* The door to the reading dialog, in `--attention` and with its name: it is the
+            one move the card offers besides answering, and an icon alone in the corner
+            went unfound. */}
         {hasItem ? (
           <Button
-            variant="ghost"
-            size="icon-sm"
-            className={cn("shrink-0 text-muted-foreground", answered && "ml-auto")}
+            variant="attention"
+            size="sm"
+            className={cn("shrink-0", answered && "ml-auto")}
             onClick={onRead}
-            aria-label={t("focus.read", { letter })}
             title={t("focus.read", { letter })}
           >
             <Maximize2 />
+            {t("reveal.read")}
           </Button>
         ) : null}
       </header>
 
-      {/* The body is CLIPPED and never scrolled: two whole exercises side by side run to
-          several screens, and what a card shows is enough to tell them apart. The rest is
-          read through "Leer en grande", and the fade says there is more rather than
-          pretending the statement ends where the box does. The cards still share ONE
-          height, so a longer proposal cannot read as "more complete" before it is read. */}
-      <div className={cn("relative flex-1 overflow-hidden", hasItem && CLIP)}>
+      {/* The body is a box of ONE height that scrolls inside: two whole exercises side by
+          side run to several screens, so the rest is reached by the wheel or in full
+          through the button above. A scrollbar says there is more; a short exercise gets
+          the same box, so the cards never differ by their length. */}
+      {/* `shrink-0` and no `flex-1` on the box: inside a `flex-col` that is stretched to the
+          row, a grow factor overrides the height and the body swells to the card. */}
+      <div className={hasItem ? cn(BODY, "shrink-0 overflow-y-auto") : "flex-1"}>
         {hasItem ? (
-          <>
-            <div className="space-y-3 p-4">
-              <ItemFields item={position.item!} spec={itemTypeOf(profile, { item_type: itemType })} />
-            </div>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent"
-            />
-          </>
+          <div className="space-y-3 p-4">
+            <ItemFields item={position.item!} spec={itemTypeOf(profile, { item_type: itemType })} />
+          </div>
         ) : (
           <div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 p-4 text-center">
             <CircleSlash className="size-5 text-muted-foreground/60" />

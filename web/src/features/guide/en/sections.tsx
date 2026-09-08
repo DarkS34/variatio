@@ -1511,7 +1511,8 @@ function Evaluate() {
         <Paragraph>
           While a comparison is open the tabs disappear, and so does the technical detail: it
           would say which architecture each proposal comes from before you have read it. The
-          button in the header takes you back to the list.
+          button in the header takes you back to the list. Leaving the screen and coming back
+          opens it on the form: a finished comparison is reread from "{t("eval.tab.history")}".
         </Paragraph>
       </Block>
 
@@ -1525,9 +1526,10 @@ function Evaluate() {
               two alternatives this session drew is not said either.
             </>,
             <>
-              The two cards are the same height and do not scroll inside: the page moves,
-              they do not. A long exercise is read with the expand button in its header, at
-              reading size and with the question at the foot; ← and → move between them.
+              The two cards are boxes of the same height, short or long the proposal, and each
+              one scrolls inside. The blue "{t("reveal.read")}" button in its header opens it in
+              full, at reading size and with the question at the foot; ← and → move between
+              them.
             </>,
             <>
               <strong>You answer one question per card</strong>: whether you would set it in

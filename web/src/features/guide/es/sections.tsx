@@ -1498,7 +1498,8 @@ function Evaluate() {
         <Paragraph>
           Mientras una comparación está abierta las pestañas desaparecen, y con ellas el detalle
           técnico: diría de qué arquitectura sale cada propuesta antes de que la leas. Se vuelve a
-          la lista con el botón de la cabecera.
+          la lista con el botón de la cabecera. Al salir de la pantalla y volver, se abre en el
+          formulario: una comparación ya terminada se relee desde «{t("eval.tab.history")}».
         </Paragraph>
       </Block>
 
@@ -1512,9 +1513,10 @@ function Evaluate() {
               cuál de las dos alternativas le ha tocado a esta sesión.
             </>,
             <>
-              Las dos tarjetas tienen la misma altura y no se desplazan por dentro: la
-              página baja, ellas no. Un ejercicio largo se lee con el botón de ampliar de su
-              cabecera, a tamaño de lectura y con la pregunta al pie; ← y → pasan de una a otra.
+              Las dos tarjetas son cajas de la misma altura, corta o larga la propuesta, y cada
+              una se desplaza por dentro. El botón azul «{t("reveal.read")}» de su cabecera la
+              abre entera, a tamaño de lectura y con la pregunta al pie; ← y → pasan de una a
+              otra.
             </>,
             <>
               <strong>Respondes una pregunta por tarjeta</strong>: si la pondrías en clase —

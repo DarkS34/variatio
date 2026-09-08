@@ -1,5 +1,5 @@
 import { ArrowLeft, Clock, EyeOff, Plus, Scale } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
@@ -196,8 +196,15 @@ export function EvaluationScreen() {
   // separately, from the endpoint that knows what it is allowed to show.
   const producedId = run?.job?.result?.session_id as string | undefined;
 
+  // ONLY A SESSION PRODUCED DURING THIS VISIT IS OPENED (2026-09-08, explicit user request).
+  // The stream outlives the screen, so `useOwnJobRun` hands back the last finished run on
+  // every mount and the screen used to reopen a comparison already judged an hour ago;
+  // what was produced before this mount is "Mis evaluaciones"' business, and the screen
+  // opens on the form. A run still going when the screen mounts is inherited: its
+  // result arrives later and is this visit's.
+  const alreadyProduced = useRef(producedId);
   useEffect(() => {
-    if (producedId) {
+    if (producedId && producedId !== alreadyProduced.current) {
       setSessionId(producedId);
     }
   }, [producedId]);
