@@ -3,6 +3,8 @@ import { readableValue } from "@/lib/text";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
+import { CHOICE_CARD } from "./FormStep";
+
 /**
  * Which rung of the ladder the exercise being commissioned should sit on.
  *
@@ -38,6 +40,9 @@ export function DifficultyChoice({
           the honest degradation: it still says what the three mean, only not per option. */}
       {lead ? <p className="text-small text-muted-foreground">{lead}</p> : null}
 
+      {/* A LIST, one rung under the next, and every box the same height. The order is the
+          ladder's, so it is read down; what the fixed height fixes is that «Cualquiera»,
+          whose hint is one line, no longer sits in a box half the size of «Intermedio». */}
       <div role="radiogroup" aria-label={t("form.difficulty.title")} className="grid gap-1.5">
         {levels.map((level) => (
           <Rung
@@ -77,7 +82,7 @@ function Rung({
       aria-checked={active}
       onClick={onClick}
       className={cn(
-        "rounded-lg border px-3 py-2 text-left transition-colors",
+        CHOICE_CARD,
         active
           ? "border-primary bg-primary/10"
           : "border-border hover:bg-accent",
@@ -86,8 +91,12 @@ function Rung({
       <span className={cn("text-body font-medium", active ? "text-primary" : "text-foreground")}>
         {label}
       </span>
+      {/* Clamped at three lines, like a modality's description, and never `block` beside
+          `line-clamp-3`: the clamp sets `display: -webkit-box` and `block` wins over it in
+          silence. The whole criterion is read and corrected in step 2, where a rung is
+          defined; here the clause is what tells one rung from the next. */}
       {detail ? (
-        <span className="mt-0.5 block text-body text-muted-foreground">{detail}</span>
+        <span className="mt-1 line-clamp-3 text-body text-muted-foreground">{detail}</span>
       ) : null}
     </button>
   );

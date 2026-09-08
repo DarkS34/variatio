@@ -55,7 +55,7 @@ import {
   fixedEffort,
 } from "./effort";
 import { EffortSlider } from "./EffortSlider";
-import { FormStep } from "./FormStep";
+import { CHOICE_CARD, FormStep } from "./FormStep";
 import { ModelChoice } from "./ModelChoice";
 import { modelLabel } from "./models";
 import { adjacency, covered, posteriors, priors } from "./prerequisites";
@@ -549,7 +549,7 @@ export function GenerateForm({
                   type="button"
                   onClick={() => chooseType(key)}
                   className={cn(
-                    "rounded-lg border p-2.5 text-left transition-colors",
+                    CHOICE_CARD,
                     active
                       ? "border-primary bg-primary/5"
                       : "border-border hover:bg-accent/40",
