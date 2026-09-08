@@ -375,10 +375,13 @@ class EvalSession(Base):
     A session on disk has no evaluator, and the evaluation's unit is a session: without an
     account to group by, none of the analysis is computable. The header columns are
     queried, since the aggregates group by them, while `trace` holds the whole
-    `EvaluationSession.to_dict()` — three prompts, three raw answers, exemplars, timings
-    — and is read only when one session is opened.
+    `EvaluationSession.to_dict()` — one prompt and one raw answer per arm, exemplars,
+    timings — and is read only when one session is opened.
 
-    `set_id` says which three items these are. A session generated on its own is its own
+    `shuffle` also says WHICH arms the session holds: the system and one drawn rival
+    since 2026-09-08, the three for anything recorded before.
+
+    `set_id` says which items these are. A session generated on its own is its own
     set; one an administrator assigned carries the set of the session it was copied from,
     and that is what makes agreement between two evaluators computable at all. Each copy
     keeps its OWN seed and shuffle, because sharing an order would let one position bias
@@ -389,10 +392,10 @@ class EvalSession(Base):
     `triage` is one answer per POSITION, given before the reveal, stored by position
     exactly as `choice` is, so what is kept is what the evaluator actually saw; the arm
     behind each one is derived from `shuffle`, which keeps the mapping auditable from the
-    seed months later. `opened_at` is when the three cards first reached the evaluator,
+    seed months later. `opened_at` is when the cards first reached the evaluator,
     so how long it took is a fact rather than an impression. `declined_at` is "I do not feel
     qualified to judge this" and deliberately NOT `chosen_at` with a null choice — that
-    already means "none of the three convinces me", which is a judgement, while this
+    already means "none of them convinces me", which is a judgement, while this
     is the absence of one: it never enters the preference counts and is a datum about the
     panel's composition.
 

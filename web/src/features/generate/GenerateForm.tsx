@@ -1032,7 +1032,7 @@ export function GenerateForm({
               {pending ? <Spinner /> : variant === "evaluation" ? <Scale /> : <Play />}
               {launchLabel ??
                 (variant === "evaluation"
-                  ? t("form.compareThree")
+                  ? t("form.compare")
                   : plural("form.generateItems", state.n))}
             </Button>
           )}

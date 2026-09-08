@@ -2,7 +2,7 @@
 
 Two instruments, and the order between them is the design. The **triage** is one question
 per card, answered BEFORE the reveal, and it is what gives the evaluation a quality signal for
-all three architectures rather than for the one whose name was already known. The
+both cards rather than for the one whose name was already known. The
 **rubric** is four scales about the system's variant, answered after the reveal and
 deliberately optional, so a person in a hurry still leaves a complete datum.
 

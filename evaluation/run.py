@@ -1,4 +1,4 @@
-"""One commission, three architectures, one blind comparison.
+"""One commission, two architectures — the system and one drawn rival — one blind comparison.
 
 Mechanism, not policy, in the way `variatio.entrypoints` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
@@ -19,7 +19,7 @@ from variatio.core import progress
 from variatio.entrypoints.initialize import RuntimeContext
 from variatio.runtime.generator import clean_fixed, forbidden
 
-from . import ARMS, FAILED, ArmResult, Commission, EvaluationSession, run_arm
+from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_session, run_arm
 from . import config as evaluation_config
 
 
@@ -33,12 +33,14 @@ def evaluate(
     seed: int | None = None,
     job_id: str | None = None,
 ) -> EvaluationSession:
-    """Run one commission through the three architectures and return the blind session.
+    """Run one commission through the system and ONE drawn rival, and return the blind session.
 
-    The order of the cards and the reasoning mode are both DRAWN from `seed`, before
-    anything runs, so a session is reproducible from that number alone. The reasoning mode
-    is the condition being measured and is identical for the three arms within a session,
-    which is what keeps it out of the comparison between them.
+    Which rival, the order of the two cards and the reasoning mode are all DRAWN from
+    `seed` (`draw_session`), before anything runs, so a session is reproducible from that
+    number alone. The reasoning mode is the condition being measured and is identical for
+    the arms within a session, which is what keeps it out of the comparison between them.
+    Only the two arms drawn are generated: a third proposal nobody sees would cost a model
+    call — a commercial one, half the time — for a datum no judgement ever touches.
 
     The writer of the two local arms is the installation's (`evaluation.local_model`, read
     through `evaluation.config.LOCAL_MODEL`), never the commission's: what is compared is
@@ -48,13 +50,11 @@ def evaluate(
     writer = evaluation_config.LOCAL_MODEL
 
     seed = random.randrange(2**31) if seed is None else int(seed)
-    draw = random.Random(seed)
-    order = list(ARMS)
-    draw.shuffle(order)
-    think = draw.random() < 0.5
+    order, think = draw_session(seed)
+    rival = next(arm for arm in order if arm != SYSTEM)
     logger.info(
-        f"Semilla {seed}: razonamiento {'activado' if think else 'desactivado'}; "
-        f"las dos propuestas locales las escribe '{writer}'"
+        f"Semilla {seed}: el sistema frente a «{rival}», razonamiento "
+        f"{'activado' if think else 'desactivado'}; las propuestas locales las escribe '{writer}'"
     )
 
     commission = Commission(
@@ -75,24 +75,31 @@ def evaluate(
     commission = replace(commission, ruling=ruling)
 
     results: dict[str, ArmResult] = {}
-    # The external arm is network, not GPU: it overlaps with the local ones for free.
+    # The external arm is network, not GPU: when it is the rival it overlaps with the
+    # system's call for free. The local arms are serialised: one GPU, one job at a time.
+    # The step counts work done and NEVER names a position — "propuesta 2 de 2" in
+    # execution order would tell the evaluator which card each arm produced.
+    local = [arm for arm in order if arm != "naive"]
     with ThreadPoolExecutor(max_workers=1) as pool:
-        external = pool.submit(_safe_run, "naive", commission, context)
+        external = pool.submit(_safe_run, "naive", commission, context) if "naive" in order else None
 
-        # The two local arms are serialised: one GPU, one job at a time. The step counts
-        # work done and NEVER names a position — "propuesta 2 de 3" in execution order
-        # would tell the evaluator which card each arm produced.
-        with progress.step("eval.arms", "Preparando las tres propuestas", total=3) as reporter:
-            for done, arm in enumerate(("rag", "system"), start=1):
+        with progress.step("eval.arms", "Preparando las dos propuestas", total=len(order)) as reporter:
+            done = 0
+            for arm in local:
                 progress.checkpoint()
                 results[arm] = _safe_run(arm, commission, context)
+                done += 1
                 reporter.tick(done)
-            results["naive"] = external.result()
-            reporter.tick(3)
+            if external is not None:
+                results["naive"] = external.result()
+                done += 1
+                reporter.tick(done)
 
     logger.info(
         "Propuestas: "
-        + ", ".join(f"{arm} {results[arm].status} en {results[arm].elapsed_ms} ms" for arm in ARMS)
+        + ", ".join(
+            f"{arm} {results[arm].status} en {results[arm].elapsed_ms} ms" for arm in order
+        )
     )
 
     _tag(context, target_type, commission, results)
@@ -114,10 +121,10 @@ def evaluate(
 
 
 def _validate(context: RuntimeContext, item_type, commission: Commission) -> None:
-    """Raise ValueError unless the commission is runnable by all three arms.
+    """Raise ValueError unless the commission is runnable by every arm.
 
     Checked here rather than inside the arms: an invalid commission must fail the whole
-    request, not come back as two happy proposals and one arm that "failed".
+    request, not come back as one happy proposal and one arm that "failed".
     """
     taggable = set(context.knowledge_graph.taggable_concepts)
 
@@ -198,7 +205,7 @@ def _safe_run(arm: str, commission: Commission, context) -> ArmResult:
 
 
 def _tag(context, item_type, commission: Commission, results: dict[str, ArmResult]) -> None:
-    """Read the three proposals through the graph, and name what each one should not have used.
+    """Read the session's proposals through the graph, and name what each should not have used.
 
     Run AFTER the arms and never inside one: an arm must produce its item under exactly the
     conditions it is being measured on, and a tagging call inside the rag arm would land in
@@ -206,11 +213,11 @@ def _tag(context, item_type, commission: Commission, results: dict[str, ArmResul
     passes the blind filter without saying which card is which.
 
     It never costs a session: a tagger that fails leaves that proposal unread — the card
-    then shows no concepts — where raising would throw away three generations.
+    then shows no concepts — where raising would throw away every generation of the session.
     """
     limits = off_limits(context, commission)
     rule = checks.closure_rule(commission.curriculum)
-    produced = [arm for arm in ARMS if results[arm].item]
+    produced = [arm for arm, result in results.items() if result.item]
     if not produced:
         return
 

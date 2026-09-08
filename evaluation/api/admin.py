@@ -51,7 +51,7 @@ class RecordsBody(BaseModel):
 
 
 class AssignBody(BaseModel):
-    """Who gets these three items.
+    """Who gets these items.
 
     `repeat` is the deliberate exception: handing the same set to somebody who already
     judged it is test-retest, the only reliability an evaluator alone in their subject can
@@ -442,7 +442,7 @@ def assign_set(
     db: DbSession = Depends(auth.db),
     admin: User = Depends(auth.require_admin),
 ) -> dict:
-    """Hand a copy of these three items to each named account.
+    """Hand a copy of these items to each named account.
 
     Each copy gets a fresh shuffle and every answer cleared, so what two evaluators end up
     agreeing about is the exercises and not the seating.

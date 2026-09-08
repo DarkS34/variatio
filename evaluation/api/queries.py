@@ -145,7 +145,7 @@ def all_evaluations(
 
 
 def sessions_in_set(session: Session, set_id: str) -> list[EvalSession]:
-    """Return every session holding these three items, whoever it belongs to.
+    """Return every session holding these items, whoever it belongs to.
 
     The agreement between evaluators is computed from this, and it is the one query that
     ignores who is asking — which is why the evaluator's own router never reaches it.
@@ -182,7 +182,7 @@ def assigned_to(
 def sets_in_workspace(session: Session, workspace_id: int) -> list[EvalSession]:
     """Return one representative row per distinct set, for the panel that hands them out.
 
-    The earliest row of a set is when those three items came into existence, which is what
+    The earliest row of a set is when those items came into existence, which is what
     the administrator is choosing between.
     """
     rows = session.scalars(

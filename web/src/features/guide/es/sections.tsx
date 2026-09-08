@@ -1451,13 +1451,15 @@ function Evaluate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.evaluate")}>
         <p>
-          El mismo encargo resuelto por tres arquitecturas distintas y presentado{" "}
-          <strong>a ciegas</strong>, para que elijas sin saber cuál es cuál. Es la parte del
-          sistema que sirve para medirlo, no para producir material.
+          El mismo encargo resuelto por dos arquitecturas distintas y presentado{" "}
+          <strong>a ciegas</strong>, para que elijas sin saber cuál es cuál. Una de las dos es
+          siempre este sistema; la otra se sortea en cada sesión entre las dos alternativas —
+          un modelo comercial, o una búsqueda por similitud sobre tus documentos —. Es la
+          parte del sistema que sirve para medirlo, no para producir material.
         </p>
         <p>
           Tú pides la comparación y tú la juzgas: eliges de qué concepto quieres el ejercicio,
-          se preparan las tres versiones y las lees cuando estén.
+          se preparan las dos versiones y las lees cuando estén.
         </p>
       </SectionHead>
 
@@ -1465,15 +1467,15 @@ function Evaluate() {
         items={[
           {
             label: "Qué se te pide",
-            value: "Leer tres propuestas, una pregunta por tarjeta y una elección.",
+            value: "Leer dos propuestas, una pregunta por tarjeta y una elección.",
           },
           {
             label: "Qué produce",
-            value: "Una sesión guardada con las tres propuestas y tu juicio.",
+            value: "Una sesión guardada con las dos propuestas y tu juicio.",
           },
           {
             label: "Qué necesitas",
-            value: "Los cuatro pasos cerrados: las tres versiones se escriben con tu asignatura.",
+            value: "Los cuatro pasos cerrados: las dos versiones se escriben con tu asignatura.",
           },
         ]}
       />
@@ -1504,12 +1506,13 @@ function Evaluate() {
         <Steps
           items={[
             <>
-              Aparecen las tres propuestas, sin etiquetar y en un orden que es solo tuyo.
+              Aparecen las dos propuestas, sin etiquetar y en un orden que es solo tuyo.
               Encima, en una línea, el encargo: el tipo de ejercicio, los conceptos y el nivel si
-              se fijó uno. Es el mismo para las tres, así que no delata nada.
+              se fijó uno. Es el mismo para las dos, así que no delata nada. Tampoco se dice
+              cuál de las dos alternativas le ha tocado a esta sesión.
             </>,
             <>
-              Las tres tarjetas tienen la misma altura y no se desplazan por dentro: la
+              Las dos tarjetas tienen la misma altura y no se desplazan por dentro: la
               página baja, ellas no. Un ejercicio largo se lee con el botón de ampliar de su
               cabecera, a tamaño de lectura y con la pregunta al pie; ← y → pasan de una a otra.
             </>,
@@ -1520,7 +1523,7 @@ function Evaluate() {
             </>,
             <>
               <strong>Eliges una</strong>. La barra de elección queda fija al pie de la ventana;
-              no se activa hasta que has respondido a las tres, y siempre puedes decir que
+              no se activa hasta que has respondido a las dos, y siempre puedes decir que
               ninguna te convence.
             </>,
             <>
@@ -1532,8 +1535,8 @@ function Evaluate() {
               Con ella se destapan también <strong>los conceptos de cada propuesta</strong>,
               leídos con el mismo etiquetador que el banco, y una línea que dice si el
               ejercicio se ha metido en algo que va después en el temario. La regla es la
-              misma para las tres y es la que el sistema lleva en su prompt, solo que
-              únicamente una de las tres la conoce. Con currículo, cuenta cualquier mención
+              misma para las dos y es la que el sistema lleva en su prompt, solo que
+              únicamente una de las dos la conoce. Con currículo, cuenta cualquier mención
               de lo que la clase no ha dado; sin él, solo cuenta que la propuesta practique
               un concepto posterior a lo pedido.
             </>,
@@ -1580,7 +1583,7 @@ function Evaluate() {
         </p>
       </Alert>
 
-      <Detail title="Las tres arquitecturas que se comparan">
+      <Detail title="Las tres arquitecturas, de las que cada sesión enfrenta dos">
         {ARM_ORDER.map((arm) => (
           <div key={arm} className="flex gap-3">
             <span
@@ -1594,6 +1597,13 @@ function Evaluate() {
             </p>
           </div>
         ))}
+        <p>
+          Cada sesión enfrenta a este sistema con <strong>una</strong> de las otras dos, elegida
+          a cara o cruz por la misma semilla que decide el orden. Así la pregunta que se
+          responde es la que importa —¿escribe el sistema mejores ejercicios que esta
+          alternativa?— y, sobre muchas sesiones, cada alternativa se enfrenta al sistema
+          tantas veces como la otra.
+        </p>
         <p>
           Cada arquitectura tiene su color fijo y siempre el mismo, en todas las sesiones y en
           todas las gráficas, para que dos sesiones separadas por meses se puedan leer juntas.
@@ -1612,7 +1622,7 @@ function Evaluate() {
 
       <Detail title="Por qué el orden de las tarjetas es distinto para cada persona">
         <p>
-          Si dos evaluadores juzgan los mismos tres ejercicios, cada uno los ve en un orden
+          Si dos evaluadores juzgan los mismos dos ejercicios, cada uno los ve en un orden
           propio. Compartir el orden significaría compartir también la tendencia a elegir la
           primera o la última, y entonces lo que parecería acuerdo sobre los ejercicios sería
           en parte acuerdo sobre dónde estaban colocados.
@@ -1625,8 +1635,13 @@ function Evaluate() {
 
       <Detail title="Lo que no eliges tú">
         <p>
-          <strong>Cuántos ejercicios se generan</strong>: siempre uno por arquitectura. Es lo que
-          hace de la sesión la unidad de análisis.
+          <strong>Cuántos ejercicios se generan</strong>: siempre uno por propuesta, dos por
+          sesión. Es lo que hace de la sesión la unidad de análisis.
+        </p>
+        <p>
+          <strong>Contra cuál de las dos alternativas se compara el sistema</strong>: lo sortea
+          cada sesión, y no se dice hasta la revelación. Elegirlo dejaría fuera la alternativa
+          que menos apetece leer, y el estudio necesita medir las dos.
         </p>
         <p>
           <strong>Si el modelo razona antes de responder</strong>: lo sortea cada sesión, no

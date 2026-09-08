@@ -14,17 +14,18 @@ import type { EvaluationPosition, Instruments, TriageValue } from "./types";
 import { useT } from "@/lib/i18n";
 
 /**
- * Three proposals, told apart by nothing but a letter.
+ * Two proposals — the system's and one rival's — told apart by nothing but a letter.
  *
  * Everything here exists to keep the cards indistinguishable until the evaluator has
  * committed: identical height so a longer statement cannot read as "more complete"
  * before it is read, identical field order, no colour, no ids, no reasoning, no JSON —
  * only the system's arm produces interesting reasoning, which makes it a perfect tell.
+ * Which rival this session holds is a tell too, so nothing here knows it either.
  *
  * THE CARD HAS NO SCROLLBAR OF ITS OWN. It used to clip at 30rem and scroll inside, so an
  * exercise with a grammar and a table in it was read through a slot a third of the window
- * wide and half a window tall, three times over. The page scrolls once and the three stay
- * the same height, which keeps the blinding intent; what a third of a window cannot hold
+ * wide and half a window tall, once per card. The page scrolls once and the cards stay
+ * the same height, which keeps the blinding intent; what half a window cannot hold
  * is read through "Leer en grande", at reading size, over the comparison.
  *
  * The LETTER CARRIES NO STATE, and that is not an oversight. It is the handle somebody
@@ -33,9 +34,19 @@ import { useT } from "@/lib/i18n";
  * said twice over, by the card's own border and by the option that is pressed.
  */
 // How much of a proposal a card shows before the fade. Measured against the reference
-// exercises: a statement plus the head of its solution, which is what tells three
+// exercises: a statement plus the head of its solution, which is what tells two
 // proposals apart at a glance; the whole thing is one press away.
 const CLIP = "max-h-[22rem]";
+
+/** How many cards a session prepared from now on holds: the system's and one rival's. */
+export const CARDS = 2;
+
+/**
+ * One column per card, at the width the session HOLDS: two since 2026-09-08, three on a
+ * session recorded before. Literal class names, because Tailwind only emits what it can
+ * read in the source.
+ */
+export const columnsFor = (cards: number) => (cards >= 3 ? "xl:grid-cols-3" : "xl:grid-cols-2");
 
 function ProposalCard({
   position,
@@ -98,10 +109,10 @@ function ProposalCard({
         ) : null}
       </header>
 
-      {/* The body is CLIPPED and never scrolled: three whole exercises side by side run to
+      {/* The body is CLIPPED and never scrolled: two whole exercises side by side run to
           several screens, and what a card shows is enough to tell them apart. The rest is
           read through "Leer en grande", and the fade says there is more rather than
-          pretending the statement ends where the box does. The three still share ONE
+          pretending the statement ends where the box does. The cards still share ONE
           height, so a longer proposal cannot read as "more complete" before it is read. */}
       <div className={cn("relative flex-1 overflow-hidden", hasItem && CLIP)}>
         {hasItem ? (
@@ -123,8 +134,8 @@ function ProposalCard({
       </div>
 
       {/* THE TRIAGE. One question, one click, before anything is revealed — which is what
-          gives the evaluation a quality signal for all THREE architectures instead of a score
-          for one of them written by somebody who already knew which it was. */}
+          gives the evaluation a quality signal for BOTH cards instead of a score for one of
+          them written by somebody who already knew which it was. */}
       {hasItem ? (
         <footer className="flex gap-1 border-t border-border bg-muted p-2.5">
           {instruments.triage.options.map((option) => (
@@ -157,7 +168,7 @@ function ProposalCard({
 }
 
 /**
- * The blind half of a session: the question, the three cards, the choice.
+ * The blind half of a session: the question, the two cards, the choice.
  *
  * It draws nothing after the reveal — that is `RevealPanel`'s — so nothing in here can
  * know an arm, and the only colour it spends is `--attention` on what is still owed.
@@ -197,7 +208,7 @@ export function ComparisonGrid({
   return (
     <div className="space-y-4">
       {/* THE QUESTION, ASKED ONCE. The answers are per card, but the wording belongs to
-          the task rather than to the card, so three copies of it would only be noise. */}
+          the task rather than to the card, so one copy per card would only be noise. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border border-border border-l-[3px] border-l-primary bg-card px-4 py-3 shadow-sm">
         <p className="text-body">
           <strong>
@@ -210,7 +221,7 @@ export function ComparisonGrid({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
+      <div className={cn("grid grid-cols-1 items-stretch gap-4", columnsFor(positions.length))}>
         {positions.map((position) => (
           <ProposalCard
             key={position.position}
@@ -227,10 +238,10 @@ export function ComparisonGrid({
       </div>
 
       {/* THE CHOICE. Sticky to the foot of the window, so it stays reachable however tall
-          the three cards grow now that they do not scroll inside. Drawn from the first
-          second so the shape of the task is visible, and inert until the three are
-          answered so the order is not a rule anybody has to be told. Forcing a pick
-          between three bad ones turns noise into signal. */}
+          the cards grow now that they do not scroll inside. Drawn from the first second so
+          the shape of the task is visible, and inert until both are answered so the order
+          is not a rule anybody has to be told. Forcing a pick between two bad ones turns
+          noise into signal. */}
       <div className="sticky bottom-0 z-10 space-y-3 border border-border bg-card p-3.5 shadow-overlay">
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-heading font-semibold">

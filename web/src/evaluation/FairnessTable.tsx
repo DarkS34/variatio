@@ -10,7 +10,10 @@ import { useT, type Key } from "@/lib/i18n";
  *
  * An experiment whose author designed the three conditions and has a stake in the result
  * needs its safeguards visible to whoever is judging — and to whoever reads the memoria.
- * This is the same table the code implements, kept where the evaluator can open it.
+ * This is the same table the code implements, kept where the evaluator can open it. A
+ * session pits the system against ONE of the other two columns, drawn by its seed; the
+ * table still lists all three, because what each arm receives does not depend on which
+ * session it lands in.
  */
 const ROWS: { fieldKey: Key; naive: boolean | Key; rag: boolean | Key; system: boolean | Key }[] = [
   { fieldKey: "fair.row.concepts", naive: true, rag: true, system: true },

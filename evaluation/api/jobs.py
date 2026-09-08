@@ -4,6 +4,8 @@ Registered on `server.jobs.handlers.HANDLERS` by `evaluation.api.install`, not d
 the queue is the installation's and the job is the evaluation's.
 """
 
+import random
+
 from loguru import logger
 
 from server import deps
@@ -13,7 +15,7 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from variatio.core import progress
 
-from .. import ARMS
+from .. import ARM_LABELS, SYSTEM, draw_session
 from .. import run as evaluation_run
 from ..arms import rag as rag_arm
 from . import store as evaluation_store
@@ -52,7 +54,7 @@ class _BlindEmitter:
 
 
 def handle_evaluate(job: Job, control: JobControl) -> dict:
-    """Run one blind comparison and save it, with the run drawer muted throughout."""
+    """Run one blind comparison — the system against a drawn rival — and save it, muted."""
     deps.require_inference()
     context = context_for(job)
     params = job.params
@@ -62,15 +64,24 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     instructions = params.get("instructions") or None
     resolved_type = context.exemplars_profile.item_type(params.get("item_type") or None)
 
+    # The seed is settled HERE so the job can ask what the session will need before it
+    # runs: `evaluate` draws from the same number and lands on the same two arms.
+    seed = random.randrange(2**31) if params.get("seed") is None else int(params["seed"])
+    order, _think = draw_session(seed)
+    rival = next(arm for arm in order if arm != SYSTEM)
+
     logger.info(
-        f"Comparación ciega de {len(ARMS)} propuestas de tipo «{resolved_type.label}» sobre "
+        f"Comparación ciega de tipo «{resolved_type.label}» sobre "
         + (", ".join(concepts) if concepts else "ningún concepto")
+        + f": el sistema frente a «{ARM_LABELS[rival]}»"
     )
 
     # Warmed BEFORE the blind section: built inside the arm, this one-off cost would land in
     # the RAG baseline's `elapsed_ms` and its step would be swallowed by the filter. Both
-    # slots, and by WORKSPACE, which is what the arm retrieves over.
-    rag_arm.warm(context.workspace)
+    # slots, and by WORKSPACE, which is what the arm retrieves over — and only when the
+    # draw put the rag arm in this session at all.
+    if "rag" in order:
+        rag_arm.warm(context.workspace)
 
     # `_BlindEmitter` is the whole of the blinding: the loguru output reaches no screen, it
     # goes to `logs/<slug>/jobs.log`, so there is nothing else to mute — and that file keeps
@@ -83,7 +94,7 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
             fixed=fixed,
             curriculum=curriculum,
             instructions=instructions,
-            seed=params.get("seed"),
+            seed=seed,
             job_id=job.id,
         )
 
@@ -98,12 +109,13 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
 
     produced = sum(1 for result in session.arms.values() if result.status == "ok")
     logger.success(
-        f"Sesión {session.id}: {produced}/{len(ARMS)} propuestas con ítem válido"
+        f"Sesión {session.id}: {produced}/{len(session.arms)} propuestas con ítem válido"
     )
-    # Deliberately WITHOUT the items: `job.result` travels over the WebSocket to every
-    # client and stays in the event buffer. They are read from `GET /api/evaluation/{id}`,
-    # which knows what it may show and what it may not.
-    return {"session_id": session.id, "arms": len(ARMS), "produced": produced}
+    # Deliberately WITHOUT the items and without the rival: `job.result` travels over the
+    # WebSocket to every client and stays in the event buffer, and naming the rival there
+    # would say what the second card is before it is read. They are read from
+    # `GET /api/evaluation/{id}`, which knows what it may show and what it may not.
+    return {"session_id": session.id, "arms": len(session.arms), "produced": produced}
 
 
 def evaluator_of(job: Job) -> int | None:

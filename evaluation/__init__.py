@@ -2,8 +2,15 @@
 
 `naive` (a commercial model with an average user's prompt), `rag` (a flat vector index
 over the raw documents read with a plain extractor, no graph, no bank) and `system` (this
-pipeline, untouched). They receive the
-same commission and return the same shape, so a fourth arm is one more file.
+pipeline, untouched). They receive the same commission and return the same shape, so a
+fourth arm is one more file.
+
+A SESSION IS TWO OF THEM, since 2026-09-08: the system's proposal is always one card, and
+the other is ONE rival drawn from `RIVALS` by the session's seed. Three cards asked the
+evaluator to rank a field; two ask the question the evaluation exists to answer — does the
+system beat this alternative — and the answer is a coin that either way falls on a rival
+whose identity the seed records. Sessions recorded before that date hold three arms, and
+everything below reads the session's own `shuffle` for how many cards it has.
 
 The boundary is the point, and `tests/evaluation/test_evaluation_boundary.py` pins both halves of
 it: `evaluation` imports `variatio` and never the reverse, and this module never imports
@@ -11,16 +18,41 @@ it: `evaluation` imports `variatio` and never the reverse, and this module never
 runtime-only consumer.
 """
 
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
 ARMS: tuple[str, ...] = ("naive", "rag", "system")
+
+SYSTEM = "system"
+
+# The two alternatives the system is compared against, one per session. Their order is the
+# palette's and the CSV's, never a preference: which one a session gets is the seed's.
+RIVALS: tuple[str, ...] = ("naive", "rag")
 
 ARM_LABELS: dict[str, str] = {
     "naive": "Modelo comercial",
     "rag": "Solo RAG sobre los documentos",
     "system": "Este sistema",
 }
+
+def draw_session(seed: int) -> tuple[list[str], bool]:
+    """Draw everything a session decides before it runs: its two arms in order, and `think`.
+
+    ONE generator over the seed, consumed in a fixed sequence — the rival, the order, the
+    reasoning mode — so the whole session is reproducible from that number alone and the
+    job can ask what a seed will need (the rag index, say) before anything is generated.
+    The rival is a coin over `RIVALS`, the order a coin over the pair: over enough sessions
+    each rival meets the system as often as the other and sits on the left as often as on
+    the right, which is what makes the position and the rival measurable conditions rather
+    than habits.
+    """
+    draw = random.Random(int(seed))
+    order = [SYSTEM, draw.choice(RIVALS)]
+    draw.shuffle(order)
+    think = draw.random() < 0.5
+    return order, think
+
 
 def rag_index_path(ws, slot: str) -> Path:
     """Where the rag arm's flat index over one raw slot is cached, inside the workspace.
@@ -42,7 +74,7 @@ class ArmUnavailable(RuntimeError):
 
 @dataclass(frozen=True)
 class Commission:
-    """What the evaluator asked for. Identical for the three arms, by construction.
+    """What the evaluator asked for. Identical for the arms of a session, by construction.
 
     `think` is the one field the evaluator does NOT get to set: the session draws it at
     random from its own seed, so across enough sessions the reasoning mode is a measured
@@ -77,7 +109,7 @@ class Commission:
 class ArmResult:
     """What one architecture produced, and what it cost, in the shape all three share.
 
-    `tagging` is the graph's reading of the proposal, run over the three alike once they
+    `tagging` is the graph's reading of the proposal, run over the session's arms alike once they
     are all in: `concepts`, the `primary` one it practises, `rule` and `off_limits` —
     whatever it brought in from the set the commission put out of bounds. Under the
     `mentions` rule (a curriculum was given) that is whether the tagger says the exercise
@@ -124,12 +156,15 @@ class ArmResult:
 class EvaluationSession:
     """One comparison: the statistical unit of the evaluation.
 
-    `shuffle` is the arm shown at each position, so the reveal is a lookup and the
-    blinding is auditable after the fact from `seed` alone. `think` comes out of that same
-    seed and is recorded next to it because it is the second condition of the experiment:
-    whether the local arms reasoned before answering.
+    `shuffle` is the arm shown at each position — and, since the session became two cards,
+    also WHICH arms the session holds: `system` and one rival for anything recorded from
+    2026-09-08, the three for anything before. So the reveal is a lookup, the blinding is
+    auditable after the fact from `seed` alone, and `cards` is the one reading of how many
+    positions there are. `think` comes out of that same seed and is recorded next to it
+    because it is the second condition of the experiment: whether the local arms reasoned
+    before answering.
 
-    `set_id` groups the sessions holding the same three items and `assigned_by` says who
+    `set_id` groups the sessions holding the same items and `assigned_by` says who
     handed them over, which is the only way two people's judgements of one set of exercises
     can be compared. `triage` is stored BY POSITION, because that is what the evaluator
     actually saw; `triage_by_arm` re-keys it from `shuffle` at read time.
@@ -159,13 +194,28 @@ class EvaluationSession:
     rating: dict | None = None
 
     @property
+    def cards(self) -> int:
+        """Return how many positions this session shows, which is what `shuffle` lists."""
+        return len(self.shuffle)
+
+    @property
+    def rival(self) -> str | None:
+        """Return the one arm the system was compared against, or None on a three-card session.
+
+        A three-way session has two rivals and no duel; the pairwise arithmetic in
+        `api.store` excludes it on this reading, and the CSV leaves the column blank.
+        """
+        others = [arm for arm in self.shuffle if arm != SYSTEM]
+        return others[0] if len(others) == 1 and SYSTEM in self.shuffle else None
+
+    @property
     def decided(self) -> bool:
         """Say whether a preference was registered, which every per-arm number counts over."""
         return self.chosen_at is not None
 
     @property
     def declined(self) -> bool:
-        """Say whether the evaluator declared themselves unable to judge these three items."""
+        """Say whether the evaluator declared themselves unable to judge these items."""
         return self.declined_at is not None
 
     @property
@@ -274,6 +324,8 @@ def run_arm(arm: str, commission: Commission, context) -> ArmResult:
 __all__ = [
     "ARMS",
     "ARM_LABELS",
+    "RIVALS",
+    "SYSTEM",
     "ArmResult",
     "ArmUnavailable",
     "Commission",
@@ -281,6 +333,7 @@ __all__ = [
     "FAILED",
     "OK",
     "UNAVAILABLE",
+    "draw_session",
     "rag_index_path",
     "run_arm",
 ]

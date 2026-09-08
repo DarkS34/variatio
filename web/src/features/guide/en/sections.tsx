@@ -1464,13 +1464,15 @@ function Evaluate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.evaluate")}>
         <p>
-          The same commission solved by three different architectures and presented{" "}
-          <strong>blind</strong>, so that you choose without knowing which is which. It is the
-          part of the system that exists to measure it, not to produce material.
+          The same commission solved by two different architectures and presented{" "}
+          <strong>blind</strong>, so that you choose without knowing which is which. One of the
+          two is always this system; the other is drawn for each session from the two
+          alternatives — a commercial model, or a similarity search over your documents. It is
+          the part of the system that exists to measure it, not to produce material.
         </p>
         <p>
           You ask for the comparison and you judge it: you pick the concept you want the
-          exercise on, the three versions are prepared, and you read them when they are ready.
+          exercise on, the two versions are prepared, and you read them when they are ready.
         </p>
       </SectionHead>
 
@@ -1478,15 +1480,15 @@ function Evaluate() {
         items={[
           {
             label: "What you are asked for",
-            value: "Reading three proposals, one question per card, and one choice.",
+            value: "Reading two proposals, one question per card, and one choice.",
           },
           {
             label: "What it produces",
-            value: "A saved session with the three proposals and your judgement.",
+            value: "A saved session with the two proposals and your judgement.",
           },
           {
             label: "What you need",
-            value: "The four steps closed: the three versions are written from your subject.",
+            value: "The four steps closed: the two versions are written from your subject.",
           },
         ]}
       />
@@ -1517,12 +1519,13 @@ function Evaluate() {
         <Steps
           items={[
             <>
-              The three proposals appear, unlabelled and in an order that is yours alone. Above
+              The two proposals appear, unlabelled and in an order that is yours alone. Above
               them, in one line, the commission: the type of exercise, the concepts and the level
-              if one was pinned. It is the same for all three, so it gives nothing away.
+              if one was pinned. It is the same for both, so it gives nothing away. Which of the
+              two alternatives this session drew is not said either.
             </>,
             <>
-              The three cards are the same height and do not scroll inside: the page moves,
+              The two cards are the same height and do not scroll inside: the page moves,
               they do not. A long exercise is read with the expand button in its header, at
               reading size and with the question at the foot; ← and → move between them.
             </>,
@@ -1533,7 +1536,7 @@ function Evaluate() {
             </>,
             <>
               <strong>You choose one</strong>. The choice bar stays pinned to the foot of the
-              window; it does not activate until you have answered all three, and you can
+              window; it does not activate until you have answered both, and you can
               always say that none of them convinces you.
             </>,
             <>
@@ -1544,9 +1547,9 @@ function Evaluate() {
             <>
               It also uncovers <strong>each proposal's concepts</strong>, read with the same
               tagger the bank is read with, and a line saying whether the exercise strayed
-              into something that comes later in the syllabus. The rule is the same for all
-              three and it is the one the system carries in its prompt, except that only one
-              of the three knows about it. With a curriculum, any mention of what the class
+              into something that comes later in the syllabus. The rule is the same for
+              both and it is the one the system carries in its prompt, except that only one
+              of the two knows about it. With a curriculum, any mention of what the class
               has not covered counts; without one, only the proposal practising a concept
               that comes after what was asked for.
             </>,
@@ -1594,7 +1597,7 @@ function Evaluate() {
         </p>
       </Alert>
 
-      <Detail title="The three architectures being compared">
+      <Detail title="The three architectures, of which each session pits two">
         {ARM_ORDER.map((arm) => (
           <div key={arm} className="flex gap-3">
             <span
@@ -1608,6 +1611,12 @@ function Evaluate() {
             </p>
           </div>
         ))}
+        <p>
+          Each session pits this system against <strong>one</strong> of the other two, chosen by
+          a coin the same seed flips that decides the order. That way the question answered is
+          the one that matters — does the system write better exercises than this alternative?
+          — and, over many sessions, each alternative meets the system as often as the other.
+        </p>
         <p>
           Each architecture has its own fixed colour, always the same, in every session and every
           chart, so that two sessions months apart can be read together.
@@ -1626,7 +1635,7 @@ function Evaluate() {
 
       <Detail title="Why the order of the cards is different for each person">
         <p>
-          If two evaluators judge the same three exercises, each of them sees them in an order of
+          If two evaluators judge the same two exercises, each of them sees them in an order of
           their own. Sharing the order would mean sharing the tendency to pick the first or the
           last one too, and then what looked like agreement about the exercises would partly be
           agreement about where they were placed.
@@ -1639,8 +1648,13 @@ function Evaluate() {
 
       <Detail title="What you do not choose">
         <p>
-          <strong>How many exercises are generated</strong>: always one per architecture. It is what
-          makes the session the unit of analysis.
+          <strong>How many exercises are generated</strong>: always one per proposal, two per
+          session. It is what makes the session the unit of analysis.
+        </p>
+        <p>
+          <strong>Which of the two alternatives the system is compared against</strong>: each
+          session draws it, and it is not said until the reveal. Choosing it would leave out the
+          alternative one least feels like reading, and the evaluation needs to measure both.
         </p>
         <p>
           <strong>Whether the model reasons before answering</strong>: each session draws it, not

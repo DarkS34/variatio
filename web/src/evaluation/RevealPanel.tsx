@@ -6,8 +6,10 @@ import { ItemChecks, ItemFields } from "@/features/generate/ResultCard";
 import { duration } from "@/lib/format";
 import { itemTypeOf } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 import { ARM_META, letterFor } from "./arms";
+import { columnsFor } from "./ComparisonGrid";
 import { RubricForm } from "./RubricForm";
 import { TaggedConcepts } from "./TaggedConcepts";
 import type {
@@ -29,9 +31,9 @@ import { useT } from "@/lib/i18n";
  * it, the model, the time, and one way to read it in full. What is being RATED gets a card
  * of its own beside the questions about it.
  *
- * Three COLUMNS and not three rows: the blind half draws three columns and the reveal is
- * the same three proposals a second later, so turning them on their side at that moment
- * makes the screen look like it has become something else.
+ * COLUMNS and not rows: the blind half draws one column per card and the reveal is the
+ * same proposals a second later, so turning them on their side at that moment makes the
+ * screen look like it has become something else.
  */
 function OriginCard({
   position,
@@ -125,7 +127,7 @@ function OriginCard({
  * What the rubric is about, beside the rubric.
  *
  * The four scales describe the system's proposal whichever one was chosen, and the old
- * screen asked them three screens below the exercise they were about. A check the
+ * screen asked them several screens below the exercise they were about. A check the
  * pipeline raised sits at the foot of this one card, because it is about this one
  * proposal; with nothing raised the foot is not drawn.
  */
@@ -216,13 +218,13 @@ export function RevealPanel({
 
   return (
     <div className="animate-fade-in space-y-5">
-      {/* The three, in the order the blind half drew them. What each one was answers the
+      {/* The cards, in the order the blind half drew them. What each one was answers the
           question the cards just asked, so it comes FIRST and the verdict after.
 
-          They STRETCH to one height, which is what puts the three tagging feet on one line:
+          They STRETCH to one height, which is what puts the tagging feet on one line:
           with `items-start` a card carrying four concepts pushes its own foot down and the
-          row reads as three unrelated blocks. */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          row reads as unrelated blocks. */}
+      <div className={cn("grid grid-cols-1 gap-4", columnsFor(positions.length))}>
         {positions.map((position) => (
           <OriginCard
             key={position.position}

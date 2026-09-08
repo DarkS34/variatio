@@ -12,9 +12,11 @@ import type { EvaluationArm } from "./types";
  * encoding: gray against teal is ΔE 7.5 in normal vision, half the readable floor.
  *
  * `ARMS` order is also the order the palette was validated on, so anything that draws the
- * three arms side by side draws them in it.
+ * three arms side by side draws them in it. A SESSION holds two of them — the system and
+ * one rival drawn by its seed — but the palette stays per arm, never per card: a recorded
+ * session read beside a fresh one has to draw its arms the same way.
  *
- * They appear ONLY after the reveal. Before it the three cards are deliberately
+ * They appear ONLY after the reveal. Before it the cards are deliberately
  * colourless, because a card wearing a colour is a card carrying information.
  */
 export const ARM_META: Record<
@@ -41,6 +43,7 @@ export const ARM_META: Record<
   },
 };
 
+/** Two letters since 2026-09-08; the third is what a session recorded with three still reads. */
 export const POSITION_LETTERS = ["A", "B", "C"] as const;
 
 export function letterFor(position: number): string {

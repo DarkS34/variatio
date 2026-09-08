@@ -27,7 +27,7 @@ import {
 
 import { toEvaluationParams } from "./commission";
 import { CommissionStrip } from "./CommissionStrip";
-import { ComparisonGrid } from "./ComparisonGrid";
+import { CARDS, ComparisonGrid, columnsFor } from "./ComparisonGrid";
 import { FairnessTable } from "./FairnessTable";
 import { CROSS_EVALUATION } from "./config";
 import { ProposalDialog } from "./ProposalDialog";
@@ -93,7 +93,7 @@ function Running({
             {queued ? ahead : t("eval.preparing")}
             {queued ? null : (
               <span className="ml-2 nums text-muted-foreground">
-                {t("eval.doneOf3", { n: done })}
+                {t("eval.doneOf", { n: done, total: CARDS })}
               </span>
             )}
           </p>
@@ -101,7 +101,7 @@ function Running({
             {queued ? waiting : duration(elapsed)}
           </p>
         </div>
-        {queued ? null : <Progress value={done} max={3} className="hidden w-40 sm:block" />}
+        {queued ? null : <Progress value={done} max={CARDS} className="hidden w-40 sm:block" />}
         <CancelButton run={run} />
       </div>
 
@@ -110,8 +110,11 @@ function Running({
         {t("eval.blindNotice")}
       </p>
 
-      <div className="grid items-stretch gap-4 xl:grid-cols-3">
-        {[1, 2, 3].map((position) => (
+      {/* One placeholder per card the session will hold. Which two arms are being written
+          is the seed's and never said here: a placeholder named after an arm would be the
+          reveal before the cards. */}
+      <div className={cn("grid items-stretch gap-4", columnsFor(CARDS))}>
+        {Array.from({ length: CARDS }, (_, index) => index + 1).map((position) => (
           <div
             key={position}
             className="flex h-64 flex-col overflow-hidden rounded-xl border border-border bg-card"
@@ -334,7 +337,7 @@ export function EvaluationScreen() {
       </header>
 
       {/* The tabs disappear while a session is open, and that is deliberate: a comparison
-          is one task with one way out, and offering three destinations beside three cards
+          is one task with one way out, and offering three destinations beside the cards
           invites leaving it half judged. */}
       {!showComparison && !running ? (
         <div className="flex border-b border-border">

@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session as DbSession
 from server import csv_safe
 from server.db.models import EvalSession
 
-from .. import ARMS, EvaluationSession
+from .. import ARMS, RIVALS, SYSTEM, EvaluationSession
 from . import queries
 from .instruments import RATING_SCALES, TRIAGE_VALUES
 
@@ -52,13 +52,15 @@ def assign(
     seed: int | None = None,
     allow_repeat: bool = False,
 ) -> EvaluationSession:
-    """Copy the three items into a new row for somebody else, judgement cleared.
+    """Copy the session's items into a new row for somebody else, judgement cleared.
 
-    The shuffle is DRAWN AFRESH, because two evaluators sharing an order share a position
-    bias and an agreement that includes it is not an agreement about the exercises. `think`
-    is INHERITED and never redrawn: those items were generated under a reasoning condition
-    that already happened. Raises ValueError('already-assigned') unless `allow_repeat`,
-    since the usual cause of a second copy is a double click.
+    The ORDER is DRAWN AFRESH, because two evaluators sharing an order share a position
+    bias and an agreement that includes it is not an agreement about the exercises. The
+    ARMS are inherited — a copy holds the same two (or, on a session recorded with three,
+    the same three) proposals, or it would not be a copy — and so is `think`, never
+    redrawn: those items were generated under a reasoning condition that already happened.
+    Raises ValueError('already-assigned') unless `allow_repeat`, since the usual cause of a
+    second copy is a double click.
     """
     set_id = source.set_id or source.id
     if not allow_repeat:
@@ -66,11 +68,11 @@ def assign(
             if row.user_id == user_id:
                 raise ValueError("already-assigned")
 
+    session = EvaluationSession.from_dict(source.trace)
     seed = random.randrange(2**31) if seed is None else int(seed)
-    order = list(ARMS)
+    order = list(session.shuffle)
     random.Random(seed).shuffle(order)
 
-    session = EvaluationSession.from_dict(source.trace)
     session.id = uuid.uuid4().hex[:12]
     session.created_at = time.time()
     session.set_id = set_id
@@ -105,8 +107,8 @@ def record_choice(
     session = EvaluationSession.from_dict(row.trace)
     if session.finished:
         raise ValueError("already-chosen")
-    if choice is not None and choice not in (1, 2, 3):
-        raise ValueError("choice must be 1, 2, 3 or null")
+    if choice is not None and choice not in range(1, session.cards + 1):
+        raise ValueError(f"choice must be between 1 and {session.cards}, or null")
 
     session.choice = choice
     session.choice_arm = session.arm_at(choice) if choice is not None else None
@@ -127,8 +129,8 @@ def record_triage(
     session = EvaluationSession.from_dict(row.trace)
     if session.finished:
         raise ValueError("already-chosen")
-    if position not in (1, 2, 3):
-        raise ValueError("position must be 1, 2 or 3")
+    if position not in range(1, session.cards + 1):
+        raise ValueError(f"position must be between 1 and {session.cards}")
     if value not in TRIAGE_VALUES:
         raise ValueError(f"'{value}' must be one of {list(TRIAGE_VALUES)}")
 
@@ -239,6 +241,10 @@ def header(row: EvalSession, user=None, workspace_slug: str | None = None) -> di
         "instructions": row.instructions or "",
         "seed": row.seed,
         "shuffle": shuffle,
+        # How many cards the session showed, and the ONE arm the system met on a two-card
+        # session — None on a three-card one, which has two rivals and no duel.
+        "cards": len(shuffle),
+        "rival": _rival_of(shuffle),
         "think": bool(row.think),
         "triage": triage,
         # Re-keyed here rather than stored, so the raw record keeps saying what the person
@@ -258,6 +264,12 @@ def header(row: EvalSession, user=None, workspace_slug: str | None = None) -> di
         **_account_fields(user),
         "workspace": workspace_slug,
     }
+
+
+def _rival_of(shuffle: list) -> str | None:
+    """Return the one arm beside the system, or None when the session held three."""
+    others = [arm for arm in shuffle if arm != SYSTEM]
+    return others[0] if len(others) == 1 and SYSTEM in shuffle else None
 
 
 def _by_arm(triage: dict, shuffle: list) -> dict:
@@ -318,10 +330,10 @@ def aggregates(headers: list[dict]) -> dict:
         "rubric": _rubric_summary([h["rating"] for h in headers if h.get("rating")]),
         "think": _think_breakdown(decided),
         "elapsed_ms": _mean_elapsed(decided),
-        # The three answers the memoria has to be able to give: is the preference
-        # distinguishable from chance, how wide is it, and did a card's position decide any
-        # of it.
-        "significance": significance(preferences, len(decided)),
+        # The three answers the memoria has to be able to give: does the system beat each
+        # rival more often than a coin would, how wide is it, and did a card's position
+        # decide any of it.
+        "significance": significance(decided),
         "triage": triage_summary(decided),
         "position": position_bias(decided),
         "duration": _duration_summary(decided),
@@ -351,17 +363,35 @@ def _preferences(rows: list[dict]) -> dict:
 # runtime stopped paying for. The three tests the evaluation needs are a handful of lines each.
 
 
-def significance(preferences: dict, decided: int) -> dict:
-    """Is the preference for the system distinguishable from picking one of three at random?"""
-    expected = 1 / len(ARMS)
-    summary: dict = {"n": decided, "expected": round(expected, 4), "arms": {}}
-    for arm in ARMS:
-        wins = preferences.get(arm, 0)
-        summary["arms"][arm] = {
-            "wins": wins,
-            "share": round(wins / decided, 4) if decided else None,
-            "ci95": wilson(wins, decided),
-            "p": (round(p, 5) if (p := binomial_p(wins, decided, expected)) is not None else None),
+def significance(decided: list[dict]) -> dict:
+    """Is the preference for the system over EACH rival distinguishable from a coin?
+
+    One duel per rival, over the two-card sessions that held it: `n` counts every decided
+    one, "ninguna me convence" included, so `share` is the system's share of the answers it
+    actually got and not of the wins alone, and `p` is the exact two-sided binomial against
+    one half. A session recorded with three cards is `legacy`: a three-way choice says who
+    won the field and nothing about either pair, so it enters no duel.
+    """
+    two_way = [row for row in decided if row.get("rival") in RIVALS]
+    summary: dict = {
+        "n": len(two_way),
+        "expected": 0.5,
+        "legacy": len(decided) - len(two_way),
+        "duels": {},
+    }
+    for rival in RIVALS:
+        rows = [row for row in two_way if row.get("rival") == rival]
+        total = len(rows)
+        system = sum(1 for row in rows if row.get("choice_arm") == SYSTEM)
+        rival_wins = sum(1 for row in rows if row.get("choice_arm") == rival)
+        summary["duels"][rival] = {
+            "n": total,
+            "system": system,
+            "rival": rival_wins,
+            "none": total - system - rival_wins,
+            "share": round(system / total, 4) if total else None,
+            "ci95": wilson(system, total),
+            "p": (round(p, 5) if (p := binomial_p(system, total, 0.5)) is not None else None),
         }
     return summary
 
@@ -394,12 +424,34 @@ def _binomial_pmf(k: int, n: int, p: float) -> float:
 
 
 def position_bias(decided: list[dict]) -> dict:
-    """Ask whether the position of a card decided anything, by chi-square on three counts.
+    """Ask whether the position of a card decided anything, by chi-square on the counts.
 
     It costs nothing because the seed and the order were recorded from the first session.
+    Two-card sessions are the population — two positions, one degree of freedom — and the
+    sessions recorded with three cards, if any, are reported apart under `three_way` with
+    their own two degrees of freedom: a count over positions cannot pool sessions that did
+    not have the same positions.
     """
-    counts = {1: 0, 2: 0, 3: 0}
-    for row in decided:
+    two_way = [row for row in decided if _cards_of(row) == 2]
+    three_way = [row for row in decided if _cards_of(row) == 3]
+    summary = {"cards": 2, **_position_counts(two_way, 2)}
+    if three_way:
+        summary["three_way"] = {"cards": 3, **_position_counts(three_way, 3)}
+    return summary
+
+
+def _cards_of(row: dict) -> int:
+    """Return how many cards a header's session showed, reading `cards` or its shuffle."""
+    cards = row.get("cards")
+    if cards:
+        return int(cards)
+    return len(row.get("shuffle") or [])
+
+
+def _position_counts(rows: list[dict], cards: int) -> dict:
+    """Count the chosen position over sessions of one shape and test it against uniform."""
+    counts = {position: 0 for position in range(1, cards + 1)}
+    for row in rows:
         choice = row.get("choice")
         if choice in counts:
             counts[choice] += 1
@@ -408,26 +460,35 @@ def position_bias(decided: list[dict]) -> dict:
     if total == 0:
         return {"n": 0, "counts": counts, "p": None}
 
-    expected = total / 3
+    expected = total / cards
     statistic = sum((observed - expected) ** 2 / expected for observed in counts.values())
     return {
         "n": total,
         "counts": counts,
         "chi2": round(statistic, 4),
-        "p": round(_chi2_p_df2(statistic), 5),
+        "p": round(_chi2_p(statistic, cards - 1), 5),
     }
 
 
-def _chi2_p_df2(statistic: float) -> float:
-    """Return the chi-square survival for the 2 degrees of freedom three positions leave.
+def _chi2_p(statistic: float, df: int) -> float:
+    """Return the chi-square survival for one or two degrees of freedom, in closed form.
 
-    That case has the closed form exp(-x/2): no table, no library, no approximation.
+    Two positions leave ONE degree of freedom, where the survival is erfc(sqrt(x/2)); three
+    leave two, where it is exp(-x/2). No table, no library, no approximation — and no
+    other shape exists here, so a third one is refused rather than guessed.
     """
-    return math.exp(-statistic / 2)
+    if df == 1:
+        return math.erfc(math.sqrt(statistic / 2))
+    if df == 2:
+        return math.exp(-statistic / 2)
+    raise ValueError(f"no closed form for {df} degrees of freedom")
 
 
 def triage_summary(decided: list[dict]) -> dict:
-    """Summarise the blind per-card answer, the one quality signal all three arms have.
+    """Summarise the blind per-card answer, the one quality signal every arm has.
+
+    Per arm over the sessions that SHOWED it: a rival absent from a session is simply not
+    counted there, so each arm's `n` is how many times it was put in front of somebody.
 
     `usable` folds "tal cual" and "con retoques" together, because that is the question a
     teacher is really answering; `outright` keeps the stricter reading beside it.
@@ -586,7 +647,7 @@ def by_profile(headers: list[dict]) -> list[dict]:
 
 
 def agreement(headers: list[dict]) -> dict:
-    """Pool what two people who judged the SAME three items said.
+    """Pool what two people who judged the SAME items said.
 
     The only evidence the evaluation can offer that its instrument is reproducible rather than a
     record of one person's taste. `declined` sessions are excluded on both sides: an
@@ -749,6 +810,7 @@ def export_csv(headers: list[dict]) -> str:
         "instructions",
         "seed",
         "think",
+        "rival",
         "position_1",
         "position_2",
         "position_3",
@@ -804,6 +866,8 @@ def _export_commission(row: dict) -> dict:
         "instructions": row.get("instructions") or "",
         "seed": row.get("seed"),
         "think": int(bool(row.get("think", True))),
+        # The one arm the system met; blank on a session recorded with three cards.
+        "rival": row.get("rival") or "",
     }
 
 
@@ -829,7 +893,11 @@ def _iso(timestamp: float | None) -> str:
 
 
 def _export_positions(shuffle: list) -> dict:
-    """Which arm sat at each of the three positions, so the blinding stays auditable."""
+    """Which arm sat at each position, so the blinding stays auditable.
+
+    Three columns whatever the session held: a two-card session leaves the third blank,
+    and one file holds both shapes without a second header.
+    """
     return {
         f"position_{index + 1}": shuffle[index] if index < len(shuffle) else ""
         for index in range(3)

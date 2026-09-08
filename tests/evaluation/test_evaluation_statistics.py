@@ -2,8 +2,12 @@
 
 These are the numbers a tribunal reads, so every expectation here is one that can be
 checked on paper rather than one produced by running the code and freezing whatever came
-out. Where a closed form exists — the binomial's symmetric tail, chi-square with two
-degrees of freedom — the test states it as an identity.
+out. Where a closed form exists — the binomial's symmetric tail, chi-square with one or
+two degrees of freedom — the test states it as an identity.
+
+A session is two cards since 2026-09-08 — the system and one drawn rival — so the headers
+below carry `cards` and `rival` as `store.header` writes them, and the three-card shape is
+built explicitly where a test is about what the arithmetic does with a legacy row.
 """
 
 import math
@@ -11,7 +15,16 @@ import math
 from evaluation.api import store
 
 
-def _decided(choice_arm, position=1, triage=None, seconds=None, profile="teacher", **extra):
+def _decided(
+    choice_arm,
+    position=1,
+    triage=None,
+    seconds=None,
+    profile="teacher",
+    rival="naive",
+    cards=2,
+    **extra,
+):
     """One decided session's header, with only the fields the aggregates actually read."""
     opened = 1000.0
     return {
@@ -27,33 +40,99 @@ def _decided(choice_arm, position=1, triage=None, seconds=None, profile="teacher
         "evaluator_profile": profile,
         "arm_status": {},
         "arm_elapsed_ms": {},
+        "cards": cards,
+        "rival": rival if cards == 2 else None,
         **extra,
     }
+
+
+def _legacy(choice_arm, position=1, **extra):
+    """A session recorded with three cards: two rivals, and therefore no duel."""
+    return _decided(choice_arm, position=position, cards=3, **extra)
 
 
 # BINOMIAL --------------------------------------------------------------------------------
 
 
-def test_a_fair_split_between_three_arms_is_not_significant():
-    # 5 of 15 is exactly the null: nothing could be less surprising, so p is 1.
-    assert store.binomial_p(5, 15, 1 / 3) == 1.0
+def test_a_fair_split_of_a_duel_is_not_significant():
+    # 5 of 10 is exactly the null of a coin: nothing could be less surprising, so p is 1.
+    assert store.binomial_p(5, 10, 0.5) == 1.0
 
 
 def test_a_clean_sweep_is_significant():
-    # Every one of twelve going to the same arm: p is the two-sided version of (1/3)^12,
+    # Every one of twelve going to the system: p is the two-sided version of (1/2)^12,
     # which is far below any threshold anybody would pre-register.
-    p = store.binomial_p(12, 12, 1 / 3)
+    p = store.binomial_p(12, 12, 0.5)
     assert p is not None and p < 0.001
 
 
-def test_the_binomial_matches_the_hand_computed_upper_tail():
+def test_the_binomial_is_two_sided_on_a_coin():
+    # With p0 = 1/2 and n = 6, the outcomes as unlikely as 6-of-6 are {0, 6}: two tails
+    # of (1/2)^6 each.
+    assert abs(store.binomial_p(6, 6, 0.5) - 2 * (1 / 2) ** 6) < 1e-12
+
+
+def test_the_binomial_still_answers_the_three_way_null_the_old_sessions_were_read_against():
     # With p0 = 1/3 and n = 6, the outcomes at least as unlikely as 6-of-6 are exactly
     # {6}, because P(0) = (2/3)^6 is bigger than P(6) = (1/3)^6.
     assert store.binomial_p(6, 6, 1 / 3) == (1 / 3) ** 6
 
 
 def test_no_decided_sessions_gives_no_p_value_rather_than_zero():
-    assert store.binomial_p(0, 0, 1 / 3) is None
+    assert store.binomial_p(0, 0, 0.5) is None
+
+
+# DUELS -----------------------------------------------------------------------------------
+
+
+def test_each_rival_gets_its_own_duel_over_the_sessions_that_held_it():
+    rows = [_decided("system", rival="naive") for _ in range(6)] + [
+        _decided("rag", rival="rag") for _ in range(4)
+    ]
+    duels = store.significance(rows)["duels"]
+    assert set(duels) == {"naive", "rag"}
+    assert duels["naive"] == {
+        "n": 6,
+        "system": 6,
+        "rival": 0,
+        "none": 0,
+        "share": 1.0,
+        "ci95": store.wilson(6, 6),
+        "p": round(2 * (1 / 2) ** 6, 5),
+    }
+    assert duels["rag"]["system"] == 0
+    assert duels["rag"]["rival"] == 4
+    assert duels["rag"]["share"] == 0.0
+
+
+def test_the_null_of_a_duel_is_a_coin():
+    assert store.significance([])["expected"] == 0.5
+
+
+def test_no_preference_counts_in_the_duel_and_for_nobody():
+    # "Ninguna me convence" is an answer the system did not win: it stays in `n`, so the
+    # share is over what the evaluator actually said and not over the wins alone.
+    rows = [_decided("system", rival="naive"), _decided(None, position=None, rival="naive")]
+    duel = store.significance(rows)["duels"]["naive"]
+    assert duel == {
+        "n": 2,
+        "system": 1,
+        "rival": 0,
+        "none": 1,
+        "share": 0.5,
+        "ci95": store.wilson(1, 2),
+        "p": 1.0,
+    }
+
+
+def test_a_session_recorded_with_three_cards_enters_no_duel():
+    # A three-way choice says who won the field and nothing about either pair.
+    rows = [_legacy("system"), _legacy("naive"), _decided("system", rival="rag")]
+    summary = store.significance(rows)
+    assert summary["n"] == 1
+    assert summary["legacy"] == 2
+    assert summary["duels"]["naive"]["n"] == 0
+    assert summary["duels"]["rag"]["n"] == 1
 
 
 # WILSON ----------------------------------------------------------------------------------
@@ -82,33 +161,47 @@ def test_wilson_narrows_as_the_sample_grows():
 # POSITION BIAS ---------------------------------------------------------------------------
 
 
-def test_a_flat_spread_over_positions_raises_no_alarm():
-    rows = [_decided("system", position=(index % 3) + 1) for index in range(30)]
+def test_a_flat_spread_over_the_two_positions_raises_no_alarm():
+    rows = [_decided("system", position=(index % 2) + 1) for index in range(30)]
     result = store.position_bias(rows)
-    assert result["counts"] == {1: 10, 2: 10, 3: 10}
+    assert result["cards"] == 2
+    assert result["counts"] == {1: 15, 2: 15}
     assert result["chi2"] == 0.0
     assert result["p"] == 1.0
+    assert "three_way" not in result
 
 
-def test_everybody_picking_the_first_card_is_caught():
+def test_everybody_picking_the_left_card_is_caught():
     rows = [_decided("system", position=1) for _ in range(30)]
     result = store.position_bias(rows)
-    # chi2 = 2n = 60 when every observation lands in one of three equal cells.
-    assert result["chi2"] == 60.0
+    # chi2 = n = 30 when every observation lands in one of two equal cells.
+    assert result["chi2"] == 30.0
     assert result["p"] < 0.001
 
 
-def test_the_chi_square_p_is_the_closed_form_for_two_degrees_of_freedom():
+def test_the_chi_square_p_is_the_closed_form_for_one_degree_of_freedom():
     rows = [_decided("system", position=1) for _ in range(12)] + [
-        _decided("rag", position=2) for _ in range(6)
+        _decided("rag", position=2, rival="rag") for _ in range(6)
     ]
     result = store.position_bias(rows)
-    assert result["p"] == round(math.exp(-result["chi2"] / 2), 5)
+    assert result["p"] == round(math.erfc(math.sqrt(result["chi2"] / 2)), 5)
 
 
 def test_sessions_with_no_preference_do_not_enter_the_position_count():
     rows = [_decided(None, position=None) for _ in range(4)]
-    assert store.position_bias(rows) == {"n": 0, "counts": {1: 0, 2: 0, 3: 0}, "p": None}
+    assert store.position_bias(rows) == {"cards": 2, "n": 0, "counts": {1: 0, 2: 0}, "p": None}
+
+
+def test_three_card_sessions_are_counted_apart_with_their_own_two_degrees_of_freedom():
+    # A count over positions cannot pool sessions that did not have the same positions.
+    rows = [_decided("system", position=2)] + [_legacy("system", position=1) for _ in range(12)]
+    result = store.position_bias(rows)
+    assert result["counts"] == {1: 0, 2: 1}
+    legacy = result["three_way"]
+    assert legacy["cards"] == 3
+    assert legacy["counts"] == {1: 12, 2: 0, 3: 0}
+    assert legacy["chi2"] == 24.0
+    assert legacy["p"] == round(math.exp(-24.0 / 2), 5)
 
 
 # TRIAGE ----------------------------------------------------------------------------------
@@ -218,10 +311,10 @@ def test_the_same_account_judging_a_set_twice_is_consistency_and_not_agreement()
     assert store.agreement(rows)["choice"]["pairs"] == 0
 
 
-def test_the_triage_contributes_three_pairs_per_shared_session():
-    triage = {"system": "yes", "rag": "partly", "naive": "no"}
+def test_the_triage_contributes_one_pair_per_card_of_a_shared_session():
+    triage = {"system": "yes", "rag": "partly"}
     rows = [_judged("A", 1, "system", triage), _judged("A", 2, "system", triage)]
-    assert store.agreement(rows)["triage"]["pairs"] == 3
+    assert store.agreement(rows)["triage"]["pairs"] == 2
 
 
 # GROUPING --------------------------------------------------------------------------------

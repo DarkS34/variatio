@@ -1,4 +1,5 @@
-/* The evaluation's own types: the three arms, one blind session, and what the administration
+/* The evaluation's own types: the three arms, one blind session — the system against ONE
+ * rival drawn by the seed, on two cards since 2026-09-08 — and what the administration
  * panel reads over the population of them. They live here rather than in `lib/types.ts`
  * for the same reason the Python does: the evaluation is measured against the system, not part
  * of it. `lib/types.ts` keeps only the two counters the admin overview prints. */
@@ -117,7 +118,7 @@ export interface EvaluationSessionHead {
   /** Somebody handed this session over, rather than the evaluator commissioning it. */
   assigned: boolean;
   /** Answered blind, one per POSITION — never per arm, because a position is what the
-   *  evaluator actually saw. Keys are "1" | "2" | "3". */
+   *  evaluator actually saw. Keys are "1" | "2" — "3" on a session recorded with three. */
   triage: Record<string, TriageValue>;
   choice: number | null;
   choice_arm: EvaluationArm | null;
@@ -195,11 +196,28 @@ export interface ThinkSlice {
 /** Wilson, so a bound never leaves [0,1] at the extremes the evaluation will actually meet. */
 export type Interval = [number, number];
 
-export interface ArmSignificance {
-  wins: number;
+export interface PositionBias {
+  cards: number;
+  n: number;
+  counts: Record<string, number>;
+  chi2?: number;
+  p: number | null;
+}
+
+/**
+ * One rival's duel with the system, over the two-card sessions that held that rival.
+ *
+ * `n` counts every decided one, "ninguna me convence" included, so `share` is the
+ * system's share of the answers it got and not of the wins alone; `p` is the exact
+ * two-sided binomial against a coin. Null with nothing decided yet.
+ */
+export interface Duel {
+  n: number;
+  system: number;
+  rival: number;
+  none: number;
   share: number | null;
   ci95: Interval | null;
-  /** Exact two-sided binomial against 1/3. Null with nothing decided yet. */
   p: number | null;
 }
 
@@ -232,18 +250,17 @@ export interface EvaluationAggregates {
   think: { on: ThinkSlice; off: ThinkSlice };
   elapsed_ms: Partial<Record<EvaluationArm, number>>;
   significance: {
+    /** Decided two-card sessions: the ones that enter a duel. */
     n: number;
     expected: number;
-    arms: Record<string, ArmSignificance>;
+    /** Decided sessions recorded with three cards, which enter no duel. */
+    legacy: number;
+    duels: Partial<Record<EvaluationArm, Duel>>;
   };
   triage: Partial<Record<EvaluationArm, TriageSlice>>;
-  /** Did the letter on the card decide anything? Three positions, two degrees of freedom. */
-  position: {
-    n: number;
-    counts: Record<string, number>;
-    chi2?: number;
-    p: number | null;
-  };
+  /** Did the letter on the card decide anything? Two positions, one degree of freedom —
+   *  and, when sessions recorded with three cards exist, those apart under `three_way`. */
+  position: PositionBias & { three_way?: PositionBias };
   duration: {
     n: number;
     median?: number;

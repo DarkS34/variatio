@@ -301,3 +301,50 @@ def test_a_session_recorded_before_sets_existed_is_its_own_set(db):
 def test_a_session_recorded_before_the_triage_existed_reads_as_untriaged(db):
     legacy = {key: value for key, value in SOURCE.items() if key != "triage"}
     assert EvaluationSession.from_dict(legacy).triage == {}
+
+
+# A TWO-CARD SOURCE ------------------------------------------------------------------------
+#
+# Since 2026-09-08 a session holds the system and ONE drawn rival. A copy keeps exactly those
+# two: the arms are the set, and only the order is drawn afresh.
+
+TWO_CARD = {
+    **SOURCE,
+    "id": "dos000000001",
+    "set_id": "dos000000001",
+    "seed": 9,
+    "shuffle": ["rag", "system"],
+    "arms": {"rag": _arm("rag", "el de similitud"), "system": _arm("system", "el del grafo")},
+    "triage": {"1": "no", "2": "yes"},
+    "choice": 2,
+}
+
+
+@pytest.fixture
+def two_card(db):
+    workspace_id = _source(db).workspace_id
+    queries.upsert_evaluation(db, TWO_CARD["id"], workspace_id, 1, TWO_CARD)
+    return queries.get_evaluation(db, TWO_CARD["id"])
+
+
+def test_a_copy_of_a_two_card_session_holds_the_same_two_arms_and_no_third(db, two_card):
+    copy = evaluation_store.assign(db, two_card, user_id=2, assigned_by=3, seed=1)
+    assert sorted(copy.shuffle) == ["rag", "system"]
+    assert set(copy.arms) == {"rag", "system"}
+    assert copy.cards == 2
+    assert copy.rival == "rag"
+
+
+def test_both_orders_of_a_two_card_copy_occur_across_seeds(db, two_card):
+    orders = {
+        tuple(evaluation_store.assign(db, two_card, 2, 3, seed=s, allow_repeat=True).shuffle)
+        for s in range(20)
+    }
+    assert orders == {("rag", "system"), ("system", "rag")}
+
+
+def test_a_three_card_session_recorded_before_the_change_still_copies_as_three(db):
+    # Legacy rows keep their shape: the copy is of what was recorded, never a re-draw.
+    copy = evaluation_store.assign(db, _source(db), user_id=2, assigned_by=3)
+    assert copy.cards == 3
+    assert copy.rival is None

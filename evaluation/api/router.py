@@ -8,7 +8,7 @@ evaluator has committed to a choice.
 What this router deliberately does NOT serve is the evaluation's aggregates and its CSV, which
 are `/api/admin/evaluations`': handing an evaluator the running score of the thing they are
 judging invites them to even it out, and a per-session export of everybody's judgements is
-research data rather than a feature of the screen where you compare three cards.
+research data rather than a feature of the screen where you compare two cards.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -43,7 +43,8 @@ class EvaluationBody(BaseModel):
 
 
 class ChoiceBody(BaseModel):
-    """Which position won, or null for "ninguna", plus an optional note."""
+    """Which position won — 1 or 2, 3 on a session recorded with three cards — or null for
+    "ninguna", plus an optional note."""
 
     choice: int | None = None
     comment: str | None = None
@@ -381,13 +382,16 @@ def _payload(session: EvaluationSession) -> dict:
             "declined_at": session.declined_at,
             "evaluator_note": session.evaluator_note,
             "rating": session.rating,
-            # The seed IS the shuffle. `think` identifies no card, being the same for the
-            # three, but it colours the reading, and the point of drawing it was to measure
-            # it rather than to have it judged with that in mind.
+            # The seed IS the shuffle — and the rival, which is why it stays withheld too.
+            # `think` identifies no card, being the same for both, but it colours the
+            # reading, and the point of drawing it was to measure it rather than to have it
+            # judged with that in mind.
             "seed": session.seed if revealed else None,
             "think": session.think if revealed else None,
         },
-        "positions": [_position(session, index + 1, revealed) for index in range(len(ARMS))],
+        # As many cards as the session HOLDS: two since 2026-09-08, three on a session
+        # recorded before. The count is the session's own `shuffle`, never a constant.
+        "positions": [_position(session, index + 1, revealed) for index in range(session.cards)],
     }
 
 

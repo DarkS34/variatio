@@ -81,7 +81,8 @@ def test_the_installations_writer_reaches_every_arm_on_the_commission(offered, m
     _local_model(monkeypatch, "el-que-delibera")
     seen = _run_capturing(monkeypatch)
     session = evaluation_run.evaluate(_Context(), concepts=["Función"], seed=7)
-    assert len(seen) == 3
+    # Two arms per session since 2026-09-08: the system and the one rival the seed drew.
+    assert len(seen) == 2
     assert {c.model for c in seen} == {"el-que-delibera"}
     # Locked at "high": reasoning ON runs at the declared level, OFF stays off.
     assert {c.effort for c in seen} == ({"high"} if session.think else {False})

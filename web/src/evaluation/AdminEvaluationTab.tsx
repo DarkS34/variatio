@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 import { AdminSetsPanel } from "./AdminSetsPanel";
 import { CROSS_EVALUATION } from "./config";
-import { ARM_META } from "./arms";
+import { ARM_META, letterFor } from "./arms";
 import {
   useAdminEvaluations,
   useAdminStageEvaluations,
@@ -31,6 +31,7 @@ import type {
   AdminStageEvaluations,
   EvaluationAggregates,
   EvaluationArm,
+  PositionBias,
   StageAccountGroup,
   StageArtifactSummary,
   EvaluationFilters,
@@ -38,13 +39,17 @@ import type {
 import { useSelection } from "./useSelection";
 import { useT, type Key, type Language } from "@/lib/i18n";
 
-/** A three-way blind choice: what pure chance would produce. Every share is read
- *  against it, and the panel never shows one without drawing the other. */
-const CHANCE = 1 / 3;
+/** A two-way blind choice — the system against one drawn rival — is a coin: what pure
+ *  chance would produce. Every share is read against it, and the panel never shows one
+ *  without drawing the other. */
+const CHANCE = 1 / 2;
 
 /** The order the arm palette was validated on. Anything that draws the three side by
  *  side draws them in it — the CVD check is over ADJACENT pairs. */
 const ARMS: EvaluationArm[] = ["naive", "rag", "system"];
+
+/** The two arms a session's system proposal can be pitted against, in the palette's order. */
+const RIVALS: EvaluationArm[] = ["naive", "rag"];
 
 const RUBRIC_LABELS: Record<string, Key> = {
   prerequisites: "rubricScale.prerequisites",
@@ -565,15 +570,22 @@ function Measurement({ data }: { data: AdminEvaluations }) {
         <p className="font-medium">{t("adminEvaluation.position")}</p>
         {position.n > 0 ? (
           <p className="text-muted-foreground">
-            A: <span className="nums text-foreground">{position.counts["1"] ?? 0}</span> · B:{" "}
-            <span className="nums text-foreground">{position.counts["2"] ?? 0}</span> · C:{" "}
-            <span className="nums text-foreground">{position.counts["3"] ?? 0}</span> ·{" "}
-            <span className="nums">{pValue(position.p, language)}</span>
+            <PositionCounts position={position} language={language} />
             {t("adminEvaluation.position.vsUniform")}
           </p>
         ) : (
           <p className="text-muted-foreground">{t("adminEvaluation.position.none")}</p>
         )}
+        {/* Sessions recorded with three cards, before the comparison became two: counted
+            apart, because a count over positions cannot pool two shapes. Drawn only when
+            there are any. */}
+        {position.three_way && position.three_way.n > 0 ? (
+          <p className="text-muted-foreground">
+            {t("adminEvaluation.position.legacy", { n: position.three_way.n })}{" "}
+            <PositionCounts position={position.three_way} language={language} />
+            {t("adminEvaluation.position.vsUniform")}
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-1">
@@ -614,12 +626,32 @@ function Measurement({ data }: { data: AdminEvaluations }) {
   );
 }
 
+/** The chosen position, one count per letter, at whatever shape the block carries. */
+function PositionCounts({ position, language }: { position: PositionBias; language: Language }) {
+  const letters = Array.from({ length: position.cards }, (_, index) => index + 1);
+  return (
+    <>
+      {letters.map((number) => (
+        <span key={number}>
+          {letterFor(number)}:{" "}
+          <span className="nums text-foreground">{position.counts[String(number)] ?? 0}</span>
+          {" · "}
+        </span>
+      ))}
+      <span className="nums">{pValue(position.p, language)}</span>
+    </>
+  );
+}
+
 /**
  * The question the evaluation exists to answer, drawn so it can be answered.
  *
- * One row per arm rather than a stack, because "did the system beat 1 in 3?" is a
+ * One row per arm rather than a stack, because "did the system beat a coin?" is a
  * comparison against a line and a stacked bar makes exactly that comparison hard. The
- * reference line IS the null hypothesis, drawn where it can be seen.
+ * reference line IS the null hypothesis, drawn where it can be seen. The bars count wins
+ * over every decided session; the DUELS under them are the pairwise reading — the system
+ * against each rival, over the sessions that held that rival — which is what a two-card
+ * session measures and what the memoria quotes.
  */
 function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
   const { plural, t } = useT();
@@ -659,7 +691,78 @@ function Preferences({ aggregates }: { aggregates: EvaluationAggregates }) {
         reference={CHANCE}
         referenceLabel={t("adminEvaluation.chanceLine")}
       />
+      <Duels aggregates={aggregates} />
       <Reliability aggregates={aggregates} />
+    </div>
+  );
+}
+
+/**
+ * The system against each rival, over the sessions that held that rival.
+ *
+ * One line per rival: how many duels, how many the system won, the Wilson interval and
+ * the exact binomial against a coin. A rival nobody has met yet is drawn with its zero
+ * rather than omitted, so the panel says which half of the draw has not landed. Sessions
+ * recorded with three cards enter no duel and are counted apart, in one sentence.
+ */
+function Duels({ aggregates }: { aggregates: EvaluationAggregates }) {
+  const { language, plural, t } = useT();
+  const significance = aggregates.significance;
+  const duels = significance?.duels ?? {};
+  const rivals = RIVALS.filter((arm) => duels[arm]);
+  if (rivals.length === 0) return null;
+
+  return (
+    <div className="space-y-1.5 border-t border-border pt-2">
+      <h3 className="text-small font-medium text-muted-foreground">
+        {t("adminEvaluation.duels")}
+      </h3>
+      {rivals.map((arm) => {
+        const duel = duels[arm]!;
+        return (
+          <p key={arm} className="flex flex-wrap items-center gap-x-1.5 text-small">
+            <span
+              className="size-2 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: ARM_META[arm].colour }}
+            />
+            <span className="text-muted-foreground">
+              {t("adminEvaluation.duels.vs", { arm: t(ARM_META[arm].shortKey) })}
+            </span>
+            {duel.n > 0 ? (
+              <>
+                <span className="nums text-foreground">
+                  {t("adminEvaluation.duels.score", {
+                    system: duel.system,
+                    rival: duel.rival,
+                    none: duel.none,
+                  })}
+                </span>
+                <span className="text-muted-foreground">
+                  · {plural("adminEvaluation.sessionCount", duel.n)}
+                  {duel.ci95 ? (
+                    <>
+                      {" · "}
+                      {t("adminEvaluation.ci95", {
+                        low: percent(duel.ci95[0]),
+                        high: percent(duel.ci95[1]),
+                      })}
+                    </>
+                  ) : null}
+                  {" · "}
+                  <span className="nums">{pValue(duel.p, language)}</span>
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">{t("adminEvaluation.duels.none")}</span>
+            )}
+          </p>
+        );
+      })}
+      {significance.legacy > 0 ? (
+        <p className="text-small text-muted-foreground">
+          {t("adminEvaluation.duels.legacy", { n: significance.legacy })}
+        </p>
+      ) : null}
     </div>
   );
 }
