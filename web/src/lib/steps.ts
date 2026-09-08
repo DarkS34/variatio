@@ -23,27 +23,20 @@ export const STEPS = [
 ] as const satisfies readonly { path: string; labelKey: Key; artifact: string | null }[];
 
 /**
- * Two phases, NAMED and not numbered.
+ * What the construction is FOR, after the rule: the one door that opens once the whole
+ * construction is closed.
  *
  * A number encodes dependency, so it goes exactly where there is one: inside the
- * construction, `1 … 4`, where each step needs the one before it closed. Generating and
- * evaluating open on the same condition — the whole construction closed — and neither waits
- * for the other, so numbering them would claim an order that does not exist. They carry an
- * ICON where a step carries its number: an icon says "a door", a number "a stop".
+ * construction, `1 … 4`, where each step needs the one before it closed. The door carries
+ * an ICON where a step carries its number: an icon says "a door", a number "a stop". It
+ * stands under no caption of its own — with one door there is no phase to name.
  *
- * The tutorial names the same two phases on its own slides, so the deck cannot promise a
- * shape the navigation does not have. `USES` is one home for the bar and the guide.
+ * `USES` is one home for the bar and the guide, so the guide cannot draw a door the
+ * navigation does not have.
  */
 export const USES = [
-  { key: "generate", path: "/generate", labelKey: "nav.create", evaluation: false },
-  { key: "compare", path: "/evaluate", labelKey: "nav.compare", evaluation: true },
-] as const satisfies readonly {
-  key: string;
-  path: string;
-  labelKey: Key;
-  /** Whether the door belongs to the evaluation rather than to the product: drawn in `--evaluation`. */
-  evaluation: boolean;
-}[];
+  { key: "generate", path: "/generate", labelKey: "nav.create" },
+] as const satisfies readonly { key: string; path: string; labelKey: Key }[];
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */
 export function stepNumber(index: number): string {

@@ -1,4 +1,4 @@
-import { ArrowRight, Check, FileText, Sparkles, User } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, User } from "lucide-react";
 import { Fragment } from "react";
 
 import { Logo } from "@/components/ui/logo";
@@ -210,60 +210,6 @@ export function AskFigure() {
         </Box>,
       ]}
     </Chain>
-  );
-}
-
-/**
- * How every step goes, in four beats.
- *
- * The marked one is "lo valoras", the only beat the reader is being asked for; the other
- * three are what the step does around it. The prose beside it does NOT walk the four beats
- * again — it says what the picture cannot, that correcting is optional and that a hand
- * correction wins.
- */
-export function CloseFigure() {
-  const { t } = useT();
-  const beats: { key: Key; marked?: boolean }[] = [
-    { key: "tutorial.fig.build" },
-    { key: "tutorial.fig.review" },
-    { key: "tutorial.fig.rate", marked: true },
-    { key: "tutorial.fig.next" },
-  ];
-  return (
-    <Chain>
-      {beats.map(({ key, marked }) => (
-        <Box key={key} marked={marked} className="w-full px-3 py-5">
-          {marked ? <Check aria-hidden className="size-5 text-attention" /> : null}
-          <span className={cn(FIGURE_PROSE, marked && "font-semibold")}>{t(key)}</span>
-        </Box>
-      ))}
-    </Chain>
-  );
-}
-
-/**
- * Three proposals, none of them named until you have chosen.
- *
- * The label is `grid.proposal`, the comparison screen's own, so the card the reader will
- * see is headed with the very words drawn here.
- */
-export function BlindFigure() {
-  const { t } = useT();
-  return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      {["A", "B", "C"].map((letter) => (
-        <Box key={letter} className="items-start gap-3 p-4 text-left">
-          <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
-            {t("grid.proposal", { letter })}
-          </span>
-          <span className="flex w-full flex-col gap-1.5" aria-hidden>
-            <span className="h-1.5 w-full bg-border" />
-            <span className="h-1.5 w-4/5 bg-border" />
-            <span className="h-1.5 w-2/3 bg-border" />
-          </span>
-        </Box>
-      ))}
-    </div>
   );
 }
 

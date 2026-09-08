@@ -19,7 +19,7 @@ function isFenced(value: string): boolean {
 }
 
 /** The one size step the app allows above `body`: a reading surface rather than dense
- *  chrome, which is what the evaluation's expanded proposal is. */
+ *  chrome. */
 const READING = "text-[16px] leading-[1.7]";
 
 function FieldValue({
@@ -44,8 +44,6 @@ function FieldValue({
 /**
  * The fields of one item, in the order the profile declares them.
  *
- * Shared with the evaluation's proposal cards so the three arms are rendered by the same
- * code: a comparison where one card lays its fields out differently is measuring layout.
  * `reading` steps the prose up one size and nothing else — the order and the labels are
  * the same, so the expanded view is the card at a size a person can read, not a fourth
  * rendering.

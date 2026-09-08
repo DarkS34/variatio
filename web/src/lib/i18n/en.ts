@@ -36,7 +36,7 @@ export const en: Catalogue = {
   "language.changed": "Language changed to {name}",
   "language.warning.title": "The change only affects what you read",
   "language.warning.body":
-    "The exercises you have already generated, the syllabuses you have built and the evaluation sessions stay as they are: they were written in the subject's language and they are not translated.",
+    "The exercises you have already generated and the syllabuses you have built stay as they are: they were written in the subject's language and they are not translated.",
 
   // WORKSPACE LANGUAGE ------------------------------------------------------------------
   "workspace.language.title": "Prompt language",
@@ -96,7 +96,7 @@ export const en: Catalogue = {
 
   "acc.ws.delete": "Delete «{name}»",
   "acc.ws.deleteTitle": "Delete «{name}»",
-  "acc.ws.whatGoes": "The syllabus, the profile, the bank, the approvals, the access of everybody who opens this instance, the generated exercises and the evaluation sessions all go.",
+  "acc.ws.whatGoes": "The syllabus, the profile, the bank, the approvals, the access of everybody who opens this instance and the generated exercises all go.",
   "acc.ws.filesStay": "The raw documents you uploaded are deleted from disk too, unless somebody else still has access: then they stay, and an administrator can import them again.",
   "acc.ws.deletedMoved": "{slug}. It was the one you had open: you are now in «{next}».",
   "acc.ws.deletedHere": "{slug}. It was the one you had open and your account is in no other: the panel offers you to create one.",
@@ -116,7 +116,7 @@ export const en: Catalogue = {
   "job.failed": "Failed",
   "job.cancelled": "Cancelled",
   "profile.noModality": "no type",
-  "evaluator.noProfile": "No profile",
+
   "api.unreachable": "The server could not be reached",
   "tunnel.external": "connected outside the API",
   "tunnel.unconfigured": "not configured",
@@ -162,12 +162,12 @@ export const en: Catalogue = {
   "step.kg_curate": "Groups the relations by type and breaks the cycles the graph does not allow. It is deterministic, with no model.",
   "step.scan": "Goes through a sample of the exemplars looking for which exercise modalities appear and which fields each one is written with.",
   "step.consolidate": "Merges what each batch saw into a single profile: a field schema, its guidance and the general writing rules.",
-  "step.eval.arms": "Generates the three proposals for the same commission, one per architecture, and shuffles them before showing them.",
-  "step.eval.guardrail": "Runs the commission's free text past the guardrail model before it reaches any of the three.",
-  "step.eval.admissibility": "Decides what the free text asks for that another control on the screen already decides. Paid once, and the three proposals share the verdict.",
-  "step.eval.tagging": "Reads the three proposals with the same tagger the bank is read with, once they are all in, and notes which concepts each one uses and which come later in the syllabus. It is the same rule the system carries in its prompt, applied to all three alike.",
-  "step.eval_rag_index_corpus": "Indexes the lecture notes, read with an ordinary extractor, for the proposal that retrieves passages from the documents. Paid once per subject.",
-  "step.eval_rag_index_exemplars": "Indexes the uploaded exercises, read with an ordinary extractor, for the same proposal. Paid once per subject.",
+
+
+
+
+
+
   "step.taggability": "One pass per domain deciding which concepts work as a label: the ones that fit any exercise («coding», «design») are marked as non-taggable. When it finishes the draft is written.",
   "step.convert": "Transcribes the document into markdown, page by page, before extracting anything. If it was already transcribed from «Raw data», this hits the cache and goes straight past.",
   "step.transcribe_documents": "One document after another. Each is saved whole when it finishes, so stopping the transcription keeps what has already come out.",
@@ -189,7 +189,7 @@ export const en: Catalogue = {
   "job.tag.label": "Tag the bank",
   "job.review_taggability.label": "Review taggability",
   "job.generate.label": "Generate exercises",
-  "job.evaluate.label": "Blind comparison",
+
   "phase.knowledge_graph.convert.label": "Transcribing the corpus documents",
   "phase.knowledge_graph.extract.label": "Extracting concepts and relations",
   "phase.knowledge_graph.clean.label": "Merging duplicates and normalising names",
@@ -233,12 +233,12 @@ export const en: Catalogue = {
   "step.transcribe_documents.label": "Transcribing the documents",
   "step.transcribe_seam.label": "Checking the seams between pages",
   "step.taggability.label": "Reviewing which concepts work as a label",
-  "step.eval.arms.label": "Preparing the three proposals",
-  "step.eval.guardrail.label": "Checking the commission",
-  "step.eval.admissibility.label": "Checking the commission's scope",
-  "step.eval.tagging.label": "Tagging the proposals",
-  "step.eval_rag_index_corpus.label": "Indexing the lecture notes for the comparison proposal",
-  "step.eval_rag_index_exemplars.label": "Indexing the exercises for the comparison proposal",
+
+
+
+
+
+
   "nav.rawWaiting": {
     one: "1 document is still untranscribed. You can build anyway: every build transcribes what it needs.",
     other: "{n} documents are still untranscribed. You can build anyway: every build transcribes what it needs.",
@@ -255,9 +255,9 @@ export const en: Catalogue = {
   "nav.state.building": "Building",
   "nav.state.reading": "Reading",
   "nav.create": "Generate exercises",
-  "nav.compare": "Evaluate the system",
+
   "nav.phase.build": "Construction phase",
-  "nav.phase.test": "Testing phase",
+
   "nav.build.folded": "Subject prepared",
   "nav.build.unfold": "Show the steps",
   "nav.build.fold": "Hide the steps",
@@ -282,20 +282,20 @@ export const en: Catalogue = {
     "Exams and worked exercises. The system uses them to understand what problems look like in this area and how the concepts are assessed.",
   "tutorial.fig.youAsk": "You say",
   "tutorial.fig.written": "And it writes the exercise",
-  "tutorial.fig.build": "It is built",
-  "tutorial.fig.review": "You read it",
-  "tutorial.fig.rate": "You rate it",
-  "tutorial.fig.next": "You correct or carry on",
+
+
+
+
 
   "tutorial.s1.title": "Variatio is an application that generates exercises for your subject",
   "tutorial.s1.body":
-    "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it generates them from your notes and from your own exercises, following the format and the spirit of the ones you set. What we are asking next is that you try it out on part of one of your own subjects and tell us how it went.",
+    "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it generates them from your notes and from your own exercises, following the format and the spirit of the ones you set.",
 
   "tutorial.s2.title": "Before you start, gather your files",
   "tutorial.s2.body":
     "The route has not begun yet. For now the only thing you have to do is find material about your subject: notes and exercises you already have in PDF, Word or PowerPoint, however they are.",
   "tutorial.s2.b1":
-    "The system is built to take a whole subject, but a couple of topics is enough to try it out: remember that this is only a trial.",
+    "The system is built to take a whole subject, but a couple of topics is enough to start seeing it work.",
   "tutorial.s2.b2":
     "It reads every document in full, page by page, and that takes time, above all with PDFs. There is no need to sit watching while it works through your material: you can leave it running and come back later.",
 
@@ -310,36 +310,35 @@ export const en: Catalogue = {
     "From the notes, internally it builds the syllabus's knowledge graph: the concepts it covers, with their dependencies and relations. That is what makes it possible, when the time comes, to decide what can be taken as known and what cannot — when writing a new exercise, for instance.",
   "tutorial.s3.step4":
     "With what comes out of the two previous steps, the exercises are tagged with the concepts of the syllabus each of them practises or assesses. That way your own examples serve as the model when new exercises are generated.",
+  "tutorial.s3.aside":
+    "Whenever the system produces something — the syllabus, the exercise types… — you are offered the chance to correct or change it. It is entirely optional and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
 
-  "tutorial.s4.title": "Testing phase: generating exercises",
+  "tutorial.s4.title":
+    "Generate exercises",
   "tutorial.s4.body":
-    "With the construction finished, the system knows everything it needs about your subject and none of it has to be prepared again. The testing phase begins, and it is two tasks (you can do them in whichever order you like, and neither needs the other): generating exercises and evaluating the system. The first: under «Generate exercises» you ask for as many as you want and keep the ones that serve you.",
+    "With the construction finished, the system knows everything it needs about your subject and none of it has to be prepared again. Under «Generate exercises» you ask for as many as you want and keep the ones that serve you.",
   "tutorial.s4.b1":
     "You can also tell it how far the class has got: the exercise will rest only on what you have already covered and use nothing you have not explained yet.",
   "tutorial.s4.b2":
     "Every exercise is saved automatically under «My exercises», in your account menu, together with what you asked for to get it. You do not have to copy it anywhere.",
   "tutorial.s4.b3":
     "You can go back to any step of the construction whenever you like. If you change something, you are told which later steps have gone stale.",
-
-  "tutorial.s5.title": "Testing phase: evaluating the system",
-  "tutorial.s5.body":
-    "The second thing you can do. Under «Evaluate the system» you are given three versions of the same exercise, each generated by a different AI and only one of them by Variatio's own system, without being told which is which. We will ask you to read them and tell us which would serve your purposes best. Only at the end is it revealed where each came from.",
-  "tutorial.s5.b1":
-    "This evaluation is independent of whether you have generated exercises or not: that is not what we are evaluating, and it makes no difference if you generated nothing at all. Under «Generate exercises» you ask for one to use in class; here three are written to the same request, by three different methods, so you can say which you like best or consider better, and what is kept is your judgement.",
-  "tutorial.s5.b3":
-    "«I am not in a position to judge this» is a valid answer and does not count as a preference. If the exercise is not in your area, saying so is worth more than picking at random.",
-  "tutorial.s5.aside":
-    "This is the part the evaluation rests on: without blind comparisons there is no way to know whether the system writes better exercises than the alternatives.",
-
-  "tutorial.s6.title": "And now, your part in the evaluation",
-  "tutorial.s6.body":
-    "So much for what it does and how it is used. What is asked of you now is to prepare it with a subject of your own and answer, at each step, a few short questions about the results the system has been giving you: those answers will help us make the system better, so please take your time over them. Thank you very much for it!",
-  "tutorial.s6.b1":
-    "Whenever the system produces something — the syllabus, the exercise types… — you are offered the chance to correct or change it. It is entirely optional and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
-  "tutorial.s6.outro.create":
-    "You do not have a subject yet: the first thing to do is create your own, and until it exists there is nothing to prepare. When this explanation ends the application appears, with the four steps and the two tests to hand; in your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
-  "tutorial.s6.outro.choose":
+  "tutorial.s4.outro.create":
+    "You do not have a subject yet: the first thing to do is create your own, and until it exists there is nothing to prepare. When this explanation ends the application appears, with the four steps and «Generate exercises» to hand; in your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
+  "tutorial.s4.outro.choose":
     "When this explanation ends the application appears: you pick your subject there — or create another one — and start at step 1. In your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
+
+
+
+
+
+
+
+
+
+
+
+
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
@@ -368,31 +367,21 @@ export const en: Catalogue = {
   "stage.continue": "Continue to step {n}",
   "stage.continueGenerate": "That is it: create my first exercise",
   "stage.continueFailed": "This step could not be closed, so nothing moved on. Try again.",
-  "stageReview.title": "Your verdict",
-  "stageReview.openTitle": "Rate this step",
-  "stageReview.close": "Close the verdict",
-  "stageReview.openPending": {
-    one: "1 short statement about what you have just reviewed: say how far you agree",
-    other: "{n} short statements about what you have just reviewed: say how far you agree with each",
-  },
-  "stageReview.openAnswered": "Already answered. Open it to change anything",
-  "stageReview.saved": "Saved",
-  "stageReview.save": "Save verdict",
-  "stageReview.saveAgain": "Save the changes",
-  "stageReview.optional": "Optional",
-  "stageReview.remaining": {
-    one: "1 statement left to rate",
-    other: "{n} statements left to rate",
-  },
-  "stageReview.notBuilt": {
-    one: "Once it is built you will be asked here how it came out. 1 short statement, 1 to 5.",
-    other: "Once it is built you will be asked here how it came out. {n} short statements, 1 to 5.",
-  },
-  "stageReview.rung": "{n} · {label}",
-  "stageReview.failed": "It could not be saved. Try again.",
-  "stageReview.done.title": "Verdict saved. Thank you.",
-  "stageReview.done.body":
-    "Moving on signs this step off, which is what the next one needs. Your verdict stays saved and you can come back to this step whenever you like.",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   "stage.what.profile":
     "It is the template new exercises are written from: the different shapes your exercises take and what parts each one carries.",
   "stage.what.profile.found": {
@@ -579,10 +568,10 @@ export const en: Catalogue = {
   "auth.kindLink": "link",
   "invite.toWorkspace": "You have been invited to «{workspace}» with {role} permission.",
   "invite.toApp": "You have been invited to Variatio.",
-  "invite.teachOrStudy": "Do you study or do you teach?",
+
   "invite.language": "Interface language",
   "invite.languageHint": "It only changes what you read. The prompt language is declared by each subject when it is created.",
-  "invite.profileHint": "It decides what you will be asked when you compare exercises. It does not change what you can do here.",
+
   "menu.profile": "Profile",
   "menu.savedVariants": "My exercises",
   "menu.openAccount": "{name}'s account",
@@ -672,22 +661,19 @@ export const en: Catalogue = {
     one: "Delete the unit and its concept",
     other: "Delete the unit and its {n} concepts",
   },
-  "eval.pendingCount": { one: "1 pending", other: "{n} pending" },
-  "sets.assignedCount": { one: "1 comparison", other: "{n} comparisons" },
-  "sets.workspaceCount": { one: "1 subject", other: "{n} subjects" },
-  "sets.accountsFailed": "The accounts could not be read",
-  "sets.failedCount": { one: "; 1 failed", other: "; {n} failed" },
-  "sets.launchLabel": {
-    one: "Commission 1 comparison",
-    other: "Commission {n} comparisons",
-  },
-  "adminEvaluation.pairs": { one: "1 pair", other: "{n} pairs" },
-  "adminEvaluation.comparisons": { one: "1 comparison", other: "{n} comparisons" },
-  "adminEvaluation.sessionCount": { one: "1 session", other: "{n} sessions" },
-  "adminEvaluation.ratedCount": { one: "1 rated", other: "{n} rated" },
+
+
+
+
+
+
+
+
+
+
   "admin.warmContexts": { one: "1 warm context", other: "{n} warm contexts" },
   "acc.savedVariants": { one: "1 generated exercise", other: "{n} generated exercises" },
-  "acc.comparisons": { one: "1 comparison", other: "{n} comparisons" },
+
   "acc.openSessions": { one: "1 session", other: "{n} sessions" },
   "ws.files": { one: "1 file", other: "{n} files" },
   "ws.renameNamed": "Rename «{name}»",
@@ -697,12 +683,9 @@ export const en: Catalogue = {
   "noWorkspace.createMine": "Create my subject",
   "noWorkspace.bodyA": "A subject keeps everything of its own: its documents, its syllabus, its exercise types and its exercises. You signed in as",
   "noWorkspace.bodyB": "; create your own now, or wait until somebody gives you access to an existing one.",
-  "sessions.selected": { one: "1 selected", other: "{n} selected" },
-  "sessions.deletedCount": { one: "1 session", other: "{n} sessions" },
-  "sessions.confirmHead": {
-    one: "Delete 1 comparison?\n\n",
-    other: "Delete {n} comparisons?\n\n",
-  },
+
+
+
   "canvas.isolated": { one: "1 with no relations", other: "{n} with no relations" },
   "canvas.relations": { one: "1 relation", other: "{n} relations" },
   "canvas.conceptCount": { one: "1 concept", other: "{n} concepts" },
@@ -829,8 +812,8 @@ export const en: Catalogue = {
   "admin.notAdmin.body": "This screen belongs to the installation's administrator. Your account is not one.",
   "admin.title": "Administration",
   "admin.whatIsThis": "What this is",
-  "admin.whatIsThis.body": "The whole installation seen from outside: who uses it, who can get in and into what, how many subjects there are, what the machine is doing and how the evaluation is going. It is the only screen that crosses accounts, and the only place access is granted from.",
-  "admin.tab.evaluation": "Evaluations",
+  "admin.whatIsThis.body": "The whole installation seen from outside: who uses it, who can get in and into what, how many subjects there are and what the machine is doing. It is the only screen that crosses accounts, and the only place access is granted from.",
+
   "admin.tab.accounts": "Accounts and access",
   "admin.tab.workspaces": "Subjects",
   "admin.tab.engine": "Engine",
@@ -838,8 +821,8 @@ export const en: Catalogue = {
   "admin.stat.accounts": "Accounts",
   "admin.stat.workspaces": "Subjects",
   "admin.stat.generations": "Exercises generated",
-  "admin.stat.comparisons": "Comparisons",
-  "admin.stat.decided": "{n} with a recorded choice",
+
+
   "admin.stat.engine": "Engine",
   "admin.stat.busy": "busy",
   "admin.stat.free": "free",
@@ -904,10 +887,10 @@ export const en: Catalogue = {
   "cere.col.requests": "Requests",
   "cere.col.tokens": "Tokens",
   "cere.col.ofDay": "Of the day",
-  "profile.teacher": "Teacher",
-  "profile.student": "Student",
-  "profile.self.teacher": "I teach",
-  "profile.self.student": "I study",
+
+
+
+
   "acc.deleteConfirm": "Delete the account «{username}» entirely?\n\nIt loses its access and its open sessions, and the username becomes free for another account.\n",
   "acc.deleteKept": "What it generated stays but with no author: {kept}.\n",
   "acc.deleteTail": "\nThis cannot be undone. To close the door without deleting anything, deactivate it.",
@@ -918,7 +901,7 @@ export const en: Catalogue = {
   "acc.col.account": "Account",
   "acc.col.access": "Access",
   "acc.col.variants": "Exercises",
-  "acc.col.comparisons": "Comparisons",
+
   "acc.col.sessions": "Sessions",
   "acc.col.created": "Created",
   "acc.badge.admin": "admin",
@@ -928,8 +911,8 @@ export const en: Catalogue = {
   "acc.lockedSeconds": "{n} s",
   "acc.fullAccess": "full access (administration)",
   "acc.noAccess": "access to none",
-  "acc.decidedShort": "({n} dec.)",
-  "acc.seeSessions": "See their sessions",
+
+
   "acc.reactivate": "Reactivate",
   "acc.deactivate": "Deactivate",
   "acc.deleteTitle": "Delete the account entirely",
@@ -940,8 +923,8 @@ export const en: Catalogue = {
   "acc.sessionsClosed": "Sessions closed",
   "acc.sessionsClosedOf": "{n} of {username}",
   "acc.failed": "It could not be done",
-  "acc.profileToast": "Evaluator profile",
-  "acc.profileToastBody": "{username} · {profile}",
+
+
   "acc.theAccount": "The account",
   "acc.removeAdmin": "Remove administration",
   "acc.makeAdmin": "Make administrator",
@@ -956,10 +939,10 @@ export const en: Catalogue = {
   "acc.closeSessions": "Close their sessions",
   "acc.loginUnlocked": "Login unlocked",
   "acc.unlockLogin": "Unlock the login ({n} min)",
-  "acc.profileLabel": "Evaluator profile",
-  "acc.profileUnset": "Unspecified",
-  "acc.profileHint": "What it changes",
-  "acc.profileHint.body": "It decides what words they are asked with when comparing proposals and how the evaluation groups their answers. It grants and removes no permission. Unspecified means they get the teacher's wording, and handing out comparisons marks it so it does not stay that way.",
+
+
+
+
   "acc.resetCopy": "Hand it over yourself. It lasts {minutes} minutes and works once; whoever opens it sets «{username}»'s new password, so do not leave it anywhere shared.",
   "acc.adminNoMemberships": "This account administers the installation: it enters every subject without being a member of any, so there is no access to give it.",
   "acc.alsoMemberOf": "It is also recorded as a member of",
@@ -1026,8 +1009,8 @@ export const en: Catalogue = {
   "ws.unbuiltArtifacts": "its artifacts, all of them unbuilt",
   "ws.rawDocuments": "the raw documents uploaded to this instance",
   "ws.cachesAccess": "its caches, its access and its approvals",
-  "ws.itsVariants": { one: "its {n} and its comparisons", other: "its {n} and its comparisons" },
-  "ws.itsComparisons": "its evaluation comparisons, if there were any",
+  "ws.itsVariants": { one: "its {n}", other: "its {n}" },
+
   "ws.hereNow": "It is the one you have open right now. Deleting it moves this tab by itself to another of your accesses; if none is left, the application offers you to create one.",
   "ws.typeToConfirm": "Type ",
   "ws.typeToConfirm.tail": " to confirm",
@@ -1041,304 +1024,301 @@ export const en: Catalogue = {
   "maint.stateOpen": "Open",
   "maint.messageLabel": "What is read in the meantime",
   "maint.messageHelp": "It is all anybody trying to get in will see. No time of return: nobody knows it.",
-  "charts.nothingToSummarise": "There is no data to summarise yet.",
-  "charts.segmentTitle": "{label} · {n}",
-  "charts.noComparisons": "No comparison recorded yet.",
-  "charts.decided": "Decided",
-  "charts.undecided": "Undecided",
-  "charts.peakPerDay": "max. {n}/day",
-  "charts.decidedOf": "{decided}/{sessions} decided",
+
+
+
+
+
+
+
 
   // THE STUDY -----------------------------------------------------------------------------
-  "arm.naive": "Commercial model",
-  "arm.naive.short": "Commercial",
-  "arm.naive.description": "A generalist commercial model on a free tier, with the prompt anybody in a hurry would write: the concept, the teaching context and the output keys. No bank and no syllabus.",
-  "arm.rag": "RAG over the documents only",
-  "arm.rag.short": "RAG only",
-  "arm.rag.description": "A similarity search over the uploaded notes and exercises, read with a plain text extractor and cut into pieces: the pieces closest to the commission are handed over as they are. The same local model as the system, but with nothing the system builds: no bank, no exercise types, no syllabus and no prerequisites.",
-  "arm.system": "This system",
-  "arm.system.short": "System",
-  "arm.system.description": "The whole pipeline: examples chosen by primary concept, prerequisites as scaffolding, later concepts forbidden and the curriculum as a hard constraint.",
-  "grid.noValidItem": "This proposal did not manage to produce a valid exercise.",
-  "grid.triageOption": "{question} {option}",
-  "grid.proposal": "Proposal {letter}",
-  "grid.youSaid": "you said",
-  "grid.forEach": "For each one: {question}",
-  "grid.answered": "{answered} of {total} answered",
-  "grid.whichWouldYouUse": "Which would you use in class?",
-  "grid.answerMissingOne": "Answer the missing one and you will be able to choose.",
-  "grid.answerMissing": "Answer the {n} missing ones and you will be able to choose.",
-  "grid.chooseAria": "Choose proposal {letter}",
-  "grid.choose": "Choose {letter}",
-  "grid.noExercise": "No exercise",
-  "grid.whyAria": "Why, in one line",
-  "grid.whyPlaceholder": "Why, in one line (optional)",
-  "grid.noneConvinces": "None of them convinces me",
-  "commission.label": "Exercise type",
-  "commission.topics": "Concepts",
-  "commission.level": "Level",
-  "focus.read": "Read proposal {letter} in full",
-  "focus.of": "{n} of {total}",
-  "reveal.choseLetter": "You chose {letter}",
-  "reveal.read": "See in full",
-  "reveal.systemWrote": "The exercise being rated",
-  "rubric.scoreOf": "{n} out of 5",
-  "rubric.title": "Score it",
-  "rubric.saved": "saved",
-  "rubric.commentAria": "What it has too much or too little of",
-  "rubric.commentPlaceholder": "What it has too much or too little of (optional)",
-  "rubric.skippable": "You can skip this: the comparison is already recorded.",
-  "rubric.skip": "Skip",
-  "rubric.update": "Update the rating",
-  "rubric.save": "Save the rating",
-  "fair.title": "What each proposal receives",
-  "fair.col.commission": "From the commission",
-  "fair.col.naive": "Commercial",
-  "fair.col.rag": "RAG only",
-  "fair.col.system": "System",
-  "fair.yes": "yes",
-  "fair.no": "no",
-  "fair.row.concepts": "Target concepts (the names)",
-  "fair.row.descriptions": "Descriptions of those concepts",
-  "fair.row.instructions": "Additional instructions",
-  "fair.row.decisions": "Field decisions",
-  "fair.row.context": "The subject's context",
-  "fair.row.outputKeys": "Output keys",
-  "fair.row.noGreetings": "Greetings and meta-text forbidden",
-  "fair.row.modality": "The modality's description",
-  "fair.row.rules": "The modality's writing rules",
-  "fair.row.rawDocs": "Pieces of your notes and exercises",
-  "fair.row.examples": "Bank exercises as examples",
-  "fair.row.prerequisites": "Prerequisites and posteriors",
-  "fair.row.curriculum": "Curriculum covered",
-  "fair.row.admissibility": "Instructions typed by the judge",
-  "fair.row.reasoning": "Prior reasoning",
-  "fair.v.asText": "as text",
-  "fair.v.oneLine": "one line",
-  "fair.v.schema": "schema",
-  "fair.v.schemaGuide": "schema + guidance",
-  "fair.v.fullProse": "the whole prose",
-  "fair.v.flatCosine": "flat cosine",
-  "fair.v.byLabel": "by label",
-  "fair.v.providers": "the provider's",
-  "fair.v.drawn": "drawn per session",
-  "fair.footnote": "All three receive the same commission and return an exercise. The two local ones use the same model, the one the administrator sets in «Settings → Evaluation», so what is compared is architectures and not models; the commercial one uses its own. All three receive the subject's whole context, so none of them has to guess what it is about. The RAG one searches over your documents read with an ordinary extractor, never over the transcription this system makes: it is what your PDFs alone get you, with none of this work. The free text is screened by the guardrail and the judge once for the whole session, but only the system's proposal receives the result typed by slot; the other two receive it exactly as it was written. Proposals that fail are recorded as such: the failing one is not retried on its own. Prior reasoning is drawn at the start of each session and applied the same way to both local ones, so it never separates one from the other: it is recorded with the session so that whether it contributes anything can be measured separately.",
-  "sessions.title": "Your comparisons",
-  "sessions.deleteSelection": "Delete selection",
-  "sessions.confirmDecided": { one: "One of them already carries a choice and stops counting in the evaluation.\n", other: "{n} of them already carry a choice and stop counting in the evaluation.\n" },
-  "sessions.confirmTail": "\nThis cannot be undone.",
-  "sessions.deleted": "Comparisons deleted",
-  "sessions.deleteFailed": "It could not be deleted",
-  "sessions.empty": "You have not compared anything yet",
-  "sessions.emptyBody": "Launch a comparison and the record of what you evaluated will stay here.",
-  "sessions.deselectAll": "Deselect every comparison",
-  "sessions.selectAll": "Select every comparison",
-  "sessions.selectOne": "Select comparison {id}",
-  "sessions.col.when": "When",
-  "sessions.col.type": "Type",
-  "sessions.col.concepts": "Concepts",
-  "sessions.col.choice": "Choice",
-  "sessions.col.reasoned": "Reasoned",
-  "sessions.undecided": "undecided",
-  "sessions.none": "none",
-  "sessions.open": "Open",
-  "eval.preparing": "Preparing the three proposals",
-  "eval.doneOf3": "{n} of 3",
-  "eval.blindNotice": "During a comparison the log and the technical detail are hidden: they would say which architecture each proposal comes from before you read it.",
-  "eval.tab.queue": "Assigned",
-  "eval.tab.compose": "Order an evaluation",
-  "eval.tab.history": "My evaluations",
-  "eval.title": "Evaluate the system",
-  "eval.whatFor": "What it is for",
-  "eval.whatFor.body": "The same commission is solved three ways: a commercial model with an ordinary prompt, a similarity search over the bank, and this system with the syllabus. You choose blind and only afterwards is it revealed which was which.",
-  "eval.backToList": "Back to the list",
-  "eval.orderAnother": "Order another evaluation",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   "chain.pending": "Still to sign off: {stages}",
   "chain.goFix": "Go to Step {n} · {label}",
-  "eval.blocked": "Evaluation blocked",
-  "eval.failed": "The comparison failed",
-  "eval.externalUnset": "The commercial proposal is not configured",
-  "eval.externalUnset.body": "The session will go ahead and that proposal will be recorded as unavailable, which is a datum in itself.",
-  "eval.waitingTurn": "It will start as soon as its turn comes.",
-  "eval.nextInQueue": "Next in the queue ({pending})",
-  "sets.change": "Change",
-  "sets.noWorkspaces": "«{username}» is not a member of any subject yet. Give them access in «Accounts and access» before assigning anything.",
-  "sets.assignAria": "Assign the comparison on {concepts}",
-  "sets.noConcepts": "no concepts",
-  "sets.withReasoning": " · with reasoning",
-  "sets.withoutReasoning": " · without reasoning",
-  "sets.deletedAccount": "deleted account",
-  "sets.unassigned": "not handed out",
-  "sets.alreadyHas": "already has it",
-  "sets.assignedTo": "Assigned to {username}",
-  "sets.assignFailed": "It could not be assigned",
-  "sets.assignedNone": "None of them was assigned. Try again.",
-  "sets.commissioned": "{n} commissioned",
-  "sets.commissioned.body": "They are prepared one after another in the queue; they will appear here as soon as they finish.",
-  "sets.commissionFailed": "It could not be commissioned",
-  "sets.noAccountData": "No account data.",
-  "sets.noAccounts": "There are no active accounts to assign to. Create one in «Accounts and access».",
-  "sets.step1": "Who are you assigning it to?",
-  "sets.step2": "In which of their subjects?",
-  "sets.step3": "Which ones?",
-  "sets.noneYet": "This subject has no comparisons yet. Commission a few below and hand out whichever you like: the ones you do not assign stay saved.",
-  "sets.assignTo": "Assign {n} to {username}",
-  "sets.commissionMore": "Commission more comparisons",
-  "sets.sameExercises": "They will receive the same exercises in an order of their own.",
-  "sets.searchAccounts": "Search by name or username",
-  "sets.noAccountMatches": "No account matches «{query}».",
-  "sets.notReady": "{stages} must be approved before commissioning here.",
-  "sets.notReadyUnknown": "This subject has not approved its chain yet.",
-  "sets.composeHint": "Each comparison is three proposals of the same commission. They are prepared one after another in the queue, and the ones you do not hand out stay saved for somebody else.",
-  "sets.howMany": "How many comparisons?",
-  "sets.oneSession": "one session, three proposals",
-  "sets.manySessions": "{n} sessions of the same commission; each draws its own order and its own reasoning separately",
-  "rubricScale.prerequisites": "Only what came before",
-  "rubricScale.complexity": "Demand",
-  "rubricScale.concept_fit": "Fit to the concept",
-  "rubricScale.soundness": "Soundness",
-  "adminEvaluation.handOut.eyebrow": "Handing out",
-  "adminEvaluation.handOut.title": "Hand out comparisons",
-  "adminEvaluation.handOut.description": "The account, the instance and the set are chosen in here. The filter below does not affect this block.",
-  "adminEvaluation.filterByWorkspace": "Filter the evaluation by subject",
-  "adminEvaluation.allWorkspaces": "Every subject",
-  "adminEvaluation.wouldUse": "{pct} would use it",
-  "adminEvaluation.asIs": "{pct} as it stands",
-  "adminEvaluation.onAverage": "{arm} · {time} on average",
-  "adminEvaluation.filteredEmpty": "There are comparisons recorded, but none matches this filter. Clear it to see them all.",
-  "adminEvaluation.empty": "No comparison has been evaluated yet. As soon as somebody evaluates, the scoreboard will appear here and you will be able to download it.",
-  "adminEvaluation.card.wins": "How often each proposal won",
-  "adminEvaluation.card.triage": "Would they use each proposal? (blind, per card)",
-  "adminEvaluation.card.measurement": "Quality of the measurement",
-  "adminEvaluation.card.rubric": "Rubric on the system's exercise",
-  "adminEvaluation.card.byAccount": "By evaluator",
-  "adminEvaluation.card.sessions": "Sessions ({n})",
-  "adminEvaluation.col.profile": "Profile",
-  "adminEvaluation.col.evaluator": "Evaluator",
-  "adminEvaluation.col.workspace": "Subject",
-  "adminEvaluation.noTriage": "No triage answers yet. They are collected blind, one per card, before choosing.",
-  "adminEvaluation.triageDetail": "{arm} · {yes} as they are, {partly} with tweaks, {no} no",
-  "adminEvaluation.agreement": "Agreement between evaluators",
-  "adminEvaluation.agreement.none": "No comparison has been judged by two people yet. Hand one out above to more than one evaluator and the agreement will appear here.",
-  "adminEvaluation.agreement.head": "{pairs} over {sets} handed out to more than one person. They agree on the choice ",
-  "adminEvaluation.agreement.times": " of the time",
-  "adminEvaluation.agreement.triage": "; on the triage, {percent} over {pairs} pairs.",
-  "adminEvaluation.position": "Did the card's position decide anything?",
-  "adminEvaluation.csvFiltered": " (filtered)",
-  "adminEvaluation.ci95": "95% CI {low}–{high}",
-  "adminEvaluation.position.none": "No choices yet.",
-  "adminEvaluation.position.vsUniform": " against a uniform split.",
-  "adminEvaluation.duration": "How long judging takes",
-  "adminEvaluation.duration.none": "No measurements yet.",
-  "adminEvaluation.duration.median": "Median ",
-  "adminEvaluation.duration.over": " over {n}",
-  "adminEvaluation.duration.under20": " under 20 s, which is not enough to read three statements",
-  "adminEvaluation.declined": "No judgement",
-  "adminEvaluation.declined.body": " were skipped by somebody who did not teach that subject. They do not count as a preference, and they are a datum about the panel's composition.",
-  "adminEvaluation.noneConvinced": "None convinced",
-  "adminEvaluation.decidedOf": "{decided} with a choice, of {total}",
-  "adminEvaluation.chanceLine": "The vertical line marks 33 %: what chance alone would give.",
-  "adminEvaluation.noValidItem": "Proposals with no valid exercise",
-  "adminEvaluation.ofTotal": "of {n}",
-  "adminEvaluation.noRated": "No session rated yet.",
-  "adminEvaluation.ratedScale": "{rated} · a 1 to 5 scale",
-  "adminEvaluation.complexityNote": "On demand the target is 3, not 5 — hence the central mark. The mean distance to 3 is ",
-  "adminEvaluation.nothingToGroup": "Nothing to group yet.",
-  "adminEvaluation.col.sessions": "Sessions",
-  "adminEvaluation.col.decided": "Decided",
-  "adminEvaluation.col.systemWon": "The system won",
-  "adminEvaluation.col.last": "Last",
-  "adminEvaluation.shareTitle": "{system} of {decided}; the mark is chance's 33 %",
-  "adminEvaluation.confirmHeadOne": "Delete 1 evaluation session?\n\n",
-  "adminEvaluation.confirmHeadMany": "Delete {n} evaluation sessions?\n\n",
-  "adminEvaluation.sessionsDeleted": "Sessions deleted",
-  "adminEvaluation.selectToDelete": "Select sessions to delete them",
-  "adminEvaluation.deselectAllSessions": "Deselect every session",
-  "adminEvaluation.selectAllSessions": "Select every session",
-  "adminEvaluation.selectSession": "Select session {id}",
-  "adminEvaluation.col.chose": "Chose",
-  "adminEvaluation.col.note": "Note",
-  "adminEvaluation.unreadable": "The evaluation could not be read",
-  "adminEvaluation.filter.profile": "Kind of account",
-  "adminEvaluation.filter.account": "Account",
-  "adminEvaluation.filter.workspace": "Subject",
-  "adminEvaluation.allProfiles": "Everyone",
-  "adminEvaluation.profile.teachers": "Teachers",
-  "adminEvaluation.profile.students": "Students",
-  "adminEvaluation.allAccounts": "Every account",
-  "adminEvaluation.records.selectHint": "Tick evaluators to delete everything of theirs",
-  "adminEvaluation.records.selected": { one: "1 evaluator ticked", other: "{n} evaluators ticked" },
-  "adminEvaluation.records.delete": "Delete their records",
-  "adminEvaluation.records.select": "Tick {name}",
-  "adminEvaluation.records.selectAll": "Tick every evaluator",
-  "adminEvaluation.records.deselectAll": "Untick every evaluator",
-  "adminEvaluation.records.confirmHead": "Delete every record of {names}?\n\n",
-  "adminEvaluation.records.confirmBody": "{sessions} and {forms} are removed, across every subject. The account stays; it is only withdrawn from the evaluation. This cannot be undone.",
-  "adminEvaluation.records.deleted": "Records deleted",
-  "adminEvaluation.records.deletedBody": "{sessions} and {forms}.",
-  "adminEvaluation.records.failed": "The records could not be deleted",
-  "adminEvaluation.backToTotal": "Back to the total",
-  "adminEvaluation.backToAll": "Show every evaluator",
-  "adminEvaluation.comparisonCount": { one: "1 comparison in the filter", other: "{n} comparisons in the filter" },
-  "adminEvaluation.formCount": { one: "1 form", other: "{n} forms" },
-  "adminEvaluation.tests.title": "Testing phase",
-  "adminEvaluation.tests.description": "The blind comparisons: three proposals per commission, judged without knowing which is whose. The filter above narrows the cards and the CSV.",
-  "adminEvaluation.build.title": "Construction phase",
-  "adminEvaluation.build.description": "The forms that close each step: what each person answered about the exercise types, the syllabus and the tagging in front of them. Same filter, its own CSV.",
-  "adminEvaluation.stages.empty": "Nobody has answered any step's form yet. It appears at the foot of every step of the construction phase, and as soon as somebody answers it will show here.",
-  "adminEvaluation.stages.filteredEmpty": "There are answered forms, but none matches this filter. Clear it to see them all.",
-  "adminEvaluation.stages.unreadable": "The forms could not be read",
-  "adminEvaluation.stages.stat.answered": "Forms answered",
-  "adminEvaluation.stages.stat.opened": "of {n} opened",
-  "adminEvaluation.stages.stat.mean": "Mean rating",
-  "adminEvaluation.stages.stat.outOf": "out of 5, over every step",
-  "adminEvaluation.stages.stat.people": "People who answered",
-  "adminEvaluation.stages.stat.curated": "Answered after correcting",
-  "adminEvaluation.stages.stat.curatedHint": "{pct} of those answered",
-  "adminEvaluation.stages.answers": { one: "1 answer", other: "{n} answers" },
-  "adminEvaluation.stages.openedOnly": { one: "1 opened and unanswered", other: "{n} opened and unanswered" },
-  "adminEvaluation.stages.noAnswers": "Nobody has answered this step yet.",
-  "adminEvaluation.stages.usable": "{pct} agree or strongly agree that they would use it as it is.",
-  "adminEvaluation.stages.curation": "Before answering:",
-  "adminEvaluation.stages.curatedYes": "corrected it",
-  "adminEvaluation.stages.curatedNo": "did not",
-  "adminEvaluation.stages.curatedUnknown": "did not say",
-  "adminEvaluation.stages.meanShort": "mean {mean}",
-  "adminEvaluation.stages.time": "Time to answer:",
-  "adminEvaluation.stages.median": "median {time}, over {n}",
-  "adminEvaluation.stages.notes": "With a written note:",
-  "adminEvaluation.stages.cardTitle": "{n} · {name}",
-  "adminEvaluation.stages.col.mean": "Mean",
-  "adminEvaluation.stages.col.curated": "Corrected",
-  "queue.progressLabel": "{decided} of {total} judged",
-  "queue.noConcepts": "no concepts",
-  "queue.none": "You have no comparisons assigned",
-  "rubric.target": "{target} = about right",
-  "queue.noneBody": "When you are assigned one, it will appear here.",
-  "queue.next": "Next up",
-  "queue.open": "Read the three proposals",
-  "queue.declined": "no judgement",
-  "queue.judged": "judged",
-  "queue.pendingMore": "Pending · {n} more",
-  "queue.allDone": "You have finished everything you were assigned. Thank you.",
-  "reveal.chosen": "chosen",
-  "reveal.unavailable": "unavailable",
-  "reveal.noValidItem": "no valid exercise",
-  "reveal.examplesFromBank": { one: "1 retrieved piece", other: "{n} retrieved pieces" },
-  "grid.missing": "still to evaluate",
-  "queue.alreadyJudged": "Already judged · {n}",
-  "reveal.choseNone": "You chose none.",
-  "reveal.tagging.none": "none detected",
-  "reveal.tagging.offLimits": "comes later in the syllabus",
-  "reveal.tagging.clean": "Uses nothing that comes later in the syllabus",
-  "reveal.tagging.trespass": {
-    one: "Uses one concept that comes later in the syllabus: {list}",
-    other: "Uses {n} concepts that come later in the syllabus: {list}",
-  },
-  "reveal.tagging.practised": "Practises a concept that comes after what was asked for: {list}",
-  "reveal.tagging.cleanPractised": "Practises what was asked for",
-  "reveal.rubricSection.title": "Now, a few questions about the system's exercise",
-  "reveal.rubricSection.body": "Whichever you chose: what follows describes only that exercise, not the comparison.",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // THE GRAPH SCREEN ----------------------------------------------------------------------
   "kg.saveChanges": "Save changes",
@@ -1615,9 +1595,9 @@ export const en: Catalogue = {
   "form.think.on": "on · {level}",
   "form.think.off": "off",
   "form.think.highEffort": "High effort",
-  "form.cancelComparison": "Cancel the comparison",
+
   "form.cancelGeneration": "Cancel generation",
-  "form.compareThree": "Compare three proposals",
+
   "form.confirmContinue": "Confirm and continue",
 
   "generate.notPassed": "did not pass the review",
@@ -1642,6 +1622,8 @@ export const en: Catalogue = {
   "effort.max": "Maximum",
   "effort.warn.qwen38": "Above «Medium», qwen3.8 deliberates for thousands of words on the local GPU: every exercise can take many minutes, and at the high level it has been measured returning an empty answer.",
   // COUNTS ------------------------------------------------------------------------------
+
+
   "count.items": { one: "{n} exercise", other: "{n} exercises" },
 
   // THE ENGINE TAB ----------------------------------------------------------------------
@@ -1754,7 +1736,7 @@ export const en: Catalogue = {
   "eng.queue.cancelFailed": "It could not be cancelled",
   "eng.queue.title": "The GPU queue ({n})",
   "eng.queue.hintLabel": "How the queue works",
-  "eng.queue.hint": "The queue is per engine, not one line: two jobs competing for the same machine wait for each other, while a local one and a remote one run side by side. Whatever is asked for while an engine is busy — building, generating, evaluating, from any subject — stacks up in order of arrival on that engine. Each person sees only their own subject's entries from inside it; this is where the whole line is visible and where anyone can be taken out of it.",
+  "eng.queue.hint": "The queue is per engine, not one line: two jobs competing for the same machine wait for each other, while a local one and a remote one run side by side. Whatever is asked for while an engine is busy — building, generating, from any subject — stacks up in order of arrival on that engine. Each person sees only their own subject's entries from inside it; this is where the whole line is visible and where anyone can be taken out of it.",
   "eng.queue.empty": "Nothing running and nothing waiting.",
   "eng.queue.col.job": "Job",
   "eng.queue.col.workspace": "Subject",
@@ -1803,7 +1785,7 @@ export const en: Catalogue = {
   "cfg.effort.noModels": "A switch appears here for each model on the list above.",
   "cfg.effort.hintLevel": "With the switch off, the dropdown beside it fixes the level that model is called with. Choose none and it is called with whatever the engine resolves.",
   "cfg.effort.hint": "Turn it off only once you have measured that the model answers the same at every level: same call, temperature 0 and a fixed seed. A slider that changes nothing is a false decision. The reasoning switch is offered either way.",
-  "cfg.offered.hint": "Whoever asks for an exercise chooses between the ticked ones; with a single one nothing is asked and that one is used. The first is the default — «Move to first» changes it — and it is what the CLI and the evaluation's three arms write with. Offering a model does not download it, but it does stop «Engine» from deleting it off the disk.",
+  "cfg.offered.hint": "Whoever asks for an exercise chooses between the ticked ones; with a single one nothing is asked and that one is used. The first is the default — «Move to first» changes it — and it is what the CLI writes with. Offering a model does not download it, but it does stop «Engine» from deleting it off the disk.",
   "cfg.section.sampling": "Sampling and context",
   "cfg.section.samplingDesc": "The temperature of each kind of call, and the context window (the KV cache) reserved for each model.",
   "cfg.section.builders": "Builders",
@@ -1812,8 +1794,8 @@ export const en: Catalogue = {
   "cfg.section.retrievalDesc": "The concepts index: embedding prefixes, weights, thresholds, and how many candidates are retrieved.",
   "cfg.section.generation": "Tagging and generation",
   "cfg.section.generationDesc": "The bank's tagger and the generation of exercises: few-shot examples, retries and the guardrail.",
-  "cfg.section.evaluation": "Evaluation",
-  "cfg.section.evaluationDesc": "The comparative evaluation: the external providers of the baseline arms and the state of their keys.",
+
+
   "cfg.section.others": "Others",
   "cfg.section.othersDesc": "Settings whose group has no page of its own in the panel.",
   "cfg.saved": "Settings saved",
@@ -1831,7 +1813,7 @@ export const en: Catalogue = {
   "cfg.engineChangeBody": "On saving, every engine-scoped setting (models, phases, context windows and reasoning) moves to the «{next}» profile. The «{current}» profile is kept exactly as it is, for when you come back to it.",
   "cfg.unsaved": { one: "1 unsaved change", other: "{n} unsaved changes" },
   "cfg.whyEachNode": "Why each node",
-  "cfg.sameAsGeneration": "The same one that writes a generation (the first offered)",
+
   "cfg.followMain": "Follow the main model",
   "cfg.notInstalled": "{model} — not installed",
   "cfg.other": "Other…",
@@ -1868,7 +1850,8 @@ export const en: Catalogue = {
   "guide.next": "Next",
   "guide.group.start": "Getting started",
   "guide.group.prepare": "Construction phase",
-  "guide.group.use": "Testing phase",
+  "guide.group.use":
+    "Using the subject",
   "guide.group.daily": "Day to day",
   "guide.sec.start": "What it is and how you move through it",
   "guide.sec.workspace": "Each subject, on its own",
@@ -1877,7 +1860,7 @@ export const en: Catalogue = {
   "guide.sec.graph": "Step 3 · The syllabus",
   "guide.sec.bank": "Step 4 · Tagging",
   "guide.sec.generate": "Generate exercises",
-  "guide.sec.evaluate": "Evaluate the system",
+
   "guide.sec.runs": "Following a run",
   "guide.sec.account": "Your account and the installation",
   "guide.sec.admin": "Administering the installation",

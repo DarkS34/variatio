@@ -134,15 +134,8 @@ export function GroupCard({
 // shows keeps its row below; what the nodes do show never gets a second row.
 
 export function isModelSetting(setting: ConfigSetting): boolean {
-  return (
-    (setting.key.startsWith("models.") || setting.key === EVALUATION_WRITER) &&
-    setting.kind === "str"
-  );
+  return setting.key.startsWith("models.") && setting.kind === "str";
 }
-
-/** The evaluation's own model setting: the writer of a comparison's two local proposals. Its
- *  null reads "the same model that writes a generation", not "follow the main". */
-const EVALUATION_WRITER = "evaluation.local_model";
 
 const OTHER = "__other__";
 
@@ -203,7 +196,7 @@ export function ModelSelect({
       >
         {setting.nullable ? (
           <option value="">
-            {t(setting.key === EVALUATION_WRITER ? "cfg.sameAsGeneration" : "cfg.followMain")}
+            {t("cfg.followMain")}
           </option>
         ) : null}
         {value && !known && !other ? (
@@ -338,7 +331,7 @@ export function CerebrasModelsField({
  * for the exercise. What stays the installation's is the SHORTLIST.
  *
  * ORDER IS MEANING — the first one is what everything that does not choose is written with:
- * the CLI, the evaluation's arms and any request naming none. Chosen ones are listed first,
+ * the CLI and any request naming none. Chosen ones are listed first,
  * in their stored order; checking one appends it. A list of one is legal and simply hides
  * the chooser on the generate screen.
  *

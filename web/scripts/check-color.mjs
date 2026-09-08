@@ -121,13 +121,11 @@ const TEXT = [
   "--destructive",
   "--code-string",
   "--code-number",
-  "--evaluation",
 ];
 const SURFACES = ["--background", "--card"];
 // A separator carries no information, so WCAG asks nothing of it; a control outline does.
 const OUTLINE = { "--input": 3, "--border": 1.3 };
-const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--evaluation"];
-const ARMS = ["--arm-naive", "--arm-rag", "--arm-system"];
+const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive"];
 
 // Text on a tint of ITS OWN hue. This is the case the plain contrast table cannot see and
 // that it missed: a badge paints its colour behind its own label, so the tint eats the
@@ -138,14 +136,13 @@ const TINTED = [
   ["--attention", 0.08],
   ["--settled", 0.08],
   ["--destructive", 0.08],
-  ["--evaluation", 0.08],
 ];
 
 // EVERY `--X-foreground` AGAINST ITS `--X`. This is the pair the tables above cannot see:
 // they check a colour used as TEXT on the page's surfaces, and a foreground token is the
-// opposite case — the label that sits ON the colour. Added 2026-09-01, after the stage
-// review's opener button shipped a near-white label on `--evaluation`, which is a LIGHT green in
-// dark mode: 1.72:1, and green enough on both sides that it read as a styling choice.
+// opposite case — the label that sits ON the colour. Added 2026-09-01, after a button
+// shipped a near-white label on a token that is a LIGHT colour in dark mode: 1.72:1, and
+// close enough on both sides that it read as a styling choice.
 // Derived from the token names rather than listed, so a new pair is covered by existing.
 const TEXT_MIN = 4.5;
 const DE_MIN = 15;
@@ -197,31 +194,6 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
         const line = `ΔE ${kind.padEnd(6)} ${a.slice(2)} vs ${b.slice(2)}: ${d.toFixed(1)}`;
         d >= DE_MIN ? ok(line) : fail(`${line} < ${DE_MIN}`);
       }
-    }
-    // The --arm-* values are a closed decision and are not re-chosen here: what this
-    // checks is that the NEW primary does not drift towards them. The floor differs per
-    // arm, and the difference is reasoned rather than an exemption to make the check pass:
-    //   - arm-system is blue, the same family as --primary, and the only real confusion.
-    //     Floor 15, the one a categorical scale gets.
-    //   - arm-naive (plum) and arm-rag (green) are not confusable with the primary except
-    //     under protanopia, where the plum loses its red and turns bluish. That is the same
-    //     limitation CLAUDE.md already records as closed for the arms themselves ("they
-    //     fail an all-pairs test, blue against plum, protanopic"), and the rule that
-    //     compensates for it does not change either: the arms are always labelled, bars and
-    //     rows only, never a scatter. Floor 10.
-    for (const arm of ARMS) {
-      if (!tokens[arm] || !tokens["--primary"]) continue;
-      const floor = arm === "--arm-system" ? DE_MIN : 10;
-      const d = deltaE(tokens["--primary"], tokens[arm], kind);
-      const line = `ΔE ${kind.padEnd(6)} primary vs ${arm.slice(2)}: ${d.toFixed(1)} (mín ${floor})`;
-      d >= floor ? ok(line) : fail(`${line}`);
-    }
-    // And that the three arcs stay apart between ADJACENT pairs in the declared order.
-    for (let i = 0; i + 1 < ARMS.length; i++) {
-      if (!tokens[ARMS[i]] || !tokens[ARMS[i + 1]]) continue;
-      const d = deltaE(tokens[ARMS[i]], tokens[ARMS[i + 1]], kind);
-      const line = `ΔE ${kind.padEnd(6)} ${ARMS[i].slice(2)} vs ${ARMS[i + 1].slice(2)}: ${d.toFixed(1)}`;
-      d >= 9 ? ok(line) : fail(`${line} < 9`);
     }
   }
 }

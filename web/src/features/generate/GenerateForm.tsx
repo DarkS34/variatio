@@ -9,7 +9,6 @@ import {
   PenLine,
   Play,
   Plus,
-  Scale,
   TriangleAlert,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -268,9 +267,6 @@ export function GenerateForm({
   blockedInstructions,
   onLaunch,
   run = null,
-  variant = "generate",
-  footnote,
-  launchLabel,
   workspace,
 }: {
   state: FormState;
@@ -286,14 +282,6 @@ export function GenerateForm({
   onLaunch: () => void;
   /** The job this form is watching, so the stop it offers can say it was heard. */
   run?: RunView | null;
-  /** "evaluation" drops the item counter: one item per arm is what makes the session
-   *  the statistical unit. Everything else is shared, which is precisely what
-   *  guarantees the commission is the same one on both screens. */
-  variant?: "generate" | "evaluation";
-  footnote?: ReactNode;
-  /** Overrides the launch button's text. The panel commissions a BATCH of comparisons,
-   *  which "Comparar tres propuestas" would misreport as one. */
-  launchLabel?: string;
   /** Which instance this commission is FOR, when it is not the one the tab is in. The
    *  concepts, the profile and the graph arrive as props, but two things the form reads
    *  for itself — the preset curriculum and the free text's scope — would otherwise come
@@ -908,39 +896,25 @@ export function GenerateForm({
       ) : null}
       {chosen ? (
         <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
-          {variant === "generate" ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-body font-medium">{t("form.howMany")}</span>
-              <Count value={state.n} onChange={(n) => patch({ n })} />
-              {state.n > 1 ? (
-                <Badge variant="outline">{t("form.noRepeat")}</Badge>
-              ) : null}
-            </div>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-body font-medium">{t("form.howMany")}</span>
+            <Count value={state.n} onChange={(n) => patch({ n })} />
+            {state.n > 1 ? <Badge variant="outline">{t("form.noRepeat")}</Badge> : null}
+          </div>
 
           {/* Before the effort and never after it: which levels exist, which are worth a
               warning, and whether the slider is drawn at all are properties of the model
               just chosen, so choosing it afterwards silently re-clamps what was just set.
-              Nothing is drawn with a single model on offer.
+              Nothing is drawn with a single model on offer. */}
+          <ModelChoice
+            offered={offered}
+            remote={remoteModels}
+            missing={missingModels}
+            value={generationModel ?? ""}
+            onChange={(model) => patch({ model })}
+          />
 
-              Not in the evaluation variant: the writer of a comparison's two local
-              proposals is the installation's (`evaluation.local_model`), never the
-              evaluator's. */}
-          {variant === "generate" ? (
-            <ModelChoice
-              offered={offered}
-              remote={remoteModels}
-              missing={missingModels}
-              value={generationModel ?? ""}
-              onChange={(model) => patch({ model })}
-            />
-          ) : null}
-
-          {/* In comparison there is no switch on purpose: the reasoning mode is what is measured
-              there, so the session draws it. Saying so here keeps the control's absence from reading
-              as a missing checkbox. */}
-          {variant === "generate" ? (
-            <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+          <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
               {/* WHO WRITES IT, and ONLY when the chooser above is not drawn: with two on
                   offer the selected card already names this one a centimetre up, and the
                   two would be the same string twice. With ONE offered there is no card at
@@ -995,10 +969,7 @@ export function GenerateForm({
                   <p>{t(warning)}</p>
                 </Alert>
               ) : null}
-            </div>
-          ) : null}
-
-          {footnote}
+          </div>
 
           {problems.some((p) => p !== SILENT_OUTSIDE) ? (
             <ul className="space-y-1 text-small text-destructive">
@@ -1017,11 +988,7 @@ export function GenerateForm({
               run={run}
               size="default"
               className="w-full"
-              label={
-                variant === "evaluation"
-                  ? t("form.cancelComparison")
-                  : t("form.cancelGeneration")
-              }
+              label={t("form.cancelGeneration")}
             />
           ) : (
             <Button
@@ -1029,11 +996,8 @@ export function GenerateForm({
               disabled={problems.length > 0 || pending || disabled}
               onClick={onLaunch}
             >
-              {pending ? <Spinner /> : variant === "evaluation" ? <Scale /> : <Play />}
-              {launchLabel ??
-                (variant === "evaluation"
-                  ? t("form.compareThree")
-                  : plural("form.generateItems", state.n))}
+              {pending ? <Spinner /> : <Play />}
+              {plural("form.generateItems", state.n)}
             </Button>
           )}
         </div>

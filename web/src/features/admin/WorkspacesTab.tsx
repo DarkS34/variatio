@@ -475,13 +475,13 @@ function DeleteWorkspaceDialog({
             {workspace.disk.raw > 0 ? ` (${bytes(workspace.disk.raw)})` : ""}
           </li>
           <li>{t("ws.cachesAccess")}</li>
-          <li>
-            {workspace.generations > 0
-              ? plural("ws.itsVariants", workspace.generations, {
-                  n: plural("acc.savedVariants", workspace.generations),
-                })
-              : t("ws.itsComparisons")}
-          </li>
+          {workspace.generations > 0 ? (
+            <li>
+              {plural("ws.itsVariants", workspace.generations, {
+                n: plural("acc.savedVariants", workspace.generations),
+              })}
+            </li>
+          ) : null}
         </ul>
         {here ? (
           <p className="text-muted-foreground">

@@ -7,31 +7,23 @@ import { STEPS, stepNumber } from "@/lib/steps";
 import { cn } from "@/lib/utils";
 import { useHasWorkspace } from "@/state/auth";
 
-import {
-  AskFigure,
-  BlindFigure,
-  CloseFigure,
-  FlowFigure,
-  PROSE,
-  SourcesFigure,
-} from "./figures";
+import { AskFigure, FlowFigure, PROSE, SourcesFigure } from "./figures";
 import { SLIDE_COUNT, slidePath } from "./slides";
 
 /**
- * Six screens, and they are the manual.
+ * Four screens, and they are the manual.
  *
  * Somebody who has just redeemed an invitation does not know what the thing is called, so
  * the first sentence is a definition and every negation comes after it. Leaving here they
  * must be able to use the whole product without asking anybody.
  *
- * The two phases are NAMED and not numbered — the construction's four steps are numbered
- * because they go in order; generating and evaluating have no order between them — and the
- * bar draws the same two names (`lib/steps.ts`), or the deck would promise a shape the
- * navigation does not have.
+ * The construction's four steps are numbered because they go in order, and generating is
+ * what they lead to; the bar draws the same shape (`lib/steps.ts`), or the deck would
+ * promise one the navigation does not have.
  *
  * The shell draws NO header under this route, so the deck is the whole window and may not
  * point at parts of a bar that is not on screen. The slide is the PATH, which is what lets
- * the browser's back button leave rather than step through six slides.
+ * the browser's back button leave rather than step through four slides.
  *
  * It is read and not operated, so it is set like something to read: the reading face is
  * Literata, declared in `index.css` for this screen alone, and prose is `PROSE` from
@@ -56,6 +48,8 @@ interface Slide {
   aside?: Key;
   /** Only the index slide: the four steps of the construction, as a numbered list. */
   steps?: boolean;
+  /** The aside under the steps: what is true of every one of them. */
+  stepsAside?: Key;
   /**
    * Only the last slide: the door, drawn under a rule. Two sentences, because the reader
    * either has a subject to pick or has none and must create one.
@@ -94,27 +88,20 @@ const SLIDES: Slide[] = [
     figure: <SourcesFigure />,
     points: [{ key: "tutorial.s2.b1", mark: true }, "tutorial.s2.b2"],
   },
-  // No figure: the bar this slide is about is the real one, lit up above it.
-  { title: "tutorial.s3.title", body: "tutorial.s3.body", steps: true },
+  // No figure: the four steps are the list itself.
+  {
+    title: "tutorial.s3.title",
+    body: "tutorial.s3.body",
+    steps: true,
+    stepsAside: "tutorial.s3.aside",
+  },
+  // The last slide: what the construction is for, and the door out of the deck.
   {
     title: "tutorial.s4.title",
     body: "tutorial.s4.body",
     figure: <AskFigure />,
     points: ["tutorial.s4.b1", "tutorial.s4.b2", "tutorial.s4.b3"],
-  },
-  {
-    title: "tutorial.s5.title",
-    body: "tutorial.s5.body",
-    figure: <BlindFigure />,
-    points: ["tutorial.s5.b1", "tutorial.s5.b3"],
-    aside: "tutorial.s5.aside",
-  },
-  {
-    title: "tutorial.s6.title",
-    body: "tutorial.s6.body",
-    figure: <CloseFigure />,
-    points: ["tutorial.s6.b1"],
-    outro: { create: "tutorial.s6.outro.create", choose: "tutorial.s6.outro.choose" },
+    outro: { create: "tutorial.s4.outro.create", choose: "tutorial.s4.outro.choose" },
   },
 ];
 
@@ -174,7 +161,7 @@ function Steps() {
  * sentence, never the vertical word alone.
  *
  * On the first slide the back rail is drawn for its width alone, invisible and unreachable:
- * removing it would move the column sideways on one slide out of six.
+ * removing it would move the column sideways on one slide out of four.
  */
 function Rail({
   side,
@@ -257,7 +244,7 @@ export function TutorialScreen({ at }: { at: number }) {
   const first = at === 0;
   const last = at === SLIDE_COUNT - 1;
   // Paging REPLACES the history entry rather than pushing one, so the back button leaves
-  // the deck instead of stepping through six slides already turned.
+  // the deck instead of stepping through four slides already turned.
   const go = (index: number) => navigate(slidePath(index), { replace: true });
   // Step 1 is the only one of the four that needs nothing built, and with no subject yet
   // the same screen is the form that creates one.
@@ -335,6 +322,9 @@ export function TutorialScreen({ at }: { at: number }) {
                   {slide.figure}
 
                   {slide.steps ? <Steps /> : null}
+                  {slide.stepsAside ? (
+                    <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.stepsAside)}</p>
+                  ) : null}
 
                   {/* The points are a ruled column and not a bulleted list: they are
                       sentences, and a dot in front of a sentence makes it look like an item
@@ -406,8 +396,8 @@ export function TutorialScreen({ at }: { at: number }) {
 
       {/* The foot: the dashes, centred, and each one leads to its slide — "Atrás" is the
           left edge, so nothing but the index is left here. The dash is 3 px and the button
-          around it is not: the hit area is the whole row, which is what makes six thin
-          marks six destinations. */}
+          around it is not: the hit area is the whole row, which is what makes four thin
+          marks four destinations. */}
       <div className="shrink-0 border-t border-border px-4 py-2.5 sm:px-6">
         <div
           role="group"

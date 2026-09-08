@@ -25,9 +25,6 @@ const BankScreen = lazy(() =>
 const GuideScreen = lazy(() =>
   import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
 );
-const EvaluationScreen = lazy(() =>
-  import("@/evaluation/EvaluationScreen").then((m) => ({ default: m.EvaluationScreen })),
-);
 const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
 );
@@ -56,7 +53,6 @@ const NEEDS_WORKSPACE = [
   "/prepare/graph",
   "/prepare/bank",
   "/generate",
-  "/evaluate",
 ];
 
 export function App() {
@@ -99,8 +95,6 @@ export function App() {
         return <BankScreen stage={stage("exemplars_bank")} />;
       case "/generate":
         return <GenerateScreen />;
-      case "/evaluate":
-        return <EvaluationScreen />;
       // The account of whoever is looking: their data, the instances they can open and their
       // variants. Each tab is a route so that "mis variantes" stays a link that can be
       // bookmarked.

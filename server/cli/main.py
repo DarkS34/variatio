@@ -108,12 +108,6 @@ def build_parser():
         default="",
         help="contraseña; si se omite se pregunta (o se lee de VARIATIO_PASSWORD)",
     )
-    creator.add_argument(
-        "--profile",
-        default=None,
-        choices=("teacher", "student"),
-        help="perfil de evaluador: decide qué se le pregunta al comparar propuestas",
-    )
     # A default here and none on the registration form: there is no browser to ask, and an
     # account with no language can read nothing.
     creator.add_argument(

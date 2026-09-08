@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from evaluation.arms.vector_store import FlatIndex
 from variatio.runtime.embedder import cache
 
 FINGERPRINT = "0123456789abcdef0123456789abcdef"
@@ -84,20 +83,6 @@ def test_a_hostile_bank_cache_is_refused_instead_of_executed(tmp_path, marker):
     assert not marker.exists()
 
 
-def test_a_hostile_rag_index_is_refused_instead_of_executed(tmp_path, marker):
-    path = _hostile(
-        tmp_path / "eval_rag_corpus",
-        marker,
-        "fingerprint",
-        keys=["apuntes.pdf#1"],
-        vectors=np.zeros((1, 4), dtype=np.float32),
-    )
-    store = FlatIndex({"apuntes.pdf#1": "texto"}, cache_path=path, model="m")
-
-    assert store._load_cache() is False
-    assert not marker.exists()
-
-
 # The refusal has to leave the legitimate round trip alone: what this installation writes
 # is `<U…` and `float32`, never an object array.
 def test_a_real_concept_cache_still_round_trips(tmp_path):
@@ -123,15 +108,3 @@ def test_a_real_bank_cache_still_round_trips(tmp_path):
     assert texts == {"C001": "hash"}
     assert fingerprint == FINGERPRINT
 
-
-def test_a_real_rag_index_still_round_trips(tmp_path):
-    path = tmp_path / "eval_rag_exemplars.npz"
-    pieces = {"hoja1.pdf#1": "Escribe una función"}
-    store = FlatIndex(pieces, cache_path=path, model="m")
-    store.ids = ["hoja1.pdf#1"]
-    store.matrix = np.zeros((1, 4), dtype=np.float32)
-    store._save_cache()
-
-    reader = FlatIndex(pieces, cache_path=path, model="m")
-    assert reader._load_cache() is True
-    assert reader.ids == ["hoja1.pdf#1"]

@@ -75,7 +75,6 @@ def _register(db, admin, username: str, language):
             username=username,
             name=username,
             password="una-contraseña-larga",
-            evaluator_profile="teacher",
             ui_language=language,
         ),
         _request(),

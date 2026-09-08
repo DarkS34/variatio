@@ -1,9 +1,5 @@
 """`create-user`, `users`, `grant` and `invite`."""
 
-# What the two profiles are called when a command prints one. The web keeps its own copy
-# for the same reason every other label does: this one is read in a terminal.
-PROFILE_LABELS = {"teacher": "docente", "student": "alumno"}
-
 
 def create_user(args) -> int:
     """Create one account, with an optional membership.
@@ -51,7 +47,6 @@ def create_user(args) -> int:
             email=args.email or None,
             is_admin=args.admin,
             email_verified=bool(args.email),
-            evaluator_profile=getattr(args, "profile", None),
             ui_language=getattr(args, "language", None),
         )
         membership = "sin asignatura"
@@ -59,11 +54,10 @@ def create_user(args) -> int:
             workspace = ensure_workspace(session, args.workspace)
             grant(session, workspace.id, user.id, args.role)
             membership = f"{args.role} de '{workspace.slug}'"
-        profile = PROFILE_LABELS.get(user.evaluator_profile, "sin perfil de evaluador")
         print(
             f"Cuenta creada: {user.username} "
             f"({'administrador' if user.is_admin else 'usuario'}), "
-            f"{membership}, {profile}."
+            f"{membership}."
         )
     return 0
 
@@ -94,7 +88,7 @@ def _ask_password(args) -> str | None:
 
 
 def list_users(_args) -> int:
-    """Print every account with its roles, its flags and its evaluator profile."""
+    """Print every account with its roles and its flags."""
     from ..db import session_scope
     from ..db.identity import list_users as rows_of, memberships_for
 
@@ -107,11 +101,7 @@ def list_users(_args) -> int:
             roles = ", ".join(f"{w.slug}:{m.role}" for m, w in memberships_for(session, user.id))
             flags = " [admin]" if user.is_admin else ""
             flags += " [desactivada]" if not user.active else ""
-            profile = PROFILE_LABELS.get(user.evaluator_profile, "—")
-            print(
-                f"{user.id:>4}  {user.username:<24} {profile:<8} "
-                f"{roles or '(sin asignaturas)'}{flags}"
-            )
+            print(f"{user.id:>4}  {user.username:<24} {roles or '(sin asignaturas)'}{flags}")
     return 0
 
 
@@ -138,8 +128,8 @@ def grant_role(args) -> int:
 def invite(args) -> int:
     """Mint a single-use invitation and print its link.
 
-    The link *is* the invitation: whoever opens it chooses their own username and says
-    whether they teach or study, so it binds the access and nothing else.
+    The link *is* the invitation: whoever opens it chooses their own username, so it
+    binds the access and nothing else.
     """
     from ..auth import tokens
     from ..db import session_scope
@@ -167,5 +157,5 @@ def invite(args) -> int:
 
     base = public_base_url() or "http://localhost:8000"
     print(f"{base}/invite?token={token}")
-    print("Quien lo canjee elegirá su usuario y dirá si da clase o si estudia.")
+    print("Quien lo canjee elegirá su usuario y su contraseña.")
     return 0

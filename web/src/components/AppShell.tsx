@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Loader2, Play, Scale, Wrench } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, Play, Wrench } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 
 import { Lockup } from "@/components/ui/logo";
@@ -160,19 +160,16 @@ const PILL_WORD = "flex items-center gap-1 pl-[28px] text-micro";
 const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
 
 /**
- * One door of the second phase: what you do with the construction once it is closed.
+ * The door after the rule: what you do with the construction once it is closed.
  *
- * An ICON where a step has its number, because the two doors have no order between them.
- * Both are gated on the whole construction being closed, which is why they sit under a
- * caption of their own rather than among the steps.
+ * An ICON where a step has its number, because it is not a stop on the path but what the
+ * path leads to. It is gated on the whole construction being closed, which is why it sits
+ * after the rule rather than among the steps, and under no caption.
  *
- * While the construction is open a door is half off and answers no click: a `span` and not
- * a link, the reason in its `title`. A URL typed by hand still lands on `ChainGate`, which
- * names the stage in the way, so nothing is lost by the bar refusing. The name is centred
- * in a pill of the steps' own height, so nothing in the row moves when the doors open.
- *
- * "Evaluar el sistema" carries `--evaluation` locked or not: the tint says "this is a
- * different kind of thing", which is true from wherever you look at it.
+ * While the construction is open the door is half off and answers no click: a `span` and
+ * not a link, the reason in its `title`. A URL typed by hand still lands on `ChainGate`,
+ * which names the stage in the way, so nothing is lost by the bar refusing. The name is
+ * centred in a pill of the steps' own height, so nothing in the row moves when it opens.
  */
 function DoorPill({
   door,
@@ -189,22 +186,14 @@ function DoorPill({
   disabledReason?: string | null;
 }) {
   const { t } = useT();
-  const evaluation = door.evaluation;
-  const face = cn(
-    PILL,
-    PILL_HEIGHT,
-    "justify-center",
-    evaluation &&
-      "text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]",
-  );
+  const face = cn(PILL, PILL_HEIGHT, "justify-center");
   const body = (
     <>
       <span
         className={cn(
           PILL_NAME,
           "font-medium",
-          !open && "text-muted-foreground",
-          open && !evaluation && "text-foreground",
+          open ? "text-foreground" : "text-muted-foreground",
         )}
       >
         <span
@@ -239,12 +228,7 @@ function DoorPill({
       to={door.path}
       title={t(door.labelKey)}
       aria-current={active ? "page" : undefined}
-      className={cn(
-        face,
-        evaluation && "hover:bg-[color-mix(in_oklch,var(--evaluation)_16%,transparent)]",
-        evaluation && active && "bg-[color-mix(in_oklch,var(--evaluation)_18%,transparent)]",
-        !evaluation && active && "bg-accent",
-      )}
+      className={cn(face, active && "bg-accent")}
     >
       {body}
     </Link>
@@ -252,29 +236,33 @@ function DoorPill({
 }
 
 /**
- * A phase: its name as a caption, and its pills under it in a row.
+ * A group of pills: a caption naming the phase, and the pills under it in a row.
  *
  * The caption carries the phase, which has no number. Its `pl-1.5` is the pills' own
- * `px-1.5`, so it starts exactly on the first pill's box edge.
+ * `px-1.5`, so it starts exactly on the first pill's box edge. A group with NO caption —
+ * the door after the rule — sits on the strip's bottom edge (`self-end`), so its pill
+ * lines up with the steps' pills rather than with the middle of caption plus pills.
  */
 function PhaseGroup({
   label,
   gap = "tight",
   children,
 }: {
-  label: string;
+  label?: string;
   /** `wide` is the doors' 4 px, the rule's own margin; the steps keep 2 px. */
   gap?: "tight" | "wide";
   children: ReactNode;
 }) {
   return (
-    <div className="flex shrink-0 flex-col gap-0.5">
-      <span
-        aria-hidden
-        className="pl-1.5 font-condensed text-micro uppercase text-muted-foreground"
-      >
-        {label}
-      </span>
+    <div className={cn("flex shrink-0 flex-col gap-0.5", label === undefined && "self-end")}>
+      {label === undefined ? null : (
+        <span
+          aria-hidden
+          className="pl-1.5 font-condensed text-micro uppercase text-muted-foreground"
+        >
+          {label}
+        </span>
+      )}
       <div className={cn("flex items-center", gap === "wide" ? "gap-1" : "gap-0.5")}>{children}</div>
     </div>
   );
@@ -458,12 +446,12 @@ function MainNav({
 
       <NavRule />
 
-      <PhaseGroup label={t("nav.phase.test")} gap="wide">
+      <PhaseGroup gap="wide">
         {USES.map((door) => (
           <DoorPill
             key={door.key}
             door={door}
-            icon={door.key === "generate" ? Play : Scale}
+            icon={Play}
             active={path === door.path}
             open={locked === null}
             disabledReason={locked}

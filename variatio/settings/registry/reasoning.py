@@ -109,8 +109,8 @@ vuelve a abrir exactamente esa puerta.
 Va en el carril del grafo porque es del grafo: una descripción por concepto, cacheada en
 `cache/concept_descriptions.json` y listada en `review.DERIVED[KNOWLEDGE_GRAPH]`. Lo que
 no hace es correr dentro de `build_kg` — la escribe el embebedor al levantarse
-(`Embedder.__init__` → `describer.ensure()`), así que la llamada la pagan `index`, `tag`,
-`generate` y `evaluate`, que es lo que `server/jobs/lanes.py` declara. Aun así se dibuja en
+(`Embedder.__init__` → `describer.ensure()`), así que la llamada la pagan `index`, `tag`
+y `generate`, que es lo que `server/jobs/lanes.py` declara. Aun así se dibuja en
 el carril del GRAFO: el carril dice de qué es la llamada, no qué trabajo la paga."""
 
 _CONCEPT_TAGGER_DOC = """El etiquetador hace una primera pasada con gramática y sin razonar; esto decide si, cuando

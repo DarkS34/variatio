@@ -16,7 +16,6 @@ from variatio.core import languages
 
 from .models import (
     EDITOR,
-    EVALUATOR_PROFILES,
     Invite,
     Membership,
     PasswordReset,
@@ -64,19 +63,6 @@ def username_error(username: str) -> str | None:
     return None
 
 
-def profile_error(profile: str | None) -> str | None:
-    """Return why this evaluator profile is not acceptable, or None; `None` is valid.
-
-    The same single boundary `username_error` is, and for the same reason: the command
-    line, the panel and the registration form all set this, and three places deciding
-    what a profile may be is three ways for them to drift. `None` means nobody said. The
-    profile is not an authorisation — `require_member` never reads it.
-    """
-    if profile is None or profile in EVALUATOR_PROFILES:
-        return None
-    return f"Perfil desconocido: «{profile}». Usa uno de {', '.join(EVALUATOR_PROFILES)}."
-
-
 # Not written out here: the vocabulary is `variatio.core.languages` and the pipeline reads
 # it too, so a second copy would be exactly the drift the two functions above prevent.
 # Unlike a profile, `None` is NOT valid — the caller resolves it rather than storing it.
@@ -119,7 +105,6 @@ def create_user(
     email: str | None = None,
     is_admin: bool = False,
     email_verified: bool = False,
-    evaluator_profile: str | None = None,
     ui_language: str | None = None,
 ) -> User:
     """Insert an account and return it."""
@@ -131,17 +116,9 @@ def create_user(
         password_hash=password_hash,
         is_admin=is_admin,
         email_verified_at=now() if email_verified and email else None,
-        evaluator_profile=evaluator_profile,
         ui_language=languages.resolve(ui_language),
     )
     session.add(user)
-    session.flush()
-    return user
-
-
-def set_evaluator_profile(session: Session, user: User, profile: str | None) -> User:
-    """Set the account's evaluator profile, `None` included."""
-    user.evaluator_profile = profile
     session.flush()
     return user
 
@@ -179,12 +156,10 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
 def delete_user(session: Session, user: User) -> None:
     """Delete the account row, and only the account row.
 
-    What the account DID is not the account: `generations.user_id` and
-    `evaluation_sessions.user_id` are `SET NULL`, so a course built on somebody's exercises
-    survives their leaving and the evaluation keeps the sessions it counted. What cascades
-    is what only means anything while the account exists — its memberships, its open
-    sessions, its pending reset links and its stage forms, a verdict on a build with nobody
-    behind it being impossible to read or withdraw from the panel. Disabling is the
+    What the account DID is not the account: `generations.user_id` is `SET NULL`, so a
+    course built on somebody's exercises survives their leaving. What cascades is what only
+    means anything while the account exists — its memberships, its open sessions and its
+    pending reset links. Disabling is the
     reversible answer; this is for an account that should not have existed.
     """
     session.delete(user)

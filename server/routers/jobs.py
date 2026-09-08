@@ -29,7 +29,6 @@ GATES: dict[str, str | None] = {
     "index": None,
     "tag": approvals.EXEMPLARS_BANK,
     "generate": "__all__",
-    "evaluate": "__all__",
 }
 
 # `GATES` answers "are the UPSTREAM of X approved?", which is the question for building X.

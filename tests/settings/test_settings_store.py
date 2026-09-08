@@ -22,7 +22,7 @@ def make(key, name, kind, default, **kw):
 SETTINGS = [
     make("models.main", "LLM_MAIN", "str", "modelo-por-defecto"),
     make("engine.idle", "IDLE", "int", 1800, env="VARIATIO_IDLE"),
-    make("evaluation.keys.groq", "", "str", "", secret=True, env="GROQ_KEY"),
+    make("external.keys.demo", "", "str", "", secret=True, env="GROQ_KEY"),
     make("models.phases.repair", "REPAIR_LLM", "str", None, nullable=True),
 ]
 
@@ -88,14 +88,14 @@ def test_write_file_omits_secrets(tmp_path):
     values = {
         "models.main": "x",
         "engine.idle": 5,
-        "evaluation.keys.groq": "SECRETO",
+        "external.keys.demo": "SECRETO",
         "models.phases.repair": None,
     }
     store.write_file(path, SETTINGS, values)
     written = json.loads(path.read_text(encoding="utf-8"))
     assert written["models"]["main"] == "x"
     assert written["models"]["phases"]["repair"] is None
-    assert "keys" not in written.get("evaluation", {})
+    assert "keys" not in written.get("external", {})
     assert "SECRETO" not in path.read_text(encoding="utf-8")
 
 

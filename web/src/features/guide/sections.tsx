@@ -8,7 +8,6 @@ import {
   LifeBuoy,
   Network,
   Play,
-  Scale,
   ShieldCheck,
   UserRound,
   type LucideIcon,
@@ -113,7 +112,6 @@ export const GUIDE_SECTIONS = [
     icon: Library,
   },
   { slug: "generate", labelKey: "guide.sec.generate", groupKey: "guide.group.use", icon: Play },
-  { slug: "evaluate", labelKey: "guide.sec.evaluate", groupKey: "guide.group.use", icon: Scale },
   {
     slug: "runs",
     labelKey: "guide.sec.runs",
@@ -126,9 +124,8 @@ export const GUIDE_SECTIONS = [
     groupKey: "guide.group.daily",
     icon: UserRound,
   },
-  // The other two administrator-only sections, and both sit in "Día a día" rather than
-  // "Fase de pruebas" because neither is something an evaluator ever does. This one first: it is the
-  // panel as a whole, and "repartir" is one of its five tabs read in detail.
+  // The administrator-only section sits in "Día a día": it is the panel as a whole, read
+  // tab by tab.
   {
     slug: "admin",
     labelKey: "guide.sec.admin",

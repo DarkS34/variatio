@@ -6,16 +6,17 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
-> **This branch is the complete system**: the library, the FastAPI + PostgreSQL API, the
-> React front end and the study's blind evaluation. The **`main`** branch carries the same
-> library and its command line alone, with no API, no database and no front end.
+> **This branch is the product**: the library, the FastAPI + PostgreSQL API and the React
+> front end, without the study's evaluation. The **`variatio-web-eval`** branch is the same
+> system plus the blind evaluation, the stage questionnaires and their panel — the TFM's
+> instrument. The **`main`** branch carries the library and its command line alone, with no
+> API, no database and no front end.
 
 ## What it does
 
 - **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.pptx`, `.md`, `.txt`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model and cached by content, so the same document is never read twice; every page can be reviewed and corrected by hand from inside the application, and a corrected page beats the model and survives every later build.
 - **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is not yet taught) and on the course curriculum. A guardrail model and an admissibility judge screen the free-text instructions, every item is validated against the profile's schema, and a batch of checks decides whether an item is returned or asked for again.
 - **Serves several subjects at once.** Each *workspace* is a complete instance — artifacts, cache, raw documents and history — with its own members and roles. Artifacts are versioned in the database, and every step of the construction goes through explicit review and approval.
-- **Evaluates itself blind.** The `evaluation/` package compares three architectures — a commercial model, retrieval over the teacher's own raw documents, and the full system — in blind sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
 
 ## How it works
 
@@ -57,11 +58,11 @@ Every pipeline phase declares its own model, context window and reasoning level,
 A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** front end (Vite, pnpm):
 
 - **Its own accounts, by invitation.** No public sign-up, no OAuth, no JWT: Argon2id, opaque server-side sessions with a sliding and an absolute expiry, enumeration defences and rate limiting keyed by both address and account. Authorisation is a membership row checked on every route (`VIEW` / `EDIT` / `MANAGE`).
-- **A construction in four numbered steps** — the raw documents, the exercise types, the syllabus, the tagging — each with its build, its review, its approval and a restorable history, and each closed by a short questionnaire that is the study's own instrument. The syllabus viewer is a hand-rolled `<canvas>` with a force layout and a view by prerequisite level.
+- **A construction in four numbered steps** — the raw documents, the exercise types, the syllabus, the tagging — each with its build, its review, its approval and a restorable history. The syllabus viewer is a hand-rolled `<canvas>` with a force layout and a view by prerequisite level.
 - **Raw documents as a destination of their own**: per-origin import, transcription with per-document state (`done` / `pending` / `stale`, with the cause), and a page editor.
 - **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or its quota. Weighted phase-plan progress, an authenticated WebSocket, cancellation that stops a model call mid-token.
-- **Generation and evaluation**: commissions with concepts, modality, difficulty, fixed fields, curriculum and typed free-text instructions. Every validated item is saved the moment it validates, with the whole commission that produced it, and is private to whoever asked for it.
-- **Administration**: the engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the full settings registry, and the evaluation's own panel.
+- **Generation**: commissions with concepts, modality, difficulty, fixed fields, curriculum and typed free-text instructions. Every validated item is saved the moment it validates, with the whole commission that produced it, and is private to whoever asked for it.
+- **Administration**: the engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), and the full settings registry.
 - **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation. A twelve-section user guide lives at `/guide`, and a tutorial at `/tutorial`.
 
 ## Getting started
@@ -145,15 +146,14 @@ variatio/       the pipeline
   wording/      the strings the code composes, in the workspace's language
   settings/     the settings registry, with the measurement beside each value
 server/         API, database, identity, job queue, the «system» CLI
-evaluation/     the TFM's evaluation: arms, sessions, statistics, its own API
 web/            the React front end
 tests/          one directory per subsystem
 migrations/     Alembic
 workspaces/     the instances, one directory per slug (git-ignored)
 ```
 
-The boundary is strict and pinned by tests: `evaluation` imports `variatio`, never the
-reverse; importing `variatio` pulls in neither Docling nor the server; and secrets live only
+The boundary is strict and pinned by tests: importing `variatio` pulls in neither Docling
+nor the server, and secrets live only
 in `.env`, never in `config.json`. Inside `variatio/`, two more rules are one `grep` each:
 only `entrypoints/` takes a `Workspace`, and only `builders/` and `runtime/` call the model.
 

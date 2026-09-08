@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Brain,
   Cpu,
-  FlaskConical,
   Hammer,
   RefreshCw,
   Save,
@@ -108,15 +107,6 @@ const SECTIONS: Section[] = [
     icon: Cpu,
     descriptionKey: "cfg.section.offeredDesc",
     groups: [OFFERED_GROUP],
-  },
-  {
-    key: "evaluacion",
-    family: "models",
-    label: null,
-    labelKey: "cfg.section.evaluation",
-    icon: FlaskConical,
-    descriptionKey: "cfg.section.evaluationDesc",
-    groups: ["Evaluación"], // i18n-exempt
   },
   {
     key: "muestreo",

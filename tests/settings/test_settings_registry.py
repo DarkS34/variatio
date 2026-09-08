@@ -7,8 +7,7 @@ DERIVED_ONLY = {
     "TEMPERATURE_DEFAULT",
     "LLM_CONTEXT",
     # Not a setting: the commission picks its writer out of `generation.models`, and this is
-    # the FIRST of them — what the CLI, the evaluation's arms and a request naming none are
-    # written with.
+    # the FIRST of them — what the CLI and a request naming none are written with.
     "VARIANT_GENERATION_LLM",
 }
 
@@ -79,8 +78,8 @@ def test_every_phase_key_is_declared_in_the_registry():
 # The two counts are a tripwire, not a fact worth knowing: adding, removing or renaming a
 # setting has to be a deliberate edit here. `REGISTRY` is every declaration, `BY_NAME` only
 # those carrying a `name` and therefore becoming a `config` attribute — the four context
-# windows, the per-phase reasoning efforts and the evaluation's own settings feed derived
-# values and never land in `variatio.config`.
+# windows and the per-phase reasoning efforts feed derived values and never land in
+# `variatio.config`.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 150
+    assert len(REGISTRY) == 141
     assert len(BY_NAME) == 118

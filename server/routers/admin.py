@@ -1,4 +1,4 @@
-"""The installation's own panel: the accounts, the workspaces and how the evaluation is going.
+"""The installation's own panel: the accounts, the workspaces and the machine.
 
 Every route here is behind `require_admin`, and the whole router exists under `/api/admin`
 because `/api/workspaces`'s `auth.MANAGE` only ever reaches the ACTIVE workspace — tidying
@@ -10,9 +10,7 @@ exists. Two screens for one question is how an installation ends up with two ans
 
 What this is NOT: a second way into the pipeline. Nothing here builds, edits or approves
 anything. It reads what the installation has recorded, hands out access, and exports a CSV.
-The one thing it reads across accounts is the evaluation — whose unit of analysis is a session,
-and whose interesting question cannot be answered from inside one account. That bypass
-lives in `auth.deps.access_for`, in one `if`, and nowhere else.
+The administrator bypass lives in `auth.deps.access_for`, in one `if`, and nowhere else.
 """
 
 from datetime import datetime
@@ -21,8 +19,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
-
-from evaluation.api import store as evaluation_store
 
 from .. import approvals, auth, deps, installation, maintenance, singletons, storage
 from ..auth import deps as auth_deps
@@ -41,8 +37,8 @@ class InviteBody(BaseModel):
 
     `workspace` may be absent — an invitation granting no membership creates an account
     and no access, which is the honest way to add somebody who will be given a workspace
-    later. There is no evaluator profile here on purpose: the link binds the access and
-    nothing else, and whoever registers answers for themselves.
+    later. The link binds the access and nothing else; whoever registers chooses their
+    own username and password.
     """
 
     workspace: str | None = None
@@ -60,12 +56,6 @@ class AdminBody(BaseModel):
     """Whether this account runs the installation."""
 
     is_admin: bool
-
-
-class ProfileBody(BaseModel):
-    """The evaluator profile being corrected: `teacher`, `student` or nothing."""
-
-    evaluator_profile: str | None = None
 
 
 class MaintenanceBody(BaseModel):
@@ -94,14 +84,13 @@ def _lane_jobs() -> dict:
     }
 
 
-def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) -> dict:
+def _account_view(db: DbSession, user: User, generated: dict) -> dict:
     """Render one account for the panel: what it is, what it holds and what it produced."""
     return {
         "id": user.id,
         "username": user.username,
         "name": user.name,
         "is_admin": user.is_admin,
-        "evaluator_profile": user.evaluator_profile,
         "disabled": not user.active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "workspaces": [
@@ -109,8 +98,6 @@ def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) 
             for m, w in identity.memberships_for(db, user.id)
         ],
         "generations": generated.get(user.id, 0),
-        "evaluations": by_account.get(user.id, {}).get("sessions", 0),
-        "decided": by_account.get(user.id, {}).get("decided", 0),
         "sessions": identity.count_live_sessions(db, user.id),
         "locked_seconds": locked_seconds("login", user.username),
         "email": user.email,
@@ -142,8 +129,6 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
     workspaces = repository.list_workspaces(db)
     users = identity.list_users(db)
     generated = generations.generations_per_user(db)
-    headers = evaluation_store.headers(db)
-    by_account = {group["key"]: group for group in evaluation_store.by_account(headers)}
 
     running = singletons.runner.running()
     return {
@@ -151,12 +136,8 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
             "users": len(users),
             "workspaces": len(workspaces),
             "generations": generations.count_generations(db),
-            "evaluations": len(headers),
-            "decided": sum(1 for h in headers if h.get("chosen_at")),
         },
-        "accounts": [
-            _account_view(db, user, generated, by_account) for user in users
-        ],
+        "accounts": [_account_view(db, user, generated) for user in users],
         "workspaces": [_workspace_view(db, workspace) for workspace in workspaces],
         "engine": {
             "busy": bool(running),
@@ -244,25 +225,6 @@ def grant_membership(
 
     identity.grant(db, workspace.id, user.id, body.role)
     return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
-
-
-@router.post("/accounts/{user_id}/profile")
-def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db)) -> dict:
-    """Correct an account's evaluator profile, administrators included.
-
-    It changes the wording of one question and how the evaluation groups its results; it
-    grants and withholds nothing, which is why withholding this control from anybody
-    would be a restriction with no reason.
-    """
-    error = identity.profile_error(body.evaluator_profile)
-    if error:
-        raise HTTPException(422, error)
-    user = identity.get_user_by_id(db, user_id)
-    if user is None:
-        raise HTTPException(404, "Esa cuenta no existe.")
-
-    identity.set_evaluator_profile(db, user, body.evaluator_profile)
-    return {"user_id": user.id, "evaluator_profile": user.evaluator_profile}
 
 
 @router.delete("/accounts/{user_id}/memberships/{slug}")

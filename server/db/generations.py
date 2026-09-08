@@ -3,9 +3,6 @@
 Kept apart from `repository.py` — which is about the instance's artifacts — because this
 table's rows belong to a *person* as well as to a workspace. That is the whole reason it
 exists: a variant nobody can attribute cannot be handed back to whoever asked for it.
-
-The sessions of the blind comparison used to sit beside it under the same roof and now
-live in `evaluation/api/queries.py`, next to the arithmetic that reads them.
 """
 
 from datetime import datetime, timezone

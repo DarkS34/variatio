@@ -1,8 +1,6 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
-Nothing inside `server` may import this module. It is also the only place the evaluation is
-mounted, because `evaluation.api` imports `server.auth` and `server.routers.jobs` back and
-mounting it from the router package would close a cycle.
+Nothing inside `server` may import this module.
 """
 
 import asyncio
@@ -19,14 +17,9 @@ from variatio import config
 from . import installation, jobs, middleware, singletons
 from .routers import ROUTERS
 
-try:
-    from evaluation import api as evaluation_api
-except ImportError:
-    evaluation_api = None
-
 
 def create_app() -> FastAPI:
-    """Assemble the whole application: middleware, routers, the evaluation and the bundle."""
+    """Assemble the whole application: middleware, routers and the bundle."""
     app = FastAPI(
         title="Graph-Guided Variant Generator",
         description="Pipeline por etapas con revisión humana en cada eslabón.",
@@ -53,11 +46,6 @@ def create_app() -> FastAPI:
 
     for router in ROUTERS:
         app.include_router(router)
-
-    # The evaluation registers its own routers and job handler here, and only here: importing
-    # it from the router package would close a cycle.
-    if evaluation_api is not None:
-        evaluation_api.install(app)
 
     _mount_web(app)
     return app

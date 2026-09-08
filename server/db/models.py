@@ -42,14 +42,6 @@ OWNER = "owner"
 ROLE_RANK: dict[str, int] = {VIEWER: 0, EDITOR: 1, OWNER: 2}
 ROLES: tuple[str, ...] = (VIEWER, EDITOR, OWNER)
 
-# Who an account is when it judges, which decides the one question it is asked about each
-# proposal. NOT an authorisation: a profile grants and withholds nothing, and
-# `require_member` never reads it. NULL means nobody said — the teacher's wording is used
-# and the panel reports it as unset, which is what makes it fixable.
-TEACHER = "teacher"
-STUDENT = "student"
-EVALUATOR_PROFILES: tuple[str, ...] = (TEACHER, STUDENT)
-
 
 class Base(DeclarativeBase):
     """The declarative base every table hangs from."""
@@ -192,8 +184,9 @@ class User(Base):
     `identity.normalise_username` is the one door an identifier enters or is looked up
     through, which answers the same question without an extension SQLite could not run.
 
-    `evaluator_profile` (`teacher` / `student` / NULL) is a stratification variable for
-    the evaluation and nothing else. `ui_language` is what this person READS — the interface,
+    `evaluator_profile` is a column the study's migrations built and this branch never
+    reads or writes: it stays NULL, and stays declared so the model keeps describing the
+    database. `ui_language` is what this person READS — the interface,
     the guide, the errors — and is deliberately a different axis from a workspace's
     `prompt_language`; NOT NULL, because there is no such thing as reading no language.
     `active_workspace_id` is a *preference* and never an authorisation: `require_member`
@@ -370,34 +363,12 @@ class Generation(Base):
 
 
 class EvalSession(Base):
-    """One blind comparison, with the evaluator it belongs to.
+    """One blind comparison of the study, which this branch neither reads nor writes.
 
-    A session on disk has no evaluator, and the evaluation's unit is a session: without an
-    account to group by, none of the analysis is computable. The header columns are
-    queried, since the aggregates group by them, while `trace` holds the whole
-    `EvaluationSession.to_dict()` — three prompts, three raw answers, exemplars, timings
-    — and is read only when one session is opened.
-
-    `set_id` says which three items these are. A session generated on its own is its own
-    set; one an administrator assigned carries the set of the session it was copied from,
-    and that is what makes agreement between two evaluators computable at all. Each copy
-    keeps its OWN seed and shuffle, because sharing an order would let one position bias
-    act on both evaluators and inflate their agreement — the copies have to agree about
-    the exercises, not about where they were sitting. `assigned_by` NULL means the
-    evaluator commissioned it themselves; set is what the queue lists as "asignada".
-
-    `triage` is one answer per POSITION, given before the reveal, stored by position
-    exactly as `choice` is, so what is kept is what the evaluator actually saw; the arm
-    behind each one is derived from `shuffle`, which keeps the mapping auditable from the
-    seed months later. `opened_at` is when the three cards first reached the evaluator,
-    so how long it took is a fact rather than an impression. `declined_at` is "I do not feel
-    qualified to judge this" and deliberately NOT `chosen_at` with a null choice — that
-    already means "none of the three convinces me", which is a judgement, while this
-    is the absence of one: it never enters the preference counts and is a datum about the
-    panel's composition.
-
-    `user_id` is `SET NULL` for the same reason `generations.user_id` is: the evaluation keeps
-    the sessions it counted when an account is deleted.
+    The table exists because the migrations built it and an installation may hold rows
+    written by the branch that runs the study; the model stays so `alembic autogenerate`
+    keeps answering zero and a shared database can serve either branch. Nothing under
+    `server/` queries it.
     """
 
     __tablename__ = "evaluation_sessions"
@@ -430,8 +401,7 @@ class EvalSession(Base):
     shuffle: Mapped[list] = mapped_column(Json, default=list)
     think: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
 
-    # `{"1": "as_is", "2": "no", ...}`, keyed by position. Nullable in the database
-    # since 0007 added it to a table that already had rows; the ORM never writes one.
+    # Nullable in the database since 0007 added it to a table that already had rows.
     triage: Mapped[dict] = mapped_column(Json, default=dict, nullable=True)
 
     choice: Mapped[int | None] = mapped_column(Integer, default=None)
@@ -455,25 +425,10 @@ class EvalSession(Base):
 
 
 class StageEvaluation(Base):
-    """What one person answered about one BUILD of one artifact, right after reviewing it.
+    """One stage questionnaire of the study, which this branch neither reads nor writes.
 
-    The questions are asked on the stage's own screen, next to the thing they are about: a
-    judgement about an artifact collected anywhere else is a judgement about a memory of it.
-
-    `artifact_hash` is what makes the row a measurement rather than an opinion — it names
-    the build that was on screen — so a rebuild starts a NEW row and "esto salió mal" and
-    "lo rehíce y salió bien" are two data rather than an edit of one. The unique constraint
-    is over the four together, so re-answering the same build replaces your answer.
-
-    `instrument` is the version of the question set: rewording a question changes what was
-    measured, so rows answered under different wordings must never be pooled. `overall` is a
-    column and the rest of the answers JSON, for the reason `EvalSession` splits the same
-    way — the aggregates group by the single ordinal scale.
-
-    `user_id` CASCADES, unlike the other two tables recording what a person produced: a
-    generated exercise and a blind comparison are material a course was built on, while a
-    form is one person's verdict and means nothing with nobody behind it — a row with no
-    evaluator cannot be filtered, grouped or withdrawn from the panel.
+    Kept for the reason `EvalSession` is: the migrations built the table, and the model
+    describes the database rather than what this branch uses of it.
     """
 
     __tablename__ = "stage_evaluations"
@@ -505,17 +460,8 @@ class StageEvaluation(Base):
     overall: Mapped[int | None] = mapped_column(Integer, default=None, index=True)
     note: Mapped[str | None] = mapped_column(Text, default=None)
 
-    # Whether this person had corrected the artifact by hand before answering. Curating is
-    # no longer required to move down the chain, so it is a variable of the evaluation instead
-    # of a guarantee: the verdict of somebody who fixed the thing is not the verdict of
-    # somebody who judged it as it came out, and one average over both says neither. It is
-    # NOT `CURATED` above, which names which FILE is being read; this is about the person.
-    # Three states: NULL is "nobody said" — every row predating the column, and every
-    # client that does not say — and `False` is somebody saying they did not.
     curated: Mapped[bool | None] = mapped_column(Boolean, default=None)
 
-    # When the questions first reached whoever had to answer them, so "cuánto tardó en
-    # contestar" is a fact rather than an impression. Written once, never on a reload.
     opened_at: Mapped[float | None] = mapped_column(Float, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

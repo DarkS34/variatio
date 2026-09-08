@@ -11,8 +11,7 @@ export type JobKind =
   | "index"
   | "tag"
   | "review_taggability"
-  | "generate"
-  | "evaluate";
+  | "generate";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
@@ -556,26 +555,15 @@ export interface GenerationDetail {
 
 /* Administration -------------------------------------------------------------------- */
 
-/**
- * What an account is asked when it compares proposals, and nothing else.
- *
- * NOT an authorisation: no route reads it. `null` means nobody said, and the evaluation
- * reports it as unset and falls back to the teacher's wording.
- */
-export type EvaluatorProfile = "teacher" | "student";
-
 export interface AdminAccount {
   id: number;
   username: string;
   name: string;
   is_admin: boolean;
-  evaluator_profile: EvaluatorProfile | null;
   disabled: boolean;
   created_at: string | null;
   workspaces: { slug: string; role: Role }[];
   generations: number;
-  evaluations: number;
-  decided: number;
   /** Sessions usable right now: not revoked and not past either expiry. */
   sessions: number;
   /** Seconds the login rate limiter still refuses this account; 0 when it is not locked. */
@@ -615,8 +603,6 @@ export interface AdminOverview {
     users: number;
     workspaces: number;
     generations: number;
-    evaluations: number;
-    decided: number;
   };
   accounts: AdminAccount[];
   workspaces: AdminWorkspace[];
@@ -767,7 +753,7 @@ export interface VgEvent {
   [payload: string]: any;
 }
 
-/** The subject's context: prose plus the three facts the naive arm reads by name. */
+/** The subject's context: prose plus the three facts every prompt can name. */
 export interface ContentContextState {
   exists: boolean;
   narrative: string;

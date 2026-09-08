@@ -349,7 +349,7 @@ export function EmptyState({
 /**
  * A READ THAT FAILED SAYS SO. NO SCREEN MAY RENDER NOTHING INSTEAD.
  *
- * The rule is the evaluation panel's, learned from a route-ordering bug that turned into a card
+ * The rule was learned from a route-ordering bug that turned into a card
  * with a heading and no body — "esta función no existe" rather than "esto falló". It was
  * fixed there and nowhere else: with `/api/kg` down, the graph screen still drew its header,
  * its APROBADO badge and "Grafo listo para etiquetar" over an empty page, which is worse

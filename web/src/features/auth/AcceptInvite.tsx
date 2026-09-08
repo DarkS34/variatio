@@ -7,10 +7,8 @@ import { LanguageFlag } from "@/components/ui/flag";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
-import { PROFILES, PROFILE_SELF_LABEL_KEYS } from "@/lib/evaluator";
 import { LANGUAGES, LANGUAGE_NAMES, localeStore, useLanguage, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
-import type { EvaluatorProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useAcceptInvite } from "@/state/auth";
@@ -32,7 +30,6 @@ export function AcceptInvite({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const [visible, setVisible] = useState(false);
-  const [profile, setProfile] = useState<EvaluatorProfile | null>(null);
   const [language, setLanguage] = useState<Language>(useLanguage());
   const accept = useAcceptInvite();
   const { navigate } = useRouter();
@@ -79,13 +76,12 @@ export function AcceptInvite({ token }: { token: string }) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (mismatch || !profile) return;
+    if (mismatch) return;
     accept.mutate({
       token,
       username: username.trim(),
       name: name.trim(),
       password,
-      evaluator_profile: profile,
       ui_language: language,
     });
   };
@@ -164,31 +160,6 @@ export function AcceptInvite({ token }: { token: string }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label id="invite-profile-label">{t("invite.teachOrStudy")}</Label>
-          <div role="group" aria-labelledby="invite-profile-label" className="flex gap-1">
-            {PROFILES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setProfile(option)}
-                aria-pressed={profile === option}
-                className={cn(
-                  "h-9 flex-1 border text-small font-medium transition-colors",
-                  profile === option
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
-                )}
-              >
-                {t(PROFILE_SELF_LABEL_KEYS[option])}
-              </button>
-            ))}
-          </div>
-          <p className="text-small text-muted-foreground">
-            {t("invite.profileHint")}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-password">{t("auth.password")}</Label>
           <div className="relative">
             <Input
@@ -235,7 +206,7 @@ export function AcceptInvite({ token }: { token: string }) {
 
         <FormError error={accept.error} />
 
-        <Button type="submit" disabled={accept.isPending || mismatch || !profile}>
+        <Button type="submit" disabled={accept.isPending || mismatch}>
           {accept.isPending ? <Spinner /> : null}
           {t("invite.createAccount")}
         </Button>

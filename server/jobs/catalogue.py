@@ -19,7 +19,6 @@ JobKind = Literal[
     "tag",
     "review_taggability",
     "generate",
-    "evaluate",
 ]
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
@@ -34,7 +33,6 @@ JOB_LABELS: dict[str, str] = {
     "tag": "Etiquetar el banco",
     "review_taggability": "Revisar la etiquetabilidad",
     "generate": "Generar ítems",
-    "evaluate": "Evaluación comparativa",
 }
 
 # A build runs out of process: it lasts hours and needs a cancel that really stops it, and

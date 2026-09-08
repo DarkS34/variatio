@@ -24,7 +24,7 @@ export function Dialog({
   children: ReactNode;
   footer?: ReactNode;
   /** Controls drawn between the title and the close button, for a dialog that pages
-   *  through several things (the evaluation's reading view). */
+   *  through several things. */
   actions?: ReactNode;
   className?: string;
 }) {

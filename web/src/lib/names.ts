@@ -11,8 +11,8 @@ import type { ArtifactName, JobKind } from "@/lib/types";
  * that say nothing about who is reading, so the wording belongs in the catalogue like
  * every other sentence and this is the table between the two.
  *
- * Same shape and same reason as `lib/raw.ts` for the raw slots and `lib/evaluator.ts` for
- * the evaluator profiles: an enumerable set the server sends by name is translated here,
+ * Same shape and same reason as `lib/raw.ts` for the raw slots: an enumerable set the
+ * server sends by name is translated here,
  * never rendered as it arrives.
  *
  * The server's own `label` survives as the fallback, which is what an API newer than the
@@ -54,7 +54,6 @@ const JOB_KEYS: Record<string, Key> = {
   tag: "job.tag.label",
   review_taggability: "job.review_taggability.label",
   generate: "job.generate.label",
-  evaluate: "job.evaluate.label",
 };
 
 export function artifactName(
@@ -149,12 +148,6 @@ const STEP_KEYS: Record<string, Key> = {
   transcribe_documents: "step.transcribe_documents.label",
   transcribe_seam: "step.transcribe_seam.label",
   taggability: "step.taggability.label",
-  "eval.arms": "step.eval.arms.label",
-  "eval.guardrail": "step.eval.guardrail.label",
-  "eval.admissibility": "step.eval.admissibility.label",
-  "eval.tagging": "step.eval.tagging.label",
-  eval_rag_index_corpus: "step.eval_rag_index_corpus.label",
-  eval_rag_index_exemplars: "step.eval_rag_index_exemplars.label",
 };
 
 /**

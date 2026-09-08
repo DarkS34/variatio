@@ -112,15 +112,7 @@ def handle_transcribe(job: Job, control: JobControl) -> dict:
     if slot not in _SLOTS:
         raise ValueError(f"Ranura desconocida: '{slot}'; esperaba una de {list(_SLOTS)}")
 
-    from evaluation import raw_text
     from variatio.entrypoints import transcribe_slot
-
-    # The evaluation's plain reading of the same slot, first and best effort: seconds, and it
-    # must not be lost to a cancelled transcription nor stop one.
-    try:
-        raw_text.prepare_slot(ws, slot)
-    except Exception as exc:  # noqa: BLE001 - the transcription matters more than the reading
-        logger.warning(f"No se pudo preparar la lectura en crudo de «{slot}»: {exc}")
 
     logger.info(f"Transcribiendo los documentos de «{slot}» en «{ws.slug}»")
     return transcribe_slot(ws, slot)

@@ -7,7 +7,7 @@
  */
 
 /** How many slides the deck has. `TutorialScreen`'s `SLIDES` must be this long. */
-export const SLIDE_COUNT = 6;
+export const SLIDE_COUNT = 4;
 
 /** The slide a path names, 0-based, or null when the path is not the tutorial's. */
 export function slideOf(path: string): number | null {

@@ -27,7 +27,7 @@ import { keys, useRaw } from "@/state/queries";
  * a row cannot do for itself.
  *
  * It also moved out of `components/`: nothing outside `features/raw/` has ever imported
- * it, and the feature is a tree with its own `api` / `queries` / `types` like `evaluation/`.
+ * it, and the feature is a tree with its own `api` / `queries` / `types`.
  */
 
 function accepts(name: string, extensions: string[]) {

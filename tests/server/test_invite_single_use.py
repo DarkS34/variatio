@@ -72,7 +72,6 @@ def _accept(session, username: str, ip: str = IP):
             username=username,
             name=username,
             password="una-contraseña-larga",
-            evaluator_profile="teacher",
         ),
         _request(ip),
         Response(),

@@ -15,14 +15,12 @@ import type {
   ArtifactName,
   BuildPhase,
   CommissionScope,
-  EvaluatorProfile,
   JobKind,
   Lanes,
   RawKind,
   Role,
   WorkspaceRow,
 } from "@/lib/types";
-import { stageReviewKeys } from "@/evaluation/queries";
 import { authKeys, useHasWorkspace, useSession } from "./auth";
 import { runStore, type RunView } from "./runStore";
 import { activeWorkspace, workspaceStore } from "./workspace";
@@ -375,7 +373,6 @@ export function useInvalidateChain() {
     client.invalidateQueries({ queryKey: ["bank"] });
     client.invalidateQueries({ queryKey: keys.profile });
     client.invalidateQueries({ queryKey: ["generations"] });
-    client.invalidateQueries({ queryKey: stageReviewKeys });
   };
 }
 
@@ -617,11 +614,6 @@ export function useAccountActions() {
         api.adminSetAdmin(id, isAdmin),
       onSuccess: refresh,
     }),
-    setProfile: useMutation({
-      mutationFn: ({ id, profile }: { id: number; profile: EvaluatorProfile | null }) =>
-        api.adminSetProfile(id, profile),
-      onSuccess: refresh,
-    }),
     resetLink: useMutation({ mutationFn: (id: number) => api.adminResetLink(id) }),
     revokeSessions: useMutation({
       mutationFn: (id: number) => api.adminRevokeSessions(id),
@@ -705,8 +697,8 @@ export function useMembershipActions() {
 /**
  * Removing an account for good.
  *
- * The whole `["admin", …]` prefix goes and not just the overview: the account was also a
- * group in "por cuenta" and possibly the evaluation tab's current filter.
+ * The whole `["admin", …]` prefix goes and not just the overview: every admin reading
+ * counts the account somewhere.
  */
 export function useDeleteAccount() {
   const client = useQueryClient();

@@ -63,7 +63,6 @@ class AcceptBody(BaseModel):
     username: str
     name: str = ""
     password: str
-    evaluator_profile: str | None = None
     # Absent is allowed here and nowhere else: a browser that never asked can still register,
     # and the form seeds this from `navigator.language`. `create_user` resolves it.
     ui_language: str | None = None
@@ -211,9 +210,8 @@ def change_language(
 ) -> dict:
     """Set the language this account reads the interface in, and nothing else.
 
-    The account's own and only the account's: an administrator corrects an evaluator
-    profile because it is a variable of the evaluation, but what somebody reads the interface
-    in is nobody else's decision. It touches no workspace — what a person reads and what
+    The account's own and only the account's: what somebody reads the interface in is
+    nobody else's decision. It touches no workspace — what a person reads and what
     an instance's prompts are written in are separate axes.
     """
     error = identity.language_error(body.language)
@@ -350,11 +348,7 @@ def accept_invite(
     through it and both got an account.
 
     A username already taken is refused outright: an invitation is not a way to set
-    somebody else's credentials. An evaluator profile is required here and required
-    nowhere else — this is the one moment the person is in front of the form, and NULL
-    ("nobody said") has to stay reachable for the accounts the command line creates and
-    for every account older than the question. It is not a permission and never becomes
-    one. An unknown UI language, unlike an absent profile, is refused rather than ignored:
+    somebody else's credentials. An unknown UI language is refused rather than ignored:
     the account reads everything through it, so silently seating somebody in Spanish
     because they typed `fr` is worse than saying the installation does not speak it.
     """
@@ -381,12 +375,6 @@ def accept_invite(
     if error:
         raise HTTPException(422, error)
 
-    error = identity.profile_error(body.evaluator_profile)
-    if error:
-        raise HTTPException(422, error)
-    if body.evaluator_profile is None:
-        raise HTTPException(422, "Di si das clase o si estudias: decide qué se te preguntará.")
-
     if body.ui_language is not None:
         error = identity.language_error(body.ui_language)
         if error:
@@ -397,7 +385,6 @@ def accept_invite(
         username=username,
         name=body.name.strip() or username,
         password_hash=passwords.hash_password(body.password),
-        evaluator_profile=body.evaluator_profile,
         ui_language=body.ui_language,
     )
     _apply_membership(session, invite, user)
@@ -440,9 +427,6 @@ def _me(session: DbSession, user: User) -> dict:
             "email": user.email,
             "name": user.name,
             "is_admin": user.is_admin,
-            # The evaluation screen asks a teacher and a student different things, and it
-            # has to know which before it draws the first card.
-            "evaluator_profile": user.evaluator_profile,
             # Travels here rather than on a screen of its own because every screen needs
             # it before the first render, the same reason `active_workspace` does.
             "ui_language": user.ui_language,

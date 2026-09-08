@@ -9,9 +9,6 @@ import type { AdminOverview } from "@/lib/types";
 import { useSession } from "@/state/auth";
 import { useAdminOverview } from "@/state/queries";
 
-import { EvaluationTab } from "@/evaluation/AdminEvaluationTab";
-import type { EvaluationFilters } from "@/evaluation/types";
-
 import { AccountsTab } from "./AccountsTab";
 import { StatTile } from "./charts";
 import { ConfigTab } from "./ConfigTab";
@@ -22,9 +19,9 @@ import { useT } from "@/lib/i18n";
 import { jobName } from "@/lib/names";
 
 /**
- * The installation seen from outside: five tabs, one per thing an administrator runs.
+ * The installation seen from outside: four tabs, one per thing an administrator runs.
  *
- * "Evaluaciones" is the evaluation; "Cuentas" decides who exists and where they get in;
+ * "Cuentas" decides who exists and where they get in;
  * "Workspaces" lists the instances and what they weigh; "Motor" is the machine and the
  * process — the GPU, the tunnel, the models on disk, the queue; "Configuración" is every
  * value the registry exposes. Each tab is its own file, because the screen that crosses
@@ -33,10 +30,7 @@ import { jobName } from "@/lib/names";
 export function AdminScreen() {
   const { t } = useT();
   const session = useSession();
-  const [tab, setTab] = useState("evaluation");
-  // The evaluation's reading filter lives here and not in its tab, because "Cuentas" sets it
-  // ("ver sus sesiones") before switching over.
-  const [filters, setFilters] = useState<EvaluationFilters>({});
+  const [tab, setTab] = useState("cuentas");
 
   const overview = useAdminOverview();
 
@@ -62,7 +56,7 @@ export function AdminScreen() {
 
       <MaintenanceSwitch />
 
-      {/* Above the tabs on purpose: three of the five render nothing without this data, and
+      {/* Above the tabs on purpose: three of the four render nothing without this data, and
           an empty tab with no explanation reads as a feature that does not exist. */}
       {overview.data ? (
         <Totals overview={overview.data} />
@@ -76,7 +70,6 @@ export function AdminScreen() {
 
       <Tabs
         items={[
-          { value: "evaluation", label: t("admin.tab.evaluation") },
           { value: "cuentas", label: t("admin.tab.accounts") },
           { value: "workspaces", label: t("admin.tab.workspaces") },
           { value: "motor", label: t("admin.tab.engine") },
@@ -86,17 +79,7 @@ export function AdminScreen() {
         onChange={setTab}
       />
 
-      {tab === "evaluation" ? <EvaluationTab filters={filters} onFilters={setFilters} /> : null}
-
-      {tab === "cuentas" && overview.data ? (
-        <AccountsTab
-          overview={overview.data}
-          onInspect={(id) => {
-            setFilters({ account: id });
-            setTab("evaluation");
-          }}
-        />
-      ) : null}
+      {tab === "cuentas" && overview.data ? <AccountsTab overview={overview.data} /> : null}
 
       {tab === "workspaces" && overview.data ? (
         <WorkspacesTab overview={overview.data} />
@@ -113,17 +96,12 @@ function Totals({ overview }: { overview: AdminOverview }) {
   const { t, plural, language } = useT();
   const { totals, engine } = overview;
   return (
-    <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatTile label={t("admin.stat.accounts")} value={totals.users} />
       <StatTile label={t("admin.stat.workspaces")} value={totals.workspaces} />
       <StatTile
         label={t("admin.stat.generations")}
         value={totals.generations.toLocaleString(language)}
-      />
-      <StatTile
-        label={t("admin.stat.comparisons")}
-        value={totals.evaluations}
-        hint={t("admin.stat.decided", { n: totals.decided })}
       />
       <StatTile
         label={t("admin.stat.engine")}

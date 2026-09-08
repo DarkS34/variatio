@@ -82,19 +82,6 @@
       "jailbreak"
     ]
   },
-  "evaluation": {
-    "providers": [
-      "gemini",
-      "mistral",
-      "groq"
-    ],
-    "models": {
-      "gemini": "gemini-3.6-flash",
-      "mistral": "mistral-medium-latest",
-      "groq": "openai/gpt-oss-120b"
-    },
-    "timeout": 60.0
-  },
   "logging": {
     "level": "INFO",
     "noisy_loggers": [
@@ -159,9 +146,6 @@
           "kg_domains_leftovers": true,
           "kg_extract": true
         }
-      },
-      "evaluation": {
-        "local_model": "qwen-3.8-27b"
       }
     },
     "ollama": {

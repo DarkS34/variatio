@@ -3,10 +3,8 @@
 They are separate CALLS on purpose and the order is a closed decision — the guardrail is a
 small local classifier reading the text alone with a 4096 window, the scope judge is handed
 the graph's whole concept list, so a text that should reach no model at all must not reach
-the larger of the two first. What they were not is separate SEQUENCES: the generator and the
-evaluation each carried their own copy of the order, the two error sentences and the owner
-derivation, and the evaluation reached into `variatio.runtime.generator` for a private helper to
-format one of them. `screen_instructions` is that sequence, once.
+the larger of the two first. `screen_instructions` is that sequence, once, so a second
+caller cannot carry its own copy of the order and the two error sentences.
 
 Both fail open, each in its own way: an unreadable guardrail criterion is skipped and clears
 `Verdict.checked`, and a judge that cannot answer returns `Ruling(checked=False)`. A screen

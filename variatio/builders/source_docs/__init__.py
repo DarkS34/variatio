@@ -6,8 +6,7 @@ model; `markdown` and `chunking` import neither `inference` nor `progress`, whic
 property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
 
 Not private, despite serving the builders: `entrypoints/transcribe.py`, `server/raw_data.py`,
-`server/db/repository.py`, `evaluation/raw_text.py`, the settings registry and fourteen
-tests all reach it. `_context.py` beside it keeps its underscore, being genuinely the
+`server/db/repository.py`, the settings registry and fourteen tests all reach it. `_context.py` beside it keeps its underscore, being genuinely the
 builders' own.
 """
 

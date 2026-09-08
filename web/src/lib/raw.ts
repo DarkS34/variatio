@@ -7,8 +7,8 @@ import type { RawKind, RawSlot } from "@/lib/types";
  * The server declares the two of them and sends a `label` and a `purpose` with each, both
  * written in the API's own language. What identifies a slot is `kind`, which is stable and
  * says nothing about who is reading, so the wording lives in the catalogue like every other
- * sentence and this is the table between the two. The same reason `lib/evaluator.ts` keeps
- * the two evaluator profiles: an enumerable set the server sends by name is translated
+ * sentence and this is the table between the two: an enumerable set the server sends by
+ * name is translated
  * here, never rendered as it arrives.
  *
  * `slot.label` survives as the fallback for a `kind` this bundle does not know, which is
