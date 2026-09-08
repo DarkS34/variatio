@@ -242,16 +242,17 @@ export function CloseFigure() {
 }
 
 /**
- * Three proposals, none of them named until you have chosen.
+ * The two proposals, neither of them named until you have chosen.
  *
- * The label is `grid.proposal`, the comparison screen's own, so the card the reader will
- * see is headed with the very words drawn here.
+ * Two and not three, because a session IS two cards: the system's proposal and the one
+ * rival the seed draws. The label is `grid.proposal`, the comparison screen's own, so the
+ * card the reader will see is headed with the very words drawn here.
  */
 export function BlindFigure() {
   const { t } = useT();
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      {["A", "B", "C"].map((letter) => (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {["A", "B"].map((letter) => (
         <Box key={letter} className="items-start gap-3 p-4 text-left">
           <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
             {t("grid.proposal", { letter })}
