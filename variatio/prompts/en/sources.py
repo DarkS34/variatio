@@ -28,6 +28,7 @@ An image is transcribed by what it CONTAINS, and described only when there is no
 - A table is transcribed as a Markdown table, cell by cell.
 - Text (a scanned statement, a note, a label) is transcribed as text.
 - Only what cannot be copied as text — a diagram, a plot, a schematic, a photograph — is noted in its place as `[figure: what it shows]`, in one sentence. Say what is SEEN (the axes and magnitudes of a plot, the components of a schematic, the labels it carries) without reading values that cannot be read clearly or interpreting what it means. The note never replaces the text accompanying the figure, which is transcribed like everything else.
+- A blank to be filled in by hand (a line of underscores or dots) is transcribed as `____`, four fixed underscores, never the whole line.
 - The same fidelity rules hold inside an image: copy character by character, do not solve, do not complete, do not correct, and `[illegible]` marks what cannot be read."""
 
 
@@ -58,6 +59,9 @@ The page's titles and headings are marked with `#` following the original's visu
 - Do NOT solve anything, do NOT complete what is missing, do NOT correct errors in the document. If the code has a bug, the bug is part of the exercise and is transcribed as it is.
 - Respect the original's spelling and accents.
 - If something is illegible, write `[illegible]` in its place. Never guess.
+
+# FILL-IN LINES
+A blank to be filled in by hand — a line of underscores or dots after "Name:", "ID:", "Signature:", an empty box — is transcribed as a short FIXED mark: exactly `____` (four underscores), whatever the length of the line in the original. The whole line is never reproduced: its length is not content.
 
 # CODE
 Code goes in blocks delimited by ``` keeping its line breaks and indentation EXACTLY. It is what survives a careless transcription worst and what does the most damage: a code fragment with flattened indentation or a changed operator stops being the exercise it was.

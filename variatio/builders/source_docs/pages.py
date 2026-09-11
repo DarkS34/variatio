@@ -632,8 +632,10 @@ def _transcribe_page(
     An answer cut by `TRANSCRIBE_MAX_OUTPUT_TOKENS` is a failed page and never a short one:
     measured, every page that reached the engine's ceiling was one repeated token — a
     fill-in line the model could not stop copying — and kept as text it went on to cost
-    the profile and the bank more than the page itself. It is not retried either, since at
-    temperature 0 the same image yields the same run.
+    the profile and the bank more than the page itself. It is not retried either: the run
+    is a property of the page (a fill-in line the prompt now folds into `____`), and the
+    same page has been measured passing once and failing the next time at temperature 0,
+    so a retry would only pay the cap again for a coin toss.
     """
     prompt = prompts.transcribe_page_prompt(index, count)
     last_error: Exception | None = None

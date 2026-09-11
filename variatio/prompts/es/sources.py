@@ -28,6 +28,7 @@ Una imagen se transcribe por lo que CONTIENE, y solo se describe cuando no hay n
 - Una tabla se transcribe como tabla Markdown, celda a celda.
 - Un texto (un enunciado escaneado, una nota, un rótulo) se transcribe como texto.
 - Solo lo que no puede copiarse como texto —un diagrama, una gráfica, un esquema, una fotografía— se anota en su sitio como `[figura: qué muestra]`, en una frase. Di lo que se VE (los ejes y magnitudes de una gráfica, los componentes de un esquema, las etiquetas que lleve) sin leer valores que no se lean con claridad ni interpretar lo que significa. La anotación nunca sustituye al texto que acompaña a la figura, que se transcribe como todo lo demás.
+- Un hueco para rellenar a mano (una línea de guiones bajos o de puntos) se transcribe como `____`, cuatro guiones bajos fijos, nunca la línea entera.
 - Dentro de una imagen rigen las mismas reglas de fidelidad: se copia carácter a carácter, no se resuelve, no se completa, no se corrige, y `[ilegible]` marca lo que no se lee."""
 
 
@@ -58,6 +59,9 @@ Los títulos y encabezados de la página se marcan con `#` según la jerarquía 
 - NO resuelvas nada, NO completes lo que falte, NO corrijas errores del documento. Si el código tiene un fallo, el fallo es parte del ejercicio y se transcribe tal cual.
 - Respeta la ortografía y los acentos del original.
 - Si algo es ilegible, escribe `[ilegible]` en su lugar. Nunca adivines.
+
+# LÍNEAS PARA RELLENAR
+Un hueco para escribir a mano —una línea de guiones bajos o de puntos tras «Nombre:», «DNI:», «Firma:», una casilla vacía— se transcribe como una marca corta y FIJA: exactamente `____` (cuatro guiones bajos), sea cual sea la longitud de la línea en el original. Nunca se reproduce la línea entera: su longitud no es contenido.
 
 # CÓDIGO
 El código va en bloques delimitados por ``` conservando EXACTAMENTE sus saltos de línea y su indentación. Es lo que peor sobrevive a una transcripción descuidada y lo que más daño hace: un fragmento de código con la indentación aplanada o un operador cambiado deja de ser el ejercicio que era.
