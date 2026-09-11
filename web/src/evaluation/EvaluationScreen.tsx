@@ -8,6 +8,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { EMPTY_FORM, type FormState } from "@/features/generate/commission";
 import { GenerateForm } from "@/features/generate/GenerateForm";
+import { refusal, stillRefused } from "@/features/generate/screening";
 import { ApiError } from "@/lib/api";
 import { duration } from "@/lib/format";
 import { isQueued, queuedLabel, waitOf, waitReason } from "@/lib/queue";
@@ -44,10 +45,8 @@ import {
   useRateSession,
   useTriageProposal,
 } from "./queries";
-import { useT, type Key } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { CancelButton } from "@/components/CancelButton";
-
-const GUARDRAIL_ERROR: Key = "generate.notPassed";
 
 /**
  * Only the comparison THIS person has to judge.
@@ -209,11 +208,7 @@ export function EvaluationScreen() {
     }
   }, [producedId]);
 
-  const blocked = useMemo(() => {
-    if (status !== "failed") return null;
-    const error = run?.job?.error ?? "";
-    return error.includes(GUARDRAIL_ERROR) ? error.replace(/^\w+Error:\s*/, "") : null;
-  }, [status, run]);
+  const blocked = useMemo(() => refusal(run?.job), [run]);
 
   // Instructions the judge refused come back to the form that wrote them, not to the queue:
   // the message is about text that is still on screen there and nowhere else.
@@ -429,7 +424,7 @@ export function EvaluationScreen() {
             running={false}
             pending={launch.isPending}
             error={launch.isError ? (launch.error as Error).message : null}
-            blockedInstructions={blocked}
+            blockedInstructions={stillRefused(run?.job, form.instructions)}
             variant="evaluation"
             footnote={<FairnessTable />}
             onLaunch={() =>

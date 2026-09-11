@@ -44,16 +44,8 @@ def _not_found(exc: raw_data.RawError) -> HTTPException:
 
 
 def _transcribing(slug: str, kind: str):
-    """Find this slot's transcription job, running or waiting, or nothing.
-
-    Reads `running(slug)` and not `current()`: with two lanes there is more than one job
-    at a time and `current()` only answers the oldest, so a transcription on the other
-    lane would slip past the duplicate guard.
-    """
-    for job in singletons.runner.running(slug) + singletons.runner.pending(slug):
-        if job.kind == raw_data.TRANSCRIBE_JOB and job.params.get("slot") == kind:
-            return job
-    return None
+    """Find this slot's transcription job, running or waiting, or nothing."""
+    return singletons.transcribing(slug, kind)
 
 
 @router.get("")

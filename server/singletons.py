@@ -11,6 +11,7 @@ from variatio.core.workspace import Workspace
 
 from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner, chain
 from .model_pulls import PullTracker
+from . import raw_data
 from .approvals import Approvals
 from .tunnel import SshTunnel
 
@@ -35,6 +36,20 @@ def pipeline_snapshot(ws: Workspace) -> list[dict]:
 def building(ws: Workspace) -> set[str]:
     """The artifacts a job is building right now in one workspace."""
     return runner.building_artifacts(ws.slug)
+
+
+def transcribing(slug: str, slot: str):
+    """Find one slot's transcription job, running or waiting, or nothing.
+
+    Reads `running(slug)` and not `current()`: with two lanes there is more than one job
+    at a time and `current()` only answers the oldest, so a transcription on the other
+    lane would slip past. A WAITING one counts too — it is about to write the same page
+    cache a build of that slot would read and write.
+    """
+    for job in runner.running(slug) + runner.pending(slug):
+        if job.kind == raw_data.TRANSCRIBE_JOB and job.params.get("slot") == slot:
+            return job
+    return None
 
 
 def approvals(ws: Workspace) -> Approvals:

@@ -531,6 +531,7 @@ export const es = {
   "build.readOnly": "Tu permiso sobre esta instancia es de solo lectura.",
   "build.whyNot": "Por qué todavía no se puede construir",
   "build.rawMissing": "Faltan documentos en «{slot}»: súbelos en «Apuntes y ejercicios» antes de construir.",
+  "build.transcribing": "Se están leyendo los documentos de «{slot}»: espera a que termine para construir.",
   "build.sending": "Enviando…",
   "build.alreadyQueued": "{label} ya está en cola.{reason}",
   "build.create": "Construye {stage} a partir de tus apuntes y ejercicios.{note}",
@@ -1736,6 +1737,7 @@ export const es = {
   "form.instructions.title": "Instrucciones adicionales",
   "form.instructions.hint": "Una petición libre para este lote: la temática, el contexto, ese tipo de cosas. Por ejemplo, que el contexto sea deportivo.",
   "form.instructions.blocked": "Instrucciones bloqueadas",
+  "form.instructions.blockedLaunch": "Las instrucciones adicionales no han pasado el filtro: corrígelas para poder generar.",
   "form.scope.canAsk": "Aquí puedes pedir",
   "form.scope.decidedAbove": "Esto se decide más arriba",
   "form.scope.subjectFixes": "Esto lo fija la asignatura",
@@ -1760,7 +1762,6 @@ export const es = {
   "form.compare": "Comparar dos propuestas",
   "form.confirmContinue": "Confirmar y continuar",
 
-  "generate.notPassed": "no han pasado la revisión",
   "generate.queued": "Está en cola.",
   "generate.howItWorks": "Cómo se genera",
   "generate.noEngine": "Sin motor de inferencia",

@@ -23,9 +23,9 @@ import { cn } from "@/lib/utils";
 /**
  * The one way to launch a build, and it is offered ONLY while there is nothing built.
  *
- * The reasons for NOT offering it — an unapproved upstream, an empty raw slot, no engine,
- * this build already waiting — live here once, and a disabled button always says why in its
- * tooltip and in the (i) beside it.
+ * The reasons for NOT offering it — an unapproved upstream, an empty raw slot, a
+ * transcription of that slot still running, no engine, this build already waiting — live
+ * here once, and a disabled button always says why in its tooltip and in the (i) beside it.
  *
  * There is no REBUILD: a second pass over the same documents gives no different result, so
  * the control was only a way to throw a person's corrections away. One label for the four
@@ -64,6 +64,10 @@ export function BuildButton({ stage, className }: { stage: StageState; className
     if (!canEdit) return t("build.readOnly");
     if (stage.blocked_reason) return stage.blocked_reason;
     if (rawMissing) return t("build.rawMissing", { slot: slotLabelOf(rawMissing, t)! });
+    // The slot this build reads is being transcribed: both would write the same page
+    // cache, and the server refuses the submit for the same reason.
+    if (stage.transcribing_slot)
+      return t("build.transcribing", { slot: slotLabelOf(stage.transcribing_slot, t)! });
     if (offline) return offline;
     if (submit.isPending) return t("build.sending");
     // Already launched and waiting its turn: pressing again would only queue a second

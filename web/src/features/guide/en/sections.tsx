@@ -2317,9 +2317,11 @@ const problems = (
     question: "My additional instructions come back blocked",
     answer: (
       <p>
-        The notice says which of the two filters it was. If it is admissibility, it names the
-        control above that already decides that: change it there instead of asking for it in
-        writing. If it is the guardrail, it says under which criterion.
+        The notice appears under the instructions box itself and the generate button stays
+        locked until you change them. It says which of the two filters it was: if it is
+        admissibility, it names the control above that already decides that, so change it there
+        instead of asking for it in writing; if it is the guardrail, it says under which
+        criterion.
       </p>
     ),
   },

@@ -54,6 +54,14 @@ _UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 TRANSCRIBE_JOB = "transcribe"
 
 
+def slot_feeding(artifact: str | None) -> str | None:
+    """Name the raw slot an artifact is built from, or `None` for one built from no slot."""
+    for kind, slot in SLOTS.items():
+        if artifact in slot["feeds"]:
+            return kind
+    return None
+
+
 class RawError(Exception):
     """A raw-slot operation the caller asked for and cannot have."""
 

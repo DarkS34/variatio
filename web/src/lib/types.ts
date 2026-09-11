@@ -66,6 +66,9 @@ export interface StageState {
   blocked_by: string[];
   blocked_reason: string | null;
   build_job: JobKind;
+  /** The raw slot this stage's build reads, while a transcription of it is live: the
+   *  build waits for it. Absent on an API older than the bundle, which reads as "none". */
+  transcribing_slot?: RawKind | null;
 }
 
 export interface Pipeline {
@@ -128,6 +131,8 @@ export interface Job {
   started_at: number | null;
   finished_at: number | null;
   error: string | null;
+  /** A stable name for WHY it failed, when the cause declares one (`instructions_blocked`). */
+  error_code?: string | null;
   result: Record<string, any> | null;
   label: string;
   artifact: ArtifactName | null;

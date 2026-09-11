@@ -426,6 +426,7 @@ export const en: Catalogue = {
   "build.readOnly": "Your permission on this instance is read-only.",
   "build.whyNot": "Why this cannot be built yet",
   "build.rawMissing": "Documents are missing in «{slot}»: upload them under «Notes and exercises» before building.",
+  "build.transcribing": "The documents in «{slot}» are being read: wait for it to finish before building.",
   "build.sending": "Sending…",
   "build.alreadyQueued": "{label} is already queued.{reason}",
   "build.create": "Builds {stage} from your notes and exercises.{note}",
@@ -1602,6 +1603,7 @@ export const en: Catalogue = {
   "form.instructions.title": "Additional instructions",
   "form.instructions.hint": "A free request for this batch: the theme, the setting, that kind of thing. For instance, make the context sporting.",
   "form.instructions.blocked": "Instructions blocked",
+  "form.instructions.blockedLaunch": "The additional instructions did not pass the screen: change them to generate.",
   "form.scope.canAsk": "Here you can ask for",
   "form.scope.decidedAbove": "This is decided above",
   "form.scope.subjectFixes": "This is fixed by the subject",
@@ -1626,7 +1628,6 @@ export const en: Catalogue = {
   "form.compare": "Compare two proposals",
   "form.confirmContinue": "Confirm and continue",
 
-  "generate.notPassed": "did not pass the review",
   "generate.queued": "It is queued.",
   "generate.howItWorks": "How generation works",
   "generate.noEngine": "No inference engine",

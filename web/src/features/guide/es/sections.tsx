@@ -2303,9 +2303,10 @@ const problems = (
     question: "Mis instrucciones adicionales salen bloqueadas",
     answer: (
       <p>
-        El aviso dice cuál de los dos filtros ha sido. Si es el de admisibilidad, te nombra el
-        control de arriba que ya decide eso: cámbialo ahí en vez de pedirlo por escrito. Si es el
-        guardarraíl, te dice bajo qué criterio.
+        El aviso aparece bajo el propio cuadro de instrucciones y el botón de generar queda
+        bloqueado hasta que las cambies. Dice cuál de los dos filtros ha sido: si es el de
+        admisibilidad, te nombra el control de arriba que ya decide eso, así que cámbialo ahí en
+        vez de pedirlo por escrito; si es el guardarraíl, te dice bajo qué criterio.
       </p>
     ),
   },
