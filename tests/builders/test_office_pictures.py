@@ -94,7 +94,7 @@ def test_a_picture_is_read_where_it_stood_and_a_repeated_one_only_once(source, m
     text, tally = _read(source, images_dir=tmp_path / "images")
 
     assert _blocks(text) == ["antes", "$x$", "entre", "$x$", ES_WORDING.UNREADABLE_IMAGE_MARK, "después"]
-    assert tally == {"images_total": 3, "images_unreadable": 1}
+    assert tally == {"images_total": 3, "images_unreadable": 1, "notes_total": 0}
     # Two pictures with the same bytes are one call, and the header logo is furniture the
     # markdown never carries, so it is not read at all.
     assert model.calls == 1
@@ -138,7 +138,7 @@ def test_a_failed_reading_leaves_the_mark_and_is_not_cached(source, tmp_path, mo
     text, tally = _read(source, images_dir=tmp_path / "images")
 
     assert text.count(ES_WORDING.UNREADABLE_IMAGE_MARK) == 3
-    assert tally == {"images_total": 3, "images_unreadable": 3}
+    assert tally == {"images_total": 3, "images_unreadable": 3, "notes_total": 0}
     assert not list((tmp_path / "images").glob("*.json")), "a failure must be retried next time"
 
 

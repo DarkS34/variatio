@@ -3859,7 +3859,7 @@ wheels = [
 
 [[package]]
 name = "variatio"
-version = "1.111.1"
+version = "1.112.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -3879,6 +3879,7 @@ builders = [
     { name = "docling" },
     { name = "pillow" },
     { name = "pypdfium2" },
+    { name = "python-pptx" },
 ]
 server = [
     { name = "alembic" },
@@ -3906,6 +3907,7 @@ dev = [
     { name = "pypdfium2" },
     { name = "pytest" },
     { name = "python-multipart" },
+    { name = "python-pptx" },
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
@@ -3930,6 +3932,7 @@ requires-dist = [
     { name = "pypdf", marker = "extra == 'server'", specifier = ">=5.0.0" },
     { name = "pypdfium2", marker = "extra == 'builders'", specifier = ">=4.30.0" },
     { name = "python-multipart", marker = "extra == 'server'", specifier = ">=0.0.20" },
+    { name = "python-pptx", marker = "extra == 'builders'", specifier = ">=1.0.0" },
     { name = "sqlalchemy", marker = "extra == 'server'", specifier = ">=2.0.36" },
     { name = "tqdm", specifier = ">=4.67.3" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.32.0" },
@@ -3950,6 +3953,7 @@ dev = [
     { name = "pypdfium2", specifier = ">=4.30.0" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
+    { name = "python-pptx", specifier = ">=1.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.36" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
     { name = "websockets", specifier = ">=13.0" },

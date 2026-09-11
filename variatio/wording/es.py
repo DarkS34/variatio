@@ -126,6 +126,7 @@ def batch_label(position: int) -> str:
 
 FAILED_PAGE_PREFIX: str = "> [TRANSCRIPCIÓN FALLIDA"
 UNREADABLE_IMAGE_MARK: str = "[IMAGEN NO LEGIBLE]"
+SPEAKER_NOTES_LABEL: str = "Notas del orador"
 
 
 def failed_page(index: int, count: int, error: str) -> str:
@@ -230,3 +231,8 @@ def syllabus_blocks(domains: int, concepts: int) -> str:
         f"El temario se divide en {domains} bloque(s), con {concepts} concepto(s) "
         "en total. Se llaman:"
     )
+
+
+def speaker_notes_block(text: str) -> str:
+    """The notes a slide's author wrote for the speaker, quoted under the slide."""
+    return shared.quote_block(SPEAKER_NOTES_LABEL, text)

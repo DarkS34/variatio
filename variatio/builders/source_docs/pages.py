@@ -40,6 +40,7 @@ from .markdown import (
     page_mark,
     picture_mark,
     pictures,
+    slide_numbers,
     splice_pictures,
     tidy_markdown,
 )
@@ -68,6 +69,7 @@ META_EXTRA = (
     "failed_pages",
     "images_total",
     "images_unreadable",
+    "notes_total",
 )
 
 # The marker a failed page carries, in EVERY language the installation writes: what is
@@ -95,6 +97,10 @@ IMAGE_MIN_LONG_SIDE = 1024
 # the pages that cleanup produced, which is seconds of Docling, while a key in the vlm
 # fingerprint would re-transcribe every PDF ever read for a change that never touched them.
 CONVERTER_CLEANUP_VERSION = 1
+# The version of how a deck's speaker notes are put on the page. Written into the fingerprint
+# of a `.pptx` ONLY: a `.docx` has no notes and must not be re-read for them, and a deck
+# re-read costs seconds of Docling — its pictures are cached by content.
+SPEAKER_NOTES_VERSION = 1
 
 
 def document_cache_dir(source: str | Path, cache_dir: str | Path) -> Path:
@@ -147,6 +153,8 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         # Whether the metafiles could be rendered: installing LibreOffice has to expire
         # every Office document read without it, or its equations stay unreadable for ever.
         fingerprint["rasteriser"] = Path(office.rasteriser()).name if office.rasteriser() else ""
+    if source.suffix.lower() == ".pptx":
+        fingerprint["notes"] = SPEAKER_NOTES_VERSION
     return fingerprint
 
 
@@ -448,6 +456,7 @@ def _write_meta(
             "failed_pages": failed_pages(pages),
             "images_total": int(images.get("images_total", 0)),
             "images_unreadable": int(images.get("images_unreadable", 0)),
+            "notes_total": int(images.get("notes_total", 0)),
         },
     )
 
@@ -704,13 +713,15 @@ def _partial_path(cache_dir: Path) -> Path:
     return cache_dir / PARTIAL_NAME
 
 
-# THE PICTURES OF AN OFFICE DOCUMENT ---------------------------------------------------------------
+# THE PICTURES AND THE NOTES OF AN OFFICE DOCUMENT --------------------------------------------------
 #
 # Docling translates a `.docx` or `.pptx` faithfully — it declares its structure, so there is
 # nothing to infer — and writes `<!-- image -->` for every picture, which is exactly the part
 # of these documents that carries the formulas and the expected outputs. Each picture is one
 # model call under the same rules a figure on a rendered page gets, and the answer is put
-# back where the picture stood.
+# back where the picture stood. A deck's speaker notes are the other thing Docling never
+# opens, and they are read straight off the file and quoted under their slide: declared text,
+# like the slide's own, and no call at all.
 
 
 def transcribe_office(
@@ -721,10 +732,10 @@ def transcribe_office(
     tag: str = "",
     images_dir: str | Path | None = None,
 ) -> tuple[str, dict]:
-    """Convert an Office document with Docling and read its pictures, one call each.
+    """Convert an Office document with Docling, read its pictures one call each, add its notes.
 
-    Returns the page and a tally: how many pictures the body carried, and how many left the
-    unreadable mark.
+    Returns the page and a tally: how many pictures the body carried, how many left the
+    unreadable mark, and how many slides carried speaker notes.
     """
     # The metafiles are rendered into a copy that Docling reads in the original's place;
     # the copy lives as long as the conversion and nothing keys on it.
@@ -732,11 +743,31 @@ def transcribe_office(
         prepared = office.rasterised_copy(source, workdir) or source
         document = convert(converter, prepared)
     found = pictures(document)
-    tally = {"images_total": len(found), "images_unreadable": 0}
-    text = tidy_markdown(export_markdown(document, {}), converted=True)
-    if not found:
-        return text, tally
+    notes = office.speaker_notes(source)
+    tally = {"images_total": len(found), "images_unreadable": 0, "notes_total": len(notes)}
+    readings = (
+        _read_pictures(source, found, model, prompts, tag, images_dir, tally) if found else {}
+    )
+    if notes:
+        logger.info(f"{tag}{source.name}: speaker notes on {len(notes)} slide(s)")
+    wording = wording_sets.beside(prompts)
+    return _office_text(document, found, readings, notes, wording), tally
 
+
+def _read_pictures(
+    source: Path,
+    found: list[tuple[str, object]],
+    model: str,
+    prompts,
+    tag: str,
+    images_dir: str | Path | None,
+    tally: dict,
+) -> dict[str, str]:
+    """Read every picture, one call each, through the memo and the content-hash cache.
+
+    Returns `{self_ref: reading}`; an unreadable picture gets the mark and is counted in
+    `tally["images_unreadable"]`.
+    """
     logger.info(f"{tag}{source.name}: {len(found)} picture(s) to read with '{model}'")
     readings: dict[str, str] = {}
     memo: dict[str, str] = {}
@@ -774,13 +805,45 @@ def transcribe_office(
         f"{tag}{source.name}: {len(found) - reused - tally['images_unreadable']} picture(s) "
         f"read, {reused} reused, {tally['images_unreadable']} unreadable"
     )
-    # Tidied with the marks still standing and the readings spliced in afterwards: the
-    # escape undo exists for Docling's output and must never touch what the model wrote.
-    marked = tidy_markdown(
-        export_markdown(document, {ref: picture_mark(ref) for ref, _ in found}),
-        converted=True,
-    )
-    return tidy_markdown(splice_pictures(marked, readings)), tally
+    return readings
+
+
+def _office_text(
+    document,
+    found: list[tuple[str, object]],
+    readings: dict[str, str],
+    notes: dict[int, str],
+    wording,
+) -> str:
+    """Serialise the document with its pictures' readings in place and its notes under each slide.
+
+    Tidied with the picture marks still standing and the readings spliced in afterwards:
+    the escape undo exists for Docling's output and must never touch what the model wrote —
+    nor a note, which is the author's own text and is added after the same pass. With no
+    notes the document is one export; with notes it is one export per slide, each followed
+    by its note, and the slides joined in order are the same text Docling writes whole.
+    """
+    marks = {ref: picture_mark(ref) for ref, _ in found}
+    if not notes:
+        return _slide_text(document, marks, readings)
+    slides: list[str] = []
+    for number in slide_numbers(document):
+        text = _slide_text(document, marks, readings, page=number).rstrip()
+        note = notes.get(number)
+        if note:
+            quoted = wording.speaker_notes_block(note)
+            text = f"{text}\n\n{quoted}" if text else quoted
+        if text:
+            slides.append(text)
+    return tidy_markdown("\n\n".join(slides))
+
+
+def _slide_text(
+    document, marks: dict[str, str], readings: dict[str, str], page: int | None = None
+) -> str:
+    """One export — the whole document, or one slide — with its pictures' readings spliced in."""
+    marked = tidy_markdown(export_markdown(document, marks, page=page), converted=True)
+    return tidy_markdown(splice_pictures(marked, readings))
 
 
 def _encode_image(image) -> bytes:

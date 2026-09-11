@@ -239,13 +239,16 @@ def pictures(document) -> list[tuple[str, object]]:
     return out
 
 
-def export_markdown(document, replacements: dict[str, str]) -> str:
+def export_markdown(document, replacements: dict[str, str], page: int | None = None) -> str:
     """Serialise a Docling document, putting `replacements[self_ref]` where each picture was.
 
     A picture with no replacement leaves nothing behind — not Docling's `<!-- image -->`,
     which used to survive into chunks and be quoted back as part of an item's statement.
     Only a real Docling document is serialised through the marking serializer; a stub keeps
-    its own `export_to_markdown`.
+    its own `export_to_markdown`. With `page` given only the items whose provenance names
+    that page are written — a slide of a deck, since Docling numbers a `.pptx` by slide —
+    and the pages joined in order are the whole document line for line (measured on the
+    103-slide reference deck).
     """
     if not hasattr(document, "iterate_items"):
         return document.export_to_markdown()
@@ -267,9 +270,17 @@ def export_markdown(document, replacements: dict[str, str]) -> str:
     text = MarkdownDocSerializer(
         doc=document,
         picture_serializer=_Marking(),
-        params=MarkdownParams(layers={ContentLayer.BODY}),
+        params=MarkdownParams(
+            layers={ContentLayer.BODY}, pages={page} if page is not None else None
+        ),
     ).serialize().text
     return splice_pictures(text, replacements)
+
+
+def slide_numbers(document) -> list[int]:
+    """The page numbers a Docling document declares, in order — a deck's slides; none for a stub."""
+    pages = getattr(document, "pages", None)
+    return sorted(pages) if isinstance(pages, dict) else []
 
 
 def splice_pictures(text: str, replacements: dict[str, str]) -> str:

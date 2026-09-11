@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.111.1"
+version = "1.112.0"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 dependencies = [
@@ -26,9 +26,10 @@ dependencies = [
 # converter is used — so a PDF corpus (page transcription) or a cached one never builds it.
 
 [project.optional-dependencies]
-# pypdfium2 arrives with Docling anyway, but `source_docs.page_images` imports it
-# directly to rasterise pages, so it is declared rather than relied on transitively.
-builders = ["docling>=2.0.0", "pypdfium2>=4.30.0", "pillow>=10.0.0"]
+# pypdfium2 and python-pptx arrive with Docling anyway, but `source_docs.page_images`
+# imports the first to rasterise pages and `source_docs.office.speaker_notes` the second to
+# read a deck's notes, so both are declared rather than relied on transitively.
+builders = ["docling>=2.0.0", "pypdfium2>=4.30.0", "pillow>=10.0.0", "python-pptx>=1.0.0"]
 
 # The web UI's backend. Kept out of the runtime so the CLI stays a plain library.
 
@@ -55,6 +56,7 @@ dev = [
     "docling>=2.0.0",
     "pypdfium2>=4.30.0",
     "pillow>=10.0.0",
+    "python-pptx>=1.0.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "websockets>=13.0",

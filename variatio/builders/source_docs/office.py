@@ -19,6 +19,9 @@ from pathlib import Path
 from loguru import logger
 
 METAFILE_EXTS = (".emf", ".wmf")
+# python-pptx joins a note's paragraphs with a newline and marks a soft line break with a
+# vertical tab; both are line breaks once the note is prose on a page.
+_SOFT_BREAK = "\x0b"
 
 # LibreOffice draws an imported metafile at its natural size in the middle of a page and
 # exports the PAGE; asked for both pixel dimensions it renders that page at any resolution.
@@ -259,3 +262,42 @@ def _declare_png(data: bytes) -> bytes:
     if re.search(r'<Default\s+Extension="png"', text, re.IGNORECASE):
         return data
     return text.replace("</Types>", f"{_PNG_DEFAULT}</Types>").encode("utf-8")
+
+
+def speaker_notes(source: str | Path) -> dict[int, str]:
+    """The speaker notes of a PowerPoint deck, by slide number, slides with none left out.
+
+    Docling never opens `notes_slide`, and on the reference decks that is where the teacher
+    put the explanation: 69 of the 103 slides of one carried 41 000 characters of notes
+    against 36 000 of slide text. The numbering is the deck's own order, which is what
+    Docling writes into every item's provenance, so a note can be put back under its slide.
+    Any file that is not a `.pptx` has none, and a deck python-pptx cannot open reads as
+    having none — a warning, never a failed document, since the slides themselves are
+    Docling's and unaffected.
+    """
+    source = Path(source)
+    if source.suffix.lower() != ".pptx":
+        return {}
+    from pptx import Presentation
+
+    try:
+        slides = Presentation(str(source)).slides
+    except Exception as exc:  # noqa: BLE001 — anything python-pptx raises on a broken zip
+        logger.warning(f"[{source.name}] speaker notes could not be read: {exc}")
+        return {}
+    notes: dict[int, str] = {}
+    for number, slide in enumerate(slides, 1):
+        if not slide.has_notes_slide:
+            continue
+        frame = slide.notes_slide.notes_text_frame
+        text = _note_text(frame.text) if frame is not None else ""
+        if text:
+            notes[number] = text
+    return notes
+
+
+def _note_text(raw: str) -> str:
+    """Normalise one note: soft breaks become lines, trailing blanks and runs of blank lines go."""
+    lines = [line.rstrip() for line in raw.replace(_SOFT_BREAK, "\n").splitlines()]
+    text = "\n".join(lines).strip()
+    return re.sub(r"\n{3,}", "\n\n", text)

@@ -760,6 +760,7 @@ export const es = {
   "transcribe.reason.temperature": "la temperatura de transcripción cambió",
   "transcribe.reason.cleanup": "la limpieza del conversor cambió",
   "transcribe.reason.rasteriser": "cambió el lector de dibujos EMF/WMF de Word y PowerPoint",
+  "transcribe.reason.notes": "ahora se leen también las notas del orador de PowerPoint",
   "transcribe.reason.config": "cambió la forma de leer los documentos",
   "doc.onlyPage": "Es la única página del documento.",
   "doc.deleteHint": "Borra esta página y renumera las siguientes.",

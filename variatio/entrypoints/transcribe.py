@@ -42,6 +42,7 @@ _REASONS = {
     "temperature": "temperature",
     "cleanup": "cleanup",
     "rasteriser": "rasteriser",
+    "notes": "notes",
 }
 
 _UNKNOWN_REASON = "config"
