@@ -1521,9 +1521,11 @@ function Evaluate() {
           items={[
             <>
               The two proposals appear, unlabelled and in an order that is yours alone. Above
-              them, in one line, the commission: the type of exercise, the concepts and the level
-              if one was pinned. It is the same for both, so it gives nothing away. Which of the
-              two alternatives this session drew is not said either.
+              them, in one line, the commission: the type of exercise, the concepts, the level if
+              one was pinned and the scenario both are set in — the one you wrote when ordering
+              or, if you left it empty, the one drawn for the session. It is the same for both,
+              so it gives nothing away. Which of the two alternatives this session drew is not
+              said either.
             </>,
             <>
               The two cards are boxes of the same height, short or long the proposal, and each

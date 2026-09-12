@@ -62,6 +62,7 @@ def _run_capturing(monkeypatch) -> list[Commission]:
 
     monkeypatch.setattr(evaluation_run, "_validate", lambda *a: None)
     monkeypatch.setattr(evaluation_run, "_screen", lambda *a: None)
+    monkeypatch.setattr(evaluation_run, "_settle_scenario", lambda *a: "")
     monkeypatch.setattr(evaluation_run, "_tag", lambda *a: None)
     monkeypatch.setattr(evaluation_run, "_safe_run", fake_arm)
     return seen

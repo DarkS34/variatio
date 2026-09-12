@@ -239,6 +239,8 @@ def header(row: EvalSession, user=None, workspace_slug: str | None = None) -> di
         "fixed": dict(row.fixed or {}),
         "curriculum": list(row.curriculum or []),
         "instructions": row.instructions or "",
+        # Kept in the trace only: no column, so a session recorded before it reads "".
+        "scenario": (row.trace or {}).get("scenario") or "",
         "seed": row.seed,
         "shuffle": shuffle,
         # How many cards the session showed, and the ONE arm the system met on a two-card
@@ -808,6 +810,7 @@ def export_csv(headers: list[dict]) -> str:
         "curriculum",
         "fixed",
         "instructions",
+        "scenario",
         "seed",
         "think",
         "rival",
@@ -864,6 +867,7 @@ def _export_commission(row: dict) -> dict:
         "curriculum": "|".join(row.get("curriculum") or []),
         "fixed": json.dumps(row.get("fixed") or {}, ensure_ascii=False),
         "instructions": row.get("instructions") or "",
+        "scenario": row.get("scenario") or "",
         "seed": row.get("seed"),
         "think": int(bool(row.get("think", True))),
         # The one arm the system met; blank on a session recorded with three cards.

@@ -114,6 +114,8 @@ export interface EvaluationSessionHead {
   fixed: Record<string, unknown>;
   curriculum: string[];
   instructions: string;
+  /** The setting both proposals were placed in; "" on a session recorded before it. */
+  scenario: string;
   revealed: boolean;
   /** Somebody handed this session over, rather than the evaluator commissioning it. */
   assigned: boolean;
@@ -294,6 +296,8 @@ export interface EvaluationParams {
   fixed?: Record<string, unknown>;
   curriculum?: string[];
   instructions?: string;
+  /** Written by the evaluator; empty, the job draws one and both arms receive it. */
+  scenario?: string;
 }
 
 /** One row of the evaluation grouped by something — an account, a workspace. */

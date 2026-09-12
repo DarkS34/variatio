@@ -98,6 +98,7 @@ def build_prompt(commission: Commission, context) -> str:
         keys=list(item_type.field_specs),
         fixed=_spoken_fixed(commission, item_type),
         instructions=commission.instructions,
+        scenario=commission.scenario,
     )
 
 

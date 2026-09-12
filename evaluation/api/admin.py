@@ -77,6 +77,7 @@ class GenerateBody(BaseModel):
     fixed: dict = {}
     curriculum: list[str] | None = None
     instructions: str | None = None
+    scenario: str | None = None
     n: int = 1
 
 
@@ -361,6 +362,7 @@ def generate(
                 "fixed": body.fixed,
                 "curriculum": curriculum or [],
                 "instructions": body.instructions,
+                "scenario": body.scenario,
                 "seed": None,
                 STOCK_PARAM: True,
             },

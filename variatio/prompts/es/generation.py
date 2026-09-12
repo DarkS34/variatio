@@ -33,6 +33,7 @@ def generate_content_prompt(
     instructions: str = "",
     requests=None,
     correction: str | None = None,
+    scenario: str = "",
 ) -> str:
     """Ask for one new exercise, in the modality given and practising the target concepts.
 
@@ -119,6 +120,16 @@ def generate_content_prompt(
             f"{fixed_values_block}\n"
         )
 
+    scenario_section = ""
+    if scenario.strip():
+        scenario_section = (
+            "\n# ESCENARIO FIJADO\n"
+            "El ejercicio se ambienta en este escenario, que viene decidido por quien lo pide y "
+            "sustituye a tu elección libre de envoltorio. Es solo el marco: el objetivo, el "
+            "conocimiento previo y la exigencia los fijan las secciones anteriores:\n"
+            f"{scenario.strip()}\n"
+        )
+
     instructions_section = _request_section(requests, instructions)
 
     correction_section = ""
@@ -172,7 +183,7 @@ Convenciones observadas en el material real de la asignatura: cómo escribe esta
 
 # VARIACIÓN DE CONTEXTO
 El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo. Si los ejemplos de referencia plantean la tarea en un escenario, elige un ámbito reconocible de la vida real que no aparezca en ellos ni en los escenarios ya usados, y plantea el ejercicio en él. Si la modalidad se plantea en seco — los ejemplos de referencia no envuelven la tarea en ningún escenario —, no le inventes uno: la variación está entonces en los datos, los objetos y los valores concretos, que no repiten los de ningún ejemplo. Cambiar el envoltorio y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y la variación elegida no añade datos ni reglas que haya que descifrar.
-{instructions_section}{correction_section}
+{scenario_section}{instructions_section}{correction_section}
 # EJEMPLOS DE REFERENCIA
 Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
 {few_shot_section}

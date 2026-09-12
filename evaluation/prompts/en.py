@@ -14,6 +14,7 @@ def naive_generation_prompt(
     fixed: dict[str, object] | None = None,
     instructions: str = "",
     context_block: str = "",
+    scenario: str = "",
 ) -> str:
     """Compose the sentence a person who had never seen this system would type.
 
@@ -37,11 +38,31 @@ def naive_generation_prompt(
         lines.append(f"{name}: {value}.")
     if instructions.strip():
         lines.append(instructions.strip())
+    if scenario.strip():
+        lines.append(f"Set it in this scenario: {scenario.strip()}")
     lines.append(
         f"Give it to me as JSON with these keys: {', '.join(keys)}. "
         "Just the exercise: no greetings, no explanations and no text outside the JSON."
     )
     return "\n".join(lines)
+
+
+def scenario_prompt(subject: str, concepts: list[str], context_block: str = "") -> str:
+    """Ask for ONE sentence placing an exercise on `concepts` in a concrete, neutral setting.
+
+    Drawn once per session and handed to both arms in the same words, so the comparison
+    is between architectures and never between the settings each arm would have invented.
+    Plain text, one line, no task and no concept named: the setting is a wrapper and the
+    exercise itself is each arm's own.
+    """
+    subject = subject or "the subject"
+    context_section = f"\nWhat the subject is about:\n{context_block.strip()}\n" if context_block.strip() else ""
+    return f"""\
+Propose ONE concrete, realistic scenario in which to set an exercise of {subject} practising {', '.join(concepts)}.
+{context_section}
+A single sentence of at most 25 words describing a recognisable organisation, system or everyday situation. Do not set the task, do not name the concepts, do not solve anything and do not explain the choice.
+
+Answer with the sentence alone, no quotes and no preamble."""
 
 
 def rag_generation_prompt(

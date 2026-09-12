@@ -92,6 +92,12 @@ class Commission:
     arms pass as `think`: the drawn boolean, or the level the installation declared when
     that model's effort is locked (`entrypoints.resolve_generation_effort`). The boolean stays
     the recorded condition; the level is the installation's.
+
+    `scenario` is the ONE setting both proposals are placed in — a sentence naming an
+    organisation, a system or an everyday situation — written by the evaluator or, when
+    they left it empty, drawn once by `run.evaluate` and handed to the arms in the same
+    words. Without it each arm invented its own and the evaluator compared a veterinary
+    clinic with a bookshop rather than two architectures.
     """
 
     concepts: list[str]
@@ -103,6 +109,7 @@ class Commission:
     ruling: object | None = None
     model: str = ""
     effort: bool | str = True
+    scenario: str = ""
 
 
 @dataclass
@@ -192,6 +199,8 @@ class EvaluationSession:
     declined_at: float | None = None
     evaluator_note: str | None = None
     rating: dict | None = None
+    # Empty on a session recorded before the shared scenario existed (2026-09-12).
+    scenario: str = ""
 
     @property
     def cards(self) -> int:
@@ -260,6 +269,7 @@ class EvaluationSession:
             "fixed": dict(self.fixed),
             "curriculum": list(self.curriculum),
             "instructions": self.instructions,
+            "scenario": self.scenario,
             "seed": self.seed,
             "shuffle": list(self.shuffle),
             "think": self.think,
@@ -285,6 +295,7 @@ class EvaluationSession:
             fixed=dict(data.get("fixed") or {}),
             curriculum=list(data.get("curriculum") or []),
             instructions=data.get("instructions") or "",
+            scenario=data.get("scenario") or "",
             seed=int(data.get("seed") or 0),
             shuffle=list(data.get("shuffle") or []),
             # A record with no `think` predates the condition and ran with reasoning on.

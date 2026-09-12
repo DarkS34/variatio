@@ -38,6 +38,7 @@ class EvaluationBody(BaseModel):
     fixed: dict = {}
     curriculum: list[str] | None = None
     instructions: str | None = None
+    scenario: str | None = None
     seed: int | None = None
     force: bool = False
 
@@ -103,6 +104,7 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         "fixed": body.fixed,
         "curriculum": curriculum or [],
         "instructions": body.instructions,
+        "scenario": body.scenario,
         "seed": body.seed,
     }
     job = singletons.runner.submit(
@@ -373,6 +375,7 @@ def _payload(session: EvaluationSession) -> dict:
             "fixed": session.fixed,
             "curriculum": session.curriculum,
             "instructions": session.instructions,
+            "scenario": session.scenario,
             "revealed": revealed,
             "assigned": session.assigned_by is not None,
             "triage": dict(session.triage),

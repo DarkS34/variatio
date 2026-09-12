@@ -15,12 +15,22 @@ from loguru import logger
 
 from variatio import config, entrypoints
 from variatio.runtime import checks, screening
-from variatio.core import progress
+from variatio import wording as wording_sets
+from variatio.core import inference, progress
+from variatio.runtime.screening import guardrail
 from variatio.entrypoints.initialize import RuntimeContext
 from variatio.runtime.generator import clean_fixed, forbidden
 
 from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_session, run_arm
 from . import config as evaluation_config
+from . import prompts as evaluation_prompts
+
+# A scenario is one sentence; the cap is what a form can reasonably hold, well under the
+# free text's own. The temperature is what makes two sessions on one commission land in
+# two settings — at the deterministic default every draw would be the same sentence.
+SCENARIO_MAX_CHARS = 300
+SCENARIO_MAX_TOKENS = 80
+SCENARIO_TEMPERATURE = 0.9
 
 
 def evaluate(
@@ -32,8 +42,14 @@ def evaluate(
     instructions: str | None = None,
     seed: int | None = None,
     job_id: str | None = None,
+    scenario: str | None = None,
 ) -> EvaluationSession:
     """Run one commission through the system and ONE drawn rival, and return the blind session.
+
+    `scenario` is the setting BOTH proposals are placed in. Written by the evaluator it is
+    screened by the guardrail — it is free text that reaches every prompt — and used as it
+    is; left empty it is drawn once, here, so the two arms receive the same sentence and
+    the evaluator compares two architectures rather than two settings.
 
     Which rival, the order of the two cards and the reasoning mode are all DRAWN from
     `seed` (`draw_session`), before anything runs, so a session is reproducible from that
@@ -66,13 +82,14 @@ def evaluate(
         think=think,
         model=writer,
         effort=entrypoints.resolve_generation_effort(writer, think),
+        scenario=(scenario or "").strip(),
     )
     _validate(context, target_type, commission)
 
     # The ruling travels ON the commission so the `system` arm does not screen the same
     # text a second time; `naive` and `rag` receive the free text untyped.
     ruling = _screen(context, target_type, commission)
-    commission = replace(commission, ruling=ruling)
+    commission = replace(commission, ruling=ruling, scenario=_settle_scenario(context, commission))
 
     results: dict[str, ArmResult] = {}
     # The external arm is network, not GPU: when it is the rival it overlaps with the
@@ -117,6 +134,7 @@ def evaluate(
         think=commission.think,
         arms=results,
         job_id=job_id,
+        scenario=commission.scenario,
     )
 
 
@@ -157,6 +175,10 @@ def _validate(context: RuntimeContext, item_type, commission: Commission) -> Non
             f"instructions must be at most {config.GENERATION_INSTRUCTIONS_MAX_CHARS} "
             f"characters, got {len(commission.instructions)}"
         )
+    if len(commission.scenario) > SCENARIO_MAX_CHARS:
+        raise ValueError(
+            f"scenario must be at most {SCENARIO_MAX_CHARS} characters, got {len(commission.scenario)}"
+        )
 
 
 def _screen(context, item_type, commission: Commission):
@@ -176,6 +198,52 @@ def _screen(context, item_type, commission: Commission):
         prompts=context.prompts,
         step_prefix="eval.",
     )
+
+
+def _settle_scenario(context, commission: Commission) -> str:
+    """Return the scenario both arms will be placed in: the evaluator's, screened, or one drawn.
+
+    A hand-written scenario is the one input of the session no other screen reads, so it
+    passes the guardrail before it reaches a prompt; a block raises and the session never
+    comes into existence. An empty one is drawn with one short call to the local writer at
+    a temperature that varies it between sessions, and a draw that fails leaves it empty —
+    each arm then picks its own setting, which is what every session did before.
+    """
+    wording = wording_sets.beside(context.prompts)
+    if commission.scenario:
+        verdict = guardrail.check(commission.scenario, wording=wording)
+        if verdict.blocked:
+            raise ValueError(wording.guardrail_blocked(verdict.reason))
+        return commission.scenario
+
+    prompt = evaluation_prompts.of(context.language).scenario_prompt(
+        subject=context.content_context.subject,
+        concepts=commission.concepts,
+        context_block=context.content_context.prompt_block(),
+    )
+    try:
+        answer = inference.generate(
+            model=commission.model or config.VARIANT_GENERATION_LLM,
+            prompt=prompt,
+            think=False,
+            temperature=SCENARIO_TEMPERATURE,
+            max_output_tokens=SCENARIO_MAX_TOKENS,
+        ).response
+    except Exception as e:  # noqa: BLE001 - a missing scenario is the old behaviour, not a failure
+        logger.warning(f"No se pudo sortear un escenario, cada propuesta elegirá el suyo: {e}")
+        return ""
+    scenario = _first_sentence(answer)
+    logger.info(f"Escenario de la sesión: «{scenario}»")
+    return scenario
+
+
+def _first_sentence(answer: str) -> str:
+    """Keep the first non-empty line of a model's answer, unquoted and capped."""
+    for line in answer.splitlines():
+        text = line.strip().strip("`\"'«»").strip()
+        if text:
+            return text[:SCENARIO_MAX_CHARS]
+    return ""
 
 
 def _safe_run(arm: str, commission: Commission, context) -> ArmResult:

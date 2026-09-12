@@ -42,6 +42,7 @@ def run(commission: Commission, context) -> ArmResult:
                 model=commission.model or None,
                 check=True,
                 ruling=commission.ruling,
+                scenario=commission.scenario or None,
             )
         except progress.Cancelled:
             raise

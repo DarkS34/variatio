@@ -19,7 +19,9 @@ import type { EvaluationSessionHead } from "./types";
  * The level is drawn only when the commission pinned one. With "Cualquiera" the whole
  * group goes, separator included: a row reading "Nivel: cualquiera" reports the absence
  * of a decision as though it were one. The free-text instructions are deliberately not
- * here — they are the judge's business, not the reader's.
+ * here — they are the judge's business, not the reader's. The scenario IS here: it is the
+ * same sentence for both proposals, so it gives none away, and a reader judging «practica
+ * de verdad los conceptos» needs to know which part of the exercise was handed to both.
  */
 export function CommissionStrip({
   session,
@@ -65,6 +67,16 @@ export function CommissionStrip({
             {t("commission.level")}
           </span>
           <span className="font-medium">{readableValue(level)}</span>
+        </>
+      ) : null}
+
+      {session.scenario ? (
+        <>
+          <Rule />
+          <span className="text-micro font-condensed text-muted-foreground uppercase">
+            {t("commission.scenario")}
+          </span>
+          <span>{session.scenario}</span>
         </>
       ) : null}
     </div>
