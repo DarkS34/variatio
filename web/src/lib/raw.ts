@@ -57,7 +57,7 @@ export const STALE_REASON_KEYS: Record<string, Key> = {
   temperature: "transcribe.reason.temperature",
   cleanup: "transcribe.reason.cleanup",
   rasteriser: "transcribe.reason.rasteriser",
-  notes: "transcribe.reason.notes",
+  deck: "transcribe.reason.deck",
   config: "transcribe.reason.config",
 };
 

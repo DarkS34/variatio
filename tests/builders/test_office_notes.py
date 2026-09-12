@@ -64,34 +64,83 @@ def _converter(document):
 
 
 def _read(source: Path, prompts=ES, document=None) -> str:
-    text, _ = pages.transcribe_office(source, _converter(document or _document()), "m", prompts)
-    return text
+    """The deck as one string, its pages joined by a blank line."""
+    return "\n".join(_pages(source, prompts, document))
 
 
-def test_a_note_is_quoted_under_its_own_slide_and_a_slide_without_one_gets_nothing(tmp_path):
+def _pages(source: Path, prompts=ES, document=None) -> list[str]:
+    read, _ = pages.transcribe_office(source, _converter(document or _document()), "m", prompts)
+    return read
+
+
+def test_a_deck_is_one_page_per_slide_with_the_note_under_its_own(tmp_path):
     source = _deck(tmp_path / "raw" / "raw_corpus" / "tema.pptx", {2: "lo que explica el profesor"})
 
-    text = _read(source)
-
-    blocks = [block.strip() for block in text.split("\n\n")]
-    assert blocks == [
-        "## Diapositiva 1",
-        "texto 1",
-        "## Diapositiva 2",
-        "texto 2",
-        "> **Notas del orador**\n>\n> lo que explica el profesor",
-        "## Diapositiva 3",
-        "texto 3",
+    assert _pages(source) == [
+        "## Diapositiva 1\n\ntexto 1\n",
+        "## Diapositiva 2\n\ntexto 2\n\n> **Notas del orador**\n>\n> lo que explica el profesor\n",
+        "## Diapositiva 3\n\ntexto 3\n",
     ]
 
 
-def test_a_deck_without_notes_reads_exactly_as_before(tmp_path):
+def test_a_slide_with_nothing_on_it_is_an_empty_page_so_page_n_is_slide_n(tmp_path):
+    source = _deck(tmp_path / "raw" / "raw_corpus" / "tema.pptx", {3: "solo la nota"}, slides=3)
+    document = _document(slides=3)
+    # Slide 2 declares a page and no item at all.
+    document = docling.DoclingDocument(name="t")
+    for number in (1, 2, 3):
+        document.add_page(page_no=number, size=docling.Size(width=10, height=10))
+        if number != 2:
+            document.add_text(
+                label=docling.DocItemLabel.PARAGRAPH, text=f"texto {number}", prov=_prov(number)
+            )
+
+    read = _pages(source, document=document)
+
+    assert read == ["texto 1\n", "", "texto 3\n\n> **Notas del orador**\n>\n> solo la nota\n"]
+
+
+def test_a_deck_without_notes_reads_slide_by_slide_exactly_as_docling_writes_it(tmp_path):
     source = _deck(tmp_path / "raw" / "raw_corpus" / "tema.pptx", {})
     document = _document()
 
     whole = pages.tidy_markdown(pages.export_markdown(document, {}), converted=True)
-    assert _read(source, document=document) == whole
+    assert "\n".join(_pages(source, document=document)) == whole
     assert office.speaker_notes(source) == {}
+
+
+def test_a_docx_is_still_one_page(tmp_path):
+    docx = tmp_path / "cuaderno.docx"
+    docx.write_bytes(b"PK")
+
+    read, _ = pages.transcribe_office(docx, _converter(_document()), "m", ES)
+
+    assert len(read) == 1 and "## Diapositiva 3" in read[0]
+
+
+def test_two_slides_are_never_joined_as_one_sentence(tmp_path):
+    # The deterministic seam reads «…sigue» + «y continúa» as a cut sentence and would glue
+    # them with a space; a slide is a unit, so the deck's seams settle every boundary.
+    slides = ["texto que sigue\n", "y continúa aquí\n"]
+    seams = pages.slide_seams(slides)
+
+    assert pages.seam(slides[0], slides[1]) == (pages.SPACE, False)
+    assert seams == [{"page": 2, "separator": pages.PARAGRAPH, "drop_head_lines": 0}]
+    assert pages.join_pages(slides, seams) == (
+        f"texto que sigue\n\n{pages.page_mark(2)}\n\ny continúa aquí"
+    )
+    assert pages.seams_merged(seams) == 0 and pages.seams_failed(seams) == []
+
+
+def test_a_deck_not_yet_read_reports_its_slides_as_its_pages(tmp_path):
+    source = _deck(tmp_path / "raw" / "raw_corpus" / "tema.pptx", {}, slides=4)
+    docx = tmp_path / "cuaderno.docx"
+    docx.write_bytes(b"PK")
+    broken = tmp_path / "roto.pptx"
+    broken.write_bytes(b"PK")
+
+    assert office.slide_count(source) == 4
+    assert office.slide_count(docx) == 0 and office.slide_count(broken) == 0
 
 
 def test_a_note_of_several_paragraphs_and_soft_breaks_is_one_quote(tmp_path):
@@ -134,7 +183,7 @@ def test_a_docx_has_no_notes_and_a_broken_deck_reads_as_having_none(tmp_path):
     assert office.speaker_notes(broken) == {}
 
 
-def test_the_notes_version_is_in_the_fingerprint_of_a_deck_only(tmp_path):
+def test_the_deck_version_is_in_the_fingerprint_of_a_deck_only(tmp_path):
     deck = tmp_path / "tema.pptx"
     deck.write_bytes(b"PK")
     docx = tmp_path / "cuaderno.docx"
@@ -143,14 +192,15 @@ def test_the_notes_version_is_in_the_fingerprint_of_a_deck_only(tmp_path):
     of_deck = pages.fingerprint_for(deck, "m", 200, False)
     of_docx = pages.fingerprint_for(docx, "m", 200, False)
 
-    assert of_deck["notes"] == pages.SPEAKER_NOTES_VERSION
-    assert "notes" not in of_docx
-    # A deck read before the notes existed is stale, and the reason is named.
+    assert of_deck["deck"] == pages.DECK_VERSION
+    assert "deck" not in of_docx
+    # A deck read as one page (layout 1, or none at all) is stale, and the reason is named.
     from variatio.entrypoints import transcribe
 
-    stored = {k: v for k, v in of_deck.items() if k != "notes"}
+    stored = {k: v for k, v in of_deck.items() if k != "deck"}
     assert not pages.same_document(stored, of_deck)
-    assert transcribe._reasons(stored, of_deck) == ["notes"]
+    assert not pages.same_document({**stored, "notes": 1}, of_deck)
+    assert transcribe._reasons({**stored, "notes": 1}, of_deck) == ["deck"]
 
 
 def test_the_notes_count_travels_in_the_meta_and_never_in_the_fingerprint(tmp_path, monkeypatch):
@@ -162,8 +212,12 @@ def test_the_notes_count_travels_in_the_meta_and_never_in_the_fingerprint(tmp_pa
     source = _deck(tmp_path / "raw" / "raw_corpus" / "tema.pptx", {1: "a", 3: "b"})
     cache = tmp_path / "cache"
 
-    pages.document_pages(source, ES, converter=_converter(_document()), model="m", cache_dir=cache)
+    read = pages.document_pages(
+        source, ES, converter=_converter(_document()), model="m", cache_dir=cache
+    )
 
     meta = pages.read_meta(pages.document_cache_dir(source, cache))
+    assert len(read) == 3 and meta["pages"] == 3
     assert meta["notes_total"] == 2
+    assert meta["seams"] == pages.slide_seams(read) and meta["seams_merged"] == 0
     assert "notes_total" not in pages.fingerprint_of(meta)

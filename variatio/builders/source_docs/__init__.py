@@ -12,6 +12,7 @@ builders' own.
 """
 
 from . import chunking, files, markdown, office, pages
+from .office import slide_count
 from .chunking import chunk_markdown, chunk_sections, chunk_text
 from .files import (
     CONVERTED_EXTS,
@@ -52,6 +53,7 @@ from .pages import (
     seam,
     seams_failed,
     seams_merged,
+    slide_seams,
     transcribe_office,
     transcribe_pdf,
     valid_seams,
@@ -97,6 +99,8 @@ __all__ = [
     "seam",
     "seams_failed",
     "seams_merged",
+    "slide_count",
+    "slide_seams",
     "split_blocks",
     "strip_page_marks",
     "tidy_markdown",

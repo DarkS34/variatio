@@ -80,9 +80,12 @@ def model(monkeypatch) -> _Model:
 
 
 def _read(source, model_name="m", images_dir=None, document=None):
-    return pages.transcribe_office(
+    """The one page a `.docx` reads as, with its tally."""
+    read, tally = pages.transcribe_office(
         source, _converter(document or _document()), model_name, ES, images_dir=images_dir
     )
+    assert len(read) == 1
+    return read[0], tally
 
 
 def _blocks(text: str) -> list[str]:

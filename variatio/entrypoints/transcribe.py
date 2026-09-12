@@ -42,7 +42,7 @@ _REASONS = {
     "temperature": "temperature",
     "cleanup": "cleanup",
     "rasteriser": "rasteriser",
-    "notes": "notes",
+    "deck": "deck",
 }
 
 _UNKNOWN_REASON = "config"
@@ -100,7 +100,7 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
     if not pages:
         return {
             "name": source.name,
-            "pages": source_docs.page_count(source) if source.suffix.lower() == ".pdf" else 0,
+            "pages": _declared_pages(source),
             "state": PENDING,
             "reasons": [],
             "chars": 0,
@@ -123,6 +123,16 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
         "images": _count(meta, "images_total"),
         "images_unreadable": _count(meta, "images_unreadable"),
     }
+
+
+def _declared_pages(source: Path) -> int:
+    """How many pages a document not yet read will have: a PDF's pages, a deck's slides."""
+    suffix = source.suffix.lower()
+    if suffix == ".pdf":
+        return source_docs.page_count(source)
+    if suffix == ".pptx":
+        return source_docs.slide_count(source)
+    return 0
 
 
 def _cache_dir_for(ws: Workspace, source: Path) -> Path:

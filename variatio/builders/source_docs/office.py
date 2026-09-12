@@ -37,6 +37,7 @@ BLANK_SIDE_PX = 64
 CONVERT_TIMEOUT_SECONDS = 180
 
 _RELS_TARGET_RE = r'(Target="[^"]*?){name}"'
+_SLIDE_ENTRY_RE = re.compile(r"^ppt/slides/slide\d+\.xml$")
 _PNG_DEFAULT = '<Default Extension="png" ContentType="image/png"/>'
 
 
@@ -262,6 +263,22 @@ def _declare_png(data: bytes) -> bytes:
     if re.search(r'<Default\s+Extension="png"', text, re.IGNORECASE):
         return data
     return text.replace("</Types>", f"{_PNG_DEFAULT}</Types>").encode("utf-8")
+
+
+def slide_count(source: str | Path) -> int:
+    """How many slides a deck holds, read off the zip listing without opening a slide.
+
+    What `/raw` reports as the page count of a deck not yet read, since a deck reads as one
+    page per slide. Anything that is not a `.pptx` or not a zip counts zero.
+    """
+    source = Path(source)
+    if source.suffix.lower() != ".pptx":
+        return 0
+    try:
+        with zipfile.ZipFile(source) as archive:
+            return sum(1 for name in archive.namelist() if _SLIDE_ENTRY_RE.match(name))
+    except (zipfile.BadZipFile, OSError):
+        return 0
 
 
 def speaker_notes(source: str | Path) -> dict[int, str]:

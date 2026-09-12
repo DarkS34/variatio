@@ -638,7 +638,7 @@ export const en: Catalogue = {
   "transcribe.reason.temperature": "the transcription temperature changed",
   "transcribe.reason.cleanup": "the converter cleanup changed",
   "transcribe.reason.rasteriser": "the reader of Word and PowerPoint's EMF/WMF drawings changed",
-  "transcribe.reason.notes": "PowerPoint's speaker notes are read now too",
+  "transcribe.reason.deck": "how a deck is read changed: one page per slide, with its speaker notes",
   "transcribe.reason.config": "the transcription settings changed",
   "doc.onlyPage": "It is the document's only page.",
   "doc.deleteHint": "Deletes this page and renumbers the following ones.",
