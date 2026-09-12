@@ -24,7 +24,7 @@ const STATE_HINTS: Record<StatusKey, string> = {
     "Cerrado y dado por bueno. Se cierra al continuar al paso siguiente; corregirlo después lo vuelve a abrir con el primer cambio que guardes.",
   draft: "Construido y todavía sin cerrar. Se puede mirar y corregir; lo que viene detrás sigue esperando.",
   stale:
-    "Algo de lo que depende cambió después de cerrarlo. Hay que repasarlo y volver a cerrarlo continuando.",
+    "Algo de lo que depende cambió después de construirlo o cerrarlo: el paso de arriba, o los documentos que lee. La pantalla dice qué cambió; si fueron los documentos, ofrece volver a construirlo con los que hay ahora. En cualquier caso se vuelve a cerrar continuando.",
   building:
     "La pantalla dice cuál de tres cosas pasa: se construye por primera vez y no hay nada que reemplazar; se trabaja sobre lo que ya hay, que sigue guardado y solo deja de verse; o el trabajo sigue en cola y todavía no ha empezado, y entonces no hay barra.",
   missing: "Todavía no existe. La pantalla enseña la cabecera y un único botón, grande y en el centro: comenzar la construcción.",
@@ -2225,11 +2225,21 @@ const problems = (
     key: "obsoleto",
     question: `Un paso dice «${t(STATUS.stale.labelKey)}»`,
     answer: (
-      <p>
-        Algo de lo que depende cambió después de que lo cerraras. Ábrelo, comprueba que sigue
-        valiendo —o corrígelo— y vuélvelo a cerrar continuando al siguiente. Mientras tanto,
-        los pasos que dependen de él quedan bloqueados.
-      </p>
+      <>
+        <p>
+          Algo de lo que depende cambió después de que lo cerraras. Ábrelo, comprueba que sigue
+          valiendo —o corrígelo— y vuélvelo a cerrar continuando al siguiente. Mientras tanto,
+          los pasos que dependen de él quedan bloqueados.
+        </p>
+        <p>
+          Si lo que cambió son los documentos —subiste más ejercicios o más apuntes después de
+          construirlo, o quitaste alguno—, el aviso nombra cuáles y ofrece «
+          {t("build.rebuild")}»: se lee otra vez todo lo que hay ahora y el resultado sustituye
+          al actual. Las correcciones hechas a mano en ese paso se pierden; la versión anterior
+          queda en el historial. Si prefieres seguir con lo que hay, cierra el paso continuando
+          y el aviso desaparece hasta el próximo cambio.
+        </p>
+      </>
     ),
   },
   {

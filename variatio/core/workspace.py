@@ -164,6 +164,17 @@ class Workspace:
         return self.instance_dir / ".review_state.json"
 
     @property
+    def built_from_path(self) -> Path:
+        """Which raw documents each artifact was built from, as the host recorded them.
+
+        Host state, beside `.review_state.json` and for the same reason: it is what says
+        whether a stage is stale against the documents that feed it, and a build reads the
+        slot at its start, so what it read is a fact about that run and not about the file
+        it wrote.
+        """
+        return self.instance_dir / ".built_from.json"
+
+    @property
     def exemplars_bank_building_path(self) -> Path:
         """The bank a build is writing, until it finishes and replaces the one in use.
 

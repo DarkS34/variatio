@@ -24,7 +24,7 @@ const STATE_HINTS: Record<StatusKey, string> = {
     "Closed and taken as good. It is closed by moving on to the next step; correcting it afterwards opens it again with the first change you save.",
   draft: "Built and not closed yet. It can be looked at and corrected; what comes after it is still waiting.",
   stale:
-    "Something it depends on changed after it was closed. It has to be looked over and closed again by carrying on.",
+    "Something it depends on changed after it was built or closed: the step above, or the documents it reads. The screen says what changed; if it was the documents, it offers to build it again from the ones there are now. Either way it is closed again by carrying on.",
   building:
     "The screen says which of three things is happening: it is being built for the first time and there is nothing to replace; it is being worked over what is already there, which stays saved and merely stops being shown; or the job is still queued and has not started, and then there is no bar.",
   missing: "It does not exist yet. The screen shows the header and a single button, large and in the middle: start building.",
@@ -2240,11 +2240,21 @@ const problems = (
     key: "obsoleto",
     question: `A step says "${t(STATUS.stale.labelKey)}"`,
     answer: (
-      <p>
-        Something it depends on changed after you closed it. Open it, check that it still holds
-        — or correct it — and close it again by carrying on to the next one. Meanwhile, the
-        steps that depend on it stay blocked.
-      </p>
+      <>
+        <p>
+          Something it depends on changed after you closed it. Open it, check that it still holds
+          — or correct it — and close it again by carrying on to the next one. Meanwhile, the
+          steps that depend on it stay blocked.
+        </p>
+        <p>
+          If what changed is the documents — you uploaded more exercises or notes after building
+          it, or removed some — the notice names which and offers "{t("build.rebuild")}":
+          everything there is now is read again and the result replaces the current one. Hand
+          corrections on that step are lost; the previous version stays in the history. If you
+          would rather keep what there is, close the step by carrying on and the notice goes
+          until the next change.
+        </p>
+      </>
     ),
   },
   {

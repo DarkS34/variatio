@@ -48,10 +48,19 @@ export interface LaneState {
 
 export type Lanes = Record<LaneName, LaneState>;
 
+/**
+ * Why a stage is stale. Two shapes share it: an ARTIFACT above changed (`artifact`), or the
+ * DOCUMENTS the stage was built from did (`slot`, with the three lists). `reason` is the
+ * server's own Spanish sentence and is the fallback for a cause this bundle cannot phrase.
+ */
 export interface StaleCause {
-  artifact: ArtifactName;
+  artifact?: ArtifactName;
+  slot?: RawKind;
   label: string;
   reason: string;
+  added?: string[];
+  removed?: string[];
+  changed?: string[];
 }
 
 export interface StageState {

@@ -5,6 +5,12 @@ records the artifact's own hash AND the hash of everything it was derived from; 
 upstream later changes, the downstream is marked stale and the UI can offer to redo that
 step. Nothing repairs itself behind the user's back.
 
+The raw documents are an upstream too, and the one the builders read directly: a build
+records what its slot held (`record_built`), and a stage whose slot no longer holds that
+reads stale with the documents named, built or closed — the artifact was made from fewer,
+or other, documents than the ones now on disk. The record is the build's and not the
+approval's, because a document uploaded between the two would otherwise never be noticed.
+
 Not a "review": it is the record of what has been APPROVED, which is why it is not named
 after the construction questionnaire or the taggability pass. `.review_state.json` and
 `Workspace.review_state_path` keep their names, being the operational truth on disk.
@@ -19,6 +25,7 @@ from pathlib import Path
 from loguru import logger
 
 from variatio import entrypoints
+from variatio.builders.source_docs import SUPPORTED_EXTS
 from variatio.core import json_io
 from variatio.core.workspace import Workspace
 
@@ -43,6 +50,24 @@ UPSTREAM: dict[str, tuple[str, ...]] = {
     EXEMPLARS_PROFILE: (),
     EXEMPLARS_BANK: (EXEMPLARS_PROFILE, KNOWLEDGE_GRAPH),
 }
+
+# The raw slot each artifact is built from — the one table of it, which `raw_data.SLOTS`
+# derives its `feeds` from. The graph reads the corpus; the profile and the bank both read
+# the exemplars, which is why adding an exercise sheet stales two stages at once.
+RAW_SOURCE: dict[str, str] = {
+    EXEMPLARS_PROFILE: "exemplars",
+    KNOWLEDGE_GRAPH: "corpus",
+    EXEMPLARS_BANK: "exemplars",
+}
+
+_RAW_DIR: dict[str, Callable[[Workspace], Path]] = {
+    "corpus": attrgetter("raw_corpus_dir"),
+    "exemplars": attrgetter("raw_exemplars_dir"),
+}
+
+# How the fallback sentence names a slot: the client translates the cause by its `slot`
+# key, so these only reach a bundle older than the API.
+_RAW_WORDS = {"corpus": "los apuntes", "exemplars": "los ejercicios"}
 
 # What a stage is CALLED, and it is display copy rather than an identifier: these strings
 # reach a person inside sentences the server composes ("before generating you have to
@@ -116,6 +141,115 @@ DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
 }
 
 
+def raw_directory(ws: Workspace, slot: str) -> Path:
+    """Return the directory one raw slot writes into; `KeyError` for a slot nobody declared."""
+    return _RAW_DIR[slot](ws)
+
+
+def raw_documents(ws: Workspace, slot: str) -> dict[str, dict]:
+    """Describe what a slot holds right now, by name: the size and the mtime of each document.
+
+    That pair is the document's signature here rather than a content hash, and it is
+    enough: nothing the API does rewrites a document in place — an upload lands under a
+    free name and a deletion unlinks — so a document that changed is one with another
+    size or another mtime, and a stat per file is what `/api/pipeline` can afford on every
+    poll where hashing a slot of up to four gigabytes is not.
+    """
+    path = raw_directory(ws, slot)
+    if not path.is_dir():
+        return {}
+    out: dict[str, dict] = {}
+    for entry in sorted(path.iterdir(), key=lambda p: p.name.lower()):
+        if not entry.is_file() or entry.suffix.lower() not in SUPPORTED_EXTS:
+            continue
+        stat = entry.stat()
+        out[entry.name] = {"bytes": stat.st_size, "modified": stat.st_mtime_ns}
+    return out
+
+
+def record_built(ws: Workspace, artifact: str, documents: dict[str, dict]) -> None:
+    """Write down which documents a build of `artifact` read, replacing any earlier record."""
+    data = _read_built(ws)
+    data[artifact] = {
+        "slot": RAW_SOURCE[artifact],
+        "documents": documents,
+        "at": datetime.now().isoformat(timespec="seconds"),
+    }
+    json_io.write_json(ws.built_from_path, data)
+
+
+def forget_built(ws: Workspace, artifact: str) -> None:
+    """Drop an artifact's build record, for when the artifact itself is gone."""
+    data = _read_built(ws)
+    if artifact in data:
+        del data[artifact]
+        json_io.write_json(ws.built_from_path, data)
+
+
+def built_from(ws: Workspace, artifact: str) -> dict | None:
+    """Return what the last build of `artifact` read, or nothing for one never built here.
+
+    A build the CLI ran, or an instance that arrived through `import-instance`, has no
+    record: with nothing to compare against the stage cannot read stale for its documents,
+    and does not.
+    """
+    record = _read_built(ws).get(artifact)
+    return record if isinstance(record, dict) else None
+
+
+def _read_built(ws: Workspace) -> dict:
+    """Read the build records, treating a missing or corrupt file as none."""
+    if not ws.built_from_path.is_file():
+        return {}
+    try:
+        with ws.built_from_path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def raw_drift(ws: Workspace, artifact: str) -> dict | None:
+    """Name the documents that changed in an artifact's slot since it was built, or nothing.
+
+    The answer carries the slot and three sorted lists — `added`, `removed`, `changed` —
+    and is `None` both when nothing moved and when there is no record to move from.
+    """
+    record = built_from(ws, artifact)
+    if record is None:
+        return None
+    slot = record.get("slot") or RAW_SOURCE[artifact]
+    then = record.get("documents") or {}
+    now = raw_documents(ws, slot)
+    added = sorted(name for name in now if name not in then)
+    removed = sorted(name for name in then if name not in now)
+    changed = sorted(name for name in now if name in then and now[name] != then[name])
+    if not (added or removed or changed):
+        return None
+    return {"slot": slot, "added": added, "removed": removed, "changed": changed}
+
+
+def _raw_cause(drift: dict) -> dict:
+    """Shape a raw drift as a stale cause, with a Spanish sentence for a client without the key."""
+    parts = []
+    for key, word in (("added", "nuevo"), ("removed", "eliminado"), ("changed", "modificado")):
+        names = drift[key]
+        if names:
+            n = len(names)
+            parts.append(f"{n} {word}{'s' if n != 1 else ''} ({', '.join(names)})")
+    return {
+        "slot": drift["slot"],
+        "label": _RAW_WORDS[drift["slot"]],
+        "reason": (
+            f"Desde que se construyó han cambiado {_RAW_WORDS[drift['slot']]}: "
+            f"{'; '.join(parts)}."
+        ),
+        "added": drift["added"],
+        "removed": drift["removed"],
+        "changed": drift["changed"],
+    }
+
+
 def discard(ws: Workspace, artifact: str) -> dict:
     """Empty a stage: the artifact goes back to "missing" and can be rebuilt.
 
@@ -130,6 +264,7 @@ def discard(ws: Workspace, artifact: str) -> dict:
     working = working_path(ws, artifact)
     if working is not None:
         working.unlink(missing_ok=True)
+    forget_built(ws, artifact)
     Approvals(ws).reopen(artifact)
     return {
         "artifact": artifact,
@@ -274,6 +409,13 @@ class Approvals:
 
         status = _status(artifact, building or set(), digest, record)
         stale_because = self._stale_because(artifact, record) if status == "approved" else []
+        # The documents are an upstream of a DRAFT too: a stage built from fewer documents
+        # than its slot now holds is stale whether or not anybody closed it, and the way
+        # out is the same — build it again, or close it as it is.
+        if status in ("draft", "approved"):
+            drift = raw_drift(self.ws, artifact)
+            if drift is not None:
+                stale_because.append(_raw_cause(drift))
         if stale_because:
             status = "stale"
 
@@ -290,7 +432,11 @@ class Approvals:
         }
 
     def _stale_because(self, artifact: str, record: dict) -> list[dict]:
-        """Name every upstream whose file no longer hashes to what the approval recorded."""
+        """Name every upstream ARTIFACT whose file no longer hashes to what the approval recorded.
+
+        The raw documents are checked by `state` itself, off the build record rather than
+        the approval's.
+        """
         out: list[dict] = []
         for upstream in UPSTREAM[artifact]:
             recorded = (record.get("upstream") or {}).get(upstream)
