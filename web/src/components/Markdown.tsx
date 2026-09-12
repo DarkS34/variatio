@@ -3,7 +3,7 @@ import { Fragment, useMemo, type ReactNode } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
 import { Diagram } from "@/components/Diagram";
 import { TeX } from "@/components/Math";
-import { diagramSource, isDiagramTag } from "@/lib/diagram";
+import { diagramSource, isDiagramTag, isDrawableDiagram } from "@/lib/diagram";
 import { DISPLAY_OPEN, splitInlineMath, takeDisplayMath } from "@/lib/math";
 import { cn } from "@/lib/utils";
 
@@ -97,8 +97,11 @@ function parseBlocks(source: string): Block[] {
         index += 1;
       }
       index += 1;
-      if (isDiagramTag(fence[2])) blocks.push({ kind: "diagram", code: body.join("\n") });
-      else blocks.push({ kind: "code", code: body.join("\n"), language: languageOf(fence[2]) });
+      const code = body.join("\n");
+      // The TAG is not enough: a ```mermaid fence holding a kind this app does not draw
+      // is shown as its own source, the way a bare block of it already was.
+      if (isDiagramTag(fence[2]) && isDrawableDiagram(code)) blocks.push({ kind: "diagram", code });
+      else blocks.push({ kind: "code", code, language: languageOf(fence[2]) });
       continue;
     }
 

@@ -192,6 +192,9 @@ export function Diagram({ code, className }: { code: string; className?: string 
           securityLevel: "strict",
           suppressErrorRendering: true,
           theme: "base",
+          // Pinned, and that is what lets the build leave ELK out: it is 1.5 MB of
+          // layout engine behind a lazy import that only this line could select.
+          layout: "dagre",
           themeVariables: themeVariables(theme),
           flowchart: { htmlLabels: false, useMaxWidth: true },
           sequence: { useMaxWidth: true },
