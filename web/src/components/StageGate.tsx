@@ -556,6 +556,7 @@ export function StageGate({
                 <StageReview
                   artifact={stage.artifact}
                   curated={curated}
+                  visible={reviewOpen}
                   onClose={() => setReviewOpen(false)}
                 />
               </div>

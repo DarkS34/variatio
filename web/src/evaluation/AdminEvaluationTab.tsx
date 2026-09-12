@@ -1029,6 +1029,14 @@ function EvaluatorsTable({
                   {entry.name && entry.name !== entry.label ? (
                     <span className="ml-1 text-muted-foreground">· {entry.name}</span>
                   ) : null}
+                  {/* A row whose every count is zero is here because of forms opened and
+                      never answered — the columns count verdicts — and without this line it
+                      reads as a row that refuses to go away. */}
+                  {openedOnly(entry) > 0 ? (
+                    <span className="block text-small text-muted-foreground">
+                      {plural("adminEvaluation.stages.openedOnly", openedOnly(entry))}
+                    </span>
+                  ) : null}
                 </TD>
                 <TD className="px-3 py-1.5 text-muted-foreground">
                   {profileLabel(entry.profile, t)}
@@ -1065,6 +1073,11 @@ function EvaluatorsTable({
       </Table>
     </div>
   );
+}
+
+/** Forms this person opened and never answered: the one thing the row's counts cannot say. */
+function openedOnly(entry: EvaluatorRow): number {
+  return (entry.forms?.opened ?? 0) - (entry.forms?.answered ?? 0);
 }
 
 interface EvaluatorRow {

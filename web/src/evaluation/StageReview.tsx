@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,12 +38,17 @@ import { questionCount, type StageInstrument, type StageScale } from "./types";
 export function StageReview({
   artifact,
   curated,
+  visible = true,
   onClose,
 }: {
   artifact: string;
   /** Whether the artifact was corrected before this verdict — the evaluation's own contrast.
    *  Told from above, because the panel cannot see an edit made beside it. */
   curated?: boolean;
+  /** Whether the person can actually SEE the form. The drawer that holds it keeps it
+   *  mounted and merely clipped shut, so mounting is not seeing: the "opened" stamp waits
+   *  for this, or every visit to a stage screen counted as a form that was looked at. */
+  visible?: boolean;
   /** Given by the drawer that holds it, so the panel can shut itself once it is answered. */
   onClose?: () => void;
 }) {
@@ -69,13 +74,19 @@ export function StageReview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review.data]);
 
-  // Recorded once, when the form is actually DRAWN — which is something the browser knows
-  // and the server cannot: fetching the payload is not the same as a person seeing it.
+  // Recorded once, when the form is actually SEEN — which is something the browser knows
+  // and the server cannot: fetching the payload is not the same as a person seeing it, and
+  // neither is mounting a panel that is clipped shut. Until 2026-09-12 this fired on mount,
+  // so merely visiting a stage screen wrote an "opened" row — which is how an evaluator
+  // whose records had just been deleted came straight back to the panel with zeros.
   const built = review.data?.built ?? false;
+  const stamped = useRef<string | null>(null);
   useEffect(() => {
-    if (built) open.mutate(artifact);
+    if (!built || !visible || stamped.current === artifact) return;
+    stamped.current = artifact;
+    open.mutate(artifact);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [built, artifact]);
+  }, [built, visible, artifact]);
 
   const instrument = review.data?.instrument;
   const remaining = useMemo(() => {
