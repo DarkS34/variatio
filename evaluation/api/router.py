@@ -38,7 +38,6 @@ class EvaluationBody(BaseModel):
     fixed: dict = {}
     curriculum: list[str] | None = None
     instructions: str | None = None
-    scenario: str | None = None
     seed: int | None = None
     force: bool = False
 
@@ -104,7 +103,6 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         "fixed": body.fixed,
         "curriculum": curriculum or [],
         "instructions": body.instructions,
-        "scenario": body.scenario,
         "seed": body.seed,
     }
     job = singletons.runner.submit(

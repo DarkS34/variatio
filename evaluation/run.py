@@ -15,9 +15,7 @@ from loguru import logger
 
 from variatio import config, entrypoints
 from variatio.runtime import checks, screening
-from variatio import wording as wording_sets
 from variatio.core import inference, progress
-from variatio.runtime.screening import guardrail
 from variatio.entrypoints.initialize import RuntimeContext
 from variatio.runtime.generator import clean_fixed, forbidden
 
@@ -25,9 +23,9 @@ from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_ses
 from . import config as evaluation_config
 from . import prompts as evaluation_prompts
 
-# A scenario is one sentence; the cap is what a form can reasonably hold, well under the
-# free text's own. The temperature is what makes two sessions on one commission land in
-# two settings — at the deterministic default every draw would be the same sentence.
+# A scenario is one sentence, and the cap is what the draw may keep of a model's first
+# line. The temperature is what makes two sessions on one commission land in two settings
+# — at the deterministic default every draw would be the same sentence.
 SCENARIO_MAX_CHARS = 300
 SCENARIO_MAX_TOKENS = 80
 SCENARIO_TEMPERATURE = 0.9
@@ -42,14 +40,14 @@ def evaluate(
     instructions: str | None = None,
     seed: int | None = None,
     job_id: str | None = None,
-    scenario: str | None = None,
 ) -> EvaluationSession:
     """Run one commission through the system and ONE drawn rival, and return the blind session.
 
-    `scenario` is the setting BOTH proposals are placed in. Written by the evaluator it is
-    screened by the guardrail — it is free text that reaches every prompt — and used as it
-    is; left empty it is drawn once, here, so the two arms receive the same sentence and
-    the evaluator compares two architectures rather than two settings.
+    The setting BOTH proposals are placed in is settled here (`_settle_scenario`): when the
+    evaluator's free text says nothing about a theme, one sentence is drawn and the two
+    arms receive it in the same words, so the evaluator compares two architectures rather
+    than two settings; when the free text already fixes one, nothing is drawn and their
+    own words reach both arms as they are.
 
     Which rival, the order of the two cards and the reasoning mode are all DRAWN from
     `seed` (`draw_session`), before anything runs, so a session is reproducible from that
@@ -82,7 +80,6 @@ def evaluate(
         think=think,
         model=writer,
         effort=entrypoints.resolve_generation_effort(writer, think),
-        scenario=(scenario or "").strip(),
     )
     _validate(context, target_type, commission)
 
@@ -175,10 +172,6 @@ def _validate(context: RuntimeContext, item_type, commission: Commission) -> Non
             f"instructions must be at most {config.GENERATION_INSTRUCTIONS_MAX_CHARS} "
             f"characters, got {len(commission.instructions)}"
         )
-    if len(commission.scenario) > SCENARIO_MAX_CHARS:
-        raise ValueError(
-            f"scenario must be at most {SCENARIO_MAX_CHARS} characters, got {len(commission.scenario)}"
-        )
 
 
 def _screen(context, item_type, commission: Commission):
@@ -201,25 +194,21 @@ def _screen(context, item_type, commission: Commission):
 
 
 def _settle_scenario(context, commission: Commission) -> str:
-    """Return the scenario both arms will be placed in: the evaluator's, screened, or one drawn.
+    """Return the scenario both arms will be placed in, or "" when the instructions fix one.
 
-    A hand-written scenario is the one input of the session no other screen reads, so it
-    passes the guardrail before it reaches a prompt; a block raises and the session never
-    comes into existence. An empty one is drawn with one short call to the local writer at
-    a temperature that varies it between sessions, and a draw that fails leaves it empty —
-    each arm then picks its own setting, which is what every session did before.
+    One short call to the local writer, at a temperature that varies it between sessions.
+    The call is shown the evaluator's own free text — already through the guardrail by
+    now — and answers `SCENARIO_NONE` when that text already fixes a theme, in which case
+    nothing is added: the evaluator's words reach both arms as they are. A draw that fails
+    leaves it empty too — each arm then picks its own setting, which is what every session
+    did before.
     """
-    wording = wording_sets.beside(context.prompts)
-    if commission.scenario:
-        verdict = guardrail.check(commission.scenario, wording=wording)
-        if verdict.blocked:
-            raise ValueError(wording.guardrail_blocked(verdict.reason))
-        return commission.scenario
-
-    prompt = evaluation_prompts.of(context.language).scenario_prompt(
+    prompt_set = evaluation_prompts.of(context.language)
+    prompt = prompt_set.scenario_prompt(
         subject=context.content_context.subject,
         concepts=commission.concepts,
         context_block=context.content_context.prompt_block(),
+        instructions=commission.instructions,
     )
     try:
         answer = inference.generate(
@@ -233,6 +222,9 @@ def _settle_scenario(context, commission: Commission) -> str:
         logger.warning(f"No se pudo sortear un escenario, cada propuesta elegirá el suyo: {e}")
         return ""
     scenario = _first_sentence(answer)
+    if scenario.strip(".!").casefold() == prompt_set.SCENARIO_NONE.casefold():
+        logger.info("Las instrucciones ya fijan la temática; no se sortea escenario")
+        return ""
     logger.info(f"Escenario de la sesión: «{scenario}»")
     return scenario
 

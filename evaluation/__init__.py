@@ -94,10 +94,11 @@ class Commission:
     the recorded condition; the level is the installation's.
 
     `scenario` is the ONE setting both proposals are placed in — a sentence naming an
-    organisation, a system or an everyday situation — written by the evaluator or, when
-    they left it empty, drawn once by `run.evaluate` and handed to the arms in the same
-    words. Without it each arm invented its own and the evaluator compared a veterinary
-    clinic with a bookshop rather than two architectures.
+    organisation, a system or an everyday situation — drawn once by `run.evaluate` and
+    handed to the arms in the same words, or empty when the evaluator's `instructions`
+    already fix a theme, which then reaches both arms in their own words. Without it each
+    arm invented its own and the evaluator compared a veterinary clinic with a bookshop
+    rather than two architectures.
     """
 
     concepts: list[str]

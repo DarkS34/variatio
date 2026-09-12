@@ -296,8 +296,6 @@ export interface EvaluationParams {
   fixed?: Record<string, unknown>;
   curriculum?: string[];
   instructions?: string;
-  /** Written by the evaluator; empty, the job draws one and both arms receive it. */
-  scenario?: string;
 }
 
 /** One row of the evaluation grouped by something — an account, a workspace. */

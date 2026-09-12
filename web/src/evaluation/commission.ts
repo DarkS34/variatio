@@ -13,9 +13,9 @@ import type { EvaluationParams } from "./types";
  * writer of the two local proposals is the installation's (`evaluation.local_model`), so
  * a value the form happened to hold must not reach the request.
  */
-export function toEvaluationParams(form: FormState, scenario = ""): EvaluationParams {
+export function toEvaluationParams(form: FormState): EvaluationParams {
   const { n: _n, think: _think, model: _model, ...rest } = toParams(form);
-  return scenario.trim() ? { ...rest, scenario: scenario.trim() } : rest;
+  return rest;
 }
 
 /**

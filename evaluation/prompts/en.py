@@ -47,19 +47,35 @@ def naive_generation_prompt(
     return "\n".join(lines)
 
 
-def scenario_prompt(subject: str, concepts: list[str], context_block: str = "") -> str:
+# What the scenario draw answers when the evaluator's own instructions already fix the
+# setting: one word, folded and stripped of punctuation before it is compared.
+SCENARIO_NONE = "NONE"
+
+
+def scenario_prompt(
+    subject: str, concepts: list[str], context_block: str = "", instructions: str = ""
+) -> str:
     """Ask for ONE sentence placing an exercise on `concepts` in a concrete, neutral setting.
 
     Drawn once per session and handed to both arms in the same words, so the comparison
     is between architectures and never between the settings each arm would have invented.
     Plain text, one line, no task and no concept named: the setting is a wrapper and the
-    exercise itself is each arm's own.
+    exercise itself is each arm's own. When `instructions` already fix a setting the
+    answer is `SCENARIO_NONE`: the evaluator's words reach both arms as they are, and a
+    second sentence saying the same thing would only compete with them.
     """
     subject = subject or "the subject"
     context_section = f"\nWhat the subject is about:\n{context_block.strip()}\n" if context_block.strip() else ""
+    instructions_section = (
+        f"\nInstructions from whoever is asking for the exercise:\n{instructions.strip()}\n\n"
+        f"If those instructions already fix a theme, a context or a setting for the exercise, "
+        f"answer with the single word {SCENARIO_NONE}. If they say nothing of the kind, propose the setting.\n"
+        if instructions.strip()
+        else ""
+    )
     return f"""\
 Propose ONE concrete, realistic scenario in which to set an exercise of {subject} practising {', '.join(concepts)}.
-{context_section}
+{context_section}{instructions_section}
 A single sentence of at most 25 words describing a recognisable organisation, system or everyday situation. Do not set the task, do not name the concepts, do not solve anything and do not explain the choice.
 
 Answer with the sentence alone, no quotes and no preamble."""

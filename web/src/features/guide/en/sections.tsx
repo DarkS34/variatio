@@ -1522,8 +1522,9 @@ function Evaluate() {
             <>
               The two proposals appear, unlabelled and in an order that is yours alone. Above
               them, in one line, the commission: the type of exercise, the concepts, the level if
-              one was pinned and the scenario both are set in — the one you wrote when ordering
-              or, if you left it empty, the one drawn for the session. It is the same for both,
+              one was pinned and, when one was drawn, the scenario both are set in. If your
+              «Additional instructions» already said what the exercise is about, none is drawn:
+              your words reach both proposals as they are. Either way it is the same for both,
               so it gives nothing away. Which of the two alternatives this session drew is not
               said either.
             </>,

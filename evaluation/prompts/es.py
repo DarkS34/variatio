@@ -65,19 +65,35 @@ def naive_generation_prompt(
     return "\n".join(lines)
 
 
-def scenario_prompt(subject: str, concepts: list[str], context_block: str = "") -> str:
+# What the scenario draw answers when the evaluator's own instructions already fix the
+# setting: one word, folded and stripped of punctuation before it is compared.
+SCENARIO_NONE = "NINGUNO"
+
+
+def scenario_prompt(
+    subject: str, concepts: list[str], context_block: str = "", instructions: str = ""
+) -> str:
     """Ask for ONE sentence placing an exercise on `concepts` in a concrete, neutral setting.
 
     Drawn once per session and handed to both arms in the same words, so the comparison
     is between architectures and never between the settings each arm would have invented.
     Plain text, one line, no task and no concept named: the setting is a wrapper and the
-    exercise itself is each arm's own.
+    exercise itself is each arm's own. When `instructions` already fix a setting the
+    answer is `SCENARIO_NONE`: the evaluator's words reach both arms as they are, and a
+    second sentence saying the same thing would only compete with them.
     """
     subject = subject or "la asignatura"
     context_section = f"\nDe qué va la asignatura:\n{context_block.strip()}\n" if context_block.strip() else ""
+    instructions_section = (
+        f"\nInstrucciones de quien encarga el ejercicio:\n{instructions.strip()}\n\n"
+        f"Si esas instrucciones ya fijan una temática, un contexto o un escenario para el ejercicio, "
+        f"responde únicamente con la palabra {SCENARIO_NONE}. Si no dicen nada de eso, propón el escenario.\n"
+        if instructions.strip()
+        else ""
+    )
     return f"""\
 Propón UN escenario concreto y realista en el que ambientar un ejercicio de {subject} que practique {', '.join(concepts)}.
-{context_section}
+{context_section}{instructions_section}
 Una sola frase, de 25 palabras como mucho, que describa una organización, un sistema o una situación cotidiana reconocible. No plantees la tarea, no menciones los conceptos, no resuelvas nada y no expliques la elección.
 
 Responde solo con la frase, sin comillas ni preámbulo."""

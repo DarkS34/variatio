@@ -1509,8 +1509,9 @@ function Evaluate() {
             <>
               Aparecen las dos propuestas, sin etiquetar y en un orden que es solo tuyo.
               Encima, en una línea, el encargo: el tipo de ejercicio, los conceptos, el nivel si
-              se fijó uno y el escenario en el que se ambientan las dos — el que escribiste al
-              encargar o, si lo dejaste vacío, el que se sorteó para la sesión. Es el mismo para
+              se fijó uno y, si se sorteó, el escenario en el que se ambientan las dos. Si en
+              «Instrucciones adicionales» ya dijiste de qué va el ejercicio, no se sortea ninguno:
+              tus palabras llegan a las dos propuestas tal cual. Sea cual sea, es el mismo para
               las dos, así que no delata nada. Tampoco se dice cuál de las dos alternativas le
               ha tocado a esta sesión.
             </>,

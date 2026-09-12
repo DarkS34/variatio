@@ -62,7 +62,6 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
     fixed = params.get("fixed") or None
     curriculum = params.get("curriculum") or None
     instructions = params.get("instructions") or None
-    scenario = params.get("scenario") or None
     resolved_type = context.exemplars_profile.item_type(params.get("item_type") or None)
 
     # The seed is settled HERE so the job can ask what the session will need before it
@@ -97,7 +96,6 @@ def handle_evaluate(job: Job, control: JobControl) -> dict:
             instructions=instructions,
             seed=seed,
             job_id=job.id,
-            scenario=scenario,
         )
 
     with session_scope() as db_session:

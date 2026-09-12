@@ -1,11 +1,10 @@
 import { ArrowLeft, Clock, EyeOff, Plus, Scale } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label } from "@/components/ui/input";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { EMPTY_FORM, type FormState } from "@/features/generate/commission";
 import { GenerateForm } from "@/features/generate/GenerateForm";
@@ -172,7 +171,6 @@ export function EvaluationScreen() {
   const announce = useQueuedNotice();
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [scenario, setScenario] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>(CROSS_EVALUATION ? "queue" : "compose");
   // Which proposal is open at reading size, by position; null while none is. It belongs
@@ -416,7 +414,6 @@ export function EvaluationScreen() {
 
       {tab === "compose" && !showComparison && !running && canCompose ? (
         <div className="mx-auto w-full max-w-3xl space-y-4">
-          <ScenarioField value={scenario} onChange={setScenario} disabled={!unlocked} />
           <GenerateForm
             state={form}
             onChange={setForm}
@@ -431,7 +428,7 @@ export function EvaluationScreen() {
             variant="evaluation"
             footnote={<FairnessTable />}
             onLaunch={() =>
-              launch.mutate(toEvaluationParams(form, scenario), {
+              launch.mutate(toEvaluationParams(form), {
                 onSuccess: ({ job }) => announce(job),
               })
             }
@@ -510,38 +507,6 @@ export function EvaluationScreen() {
           />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * The one setting both proposals will be placed in, written by the evaluator or left to the
- * draw. It sits OUTSIDE `GenerateForm` because it is the evaluation's question alone: a
- * plain commission chooses no setting, and the form is shared with «Generar ejercicios».
- */
-function ScenarioField({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  disabled: boolean;
-}) {
-  const { t } = useT();
-  const id = useId();
-  return (
-    <div className="space-y-1.5 border border-border bg-card p-4">
-      <Label htmlFor={id}>{t("eval.scenario.label")}</Label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={t("eval.scenario.placeholder")}
-        maxLength={300}
-        disabled={disabled}
-      />
-      <p className="text-small text-muted-foreground">{t("eval.scenario.hint")}</p>
     </div>
   );
 }
