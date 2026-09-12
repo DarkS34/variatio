@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { Diagram } from "@/components/Diagram";
 import { ConceptPicker } from "@/components/ConceptPicker";
 import {
   StageGate,
@@ -27,6 +28,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { diagramSource } from "@/lib/diagram";
 import { api } from "@/lib/api";
 import { fieldText, hasBrokenText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
 import { truncate } from "@/lib/format";
@@ -92,7 +94,9 @@ function FieldBlock({ field, value, primary = false }: { field: string; value: u
         {fieldLabel(field)}
         {primary ? t("bank.primaryField") : ""}
       </Label>
-      {isCodeField(field) ? (
+      {diagramSource(fieldText(value)) !== null ? (
+        <Diagram code={fieldText(value)} />
+      ) : isCodeField(field) ? (
         <CodeBlock code={fieldText(value)} maxHeight="16rem" />
       ) : (
         <p className="whitespace-pre-wrap text-body">{fieldText(value)}</p>

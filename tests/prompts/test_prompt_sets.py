@@ -85,6 +85,17 @@ def test_an_image_is_read_by_the_same_rules_on_both_routes(code):
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_a_diagram_is_transcribed_as_mermaid_in_both(code):
+    # The rule that read every diagram as a `[figura: …]` sentence left 6 of the 9 diagram
+    # solutions of the reference bank as prose the generator then imitated. The fence tag
+    # is what the client draws, so it is pinned by name.
+    rules = prompts.of(code).IMAGE_RULES
+    assert "```mermaid" in rules
+    for kind in ("flowchart", "classDiagram", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "mindmap"):
+        assert kind in rules
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
 def test_the_seam_separator_names_stay_english_in_both(code):
     # They are the values a grammar pins and `pages.py` matches against.
     assert prompts.of(code).SEAM_SEPARATORS == ("none", "space", "newline", "paragraph")

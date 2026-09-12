@@ -102,7 +102,7 @@ costuras.""",
         key="builders.transcribe_prompt_version",
         name="TRANSCRIBE_PROMPT_VERSION",
         kind="int",
-        default=5,
+        default=6,
         group="Constructores",
         impact=Impact.LOCKED,
         editable=False,
@@ -113,7 +113,13 @@ cada página PDF de cada asignatura.
 
 Lo sube quien edita el prompt, no quien mira una pantalla. OJO: `config.json` guarda este
 valor como cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo
-también en el fichero de la instalación no caduca nada.""",
+también en el fichero de la instalación no caduca nada.
+
+La 6 (2026-09-12) es la regla de los diagramas: un dibujo de nodos y flechas se transcribe
+como código Mermaid y `[figura: …]` queda para lo que no es ni texto ni diagrama. Hasta
+entonces la regla mandaba describir todo diagrama en una frase, y el modelo la desobedecía
+a veces — en la asignatura de referencia 3 de 9 soluciones de diagrama salieron en Mermaid
+y 6 en prosa, según el documento del que venían.""",
     ),
     Setting(
         key="builders.exemplars_ocr",

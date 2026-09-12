@@ -309,7 +309,8 @@ Tu tarea: dentro de CADA grupo, y nunca entre grupos, decide qué nombres son EL
 - NO fundas dos ideas de las que un alumno podría examinarse por separado, aunque aparezcan siempre juntas: un mecanismo y la técnica que lo usa siguen aparte, y también una parte y el todo al que pertenece, y también un término general y una de sus clases concretas.
 - NO fundas dos nombres solo porque pertenezcan al mismo tema, estén relacionados o aparezcan a menudo juntos. Compartir una palabra no es evidencia.
 - Usa las relaciones como evidencia: nombres con relaciones claramente distintas suelen ser conceptos distintos.
-- Cuando un nombre lleve detrás de « — » una definición tomada del material, juzga sobre las definiciones antes que sobre los nombres: dos definiciones de la misma idea son un concepto, dos definiciones distintas son dos, por mucho que los nombres se parezcan.
+- Cuando un nombre lleve detrás de « — » una definición tomada del material, léela como evidencia de QUÉ idea nombra, no como prueba de que sea otro concepto: cada fragmento definió lo suyo con sus propias palabras, así que dos redacciones distintas de UNA idea son lo normal y son un solo concepto; son dos conceptos solo cuando definen ideas de las que un alumno podría examinarse por separado, por mucho que los nombres se parezcan.
+- Una variante gramatical del mismo nombre —singular y plural («Casos de uso» y «Caso de uso»), mayúsculas, un artículo o una preposición de más— es SIEMPRE un solo concepto, digan lo que digan las definiciones que las acompañen.
 - Fundir de más cuesta más que fundir de menos: un concepto perdido en una fusión no se recupera después. Cuando las dos lecturas sean igual de defendibles, déjalos aparte.
 
 # NOMBRE CANÓNICO
