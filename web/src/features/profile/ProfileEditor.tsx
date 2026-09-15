@@ -28,7 +28,15 @@ import { difficultyFieldOf, difficultyLevelsOf } from "@/lib/profile";
 import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
 
-import { FieldEditor, baseType, fieldNameError, nameError } from "./FieldEditor";
+import {
+  FieldEditor,
+  baseType,
+  describeType,
+  enumValues,
+  fieldNameError,
+  isNullable,
+  nameError,
+} from "./FieldEditor";
 import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
@@ -260,6 +268,80 @@ function DifficultyRead({
       ) : (
         <p className="text-body text-muted-foreground">{t("modality.difficulty.noCriterion")}</p>
       )}
+    </div>
+  );
+}
+
+/**
+ * The parts an exercise of this type is made of, as they are READ.
+ *
+ * Correcting a field — its identifier, its type, whether it is obligatory — is the most
+ * technical question of the whole path, and it stays behind "Quiero corregir algo". What each
+ * part IS does not: it is the answer to "¿qué lleva un ejercicio de este tipo?", and somebody
+ * reviewing the type could not see it at all. So the static view lists every field in the
+ * order the type declares it, with no control: the name it goes by, whether it is the
+ * statement, its type and obligatoriness as the same badges the editor's row carries, what it
+ * holds in the words of its description, and the closed list of values when it has one.
+ *
+ * The difficulty is not in the list, for the reason it is not in the editor's: it is read once,
+ * above, beside the description of the type.
+ */
+function FieldsRead({
+  title,
+  names,
+  spec,
+}: {
+  title: string;
+  names: string[];
+  spec: ItemTypeSpec;
+}) {
+  const tr = useT();
+  const { t } = tr;
+  return (
+    <div className="space-y-2 pt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-body font-semibold tracking-tight">{title}</h2>
+        <InfoHint label={t("modality.fields.hintLabel")}>
+          {t("modality.fields.hintA")} <Star className="inline size-3" /> {t("modality.fields.hintB")}
+        </InfoHint>
+      </div>
+      <Card>
+        <ul className="divide-y divide-border">
+          {names.map((name) => {
+            const field = spec.fields[name];
+            const schema = field?.schema ?? {};
+            const optional = isNullable(schema);
+            const values = baseType(schema) === "enum" ? enumValues(schema) : [];
+            return (
+              <li key={name} className="space-y-1.5 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="mr-1 font-mono text-body font-medium">{name}</span>
+                  {name === spec.primary_field ? (
+                    <Badge title={t("field.primary.title")}>
+                      <Star className="fill-current" />
+                      {t("field.primary.badge")}
+                    </Badge>
+                  ) : null}
+                  <Badge variant="outline">{describeType(schema, tr)}</Badge>
+                  <Badge variant={optional ? "outline" : "secondary"}>
+                    {optional ? t("field.optional") : t("field.obligatory")}
+                  </Badge>
+                </div>
+                <Written text={field?.description ?? ""} className="max-w-[80ch]" />
+                {values.length ? (
+                  <div className="flex flex-wrap gap-1">
+                    {values.map((value) => (
+                      <Badge key={value} variant="outline" className="normal-case">
+                        {value}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
     </div>
   );
 }
@@ -649,10 +731,11 @@ export function ProfileEditor() {
           </Card>
         </div>
 
-        {/* "Campos de …" is drawn only while CORRECTING: an editor per field — identifier,
+        {/* "Campos de …" is an EDITOR only while correcting: an editor per field — identifier,
             type, whether it is obligatory — is the most technical question the whole path
-            asks, and it greeted somebody who had opened the screen to read it. The
-            questionnaire beside this asks what was worth learning from it. */}
+            asks, and it greeted somebody who had opened the screen to read it. While the
+            stage is being looked at the same fields are READ instead (`FieldsRead`), because
+            what an exercise of this type is made of is part of what is being reviewed. */}
         {editing ? (
           <>
           <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -728,6 +811,12 @@ export function ProfileEditor() {
             validate={(name) => fieldNameError(name, names, tr)}
           />
           </>
+        ) : names.length ? (
+          <FieldsRead
+            title={t("modality.fieldsOf", { name: spec.label || activeKey })}
+            names={names}
+            spec={spec}
+          />
         ) : null}
       </div>
     </div>
