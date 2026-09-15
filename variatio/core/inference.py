@@ -87,8 +87,8 @@ class OllamaEngine:
     ) -> GenerationResponse:
         """Ask `model` for one answer, with the reasoning split out of it.
 
-        Images are base64 PNGs. A text-only model handed a picture answers empty rather
-        than failing, so it is refused up front instead.
+        Images are base64 PNGs or JPEGs. A text-only model handed a picture answers empty
+        rather than failing, so it is refused up front instead.
 
         THE ANSWER IS STREAMED EVEN THOUGH NOBODY IS WATCHING IT, and that is the whole
         difference between a stop that lands and one that does not. Cancellation is

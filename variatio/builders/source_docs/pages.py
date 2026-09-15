@@ -70,6 +70,7 @@ META_EXTRA = (
     "images_total",
     "images_unreadable",
     "notes_total",
+    "restructured",
 )
 
 # The marker a failed page carries, in EVERY language the installation writes: what is
@@ -91,6 +92,9 @@ IMAGES_DIR_NAME = "images"
 # unmeasured, and because compositing onto white is needed either way — a formula drawn in
 # black on a transparent ground vanishes on a black pad.
 IMAGE_MIN_LONG_SIDE = 1024
+# A picture is downscaled before the call when it holds more pixels than this: two A4 pages
+# at 200 dpi, the most `render_scale` lets a page render reach at the default DPI.
+IMAGE_MAX_PIXELS = 7_750_000
 
 # The version of `markdown.undo_converter_escapes`, the cleanup applied to Docling's output
 # and to nothing else. It is written into the DOCLING fingerprint ONLY: bumping it expires
@@ -228,6 +232,8 @@ def adopt_pages(donor_dir: str | Path, cache_dir: str | Path, fingerprint: dict)
             "images_total": meta.get("images_total", 0),
             "images_unreadable": meta.get("images_unreadable", 0),
         },
+        # The same bytes, so a donor's hand-moved pages are this copy's hand-moved pages too.
+        restructured=bool(meta.get("restructured")),
     )
     return len(pages)
 
@@ -345,10 +351,24 @@ def _read_document(
     if use_cache:
         cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:
-            logger.info(
-                f"{tag}{source.name}: {len(cached[0])} page(s) reused from the cache"
+            retry = retryable_pages(source, document_dir, cached[0]) if is_pdf else []
+            if not retry:
+                logger.info(
+                    f"{tag}{source.name}: {len(cached[0])} page(s) reused from the cache"
+                )
+                return cached
+            return _read_failed_pages_again(
+                source,
+                cached,
+                retry,
+                document_dir,
+                fingerprint,
+                model,
+                seam_model,
+                dpi,
+                tag,
+                prompts,
             )
-            return cached
 
     pages, seams, images = _transcribe(
         source,
@@ -396,6 +416,74 @@ def _read_cached_pages(
     return pages, seams
 
 
+def retryable_pages(source: Path, cache_dir: str | Path, pages: list[str]) -> list[int]:
+    """The failed pages of a finished PDF that its next read tries again, counted from 1.
+
+    A failed page is work not done, and a later run is not the retry `_transcribe_page`
+    refuses: that one would ask the same endpoint for the same picture a second later, while
+    this one comes after somebody pressed the button again — the output cap was raised, the
+    endpoint stopped refusing the picture, or the runaway simply did not happen this time
+    (measured at temperature 0 on Cerebras: it is not deterministic).
+
+    Nothing is retried once pages were inserted or deleted by hand: that renumbers every page
+    after the edit, page N of the cache stops being page N of the PDF, and re-reading "the
+    failed page 5" would write another page's text into it. Such a document keeps its markers
+    for a person to correct, and so does one whose page count no longer matches the file's.
+    """
+    failed = failed_pages(pages)
+    if not failed or read_meta(cache_dir).get("restructured"):
+        return []
+    if page_count(source) != len(pages):
+        return []
+    return failed
+
+
+def _read_failed_pages_again(
+    source: Path,
+    cached: tuple[list[str], list[dict]],
+    numbers: list[int],
+    cache_dir: Path,
+    fingerprint: dict,
+    model: str,
+    seam_model: str,
+    dpi: int,
+    tag: str,
+    prompts,
+) -> tuple[list[str], list[dict]]:
+    """Transcribe the failed pages again and keep every other page exactly as it is.
+
+    Each page is written the moment it comes back, with the two seam records around it
+    dropped — they were decided against the failure marker — so a cancelled run keeps what
+    it paid for; the seams around the new pages are reviewed once all of them are in.
+    """
+    pages, seams = list(cached[0]), valid_seams(cached[1])
+    count, images = page_images(source, dpi, numbers=numbers)
+    logger.info(
+        f"{tag}{source.name}: reading {len(numbers)} page(s) that failed last time "
+        f"with '{model}'"
+    )
+    touched: set[int] = set()
+    with progress.step(
+        "transcribe", f"{source.name}: reading the failed pages again", len(numbers)
+    ) as reporter:
+        for done, (number, image) in enumerate(zip(numbers, images), 1):
+            progress.checkpoint()
+            reporter.start(done, detail=f"page {number}/{count}")
+            page = _transcribe_page(image, number, count, model, tag, prompts)
+            pages[number - 1] = tidy_markdown(page) if page.strip() else ""
+            touched.update((number, number + 1))
+            seams = [record for record in seams if record["page"] not in touched]
+            write_pages(cache_dir, pages, fingerprint, seams)
+    reviewed = review_seams(pages, prompts, seam_model, tag=tag, only=touched)
+    seams = sorted([*seams, *reviewed], key=lambda record: record["page"])
+    write_pages(cache_dir, pages, fingerprint, seams)
+    logger.info(
+        f"{tag}{source.name}: {len(numbers) - len(failed_pages(pages))}/{len(numbers)} "
+        "failed page(s) read this time"
+    )
+    return pages, seams
+
+
 def read_pages(cache_dir: str | Path) -> list[str]:
     """The cached pages of a finished document, or `[]` when any of them is missing."""
     cache_dir = Path(cache_dir)
@@ -426,8 +514,13 @@ def write_pages(
     fingerprint: dict,
     seams: list[dict] | None = None,
     images: dict | None = None,
+    restructured: bool = False,
 ) -> None:
-    """Write a finished document's pages and its `_meta.json`, replacing what was there."""
+    """Write a finished document's pages and its `_meta.json`, replacing what was there.
+
+    `restructured` records that a person inserted or deleted pages, so the cache's page
+    numbers stopped being the file's; `retryable_pages` reads it.
+    """
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     # Wipe first: a source that lost pages would otherwise leave the previous run's trailing
@@ -440,11 +533,16 @@ def write_pages(
             stale.unlink()
     for index, page in enumerate(pages, 1):
         _page_path(cache_dir, index).write_text(page, encoding="utf-8")
-    _write_meta(cache_dir, fingerprint, pages, seams or [], images or {})
+    _write_meta(cache_dir, fingerprint, pages, seams or [], images or {}, restructured)
 
 
 def _write_meta(
-    cache_dir: Path, fingerprint: dict, pages: list[str], seams: list[dict], images: dict
+    cache_dir: Path,
+    fingerprint: dict,
+    pages: list[str],
+    seams: list[dict],
+    images: dict,
+    restructured: bool = False,
 ) -> None:
     """Write `_meta.json`: the fingerprint plus what the screens read off it."""
     write_json(
@@ -459,6 +557,7 @@ def _write_meta(
             "images_total": int(images.get("images_total", 0)),
             "images_unreadable": int(images.get("images_unreadable", 0)),
             "notes_total": int(images.get("notes_total", 0)),
+            "restructured": bool(restructured),
         },
     )
 
@@ -596,8 +695,14 @@ def read_partial(cache_dir: str | Path | None, fingerprint: dict) -> list[str]:
     return pages
 
 
-def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator[str]]:
-    """`(page_count, generator of base64 PNGs)` — rendered one at a time, not all at once."""
+def page_images(
+    pdf_path: Path, dpi: int, first: int = 1, numbers: list[int] | None = None
+) -> tuple[int, Iterator[str]]:
+    """`(page_count, generator of base64 images)` — rendered one at a time, not all at once.
+
+    `numbers` names the pages to render, counted from 1; without it every page from `first`
+    on is rendered. What each image is encoded as is `encode_page`'s decision.
+    """
     # Imported here and NEVER at module scope: pypdfium2 ships with the `builders` extra,
     # which the runtime pipeline does not install.
     try:
@@ -613,27 +718,91 @@ def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator
         count = len(document)
 
     def render():
-        """Yield each page from `first` on as a base64 PNG.
+        """Yield each requested page as a base64 image.
 
-        Each page is rendered whole under the lock — page, bitmap and PNG bytes — and only
-        the bytes cross the `yield`, so nothing PDFium owns is touched while the model reads.
+        Each page is rendered whole under the lock — page, bitmap and encoded bytes — and
+        only the bytes cross the `yield`, so nothing PDFium owns is touched while the model
+        reads.
         """
+        wanted = numbers if numbers is not None else range(max(first, 1), count + 1)
         try:
-            for index in range(max(first - 1, 0), count):
+            for number in wanted:
+                if not 1 <= number <= count:
+                    continue
                 with _PDFIUM_LOCK:
-                    page = document[index]
+                    page = document[number - 1]
+                    width, height = page.get_size()
+                    scanned = _scanned(page)
                     # Colour is load-bearing: on these exam PDFs the correct option is
                     # marked by nothing but its colour. Never render greyscale to save bytes.
-                    bitmap = page.render(scale=dpi / 72)
-                    buffer = io.BytesIO()
-                    bitmap.to_pil().save(buffer, format="PNG")
+                    bitmap = page.render(scale=render_scale(width, height, dpi))
+                    encoded = encode_page(bitmap.to_pil(), scanned)
                     page.close()
-                yield base64.b64encode(buffer.getvalue()).decode()
+                yield base64.b64encode(encoded).decode()
         finally:
             with _PDFIUM_LOCK:
                 document.close()
 
     return count, render()
+
+
+# THE PAGE AS THE MODEL RECEIVES IT ----------------------------------------------------------------
+#
+# What reaches the model is bounded in BYTES, and a scanned page is where the bound bites: a
+# photograph of paper does not compress as a PNG. Measured on 2026-09-15, the three exercise
+# sheets of the nursing subject that were scans failed on EVERY page with Cerebras' 413
+# «Request payload exceeds maximum size» (10 MiB a request); a scan whose page declares its
+# pixels as points renders at 200 dpi to 6 892 × 9 745 px, a 9.4 MB PNG, and was refused the
+# same way, while the same page as a 16 MP JPEG was read in 0.9 s — for 1 574 prompt tokens,
+# exactly what the 7.7 MP one cost, because the endpoint resamples the picture anyway.
+
+# A4 in points: the page every DPI setting of this route was measured on.
+A4_AREA_PT = 595 * 842
+# How many A4 pages of area one render may cover at the configured DPI. Two is an A3 page at
+# full density; a page declared bigger is rendered at a lower one rather than at a size no
+# endpoint accepts.
+PAGE_MAX_A4_AREAS = 2
+# A page with text on it stays a lossless PNG unless it would weigh more than this, which is
+# a fifth of Cerebras' whole request and far above any typeset page (an A4 of text at 200 dpi
+# is ~0.6 MB). A page with NO text layer is a photograph of paper and is a JPEG from the start.
+PAGE_PNG_MAX_BYTES = 2 * 1024 * 1024
+# JPEG quality for a scan: the synthetic A4 scan measured 1.8 MB as PNG and 0.4 MB here.
+PAGE_JPEG_QUALITY = 90
+
+
+def render_scale(width_pt: float, height_pt: float, dpi: int) -> float:
+    """The scale a page is rendered at: the configured DPI, unless the page is too big for it."""
+    scale = dpi / 72
+    area = max(width_pt, 1.0) * max(height_pt, 1.0)
+    ceiling = PAGE_MAX_A4_AREAS * A4_AREA_PT
+    return scale if area <= ceiling else scale * (ceiling / area) ** 0.5
+
+
+def encode_page(image, scanned: bool) -> bytes:
+    """The rendered page as the bytes the model is sent: a PNG, or a JPEG for a photograph.
+
+    A scanned page goes as JPEG without trying the PNG: its noise is incompressible losslessly
+    and JPEG is what the scanner stored in the first place. A typeset page keeps the PNG it has
+    always had — nothing about its cached transcription changes — unless that PNG is heavy,
+    which is a page carrying a big photograph.
+    """
+    if not scanned:
+        png = io.BytesIO()
+        image.save(png, format="PNG")
+        if png.tell() <= PAGE_PNG_MAX_BYTES:
+            return png.getvalue()
+    jpeg = io.BytesIO()
+    image.convert("RGB").save(jpeg, format="JPEG", quality=PAGE_JPEG_QUALITY)
+    return jpeg.getvalue()
+
+
+def _scanned(page) -> bool:
+    """Whether a page carries no text layer at all: a picture of a page, not a typeset one."""
+    textpage = page.get_textpage()
+    try:
+        return textpage.count_chars() == 0
+    finally:
+        textpage.close()
 
 
 def _transcribe_page(
@@ -895,9 +1064,17 @@ def _encode_image(image) -> bytes:
         image = image.resize(
             (image.width * factor, image.height * factor), Image.Resampling.LANCZOS
         )
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
+    elif image.width * image.height > IMAGE_MAX_PIXELS:
+        # A photograph pasted whole into a document is the page scan's twin: shrunk to what
+        # a render of two A4 pages at 200 dpi holds, which is more than the endpoint reads.
+        factor = (IMAGE_MAX_PIXELS / (image.width * image.height)) ** 0.5
+        image = image.resize(
+            (max(1, round(image.width * factor)), max(1, round(image.height * factor))),
+            Image.Resampling.LANCZOS,
+        )
+    # The same bytes as always for every picture that fits, so its cached reading — keyed by
+    # them — stays a hit; only a picture heavy enough to threaten the request changes route.
+    return encode_page(image, scanned=False)
 
 
 def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) -> str | None:
@@ -1184,10 +1361,22 @@ SEAM_SCHEMA = {
 }
 
 
-def review_seams(pages: list[str], prompts, model: str = "", tag: str = "") -> list[dict]:
-    """Ask the model about every seam the deterministic rule could not settle."""
+def review_seams(
+    pages: list[str],
+    prompts,
+    model: str = "",
+    tag: str = "",
+    only: set[int] | None = None,
+) -> list[dict]:
+    """Ask the model about every seam the deterministic rule could not settle.
+
+    `only` limits the question to the seams named after those pages — the two around a page
+    that was just read again — so the rest keep the answers already paid for.
+    """
     model = model or config.TRANSCRIBE_SEAM_MODEL
-    boundaries = _boundaries(pages)
+    boundaries = [
+        boundary for boundary in _boundaries(pages) if only is None or boundary[2] in only
+    ]
     if not boundaries:
         return []
     records: list[dict] = []

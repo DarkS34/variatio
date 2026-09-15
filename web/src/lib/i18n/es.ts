@@ -852,6 +852,14 @@ export const es = {
     one: "1 página que el modelo no pudo transcribir.",
     other: "{n} páginas que el modelo no pudo transcribir.",
   },
+  "transcribe.failedPagesRetry": {
+    one: "1 página que el modelo no pudo transcribir. Se vuelve a intentar la próxima vez que se procesen los documentos, y también puedes corregirla a mano.",
+    other: "{n} páginas que el modelo no pudo transcribir. Se vuelven a intentar la próxima vez que se procesen los documentos, y también puedes corregirlas a mano.",
+  },
+  "transcribe.retryCount": {
+    one: "1 con páginas por releer",
+    other: "{n} con páginas por releer",
+  },
   "transcribe.stopHint":
     "Para la lectura donde vaya. Las páginas ya guardadas se conservan, y al volver a lanzarla sigue por donde quedó.",
   "transcribe.todoTitle": {

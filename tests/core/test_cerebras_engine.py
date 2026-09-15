@@ -334,6 +334,22 @@ def test_the_pictures_travel_ahead_of_the_text():
     assert parts[-1]["text"] == "transcribe"
 
 
+def test_a_jpeg_picture_is_sent_as_a_jpeg_data_url():
+    # A scanned page travels as JPEG, and a data URL typed as PNG over JPEG bytes is a
+    # picture the endpoint cannot trust. "/9j/" is FF D8 FF, JPEG's magic, in base64.
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    engine = _engine_with(handler)
+    engine.generate("qwen-3.8-27b", "transcribe", images=["/9j/4AAQ", "iVBORw0KGgo"])
+    parts = seen["messages"][-1]["content"]
+    assert parts[0]["image_url"]["url"] == "data:image/jpeg;base64,/9j/4AAQ"
+    assert parts[1]["image_url"]["url"] == "data:image/png;base64,iVBORw0KGgo"
+
+
 def test_generate_unwraps_the_reply_to_a_wrapped_array_schema():
     def handler(request: httpx.Request) -> httpx.Response:
         sent = json.loads(request.content)

@@ -51,7 +51,23 @@ class _Fake:
         self._touch("open")
         fake = self
 
+        class TextPage:
+            def count_chars(self):
+                fake._touch("text.count")
+                return 12
+
+            def close(self):
+                fake._touch("text.close")
+
         class Page:
+            def get_size(self):
+                fake._touch("size")
+                return (595.0, 842.0)
+
+            def get_textpage(self):
+                fake._touch("text")
+                return TextPage()
+
             def render(self, scale):
                 fake._touch("render")
                 return SimpleNamespace(to_pil=lambda: _Image(fake))

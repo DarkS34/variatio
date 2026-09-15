@@ -279,8 +279,9 @@ class CerebrasEngine:
     ) -> dict:
         """Assemble the chat-completions request for one call.
 
-        Images travel as base64 PNG data URLs; a model that cannot read one is refused up
-        front rather than answering emptily.
+        Images travel as base64 data URLs typed by their own first bytes — a scanned page is
+        sent as JPEG — and a model that cannot read one is refused up front rather than
+        answering emptily.
         """
         if images and not self.supports_vision(model):
             raise InferenceError(
@@ -293,10 +294,7 @@ class CerebrasEngine:
             # ahead of the prompt, and Qwen's own examples order the parts the same way.
             content = [
                 *(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{image}"},
-                    }
+                    {"type": "image_url", "image_url": {"url": _data_url(image)}}
                     for image in images
                 ),
                 {"type": "text", "text": prompt},
@@ -379,6 +377,12 @@ class CerebrasEngine:
             f"'{model}' está enrutado a Cerebras, que aquí no sirve embeddings: "
             "el modelo de embedding debe quedar fuera de CEREBRAS_MODELS"
         )
+
+
+def _data_url(image: str) -> str:
+    """Type a base64 picture by its own first bytes: `/9j/` is JPEG's FF D8 FF, all else PNG."""
+    mime = "image/jpeg" if image.startswith("/9j/") else "image/png"
+    return f"data:{mime};base64,{image}"
 
 
 def _consume_stream(response: httpx.Response, on_token: TokenSink) -> tuple[str, str, int, int]:

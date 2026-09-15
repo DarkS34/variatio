@@ -730,6 +730,14 @@ export const en: Catalogue = {
     one: "1 page the model could not transcribe.",
     other: "{n} pages the model could not transcribe.",
   },
+  "transcribe.failedPagesRetry": {
+    one: "1 page the model could not transcribe. It is tried again the next time the documents are processed, and you can also correct it by hand.",
+    other: "{n} pages the model could not transcribe. They are tried again the next time the documents are processed, and you can also correct them by hand.",
+  },
+  "transcribe.retryCount": {
+    one: "1 with pages to read again",
+    other: "{n} with pages to read again",
+  },
   "transcribe.stopHint": "Stops the transcription where it is. The pages already saved are kept and relaunching it resumes where it left off.",
   "transcribe.todoTitle": {
     one: "1 document still to process",

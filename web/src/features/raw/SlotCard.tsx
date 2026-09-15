@@ -31,6 +31,7 @@ function DocumentRow({
   state,
   reasons,
   failedPages,
+  retryPages,
   unreadableImages,
   busy,
   canEdit,
@@ -43,6 +44,8 @@ function DocumentRow({
   state: DocumentState;
   reasons: string[];
   failedPages: number;
+  /** The failed pages the next read tries again; zero when pages were moved by hand. */
+  retryPages: number;
   unreadableImages: number;
   busy: boolean;
   canEdit: boolean;
@@ -137,9 +140,13 @@ function DocumentRow({
       {notes.length > 0 ? (
         <p className="px-2 pb-1.5 pl-[30px] text-small text-attention">{notes.join(" · ")}</p>
       ) : null}
+      {/* A failed page the next read tries again says so: without it the row reports a loss
+          nobody can act on, when pressing "Procesarlos todos ahora" is exactly the move. */}
       {failedPages > 0 ? (
         <p className="px-2 pb-1.5 pl-[30px] text-small text-destructive">
-          {plural("transcribe.failedPages", failedPages)}
+          {retryPages > 0
+            ? plural("transcribe.failedPagesRetry", failedPages)
+            : plural("transcribe.failedPages", failedPages)}
         </p>
       ) : null}
     </li>
@@ -170,6 +177,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
         state: entry?.state ?? ("pending" as DocumentState),
         reasons: entry?.reasons ?? [],
         failedPages: entry?.failed_pages ?? 0,
+        retryPages: entry?.retry_pages ?? 0,
         unreadableImages: entry?.images_unreadable ?? 0,
       };
     });
@@ -215,7 +223,8 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
     !running &&
     state.data !== undefined &&
     state.data.pending === 0 &&
-    state.data.stale === 0;
+    state.data.stale === 0 &&
+    (state.data.retry ?? 0) === 0;
 
   return (
     <Card
