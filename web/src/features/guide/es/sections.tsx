@@ -913,7 +913,7 @@ function Graph() {
         ]}
       />
 
-      <Block title="Una lista, y un mapa debajo">
+      <Block title="Una lista, y el grafo al lado">
         <Paragraph>
           Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
           Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el concepto
@@ -946,11 +946,21 @@ function Graph() {
           una banda la ficha pasa a ese.
         </Paragraph>
         <Paragraph>
-          El lienzo tiene dos disposiciones: <strong>«{t("canvas.layout.force")}»</strong>, que
-          agrupa cada concepto junto a aquellos con los que se relaciona, y{" "}
-          <strong>«{t("canvas.layout.curriculum")}»</strong>, que ordena por niveles de
-          prerrequisito. Cambiar de una a otra no reconstruye nada: los nodos se desplazan hasta
-          su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario real
+          El lienzo tiene dos disposiciones. En <strong>«{t("canvas.layout.force")}»</strong>{" "}
+          cada unidad tiene su propio recuadro, en el orden del temario y con un tamaño según los
+          conceptos que reúne, y dentro de él cada concepto se coloca cerca de aquellos con los
+          que se relaciona; los que no tienen ninguna relación esperan en una fila al pie. De
+          lejos se leen las unidades —su nombre, cuántos conceptos tienen y las relaciones entre
+          ellas, más marcadas cuantas más hay—; al acercarte aparecen los conceptos con sus
+          nombres, y el de la unidad pasa a la esquina de su recuadro para que siempre sepas en
+          cuál estás. Pulsar una unidad acerca la vista a ella, y en la vista ampliada el plano
+          pequeño de la esquina marca qué parte del temario tienes delante. Así se lee igual un
+          temario de cien conceptos que uno de miles.
+        </Paragraph>
+        <Paragraph>
+          <strong>«{t("canvas.layout.curriculum")}»</strong> ordena por niveles de prerrequisito.
+          Cambiar de una disposición a otra no reconstruye nada: los nodos se desplazan hasta su
+          nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario real
           reparte los prerrequisitos de forma muy desigual; si hay menos de tres niveles el
           propio lienzo lo dice, porque eso es un dato sobre el temario y no una vista rota.
         </Paragraph>

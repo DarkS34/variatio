@@ -840,6 +840,10 @@ export const es = {
   "canvas.isolated": { one: "1 sin relaciones", other: "{n} sin relaciones" },
   "canvas.relations": { one: "1 relación", other: "{n} relaciones" },
   "canvas.conceptCount": { one: "1 concepto", other: "{n} conceptos" },
+  "canvas.unitCount": { one: "1 unidad", other: "{n} unidades" },
+  "canvas.placing": "Colocando {concepts}…",
+  "canvas.unitZoom": "Clic para acercarte a sus conceptos",
+  "canvas.aria": "Grafo de conocimiento con {concepts} en {units}. La lista de conceptos recorre lo mismo con el teclado.",
   "canvas.isolatedCount": { one: " · 1 aislado", other: " · {n} aislados" },
   "field.options": { one: "1 opción", other: "{n} opciones" },
   "form.items": { one: "1 ejercicio", other: "{n} ejercicios" },
@@ -1584,7 +1588,7 @@ export const es = {
 
   // KNOWLEDGE GRAPH — THE CANVAS ----------------------------------------------------------
   "canvas.layout.force": "Vecindario",
-  "canvas.layout.force.hint": "Conceptos cerca de aquellos con los que se relacionan",
+  "canvas.layout.force.hint": "Cada unidad en su recuadro; dentro, los conceptos cerca de aquellos con los que se relacionan",
   "canvas.layout.curriculum": "Currículo",
   "canvas.layout.curriculum.hint": "Un nivel por profundidad de prerrequisitos: lo de arriba se enseña antes ({n} lo ordenan)",
   "canvas.layout.curriculum.none": "El temario no tiene relaciones de prerrequisito que ordenar",

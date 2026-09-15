@@ -2,44 +2,50 @@ import { Maximize2, Network, RotateCw, Tag, Waypoints, ZoomIn, ZoomOut } from "l
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/misc";
+import { useT } from "@/lib/i18n";
 import type { GraphView } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  detailAt,
   draw,
   drawMinimap,
-  radiusOf,
+  drawnRadius,
+  READING_SCALE,
   readPalette,
   type LabelMode,
   type Scene,
+  type View,
 } from "./graph/draw";
+import { LabelGrid } from "./graph/labels";
 import {
-  applyParking,
   curriculumPositions,
-  forceStep,
   PADDING,
-  seedBodies,
   settleTowardTargets,
   type Body,
   type LayoutMode,
 } from "./graph/layout";
+import { cachedLayout, requestLayout } from "./graph/layoutClient";
+import { layoutKey, regionsOf, type Lane, type MapLayout } from "./graph/mapLayout";
 import { buildModel, frontierOf } from "./graph/model";
-import { useT } from "@/lib/i18n";
+import type { Region } from "./graph/regions";
 
 /**
  * The knowledge graph, drawn by hand on a canvas, in two layouts.
  *
  * A curriculum graph is two things at once and no single picture shows both: a web of
- * semantic neighbourhoods, which a force layout shows and a layered one destroys, and
- * an ORDER of prerequisites, which a force layout hides completely. So the engine owns
- * both and animates between them — `layout.ts` produces positions, `draw.ts` paints,
- * and this file owns the loop, the camera and the pointer.
+ * semantic neighbourhoods and an ORDER of prerequisites. So the canvas owns both and eases
+ * between them. What changed with the subjects of thousands of concepts is where the first one
+ * comes from. It used to be simulated here, on the main thread, from scratch on every visit —
+ * measured on the nursing subject (2 496 concepts), 47 s of a frozen page before the first
+ * frame, and again for the expanded view. Now the map is laid out ONCE per structure, in a
+ * worker, with every unit a region of its own (`graph/mapLayout.ts`), and kept in memory and in
+ * `localStorage` (`graph/layoutClient.ts`); this file only draws it, moves the camera and eases
+ * the bodies when a new map lands.
  *
- * Owning the loop means owning when it stops. Three rules keep it cheap: a frame is
- * only requested while the layout is moving or something changed; nothing inside a
- * frame reads the DOM (size comes from a ResizeObserver, colours from a cached
- * palette — both used to force a reflow on every single frame); and the props the
- * drawing depends on live in refs, so a keystroke in the search box repaints instead
- * of tearing down and restarting the animation.
+ * Three rules keep the loop cheap: a frame is only requested while something moves or
+ * changed; nothing inside a frame reads the DOM; and the props the drawing depends on live in
+ * refs, so a keystroke in the search box repaints instead of restarting anything.
  */
 
 interface Props {
@@ -55,25 +61,28 @@ interface Props {
    *  is in force and the graph keeps its domain colours; an empty set is a course that has
    *  covered nothing yet, which is a different statement and is drawn as one. */
   curriculum?: Set<string>;
-  /** Drop the toolbars and keep the drawing. A preview a few hundred pixels tall has room
-   *  for the graph or for the controls, not both, and the controls are the half that has
-   *  somewhere else to live — the expanded view, which is one click away. Panning, zooming,
-   *  hovering and selecting all still work here; only the chrome goes. */
+  /** Drop the toolbars and keep the drawing. Panning, zooming, hovering and selecting all
+   *  still work here; only the chrome goes, to the expanded view one click away. */
   compact?: boolean;
   className?: string;
 }
 
-const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
-const SETTLED = 0.4;
-const COOLING = 0.975;
-// Force steps per animation frame. One per frame cools from width/10 to SETTLED in ~200
-// frames — 3.3 s of visible drifting on a 630 px canvas. Four is the same relaxation in
-// ~0.8 s; the drawing is still one per frame.
-const STEPS_PER_FRAME = 4;
-// Upper bound on the synchronous relaxation; the cooling reaches SETTLED in ~200.
-const MAX_PRESETTLE_STEPS = 260;
 const MINIMAP = { width: 150, height: 104, margin: 10 };
+// A map that lands sooner than this is drawn with no caption at all: announcing a wait that
+// is over before it can be read is noise.
+const PLACING_DELAY = 250;
+const FLY_MS = 420;
+// Below this much detail a click is about a UNIT: concepts are specks there, and a speck
+// under the pointer is an accident, not a choice.
+const UNIT_CLICKS_BELOW = 0.35;
+
+interface Placement {
+  regions: Region[];
+  lanes: Lane[];
+  width: number;
+  height: number;
+}
 
 export function GraphCanvas({
   graph,
@@ -93,15 +102,25 @@ export function GraphCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const bodies = useRef<Body[]>([]);
-  const view = useRef({ x: 0, y: 0, scale: 1 });
-  const temperature = useRef(0);
+  const view = useRef<View>({ x: 0, y: 0, scale: 1 });
+  const minScale = useRef(0.15);
   const settling = useRef(false);
   const size = useRef({ width: 0, height: 0 });
   const palette = useRef(readPalette());
   const dirty = useRef(true);
   const frame = useRef<number | null>(null);
+  // The camera frames the whole map until somebody pans or zooms it themselves.
   const pendingFit = useRef(true);
+  const framed = useRef(true);
   const loopRef = useRef<() => void>(() => {});
+  const flight = useRef<{ from: View; to: View; start: number } | null>(null);
+  const grid = useRef(new LabelGrid());
+  const placement = useRef<Placement>({ regions: [], lanes: [], width: 0, height: 0 });
+  const layoutRef = useRef<MapLayout | null>(null);
+  // The map on screen and the graph it belongs to: where the next one starts from.
+  const shown = useRef<{ graph: GraphView; layout: MapLayout } | null>(null);
+  const flyWanted = useRef<string | null>(null);
+  const pickedHere = useRef<string | null>(null);
 
   const pointer = useRef<{
     mode: "none" | "pan" | "node";
@@ -112,19 +131,23 @@ export function GraphCanvas({
   }>({ mode: "none", index: -1, x: 0, y: 0, moved: 0 });
 
   const [hovered, setHovered] = useState<number | null>(null);
+  const [hoveredUnit, setHoveredUnit] = useState<number | null>(null);
   const [tip, setTip] = useState({ x: 0, y: 0 });
+  const [placing, setPlacing] = useState(false);
   const hoveredRef = useRef<number | null>(null);
   hoveredRef.current = hovered;
 
   const [mode, setMode] = useState<LayoutMode>(initialMode ?? "force");
-  // A label is drawn at a fixed pixel size, so shrinking the frame does not shrink the text:
-  // at preview size the 120 names collide into one grey mass and hide the shape they were
-  // supposed to annotate. What a preview shows is the constellation; the names are one click
-  // away, in the expanded view, where there is room for them.
-  const [labels, setLabels] = useState<LabelMode>(compact ? "none" : "auto");
+  const [labels, setLabels] = useState<LabelMode>("auto");
   const [arrows, setArrows] = useState(true);
 
   const model = useMemo(() => buildModel(graph), [graph]);
+  const widths = useMemo(() => new Float32Array(graph.nodes.length).fill(Number.NaN), [graph]);
+  const onScreen = useMemo(() => new Uint8Array(graph.nodes.length), [graph]);
+  const unitCounts = useMemo(
+    () => graph.groups.map((group) => plural("canvas.conceptCount", group.count)),
+    [graph, plural],
+  );
 
   const pickedIndices = useMemo(() => {
     if (!picked) return undefined;
@@ -140,9 +163,7 @@ export function GraphCanvas({
   modelRef.current = model;
   const graphRef = useRef(graph);
   graphRef.current = graph;
-  // This is where the whole idea of the redesign becomes visible: the concepts are already
-  // placed by prerequisite depth, and the colour now says where each one falls relative to
-  // the frontier. It is the same drawing as the navbar, at another scale.
+
   const curriculumIndices = useMemo(() => {
     if (!curriculum) return undefined;
     const indices = new Set<number>();
@@ -169,7 +190,10 @@ export function GraphCanvas({
     compact,
     curriculum: curriculumIndices,
     frontier,
-    isolatedCaption: "",
+    unitCounts,
+    widths,
+    onScreen,
+    laneCaption: (count: number) => plural("canvas.isolated", count),
   });
   viewProps.current = {
     selected,
@@ -182,10 +206,12 @@ export function GraphCanvas({
     compact,
     curriculum: curriculumIndices,
     frontier,
-    // The one string `draw.ts` paints. It is passed in rather than translated there: the
-    // painter runs every frame and knows nothing about the catalogue, which is the property
-    // that keeps it testable and cheap.
-    isolatedCaption: plural("canvas.isolated", model.isolated.length),
+    unitCounts,
+    widths,
+    onScreen,
+    // The sentences the painter writes are passed in rather than translated there: it runs
+    // every frame and knows nothing about the catalogue.
+    laneCaption: (count: number) => plural("canvas.isolated", count),
   };
 
   const wake = useCallback(() => {
@@ -197,135 +223,297 @@ export function GraphCanvas({
     wake();
   }, [wake]);
 
-  const reheat = useCallback(
-    (fraction = 1) => {
-      const { width } = size.current;
-      temperature.current = Math.max(2, (Math.max(400, width) / 10) * fraction);
-      wake();
-    },
-    [wake],
-  );
-
-  // The first frame is a SETTLED graph and not a seed: relaxed over animation frames, what
-  // a person sees is a dot in the middle swelling into the graph. The relaxation is cheap —
-  // 162 bodies, ~200 steps, tens of milliseconds — so it runs here, synchronously, and the
-  // loop is left with nothing to animate. Returns false while the frame is unmeasured,
-  // which is the first render: the mount effect runs it again once the size is known.
-  const settleNow = useCallback(() => {
-    const { width } = size.current;
-    if (width === 0 || bodies.current.length === 0) return false;
-    let temp = Math.max(400, width) / 10;
-    for (let step = 0; temp > SETTLED && step < MAX_PRESETTLE_STEPS; step += 1) {
-      forceStep(
-        bodies.current,
-        graphRef.current.links,
-        modelRef.current,
-        size.current,
-        temp,
-        viewProps.current.hiddenRelations,
-      );
-      temp *= COOLING;
+  /** What the camera frames: the whole map, or the order view's bands where they are heading. */
+  const worldBounds = useCallback(() => {
+    const plan = placement.current;
+    if (viewProps.current.mode === "force" && plan.regions.length > 0) {
+      // The regions themselves and not the map's rectangle: the half gutter around the outer
+      // ones is empty, and in the card it would be an empty border.
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const region of plan.regions) {
+        minX = Math.min(minX, region.x);
+        minY = Math.min(minY, region.y);
+        maxX = Math.max(maxX, region.x + region.width);
+        maxY = Math.max(maxY, region.y + region.height);
+      }
+      return { minX, minY, maxX, maxY };
     }
-    temperature.current = 0;
-    return true;
-  }, []);
-
-  const applyFit = useCallback(() => {
     const list = bodies.current;
-    const { width, height } = size.current;
-    if (list.length === 0 || width === 0 || height === 0) return false;
-
+    if (list.length === 0) return null;
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
     for (const body of list) {
-      if (body.x < minX) minX = body.x;
-      if (body.y < minY) minY = body.y;
-      if (body.x > maxX) maxX = body.x;
-      if (body.y > maxY) maxY = body.y;
+      if (body.tx < minX) minX = body.tx;
+      if (body.ty < minY) minY = body.ty;
+      if (body.tx > maxX) maxX = body.tx;
+      if (body.ty > maxY) maxY = body.ty;
     }
-
-    const spanX = Math.max(1, maxX - minX);
-    const spanY = Math.max(1, maxY - minY);
-    const scale = Math.max(
-      MIN_SCALE,
-      Math.min(1.4, (width - PADDING * 2) / spanX, (height - PADDING * 2) / spanY),
-    );
-    view.current = { x: -((minX + maxX) / 2) * scale, y: -((minY + maxY) / 2) * scale, scale };
-    return true;
+    return { minX, minY, maxX, maxY };
   }, []);
 
+  const frameOf = useCallback(
+    (bounds: { minX: number; minY: number; maxX: number; maxY: number } | null): View | null => {
+      const { width, height } = size.current;
+      if (!bounds || width === 0 || height === 0) return null;
+      const spanX = Math.max(1, bounds.maxX - bounds.minX);
+      const spanY = Math.max(1, bounds.maxY - bounds.minY);
+      // The card beside the outline has no toolbar to keep clear of, so the map is stretched
+      // until one of its sides touches one of the card's — a pixel in, so the outer hairline
+      // is not cut — while the expanded view leaves room for its chrome.
+      const padding = viewProps.current.compact ? 1 : PADDING;
+      const scale = Math.max(
+        0.002,
+        Math.min(MAX_SCALE, (width - padding * 2) / spanX, (height - padding * 2) / spanY),
+      );
+      return {
+        x: -((bounds.minX + bounds.maxX) / 2) * scale,
+        y: -((bounds.minY + bounds.maxY) / 2) * scale,
+        scale,
+      };
+    },
+    [],
+  );
+
+  const applyFit = useCallback(() => {
+    const target = frameOf(worldBounds());
+    if (!target) return false;
+    // The expanded view does not blow a small subject up past 1.4×; the card fills itself.
+    view.current = viewProps.current.compact
+      ? target
+      : { ...target, scale: Math.min(target.scale, 1.4) };
+    // However big the subject, it can always be seen whole: the floor is below its own fit.
+    minScale.current = Math.min(0.15, view.current.scale * 0.8);
+    framed.current = true;
+    return true;
+  }, [frameOf, worldBounds]);
+
   const fit = useCallback(() => {
-    // An explicit "encuadrar" also gives the camera back to the layout: whatever the
-    // relaxation does next stays in frame.
+    flight.current = null;
     pendingFit.current = true;
     applyFit();
     repaint();
   }, [applyFit, repaint]);
 
-  /** Any manual pan, zoom or drag takes the camera away from the auto-fit for good. */
+  /** A manual pan, zoom or drag takes the camera from the automatic framing for good. */
   const takeCamera = useCallback(() => {
     pendingFit.current = false;
+    framed.current = false;
+    flight.current = null;
   }, []);
 
-  const relayout = useCallback(() => {
-    pendingFit.current = true;
-    if (viewProps.current.mode === "curriculum") {
-      const targets = curriculumPositions(graphRef.current, modelRef.current);
-      bodies.current.forEach((body, index) => {
-        body.pinned = false;
-        body.tx = targets[index]?.x ?? body.x;
-        body.ty = targets[index]?.y ?? body.y;
-      });
-      settling.current = true;
+  const flyTo = useCallback(
+    (to: View) => {
+      pendingFit.current = false;
+      framed.current = false;
+      const reduced =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced) {
+        flight.current = null;
+        view.current = to;
+        repaint();
+        return;
+      }
+      flight.current = { from: { ...view.current }, to, start: performance.now() };
       wake();
+    },
+    [repaint, wake],
+  );
+
+  /** Take the camera to a concept, close enough to read its neighbours' names. */
+  const flyToConcept = useCallback(
+    (name: string) => {
+      const index = modelRef.current.nameIndex.get(name);
+      const body = index === undefined ? undefined : bodies.current[index];
+      if (!body || size.current.width === 0) {
+        flyWanted.current = name;
+        return;
+      }
+      flyWanted.current = null;
+      const reading = viewProps.current.mode === "force" ? READING_SCALE : 1.1;
+      const scale = Math.min(MAX_SCALE, Math.max(view.current.scale, reading));
+      flyTo({ x: -body.tx * scale, y: -body.ty * scale, scale });
+    },
+    [flyTo],
+  );
+
+  /** Send every body toward `target(index)`: eased from where it is, or placed there at once. */
+  const placeBodies = useCallback(
+    (target: (index: number) => { x: number; y: number }, animate: boolean) => {
+      const count = graphRef.current.nodes.length;
+      const list = bodies.current;
+      const fresh = list.length !== count;
+      const next: Body[] = fresh ? new Array<Body>(count) : list;
+      for (let index = 0; index < count; index += 1) {
+        const { x, y } = target(index);
+        const body = fresh ? undefined : list[index];
+        if (!body) {
+          next[index] = { x, y, tx: x, ty: y, pinned: false };
+          continue;
+        }
+        body.tx = x;
+        body.ty = y;
+        body.pinned = false;
+        if (!animate) {
+          body.x = x;
+          body.y = y;
+        }
+      }
+      bodies.current = next;
+      settling.current = animate && !fresh;
+      repaint();
+    },
+    [repaint],
+  );
+
+  const land = useCallback(
+    (layout: MapLayout, animate: boolean) => {
+      layoutRef.current = layout;
+      placement.current = {
+        regions: layout.regions,
+        lanes: layout.lanes,
+        width: layout.width,
+        height: layout.height,
+      };
+      shown.current = { graph: graphRef.current, layout };
+      if (viewProps.current.mode === "force") {
+        placeBodies(
+          (index) => ({ x: layout.positions[index * 2], y: layout.positions[index * 2 + 1] }),
+          animate,
+        );
+      }
+      if (pendingFit.current || framed.current) applyFit();
+      if (flyWanted.current) flyToConcept(flyWanted.current);
+      repaint();
+    },
+    [applyFit, flyToConcept, placeBodies, repaint],
+  );
+
+  // A NEW GRAPH. The same structure — a description, a rename in place, a taggability switch —
+  // keeps the map as it is. A new one is asked of the layout client; while it is computed the
+  // units are drawn at once and, after an edit, the concepts already on screen stay where they
+  // were, easing to their new places when the map lands.
+  useEffect(() => {
+    const key = layoutKey(graph);
+    if (layoutRef.current?.key === key && bodies.current.length === graph.nodes.length) {
+      shown.current = { graph, layout: layoutRef.current };
+      repaint();
       return;
     }
-    bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
-    reheat();
-  }, [reheat, wake]);
+    const previous = shown.current;
+    const plan = regionsOf(graph);
+    placement.current = { regions: plan.regions, lanes: [], width: plan.width, height: plan.height };
+    layoutRef.current = null;
 
-  useEffect(() => {
-    bodies.current = seedBodies(graph, model, size.current);
-    pendingFit.current = true;
-    settling.current = false;
-    if (viewProps.current.mode === "force" && settleNow()) {
-      applyParking(bodies.current, model, size.current);
-      wake();
-    } else {
-      reheat();
-    }
-    repaint();
-  }, [graph, model, reheat, repaint, settleNow, wake]);
-
-  // Switching layout never rebuilds the bodies: each one is given a target and eased
-  // into it, so the same node stays the same dot and you can watch the cloud fold into
-  // levels. That continuity is the whole reason both views live in one canvas.
-  useEffect(() => {
-    if (mode === "curriculum") {
+    if (viewProps.current.mode === "curriculum") {
       const targets = curriculumPositions(graph, model);
-      bodies.current.forEach((body, index) => {
-        body.pinned = false;
-        body.tx = targets[index]?.x ?? body.x;
-        body.ty = targets[index]?.y ?? body.y;
+      placeBodies((index) => targets[index], false);
+      if (!previous) pendingFit.current = true;
+    } else if (previous) {
+      const before = new Map(previous.graph.nodes.map(([name], index) => [name, index]));
+      const centres = new Map(
+        plan.regions.map((region) => [
+          region.group,
+          { x: region.x + region.width / 2, y: region.y + region.height / 2 },
+        ]),
+      );
+      const old = bodies.current;
+      bodies.current = graph.nodes.map(([name, group]) => {
+        const index = before.get(name);
+        const at = (index === undefined ? undefined : old[index]) ?? centres.get(group) ?? { x: 0, y: 0 };
+        return { x: at.x, y: at.y, tx: at.x, ty: at.y, pinned: false };
       });
-      temperature.current = 0;
-      settling.current = true;
     } else {
-      applyParking(bodies.current, model, size.current);
-      settling.current = false;
-      reheat(0.55);
+      // Nothing to show yet but the units: no dot is drawn until it has its place.
+      bodies.current = [];
+      pendingFit.current = true;
     }
+
+    const known = cachedLayout(key);
+    if (known) {
+      land(known, Boolean(previous));
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (!cancelled) setPlacing(true);
+    }, PLACING_DELAY);
+    requestLayout(graph, previous)
+      .then((layout) => {
+        if (!cancelled) land(layout, Boolean(previous));
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        window.clearTimeout(timer);
+        if (!cancelled) setPlacing(false);
+      });
+    if (pendingFit.current) applyFit();
+    repaint();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [graph, model, applyFit, land, placeBodies, repaint]);
+
+  // Switching layout never rebuilds the bodies: each one is given a target and eased into it,
+  // so the same node stays the same dot and the map folds into its levels on screen.
+  const firstMode = useRef(true);
+  useEffect(() => {
+    if (firstMode.current) {
+      firstMode.current = false;
+      return;
+    }
+    if (mode === "curriculum") {
+      const targets = curriculumPositions(graphRef.current, modelRef.current);
+      placeBodies((index) => targets[index], true);
+    } else if (layoutRef.current) {
+      const layout = layoutRef.current;
+      placeBodies(
+        (index) => ({ x: layout.positions[index * 2], y: layout.positions[index * 2 + 1] }),
+        true,
+      );
+    }
+    flight.current = null;
     pendingFit.current = true;
     wake();
-  }, [mode, graph, model, reheat, wake]);
+  }, [mode, placeBodies, wake]);
 
-  // Selection, search highlight and filters change what is drawn, never the simulation:
-  // mark the canvas dirty and let the loop draw one more frame.
+  // A concept chosen somewhere else — the list, the flow — is flown to: with thousands of them
+  // on the map, lighting one up where it already is would light up a speck. One chosen on the
+  // canvas is already under the pointer and moves nothing.
+  useEffect(() => {
+    if (!selected) {
+      flyWanted.current = null;
+      if (compact && !framed.current) fit();
+      return;
+    }
+    if (pickedHere.current === selected) {
+      pickedHere.current = null;
+      return;
+    }
+    flyToConcept(selected);
+  }, [selected, compact, fit, flyToConcept]);
+
+  // Selection, search highlight and filters change what is drawn, never the layout.
   useEffect(() => {
     repaint();
-  }, [selected, pickedIndices, highlight, hiddenRelations, hovered, labels, arrows, repaint]);
+  }, [
+    selected,
+    pickedIndices,
+    highlight,
+    hiddenRelations,
+    hovered,
+    labels,
+    arrows,
+    curriculumIndices,
+    frontier,
+    repaint,
+  ]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -360,10 +548,14 @@ export function GraphCanvas({
         frame: size.current,
         palette: palette.current,
         mode: props.mode,
+        moving: settling.current || flight.current !== null,
         labels: props.labels,
         arrows: props.arrows,
-        hulls: true,
-        hullLabels: !props.compact,
+        regions: placement.current.regions,
+        lanes: placement.current.lanes,
+        unitCounts: props.unitCounts,
+        laneCaption: props.laneCaption,
+        compact: props.compact,
         selected: current,
         picked: props.picked,
         focused: hoveredRef.current ?? -1,
@@ -371,40 +563,61 @@ export function GraphCanvas({
         hiddenRelations: props.hiddenRelations,
         curriculum: props.curriculum,
         frontier: props.frontier,
-        isolatedCaption: props.isolatedCaption,
+        grid: grid.current,
+        // Measured off the chrome as it is drawn below: the layout switch top-left, the
+        // column of buttons top-right, the counters bottom-left and the minimap bottom-right.
+        reserved: props.compact
+          ? []
+          : [
+              [0, 0, 250, 44],
+              [size.current.width - 46, 0, size.current.width, 186],
+              [0, size.current.height - 74, 330, size.current.height],
+              [
+                size.current.width - MINIMAP.width - MINIMAP.margin - 4,
+                size.current.height - MINIMAP.height - MINIMAP.margin - 4,
+                size.current.width,
+                size.current.height,
+              ],
+            ],
+        widths: props.widths,
+        onScreen: props.onScreen,
       };
     };
 
     loopRef.current = () => {
       frame.current = null;
-      const curriculum = viewProps.current.mode === "curriculum";
       let moving = false;
 
-      if (curriculum && settling.current) {
+      if (settling.current) {
         moving = settleTowardTargets(bodies.current);
         settling.current = moving;
-      } else if (!curriculum && temperature.current > SETTLED) {
-        for (let k = 0; k < STEPS_PER_FRAME && temperature.current > SETTLED; k += 1) {
-          forceStep(
-            bodies.current,
-            graphRef.current.links,
-            modelRef.current,
-            size.current,
-            temperature.current,
-            viewProps.current.hiddenRelations,
-          );
-          temperature.current *= COOLING;
-        }
-        moving = true;
+      }
+
+      const trip = flight.current;
+      if (trip) {
+        const t = Math.min(1, (performance.now() - trip.start) / FLY_MS);
+        const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        // The zoom travels geometrically and the centre linearly in world units, so the
+        // journey reads as one even movement whatever the two zooms are.
+        const scale = trip.from.scale * (trip.to.scale / trip.from.scale) ** eased;
+        const fromX = -trip.from.x / trip.from.scale;
+        const fromY = -trip.from.y / trip.from.scale;
+        const toX = -trip.to.x / trip.to.scale;
+        const toY = -trip.to.y / trip.to.scale;
+        view.current = {
+          x: -(fromX + (toX - fromX) * eased) * scale,
+          y: -(fromY + (toY - fromY) * eased) * scale,
+          scale,
+        };
+        if (t >= 1) flight.current = null;
+        else moving = true;
       }
       if (moving) dirty.current = true;
 
-      // The camera follows the layout while it moves and stops when it settles, so the
-      // graph is never half off-canvas — and one pan or zoom hands it over for good.
       if (pendingFit.current) {
-        applyFit();
-        dirty.current = true;
-        if (!moving) pendingFit.current = false;
+        const fitted = applyFit();
+        if (fitted) dirty.current = true;
+        if (fitted && !moving) pendingFit.current = false;
       }
 
       if (dirty.current) {
@@ -425,39 +638,16 @@ export function GraphCanvas({
       if (moving) frame.current = requestAnimationFrame(() => loopRef.current());
     };
 
-    // The frame is the world in force mode, so a resized panel needs the layout to flow
-    // into it — a gentle reheat, not the full relaxation the user already watched once.
-    let known = { width: 0, height: 0 };
+    // A resized panel keeps what the reader framed; only the automatic framing follows it.
     const observer = new ResizeObserver(() => {
       syncSize();
-      const changed =
-        Math.abs(known.width - size.current.width) > 24 ||
-        Math.abs(known.height - size.current.height) > 24;
-      if (changed && known.width > 0 && viewProps.current.mode === "force") {
-        applyParking(bodies.current, modelRef.current, size.current);
-        reheat(0.25);
-      }
-      known = { ...size.current };
+      if (framed.current) applyFit();
+      if (flyWanted.current) flyToConcept(flyWanted.current);
       wake();
     });
     observer.observe(wrap);
     syncSize();
-    known = { ...size.current };
-    if (viewProps.current.mode === "force") {
-      // The layout effects above ran before the element had ever been measured, so they
-      // seeded against a 0x0 frame and could not settle. This is the first moment the real
-      // frame is known: seed again against it, relax synchronously, park the isolated lane.
-      //
-      // Only in the force view, which is the only one that draws the lane: parking in the
-      // layered one would drag every isolated body into an undrawn column AND move it out
-      // of its band, which `drawLevels` measures from the bodies themselves.
-      bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
-      settleNow();
-      applyParking(bodies.current, modelRef.current, size.current);
-      pendingFit.current = true;
-    } else if (bodies.current.length === 0) {
-      bodies.current = seedBodies(graphRef.current, modelRef.current, size.current);
-    }
+    if (pendingFit.current) applyFit();
 
     // The stylesheet keys the dark tokens on `data-theme`, which `state/theme.ts` stamps
     // for the OS and for the toggle alike, so the attribute is the one thing to watch.
@@ -471,16 +661,21 @@ export function GraphCanvas({
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       takeCamera();
+      // What was under the pointer at the old zoom is not what is under it now.
+      setHovered(null);
+      setHoveredUnit(null);
       const rect = canvas.getBoundingClientRect();
       const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
-      const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.current.scale * factor));
+      const next = Math.min(MAX_SCALE, Math.max(minScale.current, view.current.scale * factor));
       const ratio = next / view.current.scale;
       // Keep the point under the cursor still: zoom around it, not around the centre.
       const offsetX = event.clientX - rect.left - rect.width / 2;
       const offsetY = event.clientY - rect.top - rect.height / 2;
-      view.current.x = offsetX - (offsetX - view.current.x) * ratio;
-      view.current.y = offsetY - (offsetY - view.current.y) * ratio;
-      view.current.scale = next;
+      view.current = {
+        x: offsetX - (offsetX - view.current.x) * ratio,
+        y: offsetY - (offsetY - view.current.y) * ratio,
+        scale: next,
+      };
       repaint();
     };
     canvas.addEventListener("wheel", onWheel, { passive: false });
@@ -494,12 +689,30 @@ export function GraphCanvas({
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;
     };
-  }, [applyFit, reheat, repaint, settleNow, takeCamera, wake]);
+  }, [applyFit, flyToConcept, repaint, takeCamera, wake]);
 
   const zoom = (factor: number) => {
     takeCamera();
-    view.current.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.current.scale * factor));
+    const next = Math.min(MAX_SCALE, Math.max(minScale.current, view.current.scale * factor));
+    // Around the centre of the frame: the translation scales with the zoom.
+    const ratio = next / view.current.scale;
+    view.current = { x: view.current.x * ratio, y: view.current.y * ratio, scale: next };
     repaint();
+  };
+
+  const relayout = () => {
+    if (viewProps.current.mode === "curriculum") {
+      const targets = curriculumPositions(graphRef.current, modelRef.current);
+      placeBodies((index) => targets[index], true);
+      pendingFit.current = true;
+      wake();
+      return;
+    }
+    setPlacing(true);
+    requestLayout(graphRef.current, null, true)
+      .then((layout) => land(layout, true))
+      .catch(() => undefined)
+      .finally(() => setPlacing(false));
   };
 
   const toWorld = (event: { clientX: number; clientY: number }) => {
@@ -510,20 +723,44 @@ export function GraphCanvas({
     };
   };
 
+  const detailNow = () =>
+    viewProps.current.mode === "force" ? detailAt(view.current.scale) : 1;
+
   const pick = (event: { clientX: number; clientY: number }) => {
+    const detail = detailNow();
+    if (detail < UNIT_CLICKS_BELOW) return -1;
     const world = toWorld(event);
     const { degrees } = modelRef.current;
+    const { scale } = view.current;
+    const list = bodies.current;
     let best = -1;
     let bestDistance = Infinity;
-    bodies.current.forEach((body, index) => {
-      const distance = Math.hypot(body.x - world.x, body.y - world.y);
-      const radius = radiusOf(degrees[index] ?? 0, view.current.scale) + 5 / view.current.scale;
-      if (distance < radius && distance < bestDistance) {
+    for (let index = 0; index < list.length; index += 1) {
+      const body = list[index];
+      const dx = body.x - world.x;
+      const dy = body.y - world.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const reach = drawnRadius(degrees[index] ?? 0, scale, detail) + 5 / scale;
+      if (distance < reach && distance < bestDistance) {
         best = index;
         bestDistance = distance;
       }
-    });
+    }
     return best;
+  };
+
+  const unitAt = (event: { clientX: number; clientY: number }) => {
+    if (viewProps.current.mode !== "force") return null;
+    const world = toWorld(event);
+    return (
+      placement.current.regions.find(
+        (region) =>
+          world.x >= region.x &&
+          world.x <= region.x + region.width &&
+          world.y >= region.y &&
+          world.y <= region.y + region.height,
+      ) ?? null
+    );
   };
 
   const release = () => {
@@ -535,6 +772,7 @@ export function GraphCanvas({
   };
 
   const hoveredNode = hovered !== null ? graph.nodes[hovered] : undefined;
+  const hoveredGroup = hoveredUnit !== null ? graph.groups[hoveredUnit] : undefined;
 
   return (
     <div
@@ -551,6 +789,11 @@ export function GraphCanvas({
     >
       <canvas
         ref={canvasRef}
+        role="img"
+        aria-label={t("canvas.aria", {
+          concepts: plural("canvas.conceptCount", graph.nodes.length),
+          units: plural("canvas.unitCount", graph.groups.length),
+        })}
         className="block h-full w-full touch-none cursor-grab active:cursor-grabbing"
         onPointerDown={(event) => {
           (event.target as HTMLCanvasElement).setPointerCapture(event.pointerId);
@@ -570,7 +813,9 @@ export function GraphCanvas({
             const index = pick(event);
             const next = index >= 0 ? index : null;
             if (next !== hoveredRef.current) setHovered(next);
-            if (next !== null) {
+            const unit = next === null && detailNow() < UNIT_CLICKS_BELOW ? unitAt(event) : null;
+            setHoveredUnit(unit ? unit.group : null);
+            if (next !== null || unit) {
               const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
               setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top });
             }
@@ -583,14 +828,12 @@ export function GraphCanvas({
           state.moved += Math.abs(deltaX) + Math.abs(deltaY);
           if (state.moved > 3) takeCamera();
           if (state.mode === "pan") {
-            view.current.x += deltaX;
-            view.current.y += deltaY;
+            view.current = { ...view.current, x: view.current.x + deltaX, y: view.current.y + deltaY };
           } else {
             const body = bodies.current[state.index];
             body.x += deltaX / view.current.scale;
             body.y += deltaY / view.current.scale;
-            // In the layered view a body is held by its target, not by the simulation:
-            // move the target too or it springs back the moment you let go.
+            // A body is held by its target: move the target too or it springs back.
             body.tx = body.x;
             body.ty = body.y;
           }
@@ -602,19 +845,41 @@ export function GraphCanvas({
             if (state.moved < 4) {
               const name = graph.nodes[state.index][0];
               if (onPick) onPick(name);
-              else onSelect(name);
+              else {
+                pickedHere.current = name;
+                onSelect(name);
+              }
             }
-          } else if (state.mode === "pan" && state.moved < 4 && pick(event) < 0) {
-            if (!onPick) onSelect(null);
+          } else if (state.mode === "pan" && state.moved < 4) {
+            const unit = detailNow() < 0.6 ? unitAt(event) : null;
+            if (unit) {
+              const target = frameOf({
+                minX: unit.x,
+                minY: unit.y,
+                maxX: unit.x + unit.width,
+                maxY: unit.y + unit.height,
+              });
+              if (target) flyTo(target);
+            } else if (!onPick && pick(event) < 0) {
+              onSelect(null);
+            }
           }
           release();
         }}
         onPointerCancel={release}
         onPointerLeave={() => {
           setHovered(null);
+          setHoveredUnit(null);
           if (pointer.current.mode !== "none") release();
         }}
       />
+
+      {placing ? (
+        <span className="pointer-events-none absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1.5 rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur">
+          <Spinner className="size-3" />
+          {t("canvas.placing", { concepts: plural("canvas.conceptCount", graph.nodes.length) })}
+        </span>
+      ) : null}
 
       {/* `contents` and not a wrapper with a box: the chrome below is positioned against the
           canvas itself, so anything that generated one would become its containing block and
@@ -681,6 +946,7 @@ export function GraphCanvas({
           variant="secondary"
           size="icon-sm"
           onClick={relayout}
+          disabled={placing}
           aria-label={t("canvas.relayout")}
           title={t("canvas.relayoutHint")}
         >
@@ -774,6 +1040,18 @@ export function GraphCanvas({
           {hoveredNode[2] ? (
             <p className="text-muted-foreground">{t("canvas.notTaggable")}</p>
           ) : null}
+        </div>
+      ) : hoveredGroup ? (
+        <div
+          className="pointer-events-none absolute z-10 max-w-64 rounded-md border border-border bg-popover/95 px-2 py-1 text-small shadow-lg backdrop-blur"
+          style={{
+            left: Math.min(tip.x + 14, Math.max(0, size.current.width - 260)),
+            top: Math.max(4, tip.y - 46),
+          }}
+        >
+          <p className="font-medium">{hoveredGroup.name}</p>
+          <p className="text-muted-foreground">{plural("canvas.conceptCount", hoveredGroup.count)}</p>
+          <p className="text-muted-foreground">{t("canvas.unitZoom")}</p>
         </div>
       ) : null}
     </div>

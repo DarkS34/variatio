@@ -923,7 +923,7 @@ function Graph() {
         ]}
       />
 
-      <Block title="A list, with a map under it">
+      <Block title="A list, with the graph beside it">
         <Paragraph>
           What you see first is the syllabus: the units in teaching order, folded. Open them, or
           search and the ones with results open on their own. Every row carries the concept and
@@ -955,10 +955,19 @@ function Graph() {
           reading the whole graph; clicking a concept in a band moves the card to it.
         </Paragraph>
         <Paragraph>
-          The canvas has two layouts: <strong>"{t("canvas.layout.force")}"</strong>, which puts
-          each concept next to the ones it relates to, and{" "}
-          <strong>"{t("canvas.layout.curriculum")}"</strong>, which orders by prerequisite level.
-          Switching rebuilds nothing: the nodes ease to their new positions. A level is a{" "}
+          The canvas has two layouts. In <strong>"{t("canvas.layout.force")}"</strong> every unit
+          has a box of its own, in syllabus order and sized by the concepts it holds, and inside
+          it each concept sits near the ones it relates to; those with no relation at all wait in
+          a row at its foot. From afar you read the units — their names, how many concepts each
+          holds, and the relations between them, stronger the more there are; closer in the
+          concepts appear with their names, and the unit's name moves to the corner of its box so
+          you always know which one you are in. Clicking a unit zooms to it, and in the enlarged
+          view the small plan in the corner marks which part of the syllabus is in front of you.
+          A syllabus of a hundred concepts reads the same way as one of thousands.
+        </Paragraph>
+        <Paragraph>
+          <strong>"{t("canvas.layout.curriculum")}"</strong> orders by prerequisite level.
+          Switching layouts rebuilds nothing: the nodes ease to their new positions. A level is a{" "}
           <em>band</em> and not a row, because a real syllabus spreads prerequisites very
           unevenly; with fewer than three levels the canvas says so, because that is a fact
           about the syllabus and not a broken view.

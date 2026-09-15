@@ -718,6 +718,10 @@ export const en: Catalogue = {
   "canvas.isolated": { one: "1 with no relations", other: "{n} with no relations" },
   "canvas.relations": { one: "1 relation", other: "{n} relations" },
   "canvas.conceptCount": { one: "1 concept", other: "{n} concepts" },
+  "canvas.unitCount": { one: "1 unit", other: "{n} units" },
+  "canvas.placing": "Placing {concepts}…",
+  "canvas.unitZoom": "Click to zoom into its concepts",
+  "canvas.aria": "Knowledge graph with {concepts} in {units}. The concept list covers the same with the keyboard.",
   "canvas.isolatedCount": { one: " · 1 isolated", other: " · {n} isolated" },
   "field.options": { one: "1 option", other: "{n} options" },
   "form.items": { one: "1 exercise", other: "{n} exercises" },
@@ -1456,7 +1460,7 @@ export const en: Catalogue = {
 
   // KNOWLEDGE GRAPH — THE CANVAS ----------------------------------------------------------
   "canvas.layout.force": "Neighbourhood",
-  "canvas.layout.force.hint": "Concepts near the ones they relate to",
+  "canvas.layout.force.hint": "Each unit in its own box; inside, concepts near the ones they relate to",
   "canvas.layout.curriculum": "Curriculum",
   "canvas.layout.curriculum.hint": "One level per prerequisite depth: what is above is taught first ({n} order it)",
   "canvas.layout.curriculum.none": "The syllabus has no prerequisite relations to order it by",
