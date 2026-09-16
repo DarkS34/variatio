@@ -1965,9 +1965,41 @@ function Admin() {
           clase o si estudia.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya una asignatura y un permiso dentro de ella, o no traer
-          ninguna. Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por
-          asignatura, desde esta misma tabla; son tres:
+          Cada invitación se crea con las condiciones que elijas: un <strong>alias</strong> que
+          solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el
+          alias—, la asignatura y el permiso que trae, o ninguna, y el día y la hora en que
+          caduca, sin máximo. Con «{t("acc.invite.count")}» se crean varias de una vez, con el
+          alias numerado, y «{t("acc.invite.copyAll")}» las copia listas para pegar en una hoja de
+          cálculo. Las que nadie ha usado quedan en la lista, las caducadas aparte, y cada una
+          ofrece:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "show",
+              head: <>«{t("acc.invite.showLink")}»</>,
+              body: "Vuelve a enseñar su enlace para copiarlo otra vez. Se guarda cifrado con una clave que no está en la base de datos y se borra en cuanto alguien lo usa. Las invitaciones creadas antes de que existiera esto no lo tienen guardado.",
+            },
+            {
+              key: "edit",
+              head: <>«{t("acc.invite.edit")}»</>,
+              body: "Cambia el alias, la asignatura, el permiso o la fecha. Si mueves la fecha de una caducada, el mismo enlace que ya diste vuelve a funcionar.",
+            },
+            {
+              key: "revoke",
+              head: <>«{t("acc.invite.revoke")}»</>,
+              body: "Su enlace deja de funcionar en el acto y la invitación sale de la lista.",
+            },
+            {
+              key: "recover",
+              head: <>«{t("acc.invite.mode.recover")}»</>,
+              body: "Si anulaste una por error, pega el enlace que diste —o solo el código que va detrás de «token=»— y vuelve a valer con las condiciones que elijas. Un enlace que ya se usó no se recupera: una invitación sirve una sola vez.",
+            },
+          ]}
+        />
+        <Paragraph>
+          Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por asignatura,
+          desde esta misma tabla; son tres:
         </Paragraph>
         <Rows
           items={[

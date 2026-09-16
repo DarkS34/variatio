@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.121.0"
+version = "1.122.0"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 dependencies = [
@@ -46,6 +46,9 @@ server = [
     # The evaluation's RAG arm reads the raw PDFs with a plain text extractor, deliberately not
     # the pipeline's VLM transcription: a baseline built without this system.
     "pypdf>=5.0.0",
+    # An invitation's link is kept sealed (Fernet) so the panel can show it again, with a key
+    # that never lives in the database: `server/auth/links.py`.
+    "cryptography>=43.0.0",
 ]
 
 # uv has no `default-extras`, so the extras are repeated here to keep a plain
@@ -67,6 +70,7 @@ dev = [
     "argon2-cffi>=23.1.0",
     "email-validator>=2.2.0",
     "pypdf>=5.0.0",
+    "cryptography>=43.0.0",
     "pytest>=8.3.0",
 ]
 

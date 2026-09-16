@@ -136,17 +136,34 @@ def grant_role(args) -> int:
 
 
 def invite(args) -> int:
-    """Mint a single-use invitation and print its link.
+    """Mint single-use invitations and print their links, one per line.
 
     The link *is* the invitation: whoever opens it chooses their own username and says
-    whether they teach or study, so it binds the access and nothing else.
+    whether they teach or study, so it binds the access and nothing else. `--alias` names it
+    for the administration panel only, numbered when `--count` asks for several.
     """
-    from ..auth import tokens
-    from ..db import session_scope
-    from ..db.identity import create_invite
-    from ..db.repository import get_workspace
-    from ..installation import INVITE_TTL, public_base_url
+    from datetime import timedelta
 
+    from ..auth import links
+    from ..db import session_scope
+    from ..db.identity import batch_labels, label_error, normalise_label, now
+    from ..db.repository import get_workspace
+    from ..installation import INVITE_BATCH_MAX, public_base_url
+
+    if args.days <= 0:
+        print("--days tiene que ser un número de días mayor que cero.")
+        return 1
+    if not 1 <= args.count <= INVITE_BATCH_MAX:
+        print(f"--count va de 1 a {INVITE_BATCH_MAX}.")
+        return 1
+    label = normalise_label(args.alias)
+    error = label_error(label)
+    if error:
+        print(error)
+        return 1
+
+    base = public_base_url() or "http://localhost:8000"
+    printed = []
     with session_scope() as session:
         workspace_id = None
         if args.workspace:
@@ -155,17 +172,30 @@ def invite(args) -> int:
                 print(f"No existe la asignatura '{args.workspace}'.")
                 return 1
             workspace_id = workspace.id
+        try:
+            labels = batch_labels(session, label, args.count)
+        except ValueError as exc:
+            print(exc)
+            return 1
 
-        token = tokens.new_token()
-        create_invite(
-            session,
-            token_hash=tokens.digest(token),
-            ttl=INVITE_TTL,
-            workspace_id=workspace_id,
-            role=args.role,
-        )
+        expires_at = now() + timedelta(days=args.days)
+        for name in labels:
+            invite, token = links.mint(
+                session,
+                expires_at=expires_at,
+                workspace_id=workspace_id,
+                role=args.role,
+                label=name,
+            )
+            link = f"{base}/invite?token={token}"
+            printed.append((f"{name}\t{link}" if name else link, invite.token_sealed is not None))
 
-    base = public_base_url() or "http://localhost:8000"
-    print(f"{base}/invite?token={token}")
-    print("Quien lo canjee elegirá su usuario y dirá si da clase o si estudia.")
+    for line, _ in printed:
+        print(line)
+    print(
+        f"Caducan en {args.days} día(s). Quien canjee cada enlace elegirá su usuario "
+        "y dirá si da clase o si estudia."
+    )
+    if not all(stored for _, stored in printed):
+        print("No se ha podido guardar el enlace para volver a verlo en el panel: cópialo ahora.")
     return 0

@@ -15,7 +15,8 @@ and whose interesting question cannot be answered from inside one account. That 
 lives in `auth.deps.access_for`, in one `if`, and nowhere else.
 """
 
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
@@ -26,9 +27,10 @@ from evaluation.api import store as evaluation_store
 
 from .. import approvals, auth, deps, installation, maintenance, singletons, storage
 from ..auth import deps as auth_deps
+from ..auth import links
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import generations, identity, repository
-from ..db.models import EDITOR, ROLES, Invite, User
+from ..db.models import EDITOR, ROLES, Invite, User, Workspace
 from ..jobs import lanes as jobs_lanes
 
 router = APIRouter(
@@ -36,17 +38,45 @@ router = APIRouter(
 )
 
 
-class InviteBody(BaseModel):
-    """What an invitation grants: a workspace and a role, or nothing at all.
+class InviteTerms(BaseModel):
+    """What an invitation grants, until when, and the name only the panel ever reads.
 
     `workspace` may be absent — an invitation granting no membership creates an account
     and no access, which is the honest way to add somebody who will be given a workspace
     later. There is no evaluator profile here on purpose: the link binds the access and
-    nothing else, and whoever registers answers for themselves.
+    nothing else, and whoever registers answers for themselves. An absent `expires_at` is
+    the installation's default week, and a chosen one has no upper bound; `label` is the
+    administrator's alias and never reaches the person holding the link.
     """
 
     workspace: str | None = None
     role: str = EDITOR
+    expires_at: datetime | None = None
+    label: str | None = None
+
+
+class InviteBody(InviteTerms):
+    """One invitation, or `count` alike — a class handed out at once."""
+
+    count: int = 1
+
+
+class InviteImportBody(InviteTerms):
+    """A link somebody already holds, to be made to work again under these terms."""
+
+    link: str
+
+
+class InviteEditBody(BaseModel):
+    """New terms for an invitation nobody has used; only the fields sent are read.
+
+    `workspace: null` sent is «ninguna», which is why presence and not value decides.
+    """
+
+    workspace: str | None = None
+    role: str | None = None
+    expires_at: datetime | None = None
+    label: str | None = None
 
 
 class MembershipBody(BaseModel):
@@ -175,8 +205,13 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
 
 @router.get("/invites")
 def invites(db: DbSession = Depends(auth.db)) -> dict:
-    """List the invitations still live."""
-    return {"invites": [_invite(db, row) for row in identity.pending_invites(db)]}
+    """List every invitation nobody has used yet, live and expired alike.
+
+    Expired ones stay because a date can be moved, and the same link works again once it
+    is. What a row never carries is its link: that is a request of its own, and a logged one.
+    """
+    moment = identity.now()
+    return {"invites": [_invite(db, row, moment) for row in identity.unused_invites(db)]}
 
 
 @router.post("/invites", status_code=201)
@@ -186,46 +221,184 @@ def create_invite(
     admin: User = Depends(auth.require_admin),
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Mint one single-use invitation and answer the link that IS the invitation.
+    """Mint `count` single-use invitations and answer the links that ARE them.
 
-    It is handed over by hand: expiring, bound to no address, and whoever redeems it
-    chooses their own username — which is why it must not be left where its holder was
-    not meant to be. An administrator session is not a licence to mint credentials
-    without limit, hence the throttle.
+    They are handed over by hand: expiring, bound to no address, and whoever redeems one
+    chooses their own username — which is why a link must not be left where its holder
+    was not meant to be. An administrator session is not a licence to mint credentials
+    without limit, hence the throttle, which a batch pays link by link. `invite` and `link`
+    repeat the first of the batch for a bundle that predates batches.
     """
-    throttle("invite", request, admin.username)
-    if body.role not in ROLES:
-        raise HTTPException(422, f"Rol desconocido: '{body.role}'. Usa uno de {', '.join(ROLES)}.")
+    if not 1 <= body.count <= installation.INVITE_BATCH_MAX:
+        raise HTTPException(
+            422,
+            f"Se pueden crear entre 1 y {installation.INVITE_BATCH_MAX} invitaciones a la vez.",
+        )
+    throttle("invite", request, admin.username, cost=body.count)
+    terms = _terms(db, body)
+    try:
+        labels = identity.batch_labels(db, terms.label, body.count)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
-    workspace = None
-    if body.workspace:
-        workspace = repository.get_workspace(db, body.workspace)
-        if workspace is None:
-            raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
-
-    token = auth.new_token()
-    invite = identity.create_invite(
-        db,
-        token_hash=auth.digest(token),
-        ttl=installation.INVITE_TTL,
-        workspace_id=workspace.id if workspace else None,
-        role=body.role,
-        created_by=admin.id,
+    minted = []
+    for label in labels:
+        invite, token = links.mint(
+            db,
+            expires_at=terms.expires_at,
+            workspace_id=terms.workspace.id if terms.workspace else None,
+            role=terms.role,
+            created_by=admin.id,
+            label=label,
+        )
+        minted.append(_minted(db, request, invite, token))
+    logger.info(
+        "[invitaciones] {} ha creado {} invitación(es) · {}",
+        admin.username,
+        len(minted),
+        terms.workspace.slug if terms.workspace else "sin asignatura",
     )
+    return {"invites": minted, "invite": minted[0]["invite"], "link": minted[0]["link"]}
 
-    return {
-        "invite": _invite(db, invite),
-        "link": f"{auth.base_url(request)}/invite?token={token}",
-    }
+
+@router.post("/invites/import")
+def import_invite(
+    body: InviteImportBody,
+    request: Request,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Make a link somebody already holds work again, under the terms sent.
+
+    For the invitation deleted by mistake: the link is still in somebody's hands, and
+    reviving it is kinder than asking them to wait for another. Only a link nobody knows
+    creates anything. One that still names an invitation of the list changes nothing about
+    it — the list is where terms are edited — except that its link becomes showable if it
+    was not; and one already used is refused, because an invitation serves once.
+    """
+    token = links.token_from(body.link)
+    error = links.shape_error(token)
+    if error:
+        raise HTTPException(422, error)
+    throttle("invite", request, admin.username)
+    terms = _terms(db, body)
+
+    existing = identity.invite_by_digest(db, auth.digest(token))
+    if existing is not None:
+        if existing.used_at is not None:
+            raise HTTPException(
+                409, "Ese enlace ya se usó y una invitación sirve una sola vez. Crea otra."
+            )
+        outcome = "unchanged"
+        if links.unseal(existing.token_sealed, existing.token_hash) is None:
+            sealed = links.seal(token)
+            if sealed is not None:
+                identity.edit_invite(db, existing, token_sealed=sealed)
+                outcome = "recovered"
+        logger.info(
+            "[invitaciones] {} ha pegado el enlace de la invitación {} ({})",
+            admin.username,
+            existing.id,
+            outcome,
+        )
+        return {"outcome": outcome, **_minted(db, request, existing, token)}
+
+    invite, _ = links.mint(
+        db,
+        token=token,
+        expires_at=terms.expires_at,
+        workspace_id=terms.workspace.id if terms.workspace else None,
+        role=terms.role,
+        created_by=admin.id,
+        label=terms.label,
+    )
+    logger.info("[invitaciones] {} ha recuperado un enlace como invitación {}", admin.username, invite.id)
+    return {"outcome": "created", **_minted(db, request, invite, token)}
+
+
+@router.get("/invites/{invite_id}/link")
+def invite_link(
+    invite_id: int,
+    request: Request,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Answer an invitation's link again, and leave a line saying who read it.
+
+    The one read in this router that hands out a credential, so it is a request of its own
+    rather than a field of the listing: the list can stay on screen for an hour without a
+    single live link sitting in the browser's cache.
+    """
+    invite = _unused_invite(db, invite_id)
+    if invite.token_sealed is None:
+        raise HTTPException(
+            409,
+            "El enlace de esta invitación no se guardó: es anterior a que Variatio guardara los "
+            "enlaces. Si lo tienes, pégalo en «Recuperar un enlace»; si no, anúlala y crea otra.",
+        )
+    token = links.unseal(invite.token_sealed, invite.token_hash)
+    if token is None:
+        raise HTTPException(
+            409,
+            "No se puede abrir el enlace guardado: la clave con la que se cifró ya no está. El "
+            "enlace sigue valiendo; si lo tienes, pégalo en «Recuperar un enlace».",
+        )
+    logger.info("[invitaciones] {} ha consultado el enlace de la invitación {}", admin.username, invite.id)
+    return {"link": _link(request, token)}
+
+
+@router.patch("/invites/{invite_id}")
+def edit_invite(
+    invite_id: int,
+    body: InviteEditBody,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Change the terms of an invitation nobody has used yet.
+
+    Moving the date is what brings an expired invitation back: the token did not change, so
+    the link its holder already has works again. The holder sees the new asignatura and
+    permission on opening it; the alias they never see.
+    """
+    invite = _unused_invite(db, invite_id)
+    sent = body.model_fields_set
+    changes: dict = {}
+    if "label" in sent:
+        changes["label"] = _label(body.label)
+    if "expires_at" in sent:
+        if body.expires_at is None:
+            raise HTTPException(422, "Una invitación siempre tiene fecha de caducidad.")
+        changes["expires_at"] = _expiry(body.expires_at)
+    if "role" in sent:
+        changes["role"] = _role(body.role)
+    if "workspace" in sent:
+        workspace = _workspace(db, body.workspace)
+        changes["workspace_id"] = workspace.id if workspace else None
+    identity.edit_invite(db, invite, **changes)
+    if changes:
+        logger.info(
+            "[invitaciones] {} ha cambiado la invitación {}: {}",
+            admin.username,
+            invite.id,
+            ", ".join(sorted(sent)),
+        )
+    return {"invite": _invite(db, invite)}
 
 
 @router.delete("/invites/{invite_id}")
-def revoke_invite(invite_id: int, db: DbSession = Depends(auth.db)) -> dict:
-    """Withdraw an invitation before anybody redeems it."""
+def revoke_invite(
+    invite_id: int,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Withdraw an invitation before anybody redeems it: its link stops working at once."""
     invite = db.get(Invite, invite_id)
     if invite is None:
         raise HTTPException(404, "Esa invitación no existe.")
-    return {"revoked": identity.revoke_invite(db, invite_id)}
+    revoked = identity.revoke_invite(db, invite_id)
+    if revoked:
+        logger.info("[invitaciones] {} ha anulado la invitación {}", admin.username, invite_id)
+    return {"revoked": revoked}
 
 
 @router.post("/accounts/{user_id}/memberships")
@@ -607,16 +780,108 @@ def _chain(slug: str) -> list[dict]:
     ]
 
 
-def _invite(db: DbSession, invite: Invite) -> dict:
-    """Render one invitation for the panel. Never its token — that is handed over once."""
+@dataclass(frozen=True)
+class _Terms:
+    """An invitation's terms once every one of them has been checked."""
+
+    workspace: Workspace | None
+    role: str
+    expires_at: datetime
+    label: str | None
+
+
+def _terms(db: DbSession, body: InviteTerms) -> _Terms:
+    """Check what a new invitation is to grant, refusing in the order the form asks it."""
+    return _Terms(
+        workspace=_workspace(db, body.workspace),
+        role=_role(body.role),
+        expires_at=_expiry(body.expires_at),
+        label=_label(body.label),
+    )
+
+
+def _workspace(db: DbSession, slug: str | None) -> Workspace | None:
+    """Resolve the asignatura an invitation lets into, or None for none."""
+    if not slug:
+        return None
+    workspace = repository.get_workspace(db, slug)
+    if workspace is None:
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
+    return workspace
+
+
+def _role(role: str | None) -> str:
+    """Accept one of the three roles and nothing else."""
+    if role not in ROLES:
+        raise HTTPException(422, f"Rol desconocido: '{role}'. Usa uno de {', '.join(ROLES)}.")
+    return role
+
+
+def _expiry(value: datetime | None) -> datetime:
+    """Resolve when an invitation stops working: the default week, or a moment still ahead.
+
+    A moment with no zone is read as UTC. The clock may be naive too — SQLite in the test
+    suite keeps no offset — and then the moment is compared, and stored, as naive UTC.
+    """
+    moment = identity.now()
+    if value is None:
+        return moment + installation.INVITE_TTL
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    if moment.tzinfo is None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    if value <= moment:
+        raise HTTPException(422, "Esa fecha de caducidad ya ha pasado: elige una que esté por llegar.")
+    return value
+
+
+def _label(label: str | None) -> str | None:
+    """Fold an alias to what is stored, refusing one that does not fit."""
+    label = identity.normalise_label(label)
+    error = identity.label_error(label)
+    if error:
+        raise HTTPException(422, error)
+    return label
+
+
+def _unused_invite(db: DbSession, invite_id: int) -> Invite:
+    """Return an invitation that can still be read and changed: it exists and nobody used it."""
+    invite = db.get(Invite, invite_id)
+    if invite is None:
+        raise HTTPException(404, "Esa invitación no existe.")
+    if invite.used_at is not None:
+        raise HTTPException(409, "Esa invitación ya se usó: ya no se puede cambiar ni volver a ver.")
+    return invite
+
+
+def _minted(db: DbSession, request: Request, invite: Invite, token: str) -> dict:
+    """Render an invitation just handed over: the row, its link, and whether it was kept."""
+    return {
+        "invite": _invite(db, invite),
+        "link": _link(request, token),
+        "stored": invite.token_sealed is not None,
+    }
+
+
+def _link(request: Request, token: str) -> str:
+    """Build the link that IS an invitation."""
+    return f"{auth.base_url(request)}/invite?token={token}"
+
+
+def _invite(db: DbSession, invite: Invite, moment: datetime | None = None) -> dict:
+    """Render one invitation for the panel. Never its token, sealed or not — that is `/link`."""
     workspace = invite.workspace
     author = identity.get_user_by_id(db, invite.created_by) if invite.created_by else None
+    moment = moment if moment is not None else identity.now()
     return {
         "id": invite.id,
+        "label": invite.label,
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
         "workspace_slug": workspace.slug if workspace else None,
         "created_at": invite.created_at.isoformat(),
         "expires_at": invite.expires_at.isoformat(),
         "created_by": author.username if author else None,
+        "state": "pending" if invite.expires_at > moment else "expired",
+        "link_stored": invite.token_sealed is not None,
     }

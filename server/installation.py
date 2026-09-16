@@ -172,7 +172,12 @@ SESSION_SLIDING = timedelta(days=14)
 SESSION_ABSOLUTE = timedelta(days=30)
 SESSION_TOUCH_INTERVAL = timedelta(minutes=5)
 
+# The expiry a new invitation gets when the administrator does not choose one. There is no
+# upper bound on the one they choose (2026-09-16, explicit user request); a date already
+# past is the only thing refused.
 INVITE_TTL = timedelta(days=7)
+# How many invitations one request may mint — a class handed out at once.
+INVITE_BATCH_MAX = 50
 RESET_TTL = timedelta(minutes=45)
 
 
@@ -219,10 +224,12 @@ def trust_proxy() -> bool:
 # these, the client IP and the account, so neither a spray nor a fixation gets through.
 # `accept` is the one whose second key is not an account: there is no account yet, and the
 # username is precisely what somebody holding a link varies to read "already taken" off
-# it, so the key there is the invitation itself.
+# it, so the key there is the invitation itself. `invite` counts LINKS, not requests — a
+# batch of `INVITE_BATCH_MAX` costs that many — so its ceiling is sized for four full
+# classes an hour rather than for twenty clicks.
 RATE_LIMITS: dict[str, tuple[int, float]] = {
     "login": (8, 300.0),
-    "invite": (20, 3600.0),
+    "invite": (200, 3600.0),
     "accept": (10, 3600.0),
     "forgot": (5, 900.0),
     "reset": (10, 900.0),

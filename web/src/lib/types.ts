@@ -761,15 +761,41 @@ export interface InvitePreview {
   expires_at: string;
 }
 
+/** Unused and still working, or unused and past its date — which can be moved. */
+export type InviteState = "pending" | "expired";
+
 export interface InviteRow {
   id: number;
+  /** The administrator's own name for it; whoever holds the link never sees it. */
+  label?: string | null;
   role: Role;
   workspace: string | null;
   workspace_slug: string | null;
   created_at: string;
   expires_at: string;
   created_by: string | null;
+  state?: InviteState;
+  /** Whether the panel can show its link again. False on every one minted before it could. */
+  link_stored?: boolean;
 }
+
+/** What an invitation grants and until when, as the panel sends it. */
+export interface InviteTerms {
+  workspace: string | null;
+  role: Role;
+  expires_at: string;
+  label: string | null;
+}
+
+/** An invitation just handed over: its row, its link, and whether that link was kept. */
+export interface MintedInvite {
+  invite: InviteRow;
+  link: string;
+  stored?: boolean;
+}
+
+/** What pasting a link back did: made a new invitation, made a listed one's link showable, or nothing. */
+export type InviteImportOutcome = "created" | "recovered" | "unchanged";
 
 /* Events --------------------------------------------------------------------------- */
 

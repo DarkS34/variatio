@@ -1978,7 +1978,39 @@ function Admin() {
           chooses their username, their password, and whether they teach or study.
         </Paragraph>
         <Paragraph>
-          The invitation may already carry a subject and a role inside it, or carry none.
+          Each invitation is created under the terms you choose: an <strong>alias</strong> only
+          you see — whoever opens the link sees the subject, the permission and the date, never
+          the alias —, the subject and permission it carries, or none, and the day and time it
+          expires, with no upper limit. «{t("acc.invite.count")}» creates several at once with
+          the alias numbered, and «{t("acc.invite.copyAll")}» copies them ready to paste into a
+          spreadsheet. The ones nobody has used stay in the list, the expired ones apart, and
+          each offers:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "show",
+              head: <>«{t("acc.invite.showLink")}»</>,
+              body: "Shows its link again so it can be copied once more. It is kept encrypted with a key that is not in the database, and erased as soon as somebody uses it. Invitations created before this existed do not have it kept.",
+            },
+            {
+              key: "edit",
+              head: <>«{t("acc.invite.edit")}»</>,
+              body: "Changes the alias, the subject, the permission or the date. Move the date of an expired one and the same link you already handed over works again.",
+            },
+            {
+              key: "revoke",
+              head: <>«{t("acc.invite.revoke")}»</>,
+              body: "Its link stops working at once and the invitation leaves the list.",
+            },
+            {
+              key: "recover",
+              head: <>«{t("acc.invite.mode.recover")}»</>,
+              body: "If you revoked one by mistake, paste the link you handed over — or only the code after «token=» — and it is valid again under the terms you choose. A link that has already been used cannot be recovered: an invitation serves once.",
+            },
+          ]}
+        />
+        <Paragraph>
           Access is granted and revoked afterwards, account by account and subject by subject,
           from this same table; there are three roles:
         </Paragraph>

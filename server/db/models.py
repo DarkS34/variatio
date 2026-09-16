@@ -50,6 +50,9 @@ TEACHER = "teacher"
 STUDENT = "student"
 EVALUATOR_PROFILES: tuple[str, ...] = (TEACHER, STUDENT)
 
+# An invitation's alias is a name for a row, not a note.
+INVITE_LABEL_MAX = 120
+
 
 class Base(DeclarativeBase):
     """The declarative base every table hangs from."""
@@ -282,16 +285,23 @@ class UserSession(Base):
 
 
 class Invite(Base):
-    """A single-use invitation: hashed, with an expiry.
+    """A single-use invitation: looked up by digest, with an expiry.
 
     There is no open registration — an account exists because the installation's
     administrator issued one of these, or because it was the first and came from the CLI.
+
+    `label` is the administrator's own name for it and never reaches the person holding
+    the link. `token_sealed` is the token encrypted with a key kept outside the database
+    (`server/auth/links.py`), so the panel can show the link again; it is emptied the
+    moment the invitation is used, and it is NULL on every row minted before it existed.
     """
 
     __tablename__ = "invites"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    token_sealed: Mapped[str | None] = mapped_column(String(255), default=None)
+    label: Mapped[str | None] = mapped_column(String(INVITE_LABEL_MAX), default=None)
     workspace_id: Mapped[int | None] = mapped_column(
         ForeignKey("workspaces.id", ondelete="CASCADE"), default=None, index=True
     )

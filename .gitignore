@@ -15,6 +15,7 @@ web/tsconfig.tsbuildinfo
 /.cerebras_budget.json
 /.cerebras_budget.json.lock
 /.maintenance.json
+/.invite_link_key
 
 *.md
 !README.md

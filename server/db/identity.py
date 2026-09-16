@@ -17,6 +17,7 @@ from variatio.core import languages
 from .models import (
     EDITOR,
     EVALUATOR_PROFILES,
+    INVITE_LABEL_MAX,
     Invite,
     Membership,
     PasswordReset,
@@ -352,22 +353,51 @@ def revoke_all_sessions(session: Session, user_id: int) -> int:
 
 # INVITES -------------------------------------------------------------------------------
 
+# What may change on an invitation after it is minted: its four terms and its sealed link.
+_EDITABLE_INVITE_FIELDS = frozenset({"label", "expires_at", "workspace_id", "role", "token_sealed"})
+
+_NUMBER = re.compile(r"[0-9]+")
+
+
+def normalise_label(label: str | None) -> str | None:
+    """Fold an invitation's alias to what is stored: trimmed, and None when nothing is left."""
+    if label is None:
+        return None
+    return " ".join(label.split()) or None
+
+
+def label_error(label: str | None) -> str | None:
+    """Return why this alias cannot be stored, or None."""
+    if label is not None and len(label) > INVITE_LABEL_MAX:
+        return f"El alias no puede pasar de {INVITE_LABEL_MAX} caracteres."
+    return None
+
 
 def create_invite(
     session: Session,
     token_hash: str,
-    ttl: timedelta,
+    ttl: timedelta | None = None,
     workspace_id: int | None = None,
     role: str = EDITOR,
     created_by: int | None = None,
+    *,
+    expires_at: datetime | None = None,
+    label: str | None = None,
+    token_sealed: str | None = None,
 ) -> Invite:
-    """Insert an invitation for this token digest."""
+    """Insert an invitation for this token digest, expiring at a moment or after a `ttl`."""
+    if expires_at is None:
+        if ttl is None:
+            raise ValueError("An invitation needs an expiry: pass `expires_at` or `ttl`.")
+        expires_at = now() + ttl
     invite = Invite(
         token_hash=token_hash,
+        token_sealed=token_sealed,
+        label=label,
         workspace_id=workspace_id,
         role=role,
         created_by=created_by,
-        expires_at=now() + ttl,
+        expires_at=expires_at,
     )
     session.add(invite)
     session.flush()
@@ -376,10 +406,15 @@ def create_invite(
 
 def live_invite(session: Session, token_hash: str) -> Invite | None:
     """Return the invitation only while it is unused and unexpired."""
-    invite = session.scalar(select(Invite).where(Invite.token_hash == token_hash))
+    invite = invite_by_digest(session, token_hash)
     if invite is None or invite.used_at is not None or invite.expires_at <= now():
         return None
     return invite
+
+
+def invite_by_digest(session: Session, token_hash: str) -> Invite | None:
+    """Return the invitation this digest names, whatever its state."""
+    return session.scalar(select(Invite).where(Invite.token_hash == token_hash))
 
 
 def claim_invite(session: Session, invite: Invite) -> bool:
@@ -389,12 +424,16 @@ def claim_invite(session: Session, invite: Invite) -> bool:
     row a moment ago: hashing a password takes a fifth of a second, and two people
     redeeming the same link inside that window both pass the read. The conditional UPDATE
     is the whole claim — the second matches no row, because the first has already written
-    `used_at` — so the caller does everything else only after this returns True.
+    `used_at` — so the caller does everything else only after this returns True. The expiry
+    is in the condition too, because the panel can move it while that fifth of a second
+    runs, and the sealed copy of the link goes in the same statement: a spent link is not
+    worth keeping in any form.
     """
+    moment = now()
     result = session.execute(
         update(Invite)
-        .where(Invite.id == invite.id, Invite.used_at.is_(None))
-        .values(used_at=now())
+        .where(Invite.id == invite.id, Invite.used_at.is_(None), Invite.expires_at > moment)
+        .values(used_at=moment, token_sealed=None)
         .execution_options(synchronize_session=False)
     )
     session.flush()
@@ -411,12 +450,56 @@ def attribute_invite(session: Session, invite: Invite, user_id: int) -> None:
     session.flush()
 
 
-def pending_invites(session: Session, workspace_id: int | None = None) -> list[Invite]:
-    """Return the unused, unexpired invitations, newest first."""
-    query = select(Invite).where(Invite.used_at.is_(None), Invite.expires_at > now())
-    if workspace_id is not None:
-        query = query.where(Invite.workspace_id == workspace_id)
-    return list(session.scalars(query.order_by(Invite.created_at.desc())))
+def unused_invites(session: Session) -> list[Invite]:
+    """Return every invitation nobody has redeemed, live or expired.
+
+    Newest batch first and, inside one batch, in the order it was minted: the rows of a
+    batch share `created_at` — Postgres' `now()` is the transaction's — so the id is what
+    keeps «Alumno 1» ahead of «Alumno 2».
+    """
+    query = select(Invite).where(Invite.used_at.is_(None))
+    return list(session.scalars(query.order_by(Invite.created_at.desc(), Invite.id)))
+
+
+def batch_labels(session: Session, label: str | None, count: int) -> list[str | None]:
+    """Name `count` invitations minted together after one alias.
+
+    One invitation keeps the alias as written. Several are numbered «Alumno 4», «Alumno 5»…
+    carrying on from the highest number any invitation with that alias already has, used
+    ones included, so a second batch for the same class never repeats a name. Without an
+    alias they all go without one. Raises `ValueError` with the reason when the numbered
+    alias would not fit.
+    """
+    if count == 1 or label is None:
+        return [label] * count
+    prefix = f"{label} "
+    stored = session.scalars(
+        select(Invite.label).where(Invite.label.startswith(prefix, autoescape=True))
+    )
+    highest = 0
+    for name in stored:
+        # LIKE is case-blind on SQLite, and `isdigit` would take a «²» that `int` refuses.
+        tail = name[len(prefix):]
+        if name.startswith(prefix) and _NUMBER.fullmatch(tail):
+            highest = max(highest, int(tail))
+    labels = [f"{prefix}{number}" for number in range(highest + 1, highest + 1 + count)]
+    error = label_error(labels[-1])
+    if error:
+        raise ValueError(error)
+    return labels
+
+
+def edit_invite(session: Session, invite: Invite, **changes) -> Invite:
+    """Change the named terms of an invitation and hand it back as the database now has it."""
+    unknown = set(changes) - _EDITABLE_INVITE_FIELDS
+    if unknown:
+        raise ValueError(f"Not an editable invitation field: {', '.join(sorted(unknown))}")
+    for name, value in changes.items():
+        setattr(invite, name, value)
+    session.flush()
+    # The relationship was loaded against the old `workspace_id` and does not follow it.
+    session.refresh(invite)
+    return invite
 
 
 def revoke_invite(session: Session, invite_id: int) -> bool:
