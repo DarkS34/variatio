@@ -181,6 +181,30 @@ def test_the_slot_offers_to_read_a_document_with_failed_pages_again(source, ws, 
     assert status["retry"] == 1
 
 
+def test_a_cached_page_that_is_a_loop_the_model_stopped_on_its_own_is_read_again(
+    source, ws, monkeypatch
+):
+    # The output cap catches a loop that runs; a loop that stopped by itself was cached as
+    # a page WITH content (271 identical grid rows on the reference installation). The
+    # cold pass over the cache finds it and the next read tries the page again.
+    _first_read(source, ws, monkeypatch, failing=())
+    cache = _cache(source, ws)
+    looped = "# Sumador\n\n" + ("| | | |       | | | |\n" * 40)
+    (cache / "003.md").write_text(looped, encoding="utf-8")
+
+    status = transcribe.transcription_status(ws, "corpus")
+    assert status["documents"][0]["failed_pages"] == 0
+    assert status["documents"][0]["retry_pages"] == 1
+    assert status["retry"] == 1
+
+    _images(monkeypatch)
+    asked, _ = _model(monkeypatch)
+    result = _read(source, ws)
+
+    assert asked == [3]
+    assert result == TIDIED
+
+
 def test_a_hand_edit_keeps_the_picture_tallies_of_the_document(tmp_path):
     cache = tmp_path / "doc"
     fingerprint = {"source": "x.docx", "mode": "docling"}

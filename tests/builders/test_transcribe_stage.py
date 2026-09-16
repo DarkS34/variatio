@@ -78,12 +78,27 @@ def test_a_changed_configuration_makes_it_stale_and_says_what_changed(ws):
     pages.write_pages(
         cache_of(ws, source),
         pages.read_pages(cache_of(ws, source)),
-        {**pages.fingerprint_of(meta), "prompt_version": 99, "dpi": 12},
+        {**pages.fingerprint_of(meta), "model": "otro", "dpi": 12},
     )
     status = transcribe.transcription_status(ws, "corpus")
     assert status["stale"] == 1
     assert status["documents"][0]["state"] == "stale"
-    assert set(status["documents"][0]["reasons"]) == {"prompt", "dpi"}
+    assert set(status["documents"][0]["reasons"]) == {"model", "dpi"}
+
+
+def test_a_page_read_under_an_older_prompt_stays_current(ws):
+    # The prompt version left the fingerprint on 2026-09-16: a meta still carrying one is
+    # what every cache of the installation holds, and it must not read as stale for it.
+    source = transcribed(ws, "corpus", "apuntes.md")
+    meta = pages.read_meta(cache_of(ws, source))
+    pages.write_pages(
+        cache_of(ws, source),
+        pages.read_pages(cache_of(ws, source)),
+        {**pages.fingerprint_of(meta), "prompt_version": 6},
+    )
+    status = transcribe.transcription_status(ws, "corpus")
+    assert status["stale"] == 0
+    assert status["documents"][0]["state"] == "done"
 
 
 def test_a_changed_document_is_stale_because_of_the_document(ws):

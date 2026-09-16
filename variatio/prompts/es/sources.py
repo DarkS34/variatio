@@ -12,6 +12,7 @@ __all__ = [
     "merge_pages_prompt",
     "transcribe_image_prompt",
     "transcribe_page_prompt",
+    "transcribe_retry_note",
 ]
 
 # ONE block for the two prompts that meet an image: the page prompt, where the image is a
@@ -27,13 +28,13 @@ Una imagen se transcribe por lo que CONTIENE, y solo se describe cuando no hay n
 - Una captura de código, de una terminal o de la salida de un programa se transcribe como bloque ``` con sus saltos de línea y su sangría exactos. Solo cuenta el contenido: se omite todo lo que sea de la aplicación y no del documento (menús, barras de herramientas, regla, pestañas, números de línea del editor, bordes de ventana, barra de tareas).
 - Una tabla se transcribe como tabla Markdown, celda a celda.
 - Un texto (un enunciado escaneado, una nota, un rótulo) se transcribe como texto.
-- Un DIAGRAMA —cualquier dibujo hecho de nodos con rótulo unidos por líneas o flechas: un diagrama de flujo, un organigrama, un mapa conceptual o mental, un árbol de decisión, una jerarquía, una línea temporal, un diagrama de clases, de casos de uso, de secuencia, de estados o entidad-relación— se transcribe como código Mermaid dentro de un bloque ```mermaid, con el tipo de diagrama que le corresponda: `flowchart` para flujos, esquemas de cajas y flechas, organigramas y árboles; `classDiagram`; `sequenceDiagram`; `stateDiagram-v2`; `erDiagram`; `mindmap` para mapas conceptuales y mentales; `timeline`; `gantt`. Es una transcripción, no una interpretación: cada nodo y cada línea del dibujo aparecen exactamente una vez, con su rótulo copiado carácter a carácter, la dirección de cada flecha y el texto de cada arista; nada que no esté dibujado, sin estilos ni colores. El identificador de un nodo se inventa corto y en ASCII (`N1`, `Cliente`) y el rótulo visible va aparte y entre comillas cuando lleva espacios, tildes o signos: `N1["Iniciar sesión"]`, y en `classDiagram` `class C1["Clase Asociación"]`. Un diagrama de casos de uso va como `flowchart LR`: los actores como nodos rectangulares fuera del sistema, el sistema como `subgraph` con su nombre, los casos de uso dentro como óvalos `(("…"))`, las asociaciones como `---`, y las relaciones «include» y «extend» como flechas discontinuas con su etiqueta, `-.->|«include»|`. Un rótulo que no se lee se transcribe como `[ilegible]`. El bloque contiene SOLO el diagrama: el texto que lo acompaña —un título, una nota al pie, una leyenda, una frase de la diapositiva— va fuera del bloque, como texto, nunca dentro del código.
+- Un DIAGRAMA —cualquier dibujo hecho de nodos con rótulo unidos por líneas o flechas: un diagrama de flujo, un organigrama, un mapa conceptual o mental, un árbol de decisión, una jerarquía, una línea temporal, un diagrama de clases, de casos de uso, de secuencia, de estados o entidad-relación— se transcribe como código Mermaid dentro de un bloque ```mermaid, con el tipo de diagrama que le corresponda: `flowchart` para flujos, esquemas de cajas y flechas, organigramas y árboles; `classDiagram`; `sequenceDiagram`; `stateDiagram-v2`; `erDiagram`; `mindmap` para mapas conceptuales y mentales; `timeline`; `gantt`. Es una transcripción, no una interpretación: cada nodo y cada línea del dibujo aparecen exactamente una vez, con su rótulo copiado carácter a carácter, la dirección de cada flecha y el texto de cada arista; nada que no esté dibujado, sin estilos ni colores. El identificador de un nodo se inventa corto y en ASCII (`N1`, `Cliente`) y el rótulo visible va aparte y entre comillas cuando lleva espacios, tildes o signos: `N1["Iniciar sesión"]`, y en `classDiagram` `class C1["Clase Asociación"]`. Un diagrama de casos de uso va como `flowchart LR`: los actores como nodos rectangulares fuera del sistema, el sistema como `subgraph` con su nombre, los casos de uso dentro como óvalos `(("…"))`, las asociaciones como `---`, y las relaciones «include» y «extend» como flechas discontinuas con su etiqueta, `-.->|«include»|`. Un rótulo que no se lee se transcribe como `[ilegible]`. El bloque contiene SOLO el diagrama: el texto que lo acompaña —un título, una nota al pie, una leyenda, una frase de la diapositiva— va fuera del bloque, como texto, nunca dentro del código. Un diagrama se transcribe entero SOLO cuando sus rótulos se leen y cabe en un bloque: hasta unos 40 nodos. Un árbol o un grafo con más nodos que eso, o cuyos rótulos no se leen a ese tamaño —la captura de un árbol de búsqueda con cientos de nodos, un grafo reducido hasta ser una mancha— NO se enumera: se anota como `[figura: …]` diciendo qué tipo de diagrama es, cuántos niveles y nodos tiene aproximadamente, qué rótulos sí se leen (la raíz, los primeros niveles) y qué representa si el propio dibujo lo dice. Nunca se rellenan nodos con `[ilegible]` uno tras otro.
 - Solo lo que no es ni texto ni un diagrama de nodos —una gráfica con ejes, un plano, un circuito, un dibujo, una fotografía— se anota en su sitio como `[figura: qué muestra]`, en una frase. Di lo que se VE (los ejes y magnitudes de una gráfica, los componentes, las etiquetas que lleve) sin leer valores que no se lean con claridad ni interpretar lo que significa. La anotación nunca sustituye al texto que acompaña a la figura, que se transcribe como todo lo demás.
-- Un hueco para rellenar a mano (una línea de guiones bajos o de puntos) se transcribe como `____`, cuatro guiones bajos fijos, nunca la línea entera.
+- Un elemento dibujado o rayado —un hueco para rellenar a mano, una cuadrícula o tabla vacía para trabajar encima, un recuadro, un borde, una línea de puntos, una racha de guiones— nunca se reproduce repitiendo caracteres: su longitud no es contenido. Un hueco para rellenar se transcribe como `____`, cuatro guiones bajos fijos, nunca la línea entera. Una cuadrícula o tabla vacía se anota una sola vez, `[cuadrícula vacía de N filas × M columnas]`; si algunas celdas llevan contenido (cifras, letras), se transcriben esas celdas y se omiten las filas vacías. En ningún caso se escribe la misma línea, ni el mismo carácter, más de tres veces seguidas: lo que el original repite se transcribe una vez y se anota cuántas veces aparece.
 - Dentro de una imagen rigen las mismas reglas de fidelidad: se copia carácter a carácter, no se resuelve, no se completa, no se corrige, y `[ilegible]` marca lo que no se lee."""
 
 
-def transcribe_page_prompt(page_number: int, page_count: int) -> str:
+def transcribe_page_prompt(page_number: int, page_count: int, note: str = "") -> str:
     """Ask for one page image copied into Markdown, character by character.
 
     The whole route stands on "copy, do not interpret": a later extractor reads the
@@ -42,8 +43,10 @@ def transcribe_page_prompt(page_number: int, page_count: int) -> str:
     visually highlighted answer option; a page carrying nothing but logos and page numbers
     comes back as `EMPTY_PAGE_MARK`, which `pages.py` matches. The answer is bare Markdown.
     A figure on the page follows `IMAGE_RULES`, the same block the standalone image prompt
-    carries, so an image is read the same way whichever route brought it.
+    carries, so an image is read the same way whichever route brought it. `note` is the
+    second attempt's section (`transcribe_retry_note`), placed before the output rules.
     """
+    retry = f"{note}\n\n" if note else ""
     return f"""\
 Transcribe a Markdown la PÁGINA {page_number} de {page_count} de un documento de material docente. La tienes delante como imagen.
 
@@ -61,8 +64,8 @@ Los títulos y encabezados de la página se marcan con `#` según la jerarquía 
 - Respeta la ortografía y los acentos del original.
 - Si algo es ilegible, escribe `[ilegible]` en su lugar. Nunca adivines.
 
-# LÍNEAS PARA RELLENAR
-Un hueco para escribir a mano —una línea de guiones bajos o de puntos tras «Nombre:», «DNI:», «Firma:», una casilla vacía— se transcribe como una marca corta y FIJA: exactamente `____` (cuatro guiones bajos), sea cual sea la longitud de la línea en el original. Nunca se reproduce la línea entera: su longitud no es contenido.
+# ELEMENTOS DIBUJADOS Y REPETIDOS
+Un elemento dibujado o rayado —un hueco para escribir a mano tras «Nombre:», «DNI:», «Firma:», una casilla vacía, una cuadrícula o tabla vacía para trabajar encima, un recuadro, un borde, una línea de puntos— nunca se reproduce repitiendo caracteres: su longitud no es contenido. Un hueco para rellenar se transcribe como una marca corta y FIJA, exactamente `____` (cuatro guiones bajos), sea cual sea la longitud de la línea en el original. Una cuadrícula o tabla vacía se anota una sola vez, `[cuadrícula vacía de N filas × M columnas]`; si algunas celdas llevan contenido (cifras, letras), se transcriben esas celdas y se omiten las filas vacías. En ningún caso se escribe la misma línea, ni el mismo carácter, más de tres veces seguidas: lo que el original repite se transcribe una vez y se anota cuántas veces aparece.
 
 # CÓDIGO
 El código va en bloques delimitados por ``` conservando EXACTAMENTE sus saltos de línea y su indentación. Es lo que peor sobrevive a una transcripción descuidada y lo que más daño hace: un fragmento de código con la indentación aplanada o un operador cambiado deja de ser el ejercicio que era.
@@ -81,13 +84,13 @@ Logotipos, escudos, cabeceras y pies institucionales, números de página y marc
 # CONTINUIDAD
 Transcribe solo lo que ves en ESTA página. Si un ejercicio empieza aquí y sigue en la siguiente, corta donde corta la página: no lo completes ni escribas notas sobre ello.
 
-# SALIDA
+{retry}# SALIDA
 Solo el Markdown de la página. Sin preámbulo, sin comentarios tuyos, sin ```markdown envolviendo el conjunto, sin decir «Aquí está la transcripción». Si la página no contiene nada más que elementos omitibles, responde exactamente `{EMPTY_PAGE_MARK}`.
 
 Markdown:"""
 
 
-def transcribe_image_prompt(image_number: int, image_count: int) -> str:
+def transcribe_image_prompt(image_number: int, image_count: int, note: str = "") -> str:
     """Ask for one image of a Word or PowerPoint document copied into Markdown.
 
     The image reaches the model alone — Docling keeps the text around it — and what comes
@@ -95,8 +98,9 @@ def transcribe_image_prompt(image_number: int, image_count: int) -> str:
     the content itself in the form the surrounding Markdown would give it: LaTeX for a
     formula, a fence for a screenshot of code, a table for a table, a ```mermaid block for
     a diagram of nodes and edges, `[figura: …]` only for what cannot be copied. A logo, a crest or an ornament comes back as `EMPTY_IMAGE_MARK`,
-    which `pages.py` matches and drops.
+    which `pages.py` matches and drops. `note` is the second attempt's section.
     """
+    retry = f"{note}\n\n" if note else ""
     return f"""\
 Transcribe a Markdown la IMAGEN {image_number} de {image_count} de un documento de material docente (un archivo de Word o de PowerPoint). La tienes delante; el texto que la rodea no lo ves.
 
@@ -110,10 +114,31 @@ Si la imagen contiene opciones de respuesta y una está destacada visualmente re
 # QUÉ NO TRANSCRIBIR
 Un logotipo, un escudo, un adorno, una línea decorativa, un icono o una fotografía sin contenido docente: responde exactamente `{EMPTY_IMAGE_MARK}` y nada más.
 
-# SALIDA
+{retry}# SALIDA
 Solo el Markdown que sustituye a la imagen. Sin preámbulo, sin comentarios tuyos, sin ```markdown envolviendo el conjunto, sin decir «Aquí está la transcripción». Si la imagen no tiene nada que transcribir, responde exactamente `{EMPTY_IMAGE_MARK}`.
 
 Markdown:"""
+
+
+def transcribe_retry_note(repeated: str | None, cap: int) -> str:
+    """The section appended to a page or image prompt when its first answer never finished.
+
+    The same request at temperature 0 is the same loop; a request that names what the
+    model kept writing and restates the rule for drawn elements is a different one. It is
+    appended, never substituted, so the second attempt reads the whole prompt plus this.
+    """
+    cause = (
+        f"se quedó repitiendo «{repeated}» sin parar"
+        if repeated
+        else f"superó el límite de {cap} tokens sin llegar al final"
+    )
+    return f"""\
+# SEGUNDO INTENTO
+Tu respuesta anterior a esta misma página o imagen no terminó: {cause}. Vuelve a transcribirla desde el principio aplicando esto:
+- Un elemento dibujado o rayado (una cuadrícula, una tabla vacía, una línea, un borde, un hueco para rellenar, filas vacías) se escribe UNA vez, como `____` o como la anotación `[cuadrícula vacía de N filas × M columnas]`, nunca repitiendo caracteres.
+- Un diagrama grande o de rótulos ilegibles se anota como `[figura: …]` en vez de enumerar sus nodos.
+- La misma línea, o el mismo carácter, no se escribe nunca más de tres veces seguidas.
+- La respuesta entera tiene que caber en menos de {cap} tokens."""
 
 
 def merge_pages_prompt(tail: str, head: str, page_number: int, page_count: int) -> str:

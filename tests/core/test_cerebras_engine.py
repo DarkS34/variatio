@@ -551,6 +551,26 @@ def test_the_output_cap_travels_as_max_completion_tokens():
     assert answer.truncated is False
 
 
+def test_a_repeated_answer_is_flagged_after_the_call_when_asked():
+    # This route answers in one piece, so the loop is judged on the whole text: what the
+    # flag buys here is the verdict the page route acts on, not the tokens.
+    row = "| | | |\n"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"message": {"content": "x\n" + row * 50}, "finish_reason": "stop"}
+                ]
+            },
+        )
+
+    engine = _engine_with(handler)
+    assert engine.generate("gemma-4-31b", "hola", stop_on_loop=True).loop == "| | | |"
+    assert engine.generate("gemma-4-31b", "hola").loop is None
+
+
 def test_no_cap_sends_no_max_completion_tokens():
     seen: dict = {}
 

@@ -72,11 +72,14 @@ El valor sale de la medición y no del gusto: de las 537 páginas PDF legítimas
 asignaturas de referencia la más larga son 6.871 caracteres (~1.900 tokens), y en
 `compiladores` el p99 son 739 y la mayor sana 1.397 — entre 1.397 y 40.960 no hay ni una.
 4.096 deja 2,1× de margen sobre la peor página real y corta la desbocada al 10 % de su
-coste. Una respuesta que llega al techo se marca como PÁGINA FALLIDA (`FAILED_PAGE_PREFIXES`),
-no se guarda truncada: una página cortada en silencio es la pérdida que este proyecto no
-acepta, y una marcada sale en rojo en «Apuntes y ejercicios», donde se corrige a mano o se
-sube este valor si de verdad era una página larguísima. No se reintenta, porque a
-temperatura 0 la misma imagen produce la misma racha.
+coste. Desde el 2026-09-16 el techo es la segunda red y no la primera: el motor deja de leer
+la respuesta en cuanto su cola es una repetición (`core/repetition.py`), y una respuesta
+que no termina — por bucle o por techo — se pide UNA vez más con el prompt diciendo qué
+se repitió. Si tampoco termina, la página se marca como FALLIDA (`FAILED_PAGE_PREFIXES`) y
+conserva debajo lo que se leyó antes del bucle: una página cortada en silencio es la
+pérdida que este proyecto no acepta, y una marcada sale en rojo en «Apuntes y ejercicios»,
+donde se completa a mano. Subir este valor solo tiene sentido para una página de verdad
+larguísima; un bucle no lo llena, lo corta el detector antes.
 
 No forma parte de la huella de la caché: subirlo o bajarlo no vuelve a transcribir nada.""",
     ),
@@ -97,29 +100,6 @@ acaba una frase o si una tabla sigue, y lo bastante corto para que la llamada no
 como una lectura del fragmento entero. NO forma parte de la huella de la caché de páginas:
 cambiarlo no vuelve a transcribir nada, solo cambia lo que verá la próxima revisión de
 costuras.""",
-    ),
-    Setting(
-        key="builders.transcribe_prompt_version",
-        name="TRANSCRIBE_PROMPT_VERSION",
-        kind="int",
-        default=6,
-        group="Constructores",
-        impact=Impact.LOCKED,
-        editable=False,
-        minimum=1,
-        doc="""Súbelo al cambiar transcribe_page_prompt o transcribe_image_prompt: forma parte de la huella
-de la caché de páginas y de la de imágenes, y subirlo caduca las dos — o sea, vuelve a leer
-cada página PDF de cada asignatura.
-
-Lo sube quien edita el prompt, no quien mira una pantalla. OJO: `config.json` guarda este
-valor como cualquier otro y el fichero gana al registro, así que subirlo aquí sin subirlo
-también en el fichero de la instalación no caduca nada.
-
-La 6 (2026-09-12) es la regla de los diagramas: un dibujo de nodos y flechas se transcribe
-como código Mermaid y `[figura: …]` queda para lo que no es ni texto ni diagrama. Hasta
-entonces la regla mandaba describir todo diagrama en una frase, y el modelo la desobedecía
-a veces — en la asignatura de referencia 3 de 9 soluciones de diagrama salieron en Mermaid
-y 6 en prosa, según el documento del que venían.""",
     ),
     Setting(
         key="builders.exemplars_ocr",

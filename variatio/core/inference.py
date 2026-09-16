@@ -14,7 +14,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from .. import config
-from . import progress
+from . import progress, repetition
 
 TokenSink = Callable[[str, str], None]
 ProgressSink = Callable[[int, int], None]
@@ -43,11 +43,16 @@ class GenerationResponse:
     model finished — Ollama's `done_reason == "length"`, Cerebras' `finish_reason ==
     "length"`. It is the engine's own reading and not a heuristic, which is what lets a
     caller treat a cut answer as a failure instead of as a short one.
+
+    `loop` is the unit the answer was repeating when the engine stopped reading it — set
+    only for a caller that asked with `stop_on_loop`, and the reason `response` ends where
+    it does: what the model wrote up to the loop is there, the repetitions are not.
     """
 
     response: str
     thinking: str | None = None
     truncated: bool = False
+    loop: str | None = None
 
 
 class OllamaEngine:
@@ -84,11 +89,15 @@ class OllamaEngine:
         temperature: float | None = None,
         format: dict | str | None = None,
         max_output_tokens: int | None = None,
+        stop_on_loop: bool = False,
     ) -> GenerationResponse:
         """Ask `model` for one answer, with the reasoning split out of it.
 
         Images are base64 PNGs or JPEGs. A text-only model handed a picture answers empty
-        rather than failing, so it is refused up front instead.
+        rather than failing, so it is refused up front instead. With `stop_on_loop` the
+        stream is abandoned the moment its tail is a repetition (`repetition.detect_tail`), so
+        a model locked on a drawn grid stops costing tokens and time at once instead of
+        at the output cap; the answer then carries the repeated unit as `loop`.
 
         THE ANSWER IS STREAMED EVEN THOUGH NOBODY IS WATCHING IT, and that is the whole
         difference between a stop that lands and one that does not. Cancellation is
@@ -125,10 +134,10 @@ class OllamaEngine:
                     model, self._temperature(temperature), max_output_tokens
                 ),
             )
-            answer, thinking, truncated = _drain(stream)
+            answer, thinking, truncated, loop = _drain(stream, stop_on_loop)
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
-        return split_thinking(answer, thinking or None, truncated)
+        return split_thinking(answer, thinking or None, truncated, loop)
 
     def generate_stream(
         self,
@@ -430,7 +439,15 @@ class OllamaEngine:
         logger.info(f"Model '{model}' deleted from the engine's disk")
 
 
-def _drain(stream) -> tuple[str, str, bool]:
+# How much of the answer's tail a loop is looked for in while it streams, and how many new
+# characters arrive between two looks. Twelve thousand characters hold the longest run the
+# detector needs at any line length a page produces; a look every quarter of a kilobyte is
+# what keeps the cost of looking below the cost of one token.
+_LOOP_WINDOW_CHARS = 12_000
+_LOOP_CHECK_EVERY_CHARS = 256
+
+
+def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | None]:
     """Read a streamed answer whole, checking between chunks whether to stop.
 
     The counterpart of `progress.checkpoint()` inside every per-item loop: without it the
@@ -441,29 +458,44 @@ def _drain(stream) -> tuple[str, str, bool]:
 
     The third value is whether the final chunk says the answer was cut by `num_predict`:
     only that chunk carries a `done_reason`, and "length" there is the engine reporting
-    a truncation that the text alone cannot show.
+    a truncation that the text alone cannot show. The fourth is the unit the answer was
+    repeating when `stop_on_loop` made the read stop: the same abandonment as a
+    cancellation, for a model that has stopped saying anything new.
     """
     answer: list[str] = []
     thinking: list[str] = []
     truncated = False
+    loop: str | None = None
+    tail = ""
+    unchecked = 0
     try:
         for chunk in stream:
             thought = getattr(chunk, "thinking", None)
             if thought:
                 thinking.append(thought)
-            answer.append(chunk.response or "")
+            piece = chunk.response or ""
+            answer.append(piece)
             if getattr(chunk, "done_reason", None) == "length":
                 truncated = True
+            if stop_on_loop and piece:
+                tail = (tail + piece)[-_LOOP_WINDOW_CHARS:]
+                unchecked += len(piece)
+                if unchecked >= _LOOP_CHECK_EVERY_CHARS:
+                    unchecked = 0
+                    found = repetition.detect_tail(tail)
+                    if found is not None:
+                        loop = found.unit
+                        break
             progress.checkpoint()
     finally:
         close = getattr(stream, "close", None)
         if close is not None:
             close()
-    return "".join(answer), "".join(thinking), truncated
+    return "".join(answer), "".join(thinking), truncated, loop
 
 
 def split_thinking(
-    text: str, sdk_thinking: str | None = None, truncated: bool = False
+    text: str, sdk_thinking: str | None = None, truncated: bool = False, loop: str | None = None
 ) -> GenerationResponse:
     """Same split as the streaming path, for a response that arrived in one piece."""
     splitter = ThinkingSplitter()
@@ -475,7 +507,9 @@ def split_thinking(
         response="".join(answer).strip(),
         thinking="\n\n".join(p.strip() for p in thinking if p.strip()) or None,
         truncated=truncated,
+        loop=loop,
     )
+
 
 
 class ThinkingSplitter:
@@ -583,12 +617,16 @@ def generate(
     temperature: float | None = None,
     format: dict | str | None = None,
     max_output_tokens: int | None = None,
+    stop_on_loop: bool = False,
 ) -> GenerationResponse:
     """Ask the configured engine for one answer.
 
     `max_output_tokens` caps what the model may write and is the caller's to set — a
     transcription has a measured ceiling, a curation call does not — and the answer says
-    through `truncated` whether the cap was hit.
+    through `truncated` whether the cap was hit. `stop_on_loop` is the caller's too: it
+    asks the engine to stop reading an answer whose tail has become a repetition and to
+    say so through `loop`. A transcription asks for it; a call under a grammar must not,
+    since a list of forty identical objects is a shape the grammar allows.
     """
     return engine().generate(
         model=model,
@@ -599,6 +637,7 @@ def generate(
         temperature=temperature,
         format=format,
         max_output_tokens=max_output_tokens,
+        stop_on_loop=stop_on_loop,
     )
 
 

@@ -38,7 +38,6 @@ _REASONS = {
     "model": "model",
     "dpi": "dpi",
     "ocr": "ocr",
-    "prompt_version": "prompt",
     "temperature": "temperature",
     "cleanup": "cleanup",
     "rasteriser": "rasteriser",
@@ -118,10 +117,11 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
     current = source_docs.same_document(stored, expected)
     failed = len(meta.get("failed_pages") or [])
     # Only a CURRENT PDF: a stale document is read whole anyway, and the other routes have no
-    # page to render again. The file is opened only when some page actually failed.
+    # page to render again. `retryable_pages` opens the file only when some page carries a
+    # marker or is a repetition loop the model stopped on its own.
     retry = (
         len(source_docs.retryable_pages(source, cache_dir, pages))
-        if current and failed and source.suffix.lower() == ".pdf"
+        if current and source.suffix.lower() == ".pdf"
         else 0
     )
     return {

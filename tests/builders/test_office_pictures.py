@@ -116,9 +116,9 @@ def test_a_reading_is_cached_by_content_and_by_what_read_it(source, model, tmp_p
     _read(source, model_name="otro", images_dir=images_dir)
     assert model.calls == 2, "another model is another reading"
 
-    monkeypatch.setattr(config, "TRANSCRIBE_PROMPT_VERSION", config.TRANSCRIBE_PROMPT_VERSION + 1)
+    monkeypatch.setattr(config, "TRANSCRIBE_TEMPERATURE", config.TRANSCRIBE_TEMPERATURE + 0.5)
     _read(source, images_dir=images_dir)
-    assert model.calls == 3, "a new prompt expires the reading, exactly as it expires a page"
+    assert model.calls == 3, "another temperature expires the reading, exactly as it expires a page"
 
 
 def test_a_logo_leaves_nothing_behind_and_is_remembered(source, tmp_path, monkeypatch):

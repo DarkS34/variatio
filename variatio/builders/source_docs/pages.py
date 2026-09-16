@@ -29,7 +29,7 @@ from loguru import logger
 
 from ... import config
 from ... import wording as wording_sets
-from ...core import inference, languages, progress
+from ...core import inference, languages, progress, repetition
 from ...core.json_io import write_json
 from ...prompts.marks import EMPTY_IMAGE_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 from . import office
@@ -58,6 +58,13 @@ META_NAME = "_meta.json"
 # because `read_pages` asks for the meta.
 PARTIAL_NAME = "_partial.json"
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
+
+# Fingerprint fields older metas carry that no longer decide anything. `prompt_version`
+# expired every page of every subject whenever a prompt changed, and a prompt change is a
+# better prompt (retired 2026-09-16): a page read under an older one stays current until
+# its document changes or somebody reads it again. Dropped on READ, so no cache is expired
+# by the retirement itself.
+RETIRED_FIELDS = ("prompt_version",)
 
 # What `_meta.json` holds beside the fingerprint, and therefore what is NOT compared when
 # deciding whether the cached pages are still current.
@@ -138,8 +145,9 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     workspace moves every timestamp and would throw away a whole corpus of transcriptions.
     `TRANSCRIBE_SEAM_CHARS` is deliberately absent — how much of a seam the model is shown
     does not change a single page, and the seam decisions live in `_meta.json` beside them.
-    The model and the temperature are recorded on BOTH routes: on the Docling one they are
-    what the pictures were read with, and a page carries those readings inline.
+    So is the prompt (`RETIRED_FIELDS`): a change to it never re-reads a corpus. The model
+    and the temperature are recorded on BOTH routes: on the Docling one they are what the
+    pictures were read with, and a page carries those readings inline.
     """
     stat = source.stat()
     fingerprint = {
@@ -150,7 +158,6 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         "model": model,
         "dpi": dpi,
         "ocr": ocr,
-        "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
         "temperature": config.TRANSCRIBE_TEMPERATURE,
     }
     if mode == "docling":
@@ -419,23 +426,27 @@ def _read_cached_pages(
 def retryable_pages(source: Path, cache_dir: str | Path, pages: list[str]) -> list[int]:
     """The failed pages of a finished PDF that its next read tries again, counted from 1.
 
-    A failed page is work not done, and a later run is not the retry `_transcribe_page`
-    refuses: that one would ask the same endpoint for the same picture a second later, while
-    this one comes after somebody pressed the button again — the output cap was raised, the
-    endpoint stopped refusing the picture, or the runaway simply did not happen this time
-    (measured at temperature 0 on Cerebras: it is not deterministic).
+    A failed page is work not done, and a later run is not the second attempt
+    `_ask_twice` already made: that one asks again a second later under a prompt naming
+    the loop, while this one comes after somebody pressed the button again — the output cap
+    was raised, the endpoint stopped refusing the picture, or the runaway simply did not
+    happen this time (measured at temperature 0 on Cerebras: it is not deterministic).
+
+    A page whose cached text is a repetition loop the model stopped on its own is read
+    again too (`looped_pages`): it was cached as a page with content, and it is not one.
 
     Nothing is retried once pages were inserted or deleted by hand: that renumbers every page
     after the edit, page N of the cache stops being page N of the PDF, and re-reading "the
     failed page 5" would write another page's text into it. Such a document keeps its markers
     for a person to correct, and so does one whose page count no longer matches the file's.
+    The PDF is opened only when there is something to retry.
     """
-    failed = failed_pages(pages)
-    if not failed or read_meta(cache_dir).get("restructured"):
+    candidates = sorted({*failed_pages(pages), *looped_pages(pages)})
+    if not candidates or read_meta(cache_dir).get("restructured"):
         return []
     if page_count(source) != len(pages):
         return []
-    return failed
+    return candidates
 
 
 def _read_failed_pages_again(
@@ -459,8 +470,8 @@ def _read_failed_pages_again(
     pages, seams = list(cached[0]), valid_seams(cached[1])
     count, images = page_images(source, dpi, numbers=numbers)
     logger.info(
-        f"{tag}{source.name}: reading {len(numbers)} page(s) that failed last time "
-        f"with '{model}'"
+        f"{tag}{source.name}: reading {len(numbers)} page(s) that failed or looped last "
+        f"time with '{model}'"
     )
     touched: set[int] = set()
     with progress.step(
@@ -585,9 +596,45 @@ def failed_pages(pages: list[str]) -> list[int]:
     ]
 
 
+def looped_pages(pages: list[str]) -> list[int]:
+    """The pages whose cached text ends in a repetition the model stopped on its own.
+
+    The output cap catches a loop that runs; this catches one that stopped — 271 identical
+    grid rows cached as a page with content on the reference installation — so the next
+    read tries the page again under the second-attempt rule. A page already carrying the
+    failure marker is that marker's business and is not looked at.
+    """
+    return [
+        index
+        for index, page in enumerate(pages, 1)
+        if not page.lstrip().startswith(FAILED_PAGE_PREFIXES) and _holds_loop(page)
+    ]
+
+
+# The verdicts of `_holds_loop`, by the page's digest. `/raw` asks `transcription_status`
+# every four seconds while a job runs and the scan is a millisecond a page (measured: 1.77 s
+# over the 1 794 cached pages of the reference installation), so a slot of several hundred
+# pages would pay a good part of a second per poll for an answer that only changes when the
+# page does. Bounded, oldest out first.
+_LOOP_VERDICTS: dict[str, bool] = {}
+_LOOP_VERDICTS_MAX = 8192
+
+
+def _holds_loop(page: str) -> bool:
+    """Whether a cached page holds a repetition loop, remembered by the page's digest."""
+    key = hashlib.sha1(page.encode("utf-8")).hexdigest()
+    verdict = _LOOP_VERDICTS.get(key)
+    if verdict is None:
+        verdict = repetition.detect(page) is not None
+        if len(_LOOP_VERDICTS) >= _LOOP_VERDICTS_MAX:
+            del _LOOP_VERDICTS[next(iter(_LOOP_VERDICTS))]
+        _LOOP_VERDICTS[key] = verdict
+    return verdict
+
+
 def fingerprint_of(meta: dict) -> dict:
-    """The fingerprint half of a `_meta.json`, without the counts written beside it."""
-    return {k: v for k, v in meta.items() if k not in META_EXTRA}
+    """The fingerprint half of a `_meta.json`, without the counts and the retired fields."""
+    return {k: v for k, v in meta.items() if k not in META_EXTRA and k not in RETIRED_FIELDS}
 
 
 def _transcribe(
@@ -808,64 +855,148 @@ def _scanned(page) -> bool:
 def _transcribe_page(
     image: str, index: int, count: int, model: str, tag: str, prompts
 ) -> str:
-    """Transcribe one page image, retrying, and marking the page when it cannot be read.
+    """Transcribe one page image, marking the page when it cannot be read whole.
 
-    An answer cut by `TRANSCRIBE_MAX_OUTPUT_TOKENS` is a failed page and never a short one:
-    measured, every page that reached the engine's ceiling was one repeated token — a
-    fill-in line the model could not stop copying — and kept as text it went on to cost
-    the profile and the bank more than the page itself. It is not retried either: the run
-    is a property of the page (a fill-in line the prompt now folds into `____`), and the
-    same page has been measured passing once and failing the next time at temperature 0,
-    so a retry would only pay the cap again for a coin toss.
+    An answer that never finished — a repetition the engine stopped reading, or one that
+    ran to `TRANSCRIBE_MAX_OUTPUT_TOKENS` — is asked for ONCE MORE with the prompt saying
+    what went wrong (`_ask_twice`); what the second attempt still cannot finish is kept up
+    to the loop under the failure marker (`_salvaged_page`). Kept as it came, a cut answer
+    was measured costing the profile and the bank more than the page itself; thrown away
+    whole, it took a title and a paragraph down with the grid that broke it.
     """
-    prompt = prompts.transcribe_page_prompt(index, count)
-    last_error: Exception | None = None
-    for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
+    what = f"page {index}/{count}"
+    try:
+        answer = _ask_twice(
+            model,
+            lambda note: prompts.transcribe_page_prompt(index, count, note=note),
+            image,
+            config.THINK_TRANSCRIBE,
+            tag,
+            what,
+            prompts,
+        )
+    except inference.InferenceError as e:
+        logger.error(f"{tag}{what}: giving up after the retries ({e})")
+        # A lost page is lost exercises. Leave a marker a human will trip over in the
+        # cached file rather than a silent gap that looks like a page with nothing on it.
+        return wording_sets.beside(prompts).failed_page(index, count, str(e))
+    if _unfinished(answer):
+        return _salvaged_page(answer, index, count, tag, prompts)
+    page = _unwrap_markdown_fence(answer.response)
+    stripped = page.strip()
+    # Tolerant on purpose: models wrap the sentinel in backticks, or add a full stop.
+    # Anything that is only the sentinel plus punctuation is an empty page.
+    if not stripped or (
+        EMPTY_PAGE_MARK in stripped and len(stripped) <= len(EMPTY_PAGE_MARK) + 16
+    ):
+        return ""
+    return page
+
+
+def _ask_twice(
+    model: str, build_prompt, image: str, think, tag: str, what: str, prompts
+) -> inference.GenerationResponse:
+    """Ask once, and once more with the prompt saying what went wrong when the answer never finished.
+
+    The same request at temperature 0 is the same loop — measured three times over on one
+    page — and a request that names what the model kept writing and restates the rule for
+    drawn elements is a different one (`transcribe_retry_note`). Two attempts and never a
+    third: a page that locks twice under two prompts is a page for a person. When both
+    fail the one that read further before locking is returned, since that is what the
+    caller keeps.
+    """
+    answer = _ask(model, build_prompt(""), image, think, tag, what)
+    if not _unfinished(answer):
+        return answer
+    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
+    logger.warning(f"{tag}{what}: {_cause(answer, cap)}; asking once more with the rule spelled out")
+    repeated = repetition.quoted(answer.loop) if answer.loop else None
+    again = _ask(
+        model, build_prompt(prompts.transcribe_retry_note(repeated, cap)), image, think, tag, what
+    )
+    if not _unfinished(again):
+        return again
+    return again if len(_head(again)) >= len(_head(answer)) else answer
+
+
+def _ask(
+    model: str, prompt: str, image: str, think, tag: str, what: str
+) -> inference.GenerationResponse:
+    """One transcription call, retried on an engine error up to `TRANSCRIBE_MAX_RETRIES` times.
+
+    Only an `InferenceError` is retried, the engine having not answered at all. An answer
+    that never finished is an answer to this function; `_ask_twice` decides what it costs.
+    Every call asks the engine to stop on a repetition, which is what makes a loop cost
+    seconds on the local route instead of a whole output budget.
+    """
+    last_error: inference.InferenceError | None = None
+    for _attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
         try:
-            answer = inference.generate(
+            return inference.generate(
                 model=model,
                 prompt=prompt,
-                think=config.THINK_TRANSCRIBE,
+                think=think,
                 images=[image],
                 temperature=config.TRANSCRIBE_TEMPERATURE,
                 max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
+                stop_on_loop=True,
             )
-            if answer.truncated:
-                return _runaway_page(index, count, tag, len(answer.response), prompts)
-            page = _unwrap_markdown_fence(answer.response)
-            stripped = page.strip()
-            # Tolerant on purpose: models wrap the sentinel in backticks, or add a full
-            # stop. Anything that is only the sentinel plus punctuation is an empty page.
-            if not stripped or (
-                EMPTY_PAGE_MARK in stripped and len(stripped) <= len(EMPTY_PAGE_MARK) + 16
-            ):
-                return ""
-            return page
         except inference.InferenceError as e:
             last_error = e
-            logger.warning(f"{tag}page {index}/{count}: transcription failed ({e})")
-    logger.error(f"{tag}page {index}/{count}: giving up after the retries ({last_error})")
-    # A lost page is lost exercises. Leave a marker a human will trip over in the cached
-    # file rather than a silent gap that looks like a page with nothing on it.
-    return wording_sets.beside(prompts).failed_page(index, count, str(last_error))
+            logger.warning(f"{tag}{what}: transcription failed ({e})")
+    assert last_error is not None
+    raise last_error
+
+
+def _unfinished(answer: inference.GenerationResponse) -> bool:
+    """Whether the answer stopped for a reason other than the model finishing."""
+    return answer.loop is not None or answer.truncated
+
+
+def _cause(answer: inference.GenerationResponse, cap: int) -> str:
+    """One clause for the log naming why the answer did not finish."""
+    if answer.loop is not None:
+        return f"answer stopped on a repetition of «{repetition.quoted(answer.loop)}»"
+    return f"answer cut at the {cap}-token cap after {len(answer.response)} characters"
+
+
+def _head(answer: inference.GenerationResponse) -> str:
+    """What the model read before it stopped saying anything new: the text up to the loop."""
+    text = answer.response
+    found = repetition.detect(text)
+    return repetition.cut(text, found) if found is not None else text.rstrip()
+
+
+def _salvaged_page(
+    answer: inference.GenerationResponse, index: int, count: int, tag: str, prompts
+) -> str:
+    """The failure marker over whatever the model read before it stopped finishing.
+
+    The marker comes FIRST, so `failed_pages` counts the page and the screen draws it red;
+    the head follows, so a title or a paragraph read before a grid is not thrown away
+    with the grid. The marker says whether anything follows, and that the rest of the
+    page is a person's to transcribe.
+    """
+    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
+    head = _head(answer).strip()
+    logger.error(
+        f"{tag}page {index}/{count}: {_cause(answer, cap)} on the second attempt too; "
+        f"marked as failed, {len(head)} character(s) kept"
+    )
+    marker = wording_sets.beside(prompts).failed_page_unfinished(
+        index,
+        count,
+        repetition.quoted(answer.loop) if answer.loop else None,
+        cap,
+        bool(head),
+    )
+    return f"{marker}\n\n{head}" if head else marker
 
 
 def _unwrap_markdown_fence(text: str) -> str:
     """Strip the ```markdown wrapper some models put around a whole page."""
     match = MD_FENCE_RE.match(text.strip())
     return match.group(1) if match else text.strip()
-
-
-def _runaway_page(index: int, count: int, tag: str, chars: int, prompts) -> str:
-    """The failure marker for a page whose answer hit the output cap."""
-    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
-    logger.error(
-        f"{tag}page {index}/{count}: answer cut at the {cap}-token cap after {chars} "
-        "characters, most likely a repetition loop; marked as failed and not retried"
-    )
-    return wording_sets.beside(prompts).failed_page_truncated(
-        index, count, cap, "TRANSCRIBE_MAX_OUTPUT_TOKENS"
-    )
 
 
 def save_partial_page(
@@ -1078,7 +1209,7 @@ def _encode_image(image) -> bytes:
 
 
 def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) -> str | None:
-    """The cached reading of a picture, when it was made under the same model and prompt."""
+    """The cached reading of a picture, when it was made under the same model and temperature."""
     if images_dir is None:
         return None
     path = _image_record_path(Path(images_dir), digest)
@@ -1090,11 +1221,7 @@ def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) ->
         return None
     if not isinstance(record, dict) or not isinstance(record.get("text"), str):
         return None
-    if (
-        record.get("model") != model
-        or record.get("prompt_version") != config.TRANSCRIBE_PROMPT_VERSION
-        or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE
-    ):
+    if record.get("model") != model or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE:
         return None
     return record["text"]
 
@@ -1102,39 +1229,40 @@ def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) ->
 def _transcribe_image(
     image: str, index: int, count: int, model: str, tag: str, prompts
 ) -> str | None:
-    """Read one picture, retrying; `""` for one with nothing on it, `None` when it failed."""
-    prompt = prompts.transcribe_image_prompt(index, count)
-    last_error: Exception | None = None
-    for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
-        try:
-            answer = inference.generate(
-                model=model,
-                prompt=prompt,
-                think=config.THINK_TRANSCRIBE_IMAGE,
-                images=[image],
-                temperature=config.TRANSCRIBE_TEMPERATURE,
-                max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
-            )
-            if answer.truncated:
-                # Same failure as a runaway page, same verdict: unreadable, not retried
-                # (temperature 0), and not cached, so a raised cap gets another chance.
-                logger.error(
-                    f"{tag}picture {index}/{count}: answer cut at the "
-                    f"{config.TRANSCRIBE_MAX_OUTPUT_TOKENS}-token cap; marked unreadable"
-                )
-                return None
-            reading = _unwrap_markdown_fence(answer.response)
-            stripped = reading.strip()
-            if not stripped or (
-                EMPTY_IMAGE_MARK in stripped and len(stripped) <= len(EMPTY_IMAGE_MARK) + 16
-            ):
-                return ""
-            return stripped
-        except inference.InferenceError as e:
-            last_error = e
-            logger.warning(f"{tag}picture {index}/{count}: transcription failed ({e})")
-    logger.error(f"{tag}picture {index}/{count}: giving up after the retries ({last_error})")
-    return None
+    """Read one picture; `""` for one with nothing on it, `None` when it could not be read.
+
+    Same two attempts as a page (`_ask_twice`). A picture whose answer never finished
+    twice is unreadable and NOT salvaged: what comes before the loop in a diagram is half
+    a diagram, and half a ```mermaid block is worse than the mark that says the picture
+    is missing. It is not cached either, so a later read gets another chance.
+    """
+    what = f"picture {index}/{count}"
+    try:
+        answer = _ask_twice(
+            model,
+            lambda note: prompts.transcribe_image_prompt(index, count, note=note),
+            image,
+            config.THINK_TRANSCRIBE_IMAGE,
+            tag,
+            what,
+            prompts,
+        )
+    except inference.InferenceError as e:
+        logger.error(f"{tag}{what}: giving up after the retries ({e})")
+        return None
+    if _unfinished(answer):
+        logger.error(
+            f"{tag}{what}: {_cause(answer, config.TRANSCRIBE_MAX_OUTPUT_TOKENS)} on the "
+            "second attempt too; marked unreadable"
+        )
+        return None
+    reading = _unwrap_markdown_fence(answer.response)
+    stripped = reading.strip()
+    if not stripped or (
+        EMPTY_IMAGE_MARK in stripped and len(stripped) <= len(EMPTY_IMAGE_MARK) + 16
+    ):
+        return ""
+    return stripped
 
 
 def _write_image_cache(
@@ -1148,7 +1276,6 @@ def _write_image_cache(
         {
             "sha256": digest,
             "model": model,
-            "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
             "temperature": config.TRANSCRIBE_TEMPERATURE,
             "text": text,
         },

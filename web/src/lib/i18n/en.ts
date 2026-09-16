@@ -644,7 +644,6 @@ export const en: Catalogue = {
   "transcribe.reason.model": "the transcription model changed",
   "transcribe.reason.dpi": "the render resolution changed",
   "transcribe.reason.ocr": "OCR changed",
-  "transcribe.reason.prompt": "the transcription prompt changed",
   "transcribe.reason.temperature": "the transcription temperature changed",
   "transcribe.reason.cleanup": "the converter cleanup changed",
   "transcribe.reason.rasteriser": "the reader of Word and PowerPoint's EMF/WMF drawings changed",

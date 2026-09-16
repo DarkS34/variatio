@@ -55,6 +55,7 @@ from .sources import (
     merge_pages_prompt,
     transcribe_image_prompt,
     transcribe_page_prompt,
+    transcribe_retry_note,
 )
 from .tagging import (
     tag_concepts_prompt,
@@ -97,4 +98,5 @@ __all__ = [
     "tag_concepts_prompt",
     "transcribe_image_prompt",
     "transcribe_page_prompt",
+    "transcribe_retry_note",
 ]

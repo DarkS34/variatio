@@ -107,14 +107,14 @@ def test_a_document_already_read_is_left_alone(workspaces):
 
 
 def test_settings_that_moved_are_not_adopted_over(workspaces, monkeypatch):
-    """A donor read under another prompt version is stale, not a shortcut."""
+    """A donor read at another temperature is stale, not a shortcut."""
     uno, dos = workspaces
     put(uno, "corpus", "apuntes.md")
     transcribe.transcribe_slot(uno, "corpus")
 
     from variatio import config
 
-    monkeypatch.setattr(config, "TRANSCRIBE_PROMPT_VERSION", config.TRANSCRIBE_PROMPT_VERSION + 1)
+    monkeypatch.setattr(config, "TRANSCRIBE_TEMPERATURE", config.TRANSCRIBE_TEMPERATURE + 0.5)
     put(dos, "corpus", "apuntes.md")
     assert transcribe.adopt_transcriptions(dos, "corpus")["adopted"] == 0
 

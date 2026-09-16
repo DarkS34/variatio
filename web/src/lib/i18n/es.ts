@@ -766,7 +766,6 @@ export const es = {
   "transcribe.reason.model": "el modelo de transcripción cambió",
   "transcribe.reason.dpi": "la resolución de render cambió",
   "transcribe.reason.ocr": "el OCR cambió",
-  "transcribe.reason.prompt": "el prompt de transcripción cambió",
   "transcribe.reason.temperature": "la temperatura de transcripción cambió",
   "transcribe.reason.cleanup": "la limpieza del conversor cambió",
   "transcribe.reason.rasteriser": "cambió el lector de dibujos EMF/WMF de Word y PowerPoint",

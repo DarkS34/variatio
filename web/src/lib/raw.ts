@@ -99,7 +99,6 @@ export const STALE_REASON_KEYS: Record<string, Key> = {
   model: "transcribe.reason.model",
   dpi: "transcribe.reason.dpi",
   ocr: "transcribe.reason.ocr",
-  prompt: "transcribe.reason.prompt",
   temperature: "transcribe.reason.temperature",
   cleanup: "transcribe.reason.cleanup",
   rasteriser: "transcribe.reason.rasteriser",

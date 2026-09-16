@@ -13,7 +13,7 @@ import httpx
 from loguru import logger
 
 from .. import config
-from . import cerebras_budget, progress
+from . import cerebras_budget, progress, repetition
 from .inference import (
     DEFAULT_THINK_EFFORT,
     GenerationResponse,
@@ -245,12 +245,18 @@ class CerebrasEngine:
         temperature: float | None = None,
         format: dict | str | None = None,
         max_output_tokens: int | None = None,
+        stop_on_loop: bool = False,
     ) -> GenerationResponse:
         """Ask `model` for one answer, unwrapping it when the schema had to be wrapped.
 
         `finish_reason == "length"` is the API saying the answer hit `max_completion_tokens`;
         it travels as `truncated` so the caller can refuse a cut answer instead of keeping
-        it as a short one.
+        it as a short one. `stop_on_loop` is answered AFTER the call here, on the whole
+        text and anywhere in it (`repetition.detect`): this endpoint answers 4 096 tokens
+        in about two seconds, and a stream cut short would arrive without the `usage` the
+        ledger charges the call by — so what the flag buys on this route is the verdict,
+        not the tokens. Anywhere and not only the tail, because a model that stops
+        repeating on its own then closes the fence and finishes the page.
         """
         body = self._body(
             model, prompt, think, system, images, temperature, format,
@@ -264,7 +270,13 @@ class CerebrasEngine:
         shaped = body.get("response_format") or {}
         if (shaped.get("json_schema") or {}).get("name") == _WRAPPER_NAME:
             content = _unwrap(content)
-        return split_thinking(content, reasoning, choice.get("finish_reason") == "length")
+        found = repetition.detect(content) if stop_on_loop else None
+        return split_thinking(
+            content,
+            reasoning,
+            choice.get("finish_reason") == "length",
+            found.unit if found is not None else None,
+        )
 
     def _body(
         self,

@@ -66,8 +66,7 @@ probable colisión: redactadas tan parecido que no distinguen los conceptos que 
     Setting(key="retrieval.description_prompt_version", name="DESCRIPTION_PROMPT_VERSION",
             kind="int", default=2, group="Recuperación", impact=Impact.LOCKED,
             editable=False, minimum=1,
-            doc="""Súbelo al cambiar `concept_description_prompt`, igual que `TRANSCRIBE_PROMPT_VERSION` con
-la transcripción de páginas. La huella de una descripción mira el grafo y el anclaje al
+            doc="""Súbelo al cambiar `concept_description_prompt`. La huella de una descripción mira el grafo y el anclaje al
 corpus, que es lo que el prompt interpola — pero no el prompt, así que cambiar las reglas
 de redacción dejaba en caché descripciones escritas con las anteriores y no había forma
 de notarlo: el texto seguía ahí y el concepto seguía existiendo. La 2 es la que prohíbe

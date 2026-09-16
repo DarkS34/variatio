@@ -127,14 +127,27 @@ def failed_page(index: int, count: int, error: str) -> str:
     return f"{FAILED_PAGE_PREFIX} — page {index} of {count}: {error}]"
 
 
-def failed_page_truncated(index: int, count: int, cap: int, setting: str) -> str:
-    """Mark a page whose answer hit the output cap instead of ending."""
-    return (
-        f"{FAILED_PAGE_PREFIX} — page {index} of {count}: the answer went over the cap of "
-        f"{cap} output tokens; the model kept repeating something from the page (a run of "
-        "dots, a border) instead of finishing. Correct it by hand, or raise "
-        f"{setting} under «Configuración» if the page really was that long]"
+def failed_page_unfinished(
+    index: int, count: int, repeated: str | None, cap: int, salvaged: bool
+) -> str:
+    """Mark a page whose answer never finished, twice: a loop, or the output cap.
+
+    `repeated` is what the model kept writing, when a loop was caught; otherwise the answer
+    ran to `cap` tokens. `salvaged` says whether what was read before the cut follows the
+    marker, so the sentence can say what a person still has to do by hand.
+    """
+    cause = (
+        f"the model kept repeating «{repeated}» instead of finishing"
+        if repeated
+        else f"the answer went over the cap of {cap} output tokens without finishing"
     )
+    rest = (
+        "What was read before the cut follows; the rest of the page has to be "
+        "transcribed by hand"
+        if salvaged
+        else "Nothing could be kept: the page has to be transcribed by hand"
+    )
+    return f"{FAILED_PAGE_PREFIX} — page {index} of {count}: {cause}, on the second attempt too. {rest}]"
 
 
 # FRAGMENTS THE PROMPT BLOCKS ARE ASSEMBLED FROM ----------------------------------------------------
