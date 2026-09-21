@@ -7,8 +7,9 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
 > **This branch is the complete system**: the library, the FastAPI + PostgreSQL API, the
-> React front end and the study's blind evaluation. The **`main`** branch carries the same
-> library and its command line alone, with no API, no database and no front end.
+> React front end and the study's blind evaluation. The **`variatio-web`** branch is the
+> same product without the study, and **`main`** carries the library and its command line
+> alone, with no API, no database and no front end.
 
 ## What it does
 
