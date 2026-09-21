@@ -6,11 +6,12 @@ model; `markdown` and `chunking` import neither `inference` nor `progress`, whic
 property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
 
 Not private, despite serving the builders: `entrypoints/transcribe.py`, `server/raw_data.py`,
-`server/db/repository.py`, the settings registry and fourteen tests all reach it. `_context.py` beside it keeps its underscore, being genuinely the
-builders' own.
+`server/db/repository.py`, the settings registry and fourteen tests all reach it.
+`_context.py` beside it keeps its underscore, being genuinely the builders' own.
 """
 
 from . import chunking, files, markdown, office, pages
+from .office import slide_count
 from .chunking import chunk_markdown, chunk_sections, chunk_text
 from .files import (
     CONVERTED_EXTS,
@@ -45,12 +46,14 @@ from .pages import (
     page_images,
     read_meta,
     read_pages,
+    retryable_pages,
     reuse_key,
     review_seams,
     same_document,
     seam,
     seams_failed,
     seams_merged,
+    slide_seams,
     transcribe_office,
     transcribe_pdf,
     valid_seams,
@@ -90,12 +93,15 @@ __all__ = [
     "pages",
     "read_meta",
     "read_pages",
+    "retryable_pages",
     "reuse_key",
     "review_seams",
     "same_document",
     "seam",
     "seams_failed",
     "seams_merged",
+    "slide_count",
+    "slide_seams",
     "split_blocks",
     "strip_page_marks",
     "tidy_markdown",

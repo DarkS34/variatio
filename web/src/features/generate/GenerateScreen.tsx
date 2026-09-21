@@ -32,10 +32,8 @@ import { adjacency, covered } from "./prerequisites";
 import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
 import { RunStrip, useRunDetail } from "./RunStrip";
-import { useT, type Key } from "@/lib/i18n";
-
-/** The job error the guardrail raises, recognised so it can be shown on its own step. */
-const GUARDRAIL_ERROR: Key = "generate.notPassed";
+import { refusal, stillRefused } from "./screening";
+import { useT } from "@/lib/i18n";
 
 interface Result {
   item: Record<string, unknown>;
@@ -142,13 +140,10 @@ export function GenerateScreen() {
     if (savedCount > 0) client.invalidateQueries({ queryKey: ["generations"] });
   }, [savedCount, client]);
 
-  // A run that the guardrail stopped is not a generic failure: it is an answer about the
-  // text in step 4, so the form comes back with that step's own message attached.
-  const blocked = useMemo(() => {
-    if (status !== "failed") return null;
-    const error = run?.job?.error ?? "";
-    return error.includes(GUARDRAIL_ERROR) ? error.replace(/^\w+Error:\s*/, "") : null;
-  }, [status, run]);
+  // A run that the guardrail or the judge stopped is not a generic failure: it is an
+  // answer about the text in the instructions step, so the form comes back with that
+  // step's own message attached and its launch button locked until the text changes.
+  const blocked = useMemo(() => refusal(run?.job), [run]);
 
   // The form has to come back holding the text that was blocked, which it no longer does on
   // its own once the state and the run have drifted apart: the commission is the run's.
@@ -213,7 +208,7 @@ export function GenerateScreen() {
         running={active}
         pending={submit.isPending}
         error={submit.isError ? (submit.error as Error).message : null}
-        blockedInstructions={blocked}
+        blockedInstructions={stillRefused(run?.job, form.instructions)}
         onLaunch={launch}
         run={run ?? null}
       />

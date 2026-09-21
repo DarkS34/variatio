@@ -1,12 +1,14 @@
 import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { Diagram } from "@/components/Diagram";
 import { Markdown } from "@/components/Markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/input";
 import { isCodeField } from "@/features/bank/BankScreen";
+import { diagramSource } from "@/lib/diagram";
 import { fieldText, isEmptyField } from "@/lib/fields";
 import { fieldLabel, itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, ItemChecks, ItemTypeSpec } from "@/lib/types";
@@ -31,6 +33,10 @@ function FieldValue({
   value: string;
   reading: boolean;
 }) {
+  // A solution field is a code field by name, and a diagram is what a solution IS on a
+  // modelling modality: checked first, or the Mermaid would be Python-highlighted.
+  const diagram = diagramSource(value);
+  if (diagram !== null) return <Diagram code={diagram} />;
   if (isCodeField(field) && !isFenced(value)) {
     return <CodeBlock code={value} maxHeight="18rem" />;
   }

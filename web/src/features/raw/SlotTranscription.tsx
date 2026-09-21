@@ -30,7 +30,7 @@ function useSlot(slot: RawSlot) {
     loading: state.isLoading,
     data,
     running,
-    todo: (data?.pending ?? 0) + (data?.stale ?? 0),
+    todo: (data?.pending ?? 0) + (data?.stale ?? 0) + (data?.retry ?? 0),
   };
 }
 
@@ -51,6 +51,9 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
     return <Badge variant="attention">{plural("transcribe.staleCount", data.stale)}</Badge>;
   if (data.pending > 0)
     return <Badge variant="outline">{plural("transcribe.pendingCount", data.pending)}</Badge>;
+  // Read, but with pages to try again: the tick would say "nothing left", which is not true.
+  if ((data.retry ?? 0) > 0)
+    return <Badge variant="danger">{plural("transcribe.retryCount", data.retry ?? 0)}</Badge>;
   // A filled tick and not the words "al día": the state with nothing left to do is the one
   // a person scans past, and a mark reads faster than a word in a row of words. Solid,
   // because the 8 % tint is the whole card's (`SlotCard`) and a tinted mark on it would

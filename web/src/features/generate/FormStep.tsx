@@ -6,6 +6,24 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
 /**
+ * The shell of every card the form offers as a choice: a modality in «¿Qué tipo de
+ * ejercicio?», a rung in «¿De qué nivel?».
+ *
+ * The height is FIXED and it is one number for both, so a rung sits in the same box as a
+ * modality does. 8.3125rem (133 px) is not chosen: it is what a modality card measured
+ * when its description was clamped at three lines — border, `p-2.5`, a `text-body`
+ * title, the mono key line and three `text-small` lines — and the rung is now held to it
+ * rather than to its own clause, whose length is the criterion writer's. `overflow-hidden`
+ * is what keeps a clause longer than the box from spilling past the border.
+ *
+ * It fixes the height and NOTHING ELSE: each list keeps its own layout — the modalities
+ * in two columns, the rungs one under the next, because the rungs are a ladder and a
+ * ladder is read down.
+ */
+export const CHOICE_CARD =
+  "h-[8.3125rem] overflow-hidden rounded-lg border p-2.5 text-left transition-colors";
+
+/**
  * One question of the form: open while it is being answered, one line once it is.
  *
  * The collapsed line is not decoration — it is what keeps four questions on screen at

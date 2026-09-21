@@ -15,6 +15,7 @@ import type {
   ArtifactName,
   BuildPhase,
   CommissionScope,
+  InviteTerms,
   JobKind,
   Lanes,
   RawKind,
@@ -650,11 +651,48 @@ export function useAdminInvites() {
   return useQuery({ queryKey: keys.adminInvites, queryFn: api.adminInvites });
 }
 
-export function useCreateInvite() {
+export function useCreateInvites() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (body: { workspace: string | null; role: Role }) =>
-      api.adminCreateInvite(body),
+    mutationFn: (body: InviteTerms & { count: number }) => api.adminCreateInvites(body),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.adminInvites }),
+  });
+}
+
+export function useImportInvite() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: InviteTerms & { link: string }) => api.adminImportInvite(body),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.adminInvites }),
+  });
+}
+
+/**
+ * One invitation's link, read while its panel is open and forgotten when it closes.
+ *
+ * `gcTime: 0` is the point: the listing never carries a link, so that a live credential sits
+ * in the page only while somebody is looking at it, and reopening the panel is a fresh read
+ * the server writes down. The key is NOT under `adminInvites`, or every create, edit and
+ * revoke would re-read — and re-log — whichever link happens to be open. A query rather than
+ * a mutation fired from an effect: React's development double-mount detaches a mutation's
+ * observer, and the answer then never reaches the panel.
+ */
+export function useInviteLink(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin", "invite-link", id] as const,
+    queryFn: () => api.adminInviteLink(id),
+    enabled,
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+}
+
+export function useEditInvite() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, changes }: { id: number; changes: Partial<InviteTerms> }) =>
+      api.adminEditInvite(id, changes),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.adminInvites }),
   });
 }

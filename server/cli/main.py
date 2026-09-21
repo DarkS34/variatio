@@ -127,11 +127,18 @@ def build_parser():
     granter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
     granter.set_defaults(func=guarded(accounts.grant_role))
 
-    inviter = subparsers.add_parser("invite", help="crea una invitación de un solo uso")
+    inviter = subparsers.add_parser("invite", help="crea invitaciones de un solo uso")
     inviter.add_argument(
         "--workspace", default="", help="asignatura a la que suma; vacío para ninguna"
     )
     inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
+    inviter.add_argument(
+        "--alias", default="", help="nombre interno; solo lo ve el panel de administración"
+    )
+    inviter.add_argument("--days", type=int, default=7, help="días hasta que caduca (7)")
+    inviter.add_argument(
+        "--count", type=int, default=1, help="cuántas crear a la vez, con el alias numerado"
+    )
     inviter.set_defaults(func=guarded(accounts.invite))
 
     check = subparsers.add_parser("db-check", help="comprueba la conexión con la base de datos")

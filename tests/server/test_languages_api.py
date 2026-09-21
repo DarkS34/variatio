@@ -97,8 +97,8 @@ def test_a_browser_tag_is_accepted_and_folded(db, admin):
 
 
 def test_registering_without_saying_is_allowed_and_lands_in_spanish(db, admin):
-    # Unlike the evaluator profile, this one has a right answer to fall back on: NULL would
-    # mean an account that reads no language, which is not a state anything can render.
+    # This one has a right answer to fall back on, so nobody is asked twice: NULL would mean
+    # an account that reads no language, which is not a state anything can render.
     assert _register(db, admin, "carla", None).ui_language == "es"
 
 

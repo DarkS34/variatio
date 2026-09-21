@@ -36,7 +36,7 @@ SLOTS: dict[str, dict] = {
             "Los apuntes y el material teórico de la asignatura. De aquí se extrae el "
             "grafo de conocimiento: conceptos, dominios y relaciones."
         ),
-        "feeds": [approvals.KNOWLEDGE_GRAPH],
+        "feeds": [a for a, s in approvals.RAW_SOURCE.items() if s == CORPUS],
     },
     EXEMPLARS: {
         "kind": EXEMPLARS,
@@ -45,13 +45,18 @@ SLOTS: dict[str, dict] = {
             "Ejercicios, exámenes o prácticas ya resueltos. De aquí se infiere el perfil "
             "de contenido y se extrae el banco de ejemplos."
         ),
-        "feeds": [approvals.EXEMPLARS_PROFILE, approvals.EXEMPLARS_BANK],
+        "feeds": [a for a, s in approvals.RAW_SOURCE.items() if s == EXEMPLARS],
     },
 }
 
 _UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 TRANSCRIBE_JOB = "transcribe"
+
+
+def slot_feeding(artifact: str | None) -> str | None:
+    """Name the raw slot an artifact is built from, or `None` for one built from no slot."""
+    return approvals.RAW_SOURCE.get(artifact) if artifact else None
 
 
 class RawError(Exception):
@@ -272,10 +277,10 @@ def document(ws: Workspace, kind: str, name: str) -> str:
 
 def directory(ws: Workspace, kind: str) -> Path:
     """Return the workspace directory one slot writes into."""
-    dirs = {CORPUS: ws.raw_corpus_dir, EXEMPLARS: ws.raw_exemplars_dir}
-    if kind not in dirs:
-        raise RawError(f"Origen desconocido: '{kind}'")
-    return dirs[kind]
+    try:
+        return approvals.raw_directory(ws, kind)
+    except KeyError:
+        raise RawError(f"Origen desconocido: '{kind}'") from None
 
 
 def _files(path: Path) -> list[dict]:

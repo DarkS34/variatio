@@ -163,11 +163,6 @@ export const en: Catalogue = {
   "step.scan": "Goes through a sample of the exemplars looking for which exercise modalities appear and which fields each one is written with.",
   "step.consolidate": "Merges what each batch saw into a single profile: a field schema, its guidance and the general writing rules.",
 
-
-
-
-
-
   "step.taggability": "One pass per domain deciding which concepts work as a label: the ones that fit any exercise («coding», «design») are marked as non-taggable. When it finishes the draft is written.",
   "step.convert": "Transcribes the document into markdown, page by page, before extracting anything. If it was already transcribed from «Raw data», this hits the cache and goes straight past.",
   "step.transcribe_documents": "One document after another. Each is saved whole when it finishes, so stopping the transcription keeps what has already come out.",
@@ -234,11 +229,6 @@ export const en: Catalogue = {
   "step.transcribe_seam.label": "Checking the seams between pages",
   "step.taggability.label": "Reviewing which concepts work as a label",
 
-
-
-
-
-
   "nav.rawWaiting": {
     one: "1 document is still untranscribed. You can build anyway: every build transcribes what it needs.",
     other: "{n} documents are still untranscribed. You can build anyway: every build transcribes what it needs.",
@@ -283,10 +273,6 @@ export const en: Catalogue = {
   "tutorial.fig.youAsk": "You say",
   "tutorial.fig.written": "And it writes the exercise",
 
-
-
-
-
   "tutorial.s1.title": "Variatio is an application that generates exercises for your subject",
   "tutorial.s1.body":
     "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it generates them from your notes and from your own exercises, following the format and the spirit of the ones you set.",
@@ -328,17 +314,6 @@ export const en: Catalogue = {
   "tutorial.s4.outro.choose":
     "When this explanation ends the application appears: you pick your subject there — or create another one — and start at step 1. In your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
 
-
-
-
-
-
-
-
-
-
-
-
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
@@ -367,20 +342,6 @@ export const en: Catalogue = {
   "stage.continue": "Continue to step {n}",
   "stage.continueGenerate": "That is it: create my first exercise",
   "stage.continueFailed": "This step could not be closed, so nothing moved on. Try again.",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   "stage.what.profile":
     "It is the template new exercises are written from: the different shapes your exercises take and what parts each one carries.",
@@ -415,6 +376,7 @@ export const en: Catalogue = {
   "build.readOnly": "Your permission on this instance is read-only.",
   "build.whyNot": "Why this cannot be built yet",
   "build.rawMissing": "Documents are missing in «{slot}»: upload them under «Notes and exercises» before building.",
+  "build.transcribing": "The documents in «{slot}» are being read: wait for it to finish before building.",
   "build.sending": "Sending…",
   "build.alreadyQueued": "{label} is already queued.{reason}",
   "build.create": "Builds {stage} from your notes and exercises.{note}",
@@ -428,6 +390,16 @@ export const en: Catalogue = {
   "build.call.bank.title": "No exercises have been collected or tagged yet",
   "build.call.bank.body": "On building, the system collects the exercises in your documents one by one and gives each of them the concepts of the syllabus it practises.",
   "build.callTakesTime": "It takes a while: you can leave this screen meanwhile, the build carries on by itself.",
+  "build.rebuild": "Build again",
+  "build.rebuildTip": "Builds {stage} again from the documents there are now.{note}",
+  "build.rebuildTitle": "Build {stage} again?",
+  "build.rebuildBody": "Everything in «{slot}» is read once more and the result replaces the current one. Hand corrections made on this step are lost; the current version stays in the history.",
+  "build.failed": "It could not be launched: {error}",
+  "stage.staleRaw": "The documents in «{slot}» have changed since it was built:",
+  "stage.staleRaw.added": { one: "1 new document: {names}", other: "{n} new documents: {names}" },
+  "stage.staleRaw.removed": { one: "1 document removed: {names}", other: "{n} documents removed: {names}" },
+  "stage.staleRaw.changed": { one: "1 document modified: {names}", other: "{n} documents modified: {names}" },
+  "stage.staleRaw.what": "This step was built without those changes. You can build it again from the documents there are now, or close it as it is by carrying on to the next one.",
   "progress.building": "Building. The detail will appear as soon as the process emits its first step.",
   "progress.running": "Running. The detail will appear as soon as the process emits its first step.",
   "progress.preparing": "Preparing the process…",
@@ -622,10 +594,10 @@ export const en: Catalogue = {
   "transcribe.reason.model": "the transcription model changed",
   "transcribe.reason.dpi": "the render resolution changed",
   "transcribe.reason.ocr": "OCR changed",
-  "transcribe.reason.prompt": "the transcription prompt changed",
   "transcribe.reason.temperature": "the transcription temperature changed",
   "transcribe.reason.cleanup": "the converter cleanup changed",
   "transcribe.reason.rasteriser": "the reader of Word and PowerPoint's EMF/WMF drawings changed",
+  "transcribe.reason.deck": "how a deck is read changed: one page per slide, with its speaker notes",
   "transcribe.reason.config": "the transcription settings changed",
   "doc.onlyPage": "It is the document's only page.",
   "doc.deleteHint": "Deletes this page and renumbers the following ones.",
@@ -662,15 +634,6 @@ export const en: Catalogue = {
     other: "Delete the unit and its {n} concepts",
   },
 
-
-
-
-
-
-
-
-
-
   "admin.warmContexts": { one: "1 warm context", other: "{n} warm contexts" },
   "acc.savedVariants": { one: "1 generated exercise", other: "{n} generated exercises" },
 
@@ -684,11 +647,13 @@ export const en: Catalogue = {
   "noWorkspace.bodyA": "A subject keeps everything of its own: its documents, its syllabus, its exercise types and its exercises. You signed in as",
   "noWorkspace.bodyB": "; create your own now, or wait until somebody gives you access to an existing one.",
 
-
-
   "canvas.isolated": { one: "1 with no relations", other: "{n} with no relations" },
   "canvas.relations": { one: "1 relation", other: "{n} relations" },
   "canvas.conceptCount": { one: "1 concept", other: "{n} concepts" },
+  "canvas.unitCount": { one: "1 unit", other: "{n} units" },
+  "canvas.placing": "Placing {concepts}…",
+  "canvas.unitZoom": "Click to zoom into its concepts",
+  "canvas.aria": "Knowledge graph with {concepts} in {units}. The concept list covers the same with the keyboard.",
   "canvas.isolatedCount": { one: " · 1 isolated", other: " · {n} isolated" },
   "field.options": { one: "1 option", other: "{n} options" },
   "form.items": { one: "1 exercise", other: "{n} exercises" },
@@ -700,6 +665,14 @@ export const en: Catalogue = {
   "transcribe.failedPages": {
     one: "1 page the model could not transcribe.",
     other: "{n} pages the model could not transcribe.",
+  },
+  "transcribe.failedPagesRetry": {
+    one: "1 page the model could not transcribe. It is tried again the next time the documents are processed, and you can also correct it by hand.",
+    other: "{n} pages the model could not transcribe. They are tried again the next time the documents are processed, and you can also correct them by hand.",
+  },
+  "transcribe.retryCount": {
+    one: "1 with pages to read again",
+    other: "{n} with pages to read again",
   },
   "transcribe.stopHint": "Stops the transcription where it is. The pages already saved are kept and relaunching it resumes where it left off.",
   "transcribe.todoTitle": {
@@ -769,6 +742,10 @@ export const en: Catalogue = {
   "fewshot.noStatement": "(no statement)",
   "run.uncheckedInstructions": "instructions not reviewed",
   "result.retried": "Retried ×{n}",
+  "diagram.drawing": "Drawing the diagram…",
+  "diagram.invalid": "The diagram could not be drawn: {reason}",
+  "diagram.showSource": "Show the diagram's code",
+  "diagram.showDiagram": "Show the diagram",
   "result.itemHeading": "Exercise {n}",
   "result.saved": "saved",
   "result.generatedItems": "# Generated exercises",
@@ -821,7 +798,6 @@ export const en: Catalogue = {
   "admin.stat.accounts": "Accounts",
   "admin.stat.workspaces": "Subjects",
   "admin.stat.generations": "Exercises generated",
-
 
   "admin.stat.engine": "Engine",
   "admin.stat.busy": "busy",
@@ -888,9 +864,6 @@ export const en: Catalogue = {
   "cere.col.tokens": "Tokens",
   "cere.col.ofDay": "Of the day",
 
-
-
-
   "acc.deleteConfirm": "Delete the account «{username}» entirely?\n\nIt loses its access and its open sessions, and the username becomes free for another account.\n",
   "acc.deleteKept": "What it generated stays but with no author: {kept}.\n",
   "acc.deleteTail": "\nThis cannot be undone. To close the door without deleting anything, deactivate it.",
@@ -912,7 +885,6 @@ export const en: Catalogue = {
   "acc.fullAccess": "full access (administration)",
   "acc.noAccess": "access to none",
 
-
   "acc.reactivate": "Reactivate",
   "acc.deactivate": "Deactivate",
   "acc.deleteTitle": "Delete the account entirely",
@@ -923,7 +895,6 @@ export const en: Catalogue = {
   "acc.sessionsClosed": "Sessions closed",
   "acc.sessionsClosedOf": "{n} of {username}",
   "acc.failed": "It could not be done",
-
 
   "acc.theAccount": "The account",
   "acc.removeAdmin": "Remove administration",
@@ -940,9 +911,6 @@ export const en: Catalogue = {
   "acc.loginUnlocked": "Login unlocked",
   "acc.unlockLogin": "Unlock the login ({n} min)",
 
-
-
-
   "acc.resetCopy": "Hand it over yourself. It lasts {minutes} minutes and works once; whoever opens it sets «{username}»'s new password, so do not leave it anywhere shared.",
   "acc.adminNoMemberships": "This account administers the installation: it enters every subject without being a member of any, so there is no access to give it.",
   "acc.alsoMemberOf": "It is also recorded as a member of",
@@ -951,19 +919,76 @@ export const en: Catalogue = {
   "acc.grantAccessTo": "Give access to",
   "acc.permission": "Permission",
   "acc.grant": "Grant",
-  "acc.invite": "Invite somebody",
+  "acc.invite": "Invitations",
   "acc.invite.hintLabel": "How people get in here",
-  "acc.invite.hint": "There is no open registration: an account exists because somebody opened a single-use invitation, or because it was created from the command line. Removing public registration is what takes the biggest target of a web login out of the way.",
+  "acc.invite.hint": "There is no open registration: an account exists because somebody opened a single-use invitation, or because it was created from the command line. Removing public registration is what takes the biggest target of a web login out of the way. Each invitation's link is kept encrypted with a key that is not in the database, and it is erased as soon as somebody uses it.",
+  "acc.invite.mode.new": "Create",
+  "acc.invite.mode.recover": "Recover a link",
+  "acc.invite.alias": "Alias",
+  "acc.invite.aliasPlaceholder": "E.g.: Nursing teacher",
+  "acc.invite.aliasHint": "The alias is only for you: whoever opens the link sees the subject, the permission and the expiry date, never the alias.",
   "acc.invite.workspace": "Subject",
   "acc.invite.noWorkspace": "None (just create the account)",
+  "acc.invite.expiresAt": "Expires on",
+  "acc.invite.quickExpiry": "Quick periods",
+  "acc.invite.preset.day": "In 1 day",
+  "acc.invite.preset.week": "In 1 week",
+  "acc.invite.preset.month": "In 1 month",
+  "acc.invite.preset.quarter": "In 3 months",
+  "acc.invite.expiresIn": "It stops working {when}.",
+  "acc.invite.expiryPast": "That date has already passed: choose one still to come.",
+  "acc.invite.expiryMissing": "Choose the day and time it stops working.",
+  "acc.invite.expiredEditHint": "It expired {when}. Move the date and the link you already handed over works again.",
+  "acc.invite.count": "How many",
+  "acc.invite.countRange": "Between 1 and {max} can be created at once.",
   "acc.invite.create": "Create link",
-  "acc.invite.noAccessHint": "They will get in with access to no instance; you give it to them afterwards from the table.",
+  "acc.invite.createMany": "Create {n} links",
+  "acc.invite.noAccessHint": "They will get in with access to no subject; you give it to them afterwards from the table.",
+  "acc.invite.batchNamed": "Each will carry the alias numbered («{label} 1», «{label} 2»…); if there are invitations with that alias already, the numbering carries on where it stopped.",
+  "acc.invite.batchUnnamed": "They will have no alias. Write one and they are numbered, which makes it easier to tell whose is whose.",
+  "acc.invite.batchDone": { one: "1 invitation created", other: "{n} invitations created" },
+  "acc.invite.copyAll": "Copy all",
+  "acc.invite.copyMany": "Hand each person their own: every link works once and whoever opens it picks their own username. «Copy all» copies them with their alias, ready to paste into a spreadsheet.",
   "acc.invite.copy": "Hand it over to whoever you are inviting yourself. It works once and whoever opens it picks their own username, so do not leave it anywhere shared.",
+  "acc.invite.copyNamed": "Link for «{label}». Hand it over yourself: it works once and whoever opens it picks their own username, so do not leave it anywhere shared.",
+  "acc.invite.notStoredNow": "The link could not be kept to show it again later: copy it now.",
+  "acc.invite.recover.lead": "Revoked an invitation by mistake? Paste the link you handed over here and it will work again under the terms below. If that invitation is still in the list nothing about it changes: its link simply becomes showable again. A link that has already been used cannot be recovered.",
+  "acc.invite.recover.link": "Link",
+  "acc.invite.recover.linkHint": "The whole link, or only the code after «token=».",
+  "acc.invite.recover.submit": "Recover the link",
+  "acc.invite.recover.created": "That link works again under the terms you chose. It is the same one you already handed over, so there is no need to send it again.",
+  "acc.invite.recover.recovered": "That invitation was still in the list: you can read its link again now",
+  "acc.invite.recover.unchanged": "That invitation was already in the list",
+  "acc.invite.recover.inList": "Nothing else was changed. Its terms are edited from the list, under «{name}».",
+  "acc.invite.loadFailed": "The invitations could not be read",
+  "acc.invite.pendingHeading": { one: "1 pending", other: "{n} pending" },
+  "acc.invite.tab.pending": "Pending",
+  "acc.invite.tab.expired": "Expired",
+  "acc.invite.search": "Search by alias, subject or author",
+  "acc.invite.none": "There is no unused invitation.",
+  "acc.invite.nonePending": "None is pending: the ones left have expired.",
+  "acc.invite.noMatch": "No invitation matches the search.",
   "acc.invite.linkOf": "Link of {date}",
-  "acc.invite.createdBy": " · created by {name}",
+  "acc.invite.expiredBadge": "Expired",
   "acc.invite.noWorkspaceShort": "no subject",
-  "acc.invite.expires": " · expires on {date}",
+  "acc.invite.expiresOn": "expires on {date} ({when})",
+  "acc.invite.expiredOn": "expired on {date} ({when})",
+  "acc.invite.createdByOn": "created by {name} on {date}",
+  "acc.invite.showLink": "Show link",
+  "acc.invite.hideLink": "Hide link",
+  "acc.invite.linkLive": "This is its link. It works once and whoever opens it picks their own username, so do not leave it anywhere shared.",
+  "acc.invite.linkExpired": "This is its link, but it has expired: change the date under «Edit» and this same link will work again.",
+  "acc.invite.notStored": "Its link was not kept",
+  "acc.invite.notStoredBody": "This invitation predates Variatio keeping links. If you still have it, paste it under «Recover a link» and it will show here again; if not, revoke it and create another.",
+  "acc.invite.recoverIt": "Paste its link",
+  "acc.invite.edit": "Edit",
+  "acc.invite.save": "Save changes",
+  "acc.invite.saved": "Invitation updated",
   "acc.invite.revoke": "Revoke",
+  "acc.invite.revokeConfirm": "Revoke «{name}»?",
+  "acc.invite.revokeConfirmBody": "Its link stops working at once and the invitation leaves the list. If you might change your mind, copy its link first with «Show link»: pasting it under «Recover a link» makes it valid again.",
+  "acc.invite.revoked": "Invitation revoked",
+  "acc.invite.revokeFailed": "It could not be revoked",
   "acc.copied": "Copied",
   "acc.copy": "Copy",
   "ws.heading": "Subjects ({n}) · {size} on disk",
@@ -1025,300 +1050,8 @@ export const en: Catalogue = {
   "maint.messageLabel": "What is read in the meantime",
   "maint.messageHelp": "It is all anybody trying to get in will see. No time of return: nobody knows it.",
 
-
-
-
-
-
-
-
-  // THE STUDY -----------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   "chain.pending": "Still to sign off: {stages}",
   "chain.goFix": "Go to Step {n} · {label}",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   // THE GRAPH SCREEN ----------------------------------------------------------------------
   "kg.saveChanges": "Save changes",
@@ -1405,7 +1138,7 @@ export const en: Catalogue = {
 
   // KNOWLEDGE GRAPH — THE CANVAS ----------------------------------------------------------
   "canvas.layout.force": "Neighbourhood",
-  "canvas.layout.force.hint": "Concepts near the ones they relate to",
+  "canvas.layout.force.hint": "Each unit in its own box; inside, concepts near the ones they relate to",
   "canvas.layout.curriculum": "Curriculum",
   "canvas.layout.curriculum.hint": "One level per prerequisite depth: what is above is taught first ({n} order it)",
   "canvas.layout.curriculum.none": "The syllabus has no prerequisite relations to order it by",
@@ -1576,6 +1309,7 @@ export const en: Catalogue = {
   "form.instructions.title": "Additional instructions",
   "form.instructions.hint": "A free request for this batch: the theme, the setting, that kind of thing. For instance, make the context sporting.",
   "form.instructions.blocked": "Instructions blocked",
+  "form.instructions.blockedLaunch": "The additional instructions did not pass the screen: change them to generate.",
   "form.scope.canAsk": "Here you can ask for",
   "form.scope.decidedAbove": "This is decided above",
   "form.scope.subjectFixes": "This is fixed by the subject",
@@ -1600,7 +1334,6 @@ export const en: Catalogue = {
 
   "form.confirmContinue": "Confirm and continue",
 
-  "generate.notPassed": "did not pass the review",
   "generate.queued": "It is queued.",
   "generate.howItWorks": "How generation works",
   "generate.noEngine": "No inference engine",
@@ -1622,7 +1355,6 @@ export const en: Catalogue = {
   "effort.max": "Maximum",
   "effort.warn.qwen38": "Above «Medium», qwen3.8 deliberates for thousands of words on the local GPU: every exercise can take many minutes, and at the high level it has been measured returning an empty answer.",
   // COUNTS ------------------------------------------------------------------------------
-
 
   "count.items": { one: "{n} exercise", other: "{n} exercises" },
 
@@ -1794,7 +1526,6 @@ export const en: Catalogue = {
   "cfg.section.retrievalDesc": "The concepts index: embedding prefixes, weights, thresholds, and how many candidates are retrieved.",
   "cfg.section.generation": "Tagging and generation",
   "cfg.section.generationDesc": "The bank's tagger and the generation of exercises: few-shot examples, retries and the guardrail.",
-
 
   "cfg.section.others": "Others",
   "cfg.section.othersDesc": "Settings whose group has no page of its own in the panel.",

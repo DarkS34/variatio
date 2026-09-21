@@ -23,7 +23,7 @@ const STATE_HINTS: Record<StatusKey, string> = {
     "Closed and taken as good. It is closed by moving on to the next step; correcting it afterwards opens it again with the first change you save.",
   draft: "Built and not closed yet. It can be looked at and corrected; what comes after it is still waiting.",
   stale:
-    "Something it depends on changed after it was closed. It has to be looked over and closed again by carrying on.",
+    "Something it depends on changed after it was built or closed: the step above, or the documents it reads. The screen says what changed; if it was the documents, it offers to build it again from the ones there are now. Either way it is closed again by carrying on.",
   building:
     "The screen says which of three things is happening: it is being built for the first time and there is nothing to replace; it is being worked over what is already there, which stays saved and merely stops being shown; or the job is still queued and has not started, and then there is no bar.",
   missing: "It does not exist yet. The screen shows the header and a single button, large and in the middle: start building.",
@@ -852,7 +852,7 @@ function Graph() {
         ]}
       />
 
-      <Block title="A list, with a map under it">
+      <Block title="A list, with the graph beside it">
         <Paragraph>
           What you see first is the syllabus: the units in teaching order, folded. Open them, or
           search and the ones with results open on their own. Every row carries the concept and
@@ -884,10 +884,19 @@ function Graph() {
           reading the whole graph; clicking a concept in a band moves the card to it.
         </Paragraph>
         <Paragraph>
-          The canvas has two layouts: <strong>"{t("canvas.layout.force")}"</strong>, which puts
-          each concept next to the ones it relates to, and{" "}
-          <strong>"{t("canvas.layout.curriculum")}"</strong>, which orders by prerequisite level.
-          Switching rebuilds nothing: the nodes ease to their new positions. A level is a{" "}
+          The canvas has two layouts. In <strong>"{t("canvas.layout.force")}"</strong> every unit
+          has a box of its own, in syllabus order and sized by the concepts it holds, and inside
+          it each concept sits near the ones it relates to; those with no relation at all wait in
+          a row at its foot. From afar you read the units — their names, how many concepts each
+          holds, and the relations between them, stronger the more there are; closer in the
+          concepts appear with their names, and the unit's name moves to the corner of its box so
+          you always know which one you are in. Clicking a unit zooms to it, and in the enlarged
+          view the small plan in the corner marks which part of the syllabus is in front of you.
+          A syllabus of a hundred concepts reads the same way as one of thousands.
+        </Paragraph>
+        <Paragraph>
+          <strong>"{t("canvas.layout.curriculum")}"</strong> orders by prerequisite level.
+          Switching layouts rebuilds nothing: the nodes ease to their new positions. A level is a{" "}
           <em>band</em> and not a row, because a real syllabus spreads prerequisites very
           unevenly; with fewer than three levels the canvas says so, because that is a fact
           about the syllabus and not a broken view.
@@ -1678,7 +1687,39 @@ function Admin() {
           chooses their username and their password.
         </Paragraph>
         <Paragraph>
-          The invitation may already carry a subject and a role inside it, or carry none.
+          Each invitation is created under the terms you choose: an <strong>alias</strong> only
+          you see — whoever opens the link sees the subject, the permission and the date, never
+          the alias —, the subject and permission it carries, or none, and the day and time it
+          expires, with no upper limit. «{t("acc.invite.count")}» creates several at once with
+          the alias numbered, and «{t("acc.invite.copyAll")}» copies them ready to paste into a
+          spreadsheet. The ones nobody has used stay in the list, the expired ones apart, and
+          each offers:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "show",
+              head: <>«{t("acc.invite.showLink")}»</>,
+              body: "Shows its link again so it can be copied once more. It is kept encrypted with a key that is not in the database, and erased as soon as somebody uses it. Invitations created before this existed do not have it kept.",
+            },
+            {
+              key: "edit",
+              head: <>«{t("acc.invite.edit")}»</>,
+              body: "Changes the alias, the subject, the permission or the date. Move the date of an expired one and the same link you already handed over works again.",
+            },
+            {
+              key: "revoke",
+              head: <>«{t("acc.invite.revoke")}»</>,
+              body: "Its link stops working at once and the invitation leaves the list.",
+            },
+            {
+              key: "recover",
+              head: <>«{t("acc.invite.mode.recover")}»</>,
+              body: "If you revoked one by mistake, paste the link you handed over — or only the code after «token=» — and it is valid again under the terms you choose. A link that has already been used cannot be recovered: an invitation serves once.",
+            },
+          ]}
+        />
+        <Paragraph>
           Access is granted and revoked afterwards, account by account and subject by subject,
           from this same table; there are three roles:
         </Paragraph>
@@ -1942,11 +1983,21 @@ const problems = (
     key: "obsoleto",
     question: `A step says "${t(STATUS.stale.labelKey)}"`,
     answer: (
-      <p>
-        Something it depends on changed after you closed it. Open it, check that it still holds
-        — or correct it — and close it again by carrying on to the next one. Meanwhile, the
-        steps that depend on it stay blocked.
-      </p>
+      <>
+        <p>
+          Something it depends on changed after you closed it. Open it, check that it still holds
+          — or correct it — and close it again by carrying on to the next one. Meanwhile, the
+          steps that depend on it stay blocked.
+        </p>
+        <p>
+          If what changed is the documents — you uploaded more exercises or notes after building
+          it, or removed some — the notice names which and offers "{t("build.rebuild")}":
+          everything there is now is read again and the result replaces the current one. Hand
+          corrections on that step are lost; the previous version stays in the history. If you
+          would rather keep what there is, close the step by carrying on and the notice goes
+          until the next change.
+        </p>
+      </>
     ),
   },
   {
@@ -2019,9 +2070,11 @@ const problems = (
     question: "My additional instructions come back blocked",
     answer: (
       <p>
-        The notice says which of the two filters it was. If it is admissibility, it names the
-        control above that already decides that: change it there instead of asking for it in
-        writing. If it is the guardrail, it says under which criterion.
+        The notice appears under the instructions box itself and the generate button stays
+        locked until you change them. It says which of the two filters it was: if it is
+        admissibility, it names the control above that already decides that, so change it there
+        instead of asking for it in writing; if it is the guardrail, it says under which
+        criterion.
       </p>
     ),
   },

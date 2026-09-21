@@ -26,10 +26,13 @@ class RateLimiter:
         self._hits: dict[tuple[str, str], deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
-    def check(self, bucket: str, key: str, limit: int, window: float) -> float:
+    def check(self, bucket: str, key: str, limit: int, window: float, cost: int = 1) -> float:
         """Seconds to wait before this attempt is allowed; 0.0 when it is allowed now.
 
-        Records the attempt when it is allowed, which is what `wait_for` does not.
+        Records the attempt when it is allowed, which is what `wait_for` does not. `cost` is
+        how many attempts one request stands for — a batch of invitations spends what the
+        same links minted one by one would — and the wait is until enough of the oldest have
+        aged out to make room for all of them. A cost above the limit never fits.
         """
         if not key:
             return 0.0
@@ -38,9 +41,12 @@ class RateLimiter:
             hits = self._hits[(bucket, key)]
             while hits and now - hits[0] > window:
                 hits.popleft()
-            if len(hits) >= limit:
-                return max(0.0, window - (now - hits[0]))
-            hits.append(now)
+            excess = len(hits) + cost - limit
+            if excess > 0:
+                if cost > limit:
+                    return window
+                return max(0.0, window - (now - hits[excess - 1]))
+            hits.extend([now] * cost)
             return 0.0
 
     def wait_for(self, bucket: str, key: str, limit: int, window: float) -> float:
@@ -79,8 +85,8 @@ limiter = RateLimiter()
 FALLBACK_LIMITS: dict[str, tuple[int, float]] = {"accept": (10, 3600.0)}
 
 
-def throttle(bucket: str, request: Request, account: str) -> None:
-    """Record an attempt against both the caller's address and the account.
+def throttle(bucket: str, request: Request, account: str, cost: int = 1) -> None:
+    """Record `cost` attempts against both the caller's address and the account.
 
     Raises HTTPException 429 with `Retry-After` as soon as either key is over its limit.
     It lives here rather than in the router that first needed it because there is now
@@ -92,7 +98,7 @@ def throttle(bucket: str, request: Request, account: str) -> None:
     limit, window = limits(bucket)
     limiter.sweep()
     for key in (client_ip(request), account):
-        wait = limiter.check(bucket, key, limit, window)
+        wait = limiter.check(bucket, key, limit, window, cost)
         if wait > 0:
             raise HTTPException(
                 429,

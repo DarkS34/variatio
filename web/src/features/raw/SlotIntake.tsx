@@ -59,6 +59,9 @@ export function useSlotIntake(slot: RawSlot, extensions: string[]): SlotIntake {
     client.invalidateQueries({ queryKey: keys.raw });
     client.invalidateQueries({ queryKey: keys.health });
     client.invalidateQueries({ queryKey: ["raw", "transcription", slot.kind] });
+    // The chain reads the documents: a stage built from fewer of them is stale the moment
+    // the drop lands, and the bar has to say so without waiting for its next poll.
+    client.invalidateQueries({ queryKey: keys.pipeline });
   };
 
   const send = async (list: FileList | File[] | null) => {

@@ -41,9 +41,9 @@ CHAIN_GRAPH = {
 PREREQUISITE = "tiene como prerrequisito"
 
 
-# THREE AUTOUSE FIXTURES, and all three are here for the same reason: the suite runs inside
-# the installation itself — its `.env`, its database, its `workspaces/` — so whatever
-# resolves a default resolves PRODUCTION.
+# FIVE AUTOUSE FIXTURES, and all five are here for the same reason: the suite runs inside
+# the installation itself — its `.env`, its database, its `workspaces/`, its keys — so
+# whatever resolves a default resolves PRODUCTION.
 #
 # The first stops a test spending real money's worth of budget. `CerebrasEngine` records
 # every call in a ledger at the project root, so the engine tests — which answer a simulated
@@ -66,6 +66,20 @@ def _no_cerebras_catalogue(monkeypatch):
     from variatio.core import cerebras
 
     monkeypatch.setattr(cerebras.CerebrasEngine, "known_models", lambda self: frozenset())
+
+
+# The fifth stops a test minting the installation's own key. Sealing an invitation's link
+# creates `/.invite_link_key` at the project root the first time, so any test reaching
+# `links.mint` would leave a key there that a later real invitation would then be sealed
+# with. The environment's key goes with it, or a developer's `.env` would decide the tests.
+@pytest.fixture(autouse=True)
+def _isolated_invite_link_key(tmp_path, monkeypatch):
+    from server.auth import links
+
+    monkeypatch.delenv(links.KEY_ENV, raising=False)
+    links.use(tmp_path / "invite_link_key")
+    yield
+    links.use(None)
 
 
 # The second stops a test writing to the production database: `session.database_url()` reads

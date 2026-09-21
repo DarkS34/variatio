@@ -83,6 +83,9 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
   const states = [corpus.data, exemplars.data].filter((entry) => entry !== undefined);
   const stale = states.reduce((sum, entry) => sum + entry.stale, 0);
   const pending = states.reduce((sum, entry) => sum + entry.pending, 0);
+  // A document with failed pages is up to date and still has work in it: reading the slot
+  // again is what tries those pages, so it counts toward the button that does it.
+  const retry = states.reduce((sum, entry) => sum + (entry.retry ?? 0), 0);
 
   // `known` guards `done`: the foot of the screen reads it, and during the first second of
   // a load — before a slot's reading has landed — "nada pendiente" is true by ABSENCE.
@@ -95,14 +98,15 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
     running,
     stale,
     pending,
-    todo: stale + pending,
+    retry,
+    todo: stale + pending + retry,
     // Both origins hold something and both readings have landed: what the foot of the
     // screen needs before it may say anything at all about the way on.
     stocked: stockedAll && known,
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
     // Both origins hold something, every document is read and nothing is running: what the
     // next step actually wants, and not merely "nothing is outstanding".
-    done: stockedAll && known && !running && stale + pending === 0,
+    done: stockedAll && known && !running && stale + pending + retry === 0,
   };
 }
 

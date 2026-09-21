@@ -120,6 +120,19 @@ if (SLIDES.length !== SLIDE_COUNT) {
 const COLUMN = "mx-auto w-full max-w-[46rem]";
 
 /**
+ * A paragraph of the slide, JUSTIFIED from `sm` up and ragged below it.
+ *
+ * The deck is set as something to read, in one measured column of ~65 characters a line, and
+ * there both edges straight make each slide read as a page. What makes it safe is the
+ * hyphenation: without it a justified line with one long Spanish word stretches its spaces into
+ * rivers, and `hyphens: auto` reads the language off `<html lang>`, which `lib/i18n/locale.ts`
+ * stamps with the reader's own. On a phone a line holds ~35 characters, too few to spread
+ * evenly, so there the text stays ragged. Only paragraphs: a title, a label quoted from the app
+ * and the sentences inside a figure keep their own alignment.
+ */
+const READING = `${PROSE} sm:text-justify sm:hyphens-auto`;
+
+/**
  * The index: the four steps of the construction, numbered exactly as the bar numbers them.
  *
  * The name is never prefixed "Paso 1:" — the counter beside it already says so.
@@ -141,7 +154,7 @@ function Steps() {
           </span>
           <div className="min-w-0 space-y-1.5">
             <p className={cn(PROSE, "font-semibold")}>{t(step.labelKey)}</p>
-            <p className={cn(PROSE, "text-muted-foreground")}>{t(STEP_BODIES[index])}</p>
+            <p className={cn(READING, "text-muted-foreground")}>{t(STEP_BODIES[index])}</p>
           </div>
         </li>
       ))}
@@ -317,7 +330,7 @@ export function TutorialScreen({ at }: { at: number }) {
                   {/* The lead is in the ink and the aside is not: greying the sentence of
                       the slide under points drawn in full ink inverts the emphasis, and on a
                       slide that is a lead and a figure it greys every word on it. */}
-                  <p className={PROSE}>{t(slide.body)}</p>
+                  <p className={READING}>{t(slide.body)}</p>
 
                   {slide.figure}
 
@@ -341,7 +354,7 @@ export function TutorialScreen({ at }: { at: number }) {
                           // every line, over the gaps. The negative side padding keeps the
                           // ink starting on the column's own left edge.
                           className={cn(
-                            PROSE,
+                            READING,
                             marked(point) &&
                               "box-decoration-clone -mx-1.5 rounded-sm bg-[color-mix(in_oklab,var(--destructive)_12%,var(--background))] px-1.5 py-0.5",
                           )}
@@ -356,12 +369,12 @@ export function TutorialScreen({ at }: { at: number }) {
                       muted ink says so without drawing a container around one paragraph of a
                       page made of paragraphs. */}
                   {slide.aside ? (
-                    <p className={cn(PROSE, "text-muted-foreground")}>{t(slide.aside)}</p>
+                    <p className={cn(READING, "text-muted-foreground")}>{t(slide.aside)}</p>
                   ) : null}
 
                   {slide.outro ? (
                     <div className="border-t border-border pt-9">
-                      <p className={PROSE}>
+                      <p className={READING}>
                         {t(hasWorkspace ? slide.outro.choose : slide.outro.create)}
                       </p>
                     </div>

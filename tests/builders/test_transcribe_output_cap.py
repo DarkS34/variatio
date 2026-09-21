@@ -1,14 +1,13 @@
-"""A transcription answer that hits the output cap is a FAILED page, not a short one.
+"""An answer that never finishes is asked for once more, and what it read is kept under a marker.
 
-Measured on the reference subject: a page whose header carries a fill-in line ("Nombre:
-____") can be copied stroke for stroke for the engine's whole budget — 40 960 tokens of one
-repeated `\\_`, at twenty times the cost and sixty times the time of a real page — and the
-garbage then goes through the profile and the bank as if it were text.
-
-`TRANSCRIBE_MAX_OUTPUT_TOKENS` bounds the call, and `truncated` — the engine's own stop
-reason — turns the cut answer into `FAILED_PAGE_PREFIX`: visible in "Apuntes y ejercicios",
-counted in `failed_pages`, never handed downstream. Not retried, because at temperature 0
-the same image produces the same run.
+Measured on the reference installation: a page whose header carries a fill-in line was
+copied as 40 960 tokens of `\\_`; a page with a hand-drawn grid was cut at the 4 096-token
+cap three times over with the same 7 368 characters, because the same request at
+temperature 0 is the same loop. So a loop the engine stops on (`GenerationResponse.loop`)
+or an answer that ran to `TRANSCRIBE_MAX_OUTPUT_TOKENS` (`truncated`) is asked for ONCE
+MORE with the prompt naming what went wrong, and if that fails too the page keeps what
+was read before the loop under `FAILED_PAGE_PREFIX`: counted in `failed_pages`, red in
+"Apuntes y ejercicios", never handed downstream as a page with content.
 """
 
 from variatio import config
@@ -17,21 +16,24 @@ from variatio.core.inference import GenerationResponse
 from variatio.prompts import of as prompts_of
 from variatio.wording import es as ES_WORDING
 
+ROW = "| | | |       | | | |"
+GRID = "# Sumador\n\n```\n1 0 0 0\n" + (ROW + "\n") * 40
+
 
 class _Engine:
-    """Answers every call with the same response and counts the calls."""
+    """Answers each call with the next response of the list, repeating the last one."""
 
-    def __init__(self, response: GenerationResponse):
-        self._response = response
+    def __init__(self, *responses: GenerationResponse):
+        self._responses = list(responses)
         self.calls: list[dict] = []
 
     def __call__(self, **kwargs) -> GenerationResponse:
         self.calls.append(kwargs)
-        return self._response
+        return self._responses[min(len(self.calls), len(self._responses)) - 1]
 
 
-def _page(monkeypatch, response: GenerationResponse) -> tuple[str, _Engine]:
-    engine = _Engine(response)
+def _page(monkeypatch, *responses: GenerationResponse) -> tuple[str, _Engine]:
+    engine = _Engine(*responses)
     monkeypatch.setattr(pages.inference, "generate", engine)
     monkeypatch.setattr(config, "TRANSCRIBE_MAX_RETRIES", 2)
     monkeypatch.setattr(config, "TRANSCRIBE_MAX_OUTPUT_TOKENS", 4096)
@@ -39,38 +41,92 @@ def _page(monkeypatch, response: GenerationResponse) -> tuple[str, _Engine]:
     return page, engine
 
 
-def test_the_cap_travels_with_every_page_call(monkeypatch):
-    page, engine = _page(monkeypatch, GenerationResponse("# Tema 1\n\nTexto."))
-    assert page == "# Tema 1\n\nTexto."
-    assert engine.calls[0]["max_output_tokens"] == 4096
-
-
-def test_a_cut_answer_is_a_failed_page_and_names_the_page(monkeypatch):
-    page, _ = _page(monkeypatch, GenerationResponse("\\_" * 2048, truncated=True))
-    assert page.startswith(ES_WORDING.FAILED_PAGE_PREFIX)
-    assert "página 3 de 7" in page
-    assert "4096" in page, "el marcador dice qué techo se superó"
-    assert "\\_\\_" not in page, "la basura no se guarda"
-
-
-def test_a_cut_answer_is_not_retried(monkeypatch):
-    # Temperature 0: the same image would yield the same run, and `TRANSCRIBE_MAX_RETRIES`
-    # is 2 here, so an answer treated as an error would have cost three calls.
-    _, engine = _page(monkeypatch, GenerationResponse("\\_" * 2048, truncated=True))
-    assert len(engine.calls) == 1
-
-
-def test_the_failed_page_is_counted_as_failed(monkeypatch):
-    page, _ = _page(monkeypatch, GenerationResponse("x" * 10, truncated=True))
-    assert pages.failed_pages(["ok", page, "ok"]) == [2]
-
-
-def test_a_cut_picture_is_unreadable_and_not_retried(monkeypatch):
-    engine = _Engine(GenerationResponse("\\_" * 2048, truncated=True))
+def _picture(monkeypatch, *responses: GenerationResponse) -> tuple[str | None, _Engine]:
+    engine = _Engine(*responses)
     monkeypatch.setattr(pages.inference, "generate", engine)
     monkeypatch.setattr(config, "TRANSCRIBE_MAX_RETRIES", 2)
     monkeypatch.setattr(config, "TRANSCRIBE_MAX_OUTPUT_TOKENS", 4096)
     reading = pages._transcribe_image("AAAA", 1, 1, "m", "[t] ", prompts_of("es"))
-    assert reading is None
+    return reading, engine
+
+
+def test_the_cap_and_the_loop_stop_travel_with_every_page_call(monkeypatch):
+    page, engine = _page(monkeypatch, GenerationResponse("# Tema 1\n\nTexto."))
+    assert page == "# Tema 1\n\nTexto."
     assert len(engine.calls) == 1
     assert engine.calls[0]["max_output_tokens"] == 4096
+    assert engine.calls[0]["stop_on_loop"] is True
+
+
+def test_a_looped_answer_is_asked_once_more_with_the_prompt_naming_the_loop(monkeypatch):
+    page, engine = _page(
+        monkeypatch,
+        GenerationResponse(GRID, loop=ROW),
+        GenerationResponse("# Sumador\n\n[cuadrícula vacía de 4 filas × 8 columnas]"),
+    )
+    assert page == "# Sumador\n\n[cuadrícula vacía de 4 filas × 8 columnas]"
+    assert len(engine.calls) == 2
+    assert ROW not in engine.calls[0]["prompt"]
+    assert ROW in engine.calls[1]["prompt"], "the second attempt is told what repeated"
+    assert "4096" in engine.calls[1]["prompt"]
+
+
+def test_a_second_loop_keeps_what_came_before_it_under_the_marker(monkeypatch):
+    page, engine = _page(
+        monkeypatch, GenerationResponse(GRID, loop=ROW), GenerationResponse(GRID, loop=ROW)
+    )
+    assert len(engine.calls) == 2, "two attempts and never a third"
+    assert page.startswith(ES_WORDING.FAILED_PAGE_PREFIX)
+    assert "página 3 de 7" in page
+    assert f"«{ROW}»" in page, "the marker names what the model kept writing"
+    assert "# Sumador" in page and "1 0 0 0" in page, "what was read before the loop is kept"
+    assert page.count(ROW) == 1, "the marker's quotation is the only copy of the row"
+    assert page.count("```") == 2, "the fence the cut left open is closed"
+    assert pages.failed_pages(["ok", page, "ok"]) == [2]
+
+
+def test_nothing_before_the_loop_leaves_the_marker_alone(monkeypatch):
+    looped = GenerationResponse("\\_" * 2048, loop="\\_")
+    page, _ = _page(monkeypatch, looped, looped)
+    assert page.startswith(ES_WORDING.FAILED_PAGE_PREFIX)
+    assert page.endswith("]")
+    assert "\\_\\_" not in page, "the garbage is not kept"
+    assert "No se pudo salvar nada" in page
+
+
+def test_an_answer_cut_at_the_cap_with_no_loop_found_keeps_its_text_and_names_the_cap(monkeypatch):
+    cut = GenerationResponse("Un párrafo largo y legítimo.", truncated=True)
+    page, engine = _page(monkeypatch, cut, cut)
+    assert len(engine.calls) == 2
+    assert "4096" in engine.calls[1]["prompt"]
+    assert page.startswith(ES_WORDING.FAILED_PAGE_PREFIX)
+    assert "4096" in page
+    assert page.endswith("Un párrafo largo y legítimo.")
+
+
+def test_the_attempt_that_read_further_is_the_one_kept(monkeypatch):
+    short = GenerationResponse("# A\n" + (ROW + "\n") * 40, loop=ROW)
+    longer = GenerationResponse("# A\n\nUn párrafo entero.\n\n" + (ROW + "\n") * 40, loop=ROW)
+    page, _ = _page(monkeypatch, short, longer)
+    assert "Un párrafo entero." in page
+
+
+def test_a_looped_picture_is_asked_once_more_then_unreadable(monkeypatch):
+    reading, engine = _picture(
+        monkeypatch, GenerationResponse(GRID, loop=ROW), GenerationResponse(GRID, loop=ROW)
+    )
+    assert reading is None
+    assert len(engine.calls) == 2
+    assert ROW in engine.calls[1]["prompt"]
+    assert engine.calls[0]["max_output_tokens"] == 4096
+    assert engine.calls[0]["stop_on_loop"] is True
+
+
+def test_a_picture_that_finishes_on_the_second_attempt_is_read(monkeypatch):
+    reading, engine = _picture(
+        monkeypatch,
+        GenerationResponse(GRID, truncated=True),
+        GenerationResponse("$$x^2$$"),
+    )
+    assert reading == "$$x^2$$"
+    assert len(engine.calls) == 2

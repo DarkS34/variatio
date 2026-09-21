@@ -156,7 +156,8 @@ def cerebras_state() -> dict:
 def cerebras_export() -> Response:
     """Export the per-phase Cerebras spending as a spreadsheet.
 
-    Semicolons and a BOM rather than plain commas: this one is opened in Excel by hand, and a Spanish locale puts a comma-separated file in a single column.
+    Semicolons and a BOM rather than plain commas: this one is opened in Excel by hand,
+    and a Spanish locale puts a comma-separated file in a single column.
     """
     columns = [
         "modelo",

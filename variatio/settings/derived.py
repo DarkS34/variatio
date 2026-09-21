@@ -45,9 +45,9 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         out[name] = values[key]
 
     # The writer of a variant is not a phase model any more: the commission picks one of
-    # the offered models, and the FIRST of them is what everything that does not pick uses
-    # — the CLI, the evaluation's three arms, and a request naming none. Indexed without a
-    # guard because `min_items=1` is what refuses an empty list, file and panel included.
+    # the offered models, and the FIRST of them is what everything that does not pick uses —
+    # the CLI, and a request naming none. Indexed without a guard because `min_items=1` is
+    # what refuses an empty list, file and panel included.
     offered = [str(model) for model in values["generation.models"]]
     out["VARIANT_GENERATION_LLM"] = offered[0]
 

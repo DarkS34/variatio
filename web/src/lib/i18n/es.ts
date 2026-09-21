@@ -175,11 +175,6 @@ export const es = {
   "step.scan": "Recorre una muestra de tus ejercicios buscando qué tipos aparecen y con qué campos se escribe cada uno.",
   "step.consolidate": "Funde lo visto en cada lote en un solo perfil: un esquema de campos, sus guías y las reglas generales de redacción.",
 
-
-
-
-
-
   "step.taggability": "Una pasada por dominio decidiendo qué conceptos sirven de etiqueta: los que valen para cualquier ejercicio («codificación», «diseño») se marcan como no etiquetables. Al terminar se escribe el borrador.",
   "step.convert": "Transcribe el documento a markdown, página a página, antes de extraer nada. Si ya se transcribió desde «Datos en bruto», esto acierta en caché y pasa de largo.",
   "step.transcribe_documents": "Un documento tras otro. Cada uno se guarda entero al terminarlo, así que detener la transcripción conserva lo que ya salió.",
@@ -257,11 +252,6 @@ export const es = {
   "step.transcribe_seam.label": "Revisando las costuras entre páginas",
   "step.taggability.label": "Revisando qué conceptos sirven como etiqueta",
 
-
-
-
-
-
   "nav.rawWaiting": {
     one: "Queda 1 documento sin transcribir. Puedes construir igualmente: cada construcción transcribe lo que le falte.",
     other: "Quedan {n} documentos sin transcribir. Puedes construir igualmente: cada construcción transcribe lo que le falte.",
@@ -335,10 +325,6 @@ export const es = {
   "tutorial.fig.youAsk": "Tú le dices",
   "tutorial.fig.written": "Y te escribe el ejercicio",
 
-
-
-
-
   "tutorial.s1.title": "Variatio es una aplicación que genera ejercicios para tu asignatura",
   "tutorial.s1.body":
     "Funciona con inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los genera a partir de tus apuntes y de tus propios ejercicios, siguiendo el formato y el espíritu de los que tú planteas.",
@@ -385,11 +371,9 @@ export const es = {
   "tutorial.s4.outro.choose":
     "Al terminar esta explicación aparece la aplicación: eliges ahí tu asignatura —o creas otra— y empiezas por el Paso 1. En el menú de tu cuenta están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
 
-
   // Two ways out, depending on whether the reader has a subject: somebody who has just
   // accepted an invitation cannot be told to "choose" one. Neither points at a place on the
   // screen — the deck draws no header, so they say what to do and not where to press.
-
 
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
@@ -428,13 +412,9 @@ export const es = {
   "stage.continueFailed":
     "No se ha podido cerrar este paso, así que no se ha avanzado. Vuelve a intentarlo.",
 
-
-
   // The scale is named ONCE, over every statement: each button carries its rung as its
   // accessible name, but the visible text is the number — five labels per row would not fit
   // and would not be read.
-
-
 
   // "Continuar" CLOSES the step. Navigating and nothing else leaves the next step refusing
   // to build for want of an approval nobody was asked for. The copy says so: a button that
@@ -485,6 +465,7 @@ export const es = {
   "build.readOnly": "Tu permiso sobre esta instancia es de solo lectura.",
   "build.whyNot": "Por qué todavía no se puede construir",
   "build.rawMissing": "Faltan documentos en «{slot}»: súbelos en «Apuntes y ejercicios» antes de construir.",
+  "build.transcribing": "Se están leyendo los documentos de «{slot}»: espera a que termine para construir.",
   "build.sending": "Enviando…",
   "build.alreadyQueued": "{label} ya está en cola.{reason}",
   "build.create": "Construye {stage} a partir de tus apuntes y ejercicios.{note}",
@@ -504,6 +485,16 @@ export const es = {
   "build.call.bank.title": "Todavía no hay ejercicios recogidos ni etiquetados",
   "build.call.bank.body": "Al construir, el sistema recoge uno a uno los ejercicios de tus documentos y le pone a cada uno los conceptos del temario que practica.",
   "build.callTakesTime": "Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
+  "build.rebuild": "Volver a construir",
+  "build.rebuildTip": "Vuelve a construir {stage} con los documentos que hay ahora.{note}",
+  "build.rebuildTitle": "¿Volver a construir {stage}?",
+  "build.rebuildBody": "Se lee otra vez todo lo que hay en «{slot}» y el resultado sustituye al actual. Las correcciones hechas a mano en este paso se pierden; la versión actual queda en el historial.",
+  "build.failed": "No se ha podido lanzar: {error}",
+  "stage.staleRaw": "Desde que se construyó han cambiado los documentos de «{slot}»:",
+  "stage.staleRaw.added": { one: "1 documento nuevo: {names}", other: "{n} documentos nuevos: {names}" },
+  "stage.staleRaw.removed": { one: "1 documento eliminado: {names}", other: "{n} documentos eliminados: {names}" },
+  "stage.staleRaw.changed": { one: "1 documento modificado: {names}", other: "{n} documentos modificados: {names}" },
+  "stage.staleRaw.what": "Este paso se construyó sin esos cambios. Puedes volver a construirlo con los documentos que hay ahora, o cerrarlo tal como está continuando al siguiente.",
   "progress.building": "Construyendo. El detalle aparecerá en cuanto el proceso emita su primer paso.",
   "progress.running": "En marcha. El detalle aparecerá en cuanto el proceso emita su primer paso.",
   "progress.preparing": "Preparando el proceso…",
@@ -709,10 +700,10 @@ export const es = {
   "transcribe.reason.model": "el modelo de transcripción cambió",
   "transcribe.reason.dpi": "la resolución de render cambió",
   "transcribe.reason.ocr": "el OCR cambió",
-  "transcribe.reason.prompt": "el prompt de transcripción cambió",
   "transcribe.reason.temperature": "la temperatura de transcripción cambió",
   "transcribe.reason.cleanup": "la limpieza del conversor cambió",
   "transcribe.reason.rasteriser": "cambió el lector de dibujos EMF/WMF de Word y PowerPoint",
+  "transcribe.reason.deck": "cambió cómo se lee una presentación: una página por diapositiva, con sus notas del orador",
   "transcribe.reason.config": "cambió la forma de leer los documentos",
   "doc.onlyPage": "Es la única página del documento.",
   "doc.deleteHint": "Borra esta página y renumera las siguientes.",
@@ -749,15 +740,6 @@ export const es = {
     other: "Eliminar la unidad y sus {n} conceptos",
   },
 
-
-
-
-
-
-
-
-
-
   "admin.warmContexts": { one: "1 contexto caliente", other: "{n} contextos calientes" },
   "acc.savedVariants": { one: "1 ejercicio generado", other: "{n} ejercicios generados" },
 
@@ -771,11 +753,13 @@ export const es = {
   "noWorkspace.bodyA": "Una asignatura es todo lo suyo: sus documentos, su temario, sus tipos de ejercicio y sus ejercicios. Entraste como",
   "noWorkspace.bodyB": "; crea la tuya ahora o espera a que te den acceso a una existente.",
 
-
-
   "canvas.isolated": { one: "1 sin relaciones", other: "{n} sin relaciones" },
   "canvas.relations": { one: "1 relación", other: "{n} relaciones" },
   "canvas.conceptCount": { one: "1 concepto", other: "{n} conceptos" },
+  "canvas.unitCount": { one: "1 unidad", other: "{n} unidades" },
+  "canvas.placing": "Colocando {concepts}…",
+  "canvas.unitZoom": "Clic para acercarte a sus conceptos",
+  "canvas.aria": "Grafo de conocimiento con {concepts} en {units}. La lista de conceptos recorre lo mismo con el teclado.",
   "canvas.isolatedCount": { one: " · 1 aislado", other: " · {n} aislados" },
   "field.options": { one: "1 opción", other: "{n} opciones" },
   "form.items": { one: "1 ejercicio", other: "{n} ejercicios" },
@@ -787,6 +771,14 @@ export const es = {
   "transcribe.failedPages": {
     one: "1 página que el modelo no pudo transcribir.",
     other: "{n} páginas que el modelo no pudo transcribir.",
+  },
+  "transcribe.failedPagesRetry": {
+    one: "1 página que el modelo no pudo transcribir. Se vuelve a intentar la próxima vez que se procesen los documentos, y también puedes corregirla a mano.",
+    other: "{n} páginas que el modelo no pudo transcribir. Se vuelven a intentar la próxima vez que se procesen los documentos, y también puedes corregirlas a mano.",
+  },
+  "transcribe.retryCount": {
+    one: "1 con páginas por releer",
+    other: "{n} con páginas por releer",
   },
   "transcribe.stopHint":
     "Para la lectura donde vaya. Las páginas ya guardadas se conservan, y al volver a lanzarla sigue por donde quedó.",
@@ -857,6 +849,10 @@ export const es = {
   "fewshot.noStatement": "(sin enunciado)",
   "run.uncheckedInstructions": "instrucciones sin revisar",
   "result.retried": "Reintentado ×{n}",
+  "diagram.drawing": "Dibujando el diagrama…",
+  "diagram.invalid": "El diagrama no se ha podido dibujar: {reason}",
+  "diagram.showSource": "Ver el código del diagrama",
+  "diagram.showDiagram": "Ver el diagrama",
   "result.itemHeading": "Ejercicio {n}",
   "result.saved": "guardado",
   "result.generatedItems": "# Ejercicios generados",
@@ -909,7 +905,6 @@ export const es = {
   "admin.stat.accounts": "Cuentas",
   "admin.stat.workspaces": "Asignaturas",
   "admin.stat.generations": "Ejercicios generados",
-
 
   "admin.stat.engine": "Motor",
   "admin.stat.busy": "ocupado",
@@ -976,9 +971,6 @@ export const es = {
   "cere.col.tokens": "Tokens",
   "cere.col.ofDay": "Del día",
 
-
-
-
   "acc.deleteConfirm": "¿Eliminar la cuenta «{username}» por completo?\n\nPierde sus accesos y sus sesiones abiertas, y el usuario queda libre para otra cuenta.\n",
   "acc.deleteKept": "Lo que generó se queda pero sin autor: {kept}.\n",
   "acc.deleteTail": "\nNo se puede deshacer. Para cerrarle la puerta sin borrar nada, desactívala.",
@@ -1000,7 +992,6 @@ export const es = {
   "acc.fullAccess": "acceso total (administración)",
   "acc.noAccess": "sin acceso a ninguna",
 
-
   "acc.reactivate": "Reactivar",
   "acc.deactivate": "Desactivar",
   "acc.deleteTitle": "Eliminar la cuenta por completo",
@@ -1011,7 +1002,6 @@ export const es = {
   "acc.sessionsClosed": "Sesiones cerradas",
   "acc.sessionsClosedOf": "{n} de {username}",
   "acc.failed": "No se ha podido",
-
 
   "acc.theAccount": "La cuenta",
   "acc.removeAdmin": "Quitar administración",
@@ -1028,9 +1018,6 @@ export const es = {
   "acc.loginUnlocked": "Login desbloqueado",
   "acc.unlockLogin": "Desbloquear el login ({n} min)",
 
-
-
-
   "acc.resetCopy": "Pásaselo tú. Vale {minutes} minutos y una sola vez; quien lo abra fija la contraseña nueva de «{username}», así que no lo dejes en un sitio compartido.",
   "acc.adminNoMemberships": "Esta cuenta administra la instalación: entra en todas las asignaturas sin ser miembro de ninguna, así que no hay accesos que darle.",
   "acc.alsoMemberOf": "Consta además como miembro de",
@@ -1039,19 +1026,76 @@ export const es = {
   "acc.grantAccessTo": "Dar acceso a",
   "acc.permission": "Permiso",
   "acc.grant": "Conceder",
-  "acc.invite": "Invitar a alguien",
+  "acc.invite": "Invitaciones",
   "acc.invite.hintLabel": "Cómo se entra aquí",
-  "acc.invite.hint": "No hay registro abierto: una cuenta existe porque alguien abrió una invitación de un solo uso, o porque se creó desde la línea de órdenes. Quitar el registro público es lo que quita de en medio el mayor blanco de un login web.",
+  "acc.invite.hint": "No hay registro abierto: una cuenta existe porque alguien abrió una invitación de un solo uso, o porque se creó desde la línea de órdenes. Quitar el registro público es lo que quita de en medio el mayor blanco de un login web. El enlace de cada invitación se guarda cifrado con una clave que no está en la base de datos, y se borra en cuanto alguien lo usa.",
+  "acc.invite.mode.new": "Crear",
+  "acc.invite.mode.recover": "Recuperar un enlace",
+  "acc.invite.alias": "Alias",
+  "acc.invite.aliasPlaceholder": "Ej.: Profesora de Enfermería",
+  "acc.invite.aliasHint": "El alias es solo para ti: quien abra el enlace verá la asignatura, el permiso y la fecha de caducidad, nunca el alias.",
   "acc.invite.workspace": "Asignatura",
   "acc.invite.noWorkspace": "Ninguna (solo crear la cuenta)",
+  "acc.invite.expiresAt": "Caduca el",
+  "acc.invite.quickExpiry": "Plazos rápidos",
+  "acc.invite.preset.day": "En 1 día",
+  "acc.invite.preset.week": "En 1 semana",
+  "acc.invite.preset.month": "En 1 mes",
+  "acc.invite.preset.quarter": "En 3 meses",
+  "acc.invite.expiresIn": "Dejará de funcionar {when}.",
+  "acc.invite.expiryPast": "Esa fecha ya ha pasado: elige una que esté por llegar.",
+  "acc.invite.expiryMissing": "Elige el día y la hora en que deja de funcionar.",
+  "acc.invite.expiredEditHint": "Caducó {when}. Si mueves la fecha, el mismo enlace que ya diste vuelve a funcionar.",
+  "acc.invite.count": "Cuántas",
+  "acc.invite.countRange": "Se pueden crear entre 1 y {max} a la vez.",
   "acc.invite.create": "Crear enlace",
-  "acc.invite.noAccessHint": "Entrará sin acceso a ninguna instancia; se lo das después desde la tabla.",
+  "acc.invite.createMany": "Crear {n} enlaces",
+  "acc.invite.noAccessHint": "Entrará sin acceso a ninguna asignatura; se lo das después desde la tabla.",
+  "acc.invite.batchNamed": "Cada una llevará el alias numerado («{label} 1», «{label} 2»…); si ya hay invitaciones con ese alias, la numeración sigue donde se quedó.",
+  "acc.invite.batchUnnamed": "Irán sin alias. Si escribes uno, se numeran y es más fácil saber cuál es de quién.",
+  "acc.invite.batchDone": { one: "Se ha creado 1 invitación", other: "Se han creado {n} invitaciones" },
+  "acc.invite.copyAll": "Copiar todas",
+  "acc.invite.copyMany": "Pásale a cada persona la suya: cada enlace sirve una sola vez y quien lo abra elegirá su propio usuario. «Copiar todas» las copia con su alias, listas para pegar en una hoja de cálculo.",
   "acc.invite.copy": "Pásaselo tú a quien invitas. Sirve una sola vez y quien lo abra elegirá su propio usuario, así que no lo dejes en un sitio compartido.",
+  "acc.invite.copyNamed": "Enlace de «{label}». Pásaselo tú: sirve una sola vez y quien lo abra elegirá su propio usuario, así que no lo dejes en un sitio compartido.",
+  "acc.invite.notStoredNow": "No se ha podido guardar el enlace para volver a verlo más tarde: cópialo ahora.",
+  "acc.invite.recover.lead": "¿Anulaste una invitación por error? Pega aquí el enlace que diste y volverá a funcionar con las condiciones de abajo. Si esa invitación sigue en la lista no se cambia nada de ella: solo vuelve a poder verse su enlace. Un enlace que ya se usó no se recupera.",
+  "acc.invite.recover.link": "Enlace",
+  "acc.invite.recover.linkHint": "El enlace entero, o solo el código que va detrás de «token=».",
+  "acc.invite.recover.submit": "Recuperar el enlace",
+  "acc.invite.recover.created": "Ese enlace vuelve a funcionar con las condiciones que has elegido. Es el mismo que ya diste, así que no hace falta volver a enviarlo.",
+  "acc.invite.recover.recovered": "Esa invitación seguía en la lista: ya puedes volver a ver su enlace",
+  "acc.invite.recover.unchanged": "Esa invitación ya estaba en la lista",
+  "acc.invite.recover.inList": "No se ha cambiado nada más. Sus condiciones se editan desde la lista, en «{name}».",
+  "acc.invite.loadFailed": "No se han podido leer las invitaciones",
+  "acc.invite.pendingHeading": { one: "1 pendiente", other: "{n} pendientes" },
+  "acc.invite.tab.pending": "Pendientes",
+  "acc.invite.tab.expired": "Caducadas",
+  "acc.invite.search": "Buscar por alias, asignatura o autor",
+  "acc.invite.none": "No hay ninguna invitación sin usar.",
+  "acc.invite.nonePending": "No queda ninguna pendiente: las que hay están caducadas.",
+  "acc.invite.noMatch": "Ninguna invitación coincide con la búsqueda.",
   "acc.invite.linkOf": "Enlace del {date}",
-  "acc.invite.createdBy": " · lo creó {name}",
+  "acc.invite.expiredBadge": "Caducada",
   "acc.invite.noWorkspaceShort": "sin asignatura",
-  "acc.invite.expires": " · caduca el {date}",
+  "acc.invite.expiresOn": "caduca el {date} ({when})",
+  "acc.invite.expiredOn": "caducó el {date} ({when})",
+  "acc.invite.createdByOn": "creada por {name} el {date}",
+  "acc.invite.showLink": "Ver enlace",
+  "acc.invite.hideLink": "Ocultar enlace",
+  "acc.invite.linkLive": "Este es su enlace. Sirve una sola vez y quien lo abra elegirá su propio usuario, así que no lo dejes en un sitio compartido.",
+  "acc.invite.linkExpired": "Este es su enlace, pero está caducado: cambia la fecha en «Editar» y este mismo enlace volverá a funcionar.",
+  "acc.invite.notStored": "Su enlace no se guardó",
+  "acc.invite.notStoredBody": "Esta invitación es anterior a que Variatio guardara los enlaces. Si todavía lo tienes, pégalo en «Recuperar un enlace» y volverá a verse aquí; si no, anúlala y crea otra.",
+  "acc.invite.recoverIt": "Pegar su enlace",
+  "acc.invite.edit": "Editar",
+  "acc.invite.save": "Guardar cambios",
+  "acc.invite.saved": "Invitación actualizada",
   "acc.invite.revoke": "Anular",
+  "acc.invite.revokeConfirm": "¿Anular «{name}»?",
+  "acc.invite.revokeConfirmBody": "Su enlace dejará de funcionar en el acto y la invitación desaparecerá de la lista. Si puede que te arrepientas, copia antes su enlace con «Ver enlace»: pegándolo en «Recuperar un enlace» volverá a valer.",
+  "acc.invite.revoked": "Invitación anulada",
+  "acc.invite.revokeFailed": "No se ha podido anular",
   "acc.copied": "Copiado",
   "acc.copy": "Copiar",
   "ws.heading": "Asignaturas ({n}) · {size} en disco",
@@ -1113,300 +1157,8 @@ export const es = {
   "maint.messageLabel": "Lo que se lee mientras tanto",
   "maint.messageHelp": "Es todo lo que verá quien intente entrar. Sin hora de vuelta: nadie la sabe.",
 
-
-
-
-
-
-
-
-  // THE STUDY -----------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   "chain.pending": "Falta dar por bueno: {stages}",
   "chain.goFix": "Ir al Paso {n} · {label}",
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   // THE GRAPH SCREEN ----------------------------------------------------------------------
   "kg.saveChanges": "Guardar cambios",
@@ -1498,7 +1250,7 @@ export const es = {
 
   // KNOWLEDGE GRAPH — THE CANVAS ----------------------------------------------------------
   "canvas.layout.force": "Vecindario",
-  "canvas.layout.force.hint": "Conceptos cerca de aquellos con los que se relacionan",
+  "canvas.layout.force.hint": "Cada unidad en su recuadro; dentro, los conceptos cerca de aquellos con los que se relacionan",
   "canvas.layout.curriculum": "Currículo",
   "canvas.layout.curriculum.hint": "Un nivel por profundidad de prerrequisitos: lo de arriba se enseña antes ({n} lo ordenan)",
   "canvas.layout.curriculum.none": "El temario no tiene relaciones de prerrequisito que ordenar",
@@ -1675,6 +1427,7 @@ export const es = {
   "form.instructions.title": "Instrucciones adicionales",
   "form.instructions.hint": "Una petición libre para este lote: la temática, el contexto, ese tipo de cosas. Por ejemplo, que el contexto sea deportivo.",
   "form.instructions.blocked": "Instrucciones bloqueadas",
+  "form.instructions.blockedLaunch": "Las instrucciones adicionales no han pasado el filtro: corrígelas para poder generar.",
   "form.scope.canAsk": "Aquí puedes pedir",
   "form.scope.decidedAbove": "Esto se decide más arriba",
   "form.scope.subjectFixes": "Esto lo fija la asignatura",
@@ -1699,7 +1452,6 @@ export const es = {
 
   "form.confirmContinue": "Confirmar y continuar",
 
-  "generate.notPassed": "no han pasado la revisión",
   "generate.queued": "Está en cola.",
   "generate.howItWorks": "Cómo se genera",
   "generate.noEngine": "Sin motor de inferencia",
@@ -1723,7 +1475,6 @@ export const es = {
   "effort.max": "Máximo",
   "effort.warn.qwen38": "Por encima de «Medio», qwen3.8 delibera durante miles de palabras en la GPU local: cada ejercicio puede tardar muchos minutos, y en el nivel alto se ha medido que llega a devolver una respuesta vacía.",
   // COUNTS ------------------------------------------------------------------------------
-
 
   "count.items": { one: "{n} ejercicio", other: "{n} ejercicios" },
 
@@ -1895,7 +1646,6 @@ export const es = {
   "cfg.section.retrievalDesc": "El índice de conceptos: prefijos de embedding, pesos, umbrales y cuántos candidatos se recuperan.",
   "cfg.section.generation": "Etiquetado y generación",
   "cfg.section.generationDesc": "El etiquetador del banco y la generación de ejercicios: ejemplos few-shot, reintentos y el guardián.",
-
 
   "cfg.section.others": "Otros",
   "cfg.section.othersDesc": "Ajustes cuyo grupo no tiene sitio propio en el panel.",

@@ -51,6 +51,42 @@ export function when(iso: string | null): string {
   });
 }
 
+/**
+ * A moment somebody chose, which may be years away: `when` plus the year when it is not this one.
+ *
+ * `when` drops the year on purpose — a job ran today, a session was opened this week — and
+ * an invitation's expiry is the one date in the app that has no upper bound, so the same
+ * shape would print «01 ene, 09:30» for a date five Januaries off.
+ */
+export function dateTime(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  return date.toLocaleString(dateLocale(), {
+    day: "2-digit",
+    month: "short",
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 365 * 86_400],
+  ["month", 30 * 86_400],
+  ["day", 86_400],
+  ["hour", 3_600],
+  ["minute", 60],
+];
+
+/** How far off a moment is, in the reader's words: «dentro de 3 días», «hace 2 horas». */
+export function relative(iso: string, now: number = Date.now()): string {
+  const seconds = (new Date(iso).getTime() - now) / 1000;
+  const format = new Intl.RelativeTimeFormat(dateLocale(), { numeric: "auto" });
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) return format.format(Math.round(seconds / size), unit);
+  }
+  return format.format(0, "minute");
+}
+
 export const ARTIFACT_STATUS: Record<
   ArtifactStatus,
   { labelKey: Key; tone: "default" | "secondary" | "outline" | "settled" | "attention" | "danger" }

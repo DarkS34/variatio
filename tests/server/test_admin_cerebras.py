@@ -82,8 +82,8 @@ def test_the_export_carries_one_row_per_phase(ledger):
     assert by_phase["kg_domains"]["tokens"] == "300"
 
 
-# Excel in a Spanish locale splits on `;` and needs the BOM to read the accents; the evaluation's
-# own export uses plain commas because nobody opens that one by hand.
+# Excel in a Spanish locale splits on `;` and needs the BOM to read the accents: this export
+# is the one somebody opens by hand.
 def test_the_export_opens_in_a_spanish_excel(ledger):
     ledger.record("gemma-4-31b", None, prompt_tokens=100, completion_tokens=0, headers={})
     body = admin_engine.cerebras_export().body.decode("utf-8")

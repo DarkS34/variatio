@@ -54,7 +54,7 @@ import {
   fixedEffort,
 } from "./effort";
 import { EffortSlider } from "./EffortSlider";
-import { FormStep } from "./FormStep";
+import { CHOICE_CARD, FormStep } from "./FormStep";
 import { ModelChoice } from "./ModelChoice";
 import { modelLabel } from "./models";
 import { adjacency, covered, posteriors, priors } from "./prerequisites";
@@ -537,7 +537,7 @@ export function GenerateForm({
                   type="button"
                   onClick={() => chooseType(key)}
                   className={cn(
-                    "rounded-lg border p-2.5 text-left transition-colors",
+                    CHOICE_CARD,
                     active
                       ? "border-primary bg-primary/5"
                       : "border-border hover:bg-accent/40",
@@ -806,7 +806,13 @@ export function GenerateForm({
           anything is set — a fold that hides a decision without saying so is where a
           decision goes to be forgotten. */}
       {chosen ? (
-        <details className="group rounded-xl border border-transparent open:border-border open:bg-card">
+        <details
+          // Unfolded the moment the judge refuses the text inside: the sentence has to be
+          // read where the text is, and a disclosure that stays shut over it would leave
+          // the locked button below pointing at nothing.
+          open={blockedInstructions ? true : undefined}
+          className="group rounded-xl border border-transparent open:border-border open:bg-card"
+        >
           <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3 py-2.5">
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <PenLine className="size-3.5" />
@@ -983,6 +989,13 @@ export function GenerateForm({
 
           {error ? <p className="text-small text-destructive">{error}</p> : null}
 
+          {/* The judge's refusal locks the button, and says so beside it: the full sentence
+              is in the instructions step, this is the one line that says why nothing
+              happens here and what lifts it. */}
+          {blockedInstructions ? (
+            <p className="text-small text-destructive">{t("form.instructions.blockedLaunch")}</p>
+          ) : null}
+
           {running ? (
             <CancelButton
               run={run}
@@ -993,7 +1006,8 @@ export function GenerateForm({
           ) : (
             <Button
               className="w-full"
-              disabled={problems.length > 0 || pending || disabled}
+              disabled={problems.length > 0 || pending || disabled || Boolean(blockedInstructions)}
+              title={blockedInstructions ?? undefined}
               onClick={onLaunch}
             >
               {pending ? <Spinner /> : <Play />}

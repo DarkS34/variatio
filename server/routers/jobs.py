@@ -14,9 +14,9 @@ from variatio import config, entrypoints
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from .. import approvals, auth, singletons
+from .. import approvals, auth, raw_data, singletons
 from ..jobs import lanes
-from ..jobs.catalogue import JOB_LABELS
+from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS
 
 router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 
@@ -73,6 +73,33 @@ def gate_error(ws: Workspace, kind: str) -> str | None:
         blockers = _unapproved_upstream(state, gate)
         return f"Antes hay que dar por bueno: {', '.join(blockers)}."
     return None
+
+
+def transcribing_slot(slug: str, kind: str) -> str | None:
+    """Name the raw slot `kind` would read that is being transcribed right now, or nothing.
+
+    Only the three builds read a slot (`SUBPROCESS_KINDS`); `tag` rewrites the bank from
+    what is already in it. A transcription and a build of the same slot both write the
+    same page cache, document by document, so they must not run at once — and the queue
+    does not keep them apart, since on a hybrid engine they may sit on different lanes.
+    This is NOT the transcription becoming a gate: a slot nobody is reading builds whether
+    its pages are cached or not.
+    """
+    if kind not in SUBPROCESS_KINDS:
+        return None
+    slot = raw_data.slot_feeding(JOB_ARTIFACT.get(kind))
+    if slot is None or singletons.transcribing(slug, slot) is None:
+        return None
+    return slot
+
+
+def transcription_error(ws: Workspace, kind: str) -> str | None:
+    """Say in Spanish that the slot this build reads is being transcribed, or nothing."""
+    slot = transcribing_slot(ws.slug, kind)
+    if slot is None:
+        return None
+    label = raw_data.SLOTS[slot]["label"]
+    return f"Se está leyendo «{label}»: espera a que termine antes de construir."
 
 
 def _pending_labels(ws: Workspace) -> list[str]:
@@ -163,6 +190,12 @@ def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
         error = gate_error(access.ws, body.kind)
         if error:
             raise HTTPException(409, error)
+
+    # Outside `force`: the gates are the person's decision, two jobs writing one page
+    # cache is not.
+    error = transcription_error(access.ws, body.kind)
+    if error:
+        raise HTTPException(409, error)
 
     _check_params(body.kind, body.params)
 

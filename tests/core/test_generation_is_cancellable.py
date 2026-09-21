@@ -154,7 +154,37 @@ def test_a_failure_mid_stream_still_closes_it(engine):
 
 def test_the_drain_survives_a_stream_that_cannot_be_closed():
     """A fake, a replay or a plain list has no `close`; that is not an error."""
-    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False)
+    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False, None)
+
+
+# A REPETITION LOOP -------------------------------------------------------------------------------
+#
+# A model locked on a drawn grid writes the same row until its budget runs out. With
+# `stop_on_loop` the read stops as soon as the tail is a repetition — the same abandonment
+# as a cancellation — and the answer names what repeated.
+
+ROW = "| | | |       | | | |\n"
+
+
+def test_a_repetition_stops_the_read_and_names_what_repeated(engine):
+    stream = _Stream([_Chunk("# Título\n")] + [_Chunk(ROW) for _ in range(400)])
+    engine._client = _Client(stream)
+
+    answer = engine.generate(model="m", prompt="p", stop_on_loop=True)
+
+    assert answer.loop == ROW.rstrip("\n")
+    assert stream.read < 200, "the read stopped inside the loop, not at its end"
+    assert stream.closed, "the connection closes so the engine stops generating"
+    assert answer.response.startswith("# Título")
+    assert answer.truncated is False
+
+
+def test_without_the_flag_a_repetition_is_read_whole(engine):
+    stream = _Stream([_Chunk(ROW) for _ in range(100)])
+    engine._client = _Client(stream)
+    answer = engine.generate(model="m", prompt="p")
+    assert answer.loop is None
+    assert stream.read == 100
 
 
 # THE OUTPUT CAP ----------------------------------------------------------------------------------

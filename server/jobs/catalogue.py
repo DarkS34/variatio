@@ -74,6 +74,9 @@ class Job:
     started_at: float | None = None
     finished_at: float | None = None
     error: str | None = None
+    # A stable name for WHY it failed, when the exception declares one (`exc.code`), so a
+    # screen can branch on the cause without matching the sentence in `error`.
+    error_code: str | None = None
     result: dict | None = None
     backends: list[str] = field(default_factory=list)
     queue_position: int = 0

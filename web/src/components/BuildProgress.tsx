@@ -73,33 +73,6 @@ export function BuildProgress({
  * own plan. They were the same bar, and separating them would have given two different ways
  * of drawing the same thing.
  */
-/**
- * Whether the step timeline is unfolded, remembered per browser.
- *
- * Closed by default: the card's header already says which phase is running, how far and for
- * how long, and on a build of thirteen phases the list under it is most of the card.
- * `localStorage` and not state, so the choice survives moving between the four steps. Every
- * access is guarded — the accessor itself throws in some browsers' private modes.
- */
-const STEPS_KEY = "vg.steps";
-
-function readStepsOpen(): boolean {
-  try {
-    return localStorage.getItem(STEPS_KEY) === "open";
-  } catch {
-    return false;
-  }
-}
-
-function writeStepsOpen(open: boolean) {
-  try {
-    if (open) localStorage.setItem(STEPS_KEY, "open");
-    else localStorage.removeItem(STEPS_KEY);
-  } catch {
-    // Nothing to remember with: the card still folds and unfolds for this visit.
-  }
-}
-
 export function JobProgress({
   run,
   phases,
@@ -126,7 +99,11 @@ export function JobProgress({
   cancel?: { runs?: (RunView | null)[]; word?: "cancel" | "stop"; hint?: string };
 }) {
   const { t } = useT();
-  const [stepsOpen, setStepsOpen] = useState(readStepsOpen);
+  // The step timeline starts FOLDED on every card, and nothing remembers otherwise: the
+  // header already says which phase is running, how far and for how long, and on a build
+  // of thirteen phases the list under it is most of the card. It was remembered per
+  // browser for two days, so one look at the steps left every later card open.
+  const [stepsOpen, setStepsOpen] = useState(false);
   const stepsId = useId();
   const waitingText = waiting ?? t("progress.running");
   const status = run?.job?.status;
@@ -249,11 +226,7 @@ export function JobProgress({
             <button
               type="button"
               onClick={() =>
-                setStepsOpen((was) => {
-                  writeStepsOpen(!was);
-                  return !was;
-                })
-              }
+setStepsOpen((was) => !was)}
               aria-expanded={stepsOpen}
               aria-controls={stepsId}
               className="flex items-center gap-1.5 text-small font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"

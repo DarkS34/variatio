@@ -19,11 +19,14 @@ import type {
   GenerationListing,
   GraphView,
   Health,
+  InviteImportOutcome,
   InvitePreview,
   InviteRow,
+  InviteTerms,
   Job,
   KgSummary,
   MaintenanceState,
+  MintedInvite,
   Pipeline,
   PullStatus,
   TunnelStatus,
@@ -368,8 +371,19 @@ export const api = {
   // Invitations and memberships are the installation administrator's, and only theirs:
   // there is one screen that hands out access and these are its calls.
   adminInvites: () => request<{ invites: InviteRow[] }>("/api/admin/invites"),
-  adminCreateInvite: (body: { workspace: string | null; role: Role }) =>
-    post<{ invite: InviteRow; link: string }>("/api/admin/invites", body),
+  adminCreateInvites: (body: InviteTerms & { count: number }) =>
+    post<{ invites?: MintedInvite[]; invite: InviteRow; link: string }>(
+      "/api/admin/invites",
+      body,
+    ),
+  // Pasting back the link of an invitation deleted by mistake. Only a link nobody knows
+  // creates anything; the outcome says which of the three things happened.
+  adminImportInvite: (body: InviteTerms & { link: string }) =>
+    post<MintedInvite & { outcome: InviteImportOutcome }>("/api/admin/invites/import", body),
+  // A request of its own, and logged: the listing never carries a live link.
+  adminInviteLink: (id: number) => request<{ link: string }>(`/api/admin/invites/${id}/link`),
+  adminEditInvite: (id: number, changes: Partial<InviteTerms>) =>
+    patch<{ invite: InviteRow }>(`/api/admin/invites/${id}`, changes),
   adminRevokeInvite: (id: number) =>
     request<{ revoked: boolean }>(`/api/admin/invites/${id}`, { method: "DELETE" }),
   // The one thing the panel writes about instances, and it is deletion. It goes through

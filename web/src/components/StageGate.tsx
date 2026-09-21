@@ -28,7 +28,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { isQueued, waitOf, waitReason } from "@/lib/queue";
-import { slotLabelOf } from "@/lib/raw";
+import { rawDriftLines, rawDriftOf, slotLabelOf } from "@/lib/raw";
 import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -200,7 +200,7 @@ export function StageGate({
   children: ReactNode;
 }) {
   const tr = useT();
-  const { t } = tr;
+  const { t, plural } = tr;
   const invalidate = useInvalidateChain();
   const rawMissing = useRawMissingFor(stage?.artifact);
   const busyRun = useArtifactRun(stage?.artifact);
@@ -310,18 +310,35 @@ export function StageGate({
           {/* The header carries no control at all: the build button is the one thing to do
               on an unbuilt stage, so it is drawn in the middle of the emptiness at a size
               that says so, and correcting is one button at the foot. Nothing offers a
-              rebuild — a second pass over the same documents gives no different result and
-              would throw the corrections away. */}
+              rebuild over the SAME documents — a second pass gives no different result and
+              would throw the corrections away; the one rebuild offered is the stale
+              notice's, over documents the last build never read. */}
         </header>
 
         {/* `attention` and not `danger`: stale is "the step above changed, close this one",
             a move to make — the same tone the badge, the status mark and a re-read document
-            on `/raw` already give it. Red here said information had been lost. */}
+            on `/raw` already give it. Red here said information had been lost.
+
+            A cause about the DOCUMENTS names them — what was added, removed or rewritten
+            since the build — and the notice's action is the build button in its rebuild
+            mode, which draws nothing for a stage stale only because the step above moved. */}
         {stage.stale_because.length > 0 ? (
-          <Alert tone="attention" title={t("stage.stale")}>
-            {stage.stale_because.map((cause) => (
-              <p key={cause.artifact}>{cause.reason}</p>
-            ))}
+          <Alert tone="attention" title={t("stage.stale")} action={<BuildButton stage={stage} />}>
+            {stage.stale_because.map((cause) => {
+              const drift = rawDriftOf(cause);
+              if (!drift) return <p key={cause.artifact ?? cause.label}>{cause.reason}</p>;
+              return (
+                <div key={`raw-${drift.slot}`}>
+                  <p>{t("stage.staleRaw", { slot: slotLabelOf(drift.slot, t)! })}</p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {rawDriftLines(drift, plural).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <p>{t("stage.staleRaw.what")}</p>
+                </div>
+              );
+            })}
           </Alert>
         ) : null}
 

@@ -47,10 +47,19 @@ export interface LaneState {
 
 export type Lanes = Record<LaneName, LaneState>;
 
+/**
+ * Why a stage is stale. Two shapes share it: an ARTIFACT above changed (`artifact`), or the
+ * DOCUMENTS the stage was built from did (`slot`, with the three lists). `reason` is the
+ * server's own Spanish sentence and is the fallback for a cause this bundle cannot phrase.
+ */
 export interface StaleCause {
-  artifact: ArtifactName;
+  artifact?: ArtifactName;
+  slot?: RawKind;
   label: string;
   reason: string;
+  added?: string[];
+  removed?: string[];
+  changed?: string[];
 }
 
 export interface StageState {
@@ -65,6 +74,9 @@ export interface StageState {
   blocked_by: string[];
   blocked_reason: string | null;
   build_job: JobKind;
+  /** The raw slot this stage's build reads, while a transcription of it is live: the
+   *  build waits for it. Absent on an API older than the bundle, which reads as "none". */
+  transcribing_slot?: RawKind | null;
 }
 
 export interface Pipeline {
@@ -127,6 +139,8 @@ export interface Job {
   started_at: number | null;
   finished_at: number | null;
   error: string | null;
+  /** A stable name for WHY it failed, when the cause declares one (`instructions_blocked`). */
+  error_code?: string | null;
   result: Record<string, any> | null;
   label: string;
   artifact: ArtifactName | null;
@@ -733,15 +747,41 @@ export interface InvitePreview {
   expires_at: string;
 }
 
+/** Unused and still working, or unused and past its date — which can be moved. */
+export type InviteState = "pending" | "expired";
+
 export interface InviteRow {
   id: number;
+  /** The administrator's own name for it; whoever holds the link never sees it. */
+  label?: string | null;
   role: Role;
   workspace: string | null;
   workspace_slug: string | null;
   created_at: string;
   expires_at: string;
   created_by: string | null;
+  state?: InviteState;
+  /** Whether the panel can show its link again. False on every one minted before it could. */
+  link_stored?: boolean;
 }
+
+/** What an invitation grants and until when, as the panel sends it. */
+export interface InviteTerms {
+  workspace: string | null;
+  role: Role;
+  expires_at: string;
+  label: string | null;
+}
+
+/** An invitation just handed over: its row, its link, and whether that link was kept. */
+export interface MintedInvite {
+  invite: InviteRow;
+  link: string;
+  stored?: boolean;
+}
+
+/** What pasting a link back did: made a new invitation, made a listed one's link showable, or nothing. */
+export type InviteImportOutcome = "created" | "recovered" | "unchanged";
 
 /* Events --------------------------------------------------------------------------- */
 

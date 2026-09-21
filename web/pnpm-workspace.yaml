@@ -1,2 +1,9 @@
 allowBuilds:
   esbuild: true
+
+# One typesetter, not two: mermaid asks for katex ^0.16.47 and this app for ^0.18.4, so
+# pnpm shipped BOTH — measured, 512 kB of one dist chunk where one copy is 256, and the
+# 0.18 stylesheet was painting markup the 0.16 copy wrote. Mermaid only ever calls
+# `katex.renderToString`, which is the same call in both.
+overrides:
+  katex: ^0.18.4

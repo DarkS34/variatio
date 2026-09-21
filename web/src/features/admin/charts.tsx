@@ -37,23 +37,3 @@ export function StatTile({
     </div>
   );
 }
-
-/* Horizontal bars ------------------------------------------------------------------- */
-
-export interface BarRow {
-  key: string;
-  label: string;
-  value: number;
-  /** The mark's colour. Identity, never rank: the same entity keeps it across filters. */
-  colour?: string;
-  /** What the tooltip says instead of the bare number. */
-  detail?: string;
-}
-
-/**
- * One named row per category, sorted by nothing — the caller's order is the palette's.
- *
- * A reference line is drawn where a null hypothesis lives (1/3 for a three-way blind
- * choice). It is the whole point of the chart: "ganó 12 veces" means nothing until you
- * can see it against what pure chance would have produced.
- */

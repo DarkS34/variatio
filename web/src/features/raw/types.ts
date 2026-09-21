@@ -11,6 +11,9 @@ export interface TranscriptionDocument {
   chars: number;
   seams_merged: number;
   failed_pages: number;
+  /** Of those, how many the next read tries again. Absent from an API older than the
+   *  bundle, which reads as none. */
+  retry_pages?: number;
   /** Pictures a Word or PowerPoint file carried, and how many left the unreadable mark. */
   images: number;
   images_unreadable: number;
@@ -22,6 +25,8 @@ export interface TranscriptionState {
   done: number;
   pending: number;
   stale: number;
+  /** Documents up to date but holding failed pages the next read tries again. */
+  retry?: number;
   total_pages: number;
 }
 

@@ -63,7 +63,7 @@ A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** fron
 - **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or its quota. Weighted phase-plan progress, an authenticated WebSocket, cancellation that stops a model call mid-token.
 - **Generation**: commissions with concepts, modality, difficulty, fixed fields, curriculum and typed free-text instructions. Every validated item is saved the moment it validates, with the whole commission that produced it, and is private to whoever asked for it.
 - **Administration**: the engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), and the full settings registry.
-- **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation. A twelve-section user guide lives at `/guide`, and a tutorial at `/tutorial`.
+- **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation. An eleven-section user guide lives at `/guide`, and a tutorial at `/tutorial`.
 
 ## Getting started
 

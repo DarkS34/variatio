@@ -1,5 +1,5 @@
 import type { Key } from "@/lib/i18n";
-import type { RawKind, RawSlot } from "@/lib/types";
+import type { RawKind, RawSlot, StaleCause } from "@/lib/types";
 
 /**
  * The raw slots, named once for the whole browser.
@@ -34,6 +34,52 @@ export function slotPurpose(slot: RawSlot, t: (key: Key) => string): string {
   return key ? t(key) : slot.purpose;
 }
 
+/** The documents a stage was built without, read off a stale cause of that shape. */
+export interface RawDrift {
+  slot: RawKind;
+  added: string[];
+  removed: string[];
+  changed: string[];
+}
+
+/**
+ * Read a stale cause as a documents drift, or nothing for one about an artifact above.
+ *
+ * The server sends both shapes through `stale_because`; what tells them apart is `slot`,
+ * and the three lists default to empty so a cause an older API sends half-formed still
+ * reads rather than throwing in the alert.
+ */
+export function rawDriftOf(cause: StaleCause): RawDrift | null {
+  if (!cause.slot) return null;
+  return {
+    slot: cause.slot,
+    added: cause.added ?? [],
+    removed: cause.removed ?? [],
+    changed: cause.changed ?? [],
+  };
+}
+
+const DRIFT_KEYS: [keyof Omit<RawDrift, "slot">, Key][] = [
+  ["added", "stage.staleRaw.added"],
+  ["removed", "stage.staleRaw.removed"],
+  ["changed", "stage.staleRaw.changed"],
+];
+
+/**
+ * One line per kind of change, each naming its documents, and none for an empty list.
+ *
+ * Added, then removed, then modified, which is the order somebody asks in: what is new
+ * is what they just uploaded.
+ */
+export function rawDriftLines(
+  drift: RawDrift,
+  plural: (key: Key, n: number, params?: Record<string, string | number>) => string,
+): string[] {
+  return DRIFT_KEYS.filter(([key]) => drift[key].length > 0).map(([key, i18n]) =>
+    plural(i18n, drift[key].length, { names: drift[key].join(", ") }),
+  );
+}
+
 export function slotLabelOf(kind: RawKind | null | undefined, t: (key: Key) => string): string | null {
   if (!kind) return null;
   const key = SLOT_LABEL_KEYS[kind];
@@ -53,10 +99,10 @@ export const STALE_REASON_KEYS: Record<string, Key> = {
   model: "transcribe.reason.model",
   dpi: "transcribe.reason.dpi",
   ocr: "transcribe.reason.ocr",
-  prompt: "transcribe.reason.prompt",
   temperature: "transcribe.reason.temperature",
   cleanup: "transcribe.reason.cleanup",
   rasteriser: "transcribe.reason.rasteriser",
+  deck: "transcribe.reason.deck",
   config: "transcribe.reason.config",
 };
 

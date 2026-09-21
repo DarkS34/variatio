@@ -81,5 +81,7 @@ def test_every_phase_key_is_declared_in_the_registry():
 # windows and the per-phase reasoning efforts feed derived values and never land in
 # `variatio.config`.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 141
-    assert len(BY_NAME) == 118
+    # 141 → 140 and 118 → 117 on 2026-09-16: `builders.transcribe_prompt_version` left with
+    # the rule that a prompt change expires every page.
+    assert len(REGISTRY) == 140
+    assert len(BY_NAME) == 117

@@ -33,6 +33,7 @@ def generate_content_prompt(
     instructions: str = "",
     requests=None,
     correction: str | None = None,
+    scenario: str = "",
 ) -> str:
     """Ask for one new exercise, in the modality given and practising the target concepts.
 
@@ -122,6 +123,16 @@ def generate_content_prompt(
             f"{fixed_values_block}\n"
         )
 
+    scenario_section = ""
+    if scenario.strip():
+        scenario_section = (
+            "\n# FIXED SCENARIO\n"
+            "The exercise is set in this scenario, decided by whoever is asking for it, which "
+            "replaces your own free choice of wrapper. It is only the frame: the objective, the "
+            "prior knowledge and the demand are fixed by the sections above:\n"
+            f"{scenario.strip()}\n"
+        )
+
     instructions_section = _request_section(requests, instructions)
 
     correction_section = ""
@@ -175,7 +186,7 @@ Conventions observed in the course's real material: how this course writes this 
 
 # SETTING VARIATION
 The wrapping, the concrete situation the task is set in, is yours and must be new. If the reference examples set the task in a scenario, choose a recognisable real-life setting that appears neither in them nor in the settings already used, and set the exercise in it. If the modality is set bare — the reference examples wrap the task in no scenario —, do not invent one for it: the variation then lies in the concrete data, objects and values, which repeat no example's. Changing the wrapping and not the substance is what forces the student to transfer the concept instead of recognising a memorised pattern. What does not change is the cognitive demand: the objective and its level are fixed by the previous sections, and the chosen variation adds no data and no rules that have to be deciphered.
-{instructions_section}{correction_section}
+{scenario_section}{instructions_section}{correction_section}
 # REFERENCE EXAMPLES
 Real exercises from the course's teaching material, on nearby concepts. They are a reference for form, register and length; their topic, their literal structure and their settings are not reused.
 {few_shot_section}

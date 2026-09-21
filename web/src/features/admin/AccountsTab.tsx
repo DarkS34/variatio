@@ -1,9 +1,6 @@
 import {
-  Check,
   ChevronRight,
-  Copy,
   KeyRound,
-  Link as LinkIcon,
   LockOpen,
   LogOut,
   ShieldCheck,
@@ -16,7 +13,6 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { InfoHint } from "@/components/ui/hint";
 import { Label, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -30,13 +26,13 @@ import { useT } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
 import {
   useAccountActions,
-  useAdminInvites,
-  useCreateInvite,
   useDeleteAccount,
   useMembershipActions,
-  useRevokeInvite,
   useSetAccountEnabled,
 } from "@/state/queries";
+
+import { CopyLink } from "./CopyLink";
+import { InvitesSection } from "./InvitesSection";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 
@@ -85,7 +81,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
 
   return (
     <div className="space-y-5">
-      <InviteSection overview={overview} />
+      <InvitesSection overview={overview} />
 
       <section className="space-y-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
@@ -495,157 +491,6 @@ function MembershipEditor({
       ) : null}
 
       <FormError error={grant.error ?? revoke.error} />
-    </div>
-  );
-}
-
-/**
- * Invitations, which are the only way an account comes into existence.
- *
- * The link IS the invitation: nothing is sent anywhere, it works once, it expires, and
- * whoever opens it chooses their own username. That is why the copy says not to leave it
- * in a shared place — until it is redeemed it is a credential.
- */
-function InviteSection({ overview }: { overview: AdminOverview }) {
-  const { t, language } = useT();
-  const invites = useAdminInvites();
-  const create = useCreateInvite();
-  const revoke = useRevokeInvite();
-  const [workspace, setWorkspace] = useState<string>(overview.workspaces[0]?.slug ?? "");
-  const [role, setRole] = useState<Role>("editor");
-
-  const pending = invites.data?.invites ?? [];
-
-  return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("acc.invite")}
-        </h2>
-        <InfoHint label={t("acc.invite.hintLabel")}>{t("acc.invite.hint")}</InfoHint>
-      </div>
-
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="space-y-1">
-          <Label htmlFor="invite-workspace">{t("acc.invite.workspace")}</Label>
-          <Select
-            id="invite-workspace"
-            value={workspace}
-            className="w-64"
-            onChange={(event) => setWorkspace(event.target.value)}
-          >
-            <option value="">{t("acc.invite.noWorkspace")}</option>
-            {overview.workspaces.map((row) => (
-              <option key={row.slug} value={row.slug}>
-                {row.name} ({row.slug})
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="invite-role">{t("acc.permission")}</Label>
-          <Select
-            id="invite-role"
-            value={role}
-            className="w-40"
-            disabled={!workspace}
-            onChange={(event) => setRole(event.target.value as Role)}
-          >
-            {ROLES.map((option) => (
-              <option key={option} value={option}>
-                {t(ROLE_LABEL_KEYS[option])}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {/* The link binds the access and nothing else: whoever registers chooses their
-            own username and password. */}
-        <Button
-          onClick={() => create.mutate({ workspace: workspace || null, role })}
-          disabled={create.isPending}
-        >
-          {create.isPending ? <Spinner /> : <LinkIcon />}
-          {t("acc.invite.create")}
-        </Button>
-        <span className="text-small text-muted-foreground">
-          {workspace
-            ? t(ROLE_HINT_KEYS[role])
-            : t("acc.invite.noAccessHint")}
-        </span>
-      </div>
-
-      <FormError error={create.error} />
-      {create.isSuccess ? (
-        <CopyLink link={create.data.link}>{t("acc.invite.copy")}</CopyLink>
-      ) : null}
-
-      {pending.length > 0 ? (
-        <ul className="divide-y divide-border rounded-lg border border-border">
-          {pending.map((invite) => (
-            <li key={invite.id} className="flex flex-wrap items-center gap-2 p-2 text-body">
-              <div className="min-w-0 flex-1">
-                {/* There is no addressee to name: what tells two pending links apart is when they were
-                    issued and for which instance. */}
-                <p className="truncate">
-                  {t("acc.invite.linkOf", {
-                    date: new Date(invite.created_at).toLocaleDateString(language),
-                  })}
-                  {invite.created_by ? (
-                    <span className="ml-1 text-small text-muted-foreground">
-                      {t("acc.invite.createdBy", { name: invite.created_by })}
-                    </span>
-                  ) : null}
-                </p>
-                <p className="text-small text-muted-foreground">
-                  {invite.workspace_slug
-                    ? `${invite.workspace_slug} · ${t(ROLE_LABEL_KEYS[invite.role])}`
-                    : t("acc.invite.noWorkspaceShort")}
-                  {t("acc.invite.expires", {
-                    date: new Date(invite.expires_at).toLocaleDateString(language),
-                  })}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                title={t("acc.invite.revoke")}
-                disabled={revoke.isPending}
-                onClick={() => revoke.mutate(invite.id)}
-              >
-                <Trash2 />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </section>
-  );
-}
-
-/** A credential handed over by hand: the link, the warning, and a copy button. */
-export function CopyLink({ link, children }: { link: string; children: React.ReactNode }) {
-  const { t } = useT();
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-      <p className="text-body">{children}</p>
-      <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded bg-background px-2 py-1 font-mono text-small">
-          {link}
-        </code>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            navigator.clipboard.writeText(link);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
-          }}
-        >
-          {copied ? <Check /> : <Copy />}
-          {copied ? t("acc.copied") : t("acc.copy")}
-        </Button>
-      </div>
     </div>
   );
 }

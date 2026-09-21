@@ -12,6 +12,7 @@ __all__ = [
     "merge_pages_prompt",
     "transcribe_image_prompt",
     "transcribe_page_prompt",
+    "transcribe_retry_note",
 ]
 
 # ONE block for the two prompts that meet an image: the page prompt, where the image is a
@@ -27,11 +28,13 @@ An image is transcribed by what it CONTAINS, and described only when there is no
 - A screenshot of code, of a terminal or of a program's output is transcribed as a ``` block with its exact line breaks and indentation. Only the content counts: leave out everything that belongs to the application and not to the document (menus, toolbars, ruler, tabs, the editor's line numbers, window borders, taskbar).
 - A table is transcribed as a Markdown table, cell by cell.
 - Text (a scanned statement, a note, a label) is transcribed as text.
-- Only what cannot be copied as text — a diagram, a plot, a schematic, a photograph — is noted in its place as `[figure: what it shows]`, in one sentence. Say what is SEEN (the axes and magnitudes of a plot, the components of a schematic, the labels it carries) without reading values that cannot be read clearly or interpreting what it means. The note never replaces the text accompanying the figure, which is transcribed like everything else.
+- A DIAGRAM — any drawing made of labelled nodes joined by lines or arrows: a flowchart, an organisation chart, a concept or mind map, a decision tree, a hierarchy, a timeline, a class, use-case, sequence, state or entity-relationship diagram — is transcribed as Mermaid code inside a ```mermaid block, with the diagram type that fits it: `flowchart` for flows, box-and-arrow schematics, organisation charts and trees; `classDiagram`; `sequenceDiagram`; `stateDiagram-v2`; `erDiagram`; `mindmap` for concept and mind maps; `timeline`; `gantt`. It is a transcription, not an interpretation: every node and every line of the drawing appears exactly once, with its label copied character by character, the direction of every arrow and the text of every edge; nothing that is not drawn, no styles and no colours. A node's identifier is made up short and in ASCII (`N1`, `Customer`) and the visible label goes apart, in quotes whenever it carries spaces, accents or symbols: `N1["Log in"]`, and in `classDiagram` `class C1["Association Class"]`. A use-case diagram goes as `flowchart LR`: the actors as rectangular nodes outside the system, the system as a `subgraph` carrying its name, the use cases inside it as ovals `(("…"))`, the associations as `---`, and the «include» and «extend» relations as dashed arrows with their label, `-.->|«include»|`. A label that cannot be read is transcribed as `[illegible]`. The block holds ONLY the diagram: the text around it — a title, a footnote, a legend, a sentence of the slide — goes outside the block, as text, never inside the code. A diagram is transcribed whole ONLY when its labels can be read and it fits in one block: up to about 40 nodes. A tree or a graph with more nodes than that, or whose labels cannot be read at that size — the screenshot of a search tree with hundreds of nodes, a graph shrunk to a smudge — is NOT enumerated: it is noted as `[figure: …]` saying what kind of diagram it is, roughly how many levels and nodes it has, which labels can be read (the root, the first levels) and what it represents if the drawing itself says so. Nodes are never filled in with `[illegible]` one after another.
+- Only what is neither text nor a diagram of nodes — a plot with axes, a floor plan, a circuit, a drawing, a photograph — is noted in its place as `[figure: what it shows]`, in one sentence. Say what is SEEN (the axes and magnitudes of a plot, the components, the labels it carries) without reading values that cannot be read clearly or interpreting what it means. The note never replaces the text accompanying the figure, which is transcribed like everything else.
+- A drawn or ruled element — a blank to be filled in by hand, an empty grid or table to work on, a box, a border, a dotted line, a run of dashes — is never reproduced by repeating characters: its length is not content. A fill-in blank is transcribed as `____`, four fixed underscores, never the whole line. An empty grid or table is noted once, `[empty grid of N rows × M columns]`; if some cells carry content (digits, letters), those cells are transcribed and the empty rows left out. The same line, or the same character, is never written more than three times in a row: what the original repeats is transcribed once, noting how many times it appears.
 - The same fidelity rules hold inside an image: copy character by character, do not solve, do not complete, do not correct, and `[illegible]` marks what cannot be read."""
 
 
-def transcribe_page_prompt(page_number: int, page_count: int) -> str:
+def transcribe_page_prompt(page_number: int, page_count: int, note: str = "") -> str:
     """Ask for one page image copied into Markdown, character by character.
 
     The whole route stands on "copy, do not interpret": a later extractor reads the
@@ -40,8 +43,10 @@ def transcribe_page_prompt(page_number: int, page_count: int) -> str:
     visually highlighted answer option; a page carrying nothing but logos and page numbers
     comes back as `EMPTY_PAGE_MARK`, which `pages.py` matches. The answer is bare Markdown.
     A figure on the page follows `IMAGE_RULES`, the same block the standalone image prompt
-    carries, so an image is read the same way whichever route brought it.
+    carries, so an image is read the same way whichever route brought it. `note` is the
+    second attempt's section (`transcribe_retry_note`), placed before the output rules.
     """
+    retry = f"{note}\n\n" if note else ""
     return f"""\
 Transcribe into Markdown PAGE {page_number} of {page_count} of a teaching-material document. You have it in front of you as an image.
 
@@ -58,6 +63,9 @@ The page's titles and headings are marked with `#` following the original's visu
 - Do NOT solve anything, do NOT complete what is missing, do NOT correct errors in the document. If the code has a bug, the bug is part of the exercise and is transcribed as it is.
 - Respect the original's spelling and accents.
 - If something is illegible, write `[illegible]` in its place. Never guess.
+
+# DRAWN AND REPEATED ELEMENTS
+A drawn or ruled element — a blank to be written in by hand after "Name:", "ID:", "Signature:", an empty box, an empty grid or table to work on, a frame, a border, a dotted line — is never reproduced by repeating characters: its length is not content. A fill-in blank is transcribed as a short FIXED mark, exactly `____` (four underscores), whatever the length of the line in the original. An empty grid or table is noted once, `[empty grid of N rows × M columns]`; if some cells carry content (digits, letters), those cells are transcribed and the empty rows left out. The same line, or the same character, is never written more than three times in a row: what the original repeats is transcribed once, noting how many times it appears.
 
 # CODE
 Code goes in blocks delimited by ``` keeping its line breaks and indentation EXACTLY. It is what survives a careless transcription worst and what does the most damage: a code fragment with flattened indentation or a changed operator stops being the exercise it was.
@@ -76,22 +84,23 @@ Logos, crests, institutional headers and footers, page numbers and watermarks. E
 # CONTINUITY
 Transcribe only what you see on THIS page. If an exercise starts here and continues on the next one, cut where the page cuts: do not complete it and do not write notes about it.
 
-# OUTPUT
+{retry}# OUTPUT
 Only the page's Markdown. No preamble, no comments of your own, no ```markdown wrapping the whole, no saying «Here is the transcription». If the page contains nothing but omittable elements, answer exactly `{EMPTY_PAGE_MARK}`.
 
 Markdown:"""
 
 
-def transcribe_image_prompt(image_number: int, image_count: int) -> str:
+def transcribe_image_prompt(image_number: int, image_count: int, note: str = "") -> str:
     """Ask for one image of a Word or PowerPoint document copied into Markdown.
 
     The image reaches the model alone — Docling keeps the text around it — and what comes
     back is spliced into the document exactly where the image was, so the answer has to be
     the content itself in the form the surrounding Markdown would give it: LaTeX for a
-    formula, a fence for a screenshot of code, a table for a table, `[figure: …]` only for
-    what cannot be copied. A logo, a crest or an ornament comes back as `EMPTY_IMAGE_MARK`,
-    which `pages.py` matches and drops.
+    formula, a fence for a screenshot of code, a table for a table, a ```mermaid block for
+    a diagram of nodes and edges, `[figure: …]` only for what cannot be copied. A logo, a crest or an ornament comes back as `EMPTY_IMAGE_MARK`,
+    which `pages.py` matches and drops. `note` is the second attempt's section.
     """
+    retry = f"{note}\n\n" if note else ""
     return f"""\
 Transcribe into Markdown IMAGE {image_number} of {image_count} of a teaching-material document (a Word or PowerPoint file). You have it in front of you; you do not see the text around it.
 
@@ -105,10 +114,31 @@ If the image contains answer options and one is visually highlighted with respec
 # WHAT NOT TO TRANSCRIBE
 A logo, a crest, an ornament, a decorative rule, an icon or a photograph with no teaching content: answer exactly `{EMPTY_IMAGE_MARK}` and nothing else.
 
-# OUTPUT
+{retry}# OUTPUT
 Only the Markdown that replaces the image. No preamble, no comments of your own, no ```markdown wrapping the whole, no saying «Here is the transcription». If the image has nothing to transcribe, answer exactly `{EMPTY_IMAGE_MARK}`.
 
 Markdown:"""
+
+
+def transcribe_retry_note(repeated: str | None, cap: int) -> str:
+    """The section appended to a page or image prompt when its first answer never finished.
+
+    The same request at temperature 0 is the same loop; a request that names what the
+    model kept writing and restates the rule for drawn elements is a different one. It is
+    appended, never substituted, so the second attempt reads the whole prompt plus this.
+    """
+    cause = (
+        f"it kept repeating «{repeated}» without stopping"
+        if repeated
+        else f"it went over the limit of {cap} tokens without reaching the end"
+    )
+    return f"""\
+# SECOND ATTEMPT
+Your previous answer to this same page or image did not finish: {cause}. Transcribe it again from the beginning, applying this:
+- A drawn or ruled element (a grid, an empty table, a line, a border, a fill-in blank, empty rows) is written ONCE, as `____` or as the note `[empty grid of N rows × M columns]`, never by repeating characters.
+- A large diagram, or one whose labels cannot be read, is noted as `[figure: …]` instead of enumerating its nodes.
+- The same line, or the same character, is never written more than three times in a row.
+- The whole answer has to fit in fewer than {cap} tokens."""
 
 
 def merge_pages_prompt(tail: str, head: str, page_number: int, page_count: int) -> str:

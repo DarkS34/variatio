@@ -394,6 +394,8 @@ class JobRunner:
         except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
             logger.exception(f"El trabajo «{job.kind}» falló")
             job.error = f"{type(exc).__name__}: {exc}"
+            code = getattr(exc, "code", None)
+            job.error_code = code if isinstance(code, str) else None
             self._settle(job, "failed")
         finally:
             progress.reset_emitter(token)

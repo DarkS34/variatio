@@ -297,6 +297,7 @@ class VariantGenerator:
         ruling: object | None = None,
         avoid: list[str] | None = None,
         on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
+        scenario: str | None = None,
     ) -> list[GeneratedVariant]:
         """Produce up to `n` items for `concepts`, checking and retrying each one.
 
@@ -306,6 +307,8 @@ class VariantGenerator:
         installation's default writer for this commission alone — the caller checks it
         against what the installation offers (`entrypoints.resolve_generation_model`); nothing
         here does, so the evaluation's arms keep passing none and get the default.
+        `scenario` pins the setting the item is placed in; the evaluation hands the same
+        sentence to every arm, and a plain commission leaves it to the prompt's own choice.
         """
         writer = model or self.generator_model
         target_type = self.exemplars_profile.item_type(item_type)
@@ -364,6 +367,7 @@ class VariantGenerator:
                         instructions=instructions,
                         requests=ruling.requests if ruling.checked else None,
                         correction=correction,
+                        scenario=scenario or "",
                     )
                     progress.emit("prompt", index=i + 1, text=prompt)
                     return self._generate_one(prompt, fixed, target_type, think, writer)

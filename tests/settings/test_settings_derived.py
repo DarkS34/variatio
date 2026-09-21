@@ -69,8 +69,8 @@ def test_a_model_no_phase_names_any_more_leaves_the_context():
     assert "principal" not in out["LLM_CONTEXT"]
 
 
-# The writer of an exercise is the commission's and not a phase model: what the CLI, the
-# evaluation's arms and a request naming none get is the FIRST of the offered list.
+# The writer of an exercise is the commission's and not a phase model: what the CLI and a
+# request naming none get is the FIRST of the offered list.
 def test_the_default_writer_is_the_first_model_offered():
     values = base()
     values["generation.models"] = ["el-primero", "el-segundo"]

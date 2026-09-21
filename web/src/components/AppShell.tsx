@@ -301,7 +301,7 @@ function writeStepsPreference(open: boolean) {
  * The construction phase, folded into one pill once its four steps are done.
  *
  * Four stops with nothing left to do were most of the bar for the whole life of a subject,
- * and at 1280 px they pushed "Evaluar el sistema" past the edge of the strip. The same
+ * and at 1280 px they pushed the door after the rule past the edge of the strip. The same
  * two-line pill as a step, so unfolding moves nothing vertically.
  */
 function FoldedPhase({ onUnfold }: { onUnfold: () => void }) {

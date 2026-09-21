@@ -23,7 +23,7 @@ const STATE_HINTS: Record<StatusKey, string> = {
     "Cerrado y dado por bueno. Se cierra al continuar al paso siguiente; corregirlo después lo vuelve a abrir con el primer cambio que guardes.",
   draft: "Construido y todavía sin cerrar. Se puede mirar y corregir; lo que viene detrás sigue esperando.",
   stale:
-    "Algo de lo que depende cambió después de cerrarlo. Hay que repasarlo y volver a cerrarlo continuando.",
+    "Algo de lo que depende cambió después de construirlo o cerrarlo: el paso de arriba, o los documentos que lee. La pantalla dice qué cambió; si fueron los documentos, ofrece volver a construirlo con los que hay ahora. En cualquier caso se vuelve a cerrar continuando.",
   building:
     "La pantalla dice cuál de tres cosas pasa: se construye por primera vez y no hay nada que reemplazar; se trabaja sobre lo que ya hay, que sigue guardado y solo deja de verse; o el trabajo sigue en cola y todavía no ha empezado, y entonces no hay barra.",
   missing: "Todavía no existe. La pantalla enseña la cabecera y un único botón, grande y en el centro: comenzar la construcción.",
@@ -843,7 +843,7 @@ function Graph() {
         ]}
       />
 
-      <Block title="Una lista, y un mapa debajo">
+      <Block title="Una lista, y el grafo al lado">
         <Paragraph>
           Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
           Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el concepto
@@ -876,11 +876,21 @@ function Graph() {
           una banda la ficha pasa a ese.
         </Paragraph>
         <Paragraph>
-          El lienzo tiene dos disposiciones: <strong>«{t("canvas.layout.force")}»</strong>, que
-          agrupa cada concepto junto a aquellos con los que se relaciona, y{" "}
-          <strong>«{t("canvas.layout.curriculum")}»</strong>, que ordena por niveles de
-          prerrequisito. Cambiar de una a otra no reconstruye nada: los nodos se desplazan hasta
-          su nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario real
+          El lienzo tiene dos disposiciones. En <strong>«{t("canvas.layout.force")}»</strong>{" "}
+          cada unidad tiene su propio recuadro, en el orden del temario y con un tamaño según los
+          conceptos que reúne, y dentro de él cada concepto se coloca cerca de aquellos con los
+          que se relaciona; los que no tienen ninguna relación esperan en una fila al pie. De
+          lejos se leen las unidades —su nombre, cuántos conceptos tienen y las relaciones entre
+          ellas, más marcadas cuantas más hay—; al acercarte aparecen los conceptos con sus
+          nombres, y el de la unidad pasa a la esquina de su recuadro para que siempre sepas en
+          cuál estás. Pulsar una unidad acerca la vista a ella, y en la vista ampliada el plano
+          pequeño de la esquina marca qué parte del temario tienes delante. Así se lee igual un
+          temario de cien conceptos que uno de miles.
+        </Paragraph>
+        <Paragraph>
+          <strong>«{t("canvas.layout.curriculum")}»</strong> ordena por niveles de prerrequisito.
+          Cambiar de una disposición a otra no reconstruye nada: los nodos se desplazan hasta su
+          nueva posición. Un nivel es una <em>banda</em> y no una fila, porque un temario real
           reparte los prerrequisitos de forma muy desigual; si hay menos de tres niveles el
           propio lienzo lo dice, porque eso es un dato sobre el temario y no una vista rota.
         </Paragraph>
@@ -1663,9 +1673,41 @@ function Admin() {
           deja en un sitio compartido. Quien lo abre elige su usuario y su contraseña.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya una asignatura y un permiso dentro de ella, o no traer
-          ninguna. Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por
-          asignatura, desde esta misma tabla; son tres:
+          Cada invitación se crea con las condiciones que elijas: un <strong>alias</strong> que
+          solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el
+          alias—, la asignatura y el permiso que trae, o ninguna, y el día y la hora en que
+          caduca, sin máximo. Con «{t("acc.invite.count")}» se crean varias de una vez, con el
+          alias numerado, y «{t("acc.invite.copyAll")}» las copia listas para pegar en una hoja de
+          cálculo. Las que nadie ha usado quedan en la lista, las caducadas aparte, y cada una
+          ofrece:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "show",
+              head: <>«{t("acc.invite.showLink")}»</>,
+              body: "Vuelve a enseñar su enlace para copiarlo otra vez. Se guarda cifrado con una clave que no está en la base de datos y se borra en cuanto alguien lo usa. Las invitaciones creadas antes de que existiera esto no lo tienen guardado.",
+            },
+            {
+              key: "edit",
+              head: <>«{t("acc.invite.edit")}»</>,
+              body: "Cambia el alias, la asignatura, el permiso o la fecha. Si mueves la fecha de una caducada, el mismo enlace que ya diste vuelve a funcionar.",
+            },
+            {
+              key: "revoke",
+              head: <>«{t("acc.invite.revoke")}»</>,
+              body: "Su enlace deja de funcionar en el acto y la invitación sale de la lista.",
+            },
+            {
+              key: "recover",
+              head: <>«{t("acc.invite.mode.recover")}»</>,
+              body: "Si anulaste una por error, pega el enlace que diste —o solo el código que va detrás de «token=»— y vuelve a valer con las condiciones que elijas. Un enlace que ya se usó no se recupera: una invitación sirve una sola vez.",
+            },
+          ]}
+        />
+        <Paragraph>
+          Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por asignatura,
+          desde esta misma tabla; son tres:
         </Paragraph>
         <Rows
           items={[
@@ -1926,11 +1968,21 @@ const problems = (
     key: "obsoleto",
     question: `Un paso dice «${t(STATUS.stale.labelKey)}»`,
     answer: (
-      <p>
-        Algo de lo que depende cambió después de que lo cerraras. Ábrelo, comprueba que sigue
-        valiendo —o corrígelo— y vuélvelo a cerrar continuando al siguiente. Mientras tanto,
-        los pasos que dependen de él quedan bloqueados.
-      </p>
+      <>
+        <p>
+          Algo de lo que depende cambió después de que lo cerraras. Ábrelo, comprueba que sigue
+          valiendo —o corrígelo— y vuélvelo a cerrar continuando al siguiente. Mientras tanto,
+          los pasos que dependen de él quedan bloqueados.
+        </p>
+        <p>
+          Si lo que cambió son los documentos —subiste más ejercicios o más apuntes después de
+          construirlo, o quitaste alguno—, el aviso nombra cuáles y ofrece «
+          {t("build.rebuild")}»: se lee otra vez todo lo que hay ahora y el resultado sustituye
+          al actual. Las correcciones hechas a mano en ese paso se pierden; la versión anterior
+          queda en el historial. Si prefieres seguir con lo que hay, cierra el paso continuando
+          y el aviso desaparece hasta el próximo cambio.
+        </p>
+      </>
     ),
   },
   {
@@ -2004,9 +2056,10 @@ const problems = (
     question: "Mis instrucciones adicionales salen bloqueadas",
     answer: (
       <p>
-        El aviso dice cuál de los dos filtros ha sido. Si es el de admisibilidad, te nombra el
-        control de arriba que ya decide eso: cámbialo ahí en vez de pedirlo por escrito. Si es el
-        guardarraíl, te dice bajo qué criterio.
+        El aviso aparece bajo el propio cuadro de instrucciones y el botón de generar queda
+        bloqueado hasta que las cambies. Dice cuál de los dos filtros ha sido: si es el de
+        admisibilidad, te nombra el control de arriba que ya decide eso, así que cámbialo ahí en
+        vez de pedirlo por escrito; si es el guardarraíl, te dice bajo qué criterio.
       </p>
     ),
   },

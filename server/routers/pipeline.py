@@ -20,6 +20,7 @@ from variatio.entrypoints import build_phases as phases_of
 from .. import approvals, auth, deps, singletons, storage
 from ..editors import kg_edit
 from ..jobs import lanes as jobs_lanes
+from .jobs import transcribing_slot
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -53,9 +54,13 @@ def pipeline_payload(access: auth.Access) -> dict:
     about this instance and never leave it.
     """
     chain = singletons.pipeline_snapshot(access.ws)
+    slug = access.ws.slug
     for stage in chain:
         stage["build_job"] = NEXT_JOB[stage["artifact"]]
-    slug = access.ws.slug
+        # The slot this stage's build reads, while a transcription of it is live: what
+        # the build button turns into "espera a que termine". A key, not a sentence, so
+        # the client names the slot in its own language.
+        stage["transcribing_slot"] = transcribing_slot(slug, stage["build_job"])
     waiting = singletons.runner.pending(slug)
     running = singletons.runner.running()
     # The oldest running job of THIS workspace: the oldest of the installation would blank

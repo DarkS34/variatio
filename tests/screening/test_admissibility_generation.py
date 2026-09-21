@@ -91,6 +91,10 @@ def test_generate_raises_naming_the_owner_and_the_term(context, graph, profile, 
     )
     with pytest.raises(ValueError) as excinfo:
         _screen(context, graph, profile, "muy difícil")
+    # Typed, so the job runner can stamp its code and a screen can tell it from any other
+    # failure without matching this sentence.
+    assert isinstance(excinfo.value, screening.InstructionsBlocked)
+    assert screening.InstructionsBlocked.code == "instructions_blocked"
     message = str(excinfo.value)
     assert "muy difícil" in message
     assert "nivel_dificultad" in message

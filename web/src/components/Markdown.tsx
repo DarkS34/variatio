@@ -1,7 +1,9 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { Diagram } from "@/components/Diagram";
 import { TeX } from "@/components/Math";
+import { diagramSource, isDiagramTag, isDrawableDiagram } from "@/lib/diagram";
 import { DISPLAY_OPEN, splitInlineMath, takeDisplayMath } from "@/lib/math";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +23,18 @@ import { cn } from "@/lib/utils";
  * paragraph of `$$…$$` are cut out BEFORE any markup is looked for, because a formula is
  * not markdown — `q_{error}` is a subscript and `(0|1)^*` is a closure, and letting the
  * emphasis rules near either of them corrupts the exercise rather than merely misdrawing it.
+ *
+ * A diagram is the fourth and came from a library too: a ```mermaid fence is drawn, and so
+ * is a field that IS a bare diagram — the extraction copies a fence's body without the
+ * fence, so a bank solution and a generated one usually arrive as `classDiagram …` with no
+ * fence around it (`lib/diagram.ts` says where that judgement lives).
  */
 
 type Language = "python" | "json" | "text";
 
 type Block =
   | { kind: "code"; code: string; language: Language }
+  | { kind: "diagram"; code: string }
   | { kind: "math"; tex: string }
   | { kind: "heading"; level: number; text: string }
   | { kind: "list"; ordered: boolean; start: number; items: string[] }
@@ -64,6 +72,9 @@ function cells(row: string): string[] {
 }
 
 function parseBlocks(source: string): Block[] {
+  const bare = diagramSource(source);
+  if (bare !== null) return [{ kind: "diagram", code: bare }];
+
   const lines = source.replace(/\r\n?/g, "\n").split("\n");
   const blocks: Block[] = [];
   let index = 0;
@@ -86,7 +97,11 @@ function parseBlocks(source: string): Block[] {
         index += 1;
       }
       index += 1;
-      blocks.push({ kind: "code", code: body.join("\n"), language: languageOf(fence[2]) });
+      const code = body.join("\n");
+      // The TAG is not enough: a ```mermaid fence holding a kind this app does not draw
+      // is shown as its own source, the way a bare block of it already was.
+      if (isDiagramTag(fence[2]) && isDrawableDiagram(code)) blocks.push({ kind: "diagram", code });
+      else blocks.push({ kind: "code", code, language: languageOf(fence[2]) });
       continue;
     }
 
@@ -342,6 +357,8 @@ export function Markdown({
                 maxHeight={codeMaxHeight}
               />
             );
+          case "diagram":
+            return <Diagram key={key} code={block.code} />;
           case "heading": {
             const Tag = `h${Math.min(block.level + 2, 6)}` as "h3";
             return (
