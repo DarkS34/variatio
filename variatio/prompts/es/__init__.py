@@ -22,6 +22,7 @@ from .sources import (
     merge_pages_prompt,
     transcribe_image_prompt,
     transcribe_page_prompt,
+    transcribe_retry_note,
 )
 from .descriptions import (
     concept_description_prompt,
@@ -97,4 +98,5 @@ __all__ = [
     "tag_concepts_prompt",
     "transcribe_image_prompt",
     "transcribe_page_prompt",
+    "transcribe_retry_note",
 ]

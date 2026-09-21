@@ -80,9 +80,12 @@ def model(monkeypatch) -> _Model:
 
 
 def _read(source, model_name="m", images_dir=None, document=None):
-    return pages.transcribe_office(
+    """The one page a `.docx` reads as, with its tally."""
+    read, tally = pages.transcribe_office(
         source, _converter(document or _document()), model_name, ES, images_dir=images_dir
     )
+    assert len(read) == 1
+    return read[0], tally
 
 
 def _blocks(text: str) -> list[str]:
@@ -94,7 +97,7 @@ def test_a_picture_is_read_where_it_stood_and_a_repeated_one_only_once(source, m
     text, tally = _read(source, images_dir=tmp_path / "images")
 
     assert _blocks(text) == ["antes", "$x$", "entre", "$x$", ES_WORDING.UNREADABLE_IMAGE_MARK, "después"]
-    assert tally == {"images_total": 3, "images_unreadable": 1}
+    assert tally == {"images_total": 3, "images_unreadable": 1, "notes_total": 0}
     # Two pictures with the same bytes are one call, and the header logo is furniture the
     # markdown never carries, so it is not read at all.
     assert model.calls == 1
@@ -113,9 +116,9 @@ def test_a_reading_is_cached_by_content_and_by_what_read_it(source, model, tmp_p
     _read(source, model_name="otro", images_dir=images_dir)
     assert model.calls == 2, "another model is another reading"
 
-    monkeypatch.setattr(config, "TRANSCRIBE_PROMPT_VERSION", config.TRANSCRIBE_PROMPT_VERSION + 1)
+    monkeypatch.setattr(config, "TRANSCRIBE_TEMPERATURE", config.TRANSCRIBE_TEMPERATURE + 0.5)
     _read(source, images_dir=images_dir)
-    assert model.calls == 3, "a new prompt expires the reading, exactly as it expires a page"
+    assert model.calls == 3, "another temperature expires the reading, exactly as it expires a page"
 
 
 def test_a_logo_leaves_nothing_behind_and_is_remembered(source, tmp_path, monkeypatch):
@@ -138,7 +141,7 @@ def test_a_failed_reading_leaves_the_mark_and_is_not_cached(source, tmp_path, mo
     text, tally = _read(source, images_dir=tmp_path / "images")
 
     assert text.count(ES_WORDING.UNREADABLE_IMAGE_MARK) == 3
-    assert tally == {"images_total": 3, "images_unreadable": 3}
+    assert tally == {"images_total": 3, "images_unreadable": 3, "notes_total": 0}
     assert not list((tmp_path / "images").glob("*.json")), "a failure must be retried next time"
 
 

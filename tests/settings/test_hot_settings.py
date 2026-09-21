@@ -14,7 +14,10 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-TREES = ("variatio", "server", "evaluation")
+# The library is the whole of this branch. `Path.rglob` on a directory that is not there
+# yields nothing, so naming the API and the study here would cover one tree while
+# claiming three.
+TREES = ("variatio",)
 
 
 def _frozen_defaults() -> list[str]:

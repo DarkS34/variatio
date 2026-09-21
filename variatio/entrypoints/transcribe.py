@@ -38,10 +38,10 @@ _REASONS = {
     "model": "model",
     "dpi": "dpi",
     "ocr": "ocr",
-    "prompt_version": "prompt",
     "temperature": "temperature",
     "cleanup": "cleanup",
     "rasteriser": "rasteriser",
+    "deck": "deck",
 }
 
 _UNKNOWN_REASON = "config"
@@ -56,6 +56,9 @@ def transcription_status(ws: Workspace, slot: str) -> dict:
         "done": sum(1 for d in documents if d["state"] == DONE),
         "pending": sum(1 for d in documents if d["state"] == PENDING),
         "stale": sum(1 for d in documents if d["state"] == STALE),
+        # Up to date, but holding pages the next read tries again: work still to do, which
+        # the screen offers to do instead of reporting a failure nobody can act on.
+        "retry": sum(1 for d in documents if d["retry_pages"]),
         "total_pages": sum(d["pages"] for d in documents),
     }
 
@@ -99,18 +102,28 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
     if not pages:
         return {
             "name": source.name,
-            "pages": source_docs.page_count(source) if source.suffix.lower() == ".pdf" else 0,
+            "pages": _declared_pages(source),
             "state": PENDING,
             "reasons": [],
             "chars": 0,
             "seams_merged": 0,
             "failed_pages": 0,
+            "retry_pages": 0,
             "images": 0,
             "images_unreadable": 0,
         }
 
     stored = source_docs.fingerprint_of(meta)
     current = source_docs.same_document(stored, expected)
+    failed = len(meta.get("failed_pages") or [])
+    # Only a CURRENT PDF: a stale document is read whole anyway, and the other routes have no
+    # page to render again. `retryable_pages` opens the file only when some page carries a
+    # marker or is a repetition loop the model stopped on its own.
+    retry = (
+        len(source_docs.retryable_pages(source, cache_dir, pages))
+        if current and source.suffix.lower() == ".pdf"
+        else 0
+    )
     return {
         "name": source.name,
         "pages": len(pages),
@@ -118,10 +131,21 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
         "reasons": [] if current else _reasons(stored, expected),
         "chars": sum(len(page) for page in pages),
         "seams_merged": _merged(meta),
-        "failed_pages": len(meta.get("failed_pages") or []),
+        "failed_pages": failed,
+        "retry_pages": retry,
         "images": _count(meta, "images_total"),
         "images_unreadable": _count(meta, "images_unreadable"),
     }
+
+
+def _declared_pages(source: Path) -> int:
+    """How many pages a document not yet read will have: a PDF's pages, a deck's slides."""
+    suffix = source.suffix.lower()
+    if suffix == ".pdf":
+        return source_docs.page_count(source)
+    if suffix == ".pptx":
+        return source_docs.slide_count(source)
+    return 0
 
 
 def _cache_dir_for(ws: Workspace, source: Path) -> Path:
@@ -217,10 +241,16 @@ def adopt_transcriptions(ws: Workspace, slot: str) -> dict:
         return summary
     keys = {source_docs.reuse_key(f) for f in wanted.values()}
     donors: dict[tuple, Path] = {}
+    failures: dict[tuple, int] = {}
     for directory, fingerprint in _transcribed_documents():
         key = source_docs.reuse_key(fingerprint)
-        if key in keys and key not in donors:
-            donors[key] = directory
+        if key not in keys:
+            continue
+        # Of several copies, the one with the fewest failed pages: what is adopted with a
+        # failure still has to be read again, one model call a page.
+        failed = len(source_docs.read_meta(directory).get("failed_pages") or [])
+        if key not in donors or failed < failures[key]:
+            donors[key], failures[key] = directory, failed
     if not donors:
         return summary
 
@@ -388,8 +418,10 @@ def insert_document_page(
         raise ValueError(f"Cannot insert after page {after} of {count}")
     pages.insert(after, text)
     # Everything from the insertion point on is renumbered, so every seam record beyond it
-    # now names a boundary between different pages.
-    _save_document(cache_dir, meta, pages, dropped=set(range(after + 1, count + 2)))
+    # now names a boundary between different pages — and no page number is the file's.
+    _save_document(
+        cache_dir, meta, pages, dropped=set(range(after + 1, count + 2)), restructured=True
+    )
     return after + 1
 
 
@@ -408,7 +440,9 @@ def delete_document_page(ws: Workspace, slot: str, name: str, index: int) -> Non
             "transcribed and the next build would silently redo it."
         )
     del pages[index - 1]
-    _save_document(cache_dir, meta, pages, dropped=set(range(index, count + 2)))
+    _save_document(
+        cache_dir, meta, pages, dropped=set(range(index, count + 2)), restructured=True
+    )
 
 
 def _open_document(ws: Workspace, slot: str, name: str) -> tuple[Path, dict, list[str]]:
@@ -427,11 +461,28 @@ def _check_index(index: int, count: int) -> None:
         raise ValueError(f"No page {index}; the document has {count}")
 
 
-def _save_document(cache_dir: Path, meta: dict, pages: list[str], dropped: set[int]) -> None:
-    """Write the pages back under the SAME fingerprint, dropping the named seam records."""
+def _save_document(
+    cache_dir: Path,
+    meta: dict,
+    pages: list[str],
+    dropped: set[int],
+    restructured: bool = False,
+) -> None:
+    """Write the pages back under the SAME fingerprint, dropping the named seam records.
+
+    Once pages were inserted or deleted the document stays marked as restructured, whatever
+    edit comes after: a page number that stopped being the file's does not become it again.
+    """
     seams = [
         record
         for record in source_docs.valid_seams(meta.get("seams"))
         if record["page"] not in dropped
     ]
-    source_docs.write_pages(cache_dir, pages, source_docs.fingerprint_of(meta), seams)
+    source_docs.write_pages(
+        cache_dir,
+        pages,
+        source_docs.fingerprint_of(meta),
+        seams,
+        {key: meta.get(key, 0) for key in ("images_total", "images_unreadable", "notes_total")},
+        restructured=restructured or bool(meta.get("restructured")),
+    )

@@ -21,3 +21,4 @@ __pycache__
 /web/
 /auditoria-ux/
 /.maintenance.json
+/.invite_link_key

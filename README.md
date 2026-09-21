@@ -7,12 +7,14 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
 > **This branch is the core system**: the library and its command line, with no web interface,
-> no API, no database and no evaluation harness. The complete system lives on the
-> **`variatio-web`** branch — see [Using the web interface](#using-the-web-interface).
+> no API, no database and no evaluation harness. The product — this same library plus the API
+> and the front end — is **`variatio-web`**, and **`variatio-web-eval`** is that product plus
+> the TFM's own instrument: the blind comparison and the questionnaire that closes each step.
+> See [Using the web interface](#using-the-web-interface).
 
 ## What it does
 
-- **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.pptx`, `.md`, `.txt`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model and cached by content, so the same document is never read twice; a hand-corrected page beats the model and survives every later build.
+- **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.pptx`, `.md`, `.txt`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model and cached by content, so the same document is never read twice — a document this installation has already read arrives read, and a hand-corrected page beats the model and survives every later build. A deck becomes one page per slide with its speaker notes under it, an Office file's pictures are read one by one (metafiles rasterised through LibreOffice first), a scanned page travels as a JPEG, formulas come back as LaTeX and diagrams as Mermaid. A reading that runs away repeating itself is cut mid-stream, asked for once more under a prompt that names what it kept writing, and salvaged under a marker that says the rest is a person's to transcribe.
 - **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is not yet taught) and on the course curriculum — the list of concepts already covered. A guardrail model and an admissibility judge screen the free-text instructions, every item is validated against the profile's schema, and a batch of checks decides whether an item is returned or asked for again.
 - **Serves several subjects at once.** Each *workspace* is a complete instance: artifacts, cache and raw documents under `workspaces/<slug>/`. There is no default instance — `--workspace` is required everywhere.
 - **Speaks the subject's language.** A workspace is built in Spanish or in English, chosen at creation: the prompts, the strings the code composes and the graph's own relation vocabulary all follow it.
@@ -90,12 +92,14 @@ uv run variatio all        --workspace <slug>   # build what is missing, then in
 
 ## Using the web interface
 
-The web half — a FastAPI + PostgreSQL API, a React front end and the study's blind
-three-arm comparison — is not on this branch. It lives on **`variatio-web`**, which carries
-this same library plus `server/`, `evaluation/`, `web/` and the Alembic migrations.
+The web half — a FastAPI + PostgreSQL API and a React front end — is not on this branch. It
+lives on **`variatio-web`**, which carries this same library plus `server/`, `web/` and the
+Alembic migrations. **`variatio-web-eval`** is that branch plus `evaluation/`: the blind
+comparison that measures the system against one alternative per session, and the
+questionnaire that closes each step of the construction.
 
 ```bash
-git switch variatio-web
+git switch variatio-web            # or variatio-web-eval, for the study as well
 uv sync                            # now installs the server extra as well
 docker compose up -d postgres      # PostgreSQL 16 on :5432, credentials in .env
 uv run alembic upgrade head        # create the schema
@@ -149,9 +153,9 @@ workspaces/     the instances, one directory per slug (git-ignored)
 ```
 
 Two rules make the package legible and both are one `grep`: only `entrypoints/` takes a
-`Workspace`, and only `builders/` and `runtime/` call the model. Two more are pinned by
-tests: importing `variatio` pulls in neither Docling nor torch — the authoring dependencies
-are lazy behind the `builders` extra — and secrets live only in `.env`, never in
+`Workspace`, and only `builders/` and `runtime/` call the model. Importing `variatio` pulls
+in neither Docling nor torch: the authoring dependencies are lazy behind the `builders`
+extra. And one more is pinned by a test — secrets live only in `.env`, never in
 `config.json`.
 
 ## Configuration

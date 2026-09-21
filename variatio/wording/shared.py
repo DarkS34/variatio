@@ -15,3 +15,15 @@ OVERRIDE_OBJECTS: str = (
 OVERRIDE_QUALIFIERS: str = r"previous|prior|above|earlier"
 
 INJECTION_PATTERNS: tuple[str, ...] = (r"\b(?:system|previous|prior) prompt\b",)
+
+
+def quote_block(label: str, text: str) -> str:
+    """Wrap `text` in a markdown blockquote opened by `label` in bold.
+
+    A blockquote is what keeps a slide's speaker notes distinguishable from the slide's own
+    text once both are one page: an aside, in the document's own grammar, that `split_blocks`
+    carries whole. Every line of the text is prefixed, a blank one with a bare `>`, so a
+    note of several paragraphs stays one quote.
+    """
+    lines = [f"> {line}" if line else ">" for line in text.strip().splitlines()]
+    return "\n".join([f"> **{label}**", ">", *lines])

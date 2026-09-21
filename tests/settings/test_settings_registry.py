@@ -91,5 +91,7 @@ def test_every_phase_key_is_declared_in_the_registry():
 # commission's, a cap on the item count that a route enforced and the recently saved
 # variants a handler read out of the database to feed the prompt as used-up scenarios.
 def test_the_registry_holds_what_this_work_transcribed():
-    assert len(REGISTRY) == 132
-    assert len(BY_NAME) == 109
+    # 132 → 131 and 109 → 108 on 2026-09-16: `builders.transcribe_prompt_version` left with
+    # the rule that a prompt change expires every page.
+    assert len(REGISTRY) == 131
+    assert len(BY_NAME) == 108

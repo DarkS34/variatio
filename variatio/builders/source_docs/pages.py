@@ -29,7 +29,7 @@ from loguru import logger
 
 from ... import config
 from ... import wording as wording_sets
-from ...core import inference, languages, progress
+from ...core import inference, languages, progress, repetition
 from ...core.json_io import write_json
 from ...prompts.marks import EMPTY_IMAGE_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 from . import office
@@ -40,6 +40,7 @@ from .markdown import (
     page_mark,
     picture_mark,
     pictures,
+    slide_numbers,
     splice_pictures,
     tidy_markdown,
 )
@@ -58,6 +59,13 @@ META_NAME = "_meta.json"
 PARTIAL_NAME = "_partial.json"
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 
+# Fingerprint fields older metas carry that no longer decide anything. `prompt_version`
+# expired every page of every subject whenever a prompt changed, and a prompt change is a
+# better prompt (retired 2026-09-16): a page read under an older one stays current until
+# its document changes or somebody reads it again. Dropped on READ, so no cache is expired
+# by the retirement itself.
+RETIRED_FIELDS = ("prompt_version",)
+
 # What `_meta.json` holds beside the fingerprint, and therefore what is NOT compared when
 # deciding whether the cached pages are still current.
 META_EXTRA = (
@@ -68,6 +76,8 @@ META_EXTRA = (
     "failed_pages",
     "images_total",
     "images_unreadable",
+    "notes_total",
+    "restructured",
 )
 
 # The marker a failed page carries, in EVERY language the installation writes: what is
@@ -89,12 +99,20 @@ IMAGES_DIR_NAME = "images"
 # unmeasured, and because compositing onto white is needed either way — a formula drawn in
 # black on a transparent ground vanishes on a black pad.
 IMAGE_MIN_LONG_SIDE = 1024
+# A picture is downscaled before the call when it holds more pixels than this: two A4 pages
+# at 200 dpi, the most `render_scale` lets a page render reach at the default DPI.
+IMAGE_MAX_PIXELS = 7_750_000
 
 # The version of `markdown.undo_converter_escapes`, the cleanup applied to Docling's output
 # and to nothing else. It is written into the DOCLING fingerprint ONLY: bumping it expires
 # the pages that cleanup produced, which is seconds of Docling, while a key in the vlm
 # fingerprint would re-transcribe every PDF ever read for a change that never touched them.
 CONVERTER_CLEANUP_VERSION = 1
+# The version of how a deck is laid out as pages: 1 was one page with the speaker notes
+# under their slides, 2 is one page PER SLIDE. Written into the fingerprint of a `.pptx`
+# ONLY — a `.docx` has neither slides nor notes and must not be re-read for them — and a
+# deck re-read costs seconds of Docling, its pictures being cached by content.
+DECK_VERSION = 2
 
 
 def document_cache_dir(source: str | Path, cache_dir: str | Path) -> Path:
@@ -127,8 +145,9 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     workspace moves every timestamp and would throw away a whole corpus of transcriptions.
     `TRANSCRIBE_SEAM_CHARS` is deliberately absent — how much of a seam the model is shown
     does not change a single page, and the seam decisions live in `_meta.json` beside them.
-    The model and the temperature are recorded on BOTH routes: on the Docling one they are
-    what the pictures were read with, and a page carries those readings inline.
+    So is the prompt (`RETIRED_FIELDS`): a change to it never re-reads a corpus. The model
+    and the temperature are recorded on BOTH routes: on the Docling one they are what the
+    pictures were read with, and a page carries those readings inline.
     """
     stat = source.stat()
     fingerprint = {
@@ -139,7 +158,6 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         "model": model,
         "dpi": dpi,
         "ocr": ocr,
-        "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
         "temperature": config.TRANSCRIBE_TEMPERATURE,
     }
     if mode == "docling":
@@ -147,6 +165,8 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         # Whether the metafiles could be rendered: installing LibreOffice has to expire
         # every Office document read without it, or its equations stay unreadable for ever.
         fingerprint["rasteriser"] = Path(office.rasteriser()).name if office.rasteriser() else ""
+    if source.suffix.lower() == ".pptx":
+        fingerprint["deck"] = DECK_VERSION
     return fingerprint
 
 
@@ -219,6 +239,8 @@ def adopt_pages(donor_dir: str | Path, cache_dir: str | Path, fingerprint: dict)
             "images_total": meta.get("images_total", 0),
             "images_unreadable": meta.get("images_unreadable", 0),
         },
+        # The same bytes, so a donor's hand-moved pages are this copy's hand-moved pages too.
+        restructured=bool(meta.get("restructured")),
     )
     return len(pages)
 
@@ -254,8 +276,9 @@ def document_pages(
 ) -> list[str]:
     """The document as a list of markdown pages, transcribed from images when it is a PDF.
 
-    Non-PDF sources have no pages to render, so they keep the Docling/plain-text route and
-    come back as a single piece — same directory layout, one file inside.
+    A `.docx` and a plain-text file have no pages to render, so they keep the Docling and
+    plain-text routes and come back as a single piece — same directory layout, one file
+    inside. A `.pptx` comes back as one page PER SLIDE, in the deck's own order.
     """
     return _read_document(
         source,
@@ -335,10 +358,24 @@ def _read_document(
     if use_cache:
         cached = _read_cached_pages(document_dir, fingerprint)
         if cached is not None:
-            logger.info(
-                f"{tag}{source.name}: {len(cached[0])} page(s) reused from the cache"
+            retry = retryable_pages(source, document_dir, cached[0]) if is_pdf else []
+            if not retry:
+                logger.info(
+                    f"{tag}{source.name}: {len(cached[0])} page(s) reused from the cache"
+                )
+                return cached
+            return _read_failed_pages_again(
+                source,
+                cached,
+                retry,
+                document_dir,
+                fingerprint,
+                model,
+                seam_model,
+                dpi,
+                tag,
+                prompts,
             )
-            return cached
 
     pages, seams, images = _transcribe(
         source,
@@ -386,6 +423,78 @@ def _read_cached_pages(
     return pages, seams
 
 
+def retryable_pages(source: Path, cache_dir: str | Path, pages: list[str]) -> list[int]:
+    """The failed pages of a finished PDF that its next read tries again, counted from 1.
+
+    A failed page is work not done, and a later run is not the second attempt
+    `_ask_twice` already made: that one asks again a second later under a prompt naming
+    the loop, while this one comes after somebody pressed the button again — the output cap
+    was raised, the endpoint stopped refusing the picture, or the runaway simply did not
+    happen this time (measured at temperature 0 on Cerebras: it is not deterministic).
+
+    A page whose cached text is a repetition loop the model stopped on its own is read
+    again too (`looped_pages`): it was cached as a page with content, and it is not one.
+
+    Nothing is retried once pages were inserted or deleted by hand: that renumbers every page
+    after the edit, page N of the cache stops being page N of the PDF, and re-reading "the
+    failed page 5" would write another page's text into it. Such a document keeps its markers
+    for a person to correct, and so does one whose page count no longer matches the file's.
+    The PDF is opened only when there is something to retry.
+    """
+    candidates = sorted({*failed_pages(pages), *looped_pages(pages)})
+    if not candidates or read_meta(cache_dir).get("restructured"):
+        return []
+    if page_count(source) != len(pages):
+        return []
+    return candidates
+
+
+def _read_failed_pages_again(
+    source: Path,
+    cached: tuple[list[str], list[dict]],
+    numbers: list[int],
+    cache_dir: Path,
+    fingerprint: dict,
+    model: str,
+    seam_model: str,
+    dpi: int,
+    tag: str,
+    prompts,
+) -> tuple[list[str], list[dict]]:
+    """Transcribe the failed pages again and keep every other page exactly as it is.
+
+    Each page is written the moment it comes back, with the two seam records around it
+    dropped — they were decided against the failure marker — so a cancelled run keeps what
+    it paid for; the seams around the new pages are reviewed once all of them are in.
+    """
+    pages, seams = list(cached[0]), valid_seams(cached[1])
+    count, images = page_images(source, dpi, numbers=numbers)
+    logger.info(
+        f"{tag}{source.name}: reading {len(numbers)} page(s) that failed or looped last "
+        f"time with '{model}'"
+    )
+    touched: set[int] = set()
+    with progress.step(
+        "transcribe", f"{source.name}: reading the failed pages again", len(numbers)
+    ) as reporter:
+        for done, (number, image) in enumerate(zip(numbers, images), 1):
+            progress.checkpoint()
+            reporter.start(done, detail=f"page {number}/{count}")
+            page = _transcribe_page(image, number, count, model, tag, prompts)
+            pages[number - 1] = tidy_markdown(page) if page.strip() else ""
+            touched.update((number, number + 1))
+            seams = [record for record in seams if record["page"] not in touched]
+            write_pages(cache_dir, pages, fingerprint, seams)
+    reviewed = review_seams(pages, prompts, seam_model, tag=tag, only=touched)
+    seams = sorted([*seams, *reviewed], key=lambda record: record["page"])
+    write_pages(cache_dir, pages, fingerprint, seams)
+    logger.info(
+        f"{tag}{source.name}: {len(numbers) - len(failed_pages(pages))}/{len(numbers)} "
+        "failed page(s) read this time"
+    )
+    return pages, seams
+
+
 def read_pages(cache_dir: str | Path) -> list[str]:
     """The cached pages of a finished document, or `[]` when any of them is missing."""
     cache_dir = Path(cache_dir)
@@ -416,8 +525,13 @@ def write_pages(
     fingerprint: dict,
     seams: list[dict] | None = None,
     images: dict | None = None,
+    restructured: bool = False,
 ) -> None:
-    """Write a finished document's pages and its `_meta.json`, replacing what was there."""
+    """Write a finished document's pages and its `_meta.json`, replacing what was there.
+
+    `restructured` records that a person inserted or deleted pages, so the cache's page
+    numbers stopped being the file's; `retryable_pages` reads it.
+    """
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     # Wipe first: a source that lost pages would otherwise leave the previous run's trailing
@@ -430,11 +544,16 @@ def write_pages(
             stale.unlink()
     for index, page in enumerate(pages, 1):
         _page_path(cache_dir, index).write_text(page, encoding="utf-8")
-    _write_meta(cache_dir, fingerprint, pages, seams or [], images or {})
+    _write_meta(cache_dir, fingerprint, pages, seams or [], images or {}, restructured)
 
 
 def _write_meta(
-    cache_dir: Path, fingerprint: dict, pages: list[str], seams: list[dict], images: dict
+    cache_dir: Path,
+    fingerprint: dict,
+    pages: list[str],
+    seams: list[dict],
+    images: dict,
+    restructured: bool = False,
 ) -> None:
     """Write `_meta.json`: the fingerprint plus what the screens read off it."""
     write_json(
@@ -448,6 +567,8 @@ def _write_meta(
             "failed_pages": failed_pages(pages),
             "images_total": int(images.get("images_total", 0)),
             "images_unreadable": int(images.get("images_unreadable", 0)),
+            "notes_total": int(images.get("notes_total", 0)),
+            "restructured": bool(restructured),
         },
     )
 
@@ -475,9 +596,45 @@ def failed_pages(pages: list[str]) -> list[int]:
     ]
 
 
+def looped_pages(pages: list[str]) -> list[int]:
+    """The pages whose cached text ends in a repetition the model stopped on its own.
+
+    The output cap catches a loop that runs; this catches one that stopped — 271 identical
+    grid rows cached as a page with content on the reference installation — so the next
+    read tries the page again under the second-attempt rule. A page already carrying the
+    failure marker is that marker's business and is not looked at.
+    """
+    return [
+        index
+        for index, page in enumerate(pages, 1)
+        if not page.lstrip().startswith(FAILED_PAGE_PREFIXES) and _holds_loop(page)
+    ]
+
+
+# The verdicts of `_holds_loop`, by the page's digest. `/raw` asks `transcription_status`
+# every four seconds while a job runs and the scan is a millisecond a page (measured: 1.77 s
+# over the 1 794 cached pages of the reference installation), so a slot of several hundred
+# pages would pay a good part of a second per poll for an answer that only changes when the
+# page does. Bounded, oldest out first.
+_LOOP_VERDICTS: dict[str, bool] = {}
+_LOOP_VERDICTS_MAX = 8192
+
+
+def _holds_loop(page: str) -> bool:
+    """Whether a cached page holds a repetition loop, remembered by the page's digest."""
+    key = hashlib.sha1(page.encode("utf-8")).hexdigest()
+    verdict = _LOOP_VERDICTS.get(key)
+    if verdict is None:
+        verdict = repetition.detect(page) is not None
+        if len(_LOOP_VERDICTS) >= _LOOP_VERDICTS_MAX:
+            del _LOOP_VERDICTS[next(iter(_LOOP_VERDICTS))]
+        _LOOP_VERDICTS[key] = verdict
+    return verdict
+
+
 def fingerprint_of(meta: dict) -> dict:
-    """The fingerprint half of a `_meta.json`, without the counts written beside it."""
-    return {k: v for k, v in meta.items() if k not in META_EXTRA}
+    """The fingerprint half of a `_meta.json`, without the counts and the retired fields."""
+    return {k: v for k, v in meta.items() if k not in META_EXTRA and k not in RETIRED_FIELDS}
 
 
 def _transcribe(
@@ -496,15 +653,16 @@ def _transcribe(
     """Produce `(pages, seams, images)` for one document, by route.
 
     A PDF is rendered and read page by page; an Office file is Docling's, with its pictures
-    read one by one and spliced back in; plain text reads as itself.
+    read one by one and spliced back in, a deck one page per slide; plain text reads as
+    itself.
     """
     if source.suffix.lower() in PLAIN_TEXT_EXTS:
         return [tidy_markdown(source.read_text(encoding="utf-8"))], [], {}
     if not is_pdf:
-        page, images = transcribe_office(
+        pages, images = transcribe_office(
             source, converter, model, prompts, tag=tag, images_dir=images_dir
         )
-        return [page], [], images
+        return pages, slide_seams(pages), images
     pages = [
         tidy_markdown(page) if page.strip() else ""
         for page in transcribe_pdf(
@@ -584,8 +742,14 @@ def read_partial(cache_dir: str | Path | None, fingerprint: dict) -> list[str]:
     return pages
 
 
-def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator[str]]:
-    """`(page_count, generator of base64 PNGs)` — rendered one at a time, not all at once."""
+def page_images(
+    pdf_path: Path, dpi: int, first: int = 1, numbers: list[int] | None = None
+) -> tuple[int, Iterator[str]]:
+    """`(page_count, generator of base64 images)` — rendered one at a time, not all at once.
+
+    `numbers` names the pages to render, counted from 1; without it every page from `first`
+    on is rendered. What each image is encoded as is `encode_page`'s decision.
+    """
     # Imported here and NEVER at module scope: pypdfium2 ships with the `builders` extra,
     # which the runtime pipeline does not install.
     try:
@@ -601,22 +765,27 @@ def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator
         count = len(document)
 
     def render():
-        """Yield each page from `first` on as a base64 PNG.
+        """Yield each requested page as a base64 image.
 
-        Each page is rendered whole under the lock — page, bitmap and PNG bytes — and only
-        the bytes cross the `yield`, so nothing PDFium owns is touched while the model reads.
+        Each page is rendered whole under the lock — page, bitmap and encoded bytes — and
+        only the bytes cross the `yield`, so nothing PDFium owns is touched while the model
+        reads.
         """
+        wanted = numbers if numbers is not None else range(max(first, 1), count + 1)
         try:
-            for index in range(max(first - 1, 0), count):
+            for number in wanted:
+                if not 1 <= number <= count:
+                    continue
                 with _PDFIUM_LOCK:
-                    page = document[index]
+                    page = document[number - 1]
+                    width, height = page.get_size()
+                    scanned = _scanned(page)
                     # Colour is load-bearing: on these exam PDFs the correct option is
                     # marked by nothing but its colour. Never render greyscale to save bytes.
-                    bitmap = page.render(scale=dpi / 72)
-                    buffer = io.BytesIO()
-                    bitmap.to_pil().save(buffer, format="PNG")
+                    bitmap = page.render(scale=render_scale(width, height, dpi))
+                    encoded = encode_page(bitmap.to_pil(), scanned)
                     page.close()
-                yield base64.b64encode(buffer.getvalue()).decode()
+                yield base64.b64encode(encoded).decode()
         finally:
             with _PDFIUM_LOCK:
                 document.close()
@@ -624,65 +793,210 @@ def page_images(pdf_path: Path, dpi: int, first: int = 1) -> tuple[int, Iterator
     return count, render()
 
 
+# THE PAGE AS THE MODEL RECEIVES IT ----------------------------------------------------------------
+#
+# What reaches the model is bounded in BYTES, and a scanned page is where the bound bites: a
+# photograph of paper does not compress as a PNG. Measured on 2026-09-15, the three exercise
+# sheets of the nursing subject that were scans failed on EVERY page with Cerebras' 413
+# «Request payload exceeds maximum size» (10 MiB a request); a scan whose page declares its
+# pixels as points renders at 200 dpi to 6 892 × 9 745 px, a 9.4 MB PNG, and was refused the
+# same way, while the same page as a 16 MP JPEG was read in 0.9 s — for 1 574 prompt tokens,
+# exactly what the 7.7 MP one cost, because the endpoint resamples the picture anyway.
+
+# A4 in points: the page every DPI setting of this route was measured on.
+A4_AREA_PT = 595 * 842
+# How many A4 pages of area one render may cover at the configured DPI. Two is an A3 page at
+# full density; a page declared bigger is rendered at a lower one rather than at a size no
+# endpoint accepts.
+PAGE_MAX_A4_AREAS = 2
+# A page with text on it stays a lossless PNG unless it would weigh more than this, which is
+# a fifth of Cerebras' whole request and far above any typeset page (an A4 of text at 200 dpi
+# is ~0.6 MB). A page with NO text layer is a photograph of paper and is a JPEG from the start.
+PAGE_PNG_MAX_BYTES = 2 * 1024 * 1024
+# JPEG quality for a scan: the synthetic A4 scan measured 1.8 MB as PNG and 0.4 MB here.
+PAGE_JPEG_QUALITY = 90
+
+
+def render_scale(width_pt: float, height_pt: float, dpi: int) -> float:
+    """The scale a page is rendered at: the configured DPI, unless the page is too big for it."""
+    scale = dpi / 72
+    area = max(width_pt, 1.0) * max(height_pt, 1.0)
+    ceiling = PAGE_MAX_A4_AREAS * A4_AREA_PT
+    return scale if area <= ceiling else scale * (ceiling / area) ** 0.5
+
+
+def encode_page(image, scanned: bool) -> bytes:
+    """The rendered page as the bytes the model is sent: a PNG, or a JPEG for a photograph.
+
+    A scanned page goes as JPEG without trying the PNG: its noise is incompressible losslessly
+    and JPEG is what the scanner stored in the first place. A typeset page keeps the PNG it has
+    always had — nothing about its cached transcription changes — unless that PNG is heavy,
+    which is a page carrying a big photograph.
+    """
+    if not scanned:
+        png = io.BytesIO()
+        image.save(png, format="PNG")
+        if png.tell() <= PAGE_PNG_MAX_BYTES:
+            return png.getvalue()
+    jpeg = io.BytesIO()
+    image.convert("RGB").save(jpeg, format="JPEG", quality=PAGE_JPEG_QUALITY)
+    return jpeg.getvalue()
+
+
+def _scanned(page) -> bool:
+    """Whether a page carries no text layer at all: a picture of a page, not a typeset one."""
+    textpage = page.get_textpage()
+    try:
+        return textpage.count_chars() == 0
+    finally:
+        textpage.close()
+
+
 def _transcribe_page(
     image: str, index: int, count: int, model: str, tag: str, prompts
 ) -> str:
-    """Transcribe one page image, retrying, and marking the page when it cannot be read.
+    """Transcribe one page image, marking the page when it cannot be read whole.
 
-    An answer cut by `TRANSCRIBE_MAX_OUTPUT_TOKENS` is a failed page and never a short one:
-    measured, every page that reached the engine's ceiling was one repeated token — a
-    fill-in line the model could not stop copying — and kept as text it went on to cost
-    the profile and the bank more than the page itself. It is not retried either, since at
-    temperature 0 the same image yields the same run.
+    An answer that never finished — a repetition the engine stopped reading, or one that
+    ran to `TRANSCRIBE_MAX_OUTPUT_TOKENS` — is asked for ONCE MORE with the prompt saying
+    what went wrong (`_ask_twice`); what the second attempt still cannot finish is kept up
+    to the loop under the failure marker (`_salvaged_page`). Kept as it came, a cut answer
+    was measured costing the profile and the bank more than the page itself; thrown away
+    whole, it took a title and a paragraph down with the grid that broke it.
     """
-    prompt = prompts.transcribe_page_prompt(index, count)
-    last_error: Exception | None = None
-    for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
+    what = f"page {index}/{count}"
+    try:
+        answer = _ask_twice(
+            model,
+            lambda note: prompts.transcribe_page_prompt(index, count, note=note),
+            image,
+            config.THINK_TRANSCRIBE,
+            tag,
+            what,
+            prompts,
+        )
+    except inference.InferenceError as e:
+        logger.error(f"{tag}{what}: giving up after the retries ({e})")
+        # A lost page is lost exercises. Leave a marker a human will trip over in the
+        # cached file rather than a silent gap that looks like a page with nothing on it.
+        return wording_sets.beside(prompts).failed_page(index, count, str(e))
+    if _unfinished(answer):
+        return _salvaged_page(answer, index, count, tag, prompts)
+    page = _unwrap_markdown_fence(answer.response)
+    stripped = page.strip()
+    # Tolerant on purpose: models wrap the sentinel in backticks, or add a full stop.
+    # Anything that is only the sentinel plus punctuation is an empty page.
+    if not stripped or (
+        EMPTY_PAGE_MARK in stripped and len(stripped) <= len(EMPTY_PAGE_MARK) + 16
+    ):
+        return ""
+    return page
+
+
+def _ask_twice(
+    model: str, build_prompt, image: str, think, tag: str, what: str, prompts
+) -> inference.GenerationResponse:
+    """Ask once, and once more with the prompt saying what went wrong when the answer never finished.
+
+    The same request at temperature 0 is the same loop — measured three times over on one
+    page — and a request that names what the model kept writing and restates the rule for
+    drawn elements is a different one (`transcribe_retry_note`). Two attempts and never a
+    third: a page that locks twice under two prompts is a page for a person. When both
+    fail the one that read further before locking is returned, since that is what the
+    caller keeps.
+    """
+    answer = _ask(model, build_prompt(""), image, think, tag, what)
+    if not _unfinished(answer):
+        return answer
+    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
+    logger.warning(f"{tag}{what}: {_cause(answer, cap)}; asking once more with the rule spelled out")
+    repeated = repetition.quoted(answer.loop) if answer.loop else None
+    again = _ask(
+        model, build_prompt(prompts.transcribe_retry_note(repeated, cap)), image, think, tag, what
+    )
+    if not _unfinished(again):
+        return again
+    return again if len(_head(again)) >= len(_head(answer)) else answer
+
+
+def _ask(
+    model: str, prompt: str, image: str, think, tag: str, what: str
+) -> inference.GenerationResponse:
+    """One transcription call, retried on an engine error up to `TRANSCRIBE_MAX_RETRIES` times.
+
+    Only an `InferenceError` is retried, the engine having not answered at all. An answer
+    that never finished is an answer to this function; `_ask_twice` decides what it costs.
+    Every call asks the engine to stop on a repetition, which is what makes a loop cost
+    seconds on the local route instead of a whole output budget.
+    """
+    last_error: inference.InferenceError | None = None
+    for _attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
         try:
-            answer = inference.generate(
+            return inference.generate(
                 model=model,
                 prompt=prompt,
-                think=config.THINK_TRANSCRIBE,
+                think=think,
                 images=[image],
                 temperature=config.TRANSCRIBE_TEMPERATURE,
                 max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
+                stop_on_loop=True,
             )
-            if answer.truncated:
-                return _runaway_page(index, count, tag, len(answer.response), prompts)
-            page = _unwrap_markdown_fence(answer.response)
-            stripped = page.strip()
-            # Tolerant on purpose: models wrap the sentinel in backticks, or add a full
-            # stop. Anything that is only the sentinel plus punctuation is an empty page.
-            if not stripped or (
-                EMPTY_PAGE_MARK in stripped and len(stripped) <= len(EMPTY_PAGE_MARK) + 16
-            ):
-                return ""
-            return page
         except inference.InferenceError as e:
             last_error = e
-            logger.warning(f"{tag}page {index}/{count}: transcription failed ({e})")
-    logger.error(f"{tag}page {index}/{count}: giving up after the retries ({last_error})")
-    # A lost page is lost exercises. Leave a marker a human will trip over in the cached
-    # file rather than a silent gap that looks like a page with nothing on it.
-    return wording_sets.beside(prompts).failed_page(index, count, str(last_error))
+            logger.warning(f"{tag}{what}: transcription failed ({e})")
+    assert last_error is not None
+    raise last_error
+
+
+def _unfinished(answer: inference.GenerationResponse) -> bool:
+    """Whether the answer stopped for a reason other than the model finishing."""
+    return answer.loop is not None or answer.truncated
+
+
+def _cause(answer: inference.GenerationResponse, cap: int) -> str:
+    """One clause for the log naming why the answer did not finish."""
+    if answer.loop is not None:
+        return f"answer stopped on a repetition of «{repetition.quoted(answer.loop)}»"
+    return f"answer cut at the {cap}-token cap after {len(answer.response)} characters"
+
+
+def _head(answer: inference.GenerationResponse) -> str:
+    """What the model read before it stopped saying anything new: the text up to the loop."""
+    text = answer.response
+    found = repetition.detect(text)
+    return repetition.cut(text, found) if found is not None else text.rstrip()
+
+
+def _salvaged_page(
+    answer: inference.GenerationResponse, index: int, count: int, tag: str, prompts
+) -> str:
+    """The failure marker over whatever the model read before it stopped finishing.
+
+    The marker comes FIRST, so `failed_pages` counts the page and the screen draws it red;
+    the head follows, so a title or a paragraph read before a grid is not thrown away
+    with the grid. The marker says whether anything follows, and that the rest of the
+    page is a person's to transcribe.
+    """
+    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
+    head = _head(answer).strip()
+    logger.error(
+        f"{tag}page {index}/{count}: {_cause(answer, cap)} on the second attempt too; "
+        f"marked as failed, {len(head)} character(s) kept"
+    )
+    marker = wording_sets.beside(prompts).failed_page_unfinished(
+        index,
+        count,
+        repetition.quoted(answer.loop) if answer.loop else None,
+        cap,
+        bool(head),
+    )
+    return f"{marker}\n\n{head}" if head else marker
 
 
 def _unwrap_markdown_fence(text: str) -> str:
     """Strip the ```markdown wrapper some models put around a whole page."""
     match = MD_FENCE_RE.match(text.strip())
     return match.group(1) if match else text.strip()
-
-
-def _runaway_page(index: int, count: int, tag: str, chars: int, prompts) -> str:
-    """The failure marker for a page whose answer hit the output cap."""
-    cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
-    logger.error(
-        f"{tag}page {index}/{count}: answer cut at the {cap}-token cap after {chars} "
-        "characters, most likely a repetition loop; marked as failed and not retried"
-    )
-    return wording_sets.beside(prompts).failed_page_truncated(
-        index, count, cap, "TRANSCRIBE_MAX_OUTPUT_TOKENS"
-    )
 
 
 def save_partial_page(
@@ -702,13 +1016,15 @@ def _partial_path(cache_dir: Path) -> Path:
     return cache_dir / PARTIAL_NAME
 
 
-# THE PICTURES OF AN OFFICE DOCUMENT ---------------------------------------------------------------
+# THE PICTURES AND THE NOTES OF AN OFFICE DOCUMENT --------------------------------------------------
 #
 # Docling translates a `.docx` or `.pptx` faithfully — it declares its structure, so there is
 # nothing to infer — and writes `<!-- image -->` for every picture, which is exactly the part
 # of these documents that carries the formulas and the expected outputs. Each picture is one
 # model call under the same rules a figure on a rendered page gets, and the answer is put
-# back where the picture stood.
+# back where the picture stood. A deck's speaker notes are the other thing Docling never
+# opens, and they are read straight off the file and quoted under their slide: declared text,
+# like the slide's own, and no call at all.
 
 
 def transcribe_office(
@@ -718,11 +1034,12 @@ def transcribe_office(
     prompts,
     tag: str = "",
     images_dir: str | Path | None = None,
-) -> tuple[str, dict]:
-    """Convert an Office document with Docling and read its pictures, one call each.
+) -> tuple[list[str], dict]:
+    """Convert an Office document with Docling, read its pictures one call each, add its notes.
 
-    Returns the page and a tally: how many pictures the body carried, and how many left the
-    unreadable mark.
+    Returns the pages — one per slide for a deck, one for anything else — and a tally: how
+    many pictures the body carried, how many left the unreadable mark, and how many slides
+    carried speaker notes.
     """
     # The metafiles are rendered into a copy that Docling reads in the original's place;
     # the copy lives as long as the conversion and nothing keys on it.
@@ -730,11 +1047,32 @@ def transcribe_office(
         prepared = office.rasterised_copy(source, workdir) or source
         document = convert(converter, prepared)
     found = pictures(document)
-    tally = {"images_total": len(found), "images_unreadable": 0}
-    text = tidy_markdown(export_markdown(document, {}), converted=True)
-    if not found:
-        return text, tally
+    notes = office.speaker_notes(source)
+    tally = {"images_total": len(found), "images_unreadable": 0, "notes_total": len(notes)}
+    readings = (
+        _read_pictures(source, found, model, prompts, tag, images_dir, tally) if found else {}
+    )
+    if notes:
+        logger.info(f"{tag}{source.name}: speaker notes on {len(notes)} slide(s)")
+    wording = wording_sets.beside(prompts)
+    per_slide = source.suffix.lower() == ".pptx"
+    return _office_pages(document, found, readings, notes, wording, per_slide), tally
 
+
+def _read_pictures(
+    source: Path,
+    found: list[tuple[str, object]],
+    model: str,
+    prompts,
+    tag: str,
+    images_dir: str | Path | None,
+    tally: dict,
+) -> dict[str, str]:
+    """Read every picture, one call each, through the memo and the content-hash cache.
+
+    Returns `{self_ref: reading}`; an unreadable picture gets the mark and is counted in
+    `tally["images_unreadable"]`.
+    """
     logger.info(f"{tag}{source.name}: {len(found)} picture(s) to read with '{model}'")
     readings: dict[str, str] = {}
     memo: dict[str, str] = {}
@@ -772,13 +1110,67 @@ def transcribe_office(
         f"{tag}{source.name}: {len(found) - reused - tally['images_unreadable']} picture(s) "
         f"read, {reused} reused, {tally['images_unreadable']} unreadable"
     )
-    # Tidied with the marks still standing and the readings spliced in afterwards: the
-    # escape undo exists for Docling's output and must never touch what the model wrote.
-    marked = tidy_markdown(
-        export_markdown(document, {ref: picture_mark(ref) for ref, _ in found}),
-        converted=True,
-    )
-    return tidy_markdown(splice_pictures(marked, readings)), tally
+    return readings
+
+
+def _office_pages(
+    document,
+    found: list[tuple[str, object]],
+    readings: dict[str, str],
+    notes: dict[int, str],
+    wording,
+    per_slide: bool,
+) -> list[str]:
+    """Serialise the document with its pictures' readings in place and its notes under each slide.
+
+    Tidied with the picture marks still standing and the readings spliced in afterwards:
+    the escape undo exists for Docling's output and must never touch what the model wrote —
+    nor a note, which is the author's own text and is added after the same pass. A deck is
+    one page per slide, EVERY slide, so page N is slide N whatever it holds — a slide with
+    nothing on it is an empty page, exactly as a blank PDF page is; anything else is one
+    page. A deck Docling handed over without slide numbers is one page with its notes in
+    order under the text, rather than one with its notes lost.
+    """
+    marks = {ref: picture_mark(ref) for ref, _ in found}
+    numbers = slide_numbers(document) if per_slide else []
+    if not numbers:
+        text = _slide_text(document, marks, readings).rstrip()
+        quoted = [wording.speaker_notes_block(notes[n]) for n in sorted(notes)]
+        return [_with_notes(text, quoted)]
+    return [
+        _with_notes(
+            _slide_text(document, marks, readings, page=number).rstrip(),
+            [wording.speaker_notes_block(notes[number])] if number in notes else [],
+        )
+        for number in numbers
+    ]
+
+
+def _with_notes(text: str, quoted: list[str]) -> str:
+    """One page: the slide's text with its quoted notes under it, or nothing at all."""
+    parts = [part for part in (text, *quoted) if part]
+    return tidy_markdown("\n\n".join(parts)) if parts else ""
+
+
+def slide_seams(pages: list[str]) -> list[dict]:
+    """A paragraph seam between every two pages, for a document whose pages are slides.
+
+    The deterministic rule reads a slide ending without a full stop and the next opening in
+    lower case as one sentence cut by the page, and would join them with a space; a slide is
+    a unit of its own, so the boundary is settled here and no model is asked.
+    """
+    return [
+        {"page": index, "separator": PARAGRAPH, "drop_head_lines": 0}
+        for index in range(2, len(pages) + 1)
+    ]
+
+
+def _slide_text(
+    document, marks: dict[str, str], readings: dict[str, str], page: int | None = None
+) -> str:
+    """One export — the whole document, or one slide — with its pictures' readings spliced in."""
+    marked = tidy_markdown(export_markdown(document, marks, page=page), converted=True)
+    return tidy_markdown(splice_pictures(marked, readings))
 
 
 def _encode_image(image) -> bytes:
@@ -803,13 +1195,21 @@ def _encode_image(image) -> bytes:
         image = image.resize(
             (image.width * factor, image.height * factor), Image.Resampling.LANCZOS
         )
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
+    elif image.width * image.height > IMAGE_MAX_PIXELS:
+        # A photograph pasted whole into a document is the page scan's twin: shrunk to what
+        # a render of two A4 pages at 200 dpi holds, which is more than the endpoint reads.
+        factor = (IMAGE_MAX_PIXELS / (image.width * image.height)) ** 0.5
+        image = image.resize(
+            (max(1, round(image.width * factor)), max(1, round(image.height * factor))),
+            Image.Resampling.LANCZOS,
+        )
+    # The same bytes as always for every picture that fits, so its cached reading — keyed by
+    # them — stays a hit; only a picture heavy enough to threaten the request changes route.
+    return encode_page(image, scanned=False)
 
 
 def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) -> str | None:
-    """The cached reading of a picture, when it was made under the same model and prompt."""
+    """The cached reading of a picture, when it was made under the same model and temperature."""
     if images_dir is None:
         return None
     path = _image_record_path(Path(images_dir), digest)
@@ -821,11 +1221,7 @@ def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) ->
         return None
     if not isinstance(record, dict) or not isinstance(record.get("text"), str):
         return None
-    if (
-        record.get("model") != model
-        or record.get("prompt_version") != config.TRANSCRIBE_PROMPT_VERSION
-        or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE
-    ):
+    if record.get("model") != model or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE:
         return None
     return record["text"]
 
@@ -833,39 +1229,40 @@ def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) ->
 def _transcribe_image(
     image: str, index: int, count: int, model: str, tag: str, prompts
 ) -> str | None:
-    """Read one picture, retrying; `""` for one with nothing on it, `None` when it failed."""
-    prompt = prompts.transcribe_image_prompt(index, count)
-    last_error: Exception | None = None
-    for attempt in range(config.TRANSCRIBE_MAX_RETRIES + 1):
-        try:
-            answer = inference.generate(
-                model=model,
-                prompt=prompt,
-                think=config.THINK_TRANSCRIBE_IMAGE,
-                images=[image],
-                temperature=config.TRANSCRIBE_TEMPERATURE,
-                max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
-            )
-            if answer.truncated:
-                # Same failure as a runaway page, same verdict: unreadable, not retried
-                # (temperature 0), and not cached, so a raised cap gets another chance.
-                logger.error(
-                    f"{tag}picture {index}/{count}: answer cut at the "
-                    f"{config.TRANSCRIBE_MAX_OUTPUT_TOKENS}-token cap; marked unreadable"
-                )
-                return None
-            reading = _unwrap_markdown_fence(answer.response)
-            stripped = reading.strip()
-            if not stripped or (
-                EMPTY_IMAGE_MARK in stripped and len(stripped) <= len(EMPTY_IMAGE_MARK) + 16
-            ):
-                return ""
-            return stripped
-        except inference.InferenceError as e:
-            last_error = e
-            logger.warning(f"{tag}picture {index}/{count}: transcription failed ({e})")
-    logger.error(f"{tag}picture {index}/{count}: giving up after the retries ({last_error})")
-    return None
+    """Read one picture; `""` for one with nothing on it, `None` when it could not be read.
+
+    Same two attempts as a page (`_ask_twice`). A picture whose answer never finished
+    twice is unreadable and NOT salvaged: what comes before the loop in a diagram is half
+    a diagram, and half a ```mermaid block is worse than the mark that says the picture
+    is missing. It is not cached either, so a later read gets another chance.
+    """
+    what = f"picture {index}/{count}"
+    try:
+        answer = _ask_twice(
+            model,
+            lambda note: prompts.transcribe_image_prompt(index, count, note=note),
+            image,
+            config.THINK_TRANSCRIBE_IMAGE,
+            tag,
+            what,
+            prompts,
+        )
+    except inference.InferenceError as e:
+        logger.error(f"{tag}{what}: giving up after the retries ({e})")
+        return None
+    if _unfinished(answer):
+        logger.error(
+            f"{tag}{what}: {_cause(answer, config.TRANSCRIBE_MAX_OUTPUT_TOKENS)} on the "
+            "second attempt too; marked unreadable"
+        )
+        return None
+    reading = _unwrap_markdown_fence(answer.response)
+    stripped = reading.strip()
+    if not stripped or (
+        EMPTY_IMAGE_MARK in stripped and len(stripped) <= len(EMPTY_IMAGE_MARK) + 16
+    ):
+        return ""
+    return stripped
 
 
 def _write_image_cache(
@@ -879,7 +1276,6 @@ def _write_image_cache(
         {
             "sha256": digest,
             "model": model,
-            "prompt_version": config.TRANSCRIBE_PROMPT_VERSION,
             "temperature": config.TRANSCRIBE_TEMPERATURE,
             "text": text,
         },
@@ -1092,10 +1488,22 @@ SEAM_SCHEMA = {
 }
 
 
-def review_seams(pages: list[str], prompts, model: str = "", tag: str = "") -> list[dict]:
-    """Ask the model about every seam the deterministic rule could not settle."""
+def review_seams(
+    pages: list[str],
+    prompts,
+    model: str = "",
+    tag: str = "",
+    only: set[int] | None = None,
+) -> list[dict]:
+    """Ask the model about every seam the deterministic rule could not settle.
+
+    `only` limits the question to the seams named after those pages — the two around a page
+    that was just read again — so the rest keep the answers already paid for.
+    """
     model = model or config.TRANSCRIBE_SEAM_MODEL
-    boundaries = _boundaries(pages)
+    boundaries = [
+        boundary for boundary in _boundaries(pages) if only is None or boundary[2] in only
+    ]
     if not boundaries:
         return []
     records: list[dict] = []

@@ -29,6 +29,19 @@ from .admissibility import (
 from .guardrail import Verdict, check, injection_pattern
 
 
+class InstructionsBlocked(ValueError):
+    """The free text was refused by one of the two screens.
+
+    A `ValueError` still, so every caller that caught the block as one keeps doing so; what
+    the subclass adds is `code`, which the job runner copies onto the job. A screen can
+    then tell "the judge refused this text" from "the generator broke" without matching a
+    sentence — the sentence is the workspace's, in either language, and matching it is
+    what kept the block from ever reaching the form.
+    """
+
+    code = "instructions_blocked"
+
+
 def screen_instructions(
     instructions: str | None,
     *,
@@ -42,7 +55,7 @@ def screen_instructions(
 ) -> Ruling:
     """Run both screens over one free-text field, in order, and return what it may ask for.
 
-    Raises ValueError when either screen blocks the commission. The raise stays INSIDE the
+    Raises `InstructionsBlocked` when either screen blocks the commission. The raise stays INSIDE the
     step so a block marks that step failed: a green tick on "checking" beside a failed job
     would read as if something else broke.
 
@@ -58,7 +71,7 @@ def screen_instructions(
     with progress.step(f"{step_prefix}guardrail", "Checking the instructions"):
         verdict = guardrail.check(instructions, wording=wording)
         if verdict.blocked:
-            raise ValueError(wording.guardrail_blocked(verdict.reason))
+            raise InstructionsBlocked(wording.guardrail_blocked(verdict.reason))
 
     with progress.step(f"{step_prefix}admissibility", "Checking the scope of the commission"):
         ruling = admissibility.screen(
@@ -72,7 +85,7 @@ def screen_instructions(
         )
         if not ruling.ok:
             first = ruling.blocked[0]
-            raise ValueError(
+            raise InstructionsBlocked(
                 wording.scope_blocked(
                     first.text, first.owner.label, first.term, sentence_case(first.owner.where)
                 )
@@ -90,6 +103,7 @@ def sentence_case(text: str) -> str:
 
 
 __all__ = [
+    "InstructionsBlocked",
     "SLOT_KEYS",
     "Owner",
     "Request",

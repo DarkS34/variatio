@@ -21,6 +21,8 @@ from . import blocks, parsing
 from .schemas import DROP_SCHEMA, MERGE_SCHEMA
 
 MIN_SINGULARIZE_LENGTH = 3
+# The preposition that opens a noun phrase's complement, in the two prompt languages.
+HEAD_COMPLEMENT = re.compile(r" (?:de|del|of) ")
 
 
 def run(staging: dict, *, schema, max_attempts: int, prompts) -> dict:
@@ -90,19 +92,40 @@ def deterministic_merge(nodes: list[str]) -> tuple[dict, list[str]]:
 def norm_key(name: str) -> str:
     """The key two names must share to be merged mechanically.
 
-    Conservative: casing, accents, an optional configurable qualifier and a trailing plural
-    suffix. Parentheses are NOT stripped, to keep `O(n)` and `O(log n)` apart, and only the
-    LAST word is singularised, so `Listas anidadas` and `Lista anidadas` do not merge.
+    Conservative: casing, accents, an optional configurable qualifier and a plural suffix on
+    the LAST word — and, since 2026-09-12, on the HEAD of a noun phrase with a complement, the
+    words before the first `de`/`del`/`of`: Spanish and English pluralise «Casos de uso» and
+    «Types of data» on the head, which the last-word rule never reached, so the reference
+    graph kept «Casos de uso» beside «Caso de Uso» as two taggable concepts. Parentheses are
+    NOT stripped, to keep `O(n)` and `O(log n)` apart, and a word in the MIDDLE of a phrase is
+    never touched, so `Listas anidadas` and `Lista anidadas` still do not merge.
     """
     s = name.lower().strip()
     if config.KG_BUILDER_MERGE_QUALIFIER_PATTERN:
         s = re.sub(config.KG_BUILDER_MERGE_QUALIFIER_PATTERN, "", s)
     s = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
     s = re.sub(r"\s+", " ", s).strip()
+    s = _singularise_head(s)
     for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
         if len(s) > MIN_SINGULARIZE_LENGTH and s.endswith(suffix):
             return s[: -len(suffix)]
     return s
+
+
+def _singularise_head(s: str) -> str:
+    """Strip a plural suffix from every word before the first `de`/`del`/`of` of `s`."""
+    match = HEAD_COMPLEMENT.search(s)
+    if not match or match.start() == 0:
+        return s
+    head, rest = s[: match.start()], s[match.start() :]
+    words = []
+    for word in head.split(" "):
+        for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
+            if len(word) > MIN_SINGULARIZE_LENGTH and word.endswith(suffix):
+                word = word[: -len(suffix)]
+                break
+        words.append(word)
+    return " ".join(words) + rest
 
 
 # MERGE ---------------------------------------------------------------------------------------

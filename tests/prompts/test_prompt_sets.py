@@ -85,6 +85,42 @@ def test_an_image_is_read_by_the_same_rules_on_both_routes(code):
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_a_diagram_is_transcribed_as_mermaid_in_both(code):
+    # The rule that read every diagram as a `[figura: …]` sentence left 6 of the 9 diagram
+    # solutions of the reference bank as prose the generator then imitated. The fence tag
+    # is what the client draws, so it is pinned by name.
+    rules = prompts.of(code).IMAGE_RULES
+    assert "```mermaid" in rules
+    for kind in ("flowchart", "classDiagram", "sequenceDiagram", "stateDiagram-v2", "erDiagram", "mindmap"):
+        assert kind in rules
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_a_diagram_too_big_or_illegible_is_a_figure_note_not_an_enumeration(code):
+    # Five pictures of one subject were cut at the output cap on 2026-09-16, all of them
+    # trees: three screenshots of a search tree with hundreds of illegible nodes, and a
+    # hand-drawn one the model looped on. The Mermaid rule now carries a bound.
+    rules = prompts.of(code).IMAGE_RULES
+    assert "40" in rules
+    assert "[figura" in rules or "[figure" in rules
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_second_attempt_names_what_repeated_and_lands_before_the_output_rules(code):
+    module = prompts.of(code)
+    note = module.transcribe_retry_note("| | | |", 4096)
+    assert "| | | |" in note and "4096" in note
+    assert "4096" in module.transcribe_retry_note(None, 4096)
+    for build in (module.transcribe_page_prompt, module.transcribe_image_prompt):
+        plain = build(1, 2)
+        assert note not in plain
+        second = build(1, 2, note=note)
+        assert note in second
+        assert second.index(note) > second.index("```")
+        assert second.index(note) < len(second) - len(note) - 40, "the output rules follow it"
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
 def test_the_seam_separator_names_stay_english_in_both(code):
     # They are the values a grammar pins and `pages.py` matches against.
     assert prompts.of(code).SEAM_SEPARATORS == ("none", "space", "newline", "paragraph")

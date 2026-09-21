@@ -309,7 +309,8 @@ Your task: within EACH group, and never across groups, decide which names are TH
 - Do NOT merge two ideas a student could be examined on separately, even if they always appear together: a mechanism and the technique that uses it stay apart, and so do a part and the whole it belongs to, and so do a general term and one of its concrete kinds.
 - Do NOT merge two names merely because they belong to the same topic, are related or often appear together. Sharing a word is not evidence.
 - Use the relations as evidence: names with clearly different relations are usually different concepts.
-- When a name carries after « — » a definition taken from the material, judge on the definitions before the names: two definitions of the same idea are one concept, two different definitions are two, however alike the names.
+- When a name carries after « — » a definition taken from the material, read it as evidence of WHICH idea it names, not as proof that it is another concept: each fragment defined its own in its own words, so two different wordings of ONE idea are the normal case and are a single concept; they are two concepts only when they define ideas a student could be examined on separately, however alike the names.
+- A grammatical variant of the same name — singular and plural («Use cases» and «Use case»), capitalisation, an extra article or preposition — is ALWAYS a single concept, whatever the definitions beside them say.
 - Over-merging costs more than under-merging: a concept lost in a merge is not recovered afterwards. When the two readings are equally defensible, leave them apart.
 
 # CANONICAL NAME

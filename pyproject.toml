@@ -1,8 +1,10 @@
 [project]
 name = "variatio"
-version = "3.0.0"
+version = "3.1.0"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "httpx>=0.27.0",
     "loguru>=0.7.3",
@@ -26,9 +28,10 @@ dependencies = [
 # converter is used — so a PDF corpus (page transcription) or a cached one never builds it.
 
 [project.optional-dependencies]
-# pypdfium2 arrives with Docling anyway, but `source_docs.page_images` imports it
-# directly to rasterise pages, so it is declared rather than relied on transitively.
-builders = ["docling>=2.0.0", "pypdfium2>=4.30.0", "pillow>=10.0.0"]
+# pypdfium2 and python-pptx arrive with Docling anyway, but `source_docs.page_images`
+# imports the first to rasterise pages and `source_docs.office.speaker_notes` the second to
+# read a deck's notes, so both are declared rather than relied on transitively.
+builders = ["docling>=2.0.0", "pypdfium2>=4.30.0", "pillow>=10.0.0", "python-pptx>=1.0.0"]
 
 # uv has no `default-extras`, so the extra is repeated here to keep a plain `uv sync` able
 # to run the builders locally.
@@ -38,6 +41,7 @@ dev = [
     "docling>=2.0.0",
     "pypdfium2>=4.30.0",
     "pillow>=10.0.0",
+    "python-pptx>=1.0.0",
     "pytest>=8.3.0",
 ]
 
