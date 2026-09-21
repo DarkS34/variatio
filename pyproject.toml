@@ -1,8 +1,10 @@
 [project]
 name = "variatio"
-version = "1.123.0"
+version = "1.123.1"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "httpx>=0.27.0",
     "loguru>=0.7.3",
