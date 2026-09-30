@@ -16,8 +16,3 @@ web/tsconfig.tsbuildinfo
 /.cerebras_budget.json.lock
 /.maintenance.json
 /.invite_link_key
-
-*.md
-!README.md
-# Auditoría UX (capturas de trabajo, no forman parte del producto)
-/auditoria-ux/
