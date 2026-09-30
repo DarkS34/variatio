@@ -205,7 +205,7 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
     //     Floor 15, the one a categorical scale gets.
     //   - arm-naive (plum) and arm-rag (green) are not confusable with the primary except
     //     under protanopia, where the plum loses its red and turns bluish. That is the same
-    //     limitation CLAUDE.md already records as closed for the arms themselves ("they
+    //     limitation AGENTS.md already records as closed for the arms themselves ("they
     //     fail an all-pairs test, blue against plum, protanopic"), and the rule that
     //     compensates for it does not change either: the arms are always labelled, bars and
     //     rows only, never a scatter. Floor 10.

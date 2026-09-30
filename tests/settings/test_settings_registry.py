@@ -83,6 +83,6 @@ def test_every_phase_key_is_declared_in_the_registry():
 # values and never land in `variatio.config`.
 def test_the_registry_holds_what_this_work_transcribed():
     # 150 → 149 and 118 → 117 on 2026-09-16: `builders.transcribe_prompt_version` left with the
-    # rule that a prompt change expires every page (see CLAUDE.md).
+    # rule that a prompt change expires every page (see AGENTS.md).
     assert len(REGISTRY) == 149
     assert len(BY_NAME) == 117

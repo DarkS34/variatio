@@ -233,7 +233,7 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
     assert len(RELATION_SCHEMA_ES) == len(RELATION_SCHEMA_EN) == 3
 
 
-# CLAUDE.md states it as a property of the whole system: "every prompt receives the
+# AGENTS.md states it as a property of the whole system: "every prompt receives the
 # context's `prompt_block()` and is told to take register, level and language from it. That
 # is how they stay subject-agnostic while sounding native to the subject." Two did not, and
 # they were the two whose output came back in the wrong language — measured on a workspace
