@@ -167,5 +167,5 @@ back to the registry defaults.
 
 ## Internal documentation
 
-`CLAUDE.md` (in the working tree, not tracked) records the design decisions, the
+`AGENTS.md` records the design decisions, the
 closed-decisions register and the measurements behind them.
