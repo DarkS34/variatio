@@ -1,4 +1,4 @@
-import { Braces, Brain, ShieldCheck, UserRound } from "lucide-react";
+import { Braces, Brain, CircleOff, Globe, ShieldCheck, Shuffle, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { Input, Select } from "@/components/ui/input";
@@ -18,12 +18,18 @@ const FIXED_LABELS: Record<ReasoningFixed, Key> = {
   grammar: "pipe.fixed.grammar",
   commission: "pipe.fixed.commission",
   model: "pipe.fixed.model",
+  drawn: "pipe.fixed.drawn",
+  external: "pipe.fixed.external",
+  off: "pipe.fixed.off",
 };
 
 const FIXED_ICONS: Record<ReasoningFixed, typeof Braces> = {
   grammar: Braces,
   commission: UserRound,
   model: ShieldCheck,
+  drawn: Shuffle,
+  external: Globe,
+  off: CircleOff,
 };
 
 type Models = ConfigPayload["models"];

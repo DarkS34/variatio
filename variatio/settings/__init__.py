@@ -5,7 +5,7 @@ import os
 from loguru import logger
 
 from . import derived, store
-from .registry import BY_KEY, BY_NAME, GROUPS, PIPELINE, REGISTRY
+from .registry import BY_KEY, BY_NAME, GROUPS, PIPELINE, REGISTRY, STAGES
 from .types import Impact, Setting, SettingError
 
 _values: dict[str, object] = {}
@@ -184,6 +184,8 @@ def snapshot() -> list[dict]:
             "nullable": setting.nullable,
             "secret": setting.secret,
             "scope": setting.scope,
+            "stages": list(setting.stages),
+            "phase": setting.phase,
         }
         if setting.secret:
             row["state"] = "configurada" if _values.get(setting.key) else "ausente"
@@ -229,6 +231,7 @@ __all__ = [
     "Impact",
     "PIPELINE",
     "REGISTRY",
+    "STAGES",
     "Setting",
     "SettingError",
     "apply",

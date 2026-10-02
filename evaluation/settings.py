@@ -1,10 +1,81 @@
-"""The evaluation's nine settings, declared beside the code that reads them.
+"""The evaluation's nine settings and its lane, declared beside the code that reads them.
 
 `variatio/settings/registry/__init__.py` picks these up through an optional import — the
 one place the pipeline names the evaluation, and the single exception to the boundary.
 """
 
+from variatio.settings.registry.reasoning import DRAWN, EXTERNAL, OFF, Lane, Phase
 from variatio.settings.types import Impact, Setting
+
+# The study's three model calls, drawn on the evaluation's screen as its stage's lane.
+LANE = Lane(
+    "evaluation",
+    "Evaluación",
+    (
+        Phase(
+            "scenario",
+            "Escenario",
+            "evaluation.local_model",
+            fixed=OFF,
+            note="Una frase que sitúa las dos propuestas, sorteada una vez por sesión.",
+        ),
+        Phase(
+            "local_arms",
+            "Propuestas locales",
+            "evaluation.local_model",
+            fixed=DRAWN,
+            note="La del sistema y la de solo RAG, con el mismo modelo; cada sesión sortea si razonan.",
+        ),
+        Phase(
+            "external_arm",
+            "Propuesta comercial",
+            "evaluation.providers",
+            fixed=EXTERNAL,
+            note="Una cadena de proveedores: si uno no responde, contesta el siguiente.",
+        ),
+    ),
+)
+
+# The pipeline's settings a session reads too, because its `system` arm IS the generation
+# stage and its rivals share the writer's sampling: the registry adds this stage to each, so
+# the evaluation's screen holds everything a session uses without the pipeline naming it.
+READS = (
+    "models.guardrail",
+    "context_window.guardrail",
+    "generation.guardrail_criteria",
+    "models.phases.admissibility",
+    "reasoning.phases.admissibility",
+    "reasoning.effort.admissibility",
+    "generation.instructions_max_chars",
+    "generation.models",
+    "generation.fixed_effort",
+    "generation.fixed_effort_levels",
+    "generation.max_few_shot_examples",
+    "generation.check_similarity_threshold",
+    "generation.check_max_retries",
+    "sampling.temperature_generation",
+    "models.phases.repair",
+    "sampling.temperature_repair",
+    "generation.max_json_repair_tries",
+    "models.phases.concept_tagger",
+    "reasoning.phases.concept_tagger",
+    "reasoning.effort.concept_tagger",
+    "generation.tagger_top_k",
+    "generation.tagger_fallback_top_k",
+    "retrieval.similarity_threshold",
+    "models.embedding",
+    "context_window.embedding",
+    "retrieval.query_prefix",
+    "retrieval.document_prefix",
+    "retrieval.batch_size",
+    "retrieval.field_max_chars",
+    "retrieval.max_chars",
+    "retrieval.description_weight",
+    "builders.kg_plural_suffixes",
+    "sampling.temperature_deterministic",
+    "sampling.temperature_reasoning",
+    "context_window.overrides",
+)
 
 SETTINGS: list[Setting] = [
     Setting(
@@ -14,6 +85,8 @@ SETTINGS: list[Setting] = [
         default=None,
         nullable=True,
         group="Evaluación",
+        stages=("evaluation",),
+        phase="local_arms",
         scope="engine",
         impact=Impact.NONE,
         doc="""QUÉ MODELO ESCRIBE LAS DOS PROPUESTAS LOCALES de una comparación (la de solo RAG y la del
@@ -41,6 +114,8 @@ así que la memoria puede decirlo sesión a sesión.""",
         kind="list[str]",
         default=["gemini", "mistral", "groq"],
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_EXTERNAL_PROVIDER",
         doc="""Este bloque lo declara `evaluation/settings.py` y lo lee `evaluation/config.py`: vive con el
@@ -73,6 +148,8 @@ sin ninguna clave el brazo naive se registra como `unavailable` y la sesión cor
         kind="str",
         default="gemini-3.6-flash",
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_GEMINI_MODEL_ID",
         doc="""Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos
@@ -87,6 +164,8 @@ cruzarse.""",
         kind="str",
         default="mistral-medium-latest",
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_MISTRAL_MODEL_ID",
         doc="""El segundo eslabón comercial de la cadena, para cuando Gemini agota su cuota gratuita a
@@ -106,6 +185,8 @@ los reclama Ollama, y estos modelos los sirve un proveedor externo y nunca se de
         kind="str",
         default="llama-3.3-70b-versatile",
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_GROQ_MODEL_ID",
         doc="""Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos
@@ -120,6 +201,8 @@ cruzarse.""",
         kind="str",
         default="",
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_GEMINI_API_KEY",
         secret=True,
@@ -140,6 +223,8 @@ por git.""",
         kind="str",
         default="",
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_MISTRAL_API_KEY",
         secret=True,
@@ -159,6 +244,8 @@ por git.""",
         kind="str",
         default="",
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_GROQ_API_KEY",
         secret=True,
@@ -179,6 +266,8 @@ por git.""",
         kind="float",
         default=60.0,
         group="Evaluación",
+        stages=("evaluation",),
+        phase="external_arm",
         impact=Impact.NONE,
         minimum=1.0,
         doc="""Por intento, así que una cadena de tres espera esto tres veces en el peor caso. El brazo

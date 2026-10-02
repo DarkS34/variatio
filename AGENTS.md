@@ -181,6 +181,12 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
 - `config.py` is an **index of bare annotations** plus `apply(globals())`; values live in the
   registry (`settings/registry/*.py`), each `Setting` carrying its measured `doc`, `Impact`
   (`NONE ENGINE CONTEXTS REINDEX LOCKED` — what a change invalidates), bounds and flags.
+- **Every setting names the stages that read it** (`stages`, the owner first; `types.STAGES`
+  is the pipeline's, the registry appends the study's) and the model call it is drawn under
+  (`phase`, a `PIPELINE` phase of its owner's lane). Engine, tunnel and logging have none.
+  `tests/settings/test_setting_stages.py` pins it.
+  The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
+  reads is `evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
   **`config.json` stores every non-secret value and beats the registry**, so bumping a
   registry default alone changes nothing on an installation — edit `config.json` too.
@@ -197,8 +203,9 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
   (`DEFAULT_THINK_EFFORT = "low"`).
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
-- The evaluation's settings are declared in `evaluation/settings.py`, picked up by an optional
-  import — the one place `variatio/` names the evaluation.
+- The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
+  `READS` are declared in `evaluation/settings.py`, picked up by an optional import — the one
+  place `variatio/` names the evaluation.
 
 ### Database (`server/db/`)
 

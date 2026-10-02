@@ -24,6 +24,11 @@ KINDS = ("str", "int", "float", "bool", "list[str]", "dict[str,int]", "dict[str,
 
 SCOPES = ("global", "engine")
 
+# The pipeline's stages, in the order the path walks them. The panel draws one screen per
+# stage, and a setting names the stages that read it so each screen holds all it uses. The
+# registry appends any stage a declaring package brings of its own.
+STAGES = ("transcription", "profile", "graph", "bank", "generation")
+
 
 class SettingError(ValueError):
     """A setting was declared wrongly, or a value does not fit the one it is meant for."""
@@ -35,6 +40,11 @@ class Setting:
 
     `name` is the `config` attribute it becomes; an empty one is read by `derived` alone.
     A `scope="engine"` setting resolves from `profiles.<engine>` rather than the top level.
+
+    `stages` are the stages whose work reads it, the first being the one whose screen owns
+    it — every other one shows it as shared. `phase` is the model call of that first stage
+    it is drawn under; none means it governs the stage as a whole. Both stay empty for what
+    belongs to the engine or the process rather than to a stage.
     """
 
     key: str
@@ -54,6 +64,8 @@ class Setting:
     min_items: int | None = None
     scope: str = "global"
     engine_defaults: tuple[tuple[str, object], ...] | None = None
+    stages: tuple[str, ...] = ()
+    phase: str | None = None
 
     def __post_init__(self) -> None:
         """Raise SettingError when the declaration itself is malformed."""
@@ -63,6 +75,10 @@ class Setting:
             raise SettingError(f"'{self.name or self.key}': ámbito desconocido '{self.scope}'")
         if not self.doc.strip():
             raise SettingError(f"'{self.name or self.key}': falta la documentación")
+        if len(set(self.stages)) != len(self.stages):
+            raise SettingError(f"'{self.name or self.key}': etapas repetidas {self.stages}")
+        if self.phase is not None and not self.stages:
+            raise SettingError(f"'{self.name or self.key}': una llamada sin etapa")
 
     def default_for(self, engine: str | None) -> object:
         """Return this setting's default under `engine`, which may declare its own."""

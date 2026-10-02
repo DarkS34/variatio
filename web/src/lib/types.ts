@@ -875,7 +875,13 @@ export interface InstalledModel {
   size: number | null;
 }
 
-export type ReasoningFixed = "grammar" | "commission" | "model";
+export type ReasoningFixed =
+  | "grammar"
+  | "commission"
+  | "model"
+  | "drawn"
+  | "external"
+  | "off";
 
 export type ReasoningPhase = {
   key: string;

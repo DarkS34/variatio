@@ -38,8 +38,9 @@ class Reset(BaseModel):
 
 
 def _payload() -> dict:
-    """Assemble the whole configuration screen: groups, values, pipeline and models."""
+    """Assemble the whole configuration screen: stages, groups, values, pipeline and models."""
     return {
+        "stages": list(settings.STAGES),
         "groups": list(settings.GROUPS),
         "settings": settings.snapshot(),
         "pipeline": settings.pipeline(),

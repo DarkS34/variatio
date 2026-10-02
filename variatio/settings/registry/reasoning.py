@@ -146,6 +146,31 @@ _DEFAULTS = {
     "admissibility": (False, _ADMISSIBILITY_DOC),
 }
 
+# The stages whose work makes each phase's call, the one whose lane draws it first.
+_STAGES = {
+    **dict.fromkeys(("transcribe", "transcribe_image", "transcribe_seam"), ("transcription",)),
+    **dict.fromkeys(("ep_scan", "ep_consolidate", "ep_context"), ("profile",)),
+    "eb_extract": ("bank",),
+    **dict.fromkeys(
+        (
+            "kg_extract",
+            "kg_clean_merge",
+            "kg_clean_drop",
+            "kg_units",
+            "kg_domains",
+            "kg_domains_leftovers",
+            "kg_link_domain",
+            "kg_link_cross_domain",
+            "description_generation",
+            "kg_taggable",
+            "kg_context",
+        ),
+        ("graph",),
+    ),
+    "concept_tagger": ("bank", "generation"),
+    "admissibility": ("generation",),
+}
+
 
 def _toggle(phase: str) -> Setting:
     """Declare one phase's `THINK_<PHASE>` switch, defaulting to what its call did before."""
@@ -156,6 +181,8 @@ def _toggle(phase: str) -> Setting:
         kind="bool",
         default=default,
         group=GROUP,
+        stages=_STAGES[phase],
+        phase=phase,
         impact=Impact.NONE,
         scope="engine",
         doc=doc + "\n\n" + _SHARED_DOC,
@@ -204,6 +231,8 @@ def _effort(phase: str) -> Setting:
         kind="str",
         default="low",
         group=GROUP,
+        stages=_STAGES[phase],
+        phase=phase,
         impact=Impact.NONE,
         scope="engine",
         choices=("low", "medium", "high", "max"),
@@ -222,6 +251,12 @@ SETTINGS: list[Setting] = [
 GRAMMAR = "grammar"
 COMMISSION = "commission"
 MODEL = "model"
+# The reasons a call outside the pipeline proper gives: drawn per run, decided by a hosted
+# provider, or never asked to reason at all.
+DRAWN = "drawn"
+EXTERNAL = "external"
+OFF = "off"
+FIXED = (GRAMMAR, COMMISSION, MODEL, DRAWN, EXTERNAL, OFF)
 
 
 @dataclass(frozen=True)
@@ -241,7 +276,8 @@ class Phase:
 class Lane:
     """One column of the pipeline: the phases of a build, or of a run.
 
-    A `shared` lane is not a builder's own: it is the step every builder runs before its
+    `key` is the stage it belongs to (`types.STAGES`), and its phases are that stage's
+    calls. A `shared` lane is not a builder's own: it is the step every builder runs before its
     own work, so the panel draws it ONCE and ACROSS, above the columns, instead of
     repeating it at the head of each of them.
     """
@@ -347,7 +383,7 @@ PIPELINE: tuple[Lane, ...] = (
         ),
     ),
     Lane(
-        "run",
+        "generation",
         "Generación",
         (
             Phase(
