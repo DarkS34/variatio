@@ -202,6 +202,7 @@ class ExemplarsProfileBuilder:
             "\n".join(lines),
             self._wording.CONTEXT_SOURCE_PROFILE,
             self.context_model,
+            phase="ep_context",
             think=config.THINK_EP_CONTEXT,
         )
         progress.advance(1.0)
@@ -285,7 +286,7 @@ class ExemplarsProfileBuilder:
             think=config.THINK_EP_SCAN,
             prompt=prompt,
             format=None if config.THINK_EP_SCAN else SCAN_SCHEMA,
-            temperature=inference.judgement_temperature(config.THINK_EP_SCAN),
+            sampling=inference.sampling("ep_scan", config.THINK_EP_SCAN),
         ).response
 
         entries, err = parse_with_repair(
@@ -408,7 +409,7 @@ class ExemplarsProfileBuilder:
             model=self.consolidate_model,
             think=think,
             prompt=prompt,
-            temperature=inference.judgement_temperature(think),
+            sampling=inference.sampling("ep_consolidate", think),
         ).response
         profile = self._parse(response)
         err = self._validate(profile)
@@ -432,7 +433,7 @@ class ExemplarsProfileBuilder:
                 prompt=repair_prompt,
                 think=False,
                 format="json",
-                temperature=config.TEMPERATURE_REPAIR,
+                sampling=inference.sampling("repair"),
             ).response
             candidate = self._parse(response)
             if candidate is not None:

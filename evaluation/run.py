@@ -24,11 +24,9 @@ from . import config as evaluation_config
 from . import prompts as evaluation_prompts
 
 # A scenario is one sentence, and the cap is what the draw may keep of a model's first
-# line. The temperature is what makes two sessions on one commission land in two settings
-# — at the deterministic default every draw would be the same sentence.
+# line. Its sampling is the `scenario` phase's (`evaluation/settings.py`).
 SCENARIO_MAX_CHARS = 300
 SCENARIO_MAX_TOKENS = 80
-SCENARIO_TEMPERATURE = 0.9
 
 
 def evaluate(
@@ -215,7 +213,7 @@ def _settle_scenario(context, commission: Commission) -> str:
             model=commission.model or config.VARIANT_GENERATION_LLM,
             prompt=prompt,
             think=False,
-            temperature=SCENARIO_TEMPERATURE,
+            sampling=inference.sampling("scenario"),
             max_output_tokens=SCENARIO_MAX_TOKENS,
         ).response
     except Exception as e:  # noqa: BLE001 - a missing scenario is the old behaviour, not a failure

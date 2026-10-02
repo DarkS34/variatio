@@ -375,6 +375,10 @@ _RECORDED_SETTINGS = (
     "GENERATION_AVOID_RECENT",
 )
 
+# The sampling of every call a run makes, as configured: what the phase left empty is still
+# empty here and was decided per call (`inference.sampling`).
+_RECORDED_SAMPLING = ("guardrail", "admissibility", "variant_generation", "repair", "concept_tagger")
+
 
 def _run_record(job: Job, ws: Workspace, n: int, asked_think, model: str) -> dict:
     """Assemble the half of every saved record that the whole run shares.
@@ -406,6 +410,7 @@ def _run_record(job: Job, ws: Workspace, n: int, asked_think, model: str) -> dic
         "settings": {
             **{name: getattr(config, name, None) for name in _RECORDED_SETTINGS},
             "LLM_CONTEXT": (config.LLM_CONTEXT or {}).get(model),
+            "SAMPLING": {phase: config.SAMPLING.get(phase) for phase in _RECORDED_SAMPLING},
         },
         "system_version": _system_version(),
     }

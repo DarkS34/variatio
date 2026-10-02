@@ -10,6 +10,8 @@ DERIVED_ONLY = {
     # the FIRST of them — what the CLI, the evaluation's arms and a request naming none are
     # written with.
     "VARIANT_GENERATION_LLM",
+    # Each phase's sampling triple, read through `inference.sampling` and never by name.
+    "SAMPLING",
 }
 
 # An empty document prefix is qwen3-embedding's prescribed usage rather than an omission.
@@ -84,5 +86,7 @@ def test_every_phase_key_is_declared_in_the_registry():
 def test_the_registry_holds_what_this_work_transcribed():
     # 150 → 149 and 118 → 117 on 2026-09-16: `builders.transcribe_prompt_version` left with the
     # rule that a prompt change expires every page (see AGENTS.md).
-    assert len(REGISTRY) == 149
+    # 149 → 218 on 2026-10-02: a temperature, top-k and top-p per model call, three of them
+    # the temperatures that already were one call's (renamed, their names kept).
+    assert len(REGISTRY) == 218
     assert len(BY_NAME) == 117

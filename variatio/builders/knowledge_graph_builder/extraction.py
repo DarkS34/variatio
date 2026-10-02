@@ -403,7 +403,7 @@ def _ask(
         prompt=prompt,
         think=config.THINK_KG_EXTRACT,
         format=None if config.THINK_KG_EXTRACT else EXTRACT_SCHEMA,
-        temperature=inference.judgement_temperature(config.THINK_KG_EXTRACT),
+        sampling=inference.sampling("kg_extract", config.THINK_KG_EXTRACT),
     ).response
     raw = parsing.parse_object(response, log_prefix, EXTRACT_SCHEMA, max_attempts, prompts)
     if raw is None:

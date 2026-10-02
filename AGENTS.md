@@ -201,6 +201,15 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
   Switching a grammar phase's reasoning on drops its grammar. `inference._think_option` and
   `cerebras.reasoning_effort` are the only places that turn `True` into a level
   (`DEFAULT_THINK_EFFORT = "low"`).
+- **Every model call samples with its own triple**, `sampling.phases.<phase>.{temperature,
+  top_k,top_p}` (engine-scoped, declared from `PIPELINE` in `registry/sampling.py`), resolved
+  by `inference.sampling(phase, think)` and passed as `sampling=` — never a bare temperature.
+  Empty is inherited: a phase reading with another's model takes that phase's values
+  (`derived`), the temperature then follows the judging pair by `think`
+  (`TEMPERATURE_DETERMINISTIC`/`_REASONING`), top-k/top-p are not sent. Transcription, variant,
+  repair and scenario keep a temperature of their own (`TRANSCRIBE_TEMPERATURE`,
+  `TEMPERATURE_GENERATION`, `TEMPERATURE_REPAIR` are those keys' names). Cerebras drops a top-k
+  with one warning per model.
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
@@ -332,7 +341,8 @@ Both raw slots use the same VLM page route (quality over speed).
 - **All PDFium calls go through `pages._PDFIUM_LOCK`** (process-wide RLock, released between
   pages, documents closed under the lock). PDFium is not thread-safe and one corruption
   poisons the process.
-- Scanned pages (no text layer) go as JPEG q90; renders are capped at two A4 areas; MIME is
+- Scanned pages (no text layer) go as JPEG q90; renders are capped at two A4 areas; top-k and
+  top-p enter the fingerprint only when set; MIME is
   read off the bytes. A failed page of a finished PDF is re-read on its own later, unless
   pages were inserted/deleted by hand (`restructured`) or the page count changed.
 - **Truncation and loops**: `TRANSCRIBE_MAX_OUTPUT_TOKENS` (4096) caps each answer;
@@ -747,6 +757,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The Cerebras throttle is a hard cap no header may raise; the gate books claims.
 - No grammar to a remote model on the bank extraction (or its repair).
 - The commission chooses its writing model from the offered list; rows record it.
+- Every model call has its own temperature, top-k and top-p; empty inherits, so adding a
+  phase never changes how an existing one samples.
 - Queue per backend lane; local capacity 1 forever; remote capacity safe only with the
   ledger's lock and claims.
 - `inference.generate()` streams internally and is interruptible; the stream is closed on

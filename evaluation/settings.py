@@ -1,10 +1,11 @@
-"""The evaluation's nine settings and its lane, declared beside the code that reads them.
+"""The evaluation's settings and its lane, declared beside the code that reads them.
 
 `variatio/settings/registry/__init__.py` picks these up through an optional import — the
 one place the pipeline names the evaluation, and the single exception to the boundary.
 """
 
 from variatio.settings.registry.reasoning import DRAWN, EXTERNAL, OFF, Lane, Phase
+from variatio.settings.registry.sampling import PARAMS, phase_sampling
 from variatio.settings.types import Impact, Setting
 
 # The study's three model calls, drawn on the evaluation's screen as its stage's lane.
@@ -75,6 +76,11 @@ READS = (
     "sampling.temperature_deterministic",
     "sampling.temperature_reasoning",
     "context_window.overrides",
+    *(
+        f"sampling.phases.{phase}.{param}"
+        for phase in ("guardrail", "admissibility", "variant_generation", "repair", "concept_tagger")
+        for param in PARAMS
+    ),
 )
 
 SETTINGS: list[Setting] = [
@@ -273,5 +279,13 @@ por git.""",
         doc="""Por intento, así que una cadena de tres espera esto tres veces en el peor caso. El brazo
 corre en un hilo junto a los dos locales, que tardan minutos, de modo que no es el reloj
 de pared.""",
+    ),
+    *phase_sampling(
+        "scenario",
+        ("evaluation",),
+        0.9,
+        temperature_doc="""Lo que hace que dos sesiones sobre un mismo encargo caigan en dos escenarios distintos: a
+la temperatura determinista cada sorteo sería la misma frase. Valor propio y nunca
+heredado, porque el escenario se sortea, no se juzga.""",
     ),
 ]

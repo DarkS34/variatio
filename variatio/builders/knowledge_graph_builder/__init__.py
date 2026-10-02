@@ -195,6 +195,7 @@ class KnowledgeGraphBuilder:
             evidence,
             self._wording.CONTEXT_SOURCE_GRAPH,
             config.KG_CONTEXT_MODEL,
+            phase="kg_context",
             think=config.THINK_KG_CONTEXT,
         )
         progress.advance(1.0)

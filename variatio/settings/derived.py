@@ -1,6 +1,11 @@
-"""What the registry does not store: the phase models, the context map and the efforts."""
+"""What the registry does not store: the phase models, the context map, efforts and sampling."""
 
+from .registry import PIPELINE
 from .registry.reasoning import PHASE_KEYS
+from .registry.sampling import PARAMS
+
+SAMPLING_PREFIX = "sampling.phases."
+MODEL_PREFIX = "models.phases."
 
 PHASES = {
     "models.phases.transcribe": "TRANSCRIBE_MODEL",
@@ -66,4 +71,29 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     # this map exists to cap.
     for model in offered:
         out["LLM_CONTEXT"].setdefault(model, values["context_window.overrides"])
+
+    out["SAMPLING"] = _sampling(values)
     return out
+
+
+def _sampling(values: dict[str, object]) -> dict[str, dict[str, object]]:
+    """Map each phase to its sampling triple, inheriting from the phase whose model it reads.
+
+    `transcribe_image` reads with the page phase's model, and what it leaves empty is what
+    the pages use: one document is read one way whichever route its pieces take. What is
+    still empty here is decided per call, by `inference.sampling`.
+    """
+    triples: dict[str, dict[str, object]] = {}
+    for key, value in values.items():
+        if key.startswith(SAMPLING_PREFIX):
+            phase, param = key[len(SAMPLING_PREFIX) :].rsplit(".", 1)
+            triples.setdefault(phase, {})[param] = value
+    for lane in PIPELINE:
+        for phase in lane.phases:
+            parent = phase.model.removeprefix(MODEL_PREFIX)
+            if phase.model.startswith(MODEL_PREFIX) and parent != phase.key and parent in triples:
+                own = triples.setdefault(phase.key, {})
+                for param in PARAMS:
+                    if own.get(param) is None:
+                        own[param] = triples[parent].get(param)
+    return triples

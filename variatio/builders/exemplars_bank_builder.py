@@ -315,7 +315,7 @@ class ExemplarsBankBuilder:
             think=config.THINK_EB_EXTRACT,
             prompt=prompt,
             format=self._grammar(),
-            temperature=inference.judgement_temperature(config.THINK_EB_EXTRACT),
+            sampling=inference.sampling("eb_extract", config.THINK_EB_EXTRACT),
         ).response
 
         # A repair re-emits the same paragraphs, so a grammar kept here would undo the drop

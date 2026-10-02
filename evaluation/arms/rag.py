@@ -80,7 +80,7 @@ def run(commission: Commission, context) -> ArmResult:
         prompt=prompt,
         think=commission.effort,
         on_token=progress.token_sink("eval"),
-        temperature=config.TEMPERATURE_GENERATION,
+        sampling=inference.sampling("variant_generation", commission.effort),
     )
     raw = resp.response or (resp.thinking or "")
 

@@ -59,12 +59,6 @@ Tres cosas que leer ahí antes de tocar nada:
 La `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres, y
 por eso el MoE de transcripción es la q8_0 y no la q4."""
 
-_TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no se movería con ella:
-reparar es un bucle de REINTENTO, y un reintento a 0 no es un reintento. El prompt del
-intento N+1 es la salida del intento N, así que un modelo voraz reconstruye el prompt
-idéntico y escribe la respuesta idéntica — el presupuesto entero gastado en una réplica
-byte a byte, que es el fallo que `parse_with_repair` documenta haber pagado una vez."""
-
 _CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en la
 A40 a través de `/api/ps`, el modelo de juicio a 65536 + guardarraíl + embebedor suman
 29.05 GiB de ~45 (19.49 + 5.49 + 4.07). La del guardarraíl a 8192 costaba 1 GiB de caché KV
@@ -555,32 +549,6 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         minimum=0.0,
         maximum=2.0,
         doc=_TEMPERATURE_DOC,
-    ),
-    Setting(
-        key="sampling.temperature_generation",
-        name="TEMPERATURE_GENERATION",
-        kind="float",
-        default=0.3,
-        group="Muestreo",
-        stages=("generation",),
-        phase="variant_generation",
-        impact=Impact.NONE,
-        minimum=0.0,
-        maximum=2.0,
-        doc=_TEMPERATURE_DOC,
-    ),
-    Setting(
-        key="sampling.temperature_repair",
-        name="TEMPERATURE_REPAIR",
-        kind="float",
-        default=0.2,
-        group="Muestreo",
-        stages=("generation", "profile", "graph", "bank"),
-        phase="repair",
-        impact=Impact.NONE,
-        minimum=0.0,
-        maximum=2.0,
-        doc=_TEMPERATURE_REPAIR_DOC,
     ),
     Setting(
         key="context_window.guardrail",

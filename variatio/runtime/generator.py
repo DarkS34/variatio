@@ -832,7 +832,7 @@ class VariantGenerator:
             prompt=prompt,
             think=think,
             on_token=progress.token_sink("item"),
-            temperature=config.TEMPERATURE_GENERATION,
+            sampling=inference.sampling("variant_generation", think),
         )
 
         thinking = resp.thinking

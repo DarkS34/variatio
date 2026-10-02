@@ -101,7 +101,7 @@ def test_an_empty_scenario_is_drawn_once(monkeypatch):
     assert len(calls) == 1
     assert calls[0]["model"] == "el-rapido"
     assert calls[0]["think"] is False
-    assert calls[0]["temperature"] > 0
+    assert calls[0]["sampling"].temperature > 0
 
 
 def test_a_failed_draw_leaves_the_scenario_empty(monkeypatch):

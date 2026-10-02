@@ -146,7 +146,7 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     `TRANSCRIBE_SEAM_CHARS` is deliberately absent — how much of a seam the model is shown
     does not change a single page, and the seam decisions live in `_meta.json` beside them.
     So is the prompt (`RETIRED_FIELDS`): a change to it never re-reads a corpus. The model
-    and the temperature are recorded on BOTH routes: on the Docling one they are what the
+    and the sampling are recorded on BOTH routes: on the Docling one they are what the
     pictures were read with, and a page carries those readings inline.
     """
     stat = source.stat()
@@ -158,7 +158,7 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         "model": model,
         "dpi": dpi,
         "ocr": ocr,
-        "temperature": config.TRANSCRIBE_TEMPERATURE,
+        **sampling_record("transcribe" if mode == "vlm" else "transcribe_image"),
     }
     if mode == "docling":
         fingerprint["cleanup"] = CONVERTER_CLEANUP_VERSION
@@ -168,6 +168,21 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     if source.suffix.lower() == ".pptx":
         fingerprint["deck"] = DECK_VERSION
     return fingerprint
+
+
+def sampling_record(phase: str) -> dict:
+    """The sampling a reading was made under, as a fingerprint or an image record keeps it.
+
+    The temperature always; top-k and top-p only when set, so a cache written before they
+    could be set stays current for as long as they are left empty.
+    """
+    sampling = inference.sampling(phase)
+    record: dict = {"temperature": sampling.temperature}
+    if sampling.top_k is not None:
+        record["top_k"] = sampling.top_k
+    if sampling.top_p is not None:
+        record["top_p"] = sampling.top_p
+    return record
 
 
 def same_document(stored: dict, fingerprint: dict) -> bool:
@@ -870,6 +885,7 @@ def _transcribe_page(
             model,
             lambda note: prompts.transcribe_page_prompt(index, count, note=note),
             image,
+            "transcribe",
             config.THINK_TRANSCRIBE,
             tag,
             what,
@@ -894,7 +910,7 @@ def _transcribe_page(
 
 
 def _ask_twice(
-    model: str, build_prompt, image: str, think, tag: str, what: str, prompts
+    model: str, build_prompt, image: str, phase: str, think, tag: str, what: str, prompts
 ) -> inference.GenerationResponse:
     """Ask once, and once more with the prompt saying what went wrong when the answer never finished.
 
@@ -905,22 +921,21 @@ def _ask_twice(
     fail the one that read further before locking is returned, since that is what the
     caller keeps.
     """
-    answer = _ask(model, build_prompt(""), image, think, tag, what)
+    answer = _ask(model, build_prompt(""), image, phase, think, tag, what)
     if not _unfinished(answer):
         return answer
     cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
     logger.warning(f"{tag}{what}: {_cause(answer, cap)}; asking once more with the rule spelled out")
     repeated = repetition.quoted(answer.loop) if answer.loop else None
-    again = _ask(
-        model, build_prompt(prompts.transcribe_retry_note(repeated, cap)), image, think, tag, what
-    )
+    note = prompts.transcribe_retry_note(repeated, cap)
+    again = _ask(model, build_prompt(note), image, phase, think, tag, what)
     if not _unfinished(again):
         return again
     return again if len(_head(again)) >= len(_head(answer)) else answer
 
 
 def _ask(
-    model: str, prompt: str, image: str, think, tag: str, what: str
+    model: str, prompt: str, image: str, phase: str, think, tag: str, what: str
 ) -> inference.GenerationResponse:
     """One transcription call, retried on an engine error up to `TRANSCRIBE_MAX_RETRIES` times.
 
@@ -937,7 +952,7 @@ def _ask(
                 prompt=prompt,
                 think=think,
                 images=[image],
-                temperature=config.TRANSCRIBE_TEMPERATURE,
+                sampling=inference.sampling(phase, think),
                 max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
                 stop_on_loop=True,
             )
@@ -1208,8 +1223,12 @@ def _encode_image(image) -> bytes:
     return encode_page(image, scanned=False)
 
 
+# What of an image record says how the picture was sampled.
+_SAMPLING_FIELDS = ("temperature", "top_k", "top_p")
+
+
 def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) -> str | None:
-    """The cached reading of a picture, when it was made under the same model and temperature."""
+    """The cached reading of a picture, when it was made under the same model and sampling."""
     if images_dir is None:
         return None
     path = _image_record_path(Path(images_dir), digest)
@@ -1221,7 +1240,8 @@ def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) ->
         return None
     if not isinstance(record, dict) or not isinstance(record.get("text"), str):
         return None
-    if record.get("model") != model or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE:
+    sampled = {key: record[key] for key in _SAMPLING_FIELDS if key in record}
+    if record.get("model") != model or sampled != sampling_record("transcribe_image"):
         return None
     return record["text"]
 
@@ -1242,6 +1262,7 @@ def _transcribe_image(
             model,
             lambda note: prompts.transcribe_image_prompt(index, count, note=note),
             image,
+            "transcribe_image",
             config.THINK_TRANSCRIBE_IMAGE,
             tag,
             what,
@@ -1276,7 +1297,7 @@ def _write_image_cache(
         {
             "sha256": digest,
             "model": model,
-            "temperature": config.TRANSCRIBE_TEMPERATURE,
+            **sampling_record("transcribe_image"),
             "text": text,
         },
     )
@@ -1556,7 +1577,7 @@ def _review_seam(
             prompt=prompts.merge_pages_prompt(tail, head, index, count),
             think=config.THINK_TRANSCRIBE_SEAM,
             format=None if config.THINK_TRANSCRIBE_SEAM else SEAM_SCHEMA,
-            temperature=inference.judgement_temperature(config.THINK_TRANSCRIBE_SEAM),
+            sampling=inference.sampling("transcribe_seam", config.THINK_TRANSCRIBE_SEAM),
         ).response
     except inference.InferenceError as e:
         logger.warning(f"{tag}seam {index - 1}→{index}: not reviewed ({e}); joined by rule")

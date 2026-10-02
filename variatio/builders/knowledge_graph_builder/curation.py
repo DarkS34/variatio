@@ -180,7 +180,7 @@ def segment_syllabus(
         prompt=prompt,
         think=config.THINK_KG_UNITS,
         format=None if config.THINK_KG_UNITS else UNITS_SCHEMA,
-        temperature=inference.judgement_temperature(config.THINK_KG_UNITS),
+        sampling=inference.sampling("kg_units", config.THINK_KG_UNITS),
     ).response
     raw = parsing.parse_object(response, "[units] ", UNITS_SCHEMA, max_attempts, prompts) or {}
     units = accept_units(raw.get("units") or [], outline)
@@ -305,7 +305,7 @@ def curate_domains(
         prompt=prompt,
         think=config.THINK_KG_DOMAINS,
         format=None if config.THINK_KG_DOMAINS else DOMAIN_NAMES_SCHEMA,
-        temperature=inference.judgement_temperature(config.THINK_KG_DOMAINS),
+        sampling=inference.sampling("kg_domains", config.THINK_KG_DOMAINS),
     ).response
     raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts, prompts) or {}
 
@@ -415,7 +415,9 @@ def assign_round(
             prompt=prompt,
             think=config.THINK_KG_DOMAINS_LEFTOVERS,
             format=None if config.THINK_KG_DOMAINS_LEFTOVERS else DOMAINS_SCHEMA,
-            temperature=inference.judgement_temperature(config.THINK_KG_DOMAINS_LEFTOVERS),
+            sampling=inference.sampling(
+                "kg_domains_leftovers", config.THINK_KG_DOMAINS_LEFTOVERS
+            ),
         ).response
         raw = (
             parsing.parse_object(
@@ -543,7 +545,9 @@ def link_cross_domain(
         model=config.KG_LINK_CROSS_DOMAIN_MODEL,
         prompt=prompt,
         think=config.THINK_KG_LINK_CROSS_DOMAIN,
-        temperature=inference.judgement_temperature(config.THINK_KG_LINK_CROSS_DOMAIN),
+        sampling=inference.sampling(
+            "kg_link_cross_domain", config.THINK_KG_LINK_CROSS_DOMAIN
+        ),
     ).response
     raw = parsing.parse_object(response, "[link · global] ", LINK_SCHEMA, max_attempts, prompts)
     if raw is None:
@@ -582,7 +586,7 @@ def link_domain(
         model=config.KG_LINK_DOMAIN_MODEL,
         prompt=prompt,
         think=config.THINK_KG_LINK_DOMAIN,
-        temperature=inference.judgement_temperature(config.THINK_KG_LINK_DOMAIN),
+        sampling=inference.sampling("kg_link_domain", config.THINK_KG_LINK_DOMAIN),
     ).response
     raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts, prompts)
     if raw is None:

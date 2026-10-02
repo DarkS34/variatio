@@ -24,27 +24,6 @@ imágenes se leen aparte, una llamada por imagen, con el mismo modelo y las mism
 No se renderizan, así que esta resolución no las afecta.""",
     ),
     Setting(
-        key="builders.transcribe_temperature",
-        name="TRANSCRIBE_TEMPERATURE",
-        kind="float",
-        default=0.0,
-        group="Constructores",
-        stages=("transcription",),
-        phase="transcribe",
-        impact=Impact.NONE,
-        minimum=0.0,
-        maximum=2.0,
-        doc="""Transcribir es copiar, no escribir: a la temperatura por defecto de Ollama la misma
-página volvió con `a = 99` e `if a < 0 : break` sacados de su `while True:`, lo que cambia
-en silencio lo que pide el ejercicio. Fijada a 0 por eso.
-
-Sigue siendo una constante propia en vez de `TEMPERATURE_DETERMINISTIC`, aunque tenga el
-mismo valor y por la misma razón: esta forma parte de la huella de la caché de páginas
-(`source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
-todos los corpus. Unificarlas haría que esa consecuencia siguiera a una edición hecha
-pensando en otra cosa.""",
-    ),
-    Setting(
         key="builders.transcribe_max_retries",
         name="TRANSCRIBE_MAX_RETRIES",
         kind="int",

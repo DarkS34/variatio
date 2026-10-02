@@ -129,7 +129,7 @@ def _judge_domain(
         model=config.KG_TAGGABLE_MODEL,
         prompt=prompt,
         think=config.THINK_KG_TAGGABLE,
-        temperature=inference.judgement_temperature(config.THINK_KG_TAGGABLE),
+        sampling=inference.sampling("kg_taggable", config.THINK_KG_TAGGABLE),
     ).response
     raw = (
         parsing.parse_object(

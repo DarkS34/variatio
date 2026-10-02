@@ -55,6 +55,19 @@ class GenerationResponse:
     loop: str | None = None
 
 
+@dataclass(frozen=True)
+class Sampling:
+    """How the engine draws each token: a temperature, and a top-k and top-p when set.
+
+    An empty top-k or top-p is not sent, and the model's own value decides — its Modelfile
+    on Ollama, the provider's default on Cerebras.
+    """
+
+    temperature: float
+    top_k: int | None = None
+    top_p: float | None = None
+
+
 class OllamaEngine:
     """The local half: an Ollama server, reached over `config.OLLAMA_HOST`."""
 
@@ -86,7 +99,7 @@ class OllamaEngine:
         think: bool | str | None = None,
         system: str | None = None,
         images: list[str] | None = None,
-        temperature: float | None = None,
+        sampling: Sampling | None = None,
         format: dict | str | None = None,
         max_output_tokens: int | None = None,
         stop_on_loop: bool = False,
@@ -130,9 +143,7 @@ class OllamaEngine:
                 **image_option,
                 **self._think_option(model, think),
                 **self._format_option(format),
-                **self._context_option(
-                    model, self._temperature(temperature), max_output_tokens
-                ),
+                **self._context_option(model, self._sampling(sampling), max_output_tokens),
             )
             answer, thinking, truncated, loop = _drain(stream, stop_on_loop)
         except (ollama.ResponseError, httpx.RequestError) as e:
@@ -145,7 +156,7 @@ class OllamaEngine:
         prompt: str,
         think: bool | str | None = None,
         on_token: TokenSink | None = None,
-        temperature: float | None = None,
+        sampling: Sampling | None = None,
     ) -> GenerationResponse:
         """Stream one answer, feeding each token to `on_token` as it arrives.
 
@@ -154,9 +165,7 @@ class OllamaEngine:
         answer channel, and every chunk is a point where a cancellation can take effect.
         """
         if on_token is None:
-            return self.generate(
-                model=model, prompt=prompt, think=think, temperature=temperature
-            )
+            return self.generate(model=model, prompt=prompt, think=think, sampling=sampling)
 
         splitter = ThinkingSplitter()
         answer: list[str] = []
@@ -174,7 +183,7 @@ class OllamaEngine:
                 prompt=prompt,
                 stream=True,
                 **self._think_option(model, think),
-                **self._context_option(model, self._temperature(temperature)),
+                **self._context_option(model, self._sampling(sampling)),
             ):
                 thought = getattr(chunk, "thinking", None)
                 if thought:
@@ -226,35 +235,39 @@ class OllamaEngine:
 
     @staticmethod
     def _context_option(
-        model: str, temperature: float | None = None, max_output_tokens: int | None = None
+        model: str, sampling: Sampling | None = None, max_output_tokens: int | None = None
     ) -> dict:
-        """Build the per-call options: the KV cache cap, the temperature and the output cap.
+        """Build the per-call options: the KV cache cap, the sampling and the output cap.
 
         Left to itself Ollama sizes the KV cache from the model's declared context, which
         is where most of this box's VRAM was going; `config.LLM_CONTEXT` decides it in one
         place so no call site has to know. Both options share one dict, so building them
         apart is how one ends up overwriting the other.
 
-        Only the two generative paths resolve a temperature: `embed`/`embed_batch` call
-        this with none and must keep sending none, an embedding having no sampler to steer.
+        Only the two generative paths resolve a sampling: `embed`/`embed_batch` call this
+        with none and must keep sending none, an embedding having no sampler to steer.
         """
         options: dict = {}
         num_ctx = config.LLM_CONTEXT.get(model)
         if num_ctx is not None:
             options["num_ctx"] = num_ctx
-        if temperature is not None:
-            options["temperature"] = temperature
+        if sampling is not None:
+            options["temperature"] = sampling.temperature
+            if sampling.top_k is not None:
+                options["top_k"] = sampling.top_k
+            if sampling.top_p is not None:
+                options["top_p"] = sampling.top_p
         if max_output_tokens is not None:
             options["num_predict"] = max_output_tokens
         return {"options": options} if options else {}
 
     @staticmethod
-    def _temperature(temperature: float | None) -> float:
-        """Resolve a generative call's temperature, never leaving the engine's own 0.8.
+    def _sampling(sampling: Sampling | None) -> Sampling:
+        """Resolve a generative call's sampling, never leaving the engine's own 0.8.
 
         The worst a forgotten argument can do is make a call deterministic.
         """
-        return config.TEMPERATURE_DEFAULT if temperature is None else temperature
+        return Sampling(config.TEMPERATURE_DEFAULT) if sampling is None else sampling
 
     def capabilities(self, model: str) -> list[str]:
         """What the model declares it can do, asked once per process and remembered."""
@@ -614,7 +627,7 @@ def generate(
     think: bool | str | None = None,
     system: str | None = None,
     images: list[str] | None = None,
-    temperature: float | None = None,
+    sampling: Sampling | None = None,
     format: dict | str | None = None,
     max_output_tokens: int | None = None,
     stop_on_loop: bool = False,
@@ -634,7 +647,7 @@ def generate(
         think=think,
         system=system,
         images=images,
-        temperature=temperature,
+        sampling=sampling,
         format=format,
         max_output_tokens=max_output_tokens,
         stop_on_loop=stop_on_loop,
@@ -646,7 +659,7 @@ def generate_stream(
     prompt: str,
     think: bool | str | None = None,
     on_token: TokenSink | None = None,
-    temperature: float | None = None,
+    sampling: Sampling | None = None,
 ) -> GenerationResponse:
     """Ask the configured engine for one answer, token by token."""
     return engine().generate_stream(
@@ -654,7 +667,7 @@ def generate_stream(
         prompt=prompt,
         think=think,
         on_token=on_token,
-        temperature=temperature,
+        sampling=sampling,
     )
 
 
@@ -668,9 +681,20 @@ def embed_batch(model: str, texts: list[str]) -> list[list[float]]:
     return engine().embed_batch(model=model, texts=texts)
 
 
-def judgement_temperature(think: bool | str) -> float:
-    """The temperature a judging phase calls at, paired with whether it reasons."""
-    return config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+def sampling(phase: str, think: bool | str = False) -> Sampling:
+    """Return how `phase` samples this call, given whether it reasons this time.
+
+    What the phase leaves empty is decided here, at the last moment: the temperature by the
+    judging pair — `TEMPERATURE_REASONING` when the call reasons, `TEMPERATURE_DETERMINISTIC`
+    when it does not, which is what every call did before it had its own — and top-k and
+    top-p by the model, by not being sent. An undeclared phase raises: a misspelt name would
+    otherwise sample at the inherited values in silence.
+    """
+    own = config.SAMPLING[phase]
+    temperature = own.get("temperature")
+    if temperature is None:
+        temperature = config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+    return Sampling(float(temperature), own.get("top_k"), own.get("top_p"))
 
 
 def supports_thinking(model: str) -> bool:

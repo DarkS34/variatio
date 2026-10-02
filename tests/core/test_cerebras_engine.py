@@ -6,6 +6,7 @@ import pytest
 from variatio import config
 from variatio.core import cerebras, cerebras_budget, progress
 from variatio.core.cerebras import CerebrasEngine, HybridEngine
+from variatio.core.inference import Sampling
 from variatio.core.inference import InferenceError
 
 # Captured at collection, before the autouse fixture in `conftest.py` stubs it out.
@@ -307,10 +308,13 @@ def test_generate_sends_the_translated_call_and_splits_the_reasoning():
 
     engine = _engine_with(handler)
     schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
-    resp = engine.generate("gemma-4-31b", "hola", think=True, temperature=0.2, format=schema)
+    resp = engine.generate(
+        "gemma-4-31b", "hola", think=True, sampling=Sampling(0.2, top_p=0.9), format=schema
+    )
     assert seen["model"] == "gemma-4-31b"
     assert seen["reasoning_effort"] == "low"
     assert seen["temperature"] == 0.2
+    assert seen["top_p"] == 0.9
     assert seen["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
     assert seen["messages"][-1] == {"role": "user", "content": "hola"}
     assert resp.response == '{"ok": true}'

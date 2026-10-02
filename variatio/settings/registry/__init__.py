@@ -8,7 +8,7 @@ from dataclasses import replace
 
 from ..types import STAGES as PIPELINE_STAGES
 from ..types import Setting
-from . import builders, generation, inference, logging, reasoning, retrieval, tunnel
+from . import builders, generation, inference, logging, reasoning, retrieval, sampling, tunnel
 
 # The one place `variatio` names the evaluation, and optional on purpose: `evaluation` imports
 # `variatio` and never the reverse, so the registry reaches it by name, not by import.
@@ -34,6 +34,7 @@ REGISTRY: tuple[Setting, ...] = tuple(
     for setting in inference.SETTINGS
     + tunnel.SETTINGS
     + reasoning.SETTINGS
+    + sampling.SETTINGS
     + builders.SETTINGS
     + retrieval.SETTINGS
     + generation.SETTINGS
