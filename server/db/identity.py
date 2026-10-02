@@ -180,9 +180,10 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
 def delete_user(session: Session, user: User) -> None:
     """Delete the account row, and only the account row.
 
-    What the account DID is not the account: `generations.user_id` and
-    `evaluation_sessions.user_id` are `SET NULL`, so a course built on somebody's exercises
-    survives their leaving and the evaluation keeps the sessions it counted. What cascades
+    What the account DID is not the account: its generated exercises stay as files of their
+    workspace and `evaluation_sessions.user_id` is `SET NULL`, so a course built on
+    somebody's exercises survives their leaving and the evaluation keeps the sessions it
+    counted. What cascades
     is what only means anything while the account exists — its memberships, its open
     sessions, its pending reset links and its stage forms, a verdict on a build with nobody
     behind it being impossible to read or withdraw from the panel. Disabling is the

@@ -51,7 +51,7 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   chained by anything; `build` creates missing artifacts; `init` loads, tags, warms indices;
   `generate` (`-n`, `--concepts`, `--item-type`, `--fixed FIELD=VALUE`, `--curriculum`,
   `--instructions`); `all` = build missing + init + generate.
-- `uv run system [serve|import-instance|export-instance|workspaces|create-workspace|db-check|create-user|users|grant|invite]`
+- `uv run system [serve|import-instance|export-instance|export-generations|workspaces|create-workspace|db-check|create-user|users|grant|invite]`
   — API and admin ([server/cli/](server/cli/)). No subcommand means `serve`. `guarded()` wraps
   every command except `db-check` and `serve`. `PROG = "system"` matches `pyproject.toml`.
 - `uv run pytest` — default `-m 'not corpus and not model'`. Suite split by subsystem under
@@ -83,7 +83,9 @@ uv run system
 Database commands fail with a plain message, not a stack. `serve` refuses to start when the
 schema is behind or ahead of the migrations ([db/schema.py](server/db/schema.py)); `db-check`
 reports it. Deploying a change with a migration or new dependency needs `uv sync` and
-`uv run alembic upgrade head` before the restart.
+`uv run alembic upgrade head` before the restart. Migration 0015 drops the `generations`
+table and refuses while a row has no file: on an installation that still has the table, run
+`uv run system export-generations` (idempotent, `--dry-run`) before the upgrade.
 
 ### Dependencies
 
@@ -167,7 +169,7 @@ put a component back at the root.
 ### `Workspace` — every per-instance path, as data
 
 [workspace.py](variatio/core/workspace.py) is a frozen dataclass over `root` deriving every
-path (`instance/`, `cache/`, `raw/`, artifacts, derivations, host state). It imports nothing
+path (`instance/`, `cache/`, `raw/`, `generations/`, artifacts, derivations, host state). It imports nothing
 from the package. Root paths live in [paths.py](variatio/core/paths.py). **There is no
 default workspace**: `ws` is required everywhere, `paths.workspace("")` raises, an
 installation may hold zero workspaces and an account may belong to none. A component with a
@@ -237,8 +239,8 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
   via `GET /{id}/link`, and pastable back after deletion. The sealed copy dies with the use.
-- Deleting an account: `generations` and `evaluation_sessions` keep their rows (`SET NULL`);
-  `stage_evaluations` cascade.
+- Deleting an account: its generated exercises stay as files nobody reads any more;
+  `evaluation_sessions` keep their rows (`SET NULL`); `stage_evaluations` cascade.
 
 ### Workspaces, jobs and the queue
 
@@ -262,13 +264,23 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   internally and emits nothing, and closing the stream stops the engine. `request_cancel`
   returns at once; SIGKILL escalation runs on its own thread. Waits are sliced into one-second
   checkpoints. A stop button stops every run its sibling button started.
-- Every validated item is a `generations` row written the moment it validates
-  (`on_accepted`), with the commission and the writing model (`generations.model`, nullable).
-  **An exercise is private to its author**: no workspace scope, 404 for others' rows.
+- Every validated item is a JSON file, `<workspace>/generations/user_<id>/<id>.json`
+  ([server/generations.py](server/generations.py)), written the moment it validates
+  (`on_accepted`) with `json_io.write_json`; one file per exercise, so concurrent jobs never
+  share one. It keeps `commission` (as asked; `think` a level or a bool) beside `resolved`
+  (targets, `assumed_known`/`forbidden` and the closure rule, few-shot with origins, ruling,
+  `avoid`, model and effort that ran, engine, lane, prompt language), the artifact hashes
+  (`inputs`), the settings that shape a statement, the version, the accepted attempt's prompt
+  and the output. The library hands it over as `GeneratedVariant.prompt`/`.provenance` and
+  writes nothing. Id = `<UTC>-<job>-<index>`, checked by regex on every route. **An exercise
+  is private to its author**: the author's id (never the username) names the directory, `user_<id>/`; no
+  workspace scope, the same 404 for others' and malformed ids. Format 0 is a row exported
+  from the retired table: what it never kept is null, never reconstructed.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
   tree goes before the row. **A workspace deletion that leaves no other member takes its tree
-  too; if others remain, the files stay.** Emptying a stage never touches `.history/`.
+  too; if others remain, the files stay** — the generated exercises with them. Emptying a
+  stage never touches `.history/`.
 - The API owns the SSH tunnel to the GPU box (`server/tunnel.py`, system `ssh -N -L`,
   `BatchMode=yes`, watchdog with backoff).
 - Job logs are **files**, `logs/<slug>/jobs.log` (one shared sink per workspace, filtered by
@@ -743,6 +755,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Deleting workspaces/artifacts is the admin's and takes the files; a last-member deletion
   takes the tree; `.history/` is never emptied by it. CORS off.
 - Exercises are private to their author.
+- Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;
+  the database keeps none of them. The library returns how an item was made; the server
+  writes it. `uv run variatio generate` (the CLI) saves nothing.
 
 **Interface**
 - The palette is measured; `--primary` is ink; `--radius: 0`; arm colours fixed; theme

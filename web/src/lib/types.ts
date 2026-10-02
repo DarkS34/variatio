@@ -539,15 +539,23 @@ export interface ItemChecks {
 }
 
 export interface GenerationRow {
-  id: number;
+  /** The name of its file. A number from an API that still kept them in a table. */
+  id: string;
   created_at: number;
   job_id: string | null;
   item_type: string;
+  /** What was ASKED for, which is what «Generar más como este» reopens. */
   concepts: string[];
+  /** What ran: the bank's most frequent concepts when nothing was asked. Absent from an
+   *  older API. */
+  targets?: string[];
   curriculum: string[];
   fixed: Record<string, unknown>;
   instructions: string;
-  think: boolean;
+  /** As asked: off, on, or the level it was asked at. */
+  think: boolean | string;
+  /** The effort that ran, once an installation's lock is applied; null when unrecorded. */
+  effort?: boolean | string | null;
   /** The model that WROTE it. Null for every row from before the commission could choose,
    *  where naming today's default would be inventing a fact. */
   model: string | null;
@@ -565,7 +573,20 @@ export interface GenerationListing {
 }
 
 export interface GenerationDetail {
-  generation: GenerationRow & { thinking: string | null };
+  generation: GenerationRow & {
+    thinking: string | null;
+    retried?: number | null;
+    /** 1 for an exercise saved as a file, 0 for one exported from the retired table. */
+    format?: number;
+    /** How it was made, beyond what was asked: null wherever it was never recorded. */
+    provenance?: {
+      resolved: Record<string, unknown> | null;
+      inputs: Record<string, string | null> | null;
+      settings: Record<string, unknown> | null;
+      system_version: string | null;
+      prompt: string | null;
+    };
+  };
 }
 
 /* Administration -------------------------------------------------------------------- */
@@ -602,6 +623,8 @@ export interface DiskUsage {
   instance: number;
   cache: number;
   history: number;
+  /** Absent from an older API. */
+  generations?: number;
   total: number;
 }
 

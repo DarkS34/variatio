@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 from json_repair import repair_json
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .. import config
 from .. import wording as wording_sets
@@ -236,7 +236,14 @@ def _as_object(candidate: str, schema_fields: set[str]) -> dict | None:
 
 
 class GeneratedVariant(BaseModel):
-    """One accepted item, with the reasoning and the checks that produced it."""
+    """One accepted item, with the reasoning and the checks that produced it.
+
+    `prompt` is the one the accepted attempt was written from, a correction included.
+    `provenance` is what the run resolved before writing anything — targets, the two
+    closures and the rule they were read under, the exemplars shown, the ruling, the
+    statements to avoid, the writer and its effort — shared by every item of the run.
+    Both are data for the caller to keep; nothing here persists them.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -245,6 +252,8 @@ class GeneratedVariant(BaseModel):
     thinking: str | None = None
     checks: dict | None = None
     retried: int = 0
+    prompt: str | None = None
+    provenance: dict = Field(default_factory=dict)
 
 
 class VariantGenerator:
@@ -309,6 +318,8 @@ class VariantGenerator:
         here does, so the evaluation's arms keep passing none and get the default.
         `scenario` pins the setting the item is placed in; the evaluation hands the same
         sentence to every arm, and a plain commission leaves it to the prompt's own choice.
+        Every accepted item carries its own `prompt` and the run's `provenance`, so a
+        caller can keep how it was made without listening to the event stream.
         """
         writer = model or self.generator_model
         target_type = self.exemplars_profile.item_type(item_type)
@@ -325,10 +336,10 @@ class VariantGenerator:
         self._emit_few_shot(few_shot, origins, concepts, target_type)
 
         target_block = self._format_target_concepts(concepts)
-        prerequisites_block = self._format_prerequisites(
-            self._prerequisites(concepts, curriculum)
-        )
+        prerequisites = self._prerequisites(concepts, curriculum)
+        prerequisites_block = self._format_prerequisites(prerequisites)
         posteriors = self._posteriors(concepts, curriculum)
+        rule = checks.closure_rule(curriculum)
         excluded_block = self._format_concept_list(posteriors)
         curriculum_block = self._format_concept_list(curriculum or [])
         rules_block = "\n".join(f"- {r}" for r in target_type.general_generation_rules)
@@ -339,6 +350,20 @@ class VariantGenerator:
         fields_block = self._build_fields_block(target_type, fixed)
         fixed_values_block = self._build_fixed_values_block(target_type, fixed)
         item_type_block = self._build_item_type_block(target_type)
+        provenance = {
+            "targets": list(concepts),
+            "item_type": target_type.key,
+            "curriculum": list(curriculum) if curriculum is not None else None,
+            "assumed_known": prerequisites,
+            "forbidden": posteriors,
+            "closure_rule": rule,
+            "model": writer,
+            "effort": think,
+            "scenario": scenario or None,
+            "ruling": _ruling_record(ruling),
+            "avoid": list(avoid or []),
+            "few_shot": _few_shot_record(few_shot, origins),
+        }
 
         accepted: list[GeneratedVariant] = []
         with progress.step("generate", "Writing the items", total=n) as reporter:
@@ -380,7 +405,7 @@ class VariantGenerator:
                             target_type,
                             targets=concepts,
                             forbidden=posteriors,
-                            rule=checks.closure_rule(curriculum),
+                            rule=rule,
                             embedder=self.embedder,
                             tagger=self.tagger,
                             few_shot=few_shot,
@@ -399,6 +424,7 @@ class VariantGenerator:
                     progress.emit("item.rejected", index=i + 1)
                     continue
 
+                result.provenance = dict(provenance)
                 accepted.append(result)
                 progress.emit(
                     "item.produced",
@@ -619,10 +645,7 @@ class VariantGenerator:
         progress.emit(
             "few_shot",
             ids=[ex_id for ex_id, _ in few_shot],
-            items=[
-                {"id": ex_id, "item": _public_fields(item), "origin": origins[ex_id]}
-                for ex_id, item in few_shot
-            ],
+            items=_few_shot_record(few_shot, origins),
             concepts=concepts,
             item_type=item_type.key,
         )
@@ -836,7 +859,9 @@ class VariantGenerator:
 
         if item is None:
             return None
-        return GeneratedVariant(item=item, item_type=item_type.key, thinking=thinking)
+        return GeneratedVariant(
+            item=item, item_type=item_type.key, thinking=thinking, prompt=prompt
+        )
 
 
 def generate_with_retries(
@@ -877,3 +902,27 @@ def generate_with_retries(
         again.checks = verify(again)
         result = again
     return result
+
+
+def _few_shot_record(few_shot: list[tuple[str, dict]], origins: dict[str, str]) -> list[dict]:
+    """Describe the chosen exemplars by id, origin and public fields."""
+    return [
+        {"id": ex_id, "item": _public_fields(item), "origin": origins[ex_id]}
+        for ex_id, item in few_shot
+    ]
+
+
+def _ruling_record(ruling) -> dict:
+    """Describe an admissibility ruling as plain data."""
+    return {
+        "checked": ruling.checked,
+        "requests": [
+            {
+                "text": request.text,
+                "slot": request.slot,
+                "owner": request.owner.key if request.owner is not None else None,
+                "term": request.term,
+            }
+            for request in ruling.requests
+        ],
+    }

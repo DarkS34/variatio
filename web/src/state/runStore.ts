@@ -31,8 +31,9 @@ export interface ProducedItem {
   thinking?: string | null;
   checks?: ItemChecks | null;
   retried?: number;
-  /** The `generations` row this item became, once the server says so. */
-  saved_id?: number | null;
+  /** The saved exercise this item became, once the server says so: the name of its file,
+   *  or a row number from an API that still kept them in a table. */
+  saved_id?: string | number | null;
 }
 
 /**

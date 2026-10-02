@@ -89,9 +89,6 @@ class Workspace(Base):
     memberships: Mapped[list["Membership"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
-    generations: Mapped[list["Generation"]] = relationship(
-        back_populates="workspace", cascade="all, delete-orphan"
-    )
     evaluations: Mapped[list["EvalSession"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
@@ -335,50 +332,6 @@ class PasswordReset(Base):
 # WHAT THE SYSTEM PRODUCED ----------------------------------------------------------------
 
 
-class Generation(Base):
-    """One validated item, with the commission that produced it — a row per item, not per job.
-
-    A run of `n=5` is five things to read back, and generating one costs a minute of GPU
-    nobody wants to pay twice. `item` is JSON rather than columns because its shape is the
-    exemplars profile's, which the user edits: an exercise has to survive the schema that
-    made it. `model` is the one that WROTE it and never the one the installation offers
-    today — the commission chooses, and two models differ by minutes and by how much they
-    deliberate, so a row that does not name one cannot be read beside the next. `user_id` is
-    `SET NULL` and not `CASCADE`: deleting an account must not silently delete the material
-    a course was built on. The workspace is what cascades.
-    """
-
-    __tablename__ = "generations"
-    __table_args__ = (
-        Index("ix_generation_recent", "workspace_id", "created_at"),
-        Index("ix_generation_author", "workspace_id", "user_id", "created_at"),
-    )
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    workspace_id: Mapped[int] = mapped_column(
-        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
-    )
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), default=None, index=True
-    )
-    job_id: Mapped[str | None] = mapped_column(String(32), default=None, index=True)
-    item_type: Mapped[str] = mapped_column(String(64), default="", server_default="")
-    concepts: Mapped[list] = mapped_column(Json, default=list)
-    curriculum: Mapped[list] = mapped_column(Json, default=list)
-    fixed: Mapped[dict] = mapped_column(Json, default=dict)
-    instructions: Mapped[str | None] = mapped_column(Text, default=None)
-    think: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
-    model: Mapped[str | None] = mapped_column(String(128), default=None)
-    item: Mapped[dict] = mapped_column(Json, default=dict)
-    thinking: Mapped[str | None] = mapped_column(Text, default=None)
-    checks: Mapped[dict | None] = mapped_column(Json, default=None)
-    promoted_item_id: Mapped[str | None] = mapped_column(String(32), default=None)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    workspace: Mapped[Workspace] = relationship(back_populates="generations")
-    user: Mapped[User | None] = relationship()
-
-
 class EvalSession(Base):
     """One blind comparison, with the evaluator it belongs to.
 
@@ -409,8 +362,8 @@ class EvalSession(Base):
     is the absence of one: it never enters the preference counts and is a datum about the
     panel's composition.
 
-    `user_id` is `SET NULL` for the same reason `generations.user_id` is: the evaluation keeps
-    the sessions it counted when an account is deleted.
+    `user_id` is `SET NULL` so that deleting an account does not delete material the work
+    rests on: the evaluation keeps the sessions it counted.
     """
 
     __tablename__ = "evaluation_sessions"

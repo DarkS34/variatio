@@ -28,8 +28,9 @@ from variatio.core import languages
 from variatio.instance import locale
 
 from .. import auth, deps, installation, singletons
+from .. import generations as generations_store
 from ..auth import deps as auth_deps
-from ..db import generations, identity, repository
+from ..db import identity, repository
 from ..db.models import OWNER, VIEWER, User, Workspace
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
@@ -168,7 +169,8 @@ def remove(
     """Delete the active instance, taking its files when nobody else is a member.
 
     A real deletion, not a flag: the row cascades to artifacts, approvals, raw documents,
-    memberships, generations and evaluation sessions. `files_removed` is what the caller
+    memberships and evaluation sessions. The generated exercises are files of the tree, so
+    they go with it when it goes and stay when it stays. `files_removed` is what the caller
     needs afterwards, because the confirmation dialog promised one of two things.
     """
     if slug != access.workspace.slug:
@@ -300,5 +302,5 @@ def summary(
             for s in stages
         ],
         "ready": all(s["status"] == "approved" for s in stages),
-        "generations": generations.count_generations(db, workspace.id),
+        "generations": generations_store.count(access.ws),
     }

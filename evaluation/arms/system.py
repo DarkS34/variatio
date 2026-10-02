@@ -8,8 +8,9 @@ screen offers to every user, and this arm merely forwards the value the session 
 the installation's `evaluation.local_model`, handed to the generator as a generation's
 chooser hands its own, and resolved never here.
 
-The prompt, the exemplars it chose and the raw answer are not returned by `generate()`,
-so they are read off the event stream it already emits — observing, not adapting.
+The prompt and the exemplars travel with an accepted item but not with a failed one, and
+the raw answer never does, so they are read off the event stream `generate()` already
+emits — observing, not adapting.
 """
 
 import time
