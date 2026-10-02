@@ -674,8 +674,7 @@ class VariantGenerator:
             lines.append(f"- **{c}**: {text}" if text else f"- **{c}**")
         return "\n".join(lines)
 
-    @staticmethod
-    def _relations_sentence(relations: dict[str, list[str]]) -> str:
+    def _relations_sentence(self, relations: dict[str, list[str]]) -> str:
         """Describe an undescribed concept by what the graph says it is related to."""
         parts = [
             f"{verb} {', '.join(neighbors)}" for verb, neighbors in relations.items() if neighbors
