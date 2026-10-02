@@ -191,7 +191,7 @@ def _toggle(phase: str) -> Setting:
 
 _EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta nada.
 Los booleanos que quedan (el `think` del encargo, la columna `generations.think`, el
-interruptor de la UI) se traducen al «low» fijo de `inference.DEFAULT_THINK_EFFORT`.
+interruptor de la UI) se traducen al nivel de `reasoning.default_effort`, «low» por defecto.
 
 `low` por defecto y no algo más alto, medido en la A40 con /api/generate:
 
@@ -245,6 +245,28 @@ PHASE_KEYS = tuple(_DEFAULTS)
 SETTINGS: list[Setting] = [
     *(_toggle(phase) for phase in _DEFAULTS),
     *(_effort(phase) for phase in _DEFAULTS),
+    Setting(
+        key="reasoning.default_effort",
+        name="DEFAULT_THINK_EFFORT",
+        kind="str",
+        default="low",
+        group=GROUP,
+        stages=("generation",),
+        phase="variant_generation",
+        impact=Impact.NONE,
+        scope="engine",
+        choices=("low", "medium", "high", "max"),
+        doc="""Con qué esfuerzo razona una llamada a la que solo se le dice QUE razone, sin nivel: un
+encargo cuyo interruptor de razonamiento está encendido, cada sesión de la evaluación que
+sortea razonar, y un modelo de esfuerzo fijo sin nivel declarado. Las fases del pipeline no
+lo usan: cada una tiene el suyo (`reasoning.effort.*`). `inference._think_option` y
+`cerebras.reasoning_effort` son los dos únicos sitios que convierten `True` en un nivel, y
+los dos lo leen aquí.
+
+«low» por la misma medición que los esfuerzos por fase: el nivel mueve el TECHO de la
+deliberación y no su suelo, y `high` devolvió una respuesta vacía en una llamada de curación
+real. Cambiarlo cambia lo que el estudio midió como «razonando».""",
+    ),
 ]
 
 

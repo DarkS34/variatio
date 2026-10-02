@@ -127,9 +127,6 @@ def write_sources(
 # UNITS -----------------------------------------------------------------------------------
 
 
-MIN_UNITS = 2
-
-
 def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, list[dict]]:
     """Group the concepts by the syllabus's own units; `({}, [])` if none can be found."""
     outline = cleaned.get("outline") or []
@@ -201,7 +198,7 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
     """Keep the proposed units that name a real heading, in the order of the material.
 
     A unit is refused when it repeats a name, a position or a chunk another already claims,
-    and the whole segmentation is refused below `MIN_UNITS`: one unit is not a syllabus.
+    and the whole segmentation is refused below `KG_MIN_UNITS`: one unit is not a syllabus.
     """
     unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
     units: list[dict] = []
@@ -232,7 +229,7 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
         units.append({"name": name, "heading": anchor["heading"], "chunk": anchor["chunk"]})
 
     units.sort(key=lambda unit: unit["chunk"])
-    return units if len(units) >= MIN_UNITS else []
+    return units if len(units) >= config.KG_MIN_UNITS else []
 
 
 def assign_to_units(

@@ -14,6 +14,8 @@ LOCAL_MODEL: str
 PROVIDER_MODELS: dict[str, str]
 PROVIDER_KEYS: dict[str, str]
 EXTERNAL_TIMEOUT: float
+SCENARIO_MAX_CHARS: int
+SCENARIO_MAX_TOKENS: int
 
 # The rag arm's own design, not a knob: how the raw documents are cut and how many pieces of
 # each slot the prompt carries. Three and three — six pieces of ~1 500 characters — is the
@@ -25,7 +27,7 @@ RAG_TOP_K_EXERCISES = 3
 
 
 def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, object]:
-    """Compute the evaluation's five resolved values from the registry and the environment."""
+    """Compute the evaluation's resolved values from the registry and the environment."""
     providers = _chain(values["evaluation.providers"])
     models = _by_provider(values, "evaluation.models.")
     keys = _by_provider(values, "evaluation.keys.")
@@ -48,6 +50,8 @@ def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, obje
         "PROVIDER_MODELS": models,
         "PROVIDER_KEYS": keys,
         "EXTERNAL_TIMEOUT": values["evaluation.timeout"],
+        "SCENARIO_MAX_CHARS": values["evaluation.scenario_max_chars"],
+        "SCENARIO_MAX_TOKENS": values["evaluation.scenario_max_tokens"],
     }
 
 

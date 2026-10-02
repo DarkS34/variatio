@@ -151,7 +151,7 @@ en `generation.fixed_effort`: bloquear el deslizador y decidir con qué nivel se
 misma decisión vista por sus dos caras, y quien la toma es quien administra la instalación.
 
 UN MODELO BLOQUEADO SIN NIVEL DECLARADO se llama con el que resuelva el motor
-(`inference.DEFAULT_THINK_EFFORT`, «low» en los dos). Sin este ajuste el navegador esconde
+(`reasoning.default_effort`, «low» por defecto). Sin este ajuste el navegador esconde
 el deslizador pero sigue mandando el último nivel que tuviera puesto, así que el bloqueo
 diría «lo fija la instalación» y lo fijaría el navegador.
 

@@ -12,6 +12,7 @@ import pytest
 
 from evaluation import Commission, EvaluationSession
 from evaluation import prompts as evaluation_prompts
+from evaluation import config as evaluation_config
 from evaluation import run as evaluation_run
 from evaluation.api import store as evaluation_store
 from variatio import prompts
@@ -113,7 +114,7 @@ def test_a_failed_draw_leaves_the_scenario_empty(monkeypatch):
 
 
 def test_a_drawn_scenario_is_capped():
-    assert len(evaluation_run._first_sentence("x" * 1000)) == evaluation_run.SCENARIO_MAX_CHARS
+    assert len(evaluation_run._first_sentence("x" * 1000)) == evaluation_config.SCENARIO_MAX_CHARS
 
 
 # THE RECORD ------------------------------------------------------------------------------

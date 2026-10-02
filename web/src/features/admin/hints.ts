@@ -53,6 +53,19 @@ const SETTING_HINTS: Record<string, Key> = {
   "evaluation.local_model": "cfg.hint.evaluation.local_model",
   "evaluation.providers": "cfg.hint.evaluation.providers",
   "evaluation.timeout": "cfg.hint.evaluation.timeout",
+  "builders.transcribe_page_max_a4_areas": "cfg.hint.builders.transcribe_page_max_a4_areas",
+  "builders.transcribe_page_png_max_bytes": "cfg.hint.builders.transcribe_page_png_max_bytes",
+  "builders.transcribe_page_jpeg_quality": "cfg.hint.builders.transcribe_page_jpeg_quality",
+  "builders.transcribe_image_min_long_side": "cfg.hint.builders.transcribe_image_min_long_side",
+  "builders.transcribe_image_max_pixels": "cfg.hint.builders.transcribe_image_max_pixels",
+  "builders.transcribe_metafile_raster_scale": "cfg.hint.builders.transcribe_metafile_raster_scale",
+  "builders.transcribe_loop_lines": "cfg.hint.builders.transcribe_loop_lines",
+  "builders.transcribe_loop_chars": "cfg.hint.builders.transcribe_loop_chars",
+  "builders.kg_min_units": "cfg.hint.builders.kg_min_units",
+  "builders.kg_min_mention_length": "cfg.hint.builders.kg_min_mention_length",
+  "builders.eb_overlap_max_share": "cfg.hint.builders.eb_overlap_max_share",
+  "generation.min_primary_chars": "cfg.hint.generation.min_primary_chars",
+  "reasoning.default_effort": "cfg.hint.reasoning.default_effort",
 };
 
 export function settingHint(key: string): Key | null {

@@ -369,9 +369,12 @@ class VariantGenerator:
         with progress.step("generate", "Writing the items", total=n) as reporter:
             for i in range(n):
                 progress.checkpoint()
-                already = list(avoid or []) + self._collect_already_generated(
-                    target_type, accepted
-                )
+                cut = config.GENERATION_AVOID_ENTRY_CHARS
+                already = [
+                    statement.strip()[:cut]
+                    for statement in list(avoid or [])
+                    + self._collect_already_generated(target_type, accepted)
+                ]
                 reporter.start(i + 1)
 
                 def attempt(correction: str | None) -> GeneratedVariant | None:

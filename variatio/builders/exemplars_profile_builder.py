@@ -34,12 +34,6 @@ BUILD_PHASES = (
     ("context", "Writing down what subject this is", 1),
 )
 
-MAX_EXCERPTS_PER_TYPE = 3
-
-# How many verbatim exemplars the context synthesis sees. Three are enough to pin the
-# subject, level and notation, and few enough not to drag one item's topic into the text.
-CONTEXT_EXCERPTS = 3
-
 # The scan's shape is fixed, so it is stated as a schema. The CONSOLIDATION's is not: what it
 # returns is a profile, and a profile CONTAINS JSON Schemas the model writes itself, one per
 # field of each modality it invents. There is no schema for "an object whose values are
@@ -192,7 +186,7 @@ class ExemplarsProfileBuilder:
             excerpt
             for record in found.values()
             for _, excerpt in record.get("excerpts", [])
-        ][:CONTEXT_EXCERPTS]
+        ][: config.EP_CONTEXT_EXCERPTS]
         if excerpts:
             lines.append("Ejemplares literales del material:")
             lines.extend(f"---\n{excerpt}" for excerpt in excerpts)
@@ -357,7 +351,7 @@ class ExemplarsProfileBuilder:
             _remember(record["fields"], str(name).strip())
 
         excerpt = str(entry.get("excerpt") or "").strip()
-        if excerpt and len(record["excerpts"]) < MAX_EXCERPTS_PER_TYPE:
+        if excerpt and len(record["excerpts"]) < config.EP_MAX_EXCERPTS_PER_TYPE:
             record["excerpts"].append((location, excerpt[: self.excerpt_chars]))
 
     def _findings_block(self, found: dict[str, dict]) -> str:
@@ -369,7 +363,7 @@ class ExemplarsProfileBuilder:
                 self._wording.seen_in_chunks(record["seen"]),
             ]
             if record["signals"]:
-                lines.append(self._wording.signals_line(record["signals"][:3]))
+                lines.append(self._wording.signals_line(record["signals"][: config.EP_MAX_SIGNALS_PER_TYPE]))
             if record["fields"]:
                 lines.append(self._wording.fields_line(record["fields"]))
             for location, excerpt in record["excerpts"]:

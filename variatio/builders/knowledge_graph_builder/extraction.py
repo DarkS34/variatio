@@ -254,7 +254,6 @@ def remember_passage(
 
 _LEADER = re.compile(r"\.{4,}|·{4,}|…{2,}")
 _SENTENCE_END = re.compile(r"[.!?:](?=\s|$)")
-MIN_LEADER_RUNS = 3
 
 
 def excerpt(chunk: str, concept: str, max_chars: int) -> str:
@@ -289,11 +288,12 @@ def is_navigation(paragraph: str) -> bool:
     """Say whether a paragraph is a table of contents rather than material.
 
     It keys on DOT-LEADER RUNS and not on punctuation density or line length, which mis-fire
-    on real prose; three runs is what separates an index from a sentence with an ellipsis.
+    on real prose; `KG_MIN_LEADER_RUNS` is what separates an index from a sentence with an
+    ellipsis.
     """
     if not paragraph.strip():
         return True
-    return len(_LEADER.findall(paragraph)) >= MIN_LEADER_RUNS
+    return len(_LEADER.findall(paragraph)) >= config.KG_MIN_LEADER_RUNS
 
 
 def clip_to_sentence(text: str, max_chars: int) -> str:

@@ -19,8 +19,6 @@ from . import progress, repetition
 TokenSink = Callable[[str, str], None]
 ProgressSink = Callable[[int, int], None]
 
-DEFAULT_THINK_EFFORT = "low"
-
 THINK_OPEN = "<think>"
 THINK_CLOSE = "</think>"
 _MAX_TAG = max(len(THINK_OPEN), len(THINK_CLOSE))
@@ -204,7 +202,7 @@ class OllamaEngine:
 
         THIS IS WHERE `True` BECOMES AN EFFORT LEVEL — with `cerebras.reasoning_effort`,
         the only place it does. The boolean callers (the evaluation's `Commission`, the
-        `generations.think` column, the UI switch) get the fixed `DEFAULT_THINK_EFFORT`; a
+        `generations.think` column, the UI switch) get `config.DEFAULT_THINK_EFFORT`; a
         pipeline phase passes what `settings.derived` resolved for it, so a string travels
         through untouched and `False` stays `False` — no reasoning at all, which the
         constrained-decoding call sites depend on.
@@ -219,7 +217,7 @@ class OllamaEngine:
         if not self.supports_thinking(model):
             logger.debug(f"'{model}' has no reasoning mode; ignoring think={think}")
             return {}
-        return {"think": DEFAULT_THINK_EFFORT if think is True else think}
+        return {"think": config.DEFAULT_THINK_EFFORT if think is True else think}
 
     @staticmethod
     def _format_option(format: dict | str | None) -> dict:
@@ -452,14 +450,6 @@ class OllamaEngine:
         logger.info(f"Model '{model}' deleted from the engine's disk")
 
 
-# How much of the answer's tail a loop is looked for in while it streams, and how many new
-# characters arrive between two looks. Twelve thousand characters hold the longest run the
-# detector needs at any line length a page produces; a look every quarter of a kilobyte is
-# what keeps the cost of looking below the cost of one token.
-_LOOP_WINDOW_CHARS = 12_000
-_LOOP_CHECK_EVERY_CHARS = 256
-
-
 def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | None]:
     """Read a streamed answer whole, checking between chunks whether to stop.
 
@@ -491,9 +481,9 @@ def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | No
             if getattr(chunk, "done_reason", None) == "length":
                 truncated = True
             if stop_on_loop and piece:
-                tail = (tail + piece)[-_LOOP_WINDOW_CHARS:]
+                tail = (tail + piece)[-config.TRANSCRIBE_LOOP_STREAM_WINDOW_CHARS :]
                 unchecked += len(piece)
-                if unchecked >= _LOOP_CHECK_EVERY_CHARS:
+                if unchecked >= config.TRANSCRIBE_LOOP_STREAM_CHECK_CHARS:
                     unchecked = 0
                     found = repetition.detect_tail(tail)
                     if found is not None:

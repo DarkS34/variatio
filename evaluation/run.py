@@ -23,11 +23,6 @@ from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_ses
 from . import config as evaluation_config
 from . import prompts as evaluation_prompts
 
-# A scenario is one sentence, and the cap is what the draw may keep of a model's first
-# line. Its sampling is the `scenario` phase's (`evaluation/settings.py`).
-SCENARIO_MAX_CHARS = 300
-SCENARIO_MAX_TOKENS = 80
-
 
 def evaluate(
     context: RuntimeContext,
@@ -214,7 +209,7 @@ def _settle_scenario(context, commission: Commission) -> str:
             prompt=prompt,
             think=False,
             sampling=inference.sampling("scenario"),
-            max_output_tokens=SCENARIO_MAX_TOKENS,
+            max_output_tokens=evaluation_config.SCENARIO_MAX_TOKENS,
         ).response
     except Exception as e:  # noqa: BLE001 - a missing scenario is the old behaviour, not a failure
         logger.warning(f"No se pudo sortear un escenario, cada propuesta elegirá el suyo: {e}")
@@ -232,7 +227,7 @@ def _first_sentence(answer: str) -> str:
     for line in answer.splitlines():
         text = line.strip().strip("`\"'«»").strip()
         if text:
-            return text[:SCENARIO_MAX_CHARS]
+            return text[: evaluation_config.SCENARIO_MAX_CHARS]
     return ""
 
 

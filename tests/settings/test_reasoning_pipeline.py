@@ -57,7 +57,8 @@ def test_every_toggle_is_a_bool_setting_of_the_reasoning_group():
 
 
 def test_every_reasoning_switch_has_a_place_in_the_pipeline():
-    declared = {s.key for s in reasoning.SETTINGS}
+    # The default effort is no phase's: it is what a bare `think=True` becomes.
+    declared = {s.key for s in reasoning.SETTINGS} - {"reasoning.default_effort"}
     drawn = {phase.setting for phase in PHASES if phase.setting} | {
         phase.effort for phase in PHASES if phase.effort
     }

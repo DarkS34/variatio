@@ -87,6 +87,7 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 150 → 149 and 118 → 117 on 2026-09-16: `builders.transcribe_prompt_version` left with the
     # rule that a prompt change expires every page (see AGENTS.md).
     # 149 → 218 on 2026-10-02: a temperature, top-k and top-p per model call, three of them
-    # the temperatures that already were one call's (renamed, their names kept).
-    assert len(REGISTRY) == 218
-    assert len(BY_NAME) == 117
+    # the temperatures that already were one call's (renamed, their names kept). 218 → 256
+    # and 117 → 153 the same day: every stage's hard-coded knobs became settings.
+    assert len(REGISTRY) == 256
+    assert len(BY_NAME) == 153

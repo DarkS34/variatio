@@ -456,12 +456,13 @@ class ExemplarsBankBuilder:
         """The trailing blocks that open the next batch — only what leaves room.
 
         Carrying a block that fills half the budget would push the very next cut back into
-        the same block and could stop the batches advancing at all.
+        the same block and could stop the batches advancing at all; the share is
+        `EB_OVERLAP_MAX_SHARE`, bounded below one so the batches always advance.
         """
         count = min(config.EB_BATCH_OVERLAP_BLOCKS, len(blocks))
         carried: list[str] = []
         for block in reversed(blocks[len(blocks) - count :]):
-            if sum(len(b) for b in carried) + len(block) > self.chunk_size // 2:
+            if sum(len(b) for b in carried) + len(block) > self.chunk_size * config.EB_OVERLAP_MAX_SHARE:
                 break
             carried.insert(0, block)
         return carried

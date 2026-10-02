@@ -91,6 +91,297 @@ cambiarlo no vuelve a transcribir nada, solo cambia lo que verá la próxima rev
 costuras.""",
     ),
     Setting(
+        key="builders.transcribe_page_max_a4_areas",
+        name="TRANSCRIBE_PAGE_MAX_A4_AREAS",
+        kind="int",
+        default=2,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántas páginas A4 de superficie puede cubrir un render a la resolución configurada. Dos es
+un A3 a densidad completa; una página declarada más grande se renderiza a menos resolución
+en vez de a un tamaño que ningún endpoint acepta. A4 es la página sobre la que se midió
+cada resolución de esta ruta.
+
+Forma parte de la huella de las páginas de un PDF: cambiarlo vuelve a leerlos.""",
+    ),
+    Setting(
+        key="builders.transcribe_page_png_max_bytes",
+        name="TRANSCRIBE_PAGE_PNG_MAX_BYTES",
+        kind="int",
+        default=2 * 1024 * 1024,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Una página con texto se envía como PNG sin pérdida salvo que pese más que esto (en bytes),
+y entonces va como JPEG. Es una quinta parte de la petición entera de Cerebras y queda muy
+por encima de cualquier página compuesta (un A4 de texto a 200 ppp son ~0,6 MB); una página
+SIN capa de texto es una foto de papel y va como JPEG desde el principio. Medido el
+2026-09-15: los tres boletines escaneados de enfermería fallaban en TODAS sus páginas con el
+413 de Cerebras (10 MiB por petición), y la misma página como JPEG se leyó en 0,9 s.
+
+Vale también para las imágenes de un Word o un PowerPoint. Forma parte de la huella de
+página: cambiarlo vuelve a leer lo transcrito.""",
+    ),
+    Setting(
+        key="builders.transcribe_page_jpeg_quality",
+        name="TRANSCRIBE_PAGE_JPEG_QUALITY",
+        kind="int",
+        default=90,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe",
+        impact=Impact.NONE,
+        minimum=1,
+        maximum=100,
+        doc="""La calidad JPEG de una página escaneada o demasiado pesada para PNG: el escaneo A4 sintético
+midió 1,8 MB como PNG y 0,4 MB a 90. Vale también para las imágenes de un Word o un
+PowerPoint que pasan a JPEG. Forma parte de la huella de página: cambiarla vuelve a leer lo
+transcrito.""",
+    ),
+    Setting(
+        key="builders.transcribe_image_min_long_side",
+        name="TRANSCRIBE_IMAGE_MIN_LONG_SIDE",
+        kind="int",
+        default=1024,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe_image",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Una imagen de un Word o un PowerPoint se amplía por un factor entero hasta que su lado mayor
+llega a estos píxeles. Medido sobre `gemma-4-31b` con las imágenes legibles de los dos
+bancos de referencia (de 188×30 a 1366×768), nativa y ampliada contestaron byte a byte lo
+mismo: allí no compra nada y cuesta unos cientos de tokens. Está por el modelo local de
+transcripción, que no se ha medido. 0 no amplía nada.
+
+Las lecturas de imágenes se guardan por sus bytes, así que cambiarlo vuelve a leer cada
+imagen la próxima vez que se transcriba su documento; forma parte de la huella.""",
+    ),
+    Setting(
+        key="builders.transcribe_image_max_pixels",
+        name="TRANSCRIBE_IMAGE_MAX_PIXELS",
+        kind="int",
+        default=7_750_000,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe_image",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Una imagen de un Word o un PowerPoint con más píxeles que esto se reduce antes de la
+llamada: es lo que cabe en dos A4 a 200 ppp, lo más que deja llegar un render de página a
+la resolución por defecto. Una foto pegada entera en un documento es la gemela de un
+escaneo. Forma parte de la huella: cambiarlo vuelve a leer las imágenes.""",
+    ),
+    Setting(
+        key="builders.transcribe_metafile_raster_scale",
+        name="TRANSCRIBE_METAFILE_RASTER_SCALE",
+        kind="int",
+        default=4,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe_image",
+        impact=Impact.NONE,
+        minimum=1,
+        maximum=16,
+        doc="""A cuántas veces la página de 96 ppp exporta LibreOffice un dibujo EMF/WMF de un Word o un
+PowerPoint. 4× son 384 ppp, que convierten una ecuación de 96×13 px en 380×54: resolución
+vectorial y no una ampliación. La ruta por PDF se midió y se descartó: perdía la mitad de
+texto del logotipo del cuaderno de referencia, que la exportación a PNG conservaba. El
+margen del recorte son 16 px, cuatro puntos de papel a 4×.
+
+Forma parte de la huella: cambiarlo vuelve a leer las imágenes de los documentos de Office.""",
+    ),
+    Setting(
+        key="builders.transcribe_metafile_timeout_seconds",
+        name="TRANSCRIBE_METAFILE_TIMEOUT_SECONDS",
+        kind="int",
+        default=180,
+        group="Constructores",
+        stages=("transcription",),
+        phase="transcribe_image",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuánto puede tardar LibreOffice en convertir los dibujos EMF/WMF de un documento antes de
+darlo por fallido; sin conversión esos dibujos se leen como «[IMAGEN NO LEGIBLE]». Sin
+medir: es el techo de un documento con muchos dibujos, no el tiempo de uno.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_lines",
+        name="TRANSCRIBE_LOOP_LINES",
+        kind="int",
+        default=24,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=2,
+        doc="""Cuántas líneas finales tienen que repetirse para declarar un bucle de líneas. Una cuadrícula
+dibujada son decenas de filas idénticas; una tabla de verdad no repite nada tan largo, y una
+página de código escrita por una persona no lleva veinticuatro líneas idénticas seguidas.
+Medido en la instalación de referencia: una página de filas «| | | |» se cortó tres veces en
+el techo de 4.096 tokens con los mismos 7.368 caracteres.
+
+El detector también revisa las páginas ya guardadas: cambiarlo puede marcar como bucle, y
+volver a leer, páginas que hoy se dan por buenas.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_max_line_period",
+        name="TRANSCRIBE_LOOP_MAX_LINE_PERIOD",
+        kind="int",
+        default=8,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""El bloque de líneas más largo que cuenta como una unidad repetida. Por encima, la repetición
+es contenido: dos estrofas idénticas son dos estrofas. El detector también revisa las
+páginas ya guardadas.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_min_line_repeats",
+        name="TRANSCRIBE_LOOP_MIN_LINE_REPEATS",
+        kind="int",
+        default=4,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=2,
+        doc="""Cuántas repeticiones de un bloque hacen falta como mínimo, sea cual sea su longitud, para
+declarar un bucle de líneas. El detector también revisa las páginas ya guardadas.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_chars",
+        name="TRANSCRIBE_LOOP_CHARS",
+        kind="int",
+        default=400,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántos caracteres tienen que repetir una unidad corta para declarar un bucle de caracteres:
+una regla de cuatrocientos guiones bajos es un dibujo y no texto, y ni un separador de tabla
+Markdown ni el subrayado de un título llegan tan lejos. El detector también revisa las
+páginas ya guardadas.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_max_char_period",
+        name="TRANSCRIBE_LOOP_MAX_CHAR_PERIOD",
+        kind="int",
+        default=16,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""La unidad más larga, en caracteres, que cuenta como repetida en un bucle de caracteres
+(`\\_`, una raya, una fila de puntos). Sin medir. El detector también revisa las páginas ya
+guardadas.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_char_run_repeats",
+        name="TRANSCRIBE_LOOP_CHAR_RUN_REPEATS",
+        kind="int",
+        default=24,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=2,
+        doc="""Cuántas veces seguidas tiene que repetirse una unidad corta, además de su primera aparición,
+en cualquier punto del texto para medirla como posible bucle de caracteres. Es el suelo que impide que la búsqueda se pare en
+cada letra doble de la prosa; lo que encuentra se mide después contra
+`TRANSCRIBE_LOOP_CHARS`. Sin medir.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_quote_chars",
+        name="TRANSCRIBE_LOOP_QUOTE_CHARS",
+        kind="int",
+        default=60,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuánto de la unidad repetida se cita: al modelo en el segundo intento y a una persona en la
+marca de página fallida. Una fila de cuadrícula son treinta caracteres; el resto de una
+unidad larga no dice nada.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_stream_window_chars",
+        name="TRANSCRIBE_LOOP_STREAM_WINDOW_CHARS",
+        kind="int",
+        default=12_000,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántos caracteres finales de una respuesta en curso mira el motor local para decidir si se
+ha quedado en bucle y dejar de leerla. Doce mil caracteres caben la racha más larga que el
+detector necesita a cualquier longitud de línea que produce una página. Solo en Ollama:
+Cerebras contesta entera y se revisa al final.""",
+    ),
+    Setting(
+        key="builders.transcribe_loop_stream_check_chars",
+        name="TRANSCRIBE_LOOP_STREAM_CHECK_CHARS",
+        kind="int",
+        default=256,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cada cuántos caracteres nuevos de una respuesta en curso se vuelve a preguntar si se ha
+quedado en bucle. Mirar cada cuarto de kilobyte es lo que mantiene el coste de mirar por
+debajo del de un token; más pequeño corta antes y comprueba más veces. Solo en Ollama.""",
+    ),
+    Setting(
+        key="builders.raw_max_file_mb",
+        name="RAW_MAX_FILE_MB",
+        kind="int",
+        default=512,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""El mayor archivo, en MB, que se acepta al subir material en bruto. Un techo contra el disco
+y contra una subida equivocada, no una medida de lo que se puede leer.""",
+    ),
+    Setting(
+        key="builders.raw_max_files",
+        name="RAW_MAX_FILES",
+        kind="int",
+        default=100,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántos archivos como máximo caben en un solo envío al material en bruto. Un envío mayor se
+rechaza entero antes de escribir nada.""",
+    ),
+    Setting(
+        key="builders.raw_max_request_mb",
+        name="RAW_MAX_REQUEST_MB",
+        kind="int",
+        default=1024,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántos MB puede sumar un solo envío al material en bruto, contando todos sus archivos.""",
+    ),
+    Setting(
+        key="builders.raw_max_slot_gb",
+        name="RAW_MAX_SLOT_GB",
+        kind="int",
+        default=4,
+        group="Constructores",
+        stages=("transcription",),
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántos GB puede ocupar cada procedencia del material en bruto (los apuntes, los ejercicios)
+de una asignatura, contando lo que ya tiene.""",
+    ),
+    Setting(
         key="builders.exemplars_ocr",
         name="EXEMPLARS_OCR",
         kind="bool",
@@ -143,6 +434,47 @@ posterior.""",
 para que un corpus ruidoso no fragmente el perfil en modalidades casi duplicadas.""",
     ),
     Setting(
+        key="builders.ep_max_excerpts_per_type",
+        name="EP_MAX_EXCERPTS_PER_TYPE",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("profile",),
+        phase="ep_consolidate",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Cuántos fragmentos literales de cada modalidad que el rastreo encontró llegan a la
+consolidación del perfil. Son lo que le enseña al modelo cómo es de verdad un ejercicio de
+ese tipo, y cada uno pesa lo que `EP_SCAN_EXCERPT_CHARS`. Sin medir.""",
+    ),
+    Setting(
+        key="builders.ep_max_signals_per_type",
+        name="EP_MAX_SIGNALS_PER_TYPE",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("profile",),
+        phase="ep_consolidate",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Cuántas de las señales que el rastreo anotó para cada modalidad (lo que la delata en el
+material) llegan a la consolidación del perfil. Sin medir.""",
+    ),
+    Setting(
+        key="builders.ep_context_excerpts",
+        name="EP_CONTEXT_EXCERPTS",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("profile",),
+        phase="ep_context",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Cuántos ejercicios literales ve la síntesis del contexto de la asignatura. Tres bastan para
+fijar la materia, el nivel y la notación, y son pocos para que el tema de un solo ejercicio
+no se cuele en el texto.""",
+    ),
+    Setting(
         key="builders.eb_chunk_size",
         name="EB_CHUNK_SIZE",
         kind="int",
@@ -174,6 +506,22 @@ en al menos una de las dos llamadas, y los ítems repetidos se descartan compara
 primario normalizado, antes de que consuman un id. Un bloque basta porque los bloques son
 los que `split_blocks` reconoce: un ejercicio con sus apartados es uno solo. 0 lo desactiva
 y vuelve al corte seco.""",
+    ),
+    Setting(
+        key="builders.eb_overlap_max_share",
+        name="EB_OVERLAP_MAX_SHARE",
+        kind="float",
+        default=0.5,
+        group="Constructores",
+        stages=("bank",),
+        phase="eb_extract",
+        impact=Impact.NONE,
+        minimum=0.0,
+        maximum=0.9,
+        doc="""Qué fracción de un lote del banco pueden ocupar, como mucho, los bloques que el solape
+(`EB_BATCH_OVERLAP_BLOCKS`) arrastra del lote anterior. Arrastrar un bloque que llena medio
+presupuesto devolvería el corte siguiente al mismo bloque y podría impedir que los lotes
+avancen; por eso el techo queda por debajo de uno. Sin medir.""",
     ),
     Setting(
         key="builders.kg_chunk_size",
@@ -281,6 +629,135 @@ para que se lea como material y no como un recorte.""",
         doc="""Sufijos que se quitan al normalizar la clave de un concepto para compararlo en la fusión,
 de modo que las menciones en plural y en singular del mismo concepto se reconozcan como
 una sola.""",
+    ),
+    Setting(
+        key="builders.kg_min_singularize_length",
+        name="KG_MIN_SINGULARIZE_LENGTH",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_clean_merge",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""La fusión mecánica quita un sufijo de plural (`KG_BUILDER_PLURAL_SUFFIXES`) solo a palabras
+más largas que esto, para que «gas» o «mes» no pierdan su última letra. Sin medir.""",
+    ),
+    Setting(
+        key="builders.kg_merge_resplit_ceiling",
+        name="KG_MERGE_RESPLIT_CEILING",
+        kind="float",
+        default=0.95,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_clean_merge",
+        impact=Impact.NONE,
+        minimum=0.0,
+        maximum=1.0,
+        doc="""Los candidatos a fusión se agrupan por parecido y los grupos se encadenan (A~B y B~C juntan
+C con A aunque no se parezcan), así que un grupo mayor que `KG_BUILDER_MAX_MERGE_GROUP` se
+vuelve a cortar con un umbral más estricto. Por encima de este umbral se deja de cortar y el
+grupo se entrega como esté. Sin medir.""",
+    ),
+    Setting(
+        key="builders.kg_merge_resplit_step",
+        name="KG_MERGE_RESPLIT_STEP",
+        kind="float",
+        default=0.05,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_clean_merge",
+        impact=Impact.NONE,
+        minimum=0.001,
+        maximum=1.0,
+        doc="""Cuánto sube el umbral de parecido en cada nuevo corte de un grupo de fusión demasiado
+grande. Más pequeño corta más fino y llama más veces al embebedor. Sin medir.""",
+    ),
+    Setting(
+        key="builders.kg_min_leader_runs",
+        name="KG_MIN_LEADER_RUNS",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_extract",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántas rachas de puntos guía («.....») hacen falta para tomar un párrafo por un índice y no
+anclar ningún concepto en él. Se mira eso y no la densidad de puntuación ni la longitud de
+línea, que fallan con prosa de verdad: tres rachas es lo que separa un índice de una frase
+con puntos suspensivos.""",
+    ),
+    Setting(
+        key="builders.kg_min_units",
+        name="KG_MIN_UNITS",
+        kind="int",
+        default=2,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_units",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántas unidades del temario tienen que sobrevivir a la verificación para aceptar la
+segmentación; por debajo, la fase entera cae al camino que nombra los dominios sin mirar la
+estructura del material. Una unidad no es un temario. El prompt pide entre 3 y 12: este es
+el suelo de lo que se acepta, no lo que se pide.""",
+    ),
+    Setting(
+        key="builders.kg_taggable_samples_per_domain",
+        name="KG_TAGGABLE_SAMPLES_PER_DOMAIN",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_taggable",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Cuántos enunciados reales del banco que tocan un dominio ve la revisión de etiquetabilidad
+de ese dominio. Son lo que le deja juzgar si un concepto discrimina entre ejercicios de
+verdad. Sin medir.""",
+    ),
+    Setting(
+        key="builders.kg_taggable_sample_chars",
+        name="KG_TAGGABLE_SAMPLE_CHARS",
+        kind="int",
+        default=300,
+        group="Constructores",
+        stages=("graph",),
+        phase="kg_taggable",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""Cuántos caracteres de cada enunciado de muestra llegan a la revisión de etiquetabilidad.
+Sin medir.""",
+    ),
+    Setting(
+        key="builders.kg_min_mention_length",
+        name="KG_MIN_MENTION_LENGTH",
+        kind="int",
+        default=3,
+        group="Constructores",
+        stages=("graph", "generation"),
+        phase="kg_extract",
+        impact=Impact.NONE,
+        minimum=1,
+        doc="""La palabra más corta del nombre de un concepto que cuenta al buscar si un texto lo menciona
+(`core/lexicon.py`). La usan el anclaje de los conceptos a sus pasajes del material y la
+comprobación de que un ejercicio generado no mencione un concepto aún no impartido. Sin
+medir.""",
+    ),
+    Setting(
+        key="builders.kg_mention_inflection_slack",
+        name="KG_MENTION_INFLECTION_SLACK",
+        kind="int",
+        default=2,
+        group="Constructores",
+        stages=("graph", "generation"),
+        phase="kg_extract",
+        impact=Impact.NONE,
+        minimum=0,
+        doc="""Cuántos caracteres puede añadir la flexión a una palabra del nombre de un concepto para que
+un texto cuente como que lo menciona: «bucle» casa con «bucles». La usan el anclaje de los
+conceptos y la comprobación de conceptos aún no impartidos. Sin medir.""",
     ),
     Setting(
         key="builders.kg_merge_qualifier_pattern",

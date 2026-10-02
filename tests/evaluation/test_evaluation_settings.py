@@ -13,6 +13,8 @@ def base():
         "evaluation.keys.mistral": "clave-mistral",
         "evaluation.keys.groq": "clave-groq",
         "evaluation.timeout": 60.0,
+        "evaluation.scenario_max_chars": 300,
+        "evaluation.scenario_max_tokens": 80,
     }
 
 

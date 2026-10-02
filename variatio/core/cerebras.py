@@ -15,7 +15,6 @@ from loguru import logger
 from .. import config
 from . import cerebras_budget, progress, repetition
 from .inference import (
-    DEFAULT_THINK_EFFORT,
     GenerationResponse,
     InferenceError,
     OllamaEngine,
@@ -475,7 +474,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
     The same translation `OllamaEngine._think_option` does, in the other dialect: the
     levels are "none"/"low"/"medium"/"high", Cerebras has no "max", so Ollama's top level
     maps down to "high". A string is a per-phase effort already resolved by
-    `settings.derived` and travels untouched; `True` becomes `DEFAULT_THINK_EFFORT`.
+    `settings.derived` and travels untouched; `True` becomes `config.DEFAULT_THINK_EFFORT`.
 
     It assumes every routed model has an off switch. Some families answer 400 "Unsupported
     reasoning effort: none" and would need `False` floored at their own minimum; none is
@@ -485,7 +484,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
         return None
     if think is False:
         return "none"
-    effort = think if isinstance(think, str) else DEFAULT_THINK_EFFORT
+    effort = think if isinstance(think, str) else config.DEFAULT_THINK_EFFORT
     return "high" if effort == "max" else effort
 
 

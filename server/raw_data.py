@@ -14,16 +14,15 @@ from pathlib import Path
 from fastapi import UploadFile
 from loguru import logger
 
+from variatio import config as vg_config
 from variatio.builders.source_docs import SUPPORTED_EXTS
 from variatio.core.workspace import Workspace
 
 from . import approvals
 
 CHUNK = 1024 * 1024
-MAX_BYTES = 512 * 1024 * 1024
-MAX_FILES = 100
-MAX_REQUEST_BYTES = 1024 * 1024 * 1024
-MAX_SLOT_BYTES = 4 * 1024 * 1024 * 1024
+MB = 1024 * 1024
+GB = 1024 * MB
 
 CORPUS = "corpus"
 EXEMPLARS = "exemplars"
@@ -71,10 +70,10 @@ def listing(ws: Workspace) -> dict:
     """Describe both slots and the caps that govern an upload."""
     return {
         "supported_extensions": list(SUPPORTED_EXTS),
-        "max_bytes": MAX_BYTES,
-        "max_files": MAX_FILES,
-        "max_request_bytes": MAX_REQUEST_BYTES,
-        "max_slot_bytes": MAX_SLOT_BYTES,
+        "max_bytes": max_file_bytes(),
+        "max_files": vg_config.RAW_MAX_FILES,
+        "max_request_bytes": max_request_bytes(),
+        "max_slot_bytes": max_slot_bytes(),
         "slots": [slot(ws, kind) for kind in SLOTS],
     }
 
@@ -99,19 +98,19 @@ def save(ws: Workspace, kind: str, uploads: list[UploadFile]) -> dict:
     a whole drop at once.
     """
     path = directory(ws, kind)
-    if len(uploads) > MAX_FILES:
+    if len(uploads) > vg_config.RAW_MAX_FILES:
         raise RawLimitError(
-            f"Son {len(uploads)} archivos y el máximo por envío es {MAX_FILES}: "
+            f"Son {len(uploads)} archivos y el máximo por envío es {vg_config.RAW_MAX_FILES}: "
             "súbelos en varias tandas."
         )
     path.mkdir(parents=True, exist_ok=True)
 
     added: list[dict] = []
     rejected: list[dict] = []
-    request_left = MAX_REQUEST_BYTES
+    request_left = max_request_bytes()
     # Counted against what the slot already holds, or the cap is walked past one
     # request at a time.
-    slot_left = MAX_SLOT_BYTES - _slot_bytes(path)
+    slot_left = max_slot_bytes() - _slot_bytes(path)
 
     for upload in uploads:
         name = _safe_name(upload.filename or "")
@@ -164,11 +163,11 @@ def _slot_bytes(path: Path) -> int:
 def _budget(request_left: int, slot_left: int) -> tuple[int, str]:
     """Return the tightest of the three caps and the sentence that explains it."""
     options = [
-        (MAX_BYTES, f"Supera el máximo de {_mb(MAX_BYTES)} MB por archivo"),
-        (request_left, f"El envío supera el máximo de {_mb(MAX_REQUEST_BYTES)} MB en total"),
+        (max_file_bytes(), f"Supera el máximo de {_mb(max_file_bytes())} MB por archivo"),
+        (request_left, f"El envío supera el máximo de {_mb(max_request_bytes())} MB en total"),
         (
             slot_left,
-            f"El origen supera el máximo de {_gb(MAX_SLOT_BYTES)} GB: "
+            f"El origen supera el máximo de {_gb(max_slot_bytes())} GB: "
             "borra documentos antes de subir más",
         ),
     ]
@@ -177,12 +176,27 @@ def _budget(request_left: int, slot_left: int) -> tuple[int, str]:
 
 def _mb(size: int) -> int:
     """Render a byte count in whole megabytes."""
-    return size // (1024 * 1024)
+    return size // MB
 
 
 def _gb(size: int) -> int:
     """Render a byte count in whole gigabytes."""
-    return size // (1024 * 1024 * 1024)
+    return size // GB
+
+
+def max_file_bytes() -> int:
+    """The largest file one upload may carry, as `RAW_MAX_FILE_MB` stands now."""
+    return vg_config.RAW_MAX_FILE_MB * MB
+
+
+def max_request_bytes() -> int:
+    """The most one upload may carry in all, as `RAW_MAX_REQUEST_MB` stands now."""
+    return vg_config.RAW_MAX_REQUEST_MB * MB
+
+
+def max_slot_bytes() -> int:
+    """The most one slot may hold, as `RAW_MAX_SLOT_GB` stands now."""
+    return vg_config.RAW_MAX_SLOT_GB * GB
 
 
 def _free_path(directory_path: Path, name: str) -> Path:

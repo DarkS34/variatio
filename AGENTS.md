@@ -200,7 +200,7 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
   default `low`); `derived` resolves `THINK_<PHASE>` to `False` or the level string.
   Switching a grammar phase's reasoning on drops its grammar. `inference._think_option` and
   `cerebras.reasoning_effort` are the only places that turn `True` into a level
-  (`DEFAULT_THINK_EFFORT = "low"`).
+  (`reasoning.default_effort`, default `low`).
 - **Every model call samples with its own triple**, `sampling.phases.<phase>.{temperature,
   top_k,top_p}` (engine-scoped, declared from `PIPELINE` in `registry/sampling.py`), resolved
   by `inference.sampling(phase, think)` and passed as `sampling=` — never a bare temperature.
@@ -341,8 +341,10 @@ Both raw slots use the same VLM page route (quality over speed).
 - **All PDFium calls go through `pages._PDFIUM_LOCK`** (process-wide RLock, released between
   pages, documents closed under the lock). PDFium is not thread-safe and one corruption
   poisons the process.
-- Scanned pages (no text layer) go as JPEG q90; renders are capped at two A4 areas; top-k and
-  top-p enter the fingerprint only when set; MIME is
+- Scanned pages (no text layer) go as JPEG (`TRANSCRIBE_PAGE_JPEG_QUALITY`); renders are capped
+  at `TRANSCRIBE_PAGE_MAX_A4_AREAS`; these, the picture sizes and the metafile scale are in
+  the fingerprint, a meta lacking them reading as `pages.RENDER_BEFORE` (the values they had
+  as constants), and top-k/top-p enter it only when set; MIME is
   read off the bytes. A failed page of a finished PDF is re-read on its own later, unless
   pages were inserted/deleted by hand (`restructured`) or the page count changed.
 - **Truncation and loops**: `TRANSCRIBE_MAX_OUTPUT_TOKENS` (4096) caps each answer;

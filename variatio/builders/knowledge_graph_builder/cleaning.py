@@ -20,7 +20,6 @@ from ...runtime.embedder import embed_normalized
 from . import blocks, parsing
 from .schemas import DROP_SCHEMA, MERGE_SCHEMA
 
-MIN_SINGULARIZE_LENGTH = 3
 # The preposition that opens a noun phrase's complement, in the two prompt languages.
 HEAD_COMPLEMENT = re.compile(r" (?:de|del|of) ")
 
@@ -107,7 +106,7 @@ def norm_key(name: str) -> str:
     s = re.sub(r"\s+", " ", s).strip()
     s = _singularise_head(s)
     for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
-        if len(s) > MIN_SINGULARIZE_LENGTH and s.endswith(suffix):
+        if len(s) > config.KG_MIN_SINGULARIZE_LENGTH and s.endswith(suffix):
             return s[: -len(suffix)]
     return s
 
@@ -121,7 +120,7 @@ def _singularise_head(s: str) -> str:
     words = []
     for word in head.split(" "):
         for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
-            if len(word) > MIN_SINGULARIZE_LENGTH and word.endswith(suffix):
+            if len(word) > config.KG_MIN_SINGULARIZE_LENGTH and word.endswith(suffix):
                 word = word[: -len(suffix)]
                 break
         words.append(word)
@@ -232,10 +231,11 @@ def components(index: list[int], similarity, threshold: float) -> list[list[int]
 
     out = []
     for members in grouped.values():
-        if len(members) <= config.KG_BUILDER_MAX_MERGE_GROUP or threshold >= 0.95:
+        ceiling = config.KG_MERGE_RESPLIT_CEILING
+        if len(members) <= config.KG_BUILDER_MAX_MERGE_GROUP or threshold >= ceiling:
             out.append(members)
         else:
-            out.extend(components(members, similarity, threshold + 0.05))
+            out.extend(components(members, similarity, threshold + config.KG_MERGE_RESPLIT_STEP))
     return out
 
 

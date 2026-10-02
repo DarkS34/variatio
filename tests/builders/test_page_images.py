@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from variatio import config
 from variatio.builders.source_docs import pages
 
 PNG_MAGIC = b"\x89PNG"
@@ -66,7 +67,7 @@ def test_a_page_declared_bigger_renders_no_more_pixels_than_two_a4_pages_hold():
     # A phone-scan PDF declares its pixels as points: 2 481 × 3 508 pt is 17 A4 pages of area.
     scale = pages.render_scale(2481, 3508, 200)
     rendered = 2481 * scale * 3508 * scale
-    ceiling = pages.PAGE_MAX_A4_AREAS * pages.A4_AREA_PT * (200 / 72) ** 2
+    ceiling = config.TRANSCRIBE_PAGE_MAX_A4_AREAS * pages.A4_AREA_PT * (200 / 72) ** 2
     assert rendered == pytest.approx(ceiling)
     assert scale < 200 / 72
 
@@ -84,13 +85,13 @@ def test_a_scanned_page_is_a_jpeg_from_the_start():
 
 
 def test_a_typeset_page_whose_png_is_too_heavy_falls_back_to_jpeg(monkeypatch):
-    monkeypatch.setattr(pages, "PAGE_PNG_MAX_BYTES", 1_000)
+    monkeypatch.setattr(config, "TRANSCRIBE_PAGE_PNG_MAX_BYTES", 1_000)
     assert pages.encode_page(_scan((400, 300)), scanned=False).startswith(JPEG_MAGIC)
 
 
 def test_a_picture_of_a_document_too_big_for_the_request_is_shrunk_and_sent_as_jpeg(monkeypatch):
-    monkeypatch.setattr(pages, "IMAGE_MAX_PIXELS", 100_000)
-    monkeypatch.setattr(pages, "PAGE_PNG_MAX_BYTES", 50_000)
+    monkeypatch.setattr(config, "TRANSCRIBE_IMAGE_MAX_PIXELS", 100_000)
+    monkeypatch.setattr(config, "TRANSCRIBE_PAGE_PNG_MAX_BYTES", 50_000)
     raw = pages._encode_image(_scan((1200, 900)))
     image = Image.open(io.BytesIO(raw))
     assert raw.startswith(JPEG_MAGIC)
@@ -121,7 +122,7 @@ def test_a_pdf_page_with_no_text_layer_travels_as_a_bounded_jpeg(tmp_path, pdfiu
 
     assert count == 1
     assert raw.startswith(JPEG_MAGIC)
-    ceiling = pages.PAGE_MAX_A4_AREAS * pages.A4_AREA_PT * (200 / 72) ** 2
+    ceiling = config.TRANSCRIBE_PAGE_MAX_A4_AREAS * pages.A4_AREA_PT * (200 / 72) ** 2
     assert image.width * image.height <= ceiling * 1.01
 
 

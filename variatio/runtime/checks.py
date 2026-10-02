@@ -22,8 +22,6 @@ from ..core.lexicon import mentions
 from .embedder import Embedder
 from ..instance.exemplars_profile import ItemType
 
-MIN_PRIMARY_CHARS = 20
-
 RULE_MENTIONS = "mentions"
 RULE_PRACTISES = "practises"
 
@@ -122,7 +120,7 @@ def content_floor(item: BaseModel, item_type: ItemType, wording=None) -> str | N
     wording = wording or wording_sets.of(None)
     data = item.model_dump(mode="json")
     primary = data.get(item_type.primary_field)
-    if not isinstance(primary, str) or len(primary.strip()) < MIN_PRIMARY_CHARS:
+    if not isinstance(primary, str) or len(primary.strip()) < config.GENERATION_MIN_PRIMARY_CHARS:
         return wording.check_empty_primary(item_type.primary_field)
     schema = item_type.stripped_schema()
     properties = schema.get("properties", {})

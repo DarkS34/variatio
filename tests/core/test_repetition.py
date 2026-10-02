@@ -6,6 +6,7 @@ copied as thousands of `\\_` (a character loop that ran to the output cap). Both
 functions of the text, so the engine can ask between two chunks and the cache in cold.
 """
 
+from variatio import config
 from variatio.core import repetition
 from variatio.core.repetition import Loop, cut, detect, detect_tail, quoted
 
@@ -106,7 +107,7 @@ def test_cut_leaves_a_closed_fence_alone():
 
 def test_quoted_flattens_a_block_and_bounds_its_length():
     assert quoted("| a |\n| b |") == "| a | ⏎ | b |"
-    assert quoted("x" * 200) == "x" * repetition.QUOTE_CHARS + "…"
+    assert quoted("x" * 200) == "x" * config.TRANSCRIBE_LOOP_QUOTE_CHARS + "…"
 
 
 def test_the_start_offset_counts_the_original_line_endings():

@@ -203,6 +203,6 @@ def test_a_small_picture_is_upscaled_on_white_before_the_call():
     encoded = Image.open(__import__("io").BytesIO(pages._encode_image(tiny)))
 
     assert encoded.mode == "RGB"
-    assert max(encoded.size) >= pages.IMAGE_MIN_LONG_SIDE
+    assert max(encoded.size) >= config.TRANSCRIBE_IMAGE_MIN_LONG_SIDE
     assert encoded.size[0] // 188 == encoded.size[1] // 30, "a whole factor, the same on both axes"
     assert encoded.getpixel((0, 0)) == (255, 255, 255), "transparent ground reads as paper"
