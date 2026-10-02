@@ -51,7 +51,7 @@ def answers(monkeypatch, *responses: str) -> list[str]:
     prompts: list[str] = []
     queue = list(responses)
 
-    def fake_generate(*, model, prompt, think, format, temperature):
+    def fake_generate(*, model, prompt, think, format, sampling):
         prompts.append(prompt)
         return SimpleNamespace(response=queue.pop(0) if queue else EMPTY)
 
@@ -296,7 +296,7 @@ def test_domains_are_ordered_by_the_median_position_of_their_members():
 def test_the_linking_prompt_lists_the_domain_in_the_order_of_the_material(monkeypatch):
     prompts: list[str] = []
 
-    def fake_generate(*, model, prompt, think, temperature):
+    def fake_generate(*, model, prompt, think, sampling):
         prompts.append(prompt)
         return SimpleNamespace(response='{"relations": []}')
 

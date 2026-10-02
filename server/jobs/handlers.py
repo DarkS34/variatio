@@ -5,17 +5,22 @@ queue for the whole installation, so a handler reading a process-wide workspace 
 one person's build into another's directory.
 """
 
+from importlib import metadata
+
 from loguru import logger
 
 from variatio import config, entrypoints
+from variatio.instance import locale
 from variatio.runtime.tagger import ConceptTagger
-from variatio.core import progress
+from variatio.core import inference, progress
 from variatio.core.workspace import Workspace
 
 from .. import curriculum as curriculum_store
+from .. import generations as generations_store
 from .. import approvals, deps, installation, storage
-from ..db import generations, mirror, repository, session_scope
+from ..db import identity, mirror, session_scope
 from ..editors import kg_edit
+from . import lanes
 from .build_process import run_build
 from .catalogue import Job
 from .runner import JobControl
@@ -199,15 +204,16 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     """Generate `n` items on commission, saving each one the moment it validates.
 
     The curriculum is resolved FIRST and what is stored is the one that ran, never the one
-    that was asked for, so a saved variant is reproducible from its own row. `on_accepted`
-    persists item by item, so a run cancelled after the third keeps three rows.
+    that was asked for, so a saved exercise is reproducible from its own file. `on_accepted`
+    persists item by item, so a run cancelled after the third keeps three files.
     """
     deps.require_inference()
     context = context_for(job)
+    ws = _workspace(job)
     params = job.params
     # `or 1` was wrong on a falsy zero: "genera 0" produced one item and then recorded
-    # `requested: 1`, falsifying the very thing the `generations` row exists to keep. An
-    # absent `n` still means one; a zero travels as itself and the generator refuses it.
+    # `requested: 1`, falsifying the very thing a saved exercise exists to keep. An absent
+    # `n` still means one; a zero travels as itself and the generator refuses it.
     n = 1 if params.get("n") is None else int(params["n"])
     concepts = params.get("concepts") or None
     item_type = params.get("item_type") or None
@@ -219,16 +225,16 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     # Absent means "as it always was": a caller predating the switch reasons at the default
     # effort. A recognised level travels as itself; anything else collapses to a bool.
     raw_think = params.get("think", True)
-    think = raw_think if raw_think in _EFFORT_LEVELS else bool(raw_think)
+    asked_think = raw_think if raw_think in _EFFORT_LEVELS else bool(raw_think)
     # Resolved here rather than deeper down because three things need the same answer: the
-    # log line, the row saved beside each item, and the call itself. An unoffered name
+    # log line, the file saved for each item, and the call itself. An unoffered name
     # raises and the job fails with it said in one sentence — the submit route refused it
     # already, so getting here means the offered list changed under a queued job.
     model = entrypoints.resolve_generation_model(params.get("model"))
     # And with it the effort, because a model whose level the installation has locked is
     # not the requester's to adjust. Resolved here as well as inside `entrypoints.generate` —
-    # the call is idempotent — so the log line and the row say what actually ran.
-    think = entrypoints.resolve_generation_effort(model, think)
+    # the call is idempotent — so the log line and the file say what actually ran.
+    think = entrypoints.resolve_generation_effort(model, asked_think)
 
     resolved_type = context.exemplars_profile.item_type(item_type)
     detail = _commission_detail(fixed, curriculum, instructions, think)
@@ -240,21 +246,25 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         + "; ".join(detail)
     )
 
-    avoid = _recent_scenarios(job, resolved_type, concepts)
+    avoid = _recent_scenarios(job, ws, resolved_type, concepts)
     if avoid:
         logger.info(
-            f"{len(avoid)} escenario(s) de variantes guardadas entran en el prompt para no repetirse"
+            f"{len(avoid)} escenario(s) de ejercicios guardados entran en el prompt para no repetirse"
         )
 
-    saved_ids: dict[int, int] = {}
+    run = _run_record(job, ws, n, asked_think, model)
+    run["resolved"].update(
+        {"item_type": resolved_type.key, "curriculum": curriculum, "model": model, "effort": think}
+    )
+    saved_ids: dict[int, str] = {}
 
     def remember(result, index: int) -> None:
-        """Persist one accepted item and tell the screen which row it became."""
-        row_id = _remember_one(job, result, resolved_type.key, curriculum, model)
-        if row_id is None:
+        """Persist one accepted item and tell the screen which file it became."""
+        generation_id = _remember_one(job, ws, run, result, index)
+        if generation_id is None:
             return
-        saved_ids[index] = row_id
-        progress.emit("item.saved", index=index, id=row_id)
+        saved_ids[index] = generation_id
+        progress.emit("item.saved", index=index, id=generation_id)
 
     results = entrypoints.generate(
         context,
@@ -311,32 +321,23 @@ def _commission_detail(fixed, curriculum, instructions, think) -> list[str]:
     return detail
 
 
-def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[str]:
-    """Read the statements of this account's last saved variants, so the prompt can avoid them.
+def _recent_scenarios(job: Job, ws: Workspace, item_type, concepts: list[str] | None) -> list[str]:
+    """Read the statements of this account's last saved exercises, so the prompt can avoid them.
 
     Its OWN, never the instance's: a generated exercise is private to whoever asked for it,
     and reading a colleague's statement into somebody's prompt is that same reading through
-    another door. A reminder and nothing more, so an unreadable database costs the run
-    nothing but this.
+    another door — so a job with no author reads nothing. A reminder and nothing more, so an
+    unreadable directory costs the run nothing but this.
     """
     limit = int(config.GENERATION_AVOID_RECENT)
-    if limit < 1:
+    if limit < 1 or job.user_id is None:
         return []
     try:
-        with session_scope() as session:
-            workspace = repository.get_workspace(session, job.workspace)
-            if workspace is None:
-                return []
-            items = generations.recent_items(
-                session,
-                workspace.id,
-                item_type=item_type.key,
-                concepts=concepts,
-                limit=limit,
-                author=job.user_id,
-            )
+        items = generations_store.recent_items(
+            ws, job.user_id, item_type=item_type.key, concepts=concepts, limit=limit
+        )
     except Exception as exc:  # noqa: BLE001 - the run matters more than the reminder
-        logger.warning(f"No se pudieron leer las variantes guardadas recientes: {exc}")
+        logger.warning(f"No se pudieron leer los ejercicios guardados recientes: {exc}")
         return []
 
     texts: list[str] = []
@@ -350,41 +351,120 @@ def _recent_scenarios(job: Job, item_type, concepts: list[str] | None) -> list[s
     return texts
 
 
-def _remember_one(
-    job: Job, result, item_type: str, curriculum: list[str] | None, model: str
-) -> int | None:
-    """Save one validated item with its commission, and return its row id or `None`.
+# Read once per run and kept beside every item: what decides how a statement comes out
+# beyond the commission and the artifacts, so two files can be read side by side.
+_RECORDED_SETTINGS = (
+    "TEMPERATURE_GENERATION",
+    "CHECK_MAX_RETRIES",
+    "MAX_FEW_SHOT_EXAMPLES",
+    "MAX_JSON_REPAIR_TRIES",
+    "REPAIR_LLM",
+    "CONCEPT_TAGGER_LLM",
+    "EMBEDDING_LLM",
+    "EMBEDDER_SIMILARITY_THRESHOLD",
+    "GUARDRAIL_LLM",
+    "ADMISSIBILITY_LLM",
+    "GENERATION_AVOID_RECENT",
+)
 
-    Its own short session, so a run cancelled after the third item keeps three rows.
-    Best-effort on purpose: a database briefly away must not turn a minute of GPU into a
-    failed job — the item is already in the event stream and on screen, and only the record
-    is lost.
+# The sampling of every call a run makes, as configured: what the phase left empty is still
+# empty here and was decided per call (`inference.sampling`).
+_RECORDED_SAMPLING = ("guardrail", "admissibility", "variant_generation", "repair", "concept_tagger")
+
+
+def _run_record(job: Job, ws: Workspace, n: int, asked_think, model: str) -> dict:
+    """Assemble the half of every saved record that the whole run shares.
+
+    `commission` is the request as it arrived — a `curriculum` of None is "the workspace's
+    own", `[]` is "sin restricción" — and `resolved` starts with what this layer alone
+    knows; the generator's provenance completes it per item.
     """
     params = job.params
+    return {
+        "workspace": ws.slug,
+        "author": _author(job),
+        "job": {"id": job.id, "requested": n},
+        "commission": {
+            "concepts": list(params.get("concepts") or []),
+            "item_type": params.get("item_type") or None,
+            "fixed": dict(params.get("fixed") or {}),
+            "curriculum": params.get("curriculum"),
+            "instructions": params.get("instructions") or None,
+            "think": asked_think,
+            "model": params.get("model") or None,
+        },
+        "resolved": {
+            "engine": inference.engine_name(),
+            "lane": lanes.backend_of(model),
+            "prompt_language": locale.prompt_language(ws),
+        },
+        "inputs": _inputs(ws),
+        "settings": {
+            **{name: getattr(config, name, None) for name in _RECORDED_SETTINGS},
+            "LLM_CONTEXT": (config.LLM_CONTEXT or {}).get(model),
+            "SAMPLING": {phase: config.SAMPLING.get(phase) for phase in _RECORDED_SAMPLING},
+        },
+        "system_version": _system_version(),
+    }
+
+
+def _author(job: Job) -> dict:
+    """Name the account a run belongs to, the username read best-effort from the database.
+
+    The username travels so a workspace copied to another installation, where the ids
+    differ, can still say whose each exercise was.
+    """
+    username = None
+    if job.user_id is not None:
+        try:
+            with session_scope() as session:
+                user = identity.get_user_by_id(session, job.user_id)
+                username = user.username if user is not None else None
+        except Exception as exc:  # noqa: BLE001 - a name is not worth a failed run
+            logger.warning(f"No se pudo leer el usuario de la cuenta {job.user_id}: {exc}")
+    return {"id": job.user_id, "username": username, "name": job.user_name}
+
+
+def _inputs(ws: Workspace) -> dict[str, str | None]:
+    """Hash every artifact a statement is generated against, as the approvals hash them."""
+    hashes = {
+        artifact: storage.sha256_of(approvals.current_path(ws, artifact))
+        for artifact in approvals.ARTIFACTS
+    }
+    hashes["content_context"] = storage.sha256_of(entrypoints.content_context_path(ws))
+    hashes["concept_descriptions"] = storage.sha256_of(ws.concept_descriptions_path)
+    return hashes
+
+
+def _system_version() -> str | None:
+    """Return the installed version of this system, or None outside an installation."""
     try:
-        with session_scope() as session:
-            workspace = repository.get_workspace(session, job.workspace)
-            if workspace is None:
-                return None
-            row = generations.save_generation(
-                session,
-                workspace_id=workspace.id,
-                user_id=job.user_id,
-                job_id=job.id,
-                item_type=result.item_type or item_type,
-                item=result.item.model_dump(mode="json"),
-                concepts=params.get("concepts") or [],
-                curriculum=curriculum or [],
-                fixed=params.get("fixed") or {},
-                instructions=params.get("instructions"),
-                think=bool(params.get("think", True)),
-                model=model,
-                thinking=result.thinking,
-                checks=result.checks,
-            )
-            return row.id
+        return metadata.version("variatio")
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def _remember_one(job: Job, ws: Workspace, run: dict, result, index: int) -> str | None:
+    """Save one validated item with how it was made, and return its id or `None`.
+
+    Best-effort on purpose: a full disk must not turn a minute of GPU into a failed job —
+    the item is already in the event stream and on screen, and only the record is lost.
+    """
+    try:
+        body = {
+            **run,
+            "resolved": {**result.provenance, **run["resolved"]},
+            "prompt": result.prompt,
+            "output": {
+                "item": result.item.model_dump(mode="json"),
+                "thinking": result.thinking,
+                "checks": result.checks,
+                "retried": result.retried,
+            },
+        }
+        return generations_store.save(ws, job.user_id, job.id, index, body)
     except Exception as exc:  # noqa: BLE001 - the item is on screen; only its record is lost
-        logger.warning(f"No se pudo guardar la variante en la base de datos: {exc}")
+        logger.warning(f"No se pudo guardar el ejercicio generado: {exc}")
         return None
 
 

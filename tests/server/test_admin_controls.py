@@ -129,9 +129,18 @@ def test_disk_usage_splits_the_tree_by_role(tmp_path):
     (ws.history_dir / "old.json").write_bytes(b"x" * 5)
     (ws.cache_dir / "embeddings").mkdir(parents=True)
     (ws.cache_dir / "embeddings" / "c.npz").write_bytes(b"x" * 7)
+    (ws.generations_dir / "user_1").mkdir(parents=True)
+    (ws.generations_dir / "user_1" / "g.json").write_bytes(b"x" * 3)
 
     usage = installation.disk_usage(ws)
-    assert usage == {"raw": 10, "instance": 20, "cache": 7, "history": 5, "total": 42}
+    assert usage == {
+        "raw": 10,
+        "instance": 20,
+        "cache": 7,
+        "history": 5,
+        "generations": 3,
+        "total": 45,
+    }
 
 
 def test_clear_cache_removes_vectors_and_markdown_but_keeps_descriptions(tmp_path, monkeypatch):

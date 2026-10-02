@@ -18,23 +18,21 @@ from pathlib import Path
 
 from loguru import logger
 
+from ... import config
+
 METAFILE_EXTS = (".emf", ".wmf")
 # python-pptx joins a note's paragraphs with a newline and marks a soft line break with a
 # vertical tab; both are line breaks once the note is prose on a page.
 _SOFT_BREAK = "\x0b"
 
 # LibreOffice draws an imported metafile at its natural size in the middle of a page and
-# exports the PAGE; asked for both pixel dimensions it renders that page at any resolution.
-# 4× the 96-dpi page is 384 dpi, which turns a 96×13 px equation into 380×54: vector
-# resolution rather than an upscale. The PDF route was measured and rejected — it dropped
-# the text half of the reference workbook's crown logo, where the PNG export kept it.
-RASTER_SCALE = 4
+# exports the PAGE; asked for both pixel dimensions it renders that page at any resolution,
+# `TRANSCRIBE_METAFILE_RASTER_SCALE` times the 96-dpi page (its measurement is the setting's).
 # Around the drawing when the page is cropped to it; at 4× this is four points of paper.
 CONTENT_MARGIN_PX = 16
 # A metafile with nothing on it still has to become a picture the model can answer
 # `EMPTY_IMAGE_MARK` to — once, since every such picture hashes the same.
 BLANK_SIDE_PX = 64
-CONVERT_TIMEOUT_SECONDS = 180
 
 _RELS_TARGET_RE = r'(Target="[^"]*?){name}"'
 _SLIDE_ENTRY_RE = re.compile(r"^ppt/slides/slide\d+\.xml$")
@@ -111,14 +109,15 @@ def _render(tool: str, source: Path, names: list[str], workdir: Path) -> dict[st
     # Two passes, because the export needs the page's pixel size to keep its aspect and
     # LibreOffice picks the page (Letter here, A4 under another locale) on its own: the
     # first pass at the default 96 dpi says how big the page is, the second renders it at
-    # `RASTER_SCALE` times that.
+    # `TRANSCRIBE_METAFILE_RASTER_SCALE` times that.
     page = _export(tool, list(by_file), outputs / "probe", workdir, None)
     if not page:
         return {}
     probe = _open_png(next(iter(page.values())))
     if probe is None:
         return {}
-    size = (probe.width * RASTER_SCALE, probe.height * RASTER_SCALE)
+    scale = config.TRANSCRIBE_METAFILE_RASTER_SCALE
+    size = (probe.width * scale, probe.height * scale)
     full = _export(tool, list(by_file), outputs / "full", workdir, size)
 
     out: dict[str, bytes] = {}
@@ -163,7 +162,7 @@ def _export(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
-            timeout=CONVERT_TIMEOUT_SECONDS,
+            timeout=config.TRANSCRIBE_METAFILE_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
         logger.warning(f"LibreOffice export failed ({e})")

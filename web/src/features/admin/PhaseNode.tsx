@@ -1,5 +1,5 @@
-import { Braces, Brain, ShieldCheck, UserRound } from "lucide-react";
-import { useState } from "react";
+import { Braces, Brain, CircleOff, Globe, ShieldCheck, Shuffle, UserRound } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 import { Input, Select } from "@/components/ui/input";
 import { bytes } from "@/lib/format";
@@ -8,7 +8,6 @@ import type {
   ConfigSetting,
   InstalledModel,
   ReasoningFixed,
-  ReasoningLane,
   ReasoningPhase,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -18,115 +17,60 @@ const FIXED_LABELS: Record<ReasoningFixed, Key> = {
   grammar: "pipe.fixed.grammar",
   commission: "pipe.fixed.commission",
   model: "pipe.fixed.model",
+  drawn: "pipe.fixed.drawn",
+  external: "pipe.fixed.external",
+  off: "pipe.fixed.off",
 };
 
 const FIXED_ICONS: Record<ReasoningFixed, typeof Braces> = {
   grammar: Braces,
   commission: UserRound,
   model: ShieldCheck,
+  drawn: Shuffle,
+  external: Globe,
+  off: CircleOff,
 };
 
 type Models = ConfigPayload["models"];
 
-export function ReasoningPipeline({
-  lanes,
-  settings,
-  draft,
-  models,
-  onChange,
-}: {
-  lanes: ReasoningLane[];
-  settings: ConfigSetting[];
-  draft: Record<string, unknown>;
-  models: Models | null;
-  onChange: (key: string, value: unknown) => void;
-}) {
-  const { t } = useT();
-  const byKey = new Map(settings.map((setting) => [setting.key, setting]));
-  const node = (phase: ReasoningPhase, last: boolean) => (
-    <PhaseNode
-      key={phase.key}
-      phase={phase}
-      setting={phase.setting ? byKey.get(phase.setting) ?? null : null}
-      effortSetting={phase.effort ? byKey.get(phase.effort) ?? null : null}
-      modelSetting={byKey.get(phase.model) ?? null}
-      draft={draft}
-      models={models}
-      last={last}
-      onChange={onChange}
-    />
-  );
-  const shared = lanes.filter((lane) => lane.shared);
-  const own = lanes.filter((lane) => !lane.shared);
-
-  return (
-    <div className="space-y-6">
-      {/* The step that comes BEFORE the three builders, drawn once and across. It is the
-          same three settings for all of them, so repeating it at the head of each column
-          was nine nodes for three decisions and no column started with its own work. */}
-      {shared.map((lane) => (
-        <section key={lane.key} className="rounded-md border border-border bg-muted/25 p-3">
-          <p className="border-b border-border pb-1.5 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
-            {lane.label}
-          </p>
-          <p className="pt-2 text-small text-muted-foreground">{t("pipe.sharedNote")}</p>
-          {/* No connector between these three: the pages and the Office pictures are two
-              ROUTES for one document, not one stop after another, and a rule between them
-              would draw an order that does not exist. */}
-          <ol className="grid gap-x-5 gap-y-1 pt-3 sm:grid-cols-2 lg:grid-cols-3">
-            {lane.phases.map((phase) => node(phase, true))}
-          </ol>
-        </section>
-      ))}
-      <ol className="grid items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-4">
-        {own.map((lane) => (
-          <li key={lane.key} className="min-w-0">
-            <p className="border-b border-border pb-1.5 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
-              {lane.label}
-            </p>
-            <ol className="pt-3">
-              {lane.phases.map((phase, index) => node(phase, index === lane.phases.length - 1))}
-            </ol>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
 /**
- * One call to the model, drawn as a stop on its lane.
+ * One call to the model, drawn as a stop on its stage's path, with what tunes it below.
  *
- * A BUILDER's lane runs DOWN and not across, and that is the whole of the layout. Across,
- * the mark was a fixed width and the spacing between marks was elastic, so how the drawing
- * looked was a function of how many stops a lane happened to have — and they have 3, 11, 2
- * and 4. The long one overflowed into a scroller with every label clipped to "TRANSCRIPCI"
- * and every select to "gemm", and the short ones were left with holes. Down the page each
- * stop is the width of its column whatever its neighbours do, a model name fits without
- * being cut, and nothing has to scroll sideways to be read.
+ * A stage runs DOWN and not across, and that is the whole of the layout: each stop is the
+ * width of the column whatever its neighbours do, a model name fits without being cut,
+ * and the call's own settings — its sampling, then its parameters — sit under its name, so
+ * everything one call does is decided in one place. `last` withholds the connector.
  *
- * The transcription band above them is the one exception and does not reopen that: it is a
- * grid of THREE fixed cells, so nothing is elastic and no lane's length can stretch it.
- * The same node is drawn in both, with `last` withholding the connector in the band.
+ * The header shows the model as a select when the node owns it, as nothing when the
+ * setting is drawn as a row below (`modelBelow`), and as its name otherwise: the pictures
+ * read with the PAGE phase's model on purpose, and a second select for one setting would
+ * read as two controls.
  */
-function PhaseNode({
+export function PhaseNode({
   phase,
   setting,
   effortSetting,
   modelSetting,
+  modelBelow = false,
   draft,
   models,
   last,
+  aside,
   onChange,
+  children,
 }: {
   phase: ReasoningPhase;
   setting: ConfigSetting | null;
   effortSetting: ConfigSetting | null;
   modelSetting: ConfigSetting | null;
+  modelBelow?: boolean;
   draft: Record<string, unknown>;
   models: Models | null;
   last: boolean;
+  /** Beside the name: where a call drawn on another stage's screen belongs. */
+  aside?: ReactNode;
   onChange: (key: string, value: unknown) => void;
+  children?: ReactNode;
 }) {
   const { t } = useT();
   const thinks = setting
@@ -137,22 +81,14 @@ function PhaseNode({
         ? draft[modelSetting.key]
         : modelSetting.value ?? modelSetting.default)
     : null;
-  // A node whose model is a LIST is the variant's: what a commission may be written with,
-  // in offer order. Read here and edited in "Modelos generadores", like every other node
-  // that does not own its model.
   const residentName = Array.isArray(modelValue)
     ? modelValue.map(String).join(" · ")
-    : String(modelValue ?? "");
-  // A node owns its model when the setting is ITS OWN phase's, not merely some phase's:
-  // `transcribe_image` names the PAGE phase's key on purpose, and the two are now side by
-  // side in the transcription band, where a second select for one setting reads as two
-  // controls. It shows the name instead, like every other node that does not own its model.
+    : String(modelValue ?? "") || "—";
   const ownModel = modelSetting?.key === `models.phases.${phase.key}`;
 
   return (
-    <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-2.5 pb-3">
-      {/* The stretch between this stop and the next one. Behind the mark rather than
-          between two of them, so a lane of thirteen draws one line and not twelve. */}
+    <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-2.5 pb-5">
+      {/* The stretch between this stop and the next one, behind the mark. */}
       {last ? null : (
         <span aria-hidden className="absolute bottom-0 left-[1.0625rem] top-9 w-px bg-border" />
       )}
@@ -161,36 +97,39 @@ function PhaseNode({
       ) : (
         <Fixed phase={phase} />
       )}
-      <span className="flex min-w-0 flex-col gap-1 pt-1.5">
-        <span className="truncate font-condensed uppercase leading-tight text-small text-foreground">
-          {phase.label}
-        </span>
-        {/* Effort and model share one line and the label has its own. The other way round
-            left "ETIQUETABILIDAD" 83px at the narrowest column, which is the clipping this
-            layout exists to end — and a node is identified by its name long before it is
-            identified by how hard it thinks. */}
-        <span className="flex items-center gap-1.5">
-          {effortSetting && thinks ? (
-            <NodeEffort phase={phase} setting={effortSetting} draft={draft} onChange={onChange} />
-          ) : null}
-          {modelSetting && !ownModel ? (
-            <span
-              className="min-w-0 flex-1 truncate font-mono text-micro text-muted-foreground"
-              title={t("pipe.modelTitle", { model: residentName })}
-            >
-              {residentName}
-            </span>
-          ) : modelSetting ? (
-            <NodeModel
-              phase={phase}
-              setting={modelSetting}
-              draft={draft}
-              models={models}
-              onChange={onChange}
-            />
-          ) : null}
-        </span>
-      </span>
+      <div className="min-w-0 space-y-3 pt-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span
+            className="font-condensed uppercase leading-tight text-small text-foreground"
+            title={phase.note || undefined}
+          >
+            {phase.label}
+          </span>
+          {aside}
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 sm:max-w-md">
+            {effortSetting && thinks ? (
+              <NodeEffort phase={phase} setting={effortSetting} draft={draft} onChange={onChange} />
+            ) : null}
+            {modelSetting && ownModel ? (
+              <NodeModel
+                phase={phase}
+                setting={modelSetting}
+                draft={draft}
+                models={models}
+                onChange={onChange}
+              />
+            ) : modelSetting && !modelBelow ? (
+              <span
+                className="min-w-0 flex-1 truncate font-mono text-micro text-muted-foreground"
+                title={t("pipe.modelTitle", { model: residentName })}
+              >
+                {residentName}
+              </span>
+            ) : null}
+          </span>
+        </div>
+        {children}
+      </div>
     </li>
   );
 }

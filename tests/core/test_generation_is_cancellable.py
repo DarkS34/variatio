@@ -12,7 +12,7 @@ import pytest
 
 from variatio import config
 from variatio.core import inference, progress
-from variatio.core.inference import OllamaEngine
+from variatio.core.inference import OllamaEngine, Sampling
 
 
 class _Chunk:
@@ -197,7 +197,7 @@ def test_without_the_flag_a_repetition_is_read_whole(engine):
 def test_the_output_cap_travels_as_num_predict_beside_the_context(engine, monkeypatch):
     monkeypatch.setattr(config, "LLM_CONTEXT", {"m": 8192})
     engine._client = _Client(_Stream([_Chunk("ok", done_reason="stop")]))
-    engine.generate(model="m", prompt="p", temperature=0.0, max_output_tokens=4096)
+    engine.generate(model="m", prompt="p", sampling=Sampling(0.0), max_output_tokens=4096)
     assert engine._client.kwargs["options"] == {
         "num_ctx": 8192,
         "temperature": 0.0,

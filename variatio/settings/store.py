@@ -66,6 +66,11 @@ LEGACY_KEYS = {
     "models.phases.exemplars_transcribe": "models.phases.transcribe",
     "reasoning.phases.exemplars_transcribe": "reasoning.phases.transcribe",
     "reasoning.effort.exemplars_transcribe": "reasoning.effort.transcribe",
+    # 2026-10-02: each call's sampling became a triple of its own, and these three were
+    # already one call's temperature.
+    "builders.transcribe_temperature": "sampling.phases.transcribe.temperature",
+    "sampling.temperature_generation": "sampling.phases.variant_generation.temperature",
+    "sampling.temperature_repair": "sampling.phases.repair.temperature",
 }
 
 

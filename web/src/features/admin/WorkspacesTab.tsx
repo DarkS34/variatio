@@ -234,6 +234,7 @@ function DiskCell({ workspace }: { workspace: AdminWorkspace }) {
     [t("ws.disk.instance"), disk.instance],
     [t("ws.disk.cache"), disk.cache],
     [t("ws.disk.history"), disk.history],
+    [t("ws.disk.generations"), disk.generations ?? 0],
   ] as const;
   return (
     <span

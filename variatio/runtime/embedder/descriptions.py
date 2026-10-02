@@ -278,7 +278,9 @@ class ConceptDescriber:
             think=config.THINK_DESCRIPTION_GENERATION,
             prompt=prompt,
             format=None if config.THINK_DESCRIPTION_GENERATION else DESCRIPTION_SCHEMA,
-            temperature=inference.judgement_temperature(config.THINK_DESCRIPTION_GENERATION),
+            sampling=inference.sampling(
+                "description_generation", config.THINK_DESCRIPTION_GENERATION
+            ),
         ).response
         parsed, error = parse_with_repair(
             response,
@@ -406,7 +408,9 @@ class ConceptDescriber:
             think=config.THINK_DESCRIPTION_GENERATION,
             prompt=prompt,
             format=None if config.THINK_DESCRIPTION_GENERATION else _batch_schema(concepts),
-            temperature=inference.judgement_temperature(config.THINK_DESCRIPTION_GENERATION),
+            sampling=inference.sampling(
+                "description_generation", config.THINK_DESCRIPTION_GENERATION
+            ),
         ).response
         parsed, error = parse_with_repair(
             response,

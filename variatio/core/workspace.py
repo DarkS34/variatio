@@ -6,6 +6,7 @@ from pathlib import Path
 INSTANCE_DIRNAME = "instance"
 CACHE_DIRNAME = "cache"
 RAW_DIRNAME = "raw"
+GENERATIONS_DIRNAME = "generations"
 
 
 @dataclass(frozen=True)
@@ -195,3 +196,14 @@ class Workspace:
         workspace, like `.review_state.json`.
         """
         return self.instance_dir / ".curriculum.json"
+
+    # WHAT IT PRODUCED --------------------------------------------------------------------
+
+    @property
+    def generations_dir(self) -> Path:
+        """The exercises generated here, one JSON per exercise in `user_<id>/` of its author.
+
+        Beside `instance/` and not inside it: a generated exercise neither defines the
+        instance nor can be regenerated, so it is neither an artifact nor a derivation.
+        """
+        return self.root / GENERATIONS_DIRNAME

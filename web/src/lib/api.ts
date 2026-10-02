@@ -352,9 +352,12 @@ export const api = {
     }
     return request<GenerationListing>(`/api/generations?${search.toString()}`);
   },
-  generation: (id: number) => request<GenerationDetail>(`/api/generations/${id}`),
-  deleteGeneration: (id: number) =>
-    request<{ deleted: number }>(`/api/generations/${id}`, { method: "DELETE" }),
+  generation: (id: string) =>
+    request<GenerationDetail>(`/api/generations/${encodeURIComponent(id)}`),
+  deleteGeneration: (id: string) =>
+    request<{ deleted: string }>(`/api/generations/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 
   adminOverview: () => request<AdminOverview>("/api/admin/overview"),
   setAccountEnabled: (userId: number, enabled: boolean) =>

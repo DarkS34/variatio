@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from variatio import config
 from variatio.runtime import taggability
 from variatio.instance.content_context import ContentContext
 from variatio.prompts.es import review_taggable_concepts_prompt
@@ -77,10 +78,10 @@ def test_samples_block_respects_the_per_domain_cap():
             "concepts": ["Recursividad"],
             "primary_concept": "Recursividad",
         }
-        for i in range(taggability.MAX_SAMPLES_PER_DOMAIN + 5)
+        for i in range(config.KG_TAGGABLE_SAMPLES_PER_DOMAIN + 5)
     }
     block = taggability._samples_block(FakeProfile(), bank, ["Recursividad"])
-    assert len(block.splitlines()) == taggability.MAX_SAMPLES_PER_DOMAIN
+    assert len(block.splitlines()) == config.KG_TAGGABLE_SAMPLES_PER_DOMAIN
 
 
 def test_samples_block_degrades_gracefully_without_a_matching_item_type():

@@ -1,151 +1,61 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Brain,
-  Cpu,
-  Hammer,
-  RefreshCw,
-  Save,
-  ScanSearch,
-  SlidersHorizontal,
-  Tags,
-  Wrench,
-} from "lucide-react";
-import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronRight, RefreshCw, Save, Wrench } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
-import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { ReasoningLegend, ReasoningPipeline } from "@/features/admin/ReasoningPipeline";
+import { ReasoningLegend } from "@/features/admin/PhaseNode";
+import { DiffSummary, GroupCard, sameValue } from "@/features/admin/SettingFields";
 import {
-  DiffSummary,
-  GroupCard,
-  sameValue,
-  SettingRow,
-} from "@/features/admin/SettingFields";
-import { useT, type Key } from "@/lib/i18n";
-import type { ConfigPayload, ConfigSetting, ReasoningLane } from "@/lib/types";
+  FlowNode,
+  nodeKeys,
+  Row,
+  StageFlow,
+  valueOf,
+  type FlowContext,
+} from "@/features/admin/StageFlow";
+import {
+  CONFIG_STAGES,
+  homeOf,
+  isCommon,
+  isSharedInto,
+  type ConfigStage,
+} from "@/features/admin/stages";
+import { api } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import type { ConfigPayload, ConfigSetting, ReasoningLane, ReasoningPhase } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-const REASONING_GROUP = "Razonamiento";
-const MODELS_GROUP = "Modelos";
-// A group of its own and not a card inside "Modelos", because it answers a different
-// question: those rows say which model serves each phase of the pipeline, this one says
-// between which models the PERSON asking for an item may choose.
-const OFFERED_GROUP = "Modelos generadores"; // i18n-exempt
-const PHASE_MODEL_PREFIX = "models.phases.";
-const OTHERS_KEY = "__otros__";
+// Drawn in "Administración → Motor", beside the meters that give them meaning, or not at
+// all: the level the process logs at is read from `VARIATIO_LOG_LEVEL` by whoever reads
+// the log. Every one of them belongs to no stage, and none gets a row here.
 export const ENGINE_GROUPS = ["Motor", "Túnel SSH"]; // i18n-exempt
-// Claimed and given NO section, exactly as the engine's two are: the level the process
-// logs at is read from `VARIATIO_LOG_LEVEL` by whoever is reading the log, and it was a
-// whole page of the panel for three rows nobody edits from a browser. Claiming it is what
-// stops the unclaimed-group fallback from handing it a page again in silence.
 const UNLISTED_GROUPS = ["Registro"]; // i18n-exempt
-const CEREBRAS_KEYS = [
-  "engine.cerebras_base_url",
-  "engine.cerebras_api_key",
-  "engine.cerebras_models",
-];
 
 // Drawn INSIDE another setting's field and therefore never as a row of its own: the level a
 // locked model is called with is asked on that model's own line, in `generation.fixed_
-// effort`. A row of its own would offer one level for a map keyed by model — the generic
-// `choices` control has no idea it is looking at a map. It still travels in the save bar's
-// list of pending changes, which reads `payload.settings` unfiltered.
+// effort`. It still travels in the save bar's list of pending changes, which reads
+// `payload.settings` unfiltered.
 const DRAWN_ON_ANOTHER_ROW = ["generation.fixed_effort_levels"];
 
-// The two halves of the nav: what MODEL answers, and what the pipeline does with it.
-// A section declares which half it belongs to and the nav draws them as two lists with a
-// rule between them — eight destinations in one column is a list to be read rather than a
-// place to be found.
-type Family = "models" | "pipeline";
+// A setting no stage claims: what an API older than the stages sends for everything, and
+// what a registry addition without a stage would be. It gets a page rather than vanishing.
+const OTHERS_KEY = "__otros__";
 
-const FAMILIES: { key: Family; labelKey: Key }[] = [
-  { key: "models", labelKey: "cfg.family.models" },
-  { key: "pipeline", labelKey: "cfg.family.pipeline" },
-];
-
-type Section = {
-  key: string;
-  family: Family;
-  // A section built from a group the table below does not claim carries the server's own
-  // name, which has no key: `labelKey` is null there and the raw string is drawn instead.
-  label: string | null;
-  labelKey: Key | null;
-  icon: LucideIcon;
-  descriptionKey: Key | null;
-  groups: string[];
-};
-
-// The registry's groups, folded into destinations a person can hold in their head: one
-// sub-page per question the configuration answers, not one flat list of 132 rows. The
-// group names are the server's; a group nobody claims below still gets a page of its own,
-// so a registry addition never disappears from the screen.
-const SECTIONS: Section[] = [
-  // Every `groups` entry is a REGISTRY group name, matched against what the server sends.
-  // Translating one would stop it matching, which is why they are literals and the labels
-  // beside them are keys.
-  {
-    key: "modelos",
-    family: "models",
-    label: null,
-    labelKey: "cfg.section.models",
-    icon: Brain,
-    descriptionKey: "cfg.section.modelsDesc",
-    groups: [MODELS_GROUP, REASONING_GROUP],
-  },
-  {
-    key: "ofrecidos",
-    family: "models",
-    label: null,
-    labelKey: "cfg.section.offered",
-    icon: Cpu,
-    descriptionKey: "cfg.section.offeredDesc",
-    groups: [OFFERED_GROUP],
-  },
-  {
-    key: "muestreo",
-    family: "pipeline",
-    label: null,
-    labelKey: "cfg.section.sampling",
-    icon: SlidersHorizontal,
-    descriptionKey: "cfg.section.samplingDesc",
-    groups: ["Muestreo", "Ventana de contexto"], // i18n-exempt
-  },
-  {
-    key: "constructores",
-    family: "pipeline",
-    label: null,
-    labelKey: "cfg.section.builders",
-    icon: Hammer,
-    descriptionKey: "cfg.section.buildersDesc",
-    groups: ["Constructores"],
-  },
-  {
-    key: "recuperacion",
-    family: "pipeline",
-    label: null,
-    labelKey: "cfg.section.retrieval",
-    icon: ScanSearch,
-    descriptionKey: "cfg.section.retrievalDesc",
-    groups: ["Recuperación"], // i18n-exempt
-  },
-  {
-    key: "generacion",
-    family: "pipeline",
-    label: null,
-    labelKey: "cfg.section.generation",
-    icon: Tags,
-    descriptionKey: "cfg.section.generationDesc",
-    groups: ["Etiquetado y generación"], // i18n-exempt
-  },
-];
-
+/**
+ * THE CONFIGURATION, ONE SCREEN PER STAGE OF THE PATH.
+ *
+ * Each screen holds everything its stage's work reads: its calls down the page — model,
+ * reasoning and sampling on each node, the call's own parameters under it — then what
+ * governs the stage as a whole, then what every stage shares, and, folded, what it reads
+ * of another stage's (a setting shared is still ONE value: changing it here changes it
+ * there). Nothing is folded that is not also unfolded on its own stage's screen.
+ */
 export function ConfigTab() {
   const tr = useT();
   const { t, plural } = tr;
@@ -154,7 +64,7 @@ export function ConfigTab() {
   const query = useQuery({ queryKey: ["admin", "config"], queryFn: api.adminConfig });
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [applied, setApplied] = useState<string[] | null>(null);
-  const [active, setActive] = useState("motor");
+  const [active, setActive] = useState(CONFIG_STAGES[0].key);
   const [search, setSearch] = useState("");
 
   const invalidate = () => client.invalidateQueries({ queryKey: ["admin", "config"] });
@@ -203,63 +113,20 @@ export function ConfigTab() {
   const stored = new Map(
     payload.settings.map((setting) => [setting.key, setting.value ?? setting.default]),
   );
-  const engineName = String(
-    ("engine.name" in draft ? draft["engine.name"] : stored.get("engine.name")) ?? "ollama",
-  );
-  const hidden = new Set([
-    ...(engineName === "cerebras+ollama" ? [] : CEREBRAS_KEYS),
-    ...DRAWN_ON_ANOTHER_ROW,
-  ]);
-  const named = new Set(payload.groups);
-  const orphans = payload.settings.filter(
+  const visible = payload.settings.filter(
     (setting) =>
-      !named.has(setting.group) &&
+      !DRAWN_ON_ANOTHER_ROW.includes(setting.key) &&
       !ENGINE_GROUPS.includes(setting.group) &&
       !UNLISTED_GROUPS.includes(setting.group),
   );
-  const byGroup = (group: string) =>
-    payload.settings.filter((setting) => setting.group === group && !hidden.has(setting.key));
-  // "Motor" and "Túnel SSH" are drawn in "Administración → Motor", beside the meters that
-  // give them meaning. They are claimed here WITHOUT a section, or the unclaimed-group
-  // fallback below hands them a page of their own again and the move undoes itself.
-  const claimed = new Set([
-    ...SECTIONS.flatMap((section) => section.groups),
-    ...ENGINE_GROUPS,
-    ...UNLISTED_GROUPS,
-  ]);
-  const sections: Section[] = [
-    ...SECTIONS,
-    ...payload.groups
-      .filter((group) => !claimed.has(group))
-      .map((group) => ({
-        key: `grupo:${group}`,
-        family: "pipeline" as Family,
-        label: group,
-        labelKey: null,
-        icon: Wrench,
-        descriptionKey: null,
-        groups: [group],
-      })),
-    ...(orphans.length > 0
-      ? [
-          {
-            key: OTHERS_KEY,
-            family: "pipeline" as Family,
-            label: null,
-            labelKey: "cfg.section.others" as Key,
-            icon: Wrench,
-            descriptionKey: "cfg.section.othersDesc" as Key,
-            groups: [],
-          },
-        ]
-      : []),
-  ].filter((section) =>
-    section.key === OTHERS_KEY
-      ? true
-      : section.groups.some((group) => byGroup(group).length > 0),
+  const orphans = visible.filter((setting) => homeOf(setting) === null);
+  const lanes = new Map((payload.pipeline ?? []).map((lane) => [lane.key, lane]));
+  const served = new Set(payload.stages ?? []);
+  const stages = CONFIG_STAGES.filter(
+    (stage) => served.has(stage.key) && visible.some((setting) => readsIn(setting, stage.key)),
   );
-  const settingsOf = (section: Section) =>
-    section.key === OTHERS_KEY ? orphans : section.groups.flatMap(byGroup);
+  const settingsOf = (key: string) =>
+    key === OTHERS_KEY ? orphans : visible.filter((setting) => readsIn(setting, key));
 
   const setValue = (key: string, value: unknown) =>
     setDraft((prev) => {
@@ -270,71 +137,48 @@ export function ConfigTab() {
       return { ...prev, [key]: value };
     });
   const dirty = Object.keys(draft).length > 0;
-  const pendingOf = (section: Section) => {
-    const keys = new Set(settingsOf(section).map((setting) => setting.key));
-    return Object.keys(draft).filter((key) => keys.has(key)).length;
+  const pendingOf = (key: string) => {
+    const keys = new Set(settingsOf(key).map((setting) => setting.key));
+    return Object.keys(draft).filter((draftKey) => keys.has(draftKey)).length;
   };
 
-  const activeSection = sections.find((section) => section.key === active) ?? sections[0];
+  // The offered models AS THEY STAND IN THE DRAFT, so "Esfuerzo ajustable" follows a model
+  // added or removed above it in the same visit rather than the last save; and the level
+  // declared for each locked one, read from the draft for the same reason.
+  const byKey = new Map(payload.settings.map((setting) => [setting.key, setting]));
+  const offeredSetting = byKey.get("generation.models");
+  const offeredValue = offeredSetting ? valueOf(offeredSetting, draft) : null;
+  const levelsSetting = byKey.get("generation.fixed_effort_levels");
+  const levelsValue = levelsSetting ? valueOf(levelsSetting, draft) : null;
+  const ctx: FlowContext = {
+    byKey,
+    draft,
+    models: payload.models ?? null,
+    onChange: setValue,
+    onReset: (key) => reset.mutate(key),
+    offered: Array.isArray(offeredValue) ? offeredValue.map(String) : [],
+    levels:
+      levelsValue && typeof levelsValue === "object" && !Array.isArray(levelsValue)
+        ? (levelsValue as Record<string, string>)
+        : {},
+    onLevels: (next) => setValue("generation.fixed_effort_levels", next),
+  };
+
+  const activeKey =
+    active === OTHERS_KEY && orphans.length > 0
+      ? OTHERS_KEY
+      : (stages.find((stage) => stage.key === active) ?? stages[0])?.key ?? OTHERS_KEY;
   const term = search.trim().toLowerCase();
   const matches = term
-    ? payload.settings.filter(
-        (setting) =>
-          !hidden.has(setting.key) &&
-          `${setting.name} ${setting.key} ${setting.group}`.toLowerCase().includes(term),
+    ? visible.filter((setting) =>
+        `${setting.name} ${setting.key} ${setting.group}`.toLowerCase().includes(term),
       )
     : null;
-
-  // The offered models AS THEY STAND IN THE DRAFT, so "Esfuerzo ajustable" follows a model
-  // added or removed above it in the same visit rather than the last save.
-  const offeredNow = (() => {
-    const setting = payload.settings.find((entry) => entry.key === "generation.models");
-    const value = setting
-      ? setting.key in draft
-        ? draft[setting.key]
-        : (setting.value ?? setting.default)
-      : null;
-    return Array.isArray(value) ? value.map(String) : [];
-  })();
-
-  // And the level declared for each locked one, read from the draft for the same reason:
-  // the two settings are edited on one row and saved in one request.
-  const levelsNow = (() => {
-    const setting = payload.settings.find(
-      (entry) => entry.key === "generation.fixed_effort_levels",
-    );
-    const value = setting
-      ? setting.key in draft
-        ? draft[setting.key]
-        : (setting.value ?? setting.default)
-      : null;
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, string>)
-      : {};
-  })();
-  const setLevels = (next: Record<string, string>) =>
-    setValue("generation.fixed_effort_levels", next);
-
-  const row = (setting: ConfigSetting) => (
-    <SettingRow
-      key={setting.key}
-      setting={setting}
-      value={setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default)}
-      onChange={(next) => setValue(setting.key, next)}
-      onReset={() => reset.mutate(setting.key)}
-      models={payload.models ?? null}
-      offered={offeredNow}
-      levels={levelsNow}
-      onLevels={setLevels}
-    />
-  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-small text-muted-foreground">
-          {t("cfg.intro")}
-        </p>
+        <p className="max-w-xl text-small text-muted-foreground">{t("cfg.intro")}</p>
         <Button variant="outline" onClick={() => reload.mutate()} disabled={reload.isPending}>
           {reload.isPending ? <Spinner /> : <RefreshCw />}
           {t("cfg.reload")}
@@ -360,51 +204,33 @@ export function ConfigTab() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          {/* Two lists with a rule between them rather than one of eight: the caption
-              says what its half is about, and the rule is what makes the second half read
-              as another kind of question instead of as more of the first. */}
-          {FAMILIES.map(({ key, labelKey }, index) => {
-            const family = sections.filter((section) => section.family === key);
-            if (family.length === 0) return null;
-            return (
-              <div
-                key={key}
-                className={cn("space-y-1", index > 0 && "border-t border-border pt-3")}
-              >
-                <p className="px-1 text-micro text-muted-foreground">{t(labelKey)}</p>
-                <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-                  {family.map((section) => {
-                    const pending = pendingOf(section);
-                    const current = !matches && section.key === activeSection.key;
-                    return (
-                      <li key={section.key} className="shrink-0 lg:shrink">
-                        <button
-                          type="button"
-                          aria-current={current ? "true" : undefined}
-                          onClick={() => {
-                            setSearch("");
-                            setActive(section.key);
-                          }}
-                          className={cn(
-                            "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-body transition-colors",
-                            current
-                              ? "border-border bg-card text-foreground shadow-raised"
-                              : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                          )}
-                        >
-                          <section.icon className="size-4 shrink-0" />
-                          <span className="min-w-0 flex-1 truncate">
-                            {section.labelKey ? t(section.labelKey) : section.label}
-                          </span>
-                          {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
+          <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+            {stages.map((stage) => (
+              <NavItem
+                key={stage.key}
+                current={!matches && stage.key === activeKey}
+                pending={pendingOf(stage.key)}
+                onSelect={() => {
+                  setSearch("");
+                  setActive(stage.key);
+                }}
+                mark={<StageMark stage={stage} />}
+                label={t(stage.labelKey)}
+              />
+            ))}
+            {orphans.length > 0 ? (
+              <NavItem
+                current={!matches && activeKey === OTHERS_KEY}
+                pending={pendingOf(OTHERS_KEY)}
+                onSelect={() => {
+                  setSearch("");
+                  setActive(OTHERS_KEY);
+                }}
+                mark={<Wrench className="size-4 shrink-0" />}
+                label={t("cfg.section.others")}
+              />
+            ) : null}
+          </ul>
         </nav>
 
         <div className="min-w-0 space-y-4">
@@ -413,76 +239,43 @@ export function ConfigTab() {
               <p className="text-small text-muted-foreground">
                 {plural("cfg.matches", matches.length, { term: search.trim() })}
               </p>
-              {matches.map(row)}
-            </div>
-          ) : (
-            <section key={activeSection.key} className="space-y-4">
-              <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
-                  <activeSection.icon className="size-4" />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="font-expanded text-heading">
-                    {activeSection.labelKey ? t(activeSection.labelKey) : activeSection.label}
-                  </h2>
-                  {activeSection.descriptionKey ? (
-                    <p className="text-small text-muted-foreground">
-                      {t(activeSection.descriptionKey)}
-                    </p>
-                  ) : null}
+              {matches.map((setting) => (
+                <div key={setting.key} className="space-y-1">
+                  <HomeCaption setting={setting} />
+                  <Row setting={setting} ctx={ctx} />
                 </div>
-              </div>
-
-              {activeSection.groups.includes(MODELS_GROUP) ? (
-                <PipelineCard
-                  lanes={payload.pipeline ?? []}
-                  settings={payload.settings}
-                  draft={draft}
-                  models={payload.models ?? null}
-                  onChange={setValue}
-                  onReset={(key) => reset.mutate(key)}
-                />
-              ) : activeSection.key === OTHERS_KEY ? (
-                <GroupCard
-                  title={null}
-                  settings={orphans}
-                  draft={draft}
-                  onChange={setValue}
-                  onReset={(key) => reset.mutate(key)}
-                  models={payload.models ?? null}
-                  offered={offeredNow}
-                  levels={levelsNow}
-                  onLevels={setLevels}
-                />
-              ) : (
-                activeSection.groups
-                  .filter((group) => byGroup(group).length > 0)
-                  .map((group) => (
-                    <GroupCard
-                      key={group}
-                      title={activeSection.groups.length > 1 ? group : null}
-                      settings={byGroup(group)}
-                      draft={draft}
-                      onChange={setValue}
-                      onReset={(key) => reset.mutate(key)}
-                      models={payload.models ?? null}
-                      offered={offeredNow}
-                      levels={levelsNow}
-                      onLevels={setLevels}
-                    />
-                  ))
-              )}
+              ))}
+            </div>
+          ) : activeKey === OTHERS_KEY ? (
+            <section className="space-y-4">
+              <StageHeader
+                mark={<Wrench className="size-4" />}
+                title={t("cfg.section.others")}
+                description={t("cfg.section.othersDesc")}
+              />
+              <GroupCard
+                title={null}
+                settings={orphans}
+                draft={draft}
+                onChange={setValue}
+                onReset={(key) => reset.mutate(key)}
+                models={payload.models ?? null}
+                offered={ctx.offered}
+                levels={ctx.levels}
+                onLevels={ctx.onLevels}
+              />
             </section>
+          ) : (
+            <StageView
+              key={activeKey}
+              stage={stages.find((stage) => stage.key === activeKey)!}
+              lane={lanes.get(activeKey) ?? null}
+              lanes={payload.pipeline ?? []}
+              settings={settingsOf(activeKey)}
+              ctx={ctx}
+              onGo={(key) => setActive(key)}
+            />
           )}
-
-          {"engine.name" in draft ? (
-            <Alert tone="attention" title={t("cfg.engineChange")}>
-              {t("cfg.engineChangeBody", {
-                next: String(draft["engine.name"]),
-                current: String(stored.get("engine.name")),
-              })}
-            </Alert>
-          ) : null}
 
           <DiffSummary settings={payload.settings} draft={draft} />
         </div>
@@ -508,86 +301,279 @@ export function ConfigTab() {
   );
 }
 
-function PipelineCard({
+/** Whether `stage`'s screen draws `setting`: its own, one every stage shares, or one it reads. */
+function readsIn(setting: ConfigSetting, stage: string): boolean {
+  return (setting.stages ?? []).includes(stage);
+}
+
+/**
+ * One stage: its calls, what governs it whole, what all stages share, and what it reads of
+ * another's — each of those drawn only when it holds something.
+ */
+function StageView({
+  stage,
+  lane,
   lanes,
   settings,
-  draft,
-  models,
-  onChange,
-  onReset,
+  ctx,
+  onGo,
 }: {
+  stage: ConfigStage;
+  lane: ReasoningLane | null;
   lanes: ReasoningLane[];
   settings: ConfigSetting[];
-  draft: Record<string, unknown>;
-  models: ConfigPayload["models"] | null;
-  onChange: (key: string, value: unknown) => void;
-  onReset: (key: string) => void;
+  ctx: FlowContext;
+  onGo: (stage: string) => void;
 }) {
   const { t } = useT();
-  const phases = lanes.flatMap((lane) => lane.phases);
-  const drawn = new Set([
-    ...phases.map((phase) => phase.setting),
-    ...phases.map((phase) => phase.effort),
-    ...phases.map((phase) => phase.model).filter((key) => key.startsWith(PHASE_MODEL_PREFIX)),
-  ]);
-  const ofGroups = settings.filter(
-    (setting) => setting.group === MODELS_GROUP || setting.group === REASONING_GROUP,
+  const own = settings.filter((setting) => homeOf(setting) === stage.key && !isCommon(setting));
+  const phases = lane?.phases ?? [];
+  const onNodes = new Set(phases.flatMap(nodeKeys));
+  const phaseKeys = new Set(phases.map((phase) => phase.key));
+  const underNode = (phase: ReasoningPhase) =>
+    own.filter((setting) => setting.phase === phase.key && !onNodes.has(setting.key));
+  const general = own.filter(
+    (setting) => !onNodes.has(setting.key) && !(setting.phase && phaseKeys.has(setting.phase)),
   );
-  const residents = ofGroups.filter(
-    (setting) => setting.group === MODELS_GROUP && !drawn.has(setting.key),
-  );
-  const rest = ofGroups.filter(
-    (setting) => setting.group === REASONING_GROUP && !drawn.has(setting.key),
-  );
-  const inNodes = ofGroups.filter((setting) => drawn.has(setting.key));
-  const current = (setting: ConfigSetting) =>
-    setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
-  const row = (setting: ConfigSetting) => (
-    <SettingRow
-      key={setting.key}
-      setting={setting}
-      value={current(setting)}
-      onChange={(next) => onChange(setting.key, next)}
-      onReset={() => onReset(setting.key)}
-      models={models}
-    />
-  );
+  const common = settings.filter(isCommon);
+  const shared = settings.filter((setting) => isSharedInto(setting, stage.key));
 
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-4">
-        <ReasoningPipeline
-          lanes={lanes}
-          settings={settings}
-          draft={draft}
-          models={models}
-          onChange={onChange}
+    <section className="space-y-4">
+      <StageHeader
+        mark={<StageMark stage={stage} />}
+        title={t(stage.labelKey)}
+        description={t(stage.descriptionKey)}
+      />
+
+      {phases.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>{t("cfg.flow")}</CardTitle>
+            <CardDescription>{t("cfg.flowDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <StageFlow lane={lane!} ctx={ctx} rowsOf={underNode} />
+            <ReasoningLegend />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {general.length > 0 ? (
+        <SettingsCard title={t("cfg.general")} settings={general} ctx={ctx} />
+      ) : null}
+
+      {common.length > 0 ? (
+        <SettingsCard
+          title={t("cfg.common")}
+          description={t("cfg.commonDesc")}
+          settings={common}
+          ctx={ctx}
         />
-        <ReasoningLegend />
-        {inNodes.length > 0 ? (
-          <details className="text-small text-muted-foreground">
-            <summary className="cursor-pointer select-none">{t("cfg.whyEachNode")}</summary>
-            <dl className="mt-2 space-y-3">
-              {inNodes
-                .filter((setting) => setting.doc && setting.name)
-                .map((setting) => (
-                  <div key={setting.key}>
-                    <dt className="font-mono text-foreground">{setting.name}</dt>
-                    <dd className="mt-0.5 whitespace-pre-wrap">{setting.doc}</dd>
-                  </div>
-                ))}
-            </dl>
-          </details>
+      ) : null}
+
+      {shared.length > 0 ? (
+        <SharedBlock stage={stage} shared={shared} lanes={lanes} ctx={ctx} onGo={onGo} />
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * What this stage reads of other stages' settings, folded: each value is ONE, unfolded on
+ * its own stage's screen, so folding it here never hides the only copy.
+ *
+ * A call of another stage that this one makes too (the repair, the tagger) is drawn as its
+ * node, with its sampling and its rows; a setting this stage reads without making the call
+ * goes in a list under the name of the stage that owns it.
+ */
+function SharedBlock({
+  stage,
+  shared,
+  lanes,
+  ctx,
+  onGo,
+}: {
+  stage: ConfigStage;
+  shared: ConfigSetting[];
+  lanes: ReasoningLane[];
+  ctx: FlowContext;
+  onGo: (stage: string) => void;
+}) {
+  const { t } = useT();
+  // Another stage's call is THIS stage's too when its model is read here, not merely one
+  // setting drawn under it: the plural suffixes sit under the graph's merge and are read
+  // by the generation's checks, which never call the merge.
+  const calls = lanes
+    .flatMap((lane) => lane.phases.map((phase) => ({ lane, phase })))
+    .filter(({ lane, phase }) => {
+      if (lane.key === stage.key) return false;
+      const model = ctx.byKey.get(phase.model);
+      return Boolean(model && (model.stages ?? []).includes(stage.key));
+    });
+  const callKeys = new Set(calls.map(({ phase }) => phase.key));
+  const drawn = new Set(calls.flatMap(({ phase }) => nodeKeys(phase)));
+  const loose = shared.filter(
+    (setting) => !drawn.has(setting.key) && !(setting.phase && callKeys.has(setting.phase)),
+  );
+  const looseHomes = [...new Set(loose.map((setting) => homeOf(setting)!))];
+
+  return (
+    <details className="group rounded-lg border border-border bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+        <span className="font-expanded text-body">{t("cfg.shared", { n: shared.length })}</span>
+        <span className="text-small text-muted-foreground">{t("cfg.sharedDesc")}</span>
+      </summary>
+      <div className="space-y-5 border-t border-border p-4">
+        {calls.length > 0 ? (
+          <ol>
+            {calls.map(({ lane, phase }, index) => (
+              <FlowNode
+                key={phase.key}
+                phase={phase}
+                ctx={ctx}
+                rows={shared.filter(
+                  (setting) => setting.phase === phase.key && !drawn.has(setting.key),
+                )}
+                aside={<OwnerLink stageKey={lane.key} onGo={onGo} />}
+                last={index === calls.length - 1}
+              />
+            ))}
+          </ol>
         ) : null}
-        {rest.map(row)}
-        {/* The two resident models go LAST and are read-only: neither serves a phase — the
-            guardrail screens the free text, the embedder writes the index — so they are
-            what is left once the pipeline has said everything. The rows still read: the
-            value, its source and the measurement behind it. */}
-        {residents.map(row)}
+        {looseHomes.map((home) => (
+          <div key={home} className="space-y-2">
+            <OwnerLink stageKey={home} onGo={onGo} />
+            {loose
+              .filter((setting) => homeOf(setting) === home)
+              .map((setting) => (
+                <Row key={setting.key} setting={setting} ctx={ctx} />
+              ))}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function SettingsCard({
+  title,
+  description,
+  settings,
+  ctx,
+}: {
+  title: string;
+  description?: string;
+  settings: ConfigSetting[];
+  ctx: FlowContext;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle>{title}</CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {settings.map((setting) => (
+          <Row key={setting.key} setting={setting} ctx={ctx} />
+        ))}
       </CardContent>
     </Card>
   );
 }
 
-/** The settings whose value is a model name: the three residents and every phase override. */
+/** The stage that owns a shared setting, as a way there. */
+function OwnerLink({ stageKey, onGo }: { stageKey: string; onGo: (stage: string) => void }) {
+  const { t } = useT();
+  const stage = CONFIG_STAGES.find((entry) => entry.key === stageKey);
+  if (!stage) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onGo(stage.key)}
+      className="inline-flex items-center gap-1.5 text-small text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+    >
+      <StageMark stage={stage} />
+      {t("cfg.ownedBy", { stage: t(stage.labelKey) })}
+    </button>
+  );
+}
+
+/** Above a search result: the screen it lives on. */
+function HomeCaption({ setting }: { setting: ConfigSetting }) {
+  const { t } = useT();
+  const stage = CONFIG_STAGES.find((entry) => entry.key === homeOf(setting));
+  return (
+    <p className="flex items-center gap-1.5 text-micro text-muted-foreground">
+      {stage ? <StageMark stage={stage} /> : null}
+      {stage ? t(stage.labelKey) : t("cfg.section.others")}
+    </p>
+  );
+}
+
+/** A stage's mark, as the bar draws it: its number, or the icon of its door. */
+function StageMark({ stage }: { stage: ConfigStage }) {
+  if (stage.icon) return <stage.icon className="size-4 shrink-0" />;
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center border border-current text-micro leading-none">
+      {stage.number}
+    </span>
+  );
+}
+
+function StageHeader({
+  mark,
+  title,
+  description,
+}: {
+  mark: ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
+        {mark}
+      </span>
+      <div className="min-w-0">
+        <h2 className="font-expanded text-heading">{title}</h2>
+        <p className="text-small text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function NavItem({
+  current,
+  pending,
+  onSelect,
+  mark,
+  label,
+}: {
+  current: boolean;
+  pending: number;
+  onSelect: () => void;
+  mark: ReactNode;
+  label: string;
+}) {
+  return (
+    <li className="shrink-0 lg:shrink">
+      <button
+        type="button"
+        aria-current={current ? "true" : undefined}
+        onClick={onSelect}
+        className={cn(
+          "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-body transition-colors",
+          current
+            ? "border-border bg-card text-foreground shadow-raised"
+            : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        )}
+      >
+        {mark}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
+      </button>
+    </li>
+  );
+}

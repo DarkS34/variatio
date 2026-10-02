@@ -5,7 +5,7 @@ import os
 from loguru import logger
 
 from . import derived, store
-from .registry import BY_KEY, BY_NAME, GROUPS, PIPELINE, REGISTRY
+from .registry import BY_KEY, BY_NAME, GROUPS, PIPELINE, REGISTRY, STAGES
 from .types import Impact, Setting, SettingError
 
 _values: dict[str, object] = {}
@@ -161,7 +161,11 @@ def _refuse_unresettable(keys: list[str]) -> None:
 
 
 def snapshot() -> list[dict]:
-    """Return every setting as the panel reads it; a secret reports only whether it is set."""
+    """Return every setting as the panel reads it; a secret reports only whether it is set.
+
+    The measured `doc` stays in the registry: it is written for whoever changes a value
+    there, and the panel's one-line hints live in the client's catalogue.
+    """
     engine = active_engine()
     out = []
     for setting in REGISTRY:
@@ -170,7 +174,6 @@ def snapshot() -> list[dict]:
             "name": setting.name,
             "kind": setting.kind,
             "group": setting.group,
-            "doc": setting.doc,
             "impact": setting.impact.value,
             "editable": setting.editable and setting.impact is not Impact.LOCKED,
             "source": _sources.get(setting.key, "default"),
@@ -181,6 +184,8 @@ def snapshot() -> list[dict]:
             "nullable": setting.nullable,
             "secret": setting.secret,
             "scope": setting.scope,
+            "stages": list(setting.stages),
+            "phase": setting.phase,
         }
         if setting.secret:
             row["state"] = "configurada" if _values.get(setting.key) else "ausente"
@@ -198,12 +203,11 @@ def active_engine() -> str | None:
 
 
 def pipeline() -> list[dict]:
-    """Serialise the reasoning pipeline: one lane per column, one phase per model call."""
+    """Serialise the pipeline: one lane per stage, one phase per model call."""
     return [
         {
             "key": lane.key,
             "label": lane.label,
-            "shared": lane.shared,
             "phases": [
                 {
                     "key": phase.key,
@@ -226,6 +230,7 @@ __all__ = [
     "Impact",
     "PIPELINE",
     "REGISTRY",
+    "STAGES",
     "Setting",
     "SettingError",
     "apply",

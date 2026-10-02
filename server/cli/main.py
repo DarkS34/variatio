@@ -13,7 +13,7 @@ from variatio.core.paths import PROJECT_ROOT
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-from . import accounts, diagnostics, instances
+from . import accounts, diagnostics, generations, instances
 from .common import PROG, guarded
 from .serve import serve
 
@@ -68,6 +68,15 @@ def build_parser():
         help="asignatura de destino en disco; por defecto, la misma que --slug",
     )
     exporter.set_defaults(func=guarded(instances.export_instance))
+
+    generated = subparsers.add_parser(
+        "export-generations",
+        help="vuelca los ejercicios generados de la base de datos a ficheros de cada asignatura",
+    )
+    generated.add_argument(
+        "--dry-run", action="store_true", help="dice qué escribiría, sin escribir nada"
+    )
+    generated.set_defaults(func=guarded(generations.export_generations))
 
     listing = subparsers.add_parser("workspaces", help="lista las asignaturas de la base de datos")
     listing.set_defaults(func=guarded(instances.list_workspaces))

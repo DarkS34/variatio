@@ -22,10 +22,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from .. import approvals, auth, deps, installation, maintenance, singletons, storage
+from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import links
 from ..auth.rate_limit import locked_seconds, throttle, unlock
-from ..db import generations, identity, repository
+from ..db import identity, repository
 from ..db.models import EDITOR, ROLES, Invite, User, Workspace
 from ..jobs import lanes as jobs_lanes
 
@@ -146,7 +147,7 @@ def _workspace_view(db: DbSession, workspace) -> dict:
         "name": workspace.name,
         "created_at": workspace.created_at.isoformat() if workspace.created_at else None,
         "members": len(identity.members_of(db, workspace.id)),
-        "generations": generations.count_generations(db, workspace.id),
+        "generations": generations_store.count(installation.workspace_for(workspace.slug)),
         "warm": workspace.slug in deps.warm_slugs(),
         "stages": _chain(workspace.slug),
         "disk": installation.disk_usage(installation.workspace_for(workspace.slug)),
@@ -158,14 +159,15 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
     """Answer the whole panel: totals, every account, every instance and the queue."""
     workspaces = repository.list_workspaces(db)
     users = identity.list_users(db)
-    generated = generations.generations_per_user(db)
+    trees = [installation.workspace_for(workspace.slug) for workspace in workspaces]
+    generated = generations_store.count_by_author(trees)
 
     running = singletons.runner.running()
     return {
         "totals": {
             "users": len(users),
             "workspaces": len(workspaces),
-            "generations": generations.count_generations(db),
+            "generations": sum(generations_store.count(ws) for ws in trees),
         },
         "accounts": [_account_view(db, user, generated) for user in users],
         "workspaces": [_workspace_view(db, workspace) for workspace in workspaces],
@@ -626,9 +628,9 @@ def delete_account(
     """Delete one account. What it produced survives it.
 
     Deliberately not `disable`: that keeps the account and shuts the door, this removes
-    the account and leaves standing what it made — `generations.user_id` and
-    `evaluation_sessions.user_id` are `SET NULL`, so deleting somebody must not delete the
-    material a course was built on. Deleting yourself is refused, which is also what keeps
+    the account and leaves standing what it made — its generated exercises stay in their
+    directory of the workspace, which nobody reads any more, and `evaluation_sessions.user_id`
+    is `SET NULL`, so deleting somebody must not delete the material a course was built on. Deleting yourself is refused, which is also what keeps
     the installation from losing its last administrator.
     """
     user = identity.get_user_by_id(db, user_id)

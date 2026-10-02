@@ -217,7 +217,7 @@ def _already_used_block(already_generated: list[str]) -> str:
     """Render the statements this commission has already produced, as settings to avoid."""
     if not already_generated:
         return ""
-    existing_lines = "\n".join(f"- {s.strip()[:240]}" for s in already_generated)
+    existing_lines = "\n".join(f"- {s.strip()}" for s in already_generated)
     return (
         "\n# SETTINGS ALREADY USED\n"
         "Statements already produced in this same commission or saved earlier in this course "

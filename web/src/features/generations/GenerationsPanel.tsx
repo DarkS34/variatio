@@ -32,9 +32,9 @@ import { useT } from "@/lib/i18n";
 /**
  * Everything this account has generated, kept.
  *
- * Every validated item is a row, and the row carries the commission that produced it —
- * concepts, curriculum, fixed fields, instructions, whether the model reasoned — because a
- * statement without its parameters can be read but neither judged nor reproduced.
+ * Every validated item is saved, with the commission that produced it — concepts,
+ * curriculum, fixed fields, instructions, whether the model reasoned — because a statement
+ * without its parameters can be read but neither judged nor reproduced.
  *
  * YOURS AND NOBODY ELSE'S: the endpoint answers your own rows and only those, so there is
  * no scope to flip and no author to print on a row.
@@ -68,7 +68,7 @@ function GenerationsList() {
   const profileQuery = useProfile();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState<number | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   const listing = useGenerations({ q: search || undefined, limit: 60 });
   const remove = useDeleteGeneration();
@@ -205,6 +205,9 @@ function GenerationCard({
   const spec = profile ? itemTypeOf(profile, { item_type: row.item_type }) : null;
   const manyTypes = profile ? Object.keys(profile.item_types).length > 1 : false;
   const primary = spec ? fieldText(row.item[spec.primary_field]) : "";
+  // What it practises: the targets that ran, which an older API does not send, and the
+  // concepts asked for otherwise — empty when the bank chose them and nobody recorded which.
+  const concepts = row.targets?.length ? row.targets : row.concepts;
 
   return (
     <Card>
@@ -220,7 +223,7 @@ function GenerationCard({
             <Badge variant="outline">{typeLabel(profile, row.item_type, t)}</Badge>
           ) : null}
           <CardTitle className="text-body">
-            {row.concepts.length > 0 ? row.concepts.join(" · ") : t("generations.noConcepts")}
+            {concepts.length > 0 ? concepts.join(" · ") : t("generations.noConcepts")}
           </CardTitle>
 
           <div className="ml-auto flex gap-1">

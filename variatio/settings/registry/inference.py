@@ -1,6 +1,6 @@
 """The engine settings: the two engines, the phase models, sampling and context windows."""
 
-from ..types import Impact, Setting
+from ..types import STAGES, Impact, Setting
 
 _IDLE_DOC = """Cuánto puede estar el servidor sin ejecutar un solo trabajo antes de soltar la GPU
 (`inference.unload_all()`, que es `ollama stop` de cada modelo residente).
@@ -58,12 +58,6 @@ Tres cosas que leer ahí antes de tocar nada:
 
 La `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres, y
 por eso el MoE de transcripción es la q8_0 y no la q4."""
-
-_TEMPERATURE_REPAIR_DOC = """Constante propia aunque coincida con la de razonamiento, porque no se movería con ella:
-reparar es un bucle de REINTENTO, y un reintento a 0 no es un reintento. El prompt del
-intento N+1 es la salida del intento N, así que un modelo voraz reconstruye el prompt
-idéntico y escribe la respuesta idéntica — el presupuesto entero gastado en una réplica
-byte a byte, que es el fallo que `parse_with_repair` documenta haber pagado una vez."""
 
 _CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en la
 A40 a través de `/api/ps`, el modelo de juicio a 65536 + guardarraíl + embebedor suman
@@ -157,7 +151,7 @@ en `generation.fixed_effort`: bloquear el deslizador y decidir con qué nivel se
 misma decisión vista por sus dos caras, y quien la toma es quien administra la instalación.
 
 UN MODELO BLOQUEADO SIN NIVEL DECLARADO se llama con el que resuelva el motor
-(`inference.DEFAULT_THINK_EFFORT`, «low» en los dos). Sin este ajuste el navegador esconde
+(`reasoning.default_effort`, «low» por defecto). Sin este ajuste el navegador esconde
 el deslizador pero sigue mandando el último nivel que tuviera puesto, así que el bloqueo
 diría «lo fija la instalación» y lo fijaría el navegador.
 
@@ -513,6 +507,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default="granite4.1-guardian:8b-q4_K_M",
         group="Modelos",
+        stages=("generation",),
+        phase="guardrail",
         impact=Impact.CONTEXTS,
         scope="engine",
         editable=False,
@@ -524,6 +520,7 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default="qwen3-embedding:4b",
         group="Modelos",
+        stages=("bank", "graph", "generation"),
         impact=Impact.REINDEX,
         scope="engine",
         editable=False,
@@ -535,6 +532,7 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="float",
         default=0.0,
         group="Muestreo",
+        stages=STAGES,
         impact=Impact.NONE,
         minimum=0.0,
         maximum=2.0,
@@ -546,32 +544,11 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="float",
         default=0.2,
         group="Muestreo",
+        stages=STAGES,
         impact=Impact.NONE,
         minimum=0.0,
         maximum=2.0,
         doc=_TEMPERATURE_DOC,
-    ),
-    Setting(
-        key="sampling.temperature_generation",
-        name="TEMPERATURE_GENERATION",
-        kind="float",
-        default=0.3,
-        group="Muestreo",
-        impact=Impact.NONE,
-        minimum=0.0,
-        maximum=2.0,
-        doc=_TEMPERATURE_DOC,
-    ),
-    Setting(
-        key="sampling.temperature_repair",
-        name="TEMPERATURE_REPAIR",
-        kind="float",
-        default=0.2,
-        group="Muestreo",
-        impact=Impact.NONE,
-        minimum=0.0,
-        maximum=2.0,
-        doc=_TEMPERATURE_REPAIR_DOC,
     ),
     Setting(
         key="context_window.guardrail",
@@ -579,6 +556,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="int",
         default=4096,
         group="Ventana de contexto",
+        stages=("generation",),
+        phase="guardrail",
         scope="engine",
         impact=Impact.CONTEXTS,
         minimum=2048,
@@ -590,6 +569,7 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="int",
         default=4096,
         group="Ventana de contexto",
+        stages=("bank", "graph", "generation"),
         scope="engine",
         impact=Impact.REINDEX,
         minimum=512,
@@ -601,6 +581,7 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="int",
         default=65536,
         group="Ventana de contexto",
+        stages=STAGES,
         scope="engine",
         impact=Impact.CONTEXTS,
         minimum=2048,
@@ -612,6 +593,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("transcription",),
+        phase="transcribe",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -623,6 +606,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("transcription",),
+        phase="transcribe_seam",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -634,6 +619,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("profile",),
+        phase="ep_scan",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -647,6 +634,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("profile",),
+        phase="ep_consolidate",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -658,6 +647,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("profile",),
+        phase="ep_context",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -669,6 +660,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("bank",),
+        phase="eb_extract",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -680,6 +673,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_extract",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -691,6 +686,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_clean_merge",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -702,6 +699,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_clean_drop",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -713,6 +712,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_units",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -727,6 +728,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_domains",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -738,6 +741,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_domains_leftovers",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -752,6 +757,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_link_domain",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -765,6 +772,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_link_cross_domain",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -778,6 +787,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_context",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -791,6 +802,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="description_generation",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -806,6 +819,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("graph",),
+        phase="kg_taggable",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -819,6 +834,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("bank", "generation"),
+        phase="concept_tagger",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -833,6 +850,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="list[str]",
         default=[_MAIN],
         group=OFFERED_GROUP,
+        stages=("generation",),
+        phase="variant_generation",
         impact=Impact.CONTEXTS,
         scope="engine",
         min_items=1,
@@ -845,6 +864,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="list[str]",
         default=[],
         group=OFFERED_GROUP,
+        stages=("generation",),
+        phase="variant_generation",
         # Nothing on the server reads it: it travels to the browser through `/api/health`
         # and decides one control. No context to rebuild, no index to re-embed.
         impact=Impact.NONE,
@@ -858,6 +879,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="dict[str,str]",
         default={},
         group=OFFERED_GROUP,
+        stages=("generation",),
+        phase="variant_generation",
         # Read by the same two readers as the list it accompanies — the generate screen and
         # the handler that resolves a commission. No context to rebuild, no index to
         # re-embed.
@@ -872,6 +895,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("generation",),
+        phase="admissibility",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
@@ -889,6 +914,8 @@ Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando 
         kind="str",
         default=_MAIN,
         group="Modelos",
+        stages=("generation", "profile", "graph", "bank"),
+        phase="repair",
         impact=Impact.CONTEXTS,
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,

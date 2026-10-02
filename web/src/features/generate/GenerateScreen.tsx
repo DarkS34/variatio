@@ -40,7 +40,7 @@ interface Result {
   item_type?: string;
   checks?: ItemChecks | null;
   retried?: number;
-  saved_id?: number | null;
+  saved_id?: string | number | null;
 }
 
 export function GenerateScreen() {

@@ -146,6 +146,31 @@ _DEFAULTS = {
     "admissibility": (False, _ADMISSIBILITY_DOC),
 }
 
+# The stages whose work makes each phase's call, the one whose lane draws it first.
+_STAGES = {
+    **dict.fromkeys(("transcribe", "transcribe_image", "transcribe_seam"), ("transcription",)),
+    **dict.fromkeys(("ep_scan", "ep_consolidate", "ep_context"), ("profile",)),
+    "eb_extract": ("bank",),
+    **dict.fromkeys(
+        (
+            "kg_extract",
+            "kg_clean_merge",
+            "kg_clean_drop",
+            "kg_units",
+            "kg_domains",
+            "kg_domains_leftovers",
+            "kg_link_domain",
+            "kg_link_cross_domain",
+            "description_generation",
+            "kg_taggable",
+            "kg_context",
+        ),
+        ("graph",),
+    ),
+    "concept_tagger": ("bank", "generation"),
+    "admissibility": ("generation",),
+}
+
 
 def _toggle(phase: str) -> Setting:
     """Declare one phase's `THINK_<PHASE>` switch, defaulting to what its call did before."""
@@ -156,6 +181,8 @@ def _toggle(phase: str) -> Setting:
         kind="bool",
         default=default,
         group=GROUP,
+        stages=_STAGES[phase],
+        phase=phase,
         impact=Impact.NONE,
         scope="engine",
         doc=doc + "\n\n" + _SHARED_DOC,
@@ -164,7 +191,7 @@ def _toggle(phase: str) -> Setting:
 
 _EFFORT_DOC = """Cuánto razona esta fase cuando su interruptor está encendido; con él apagado no pinta nada.
 Los booleanos que quedan (el `think` del encargo, la columna `generations.think`, el
-interruptor de la UI) se traducen al «low» fijo de `inference.DEFAULT_THINK_EFFORT`.
+interruptor de la UI) se traducen al nivel de `reasoning.default_effort`, «low» por defecto.
 
 `low` por defecto y no algo más alto, medido en la A40 con /api/generate:
 
@@ -204,6 +231,8 @@ def _effort(phase: str) -> Setting:
         kind="str",
         default="low",
         group=GROUP,
+        stages=_STAGES[phase],
+        phase=phase,
         impact=Impact.NONE,
         scope="engine",
         choices=("low", "medium", "high", "max"),
@@ -216,12 +245,40 @@ PHASE_KEYS = tuple(_DEFAULTS)
 SETTINGS: list[Setting] = [
     *(_toggle(phase) for phase in _DEFAULTS),
     *(_effort(phase) for phase in _DEFAULTS),
+    Setting(
+        key="reasoning.default_effort",
+        name="DEFAULT_THINK_EFFORT",
+        kind="str",
+        default="low",
+        group=GROUP,
+        stages=("generation",),
+        phase="variant_generation",
+        impact=Impact.NONE,
+        scope="engine",
+        choices=("low", "medium", "high", "max"),
+        doc="""Con qué esfuerzo razona una llamada a la que solo se le dice QUE razone, sin nivel: un
+encargo cuyo interruptor de razonamiento está encendido, cada sesión de la evaluación que
+sortea razonar, y un modelo de esfuerzo fijo sin nivel declarado. Las fases del pipeline no
+lo usan: cada una tiene el suyo (`reasoning.effort.*`). `inference._think_option` y
+`cerebras.reasoning_effort` son los dos únicos sitios que convierten `True` en un nivel, y
+los dos lo leen aquí.
+
+«low» por la misma medición que los esfuerzos por fase: el nivel mueve el TECHO de la
+deliberación y no su suelo, y `high` devolvió una respuesta vacía en una llamada de curación
+real. Cambiarlo cambia lo que el estudio midió como «razonando».""",
+    ),
 ]
 
 
 GRAMMAR = "grammar"
 COMMISSION = "commission"
 MODEL = "model"
+# The reasons a call outside the pipeline proper gives: drawn per run, decided by a hosted
+# provider, or never asked to reason at all.
+DRAWN = "drawn"
+EXTERNAL = "external"
+OFF = "off"
+FIXED = (GRAMMAR, COMMISSION, MODEL, DRAWN, EXTERNAL, OFF)
 
 
 @dataclass(frozen=True)
@@ -239,17 +296,15 @@ class Phase:
 
 @dataclass(frozen=True)
 class Lane:
-    """One column of the pipeline: the phases of a build, or of a run.
+    """One stage of the pipeline as its calls: the phases of a build, or of a run.
 
-    A `shared` lane is not a builder's own: it is the step every builder runs before its
-    own work, so the panel draws it ONCE and ACROSS, above the columns, instead of
-    repeating it at the head of each of them.
+    `key` is the stage it belongs to (`types.STAGES`), and its phases are that stage's
+    calls in the order its work makes them; the panel draws them down that stage's screen.
     """
 
     key: str
     label: str
     phases: tuple[Phase, ...]
-    shared: bool = False
 
 
 def _switch(key: str, label: str, note: str = "") -> Phase:
@@ -271,9 +326,8 @@ _IMAGE_NOTE = (
 )
 _SEAM_NOTE = "Clasifica cómo se pega una página con la siguiente, una llamada por costura."
 
-# Reading the documents is a step of its own, drawn as a `shared` lane above the other four.
-# Its three phases are the SAME three settings for the three builders — one each, not three
-# — so repeating them at the head of every column draws nine nodes for three decisions.
+# Reading the documents is a stage of its own, before the three builders: its three phases
+# are the SAME three settings for all of them — one each, not three.
 _TRANSCRIPTION = Lane(
     "transcription",
     "Transcripción",
@@ -289,7 +343,6 @@ _TRANSCRIPTION = Lane(
         ),
         _switch("transcribe_seam", "Costura", _SEAM_NOTE),
     ),
-    shared=True,
 )
 
 
@@ -347,7 +400,7 @@ PIPELINE: tuple[Lane, ...] = (
         ),
     ),
     Lane(
-        "run",
+        "generation",
         "Generación",
         (
             Phase(

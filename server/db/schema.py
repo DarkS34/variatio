@@ -2,8 +2,8 @@
 
 A database that answers is not a database that is up to date, and the difference is
 invisible until a request touches the column the migration would have added: what reaches
-the person is a 500 on an unrelated button — deleting a workspace loads its generations to
-cascade them, so a missing `generations.model` broke a route that has nothing to do with
+the person is a 500 on an unrelated button — deleting a workspace loaded its generations to
+cascade them, so a missing `generations.model` broke a route that had nothing to do with
 which model wrote anything. Comparing the revisions costs one query and turns that into a
 sentence naming the command that fixes it.
 

@@ -24,26 +24,12 @@ loop is in the middle.
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 
-# How many trailing lines must repeat before a line loop is declared. A drawn grid is tens
-# of identical rows; a real table repeats nothing this long, and a page of code written by
-# a person does not carry twenty-four identical lines in a row.
-LINE_LOOP_LINES = 24
-# The longest block of lines that counts as one repeated unit. Above it the repetition is
-# content — two identical stanzas are two stanzas.
-MAX_LINE_PERIOD = 8
-# At least this many repetitions of a block, whatever its length.
-MIN_LINE_REPEATS = 4
-# How many trailing characters must repeat a short unit before a character loop is declared:
-# a rule of four hundred underscores is a drawing, not text, and a Markdown table separator
-# or a heading underline never runs this long.
-CHAR_LOOP_CHARS = 400
-MAX_CHAR_PERIOD = 16
+from .. import config
 
-# How much of a repeated unit is quoted back — to the model on the retry, to a person on
-# the failure marker. A grid row is thirty characters; the rest of a long unit says nothing.
-QUOTE_CHARS = 60
-
+# Every threshold is a setting (`builders.transcribe_loop_*`), read at each call: the
+# detector also judges pages already on disk, so its verdict follows the value in force.
 
 @dataclass(frozen=True)
 class Loop:
@@ -51,13 +37,6 @@ class Loop:
 
     start: int
     unit: str
-
-
-# A character loop anywhere: the shortest unit of up to `MAX_CHAR_PERIOD` characters that
-# repeats at least this many times in a row; the match is then measured against
-# `CHAR_LOOP_CHARS`. A lazy unit finds `\_` before `\_\_`, and the repeat floor keeps the
-# search from stopping at every doubled letter of ordinary prose.
-_CHAR_RUN_RE = re.compile(r"(.{1,%d}?)\1{24,}" % MAX_CHAR_PERIOD, re.DOTALL)
 
 
 def detect(text: str) -> Loop | None:
@@ -91,15 +70,19 @@ def cut(text: str, loop: Loop) -> str:
 def quoted(unit: str) -> str:
     """One line naming a repeated unit, short enough to sit inside a sentence."""
     flat = " ⏎ ".join(part for part in unit.split("\n")).strip()
-    return flat if len(flat) <= QUOTE_CHARS else flat[:QUOTE_CHARS] + "…"
+    cap = config.TRANSCRIBE_LOOP_QUOTE_CHARS
+    return flat if len(flat) <= cap else flat[:cap] + "…"
 
 
 def _line_run(text: str) -> Loop | None:
-    """The first run of lines, anywhere, that repeats a block of at most `MAX_LINE_PERIOD`."""
+    """The first run of lines, anywhere, that repeats a block of a few lines at most."""
     raw = text.split("\n")
     lines = [line.rstrip() for line in raw]
-    for period in range(1, MAX_LINE_PERIOD + 1):
-        needed = max(LINE_LOOP_LINES - period, (MIN_LINE_REPEATS - 1) * period)
+    for period in range(1, config.TRANSCRIBE_LOOP_MAX_LINE_PERIOD + 1):
+        needed = max(
+            config.TRANSCRIBE_LOOP_LINES - period,
+            (config.TRANSCRIBE_LOOP_MIN_LINE_REPEATS - 1) * period,
+        )
         run = 0
         for i in range(period, len(lines)):
             if lines[i] != lines[i - period]:
@@ -119,16 +102,18 @@ def _line_run(text: str) -> Loop | None:
 
 
 def _char_run(text: str) -> Loop | None:
-    """The first run of characters, anywhere, that repeats a unit of at most `MAX_CHAR_PERIOD`."""
-    for match in _CHAR_RUN_RE.finditer(text):
+    """The first run of characters, anywhere, that repeats a short unit."""
+    for match in _char_run_re(
+        config.TRANSCRIBE_LOOP_MAX_CHAR_PERIOD, config.TRANSCRIBE_LOOP_CHAR_RUN_REPEATS
+    ).finditer(text):
         unit = match.group(1)
-        if unit.strip() and len(match.group(0)) >= CHAR_LOOP_CHARS + len(unit):
+        if unit.strip() and len(match.group(0)) >= config.TRANSCRIBE_LOOP_CHARS + len(unit):
             return Loop(match.start(), unit)
     return None
 
 
 def _line_loop(text: str) -> Loop | None:
-    """A tail of `LINE_LOOP_LINES` lines that repeats a block of at most `MAX_LINE_PERIOD`."""
+    """A tail of `TRANSCRIBE_LOOP_LINES` lines that repeats a block of a few lines at most."""
     raw = text.split("\n")
     lines = [line.rstrip() for line in raw]
     # A stream ends mid-line, so a last line with no newline after it may still be being
@@ -138,11 +123,14 @@ def _line_loop(text: str) -> Loop | None:
     while end > 0 and not lines[end - 1]:
         end -= 1
     lines = lines[:end]
-    for period in range(1, MAX_LINE_PERIOD + 1):
+    for period in range(1, config.TRANSCRIBE_LOOP_MAX_LINE_PERIOD + 1):
         # Each compared line equals the one `period` earlier, so `needed` comparisons over
         # `needed + period` lines: twenty-four identical lines for a row, four blocks for a
         # block of eight.
-        needed = max(LINE_LOOP_LINES - period, (MIN_LINE_REPEATS - 1) * period)
+        needed = max(
+            config.TRANSCRIBE_LOOP_LINES - period,
+            (config.TRANSCRIBE_LOOP_MIN_LINE_REPEATS - 1) * period,
+        )
         if len(lines) < needed + period:
             break
         if not all(lines[-i] == lines[-i - period] for i in range(1, needed + 1)):
@@ -159,11 +147,12 @@ def _line_loop(text: str) -> Loop | None:
 
 
 def _char_loop(text: str) -> Loop | None:
-    """A tail of `CHAR_LOOP_CHARS` characters that repeats a unit of at most `MAX_CHAR_PERIOD`."""
-    for period in range(1, MAX_CHAR_PERIOD + 1):
-        if len(text) < CHAR_LOOP_CHARS + period:
+    """A tail of `TRANSCRIBE_LOOP_CHARS` characters that repeats a short unit."""
+    span = config.TRANSCRIBE_LOOP_CHARS
+    for period in range(1, config.TRANSCRIBE_LOOP_MAX_CHAR_PERIOD + 1):
+        if len(text) < span + period:
             break
-        if not all(text[-i] == text[-i - period] for i in range(1, CHAR_LOOP_CHARS + 1)):
+        if not all(text[-i] == text[-i - period] for i in range(1, span + 1)):
             continue
         unit = text[-period:]
         if not unit.strip():
@@ -173,3 +162,26 @@ def _char_loop(text: str) -> Loop | None:
             k -= 1
         return Loop(k - period + 1, unit)
     return None
+
+
+@lru_cache(maxsize=8)
+def _char_run_re(period: int, repeats: int) -> re.Pattern:
+    """A character loop anywhere: the shortest unit of up to `period` characters repeated.
+
+    The match is then measured against `TRANSCRIBE_LOOP_CHARS`. A lazy unit finds `\\_` before
+    `\\_\\_`, and the repeat floor keeps the search from stopping at every doubled letter of
+    ordinary prose.
+    """
+    return re.compile(r"(.{1,%d}?)\1{%d,}" % (period, repeats), re.DOTALL)
+
+
+def signature() -> tuple[int, ...]:
+    """The thresholds in force, for a memo of verdicts that must not outlive a change to them."""
+    return (
+        config.TRANSCRIBE_LOOP_LINES,
+        config.TRANSCRIBE_LOOP_MAX_LINE_PERIOD,
+        config.TRANSCRIBE_LOOP_MIN_LINE_REPEATS,
+        config.TRANSCRIBE_LOOP_CHARS,
+        config.TRANSCRIBE_LOOP_MAX_CHAR_PERIOD,
+        config.TRANSCRIBE_LOOP_CHAR_RUN_REPEATS,
+    )

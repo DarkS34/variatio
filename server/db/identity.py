@@ -157,10 +157,10 @@ def set_password(session: Session, user: User, password_hash: str) -> None:
 def delete_user(session: Session, user: User) -> None:
     """Delete the account row, and only the account row.
 
-    What the account DID is not the account: `generations.user_id` is `SET NULL`, so a
-    course built on somebody's exercises survives their leaving. What cascades is what only
-    means anything while the account exists — its memberships, its open sessions and its
-    pending reset links. Disabling is the
+    What the account DID is not the account: its generated exercises stay as files of their
+    workspace, so a course built on somebody's exercises survives their leaving. What
+    cascades is what only means anything while the account exists — its memberships, its
+    open sessions and its pending reset links. Disabling is the
     reversible answer; this is for an account that should not have existed.
     """
     session.delete(user)

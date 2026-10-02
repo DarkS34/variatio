@@ -44,7 +44,7 @@ export const keys = {
   // the owners: two modalities of one instance do not have the same scope.
   scope: (itemType: string) => ["pipeline", "scope", itemType] as const,
   generations: (params: Record<string, unknown>) => ["generations", params] as const,
-  generation: (id: number) => ["generations", "one", id] as const,
+  generation: (id: string) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
   adminOverview: ["admin", "overview"] as const,
   adminInvites: ["admin", "invites"] as const,
@@ -510,9 +510,9 @@ export function useGenerations(params: {
   });
 }
 
-export function useGeneration(id: number | null) {
+export function useGeneration(id: string | null) {
   return useQuery({
-    queryKey: keys.generation(id ?? 0),
+    queryKey: keys.generation(id ?? ""),
     queryFn: () => api.generation(id!),
     enabled: id !== null,
   });
@@ -521,7 +521,7 @@ export function useGeneration(id: number | null) {
 export function useDeleteGeneration() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.deleteGeneration(id),
+    mutationFn: (id: string) => api.deleteGeneration(id),
     onSuccess: () => client.invalidateQueries({ queryKey: ["generations"] }),
   });
 }
