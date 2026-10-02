@@ -1905,11 +1905,12 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">solo administradores</Badge>
         <Paragraph>
-          La instalación vista desde fuera, en cinco pestañas: «{t("admin.tab.evaluation")}» (el
-          estudio), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos), «
-          {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar), «
-          {t("admin.tab.engine")}» y «{t("admin.tab.config")}» (todos los ajustes, cada uno con
-          lo que invalidará al guardarlo). Tiene sección propia aquí al lado: «{t("guide.sec.admin")}».
+          La instalación vista desde fuera, en cinco pestañas: «{t("admin.tab.engine")}», «
+          {t("admin.tab.config")}» (todos los ajustes, cada uno con lo que invalidará al
+          guardarlo), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos), «
+          {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar) y, separada al final,
+          «{t("admin.tab.evaluation")}» (el estudio). Tiene sección propia aquí al lado: «
+          {t("guide.sec.admin")}».
         </Paragraph>
       </Block>
 
@@ -1964,7 +1965,8 @@ function Admin() {
           clase o si estudia.
         </Paragraph>
         <Paragraph>
-          Cada invitación se crea con las condiciones que elijas: un <strong>alias</strong> que
+          Cada invitación se crea con «{t("acc.invite.open")}», que abre una ventana con las
+          condiciones que elijas: un <strong>alias</strong> que
           solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el
           alias—, la asignatura y el permiso que trae, o ninguna, y el día y la hora en que
           caduca, sin máximo. Con «{t("acc.invite.count")}» se crean varias de una vez, con el
@@ -2063,9 +2065,10 @@ function Admin() {
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
           Todas las instancias de la instalación con sus miembros, sus ejercicios y el estado de
-          su cadena. Lo que pesa cada una va repartido por papel —{t("ws.disk.raw")},{" "}
-          {t("ws.disk.instance")}, {t("ws.disk.cache")} e {t("ws.disk.history")}—, que es la
-          única forma de ver que lo caro casi nunca son los artefactos.
+          su cadena. El número de ejercicios abre todos los generados en esa asignatura, de
+          cualquier cuenta y con su autor, para leerlos: es el único sitio donde se ven
+          ejercicios ajenos. Borrarlos o generar más como ellos sigue siendo cosa de quien los
+          escribió, desde «{t("generations.title")}» en su perfil.
         </Paragraph>
         <Rows
           items={[

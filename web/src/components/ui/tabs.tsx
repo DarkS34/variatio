@@ -6,6 +6,10 @@ export interface TabItem {
   value: string;
   label: ReactNode;
   badge?: ReactNode;
+  /** Drawn in `--evaluation`, as the navbar draws the study's door. */
+  evaluation?: boolean;
+  /** A vertical rule before the tab, setting it apart from the ones on its left. */
+  separated?: boolean;
 }
 
 export function Tabs({
@@ -57,7 +61,14 @@ export function Tabs({
         }
       }}
     >
-      {items.map((item) => (
+      {items.map((item) => [
+        item.separated ? (
+          <span
+            key={`${item.value}-rule`}
+            aria-hidden="true"
+            className="mx-1 h-5 w-px shrink-0 self-center bg-border"
+          />
+        ) : null,
         <button
           key={item.value}
           role="tab"
@@ -69,15 +80,19 @@ export function Tabs({
           onClick={() => onChange(item.value)}
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            value === item.value
-              ? "bg-background text-foreground shadow-raised"
-              : "text-muted-foreground hover:text-foreground",
+            item.evaluation
+              ? value === item.value
+                ? "bg-[color-mix(in_oklch,var(--evaluation)_18%,var(--background))] text-evaluation shadow-raised ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)]"
+                : "text-evaluation hover:bg-[color-mix(in_oklch,var(--evaluation)_12%,transparent)]"
+              : value === item.value
+                ? "bg-background text-foreground shadow-raised"
+                : "text-muted-foreground hover:text-foreground",
           )}
         >
           {item.label}
           {item.badge}
-        </button>
-      ))}
+        </button>,
+      ])}
     </div>
   );
 }

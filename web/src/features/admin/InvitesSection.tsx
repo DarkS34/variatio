@@ -3,15 +3,17 @@ import {
   EyeOff,
   Link as LinkIcon,
   Pencil,
+  Plus,
   RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
+import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, LoadError, Spinner } from "@/components/ui/misc";
@@ -84,55 +86,68 @@ type Recovered = MintedInvite & { outcome: InviteImportOutcome };
  * whoever opens it chooses their own username — so until it is redeemed it is a credential.
  * What the administrator controls around that is everything but the single use: when it
  * expires, a name only this panel shows, the asignatura and permission it carries, reading
- * the link again, and pasting back the link of one deleted by mistake. The listing never
+ * the link again, and pasting back the link of one deleted by mistake. Both forms live in a
+ * window opened by «Crear invitación», so the section itself is the list. The listing never
  * carries a link; «Ver enlace» asks for that one and the server writes down who did.
  */
 export function InvitesSection({ overview }: { overview: AdminOverview }) {
   const { t } = useT();
   const invites = useAdminInvites();
+  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("new");
   const [minted, setMinted] = useState<MintedInvite[] | null>(null);
   const [recovered, setRecovered] = useState<Recovered | null>(null);
-  const top = useRef<HTMLDivElement>(null);
 
-  const recoverLink = () => {
-    setMode("recover");
-    top.current?.scrollIntoView({ block: "nearest" });
+  const openAs = (next: Mode) => {
+    setMode(next);
+    setOpen(true);
   };
 
   return (
     <section className="space-y-4 rounded-lg border border-border bg-card p-3 shadow-sm">
-      <div ref={top} className="flex scroll-mt-24 flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
           {t("acc.invite")}
         </h2>
         <InfoHint label={t("acc.invite.hintLabel")}>{t("acc.invite.hint")}</InfoHint>
-        <Tabs
-          className="ml-auto"
-          value={mode}
-          onChange={(next) => setMode(next as Mode)}
-          items={[
-            { value: "new", label: t("acc.invite.mode.new") },
-            { value: "recover", label: t("acc.invite.mode.recover") },
-          ]}
-        />
+        <Button className="ml-auto" onClick={() => openAs("new")}>
+          <Plus />
+          {t("acc.invite.open")}
+        </Button>
       </div>
 
-      {/* Each form keeps its own last result under it, so a batch's links are still there to
-          copy after a look at the other tab. */}
-      {mode === "new" ? (
-        <>
-          <NewInvites overview={overview} onMinted={setMinted} />
-          {minted ? <MintedLinks minted={minted} onDismiss={() => setMinted(null)} /> : null}
-        </>
-      ) : (
-        <>
-          <RecoverInvite overview={overview} onRecovered={setRecovered} />
-          {recovered ? (
-            <RecoveredNotice recovered={recovered} onDismiss={() => setRecovered(null)} />
-          ) : null}
-        </>
-      )}
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("acc.invite.open")}
+        className="sm:max-w-3xl"
+      >
+        <div className="space-y-4">
+          <Tabs
+            value={mode}
+            onChange={(next) => setMode(next as Mode)}
+            items={[
+              { value: "new", label: t("acc.invite.mode.new") },
+              { value: "recover", label: t("acc.invite.mode.recover") },
+            ]}
+          />
+          {/* Each form keeps its own last result under it, even across closing the window,
+              so a batch's links are still there to copy after a look elsewhere. */}
+          {mode === "new" ? (
+            <>
+              <NewInvites overview={overview} onMinted={setMinted} />
+              {minted ? <MintedLinks minted={minted} onDismiss={() => setMinted(null)} /> : null}
+            </>
+          ) : (
+            <>
+              <RecoverInvite overview={overview} onRecovered={setRecovered} />
+              {recovered ? (
+                <RecoveredNotice recovered={recovered} onDismiss={() => setRecovered(null)} />
+              ) : null}
+            </>
+          )}
+        </div>
+      </Dialog>
 
       {invites.isError ? (
         <LoadError
@@ -146,7 +161,7 @@ export function InvitesSection({ overview }: { overview: AdminOverview }) {
         <InviteList
           rows={invites.data?.invites ?? []}
           overview={overview}
-          onRecover={recoverLink}
+          onRecover={() => openAs("recover")}
         />
       )}
     </section>

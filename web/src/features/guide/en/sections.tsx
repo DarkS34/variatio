@@ -1918,11 +1918,11 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          The installation seen from outside, in five tabs: "{t("admin.tab.evaluation")}" (the evaluation),
-          "{t("admin.tab.accounts")}" (invitations, roles, unlocks), "
-          {t("admin.tab.workspaces")}" (disk usage, export, delete), "{t("admin.tab.engine")}"
-          and "{t("admin.tab.config")}" (every setting, each with what it will
-          invalidate on saving). It has a section of its own next door: "
+          The installation seen from outside, in five tabs: "{t("admin.tab.engine")}", "
+          {t("admin.tab.config")}" (every setting, each with what it will invalidate on
+          saving), "{t("admin.tab.accounts")}" (invitations, roles, unlocks), "
+          {t("admin.tab.workspaces")}" (disk usage, export, delete) and, set apart at the end, "
+          {t("admin.tab.evaluation")}" (the evaluation). It has a section of its own next door: "
           {t("guide.sec.admin")}".
         </Paragraph>
       </Block>
@@ -1978,7 +1978,8 @@ function Admin() {
           chooses their username, their password, and whether they teach or study.
         </Paragraph>
         <Paragraph>
-          Each invitation is created under the terms you choose: an <strong>alias</strong> only
+          Each invitation is created with «{t("acc.invite.open")}», which opens a window with
+          the terms you choose: an <strong>alias</strong> only
           you see — whoever opens the link sees the subject, the permission and the date, never
           the alias —, the subject and permission it carries, or none, and the day and time it
           expires, with no upper limit. «{t("acc.invite.count")}» creates several at once with
@@ -2077,9 +2078,10 @@ function Admin() {
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
           Every instance of the installation with its members, its exercises and the state of its
-          chain. What each one weighs is broken down by role — {t("ws.disk.raw")},{" "}
-          {t("ws.disk.instance")}, {t("ws.disk.cache")} and {t("ws.disk.history")} — which is the
-          only way to see that the expensive part is almost never the artifacts.
+          chain. The exercise count opens every exercise generated in that subject, by any
+          account and with its author, to read: it is the only place anybody sees exercises
+          that are not their own. Deleting them or generating more like them is still up to
+          whoever wrote them, from «{t("generations.title")}» in their profile.
         </Paragraph>
         <Rows
           items={[

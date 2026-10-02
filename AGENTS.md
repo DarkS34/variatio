@@ -290,7 +290,10 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   and the output. The library hands it over as `GeneratedVariant.prompt`/`.provenance` and
   writes nothing. Id = `<UTC>-<job>-<index>`, checked by regex on every route. **An exercise
   is private to its author**: the author's id (never the username) names the directory, `user_<id>/`; no
-  workspace scope, the same 404 for others' and malformed ids. Format 0 is a row exported
+  workspace scope, the same 404 for others' and malformed ids. The one exception is the
+  installation administrator, read-only and only from the panel
+  (`GET /api/admin/workspaces/{slug}/generations`, `generations.list_all`, opened from the
+  «Asignaturas» tab's exercise count); the author's own routes refuse the admin as anyone. Format 0 is a row exported
   from the retired table: what it never kept is null, never reconstructed.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
@@ -783,7 +786,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - A session shows the system's proposal and one seed-drawn rival.
 - Deleting workspaces/artifacts is the admin's and takes the files; a last-member deletion
   takes the tree; `.history/` is never emptied by it. CORS off.
-- Exercises are private to their author.
+- Exercises are private to their author; the installation administrator alone reads every
+  account's, read-only, from the panel (never through `/api/generations`).
 - Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;
   the database keeps none of them. The library returns how an item was made; the server
   writes it. `uv run variatio generate` (the CLI) saves nothing.

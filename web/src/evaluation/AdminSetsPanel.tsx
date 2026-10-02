@@ -44,7 +44,7 @@ import { useT } from "@/lib/i18n";
  * includes it is not an agreement about the exercises.
  */
 
-// The label is shared with "Cuentas y accesos", which is where it is set; what belongs to
+// The label is shared with "Cuentas", which is where it is set; what belongs to
 // this screen is the MARK on an account nobody classified — here it decides which wording
 // that person will be asked, so it is something to act on before handing anything over.
 function Profile({ value }: { value: EvaluatorProfile | null }) {

@@ -572,6 +572,15 @@ export interface GenerationListing {
   offset: number;
 }
 
+/** Every account's exercises of one workspace, as the administrator's panel reads them. */
+export interface AdminGenerationListing extends GenerationListing {
+  workspace: string;
+  /** Every account with exercises there that still exists, for the filter. */
+  authors: { id: number; username: string; name: string | null }[];
+  /** The workspace's profile, which draws the rows: the administrator need not be a member. */
+  profile: ExemplarsProfile | null;
+}
+
 export interface GenerationDetail {
   generation: GenerationRow & {
     thinking: string | null;

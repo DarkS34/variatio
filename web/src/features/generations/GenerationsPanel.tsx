@@ -187,18 +187,27 @@ function GenerationsList() {
   );
 }
 
-function GenerationCard({
+/**
+ * One saved exercise, folded to its statement.
+ *
+ * `onDelete` absent is the administrator's read-only view: no «Generar más como este» (it
+ * would open another workspace's commission in this one) and no delete, which stays the
+ * author's. `showAuthor` names who wrote it, which only that view needs.
+ */
+export function GenerationCard({
   row,
   profile,
   expanded,
   onToggle,
   onDelete,
+  showAuthor = false,
 }: {
   row: GenerationRow;
   profile: ExemplarsProfile | null;
   expanded: boolean;
   onToggle: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
+  showAuthor?: boolean;
 }) {
   const { t } = useT();
   const { navigate } = useRouter();
@@ -225,6 +234,13 @@ function GenerationCard({
           <CardTitle className="text-body">
             {concepts.length > 0 ? concepts.join(" · ") : t("generations.noConcepts")}
           </CardTitle>
+          {showAuthor ? (
+            <span className="text-small text-muted-foreground">
+              {row.author.username
+                ? t("generations.by", { username: row.author.username })
+                : t("generations.byNobody")}
+            </span>
+          ) : null}
 
           <div className="ml-auto flex gap-1">
             {/* A promoted row keeps saying so: that is data about the bank and not a
@@ -235,18 +251,20 @@ function GenerationCard({
                 {t("generations.inBank", { id: row.promoted_item_id })}
               </Badge>
             ) : null}
-            <Button
-              variant="ghost"
-              size="sm"
-              title={t("generations.againHint")}
-              onClick={() => {
-                stashDraft(fromGeneration(row));
-                navigate("/generate");
-              }}
-            >
-              <Sparkles />
-              {t("generations.moreLikeThis")}
-            </Button>
+            {onDelete ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                title={t("generations.againHint")}
+                onClick={() => {
+                  stashDraft(fromGeneration(row));
+                  navigate("/generate");
+                }}
+              >
+                <Sparkles />
+                {t("generations.moreLikeThis")}
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               size="icon-sm"
@@ -255,11 +273,18 @@ function GenerationCard({
             >
               <Copy />
             </Button>
-            {/* Always offered: every row here is this account's own, and the endpoint
-                refuses anybody else's before this screen could draw one. */}
-            <Button variant="ghost" size="icon-sm" aria-label={t("generations.delete")} onClick={onDelete}>
-              <Trash2 />
-            </Button>
+            {/* Offered on every row of "Mi perfil": each is this account's own, and the
+                endpoint refuses anybody else's before this screen could draw one. */}
+            {onDelete ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("generations.delete")}
+                onClick={onDelete}
+              >
+                <Trash2 />
+              </Button>
+            ) : null}
           </div>
         </div>
       </CardHeader>

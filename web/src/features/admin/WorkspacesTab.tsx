@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -25,9 +24,14 @@ import {
 import { useT } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
+import { WorkspaceGenerations } from "./WorkspaceGenerations";
+
 /**
  * The installation's instances, and what this panel writes about them: their name, their
  * removal, or the regenerable half of what they hold.
+ *
+ * Its exercise count opens every exercise generated there, read-only: the one place anybody
+ * reads exercises that are not their own.
  *
  * Emptying a stage and deleting the workspace are one decision at two scopes, so they live
  * in the same row. Neither builds nor approves anything — for that one enters the instance,
@@ -50,16 +54,20 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   // installation holding zero workspaces is a normal state the panel draws — it offers to
   // create one — and `leave` already reached it from the other side, by walking the last
   // member out. The guard refused the tidy way of doing what the untidy one allowed.
-  const total = overview.workspaces.reduce((sum, w) => sum + w.disk.total, 0);
+  const [viewingSlug, setViewingSlug] = useState<string | null>(null);
+  // By slug, so the view follows the overview's refreshes and closes if the row goes.
+  const viewing = overview.workspaces.find((w) => w.slug === viewingSlug) ?? null;
+  const setViewing = (workspace: AdminWorkspace | null) => setViewingSlug(workspace?.slug ?? null);
+
+  if (viewing) {
+    return <WorkspaceGenerations workspace={viewing} onBack={() => setViewing(null)} />;
+  }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("ws.heading", { n: overview.workspaces.length, size: bytes(total) })}
-        </h2>
-        <InfoHint label={t("ws.diskHint")}>{t("ws.diskHint.body")}</InfoHint>
-      </div>
+      <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+        {t("ws.heading", { n: overview.workspaces.length })}
+      </h2>
 
       <div className="overflow-hidden rounded-lg border border-border">
         <Table minWidth="64rem">
@@ -69,7 +77,6 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
               <TH>{t("ws.col.chain")}</TH>
               <TH align="num">{t("ws.col.members")}</TH>
               <TH align="num">{t("ws.col.variants")}</TH>
-              <TH>{t("ws.col.disk")}</TH>
               <TH>{t("ws.col.created")}</TH>
               <TH />
             </TR>
@@ -92,9 +99,19 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                   <ChainCell workspace={workspace} />
                 </TD>
                 <TD align="num" className="px-3 py-2 nums">{workspace.members}</TD>
-                <TD align="num" className="px-3 py-2 nums">{workspace.generations}</TD>
-                <TD className="px-3 py-2">
-                  <DiskCell workspace={workspace} />
+                <TD align="num" className="px-3 py-2 nums">
+                  {workspace.generations > 0 ? (
+                    <button
+                      type="button"
+                      title={t("ws.viewVariants", { name: workspace.name })}
+                      className="font-medium text-primary underline underline-offset-4 hover:no-underline"
+                      onClick={() => setViewing(workspace)}
+                    >
+                      {workspace.generations}
+                    </button>
+                  ) : (
+                    <span className="text-muted-foreground">0</span>
+                  )}
                 </TD>
                 <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
                   {workspace.created_at ? when(workspace.created_at) : "—"}
@@ -223,34 +240,6 @@ function RenameWorkspaceDialog({
         <FormError error={rename.error} />
       </div>
     </Dialog>
-  );
-}
-
-function DiskCell({ workspace }: { workspace: AdminWorkspace }) {
-  const { t } = useT();
-  const { disk } = workspace;
-  const parts = [
-    [t("ws.disk.raw"), disk.raw],
-    [t("ws.disk.instance"), disk.instance],
-    [t("ws.disk.cache"), disk.cache],
-    [t("ws.disk.history"), disk.history],
-    [t("ws.disk.generations"), disk.generations ?? 0],
-  ] as const;
-  return (
-    <span
-      className="nums text-small"
-      title={parts.map(([label, size]) => `${label}: ${bytes(size)}`).join(" · ")}
-    >
-      {bytes(disk.total)}
-      <span className="ml-1 text-small text-muted-foreground">
-        (
-        {parts
-          .filter(([, size]) => size > 0)
-          .map(([label, size]) => `${label} ${bytes(size)}`)
-          .join(", ") || t("ws.disk.empty")}
-        )
-      </span>
-    </span>
   );
 }
 

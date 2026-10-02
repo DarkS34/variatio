@@ -49,6 +49,8 @@ export const keys = {
   generation: (id: string) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
   adminOverview: ["admin", "overview"] as const,
+  adminGenerations: (slug: string, params: Record<string, unknown>) =>
+    ["admin", "generations", slug, params] as const,
   adminInvites: ["admin", "invites"] as const,
   adminJobs: ["admin", "jobs"] as const,
   adminJobHistory: ["admin", "jobs", "history"] as const,
@@ -533,6 +535,17 @@ export function useDeleteGeneration() {
 
 export function useAdminOverview() {
   return useQuery({ queryKey: keys.adminOverview, queryFn: api.adminOverview });
+}
+
+export function useAdminWorkspaceGenerations(
+  slug: string,
+  params: { author?: number; q?: string; limit?: number; offset?: number },
+) {
+  return useQuery({
+    queryKey: keys.adminGenerations(slug, params),
+    queryFn: () => api.adminWorkspaceGenerations(slug, params),
+    placeholderData: (previous) => previous,
+  });
 }
 
 export function useAdminJobs() {

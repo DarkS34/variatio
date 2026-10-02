@@ -2,6 +2,7 @@ import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
   AdminEngine,
+  AdminGenerationListing,
   AdminJobQueue,
   AdminOverview,
   AdminSystem,
@@ -364,6 +365,19 @@ export const api = {
     }),
 
   adminOverview: () => request<AdminOverview>("/api/admin/overview"),
+  // Read-only, and the one place anybody reads exercises that are not their own.
+  adminWorkspaceGenerations: (
+    slug: string,
+    params: { author?: number; q?: string; limit?: number; offset?: number },
+  ) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") search.set(key, String(value));
+    }
+    return request<AdminGenerationListing>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}/generations?${search.toString()}`,
+    );
+  },
   setAccountEnabled: (userId: number, enabled: boolean) =>
     post<{ disabled?: number; enabled?: number }>(
       `/api/admin/accounts/${userId}/${enabled ? "enable" : "disable"}`,
