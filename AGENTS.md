@@ -184,7 +184,7 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
 - **Every setting names the stages that read it** (`stages`, the owner first; `types.STAGES`
   is the pipeline's, the registry appends the study's) and the model call it is drawn under
   (`phase`, a `PIPELINE` phase of its owner's lane). Engine, tunnel and logging have none.
-  `tests/settings/test_setting_stages.py` pins it.
+  `tests/settings/test_setting_stages.py` pins it; the panel has one screen per stage.
   The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
   reads is `evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
@@ -679,7 +679,11 @@ never `oklch` (hue interpolation turns greens blue).
   its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   «Motor» tab: left column measures, right column sets; one save bar; the guardrail and
-  embedder models are read-only.
+  embedder models are read-only. «Configuración» is **one screen per stage**, named and
+  numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
+  down the page, each node with model, reasoning and sampling and its own settings under it;
+  then «General de la etapa», «Común a todas las etapas», and folded what it reads of
+  another stage's — the same value, unfolded on its owner's screen.
 - A setting's measured `doc` stays in the registry and never leaves the API. A row carries at
   most one (i), and only where its name does not say what it controls or a change has a
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
@@ -798,6 +802,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
 - Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
+- «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
+  drawn on every stage that reads it and unfolded only on its owner's.
 - The mark is three equal squares (settled, attention, outline).
 - Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - The exemplars profile is edited through the form alone.

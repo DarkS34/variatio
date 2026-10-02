@@ -1342,7 +1342,7 @@ function Generate() {
       <Block title="Qué modelo lo escribe">
         <Paragraph>
           Lo eliges tú, entre los que la instalación ofrece. Quien la administra fija esa
-          lista en «Configuración → Modelos generadores»; tú ves una ficha por modelo con lo
+          lista en «Configuración → Generar ejercicios»; tú ves una ficha por modelo con lo
           que cuesta cada uno —uno contesta en segundos, otro tarda minutos y delibera— y el
           primero de la lista viene marcado. Si sólo se ofrece uno no se te pregunta nada.
         </Paragraph>
@@ -1496,7 +1496,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: "Donde abre la pantalla. Eliges de qué concepto y de qué tipo quieres el ejercicio: es el mismo formulario de «Generación de ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión. El modelo que escribe las dos propuestas locales no se elige aquí: lo fija quien administra en «Configuración → Evaluación», y la comercial usa el suyo.",
+              body: "Donde abre la pantalla. Eliges de qué concepto y de qué tipo quieres el ejercicio: es el mismo formulario de «Generación de ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión. El modelo que escribe las dos propuestas locales no se elige aquí: lo fija quien administra en «Configuración → Evaluar el sistema», y la comercial usa el suyo.",
             },
             {
               key: "sesiones",
@@ -2154,11 +2154,35 @@ function Admin() {
 
       <Block title={t("admin.tab.config")}>
         <Paragraph>
-          Todos los ajustes de la instalación, repartidos en secciones con su propio índice y su{" "}
-          <strong>buscador</strong> — que es lo que hace encontrable un ajuste del que solo
-          recuerdas media palabra. Cuando el nombre de un ajuste no basta para saber qué controla,
-          o cambiarlo tiene una consecuencia que no se adivina, lleva al lado un (i) que lo dice
-          en una frase.
+          Todos los ajustes de la instalación, con <strong>una pestaña por etapa</strong> y con
+          los nombres y números de la barra: «{t("nav.step.raw")}», «{t("nav.step.profile")}», «
+          {t("nav.step.graph")}», «{t("nav.step.bank")}», «{t("nav.create")}» y «
+          {t("nav.compare")}». Cada pestaña tiene todo lo que usa su etapa, y el{" "}
+          <strong>buscador</strong> de arriba encuentra un ajuste del que solo recuerdas media
+          palabra, esté en la pestaña que esté. Cuando el nombre de un ajuste no basta para saber
+          qué controla, o cambiarlo tiene una consecuencia que no se adivina, lleva al lado un (i)
+          que lo dice en una frase. Lo del motor —el motor de inferencia, el túnel, Cerebras— no
+          es de ninguna etapa y está en «{t("admin.tab.engine")}».
+        </Paragraph>
+        <Paragraph>
+          Cada pestaña empieza por <strong>{t("cfg.flow").toLowerCase()}</strong>: las llamadas al
+          modelo de la etapa, de arriba abajo y en el orden en que las hace. En cada parada, qué
+          modelo la atiende; el círculo dice si razona antes de contestar y, mientras razona, el
+          selector de al lado fija cuánto. Las paradas que no llevan interruptor lo dicen con el
+          círculo a trazos: el guardián porque su modelo no razona, el ejercicio porque eso lo
+          decide cada encargo, la reparación porque va con gramática, y en la evaluación porque
+          lo sortea cada sesión o lo decide el proveedor. Debajo de cada parada va su{" "}
+          <strong>muestreo</strong> —temperatura, top_k y top_p— y después sus propios ajustes.
+          Un campo de muestreo vacío hereda, y dice de qué: la temperatura sigue al interruptor de
+          razonamiento, y top_k y top_p los pone el modelo. Cerebras no admite top_k, así que en
+          una parada servida allí ese campo no se ofrece.
+        </Paragraph>
+        <Paragraph>
+          Debajo del recorrido, «{t("cfg.general")}» reúne lo que no es de una sola llamada, y «
+          {t("cfg.common")}» lo que vale para todo el recorrido a la vez. Plegado al final, «
+          {t("cfg.shared", { n: "…" })}» enseña lo que esta etapa usa de otras —el modelo de
+          reparación, el etiquetador, el índice de conceptos—: es el mismo valor que en su propia
+          pestaña, y cambiarlo aquí lo cambia allí.
         </Paragraph>
         <Paragraph>
           Cada fila dice de dónde sale su valor —«{t("cfg.source.default")}», «
@@ -2174,16 +2198,6 @@ function Admin() {
           calientes; tocar el modelo de embeddings vuelve a embeber el índice de conceptos
           entero; tocar el motor reinicia la conexión. Los avisos salen en «
           {t("cfg.beforeSaving")}», junto a la lista de cambios pendientes.
-        </Paragraph>
-        <Paragraph>
-          El razonamiento no es un interruptor global sino uno <strong>por fase</strong>, y se
-          dibuja como lo que es: cuatro columnas que se leen de arriba abajo —las tres
-          construcciones y la generación— y cada parada, una llamada al modelo. Bajo el nombre de
-          la parada, qué modelo la atiende; el círculo dice si razona antes de contestar y,
-          mientras razona, el selector de al lado fija cuánto. Tres paradas no llevan interruptor
-          y lo dicen con el círculo a trazos: el guardián porque su modelo no razona, el ejercicio
-          porque eso lo decide cada encargo, y la reparación porque va con gramática y con
-          gramática no se puede razonar.
         </Paragraph>
       </Block>
     </div>

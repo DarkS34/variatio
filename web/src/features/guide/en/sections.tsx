@@ -1353,7 +1353,7 @@ function Generate() {
       <Block title="Which model writes it">
         <Paragraph>
           You choose it, out of what the installation offers. Whoever administers it sets that
-          list in «Configuration → Generator models»; you get a card per model with what each
+          list in «Configuration → Generate exercises»; you get a card per model with what each
           one costs — one answers in seconds, the other takes minutes and deliberates — and
           the first of the list comes selected. With a single one on offer nothing is asked.
         </Paragraph>
@@ -1508,7 +1508,7 @@ function Evaluate() {
             {
               key: "encargo",
               head: t("eval.tab.compose"),
-              body: 'Where the screen opens. You pick the concept and the type of exercise you want: the same "Generate exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version. The model that writes the two local proposals is not chosen here: the administrator sets it in "Settings → Evaluation", and the commercial one uses its own.',
+              body: 'Where the screen opens. You pick the concept and the type of exercise you want: the same "Generate exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version. The model that writes the two local proposals is not chosen here: the administrator sets it in "Configuration → Evaluate the system", and the commercial one uses its own.',
             },
             {
               key: "sesiones",
@@ -2167,11 +2167,35 @@ function Admin() {
 
       <Block title={t("admin.tab.config")}>
         <Paragraph>
-          Every setting of the installation, laid out in sections with their own index and their
-          own <strong>search box</strong> — which is what makes a setting findable when you only
-          remember half a word of it. When a setting's name does not tell what it controls, or
+          Every setting of the installation, with <strong>one tab per stage</strong>, named and
+          numbered as the bar names them: "{t("nav.step.raw")}", "{t("nav.step.profile")}", "
+          {t("nav.step.graph")}", "{t("nav.step.bank")}", "{t("nav.create")}" and "
+          {t("nav.compare")}". Each tab holds everything its stage uses, and the{" "}
+          <strong>search box</strong> above finds a setting you only remember half a word of,
+          whichever tab it is on. When a setting's name does not tell what it controls, or
           changing it has a consequence nobody would guess, an (i) beside it says so in one
-          sentence.
+          sentence. What belongs to the engine — the inference engine, the tunnel, Cerebras — is
+          no stage's and lives in "{t("admin.tab.engine")}".
+        </Paragraph>
+        <Paragraph>
+          Each tab opens with <strong>{t("cfg.flow").toLowerCase()}</strong>: the stage's calls
+          to the model, top to bottom, in the order it makes them. At each stop, which model
+          serves it; the circle says whether it deliberates before answering and, while it does,
+          the selector beside it sets how much. The stops with no switch say so with a dashed
+          circle: the guardrail because its model does not reason, the exercise because each
+          commission decides that, the repair because it runs under a grammar, and in the
+          evaluation because each session draws it or the provider decides. Under each stop sits
+          its <strong>sampling</strong> — temperature, top_k and top_p — and then its own
+          settings. An empty sampling field is inherited and says from what: the temperature
+          follows the reasoning switch, and top_k and top_p are the model's. Cerebras takes no
+          top_k, so on a stop served there that field is not offered.
+        </Paragraph>
+        <Paragraph>
+          Below the path, "{t("cfg.general")}" gathers what belongs to no single call, and "
+          {t("cfg.common")}" what holds for the whole path at once. Folded at the end, "
+          {t("cfg.shared", { n: "…" })}" shows what this stage uses of others' — the repair
+          model, the tagger, the concept index: it is the same value as on its own tab, and
+          changing it here changes it there.
         </Paragraph>
         <Paragraph>
           Each row says where its value comes from — "{t("cfg.source.default")}", "
@@ -2188,15 +2212,6 @@ function Admin() {
           rebuilt; touching the embedding model re-embeds the whole concept index; touching the
           engine restarts the connection. The warnings appear under "{t("cfg.beforeSaving")}",
           beside the list of pending changes.
-        </Paragraph>
-        <Paragraph>
-          Reasoning is not a global switch but a <strong>per-phase</strong> one, and it is drawn
-          as what it is: four columns read top to bottom — the three builds and generation — each
-          stop a call to the model. Under the stop's name, which model serves it; the circle says
-          whether it deliberates before answering and, while it does, the selector beside it sets
-          how much. Three stops carry no switch and say so with a dashed circle: the guardrail
-          because its model does not reason, the exercise because each commission decides that,
-          and the repair because it runs under a grammar and a grammar leaves no room to reason.
         </Paragraph>
       </Block>
     </div>

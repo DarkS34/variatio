@@ -865,6 +865,10 @@ export type ConfigSetting = {
   value?: unknown;
   default?: unknown;
   state?: "configurada" | "ausente";
+  /** The stages that read it, the one whose screen owns it first. Missing on an older API. */
+  stages?: string[];
+  /** The model call of that first stage it is drawn under; null governs the whole stage. */
+  phase?: string | null;
 };
 
 export interface InstalledModel {
@@ -893,21 +897,16 @@ export type ReasoningPhase = {
   note: string;
 };
 
-/**
- * One column of the pipeline — or, when `shared`, the step above them all.
- *
- * A shared lane is no builder's own: the transcription is the same three calls for the
- * three, so it is drawn once and across. Optional, because an API older than this bundle
- * sends no such flag and repeats those phases inside every lane.
- */
+/** One stage's model calls, in the order its work makes them; `key` is the stage. */
 export type ReasoningLane = {
   key: string;
   label: string;
-  shared?: boolean;
   phases: ReasoningPhase[];
 };
 
 export type ConfigPayload = {
+  /** The stages in the order of the path, the study's last. Missing on an older API. */
+  stages?: string[];
   groups: string[];
   settings: ConfigSetting[];
   pipeline: ReasoningLane[];

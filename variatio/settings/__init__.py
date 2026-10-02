@@ -203,12 +203,11 @@ def active_engine() -> str | None:
 
 
 def pipeline() -> list[dict]:
-    """Serialise the reasoning pipeline: one lane per column, one phase per model call."""
+    """Serialise the pipeline: one lane per stage, one phase per model call."""
     return [
         {
             "key": lane.key,
             "label": lane.label,
-            "shared": lane.shared,
             "phases": [
                 {
                     "key": phase.key,

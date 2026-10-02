@@ -274,18 +274,15 @@ class Phase:
 
 @dataclass(frozen=True)
 class Lane:
-    """One column of the pipeline: the phases of a build, or of a run.
+    """One stage of the pipeline as its calls: the phases of a build, or of a run.
 
     `key` is the stage it belongs to (`types.STAGES`), and its phases are that stage's
-    calls. A `shared` lane is not a builder's own: it is the step every builder runs before its
-    own work, so the panel draws it ONCE and ACROSS, above the columns, instead of
-    repeating it at the head of each of them.
+    calls in the order its work makes them; the panel draws them down that stage's screen.
     """
 
     key: str
     label: str
     phases: tuple[Phase, ...]
-    shared: bool = False
 
 
 def _switch(key: str, label: str, note: str = "") -> Phase:
@@ -307,9 +304,8 @@ _IMAGE_NOTE = (
 )
 _SEAM_NOTE = "Clasifica cómo se pega una página con la siguiente, una llamada por costura."
 
-# Reading the documents is a step of its own, drawn as a `shared` lane above the other four.
-# Its three phases are the SAME three settings for the three builders — one each, not three
-# — so repeating them at the head of every column draws nine nodes for three decisions.
+# Reading the documents is a stage of its own, before the three builders: its three phases
+# are the SAME three settings for all of them — one each, not three.
 _TRANSCRIPTION = Lane(
     "transcription",
     "Transcripción",
@@ -325,7 +321,6 @@ _TRANSCRIPTION = Lane(
         ),
         _switch("transcribe_seam", "Costura", _SEAM_NOTE),
     ),
-    shared=True,
 )
 
 
