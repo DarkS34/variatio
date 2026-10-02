@@ -252,7 +252,7 @@ class ConceptTagger:
             prompt=prompt,
             think=think,
             format=None if think else schema,
-            temperature=inference.judgement_temperature(think),
+            sampling=inference.sampling("concept_tagger", think),
         ).response
 
         def parse(text: str) -> tuple[dict | None, str | None]:

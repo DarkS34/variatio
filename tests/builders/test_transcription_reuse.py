@@ -114,7 +114,9 @@ def test_settings_that_moved_are_not_adopted_over(workspaces, monkeypatch):
 
     from variatio import config
 
-    monkeypatch.setattr(config, "TRANSCRIBE_TEMPERATURE", config.TRANSCRIBE_TEMPERATURE + 0.5)
+    moved = {"temperature": config.TRANSCRIBE_TEMPERATURE + 0.5, "top_k": None, "top_p": None}
+    sampling = {**config.SAMPLING, "transcribe": moved, "transcribe_image": moved}
+    monkeypatch.setattr(config, "SAMPLING", sampling)
     put(dos, "corpus", "apuntes.md")
     assert transcribe.adopt_transcriptions(dos, "corpus")["adopted"] == 0
 

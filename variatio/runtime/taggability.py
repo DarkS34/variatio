@@ -15,9 +15,6 @@ from ..builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
 from ..core import inference, progress
 from ..instance.content_context import ContentContext
 
-MAX_SAMPLES_PER_DOMAIN = 3
-SAMPLE_CHARS = 300
-
 BUILD_PHASES = (("taggable", "Reviewing which concepts work as labels", 100),)
 
 
@@ -129,7 +126,7 @@ def _judge_domain(
         model=config.KG_TAGGABLE_MODEL,
         prompt=prompt,
         think=config.THINK_KG_TAGGABLE,
-        temperature=inference.judgement_temperature(config.THINK_KG_TAGGABLE),
+        sampling=inference.sampling("kg_taggable", config.THINK_KG_TAGGABLE),
     ).response
     raw = (
         parsing.parse_object(
@@ -153,20 +150,20 @@ def _judge_domain(
 
 
 def _samples_block(exemplars_profile, exemplars_bank, domain_concepts: list[str]) -> str:
-    """Render up to `MAX_SAMPLES_PER_DOMAIN` real statements touching this domain."""
+    """Render up to `KG_TAGGABLE_SAMPLES_PER_DOMAIN` real statements touching this domain."""
     if not exemplars_bank:
         return ""
     wanted = set(domain_concepts)
     lines = []
     for item in exemplars_bank.values():
-        if len(lines) >= MAX_SAMPLES_PER_DOMAIN:
+        if len(lines) >= config.KG_TAGGABLE_SAMPLES_PER_DOMAIN:
             break
         if not wanted.intersection(item.get("concepts") or []):
             continue
         key = item.get("item_type")
         item_type = exemplars_profile.item_types.get(key) if key else None
         field = item_type.primary_field if item_type else "statement"
-        text = " ".join(str(item.get(field) or "").split())[:SAMPLE_CHARS]
+        text = " ".join(str(item.get(field) or "").split())[: config.KG_TAGGABLE_SAMPLE_CHARS]
         if text:
             lines.append(f"- {text}")
     return "\n".join(lines)

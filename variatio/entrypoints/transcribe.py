@@ -39,6 +39,14 @@ _REASONS = {
     "dpi": "dpi",
     "ocr": "ocr",
     "temperature": "temperature",
+    "top_k": "sampling",
+    "top_p": "sampling",
+    "render_max_a4": "render",
+    "png_max_bytes": "render",
+    "jpeg_quality": "render",
+    "picture_min_side": "render",
+    "picture_max_pixels": "render",
+    "raster_scale": "render",
     "cleanup": "cleanup",
     "rasteriser": "rasteriser",
     "deck": "deck",
@@ -174,10 +182,12 @@ def _slot_converter(slot: str):
 
 def _reasons(stored: dict, expected: dict) -> list[str]:
     """Name what changed, deduped and in fingerprint order; `config` when nothing is named."""
+    # A field only the stored side has counts too: a top-k emptied since the reading.
+    keys = [*expected, *(key for key in stored if key not in expected)]
     changed = [
         key
-        for key in expected
-        if key in _REASONS and stored.get(key) != expected[key]
+        for key in keys
+        if key in _REASONS and stored.get(key) != expected.get(key)
     ]
     said: list[str] = []
     for key in changed:

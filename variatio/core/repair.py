@@ -58,7 +58,7 @@ def parse_with_repair(
             prompt=prompt,
             think=False,
             format=format,
-            temperature=config.TEMPERATURE_REPAIR,
+            sampling=inference.sampling("repair"),
         ).response
         result, error = parse(response)
 

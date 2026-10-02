@@ -34,6 +34,7 @@ def synthesize(
     source_label: str,
     model: str,
     *,
+    phase: str,
     think: bool = False,
 ) -> ContentContext | None:
     """Write the subject context draft from one builder's evidence, or `None` on failure.
@@ -55,7 +56,7 @@ def synthesize(
         model=model,
         prompt=prompt,
         think=think,
-        temperature=inference.judgement_temperature(think),
+        sampling=inference.sampling(phase, think),
         format=None if think else CONTENT_CONTEXT_SCHEMA,
     ).response
     parsed, error = parse_with_repair(

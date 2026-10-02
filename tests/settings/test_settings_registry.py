@@ -10,6 +10,8 @@ DERIVED_ONLY = {
     # the FIRST of them — what the CLI, the evaluation's arms and a request naming none are
     # written with.
     "VARIANT_GENERATION_LLM",
+    # Each phase's sampling triple, read through `inference.sampling` and never by name.
+    "SAMPLING",
 }
 
 # An empty document prefix is qwen3-embedding's prescribed usage rather than an omission.
@@ -82,16 +84,20 @@ def test_every_phase_key_is_declared_in_the_registry():
 # windows and the per-phase reasoning efforts feed derived values and never land in
 # `variatio.config`.
 #
-# 132 and 109 on this branch, which is the library alone: the web half's own eighteen
+# 229 and 140 on this branch, which is the library alone: the web half's own twenty-seven
 # settings are declared where they are read, and there is nothing left here to read them.
-# Nine were the evaluation's, picked up by an optional import from a package this branch
-# does not carry; four were the SSH tunnel the API opened as a subprocess; three belonged
-# to the job queue — how long a server may sit idle before letting go of the GPU, how often
-# it looks, and how many jobs may hold the remote lane at once; and the last two were the
-# commission's, a cap on the item count that a route enforced and the recently saved
-# variants a handler read out of the database to feed the prompt as used-up scenarios.
+# Fourteen are the evaluation's — its own eleven and the sampling of its scenario call —
+# picked up by an optional import from a package this branch does not carry; four were the
+# SSH tunnel the API opened as a subprocess; three belonged to the job queue — how long a
+# server may sit idle before letting go of the GPU, how often it looks, and how many jobs
+# may hold the remote lane at once; two were the commission's, a cap on the item count that
+# a route enforced and the recently saved variants a handler read to feed the prompt as
+# used-up scenarios; and the last four are the limits an upload of raw material is held to.
 def test_the_registry_holds_what_this_work_transcribed():
     # 132 → 131 and 109 → 108 on 2026-09-16: `builders.transcribe_prompt_version` left with
     # the rule that a prompt change expires every page.
-    assert len(REGISTRY) == 131
-    assert len(BY_NAME) == 108
+    # 131 → 197 on 2026-10-02: a temperature, top-k and top-p per model call, three of them
+    # the temperatures that already were one call's (renamed, their names kept). 197 → 229
+    # and 108 → 140 the same day: every stage's hard-coded knobs became settings.
+    assert len(REGISTRY) == 229
+    assert len(BY_NAME) == 140

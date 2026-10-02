@@ -19,7 +19,7 @@ OUTLINE = [
 def answer(monkeypatch, response: str) -> list[str]:
     prompts: list[str] = []
 
-    def fake_generate(*, model, prompt, think, format, temperature):
+    def fake_generate(*, model, prompt, think, format, sampling):
         prompts.append(prompt)
         return SimpleNamespace(response=response)
 

@@ -98,7 +98,7 @@ def screen(
             prompt=prompt,
             think=config.THINK_ADMISSIBILITY,
             format=None if config.THINK_ADMISSIBILITY else _schema(owners),
-            temperature=inference.judgement_temperature(config.THINK_ADMISSIBILITY),
+            sampling=inference.sampling("admissibility", config.THINK_ADMISSIBILITY),
         ).response
     except InferenceError as e:
         logger.warning(f"[admissibility] The judge could not answer: {e}; the commission goes ahead")

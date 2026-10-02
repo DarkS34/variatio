@@ -66,6 +66,17 @@ MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 # by the retirement itself.
 RETIRED_FIELDS = ("prompt_version",)
 
+# The render fields' values before they were settings, and so what every page read before
+# they entered the fingerprint was produced with (2026-10-02).
+RENDER_BEFORE = {
+    "render_max_a4": 2,
+    "png_max_bytes": 2 * 1024 * 1024,
+    "jpeg_quality": 90,
+    "picture_min_side": 1024,
+    "picture_max_pixels": 7_750_000,
+    "raster_scale": 4,
+}
+
 # What `_meta.json` holds beside the fingerprint, and therefore what is NOT compared when
 # deciding whether the cached pages are still current.
 META_EXTRA = (
@@ -92,17 +103,6 @@ FAILED_PAGE_PREFIXES = tuple(wording_sets.of(code).FAILED_PAGE_PREFIX for code i
 # shared by every document of the workspace: one file per distinct image, so the header
 # logo six documents repeat costs one call and not six.
 IMAGES_DIR_NAME = "images"
-# A picture is upscaled before the call until its longer side reaches this many pixels.
-# Measured on `gemma-4-31b` over the readable pictures of the two reference banks (188×30 to
-# 1366×768), native and upscaled answered byte for byte the same, so there it buys nothing
-# and costs a few hundred tokens. It stands for the local transcription model, which is
-# unmeasured, and because compositing onto white is needed either way — a formula drawn in
-# black on a transparent ground vanishes on a black pad.
-IMAGE_MIN_LONG_SIDE = 1024
-# A picture is downscaled before the call when it holds more pixels than this: two A4 pages
-# at 200 dpi, the most `render_scale` lets a page render reach at the default DPI.
-IMAGE_MAX_PIXELS = 7_750_000
-
 # The version of `markdown.undo_converter_escapes`, the cleanup applied to Docling's output
 # and to nothing else. It is written into the DOCLING fingerprint ONLY: bumping it expires
 # the pages that cleanup produced, which is seconds of Docling, while a key in the vlm
@@ -146,7 +146,7 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     `TRANSCRIBE_SEAM_CHARS` is deliberately absent — how much of a seam the model is shown
     does not change a single page, and the seam decisions live in `_meta.json` beside them.
     So is the prompt (`RETIRED_FIELDS`): a change to it never re-reads a corpus. The model
-    and the temperature are recorded on BOTH routes: on the Docling one they are what the
+    and the sampling are recorded on BOTH routes: on the Docling one they are what the
     pictures were read with, and a page carries those readings inline.
     """
     stat = source.stat()
@@ -158,7 +158,8 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
         "model": model,
         "dpi": dpi,
         "ocr": ocr,
-        "temperature": config.TRANSCRIBE_TEMPERATURE,
+        **sampling_record("transcribe" if mode == "vlm" else "transcribe_image"),
+        **_render_record(mode),
     }
     if mode == "docling":
         fingerprint["cleanup"] = CONVERTER_CLEANUP_VERSION
@@ -168,6 +169,38 @@ def _page_fingerprint(source: Path, mode: str, model: str, dpi: int, ocr: bool) 
     if source.suffix.lower() == ".pptx":
         fingerprint["deck"] = DECK_VERSION
     return fingerprint
+
+
+def _render_record(mode: str) -> dict:
+    """What shapes the picture a route sends the model, beyond the DPI: a page's render, or a
+    document's pictures and their metafiles."""
+    encoding = {
+        "png_max_bytes": config.TRANSCRIBE_PAGE_PNG_MAX_BYTES,
+        "jpeg_quality": config.TRANSCRIBE_PAGE_JPEG_QUALITY,
+    }
+    if mode == "vlm":
+        return {"render_max_a4": config.TRANSCRIBE_PAGE_MAX_A4_AREAS, **encoding}
+    return {
+        "picture_min_side": config.TRANSCRIBE_IMAGE_MIN_LONG_SIDE,
+        "picture_max_pixels": config.TRANSCRIBE_IMAGE_MAX_PIXELS,
+        "raster_scale": config.TRANSCRIBE_METAFILE_RASTER_SCALE,
+        **encoding,
+    }
+
+
+def sampling_record(phase: str) -> dict:
+    """The sampling a reading was made under, as a fingerprint or an image record keeps it.
+
+    The temperature always; top-k and top-p only when set, so a cache written before they
+    could be set stays current for as long as they are left empty.
+    """
+    sampling = inference.sampling(phase)
+    record: dict = {"temperature": sampling.temperature}
+    if sampling.top_k is not None:
+        record["top_k"] = sampling.top_k
+    if sampling.top_p is not None:
+        record["top_p"] = sampling.top_p
+    return record
 
 
 def same_document(stored: dict, fingerprint: dict) -> bool:
@@ -611,18 +644,19 @@ def looped_pages(pages: list[str]) -> list[int]:
     ]
 
 
-# The verdicts of `_holds_loop`, by the page's digest. `/raw` asks `transcription_status`
-# every four seconds while a job runs and the scan is a millisecond a page (measured: 1.77 s
-# over the 1 794 cached pages of the reference installation), so a slot of several hundred
-# pages would pay a good part of a second per poll for an answer that only changes when the
-# page does. Bounded, oldest out first.
-_LOOP_VERDICTS: dict[str, bool] = {}
+# The verdicts of `_holds_loop`, by the page's digest and the detector's thresholds. `/raw`
+# asks `transcription_status` every four seconds while a job runs and the scan is a
+# millisecond a page (measured: 1.77 s over the 1 794 cached pages of the reference
+# installation), so a slot of several hundred pages would pay a good part of a second per
+# poll for an answer that only changes when the page or a threshold does. Bounded, oldest
+# out first.
+_LOOP_VERDICTS: dict[tuple, bool] = {}
 _LOOP_VERDICTS_MAX = 8192
 
 
 def _holds_loop(page: str) -> bool:
     """Whether a cached page holds a repetition loop, remembered by the page's digest."""
-    key = hashlib.sha1(page.encode("utf-8")).hexdigest()
+    key = (hashlib.sha1(page.encode("utf-8")).hexdigest(), repetition.signature())
     verdict = _LOOP_VERDICTS.get(key)
     if verdict is None:
         verdict = repetition.detect(page) is not None
@@ -633,8 +667,18 @@ def _holds_loop(page: str) -> bool:
 
 
 def fingerprint_of(meta: dict) -> dict:
-    """The fingerprint half of a `_meta.json`, without the counts and the retired fields."""
-    return {k: v for k, v in meta.items() if k not in META_EXTRA and k not in RETIRED_FIELDS}
+    """The fingerprint half of a `_meta.json`, without the counts and the retired fields.
+
+    A meta written before the render fields were recorded was read with the values those
+    had then (`RENDER_BEFORE`), and reads as such: recording them expired nothing.
+    """
+    fingerprint = {
+        k: v for k, v in meta.items() if k not in META_EXTRA and k not in RETIRED_FIELDS
+    }
+    if "mode" in fingerprint:
+        for key in _render_record(fingerprint["mode"]):
+            fingerprint.setdefault(key, RENDER_BEFORE[key])
+    return fingerprint
 
 
 def _transcribe(
@@ -803,25 +847,17 @@ def page_images(
 # same way, while the same page as a 16 MP JPEG was read in 0.9 s — for 1 574 prompt tokens,
 # exactly what the 7.7 MP one cost, because the endpoint resamples the picture anyway.
 
-# A4 in points: the page every DPI setting of this route was measured on.
+# A4 in points: the page every DPI setting of this route was measured on. How many of them
+# one render may cover, and when a page leaves PNG for JPEG, are settings
+# (`builders.transcribe_page_*`).
 A4_AREA_PT = 595 * 842
-# How many A4 pages of area one render may cover at the configured DPI. Two is an A3 page at
-# full density; a page declared bigger is rendered at a lower one rather than at a size no
-# endpoint accepts.
-PAGE_MAX_A4_AREAS = 2
-# A page with text on it stays a lossless PNG unless it would weigh more than this, which is
-# a fifth of Cerebras' whole request and far above any typeset page (an A4 of text at 200 dpi
-# is ~0.6 MB). A page with NO text layer is a photograph of paper and is a JPEG from the start.
-PAGE_PNG_MAX_BYTES = 2 * 1024 * 1024
-# JPEG quality for a scan: the synthetic A4 scan measured 1.8 MB as PNG and 0.4 MB here.
-PAGE_JPEG_QUALITY = 90
 
 
 def render_scale(width_pt: float, height_pt: float, dpi: int) -> float:
     """The scale a page is rendered at: the configured DPI, unless the page is too big for it."""
     scale = dpi / 72
     area = max(width_pt, 1.0) * max(height_pt, 1.0)
-    ceiling = PAGE_MAX_A4_AREAS * A4_AREA_PT
+    ceiling = config.TRANSCRIBE_PAGE_MAX_A4_AREAS * A4_AREA_PT
     return scale if area <= ceiling else scale * (ceiling / area) ** 0.5
 
 
@@ -836,10 +872,10 @@ def encode_page(image, scanned: bool) -> bytes:
     if not scanned:
         png = io.BytesIO()
         image.save(png, format="PNG")
-        if png.tell() <= PAGE_PNG_MAX_BYTES:
+        if png.tell() <= config.TRANSCRIBE_PAGE_PNG_MAX_BYTES:
             return png.getvalue()
     jpeg = io.BytesIO()
-    image.convert("RGB").save(jpeg, format="JPEG", quality=PAGE_JPEG_QUALITY)
+    image.convert("RGB").save(jpeg, format="JPEG", quality=config.TRANSCRIBE_PAGE_JPEG_QUALITY)
     return jpeg.getvalue()
 
 
@@ -870,6 +906,7 @@ def _transcribe_page(
             model,
             lambda note: prompts.transcribe_page_prompt(index, count, note=note),
             image,
+            "transcribe",
             config.THINK_TRANSCRIBE,
             tag,
             what,
@@ -894,7 +931,7 @@ def _transcribe_page(
 
 
 def _ask_twice(
-    model: str, build_prompt, image: str, think, tag: str, what: str, prompts
+    model: str, build_prompt, image: str, phase: str, think, tag: str, what: str, prompts
 ) -> inference.GenerationResponse:
     """Ask once, and once more with the prompt saying what went wrong when the answer never finished.
 
@@ -905,22 +942,21 @@ def _ask_twice(
     fail the one that read further before locking is returned, since that is what the
     caller keeps.
     """
-    answer = _ask(model, build_prompt(""), image, think, tag, what)
+    answer = _ask(model, build_prompt(""), image, phase, think, tag, what)
     if not _unfinished(answer):
         return answer
     cap = config.TRANSCRIBE_MAX_OUTPUT_TOKENS
     logger.warning(f"{tag}{what}: {_cause(answer, cap)}; asking once more with the rule spelled out")
     repeated = repetition.quoted(answer.loop) if answer.loop else None
-    again = _ask(
-        model, build_prompt(prompts.transcribe_retry_note(repeated, cap)), image, think, tag, what
-    )
+    note = prompts.transcribe_retry_note(repeated, cap)
+    again = _ask(model, build_prompt(note), image, phase, think, tag, what)
     if not _unfinished(again):
         return again
     return again if len(_head(again)) >= len(_head(answer)) else answer
 
 
 def _ask(
-    model: str, prompt: str, image: str, think, tag: str, what: str
+    model: str, prompt: str, image: str, phase: str, think, tag: str, what: str
 ) -> inference.GenerationResponse:
     """One transcription call, retried on an engine error up to `TRANSCRIBE_MAX_RETRIES` times.
 
@@ -937,7 +973,7 @@ def _ask(
                 prompt=prompt,
                 think=think,
                 images=[image],
-                temperature=config.TRANSCRIBE_TEMPERATURE,
+                sampling=inference.sampling(phase, think),
                 max_output_tokens=config.TRANSCRIBE_MAX_OUTPUT_TOKENS,
                 stop_on_loop=True,
             )
@@ -1178,7 +1214,9 @@ def _encode_image(image) -> bytes:
 
     Transparency is composited onto white: a formula drawn in black on a transparent ground
     is invisible on the black a preprocessor pads with. A small picture is upscaled by a
-    whole factor until its longer side reaches `IMAGE_MIN_LONG_SIDE`.
+    whole factor until its longer side reaches `TRANSCRIBE_IMAGE_MIN_LONG_SIDE` — compositing
+    onto white is needed either way, a formula drawn in black on a transparent ground
+    vanishing on a black pad.
     """
     from PIL import Image
 
@@ -1190,15 +1228,17 @@ def _encode_image(image) -> bytes:
     elif image.mode != "RGB":
         image = image.convert("RGB")
     longest = max(image.size)
-    if 0 < longest < IMAGE_MIN_LONG_SIDE:
-        factor = -(-IMAGE_MIN_LONG_SIDE // longest)
+    min_side = config.TRANSCRIBE_IMAGE_MIN_LONG_SIDE
+    max_pixels = config.TRANSCRIBE_IMAGE_MAX_PIXELS
+    if 0 < longest < min_side:
+        factor = -(-min_side // longest)
         image = image.resize(
             (image.width * factor, image.height * factor), Image.Resampling.LANCZOS
         )
-    elif image.width * image.height > IMAGE_MAX_PIXELS:
+    elif image.width * image.height > max_pixels:
         # A photograph pasted whole into a document is the page scan's twin: shrunk to what
         # a render of two A4 pages at 200 dpi holds, which is more than the endpoint reads.
-        factor = (IMAGE_MAX_PIXELS / (image.width * image.height)) ** 0.5
+        factor = (max_pixels / (image.width * image.height)) ** 0.5
         image = image.resize(
             (max(1, round(image.width * factor)), max(1, round(image.height * factor))),
             Image.Resampling.LANCZOS,
@@ -1208,8 +1248,12 @@ def _encode_image(image) -> bytes:
     return encode_page(image, scanned=False)
 
 
+# What of an image record says how the picture was sampled.
+_SAMPLING_FIELDS = ("temperature", "top_k", "top_p")
+
+
 def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) -> str | None:
-    """The cached reading of a picture, when it was made under the same model and temperature."""
+    """The cached reading of a picture, when it was made under the same model and sampling."""
     if images_dir is None:
         return None
     path = _image_record_path(Path(images_dir), digest)
@@ -1221,7 +1265,8 @@ def _read_image_cache(images_dir: str | Path | None, digest: str, model: str) ->
         return None
     if not isinstance(record, dict) or not isinstance(record.get("text"), str):
         return None
-    if record.get("model") != model or record.get("temperature") != config.TRANSCRIBE_TEMPERATURE:
+    sampled = {key: record[key] for key in _SAMPLING_FIELDS if key in record}
+    if record.get("model") != model or sampled != sampling_record("transcribe_image"):
         return None
     return record["text"]
 
@@ -1242,6 +1287,7 @@ def _transcribe_image(
             model,
             lambda note: prompts.transcribe_image_prompt(index, count, note=note),
             image,
+            "transcribe_image",
             config.THINK_TRANSCRIBE_IMAGE,
             tag,
             what,
@@ -1276,7 +1322,7 @@ def _write_image_cache(
         {
             "sha256": digest,
             "model": model,
-            "temperature": config.TRANSCRIBE_TEMPERATURE,
+            **sampling_record("transcribe_image"),
             "text": text,
         },
     )
@@ -1556,7 +1602,7 @@ def _review_seam(
             prompt=prompts.merge_pages_prompt(tail, head, index, count),
             think=config.THINK_TRANSCRIBE_SEAM,
             format=None if config.THINK_TRANSCRIBE_SEAM else SEAM_SCHEMA,
-            temperature=inference.judgement_temperature(config.THINK_TRANSCRIBE_SEAM),
+            sampling=inference.sampling("transcribe_seam", config.THINK_TRANSCRIBE_SEAM),
         ).response
     except inference.InferenceError as e:
         logger.warning(f"{tag}seam {index - 1}→{index}: not reviewed ({e}); joined by rule")

@@ -51,7 +51,7 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   chained by anything; `build` creates missing artifacts; `init` loads, tags, warms indices;
   `generate` (`-n`, `--concepts`, `--item-type`, `--fixed FIELD=VALUE`, `--curriculum`,
   `--instructions`); `all` = build missing + init + generate.
-- `uv run system [serve|import-instance|export-instance|workspaces|create-workspace|db-check|create-user|users|grant|invite]`
+- `uv run system [serve|import-instance|export-instance|export-generations|workspaces|create-workspace|db-check|create-user|users|grant|invite]`
   — API and admin ([server/cli/](server/cli/)). No subcommand means `serve`. `guarded()` wraps
   every command except `db-check` and `serve`. `PROG = "system"` matches `pyproject.toml`.
 - `uv run pytest` — default `-m 'not corpus and not model'`. Suite split by subsystem under
@@ -83,7 +83,9 @@ uv run system
 Database commands fail with a plain message, not a stack. `serve` refuses to start when the
 schema is behind or ahead of the migrations ([db/schema.py](server/db/schema.py)); `db-check`
 reports it. Deploying a change with a migration or new dependency needs `uv sync` and
-`uv run alembic upgrade head` before the restart.
+`uv run alembic upgrade head` before the restart. Migration 0015 drops the `generations`
+table and refuses while a row has no file: on an installation that still has the table, run
+`uv run system export-generations` (idempotent, `--dry-run`) before the upgrade.
 
 ### Dependencies
 
@@ -167,7 +169,7 @@ put a component back at the root.
 ### `Workspace` — every per-instance path, as data
 
 [workspace.py](variatio/core/workspace.py) is a frozen dataclass over `root` deriving every
-path (`instance/`, `cache/`, `raw/`, artifacts, derivations, host state). It imports nothing
+path (`instance/`, `cache/`, `raw/`, `generations/`, artifacts, derivations, host state). It imports nothing
 from the package. Root paths live in [paths.py](variatio/core/paths.py). **There is no
 default workspace**: `ws` is required everywhere, `paths.workspace("")` raises, an
 installation may hold zero workspaces and an account may belong to none. A component with a
@@ -179,6 +181,12 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
 - `config.py` is an **index of bare annotations** plus `apply(globals())`; values live in the
   registry (`settings/registry/*.py`), each `Setting` carrying its measured `doc`, `Impact`
   (`NONE ENGINE CONTEXTS REINDEX LOCKED` — what a change invalidates), bounds and flags.
+- **Every setting names the stages that read it** (`stages`, the owner first; `types.STAGES`
+  is the pipeline's, the registry appends the study's) and the model call it is drawn under
+  (`phase`, a `PIPELINE` phase of its owner's lane). Engine, tunnel and logging have none.
+  `tests/settings/test_setting_stages.py` pins it; the panel has one screen per stage.
+  The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
+  reads is `evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
   **`config.json` stores every non-secret value and beats the registry**, so bumping a
   registry default alone changes nothing on an installation — edit `config.json` too.
@@ -192,11 +200,21 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
   default `low`); `derived` resolves `THINK_<PHASE>` to `False` or the level string.
   Switching a grammar phase's reasoning on drops its grammar. `inference._think_option` and
   `cerebras.reasoning_effort` are the only places that turn `True` into a level
-  (`DEFAULT_THINK_EFFORT = "low"`).
+  (`reasoning.default_effort`, default `low`).
+- **Every model call samples with its own triple**, `sampling.phases.<phase>.{temperature,
+  top_k,top_p}` (engine-scoped, declared from `PIPELINE` in `registry/sampling.py`), resolved
+  by `inference.sampling(phase, think)` and passed as `sampling=` — never a bare temperature.
+  Empty is inherited: a phase reading with another's model takes that phase's values
+  (`derived`), the temperature then follows the judging pair by `think`
+  (`TEMPERATURE_DETERMINISTIC`/`_REASONING`), top-k/top-p are not sent. Transcription, variant,
+  repair and scenario keep a temperature of their own (`TRANSCRIBE_TEMPERATURE`,
+  `TEMPERATURE_GENERATION`, `TEMPERATURE_REPAIR` are those keys' names). Cerebras drops a top-k
+  with one warning per model.
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
-- The evaluation's settings are declared in `evaluation/settings.py`, picked up by an optional
-  import — the one place `variatio/` names the evaluation.
+- The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
+  `READS` are declared in `evaluation/settings.py`, picked up by an optional import — the one
+  place `variatio/` names the evaluation.
 
 ### Database (`server/db/`)
 
@@ -237,8 +255,8 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
   via `GET /{id}/link`, and pastable back after deletion. The sealed copy dies with the use.
-- Deleting an account: `generations` and `evaluation_sessions` keep their rows (`SET NULL`);
-  `stage_evaluations` cascade.
+- Deleting an account: its generated exercises stay as files nobody reads any more;
+  `evaluation_sessions` keep their rows (`SET NULL`); `stage_evaluations` cascade.
 
 ### Workspaces, jobs and the queue
 
@@ -262,13 +280,23 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   internally and emits nothing, and closing the stream stops the engine. `request_cancel`
   returns at once; SIGKILL escalation runs on its own thread. Waits are sliced into one-second
   checkpoints. A stop button stops every run its sibling button started.
-- Every validated item is a `generations` row written the moment it validates
-  (`on_accepted`), with the commission and the writing model (`generations.model`, nullable).
-  **An exercise is private to its author**: no workspace scope, 404 for others' rows.
+- Every validated item is a JSON file, `<workspace>/generations/user_<id>/<id>.json`
+  ([server/generations.py](server/generations.py)), written the moment it validates
+  (`on_accepted`) with `json_io.write_json`; one file per exercise, so concurrent jobs never
+  share one. It keeps `commission` (as asked; `think` a level or a bool) beside `resolved`
+  (targets, `assumed_known`/`forbidden` and the closure rule, few-shot with origins, ruling,
+  `avoid`, model and effort that ran, engine, lane, prompt language), the artifact hashes
+  (`inputs`), the settings that shape a statement, the version, the accepted attempt's prompt
+  and the output. The library hands it over as `GeneratedVariant.prompt`/`.provenance` and
+  writes nothing. Id = `<UTC>-<job>-<index>`, checked by regex on every route. **An exercise
+  is private to its author**: the author's id (never the username) names the directory, `user_<id>/`; no
+  workspace scope, the same 404 for others' and malformed ids. Format 0 is a row exported
+  from the retired table: what it never kept is null, never reconstructed.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
   tree goes before the row. **A workspace deletion that leaves no other member takes its tree
-  too; if others remain, the files stay.** Emptying a stage never touches `.history/`.
+  too; if others remain, the files stay** — the generated exercises with them. Emptying a
+  stage never touches `.history/`.
 - The API owns the SSH tunnel to the GPU box (`server/tunnel.py`, system `ssh -N -L`,
   `BatchMode=yes`, watchdog with backoff).
 - Job logs are **files**, `logs/<slug>/jobs.log` (one shared sink per workspace, filtered by
@@ -313,7 +341,10 @@ Both raw slots use the same VLM page route (quality over speed).
 - **All PDFium calls go through `pages._PDFIUM_LOCK`** (process-wide RLock, released between
   pages, documents closed under the lock). PDFium is not thread-safe and one corruption
   poisons the process.
-- Scanned pages (no text layer) go as JPEG q90; renders are capped at two A4 areas; MIME is
+- Scanned pages (no text layer) go as JPEG (`TRANSCRIBE_PAGE_JPEG_QUALITY`); renders are capped
+  at `TRANSCRIBE_PAGE_MAX_A4_AREAS`; these, the picture sizes and the metafile scale are in
+  the fingerprint, a meta lacking them reading as `pages.RENDER_BEFORE` (the values they had
+  as constants), and top-k/top-p enter it only when set; MIME is
   read off the bytes. A failed page of a finished PDF is re-read on its own later, unless
   pages were inserted/deleted by hand (`restructured`) or the page count changed.
 - **Truncation and loops**: `TRANSCRIBE_MAX_OUTPUT_TOKENS` (4096) caps each answer;
@@ -650,7 +681,15 @@ never `oklch` (hue interpolation turns greens blue).
   its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   «Motor» tab: left column measures, right column sets; one save bar; the guardrail and
-  embedder models are read-only.
+  embedder models are read-only. «Configuración» is **one screen per stage**, named and
+  numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
+  down the page, each node with model, reasoning and sampling and its own settings under it;
+  then «General de la etapa», «Común a todas las etapas», and folded what it reads of
+  another stage's — the same value, unfolded on its owner's screen.
+- A setting's measured `doc` stays in the registry and never leaves the API. A row carries at
+  most one (i), and only where its name does not say what it controls or a change has a
+  consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
+  `cfg.hint.<key>`; a key missing there draws nothing.
 
 ### Client rules
 
@@ -724,6 +763,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The Cerebras throttle is a hard cap no header may raise; the gate books claims.
 - No grammar to a remote model on the bank extraction (or its repair).
 - The commission chooses its writing model from the offered list; rows record it.
+- Every model call has its own temperature, top-k and top-p; empty inherits, so adding a
+  phase never changes how an existing one samples.
 - Queue per backend lane; local capacity 1 forever; remote capacity safe only with the
   ledger's lock and claims.
 - `inference.generate()` streams internally and is interruptible; the stream is closed on
@@ -743,6 +784,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Deleting workspaces/artifacts is the admin's and takes the files; a last-member deletion
   takes the tree; `.history/` is never emptied by it. CORS off.
 - Exercises are private to their author.
+- Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;
+  the database keeps none of them. The library returns how an item was made; the server
+  writes it. `uv run variatio generate` (the CLI) saves nothing.
 
 **Interface**
 - The palette is measured; `--primary` is ink; `--radius: 0`; arm colours fixed; theme
@@ -759,6 +803,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   except the finished-origin tint and the closing block.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
+- Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
+- «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
+  drawn on every stage that reads it and unfolded only on its owner's.
 - The mark is three equal squares (settled, attention, outline).
 - Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - The exemplars profile is edited through the form alone.

@@ -4,12 +4,14 @@ The declarations live one module per family and are assembled here in the order 
 lays the panel out.
 """
 
+from ..types import STAGES as PIPELINE_STAGES
 from ..types import Setting
-from . import builders, generation, inference, logging, reasoning, retrieval
+from . import builders, generation, inference, logging, reasoning, retrieval, sampling
 
 REGISTRY: tuple[Setting, ...] = tuple(
     inference.SETTINGS
     + reasoning.SETTINGS
+    + sampling.SETTINGS
     + builders.SETTINGS
     + retrieval.SETTINGS
     + generation.SETTINGS
@@ -35,4 +37,7 @@ GROUPS = (
 
 PIPELINE = reasoning.PIPELINE
 
-__all__ = ["BY_KEY", "BY_NAME", "GROUPS", "PIPELINE", "REGISTRY"]
+# One screen per stage, in the order of the path.
+STAGES = PIPELINE_STAGES
+
+__all__ = ["BY_KEY", "BY_NAME", "GROUPS", "PIPELINE", "REGISTRY", "STAGES"]

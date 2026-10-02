@@ -19,8 +19,6 @@ from . import progress, repetition
 TokenSink = Callable[[str, str], None]
 ProgressSink = Callable[[int, int], None]
 
-DEFAULT_THINK_EFFORT = "low"
-
 THINK_OPEN = "<think>"
 THINK_CLOSE = "</think>"
 _MAX_TAG = max(len(THINK_OPEN), len(THINK_CLOSE))
@@ -55,6 +53,19 @@ class GenerationResponse:
     loop: str | None = None
 
 
+@dataclass(frozen=True)
+class Sampling:
+    """How the engine draws each token: a temperature, and a top-k and top-p when set.
+
+    An empty top-k or top-p is not sent, and the model's own value decides — its Modelfile
+    on Ollama, the provider's default on Cerebras.
+    """
+
+    temperature: float
+    top_k: int | None = None
+    top_p: float | None = None
+
+
 class OllamaEngine:
     """The local half: an Ollama server, reached over `config.OLLAMA_HOST`."""
 
@@ -86,7 +97,7 @@ class OllamaEngine:
         think: bool | str | None = None,
         system: str | None = None,
         images: list[str] | None = None,
-        temperature: float | None = None,
+        sampling: Sampling | None = None,
         format: dict | str | None = None,
         max_output_tokens: int | None = None,
         stop_on_loop: bool = False,
@@ -130,9 +141,7 @@ class OllamaEngine:
                 **image_option,
                 **self._think_option(model, think),
                 **self._format_option(format),
-                **self._context_option(
-                    model, self._temperature(temperature), max_output_tokens
-                ),
+                **self._context_option(model, self._sampling(sampling), max_output_tokens),
             )
             answer, thinking, truncated, loop = _drain(stream, stop_on_loop)
         except (ollama.ResponseError, httpx.RequestError) as e:
@@ -145,7 +154,7 @@ class OllamaEngine:
         prompt: str,
         think: bool | str | None = None,
         on_token: TokenSink | None = None,
-        temperature: float | None = None,
+        sampling: Sampling | None = None,
     ) -> GenerationResponse:
         """Stream one answer, feeding each token to `on_token` as it arrives.
 
@@ -154,9 +163,7 @@ class OllamaEngine:
         answer channel, and every chunk is a point where a cancellation can take effect.
         """
         if on_token is None:
-            return self.generate(
-                model=model, prompt=prompt, think=think, temperature=temperature
-            )
+            return self.generate(model=model, prompt=prompt, think=think, sampling=sampling)
 
         splitter = ThinkingSplitter()
         answer: list[str] = []
@@ -174,7 +181,7 @@ class OllamaEngine:
                 prompt=prompt,
                 stream=True,
                 **self._think_option(model, think),
-                **self._context_option(model, self._temperature(temperature)),
+                **self._context_option(model, self._sampling(sampling)),
             ):
                 thought = getattr(chunk, "thinking", None)
                 if thought:
@@ -195,7 +202,7 @@ class OllamaEngine:
 
         THIS IS WHERE `True` BECOMES AN EFFORT LEVEL — with `cerebras.reasoning_effort`,
         the only place it does. The boolean callers (the evaluation's `Commission`, the
-        `generations.think` column, the UI switch) get the fixed `DEFAULT_THINK_EFFORT`; a
+        `generations.think` column, the UI switch) get `config.DEFAULT_THINK_EFFORT`; a
         pipeline phase passes what `settings.derived` resolved for it, so a string travels
         through untouched and `False` stays `False` — no reasoning at all, which the
         constrained-decoding call sites depend on.
@@ -210,7 +217,7 @@ class OllamaEngine:
         if not self.supports_thinking(model):
             logger.debug(f"'{model}' has no reasoning mode; ignoring think={think}")
             return {}
-        return {"think": DEFAULT_THINK_EFFORT if think is True else think}
+        return {"think": config.DEFAULT_THINK_EFFORT if think is True else think}
 
     @staticmethod
     def _format_option(format: dict | str | None) -> dict:
@@ -226,35 +233,39 @@ class OllamaEngine:
 
     @staticmethod
     def _context_option(
-        model: str, temperature: float | None = None, max_output_tokens: int | None = None
+        model: str, sampling: Sampling | None = None, max_output_tokens: int | None = None
     ) -> dict:
-        """Build the per-call options: the KV cache cap, the temperature and the output cap.
+        """Build the per-call options: the KV cache cap, the sampling and the output cap.
 
         Left to itself Ollama sizes the KV cache from the model's declared context, which
         is where most of this box's VRAM was going; `config.LLM_CONTEXT` decides it in one
         place so no call site has to know. Both options share one dict, so building them
         apart is how one ends up overwriting the other.
 
-        Only the two generative paths resolve a temperature: `embed`/`embed_batch` call
-        this with none and must keep sending none, an embedding having no sampler to steer.
+        Only the two generative paths resolve a sampling: `embed`/`embed_batch` call this
+        with none and must keep sending none, an embedding having no sampler to steer.
         """
         options: dict = {}
         num_ctx = config.LLM_CONTEXT.get(model)
         if num_ctx is not None:
             options["num_ctx"] = num_ctx
-        if temperature is not None:
-            options["temperature"] = temperature
+        if sampling is not None:
+            options["temperature"] = sampling.temperature
+            if sampling.top_k is not None:
+                options["top_k"] = sampling.top_k
+            if sampling.top_p is not None:
+                options["top_p"] = sampling.top_p
         if max_output_tokens is not None:
             options["num_predict"] = max_output_tokens
         return {"options": options} if options else {}
 
     @staticmethod
-    def _temperature(temperature: float | None) -> float:
-        """Resolve a generative call's temperature, never leaving the engine's own 0.8.
+    def _sampling(sampling: Sampling | None) -> Sampling:
+        """Resolve a generative call's sampling, never leaving the engine's own 0.8.
 
         The worst a forgotten argument can do is make a call deterministic.
         """
-        return config.TEMPERATURE_DEFAULT if temperature is None else temperature
+        return Sampling(config.TEMPERATURE_DEFAULT) if sampling is None else sampling
 
     def capabilities(self, model: str) -> list[str]:
         """What the model declares it can do, asked once per process and remembered."""
@@ -439,14 +450,6 @@ class OllamaEngine:
         logger.info(f"Model '{model}' deleted from the engine's disk")
 
 
-# How much of the answer's tail a loop is looked for in while it streams, and how many new
-# characters arrive between two looks. Twelve thousand characters hold the longest run the
-# detector needs at any line length a page produces; a look every quarter of a kilobyte is
-# what keeps the cost of looking below the cost of one token.
-_LOOP_WINDOW_CHARS = 12_000
-_LOOP_CHECK_EVERY_CHARS = 256
-
-
 def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | None]:
     """Read a streamed answer whole, checking between chunks whether to stop.
 
@@ -478,9 +481,9 @@ def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | No
             if getattr(chunk, "done_reason", None) == "length":
                 truncated = True
             if stop_on_loop and piece:
-                tail = (tail + piece)[-_LOOP_WINDOW_CHARS:]
+                tail = (tail + piece)[-config.TRANSCRIBE_LOOP_STREAM_WINDOW_CHARS :]
                 unchecked += len(piece)
-                if unchecked >= _LOOP_CHECK_EVERY_CHARS:
+                if unchecked >= config.TRANSCRIBE_LOOP_STREAM_CHECK_CHARS:
                     unchecked = 0
                     found = repetition.detect_tail(tail)
                     if found is not None:
@@ -614,7 +617,7 @@ def generate(
     think: bool | str | None = None,
     system: str | None = None,
     images: list[str] | None = None,
-    temperature: float | None = None,
+    sampling: Sampling | None = None,
     format: dict | str | None = None,
     max_output_tokens: int | None = None,
     stop_on_loop: bool = False,
@@ -634,7 +637,7 @@ def generate(
         think=think,
         system=system,
         images=images,
-        temperature=temperature,
+        sampling=sampling,
         format=format,
         max_output_tokens=max_output_tokens,
         stop_on_loop=stop_on_loop,
@@ -646,7 +649,7 @@ def generate_stream(
     prompt: str,
     think: bool | str | None = None,
     on_token: TokenSink | None = None,
-    temperature: float | None = None,
+    sampling: Sampling | None = None,
 ) -> GenerationResponse:
     """Ask the configured engine for one answer, token by token."""
     return engine().generate_stream(
@@ -654,7 +657,7 @@ def generate_stream(
         prompt=prompt,
         think=think,
         on_token=on_token,
-        temperature=temperature,
+        sampling=sampling,
     )
 
 
@@ -668,9 +671,20 @@ def embed_batch(model: str, texts: list[str]) -> list[list[float]]:
     return engine().embed_batch(model=model, texts=texts)
 
 
-def judgement_temperature(think: bool | str) -> float:
-    """The temperature a judging phase calls at, paired with whether it reasons."""
-    return config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+def sampling(phase: str, think: bool | str = False) -> Sampling:
+    """Return how `phase` samples this call, given whether it reasons this time.
+
+    What the phase leaves empty is decided here, at the last moment: the temperature by the
+    judging pair — `TEMPERATURE_REASONING` when the call reasons, `TEMPERATURE_DETERMINISTIC`
+    when it does not, which is what every call did before it had its own — and top-k and
+    top-p by the model, by not being sent. An undeclared phase raises: a misspelt name would
+    otherwise sample at the inherited values in silence.
+    """
+    own = config.SAMPLING[phase]
+    temperature = own.get("temperature")
+    if temperature is None:
+        temperature = config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+    return Sampling(float(temperature), own.get("top_k"), own.get("top_p"))
 
 
 def supports_thinking(model: str) -> bool:

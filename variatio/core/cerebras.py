@@ -15,10 +15,10 @@ from loguru import logger
 from .. import config
 from . import cerebras_budget, progress, repetition
 from .inference import (
-    DEFAULT_THINK_EFFORT,
     GenerationResponse,
     InferenceError,
     OllamaEngine,
+    Sampling,
     TokenSink,
     split_thinking,
 )
@@ -190,7 +190,7 @@ class CerebrasEngine:
         prompt: str,
         think: bool | str | None = None,
         on_token: TokenSink | None = None,
-        temperature: float | None = None,
+        sampling: Sampling | None = None,
     ) -> GenerationResponse:
         """Stream one answer, feeding each token to `on_token` as it arrives.
 
@@ -200,9 +200,9 @@ class CerebrasEngine:
         comes back when the call never happened.
         """
         if on_token is None:
-            return self.generate(model=model, prompt=prompt, think=think, temperature=temperature)
+            return self.generate(model=model, prompt=prompt, think=think, sampling=sampling)
 
-        body = self._body(model, prompt, think, None, None, temperature, None)
+        body = self._body(model, prompt, think, None, None, sampling, None)
         body["stream"] = True
         # A streamed answer carries no `usage` unless it is asked for, and without it the
         # ledger would charge a whole generation zero tokens.
@@ -242,7 +242,7 @@ class CerebrasEngine:
         think: bool | str | None = None,
         system: str | None = None,
         images: list[str] | None = None,
-        temperature: float | None = None,
+        sampling: Sampling | None = None,
         format: dict | str | None = None,
         max_output_tokens: int | None = None,
         stop_on_loop: bool = False,
@@ -259,7 +259,7 @@ class CerebrasEngine:
         repeating on its own then closes the fence and finishes the page.
         """
         body = self._body(
-            model, prompt, think, system, images, temperature, format,
+            model, prompt, think, system, images, sampling, format,
             max_output_tokens=max_output_tokens,
         )
         data = self._post(model, body).json()
@@ -285,7 +285,7 @@ class CerebrasEngine:
         think: bool | str | None,
         system: str | None,
         images: list[str] | None,
-        temperature: float | None,
+        sampling: Sampling | None,
         format: dict | str | None,
         max_output_tokens: int | None = None,
     ) -> dict:
@@ -293,7 +293,9 @@ class CerebrasEngine:
 
         Images travel as base64 data URLs typed by their own first bytes — a scanned page is
         sent as JPEG — and a model that cannot read one is refused up front rather than
-        answering emptily.
+        answering emptily. A top-k is not sent: the API documents temperature and top-p
+        and nothing else of the sampler, so a set one is dropped with a warning once per
+        model and the rest of the sampling travels as asked.
         """
         if images and not self.supports_vision(model):
             raise InferenceError(
@@ -317,8 +319,16 @@ class CerebrasEngine:
         messages.append({"role": "user", "content": content})
 
         body: dict = {"model": model, "messages": messages}
-        if temperature is not None:
-            body["temperature"] = temperature
+        if sampling is not None:
+            body["temperature"] = sampling.temperature
+            if sampling.top_p is not None:
+                body["top_p"] = sampling.top_p
+            if sampling.top_k is not None:
+                _warn_once(
+                    f"top_k:{model}",
+                    f"[cerebras] '{model}' is sent no top_k (the API does not document it); "
+                    f"the {sampling.top_k} asked for is dropped",
+                )
         if max_output_tokens is not None:
             body["max_completion_tokens"] = max_output_tokens
         effort = reasoning_effort(think)
@@ -464,7 +474,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
     The same translation `OllamaEngine._think_option` does, in the other dialect: the
     levels are "none"/"low"/"medium"/"high", Cerebras has no "max", so Ollama's top level
     maps down to "high". A string is a per-phase effort already resolved by
-    `settings.derived` and travels untouched; `True` becomes `DEFAULT_THINK_EFFORT`.
+    `settings.derived` and travels untouched; `True` becomes `config.DEFAULT_THINK_EFFORT`.
 
     It assumes every routed model has an off switch. Some families answer 400 "Unsupported
     reasoning effort: none" and would need `False` floored at their own minimum; none is
@@ -474,7 +484,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
         return None
     if think is False:
         return "none"
-    effort = think if isinstance(think, str) else DEFAULT_THINK_EFFORT
+    effort = think if isinstance(think, str) else config.DEFAULT_THINK_EFFORT
     return "high" if effort == "max" else effort
 
 

@@ -119,7 +119,7 @@ def _score(text: str, criterion: str) -> bool | None:
             prompt=text,
             system=criterion,
             think=False,
-            temperature=config.TEMPERATURE_DETERMINISTIC,
+            sampling=inference.sampling("guardrail"),
         )
     except InferenceError as e:
         logger.warning(f"The guardrail call failed for «{criterion}»: {e}")

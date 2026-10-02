@@ -11,15 +11,11 @@ import unicodedata
 
 from .. import config, wording as wording_sets
 
-MIN_NEEDLE_LENGTH = 3
-MAX_INFLECTION_SLACK = 2
-
-
 def mentions(text: str, concept: str, wording=None) -> bool:
     """Return whether `text` mentions `concept`, tolerating accents and inflection.
 
     A word-adjacent literal match first; failing that, every stopword-stripped needle of
-    the concept must prefix some stem of the text within `MAX_INFLECTION_SLACK`
+    the concept must prefix some stem of the text within `KG_MENTION_INFLECTION_SLACK`
     characters. The extractor's naming canon rarely matches verbatim, and a bare `in`
     test missed most true occurrences.
     """
@@ -29,16 +25,14 @@ def mentions(text: str, concept: str, wording=None) -> bool:
     needles = [
         _singular(w)
         for w in re.findall(r"\w+", fold(concept))
-        if w not in stopwords and len(w) >= MIN_NEEDLE_LENGTH
+        if w not in stopwords and len(w) >= config.KG_MIN_MENTION_LENGTH
     ]
     if not needles:
         return False
     stems = _stems(text)
+    slack = config.KG_MENTION_INFLECTION_SLACK
     return all(
-        any(
-            stem.startswith(needle) and len(stem) - len(needle) <= MAX_INFLECTION_SLACK
-            for stem in stems
-        )
+        any(stem.startswith(needle) and len(stem) - len(needle) <= slack for stem in stems)
         for needle in needles
     )
 
@@ -58,6 +52,6 @@ def fold(text: str) -> str:
 def _singular(word: str) -> str:
     """Strip one plural suffix from `word`, leaving anything shorter than a needle alone."""
     for suffix in config.KG_BUILDER_PLURAL_SUFFIXES:
-        if len(word) > MIN_NEEDLE_LENGTH and word.endswith(suffix):
+        if len(word) > config.KG_MIN_MENTION_LENGTH and word.endswith(suffix):
             return word[: -len(suffix)]
     return word
