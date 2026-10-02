@@ -1921,8 +1921,8 @@ function Account() {
           The installation seen from outside, in five tabs: "{t("admin.tab.evaluation")}" (the evaluation),
           "{t("admin.tab.accounts")}" (invitations, roles, unlocks), "
           {t("admin.tab.workspaces")}" (disk usage, export, delete), "{t("admin.tab.engine")}"
-          and "{t("admin.tab.config")}" (every setting, each with what it cost to measure it and
-          with what it will invalidate on saving). It has a section of its own next door: "
+          and "{t("admin.tab.config")}" (every setting, each with what it will
+          invalidate on saving). It has a section of its own next door: "
           {t("guide.sec.admin")}".
         </Paragraph>
       </Block>
@@ -2167,10 +2167,11 @@ function Admin() {
 
       <Block title={t("admin.tab.config")}>
         <Paragraph>
-          Every setting of the installation, each one with the measurement that justifies it
-          beside it, laid out in sections with their own index and their own <strong>search
-          box</strong> — which is what makes a setting findable when you only remember half a
-          word of it.
+          Every setting of the installation, laid out in sections with their own index and their
+          own <strong>search box</strong> — which is what makes a setting findable when you only
+          remember half a word of it. When a setting's name does not tell what it controls, or
+          changing it has a consequence nobody would guess, an (i) beside it says so in one
+          sentence.
         </Paragraph>
         <Paragraph>
           Each row says where its value comes from — "{t("cfg.source.default")}", "

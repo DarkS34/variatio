@@ -663,6 +663,10 @@ never `oklch` (hue interpolation turns greens blue).
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   «Motor» tab: left column measures, right column sets; one save bar; the guardrail and
   embedder models are read-only.
+- A setting's measured `doc` stays in the registry and never leaves the API. A row carries at
+  most one (i), and only where its name does not say what it controls or a change has a
+  consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
+  `cfg.hint.<key>`; a key missing there draws nothing.
 
 ### Client rules
 
@@ -774,6 +778,7 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   except the finished-origin tint and the closing block.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
+- Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
 - The mark is three equal squares (settled, attention, outline).
 - Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - The exemplars profile is edited through the form alone.

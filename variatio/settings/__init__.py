@@ -161,7 +161,11 @@ def _refuse_unresettable(keys: list[str]) -> None:
 
 
 def snapshot() -> list[dict]:
-    """Return every setting as the panel reads it; a secret reports only whether it is set."""
+    """Return every setting as the panel reads it; a secret reports only whether it is set.
+
+    The measured `doc` stays in the registry: it is written for whoever changes a value
+    there, and the panel's one-line hints live in the client's catalogue.
+    """
     engine = active_engine()
     out = []
     for setting in REGISTRY:
@@ -170,7 +174,6 @@ def snapshot() -> list[dict]:
             "name": setting.name,
             "kind": setting.kind,
             "group": setting.group,
-            "doc": setting.doc,
             "impact": setting.impact.value,
             "editable": setting.editable and setting.impact is not Impact.LOCKED,
             "source": _sources.get(setting.key, "default"),

@@ -1,15 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Undo2 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, Checkbox, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
+import { settingHint } from "@/features/admin/hints";
 import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/features/generate/effort";
 import { familyOf } from "@/features/generate/models";
 import { useT, type Key, type Translate } from "@/lib/i18n";
@@ -153,6 +155,7 @@ const OTHER = "__other__";
 export function ModelSelect({
   id,
   label,
+  hint,
   setting,
   value,
   disabled,
@@ -161,6 +164,8 @@ export function ModelSelect({
 }: {
   id: string;
   label: string;
+  /** The setting's (i), drawn beside its name when it has one. */
+  hint?: ReactNode;
   setting: ConfigSetting;
   value: string | null;
   disabled: boolean;
@@ -186,7 +191,9 @@ export function ModelSelect({
 
   return (
     <div className="space-y-1">
-      <Label htmlFor={id}>{label}</Label>
+      <Titled hint={hint}>
+        <Label htmlFor={id}>{label}</Label>
+      </Titled>
       <Select
         id={id}
         value={selectValue}
@@ -237,12 +244,15 @@ export function ModelSelect({
 export function CerebrasModelsField({
   id,
   label,
+  hint,
   value,
   disabled,
   onChange,
 }: {
   id: string;
   label: string;
+  /** The setting's (i), drawn beside its name when it has one. */
+  hint?: ReactNode;
   value: unknown;
   disabled: boolean;
   onChange: (next: unknown) => void;
@@ -261,7 +271,9 @@ export function CerebrasModelsField({
   if (catalog.isLoading) {
     return (
       <div className="space-y-1">
-        <span className="text-body">{label}</span>
+        <Titled hint={hint}>
+          <span className="text-body">{label}</span>
+        </Titled>
         <p className="flex items-center gap-2 text-small text-muted-foreground">
           <Spinner />
           {t("cfg.cerebrasLoading")}
@@ -273,7 +285,9 @@ export function CerebrasModelsField({
   if (!listed) {
     return (
       <div className="space-y-1">
-        <Label htmlFor={id}>{label}</Label>
+        <Titled hint={hint}>
+          <Label htmlFor={id}>{label}</Label>
+        </Titled>
         <Input
           id={id}
           disabled={disabled}
@@ -297,7 +311,9 @@ export function CerebrasModelsField({
   const extras = selected.filter((name) => !listed.includes(name));
   return (
     <div className="space-y-1.5">
-      <span className="text-body">{label}</span>
+      <Titled hint={hint}>
+        <span className="text-body">{label}</span>
+      </Titled>
       <ul className="space-y-1.5">
         {listed.map((model) => (
           <li key={model} className="flex items-center gap-2">
@@ -350,6 +366,7 @@ export function CerebrasModelsField({
 export function GenerationModelsField({
   id,
   label,
+  hint,
   value,
   disabled,
   models,
@@ -357,6 +374,8 @@ export function GenerationModelsField({
 }: {
   id: string;
   label: string;
+  /** The setting's (i), drawn beside its name when it has one. */
+  hint?: ReactNode;
   value: unknown;
   disabled: boolean;
   models: ConfigPayload["models"] | null;
@@ -389,9 +408,11 @@ export function GenerationModelsField({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-body" id={id}>
-        {label}
-      </span>
+      <Titled hint={hint}>
+        <span className="text-body" id={id}>
+          {label}
+        </span>
+      </Titled>
       <ul aria-labelledby={id} className="space-y-1.5">
         {rows.map((model) => {
           const info = known.get(model);
@@ -493,6 +514,7 @@ export function GenerationModelsField({
 export function FixedEffortField({
   id,
   label,
+  hint,
   value,
   disabled,
   offered,
@@ -502,6 +524,8 @@ export function FixedEffortField({
 }: {
   id: string;
   label: string;
+  /** The setting's (i), drawn beside its name when it has one. */
+  hint?: ReactNode;
   value: unknown;
   disabled: boolean;
   offered: string[];
@@ -531,9 +555,11 @@ export function FixedEffortField({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-body" id={id}>
-        {label}
-      </span>
+      <Titled hint={hint}>
+        <span className="text-body" id={id}>
+          {label}
+        </span>
+      </Titled>
       {rows.length === 0 ? (
         <p className="text-small text-muted-foreground">{t("cfg.effort.noModels")}</p>
       ) : (
@@ -627,6 +653,10 @@ export function SettingRow({
   const { t } = useT();
   const label = setting.name || setting.key;
   const id = `config-${setting.key}`;
+  const hintKey = settingHint(setting.key);
+  const hint = hintKey ? (
+    <InfoHint label={t("cfg.hintLabel", { label })}>{t(hintKey)}</InfoHint>
+  ) : null;
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   // Only a value that actually left the default has anything to go back to; a file value
@@ -645,14 +675,18 @@ export function SettingRow({
         <div className="min-w-0 flex-1">
           {setting.secret ? (
             <div className="flex items-center justify-between gap-2">
-              <span className="text-body">{label}</span>
+              <Titled hint={hint}>
+                <span className="text-body">{label}</span>
+              </Titled>
               <Badge variant="outline">
                 {setting.state === "configurada" ? t("cfg.configured") : t("cfg.absent")}
               </Badge>
             </div>
           ) : setting.kind === "bool" ? (
             <div className="flex items-center justify-between gap-2">
-              <span className="text-body">{label}</span>
+              <Titled hint={hint}>
+                <span className="text-body">{label}</span>
+              </Titled>
               <Switch
                 checked={Boolean(value)}
                 disabled={disabled}
@@ -664,6 +698,7 @@ export function SettingRow({
             <GenerationModelsField
               id={id}
               label={label}
+              hint={hint}
               value={value}
               disabled={disabled}
               models={models}
@@ -673,6 +708,7 @@ export function SettingRow({
             <FixedEffortField
               id={id}
               label={label}
+              hint={hint}
               value={value}
               disabled={disabled}
               offered={offered ?? []}
@@ -684,6 +720,7 @@ export function SettingRow({
             <CerebrasModelsField
               id={id}
               label={label}
+              hint={hint}
               value={value}
               disabled={disabled}
               onChange={onChange}
@@ -692,6 +729,7 @@ export function SettingRow({
             <ModelSelect
               id={id}
               label={label}
+              hint={hint}
               setting={setting}
               value={value as string | null}
               disabled={disabled}
@@ -700,7 +738,9 @@ export function SettingRow({
             />
           ) : setting.choices ? (
             <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
+              <Titled hint={hint}>
+                <Label htmlFor={id}>{label}</Label>
+              </Titled>
               <Select
                 id={id}
                 value={String(value ?? "")}
@@ -719,7 +759,9 @@ export function SettingRow({
             </div>
           ) : setting.kind === "int" || setting.kind === "float" ? (
             <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
+              <Titled hint={hint}>
+                <Label htmlFor={id}>{label}</Label>
+              </Titled>
               <Input
                 id={id}
                 type="number"
@@ -742,7 +784,9 @@ export function SettingRow({
             </div>
           ) : setting.kind === "list[str]" ? (
             <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
+              <Titled hint={hint}>
+                <Label htmlFor={id}>{label}</Label>
+              </Titled>
               <Input
                 id={id}
                 disabled={disabled}
@@ -760,7 +804,9 @@ export function SettingRow({
             </div>
           ) : (
             <div className="space-y-1">
-              <Label htmlFor={id}>{label}</Label>
+              <Titled hint={hint}>
+                <Label htmlFor={id}>{label}</Label>
+              </Titled>
               <Input
                 id={id}
                 disabled={disabled}
@@ -798,14 +844,18 @@ export function SettingRow({
       ) : !setting.editable ? (
         <p className="text-small text-muted-foreground">{t("cfg.notEditable")}</p>
       ) : null}
-
-      {setting.doc ? (
-        <details className="text-small text-muted-foreground">
-          <summary className="cursor-pointer select-none">{t("cfg.whyThisValue")}</summary>
-          <p className="mt-1 whitespace-pre-wrap">{setting.doc}</p>
-        </details>
-      ) : null}
     </div>
+  );
+}
+
+/** A field's name with the setting's (i) beside it; without one, the name exactly as it was. */
+function Titled({ hint, children }: { hint?: ReactNode; children: ReactNode }) {
+  if (!hint) return <>{children}</>;
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      {children}
+      {hint}
+    </span>
   );
 }
 

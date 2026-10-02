@@ -853,7 +853,6 @@ export type ConfigSetting = {
   name: string;
   kind: string;
   group: string;
-  doc: string;
   impact: ConfigImpact;
   editable: boolean;
   source: ConfigSource;

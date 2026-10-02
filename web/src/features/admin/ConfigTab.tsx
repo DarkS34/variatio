@@ -533,7 +533,6 @@ function PipelineCard({
   onChange: (key: string, value: unknown) => void;
   onReset: (key: string) => void;
 }) {
-  const { t } = useT();
   const phases = lanes.flatMap((lane) => lane.phases);
   const drawn = new Set([
     ...phases.map((phase) => phase.setting),
@@ -549,7 +548,6 @@ function PipelineCard({
   const rest = ofGroups.filter(
     (setting) => setting.group === REASONING_GROUP && !drawn.has(setting.key),
   );
-  const inNodes = ofGroups.filter((setting) => drawn.has(setting.key));
   const current = (setting: ConfigSetting) =>
     setting.key in draft ? draft[setting.key] : (setting.value ?? setting.default);
   const row = (setting: ConfigSetting) => (
@@ -574,26 +572,11 @@ function PipelineCard({
           onChange={onChange}
         />
         <ReasoningLegend />
-        {inNodes.length > 0 ? (
-          <details className="text-small text-muted-foreground">
-            <summary className="cursor-pointer select-none">{t("cfg.whyEachNode")}</summary>
-            <dl className="mt-2 space-y-3">
-              {inNodes
-                .filter((setting) => setting.doc && setting.name)
-                .map((setting) => (
-                  <div key={setting.key}>
-                    <dt className="font-mono text-foreground">{setting.name}</dt>
-                    <dd className="mt-0.5 whitespace-pre-wrap">{setting.doc}</dd>
-                  </div>
-                ))}
-            </dl>
-          </details>
-        ) : null}
         {rest.map(row)}
         {/* The two resident models go LAST and are read-only: neither serves a phase — the
             guardrail screens the free text, the embedder writes the index — so they are
             what is left once the pipeline has said everything. The rows still read: the
-            value, its source and the measurement behind it. */}
+            value and its source. */}
         {residents.map(row)}
       </CardContent>
     </Card>

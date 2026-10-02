@@ -1909,8 +1909,7 @@ function Account() {
           estudio), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos), «
           {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar), «
           {t("admin.tab.engine")}» y «{t("admin.tab.config")}» (todos los ajustes, cada uno con
-          lo que costó medirlo y con lo que invalidará al guardarlo). Tiene sección propia aquí
-          al lado: «{t("guide.sec.admin")}».
+          lo que invalidará al guardarlo). Tiene sección propia aquí al lado: «{t("guide.sec.admin")}».
         </Paragraph>
       </Block>
 
@@ -2155,9 +2154,11 @@ function Admin() {
 
       <Block title={t("admin.tab.config")}>
         <Paragraph>
-          Todos los ajustes de la instalación, cada uno con la medición que lo justifica al lado,
-          repartidos en secciones con su propio índice y su <strong>buscador</strong> — que es lo
-          que hace encontrable un ajuste del que solo recuerdas media palabra.
+          Todos los ajustes de la instalación, repartidos en secciones con su propio índice y su{" "}
+          <strong>buscador</strong> — que es lo que hace encontrable un ajuste del que solo
+          recuerdas media palabra. Cuando el nombre de un ajuste no basta para saber qué controla,
+          o cambiarlo tiene una consecuencia que no se adivina, lleva al lado un (i) que lo dice
+          en una frase.
         </Paragraph>
         <Paragraph>
           Cada fila dice de dónde sale su valor —«{t("cfg.source.default")}», «
