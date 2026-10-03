@@ -8,6 +8,30 @@ ask before implementing. Numbers quoted are measurements; re-measure before chan
 what they justify. When a decision's reason is only summarised here, look for it in the
 commit that introduced it (`git log -S`) before changing it.
 
+## Writing to the user
+
+**Write every answer, explanation and detail for the user 80% of the way to ASD-STE100**
+(Simplified Technical English). The user asked for this so that the text is clear at first
+reading. The language stays Spanish; the STE rules apply to the Spanish text.
+
+- Write short sentences: 20 words at most for an instruction, 25 for a description.
+- Put one idea in each sentence, and one topic in each paragraph (six sentences at most).
+- Use the active voice and the simple tenses. Say who does what.
+- Use one word for one thing. Do not change the term for variety.
+- Write an instruction as a command, one action per sentence, in the order of the work.
+  Put the condition before the action it controls.
+- Prefer common words. Do not use idioms, metaphors or filler.
+- Write a technical name (identifier, setting, command) as it is. Explain it the first time
+  if the user may not know it.
+- Keep the articles and the connectors; do not write telegraphic text. Do not chain more
+  than three nouns.
+- Use a list for steps and for parallel items.
+
+«80%» means that the rules guide the text but STE's dictionary does not bind it: when a
+rule and precision conflict, precision wins. The rule covers what is said to the user in the
+conversation (answers, summaries, plans, questions). It does not change code, commit
+messages, UI copy, the in-app guide or this file, which keep their own conventions.
+
 ## Project
 
 *Knowledge Graph-Guided LLM Content Generator* — TFM (Máster en IA) for adaptive
@@ -118,8 +142,12 @@ table and refuses while a row has no file: on an installation that still has the
   and drops `strict` above 5 000 chars or on open-ended maps. Each degradation is warned once
   per schema per process. Images travel before text in the body.
 - **The Cerebras rate limit is enforced before the call** from a flock'ed file ledger
-  (`/.cerebras_budget.json`, [core/cerebras_budget.py](variatio/core/cerebras_budget.py)):
-  per-model buckets, rolling minute and day windows, `usage` charges tokens, and **a header may
+  ([core/cerebras_budget.py](variatio/core/cerebras_budget.py)). **The ledger is the
+  account's, not the tree's**: Cerebras limits the organisation, not the key, so it lives at
+  `paths.cerebras_budget_path()` — `~/.local/state/variatio/cerebras_budget.json`
+  (`$XDG_STATE_HOME` honoured), shared by every installation of this user — and
+  `CEREBRAS_BUDGET_PATH` is only for an installation whose key belongs to another account.
+  Per-model buckets, rolling minute and day windows, `usage` charges tokens, and **a header may
   only lower what is believed left — never raise the configured `CEREBRAS_MAX_*` ceilings**
   (reading `limit-*`/`remaining-*` as the account's budget once disabled the throttle).
   `wait` books a `Claim` before the call; `record`/`release` settle it; stale claims age out.
@@ -290,7 +318,10 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   and the output. The library hands it over as `GeneratedVariant.prompt`/`.provenance` and
   writes nothing. Id = `<UTC>-<job>-<index>`, checked by regex on every route. **An exercise
   is private to its author**: the author's id (never the username) names the directory, `user_<id>/`; no
-  workspace scope, the same 404 for others' and malformed ids. Format 0 is a row exported
+  workspace scope, the same 404 for others' and malformed ids. The one exception is the
+  installation administrator, read-only and only from the panel
+  (`GET /api/admin/workspaces/{slug}/generations`, `generations.list_all`, opened from the
+  «Asignaturas» tab's exercise count); the author's own routes refuse the admin as anyone. Format 0 is a row exported
   from the retired table: what it never kept is null, never reconstructed.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
@@ -409,7 +440,7 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
   builder of its own**: the graph and profile builders each synthesise it in a final
   `context` phase. `prompt_block()` is the only renderer; capped at
   `CONTENT_CONTEXT_MAX_CHARS` (900); it feeds the description fingerprint. Read-only on
-  screen (under «Mi perfil → Espacios de trabajo»); `PUT /api/context` still exists.
+  screen (under «Mi perfil → Asignaturas y ejercicios»); `PUT /api/context` still exists.
 - `instance/locale.json` — the workspace's prompt language, chosen at creation and never
   after (relation labels are baked into the graph).
 
@@ -648,6 +679,11 @@ never `oklch` (hue interpolation turns greens blue).
 
 ### Specific screens
 
+- «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): one row
+  per subject, each with a fold of the account's own exercises there (read with the row's
+  slug as `X-Workspace`, no switch; the subject in use opens unfolded). «Generar más como
+  este» in another subject switches into it first. There is no exercises tab; the old
+  routes redirect here.
 - `/raw`: one row per document; multi-select delete; a finished origin is tinted with a
   filled tick; the foot offers «Continuar» once both origins hold something.
 - Graph: three columns (list, concept card, fixed-size graph card) plus a full-width
@@ -680,8 +716,22 @@ never `oklch` (hue interpolation turns greens blue).
 - The in-app guide (`/guide`) is user-facing copy: a behaviour change is not finished until
   its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
-  «Motor» tab: left column measures, right column sets; one save bar; the guardrail and
-  embedder models are read-only. «Configuración» is **one screen per stage**, named and
+  «Motor» tab: **a board with one cell per part of the engine** — «General», «Local», and
+  «Remoto» only when the engine has that half — each cell its state in a word and the door to
+  its screen; the tab opens on the part that needs somebody, else on «General». The readings
+  are `features/admin/engineState.ts`, shared by the cells and the cards' badges. «General»
+  leads with the choice of engine («Solo local» / «Híbrido», `engine.name`), then the queue,
+  the connection to Ollama (direct when no `OLLAMA_SSH_HOST` is named — never drawn as a
+  tunnel left unconfigured — else the SSH tunnel) and the warm contexts; «Local» is the GPU and the models on ITS disk (a
+  remote model has no row there); «Remoto» is the quota. A setting the panel cannot change
+  (environment, or `editable=False`) is not drawn. Models are never downloaded from the
+  panel (a build pulls what it lacks). `CEREBRAS_MODELS` is ticked from the catalogue plus
+  what the engine already lists, never typed. The four Cerebras ceilings are one group named
+  and ordered as the four meters, each capped at the registry's `maximum` (the account's
+  quota). The queue card is one list of three moments — waiting (dimmed, hollow mark), running (ink)
+  and the last 30 finished (settled; red where it failed), which the admin may clear: clearing
+  moves a window (`POST /api/admin/jobs/history/clear`), it never deletes a job. No database card. One save bar for the tab; a part's cell counts
+  its unsaved changes; the guardrail and embedder models are read-only. «Configuración» is **one screen per stage**, named and
   numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
   down the page, each node with model, reasoning and sampling and its own settings under it;
   then «General de la etapa», «Común a todas las etapas», and folded what it reads of
@@ -761,6 +811,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The domains naming call runs without reasoning; the phase context window is 65536.
 - Embedding model fixed at `qwen3-embedding:4b`.
 - The Cerebras throttle is a hard cap no header may raise; the gate books claims.
+- The Cerebras ledger lives outside the tree and is shared by default: the quota is the
+  account's, and one ledger per installation let each spend all of it.
 - No grammar to a remote model on the bank extraction (or its repair).
 - The commission chooses its writing model from the offered list; rows record it.
 - Every model call has its own temperature, top-k and top-p; empty inherits, so adding a
@@ -783,7 +835,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - A session shows the system's proposal and one seed-drawn rival.
 - Deleting workspaces/artifacts is the admin's and takes the files; a last-member deletion
   takes the tree; `.history/` is never emptied by it. CORS off.
-- Exercises are private to their author.
+- Exercises are private to their author; the installation administrator alone reads every
+  account's, read-only, from the panel (never through `/api/generations`).
 - Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;
   the database keeps none of them. The library returns how an item was made; the server
   writes it. `uv run variatio generate` (the CLI) saves nothing.
@@ -830,12 +883,12 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 ## Notes for working in this repo
 
 - Gitignored: `/raw*`, `web/node_modules`, `web/dist`, `/workspaces/` in full (the repo ships no
-  instance), `logs/`, `/.cerebras_budget.json`, `/.invite_link_key` (a secret; back it up
+  instance), `logs/`, `/.maintenance.json`, `/.invite_link_key` (a secret; back it up
   beside `.env`).
 - `config.json` at the root is versioned and holds no secrets; deleting it falls back to
   registry defaults.
-- The working language with the user is Spanish; code, identifiers, comments and
-  `variatio/` logs are English.
+- The working language with the user is Spanish, written as *Writing to the user* says;
+  code, identifiers, comments and `variatio/` logs are English.
 
 ## Deliberate heuristics
 

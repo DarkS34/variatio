@@ -110,7 +110,10 @@ certeza, así que un documento de N páginas paga como mucho N-1 llamadas cortas
 # Seed value only: it is read once, when a phase has no stored model. Nothing resolves
 # through it at run time — every phase names its own and refuses an empty value.
 _MAIN = "qwen3.8:27b-q8_0"
-_MAIN_BY_ENGINE = (("cerebras+ollama", "gemma-4-31b"),)
+# The same weights under Cerebras' own id. It replaced `gemma-4-31b` on 2026-10-03, when
+# Cerebras' catalogue stopped listing that model.
+_MAIN_REMOTE = "qwen-3.8-27b"
+_MAIN_BY_ENGINE = (("cerebras+ollama", _MAIN_REMOTE),)
 
 OFFERED_GROUP = "Modelos generadores"
 
@@ -123,12 +126,17 @@ quien la sufre es quien pide el ejercicio, así que declararla es administrar y 
 
 LO QUE HAY QUE MEDIR PARA PONER UN NOMBRE AQUÍ: la misma llamada, temperatura 0 y semilla
 fija, en cada nivel. Si dos niveles devuelven byte a byte lo mismo, el deslizador ofrece una
-decisión que no cambia nada. Así se midió `gemma-4-31b` —de ahí que sea el único valor por
-defecto, y sólo en el perfil de `cerebras+ollama`— y así se midió que `qwen3.8:27b-q8_0` SÍ
-los distingue en tres.
+decisión que no cambia nada. Así se midió `gemma-4-31b` en Cerebras, que por eso fue el
+único valor por defecto del perfil de `cerebras+ollama`, y así se midió que
+`qwen3.8:27b-q8_0` SÍ los distingue en tres.
+
+LA LISTA SALE VACÍA EN LOS DOS MOTORES desde el 2026-10-03: `gemma-4-31b` dejó de figurar en
+el catálogo de Cerebras, y `qwen-3.8-27b`, que lo sustituye como modelo por defecto del
+perfil híbrido, está SIN MEDIR servido por Cerebras. Bloquear un modelo sin haberlo medido
+sería declarar una medición que nadie hizo.
 
 LOS NOMBRES SON LOS DEL MOTOR y se comparan enteros, no por prefijo; de ámbito `engine` por
-lo mismo que la lista de ofrecidos, porque `gemma-4-31b` no existe en Ollama.
+lo mismo que la lista de ofrecidos, porque `qwen-3.8-27b` no existe en Ollama.
 
 NOMBRAR AQUÍ UN MODELO QUE NO SE OFREZCA no es un error y no se rechaza: se retira un modelo
 mucho más a menudo de lo que se vuelve a medir su razonamiento.
@@ -167,7 +175,7 @@ arquitecturas y no modelos. La memoria tiene que decir cuál era el primero cuan
 grabaron las sesiones, igual que dice qué motor las produjo.
 
 LOS NOMBRES SON LOS DEL MOTOR, así que el ajuste es de ámbito `engine` como los modelos de
-fase: `gemma-4-31b` es el nombre de Cerebras y no existe en Ollama. Cambiar de motor cambia
+fase: `qwen-3.8-27b` es el nombre de Cerebras y no existe en Ollama. Cambiar de motor cambia
 la lista entera, y volver recupera la anterior intacta.
 
 OFRECER UN MODELO NO LO DESCARGA: nada llama aquí a `ensure_models`, así que uno que no esté
@@ -313,7 +321,7 @@ la necesitan.""",
         key="engine.cerebras_models",
         name="CEREBRAS_MODELS",
         kind="list[str]",
-        default=["gemma-4-31b"],
+        default=[_MAIN_REMOTE],
         group="Motor",
         impact=Impact.ENGINE,
         doc="""Qué modelos enruta a Cerebras el motor 'cerebras+ollama' ADEMÁS de su catálogo: todo modelo
@@ -321,14 +329,17 @@ que la API lista en `/models` se sirve allí sin declararlo aquí. Esta lista es
 cuando el catálogo no se puede leer (se recuerda la última lectura, y sin ninguna vale esto)
 y lo que nombra un modelo que el catálogo no lista. Todo lo demás va a Ollama.
 
-`gemma-4-31b` por defecto: el id exacto del catálogo de Cerebras (~1.850 tok/s, ventana de
-131.072, salida máxima 40.000, structured outputs con `strict` y razonamiento vía
-`reasoning_effort`).
+`qwen-3.8-27b` por defecto: el id exacto del catálogo de Cerebras para el modelo que en
+Ollama se llama `qwen3.8:27b-q8_0`. Sustituye a `gemma-4-31b`, que dejó de figurar en el
+catálogo (leído el 2026-10-03: `gpt-oss-120b` y `qwen-3.8-27b`). Lo que se midió sobre
+`gemma-4-31b` —~1.850 tok/s, ventana de 131.072, salida máxima 40.000, structured outputs
+con `strict` y razonamiento vía `reasoning_effort`— queda como historia: sobre
+`qwen-3.8-27b` no hay medida equivalente.
 
 LAS CUOTAS SON POR MODELO, y las de la cuenta no son las que anuncia la página del modelo.
-Medido contra la API: `gemma-4-31b` declara 500 peticiones/min y 250.000 tokens
-uncached/min, mientras la cuenta admite 5 peticiones/min, 30.000 tokens/min, 2.400
-peticiones/día y 1.000.000 de tokens/día — un build entero no cabe ahí. Los headers no
+Medido contra la API cuando el modelo era `gemma-4-31b`: declaraba 500 peticiones/min y
+250.000 tokens uncached/min, mientras la cuenta admitía 5 peticiones/min, 30.000
+tokens/min, 2.400 peticiones/día y 1.000.000 de tokens/día — un build entero no cabe ahí. Los headers no
 sirven para averiguarlo: `remaining-*` también cuenta contra la cuota del MODELO, así que
 quien lo administra son los CEREBRAS_MAX_* de abajo, y son un tope rígido.""",
     ),
@@ -342,6 +353,7 @@ quien lo administra son los CEREBRAS_MAX_* de abajo, y son un tope rígido.""",
         kind="int",
         default=5,
         minimum=1,
+        maximum=450,
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántas peticiones por minuto admite la cuenta para CADA modelo enrutado a Cerebras.
@@ -357,7 +369,11 @@ rompe el limitador — `remaining-*` cuenta contra la cuota del MODELO, así que
 respuesta subiría el techo a 499 y no se retendría ni una llamada más. Lo que la API informe
 solo puede BAJAR lo que creemos que queda.
 
-No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.""",
+No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.
+
+MÁXIMO 450: es lo que admite la cuenta de esta instalación, declarado por quien la
+administra el 2026-10-03 y no medido contra la API (ningún header lo dice). Ni el
+panel ni `config.json` aceptan un techo por encima.""",
     ),
     Setting(
         key="engine.cerebras_max_tokens_minute",
@@ -365,6 +381,7 @@ No hace falta reiniciar nada al cambiarlo: se lee en cada llamada.""",
         kind="int",
         default=30_000,
         minimum=1,
+        maximum=450_000,
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántos tokens por minuto admite la cuenta para cada modelo enrutado a Cerebras. 30.000 en
@@ -377,7 +394,11 @@ BAJAR lo que creemos que queda, nunca para subirlo.
 
 Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
 creemos que queda; dejar que un `remaining` generoso levante el techo es lo que deja al
-limitador sin efecto desde la primera llamada.""",
+limitador sin efecto desde la primera llamada.
+
+MÁXIMO 450.000: es lo que admite la cuenta de esta instalación, declarado por quien la
+administra el 2026-10-03 y no medido contra la API (ningún header lo dice). Ni el
+panel ni `config.json` aceptan un techo por encima.""",
     ),
     Setting(
         key="engine.cerebras_max_requests_day",
@@ -385,6 +406,7 @@ limitador sin efecto desde la primera llamada.""",
         kind="int",
         default=2_400,
         minimum=1,
+        maximum=648_000,
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántas peticiones al día admite la cuenta para cada modelo enrutado a Cerebras. 2.400 en el
@@ -397,7 +419,11 @@ de tiempo. Ser deslizante es lo conservador — nunca gasta de más.
 
 Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
 creemos que queda; dejar que un `remaining` generoso levante el techo es lo que deja al
-limitador sin efecto desde la primera llamada.""",
+limitador sin efecto desde la primera llamada.
+
+MÁXIMO 648.000 (450 por minuto, 1.440 minutos): es lo que admite la cuenta de esta instalación, declarado por quien la
+administra el 2026-10-03 y no medido contra la API (ningún header lo dice). Ni el
+panel ni `config.json` aceptan un techo por encima.""",
     ),
     Setting(
         key="engine.cerebras_max_tokens_day",
@@ -405,6 +431,7 @@ limitador sin efecto desde la primera llamada.""",
         kind="int",
         default=1_000_000,
         minimum=1,
+        maximum=648_000_000,
         group="Motor",
         impact=Impact.NONE,
         doc="""Cuántos tokens al día admite la cuenta para cada modelo enrutado a Cerebras. 1.000.000 en el
@@ -416,7 +443,11 @@ sigue — QUÉ fase se lo está comiendo — y se descarga en CSV.
 
 Es un TOPE RÍGIDO: manda este número y nada lo sube. La API solo se lee para BAJAR lo que
 creemos que queda; dejar que un `remaining` generoso levante el techo es lo que deja al
-limitador sin efecto desde la primera llamada.""",
+limitador sin efecto desde la primera llamada.
+
+MÁXIMO 648.000.000 (450.000 por minuto, 1.440 minutos): es lo que admite la cuenta de esta instalación, declarado por quien la
+administra el 2026-10-03 y no medido contra la API (ningún header lo dice). Ni el
+panel ni `config.json` aceptan un techo por encima.""",
     ),
     Setting(
         key="engine.cerebras_max_wait_seconds",
@@ -808,7 +839,7 @@ Apuntarlo a otra máquina, o al puerto local que abra un túnel SSH, se hace por
         impact=Impact.CONTEXTS,
         scope="engine",
         min_items=1,
-        engine_defaults=(("cerebras+ollama", ["gemma-4-31b"]),),
+        engine_defaults=(("cerebras+ollama", [_MAIN_REMOTE]),),
         doc=_OFFERED_DOC,
     ),
     Setting(
@@ -823,7 +854,6 @@ Apuntarlo a otra máquina, o al puerto local que abra un túnel SSH, se hace por
         # and decides one control. No context to rebuild, no index to re-embed.
         impact=Impact.NONE,
         scope="engine",
-        engine_defaults=(("cerebras+ollama", ["gemma-4-31b"]),),
         doc=_FIXED_EFFORT_DOC,
     ),
     Setting(
