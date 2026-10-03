@@ -2,11 +2,7 @@
 
 from tutor import focus
 
-from ..conftest import ES
-from variatio import wording
-
 ELIGIBLE = {"Variable", "Función", "Recursividad", "Memoización"}
-WORDING = wording.beside(ES)
 
 
 def step(current, scores, given=None):
@@ -41,23 +37,23 @@ def test_concepts_the_turn_already_knows_win_outright_and_generic_ones_never_ent
     assert step([], {"Notación asintótica": 0.9}) == []
 
 
-def test_a_prerequisite_the_reply_asks_about_counts_as_checked_and_leaves_the_focus():
-    state = {"focus": ["Recursividad"], "trail": ["Recursividad"], "verified": []}
-    reply = "Lo tienes en «Tema 1 > Funciones». Antes de seguir: ¿qué sabes de una función y de sus parámetros?"
-
-    after = focus.after_reply(state, ["Recursividad"], ["Función"], reply, WORDING)
-
-    assert after["focus"] == ["Recursividad"]
-    assert after["verified"] == ["Función"]
-    assert after["trail"] == ["Recursividad"]
-
-
-def test_a_reply_naming_no_prerequisite_leaves_the_focus_alone():
-    state = {"focus": ["Recursividad"], "trail": [], "verified": ["Variable"]}
-
-    after = focus.after_reply(
-        state, ["Recursividad"], ["Función"], "Repasa «Funciones». ¿Cuál es el caso base?", WORDING
+def test_a_message_about_what_comes_before_the_focus_never_moves_it():
+    before = {"Función", "Variable"}
+    moved = focus.next_focus(
+        ["Recursividad"],
+        {"Función": 0.8, "Recursividad": 0.6},
+        threshold=0.55,
+        margin=0.05,
+        eligible=ELIGIBLE,
+        before=before,
     )
+    assert moved == ["Recursividad"]
+    assert step(["Recursividad"], {"Memoización": 0.8, "Recursividad": 0.6}) == ["Memoización"]
 
-    assert after["focus"] == ["Recursividad"]
-    assert after["verified"] == ["Variable"]
+
+def test_the_state_after_a_reply_is_the_focus_and_the_trail_it_has_stood_on():
+    state = {"focus": ["Variable"], "trail": ["Variable"], "verified": ["Función"]}
+
+    after = focus.after_reply(state, ["Recursividad"])
+
+    assert after == {"focus": ["Recursividad"], "trail": ["Variable", "Recursividad"]}

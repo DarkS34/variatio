@@ -48,6 +48,8 @@ def test_a_question_about_the_theory_is_answered_with_its_card(tutor_context, en
     assert "Una función recursiva necesita un caso base" in reply["prompt"]
     assert "Memoización" in reply["prompt"], "the card names what comes later"
     assert "«Función» (en «Tema 1 Fundamentos > Funciones»)" in reply["prompt"]
+    assert "Se da por sabido" in reply["prompt"], "what comes before is taken as known"
+    assert "comprueba de forma breve" not in reply["system"]
     assert {"document": "apuntes.pdf", "location": "Tema 2 Avanzado > Recursividad"} in result.references
 
 
@@ -157,9 +159,49 @@ def test_the_subject_s_criteria_and_terms_reach_the_card(tutor_context, engine):
 def test_a_greeting_carries_no_notes_and_leaves_the_focus_where_it_was(tutor_context, engine):
     scripted = engine(classify=['{"kind": "social"}'], reply=["¡Hola! ¿Qué quieres trabajar hoy?"])
 
-    result = run(tutor_context, "Hola, buenas", state={"focus": ["Recursividad"], "trail": [], "verified": []})
+    result = run(tutor_context, "Hola, buenas", state={"focus": ["Recursividad"], "trail": []})
 
     assert result.kind == "social" and result.references == []
     assert result.state["focus"] == ["Recursividad"]
     reply = next(call for call in scripted.calls if call["kind"] == "reply")
     assert "Una función recursiva necesita" not in reply["prompt"]
+
+
+def test_the_places_shown_under_a_reply_are_those_it_names_else_the_card_s_first():
+    from tutor.card import Card, FocusConcept, Prerequisite, Quote
+
+    the_card = Card(
+        kind=THEORY,
+        focus=(
+            FocusConcept(
+                name="Recursividad",
+                unit="Avanzado",
+                prerequisites=(Prerequisite("Parámetro", "Tema 1 Fundamentos > Parámetros", "apuntes.pdf"),),
+                later=("Memoización", "Subproblema"),
+                anchors=(
+                    Quote("apuntes.pdf", "", "Sin sitio."),
+                    Quote("apuntes.pdf", "Tema 2 Avanzado > Recursividad", "Se llama a sí misma."),
+                ),
+            ),
+        ),
+        passages=(
+            Quote("apuntes.pdf", "Tema 1 Fundamentos > Funciones", "Una función devuelve."),
+            Quote("apuntes.pdf", "Tema 2 Avanzado > Casos base", "El caso base detiene."),
+        ),
+    )
+    with_subproblem = Card(kind=THEORY, focus=(the_card.focus[0], FocusConcept("Subproblema", "Avanzado")))
+    assert with_subproblem.later() == ["Memoización"], "a concept of the focus is never a later one"
+
+    named = the_card.references("Repasa el apartado «Casos base» de los apuntes. ¿Qué detiene las llamadas?")
+    assert named == [{"document": "apuntes.pdf", "location": "Tema 2 Avanzado > Casos base"}]
+    parent = the_card.references("Está en el Tema 1: Fundamentos. ¿Qué devuelve?")
+    assert parent == [
+        {"document": "apuntes.pdf", "location": "Tema 1 Fundamentos > Funciones"},
+        {"document": "apuntes.pdf", "location": "Tema 1 Fundamentos > Parámetros"},
+    ]
+    lacking = the_card.references("Repasa «Parámetros» en los apuntes. ¿Qué hace tu caso base?")
+    assert lacking == [{"document": "apuntes.pdf", "location": "Tema 1 Fundamentos > Parámetros"}]
+    assert [p["location"] for p in the_card.references("¿Qué piensas tú?")] == [
+        "Tema 2 Avanzado > Recursividad",
+        "Tema 1 Fundamentos > Funciones",
+    ]

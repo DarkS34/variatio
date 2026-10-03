@@ -23,7 +23,7 @@ LANE = Lane(
             "Clasificación",
             "tutor.models.classify",
             fixed=GRAMMAR,
-            note="Decide qué tipo de mensaje ha escrito el alumno; contesta una sola palabra.",
+            note="Decide qué tipo de mensaje ha escrito el alumno y, una vez, el título de la conversación.",
         ),
         Phase(
             "tutor_reply",
@@ -189,9 +189,11 @@ Encenderlo quita la gramática y deja la forma en manos del analizador y de la r
     _number(
         "message_max_chars",
         "int",
-        4000,
-        """Cuántos caracteres puede tener un mensaje del alumno. Da para un enunciado y un programa
-corto pegados; más largo se rechaza antes de llegar a la cola.""",
+        12000,
+        """Cuántos caracteres puede tener un mensaje del alumno. La pantalla no lo muestra: es un tope
+de seguridad, no un límite de escritura, y da para un enunciado y un programa largo pegados.
+Más largo se rechaza antes de llegar a la cola, porque ocho intercambios así ya llenarían
+buena parte de la ventana de contexto.""",
         minimum=200,
     ),
     _number(
@@ -337,10 +339,12 @@ Entran primero los párrafos que mandan, prohíben o avisan de un error. Sin med
     _number(
         "criteria_per_unit",
         "int",
-        10,
+        5,
         """Cuántos criterios puede proponer como mucho la llamada de cada unidad. La gramática lo
 impone (`maxItems`) y el prompt pide los más importantes: sin techo, un modelo con gramática
-puede seguir añadiendo criterios hasta llenar la ventana.""",
+puede seguir añadiendo criterios hasta llenar la ventana. Con diez, la redacción de `demo`
+dio entre seis y nueve por unidad, largos y difíciles de revisar; cinco es lo que un docente
+lee de una vez.""",
         phase="tutor_criteria",
         minimum=1,
     ),

@@ -1,15 +1,14 @@
-import { BookOpen, RotateCcw, Send, Square } from "lucide-react";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ArrowUp, BookOpen, RotateCcw, Square } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
 import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { when } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 
 import type { TutorDraft } from "./draft";
+import { NotesReader } from "./NotesReader";
 import {
   useCancelTurn,
   useConversation,
@@ -25,6 +24,11 @@ const FAILED_KEYS: Record<string, Key> = {
   interrupted: "tutor.failed.interrupted",
 };
 
+// The panel is one fixed height, so a long conversation scrolls inside it instead of
+// pushing the box to write in below the fold: the window less what sits above it (the bar,
+// the title and the tabs, about 18rem), never under 24rem. Shared with the list beside it.
+export const PANEL_HEIGHT = "h-[max(24rem,calc(100dvh-18rem))]";
+
 /**
  * One conversation: the turns, the reply on its way, and the box to write the next message.
  *
@@ -35,13 +39,11 @@ const FAILED_KEYS: Record<string, Key> = {
 export function ConversationView({
   id,
   ready,
-  maxChars,
   draft,
   onOpened,
 }: {
   id: string | null;
   ready: boolean;
-  maxChars: number;
   draft: TutorDraft | null;
   onOpened: (id: string) => void;
 }) {
@@ -52,19 +54,21 @@ export function ConversationView({
   const retry = useRetryTurn(id);
   const cancel = useCancelTurn(id);
   const [message, setMessage] = useState(draft?.message ?? "");
-  const end = useRef<HTMLDivElement>(null);
+  const [reading, setReading] = useState<Place | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
 
   const data = conversation.data;
   const pending = data?.pending ?? null;
   const turns = data?.turns ?? [];
+  // The panel's own scroll, never the page's: the newest turn is at its foot.
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
+    const node = scroller.current;
+    if (node) node.scrollTop = node.scrollHeight;
   }, [turns.length, pending?.status]);
 
   const sending = open.isPending || send.isPending;
   const error = open.error ?? send.error ?? retry.error;
-  const tooLong = message.trim().length > maxChars;
-  const canSend = ready && !sending && !pending && message.trim().length > 0 && !tooLong;
+  const canSend = ready && !sending && !pending && message.trim().length > 0;
 
   const submit = () => {
     if (!canSend) return;
@@ -80,14 +84,7 @@ export function ConversationView({
     }
   };
 
-  const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      submit();
-    }
-  };
-
-  if (id !== null && conversation.isLoading) return <Skeleton className="h-96" />;
+  if (id !== null && conversation.isLoading) return <Skeleton className={PANEL_HEIGHT} />;
   if (id !== null && !data) {
     return (
       <LoadError
@@ -102,12 +99,12 @@ export function ConversationView({
   const unanswered = last?.role === "student" && last.failed ? last.failed : null;
 
   return (
-    <section className="flex min-h-[32rem] flex-col rounded-lg border border-border bg-card">
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+    <section className={`flex flex-col rounded-lg border border-border bg-card ${PANEL_HEIGHT}`}>
+      <div ref={scroller} className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         {id === null ? <Welcome fromExercise={Boolean(draft?.generationId)} /> : null}
         {data ? <Opened conversation={data} /> : null}
         {turns.map((turn, index) => (
-          <TurnBubble key={`${index}-${turn.at}`} turn={turn} />
+          <TurnBubble key={`${index}-${turn.at}`} turn={turn} onRead={setReading} />
         ))}
         {pending ? <OnItsWay pending={pending} onStop={() => cancel.mutate()} /> : null}
         {unanswered ? (
@@ -124,7 +121,6 @@ export function ConversationView({
             </Button>
           </div>
         ) : null}
-        <div ref={end} />
       </div>
 
       <div className="space-y-2 border-t border-border p-3">
@@ -133,29 +129,85 @@ export function ConversationView({
             <p>{error.message}</p>
           </Alert>
         ) : null}
-        <Textarea
-          aria-label={t("tutor.composer.label")}
-          autoGrow
-          rows={3}
+        <Composer
           value={message}
-          placeholder={t("tutor.composer.placeholder")}
-          onChange={(event) => setMessage(event.target.value)}
-          onKeyDown={onKey}
+          onChange={setMessage}
+          onSubmit={submit}
           disabled={!ready}
-          className="max-h-64"
+          canSend={canSend}
+          sending={sending}
         />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className={cn("text-small", tooLong ? "text-destructive" : "text-muted-foreground")}>
-            {t("tutor.composer.count", { n: message.trim().length, max: maxChars })} ·{" "}
-            {t("tutor.composer.hint")}
-          </span>
-          <Button variant="attention" disabled={!canSend} onClick={submit}>
-            {sending ? <Spinner className="size-4" /> : <Send />}
-            {t("tutor.composer.send")}
-          </Button>
-        </div>
       </div>
+      <NotesReader place={reading} onClose={() => setReading(null)} />
     </section>
+  );
+}
+
+// The box grows with what is written up to this height, then scrolls inside itself.
+const COMPOSER_MAX_PX = 192;
+
+/**
+ * The box to write in, with its send button inside it on the right.
+ *
+ * Enter sends and Shift+Enter breaks the line, as in every chat. A key pressed while an input
+ * method is composing a character belongs to that character, so it never sends.
+ */
+function Composer({
+  value,
+  onChange,
+  onSubmit,
+  disabled,
+  canSend,
+  sending,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  disabled: boolean;
+  canSend: boolean;
+  sending: boolean;
+}) {
+  const { t } = useT();
+  const box = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const node = box.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, COMPOSER_MAX_PX)}px`;
+  }, [value]);
+
+  const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    onSubmit();
+  };
+
+  return (
+    <div className="flex items-end gap-2 rounded-lg border border-input bg-background p-1.5 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
+      <textarea
+        ref={box}
+        aria-label={t("tutor.composer.label")}
+        rows={1}
+        value={value}
+        placeholder={t("tutor.composer.placeholder")}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={onKey}
+        disabled={disabled}
+        className="thin-scroll min-h-9 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-body leading-relaxed placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <Button
+        variant="attention"
+        size="icon"
+        className="shrink-0"
+        aria-label={t("tutor.composer.send")}
+        title={t("tutor.composer.send")}
+        disabled={!canSend}
+        onClick={onSubmit}
+      >
+        {sending ? <Spinner className="size-4" /> : <ArrowUp />}
+      </Button>
+    </div>
   );
 }
 
@@ -177,7 +229,7 @@ function Opened({ conversation }: { conversation: Conversation }) {
   return <p className="text-small text-muted-foreground">{t("tutor.openedFrom")}</p>;
 }
 
-function TurnBubble({ turn }: { turn: Turn }) {
+function TurnBubble({ turn, onRead }: { turn: Turn; onRead: (place: Place) => void }) {
   const { t } = useT();
   if (turn.role === "student") {
     return (
@@ -199,7 +251,7 @@ function TurnBubble({ turn }: { turn: Turn }) {
         <Markdown>{turn.text}</Markdown>
       </div>
       {turn.references && turn.references.length > 0 ? (
-        <References places={turn.references} />
+        <References places={turn.references} onRead={onRead} />
       ) : null}
       <p className="text-micro text-muted-foreground">
         {t("tutor.tutor")} · {when(turn.at)}
@@ -208,24 +260,38 @@ function TurnBubble({ turn }: { turn: Turn }) {
   );
 }
 
-/** Where in the notes the reply's material came from: the card's places, never the model's. */
-function References({ places }: { places: Place[] }) {
+/**
+ * Where in the notes to look, each place opening the reader at it. The places are the card's,
+ * never the model's, chosen by which ones the reply names.
+ */
+function References({ places, onRead }: { places: Place[]; onRead: (place: Place) => void }) {
   const { t } = useT();
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
       <BookOpen className="size-3.5" aria-hidden />
       <span>{t("tutor.references")}</span>
-      {places.map((place) => (
-        <span
-          key={`${place.document}|${place.location}`}
-          title={place.document}
-          className="max-w-full truncate rounded-full border border-border px-2 py-0.5"
-        >
-          {place.location || place.document}
-        </span>
-      ))}
+      {places.map((place) => {
+        const label = lastPart(place.location) || place.document;
+        return (
+          <button
+            key={`${place.document}|${place.location}`}
+            type="button"
+            onClick={() => onRead(place)}
+            title={t("tutor.notes.open", { place: place.location || place.document })}
+            className="max-w-full truncate rounded-full border border-border px-2 py-0.5 text-foreground underline-offset-2 transition-colors hover:bg-accent hover:underline"
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
+}
+
+/** The section a heading path ends in, which is what a reply names. */
+function lastPart(location: string): string {
+  const parts = location.split(" > ");
+  return parts[parts.length - 1] ?? "";
 }
 
 function OnItsWay({ pending, onStop }: { pending: Pending; onStop: () => void }) {

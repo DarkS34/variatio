@@ -42,7 +42,7 @@ def test_a_turn_appends_the_reply_moves_the_state_and_frees_the_conversation(wir
     def answer(context, **kwargs):
         seen.update(kwargs)
         return TurnResult(text="¿Qué sabes de funciones?", kind="theory", decided_by="model",
-                          state={"focus": ["Recursividad"], "trail": ["Recursividad"], "verified": []},
+                          state={"focus": ["Recursividad"], "trail": ["Recursividad"]},
                           prompt="el prompt")
 
     monkeypatch.setattr(jobs, "run_turn", answer)
@@ -137,3 +137,46 @@ def test_only_the_turn_s_steps_reach_the_workspace_s_stream(wired, monkeypatch):
 
     assert "guardrail" not in heard
     assert heard == ["step.started", "step.finished"]
+
+
+def test_the_first_reply_that_works_on_the_subject_titles_the_conversation_once(wired, monkeypatch):
+    record, job = pending_turn(wired, message="Hola, necesito ayuda con esto de llamarse a sí misma")
+    asked = []
+
+    def name(messages, concepts, **kwargs):
+        asked.append((messages, concepts))
+        return "Recursividad"
+
+    def answer(context, **kwargs):
+        return TurnResult(text="¿Qué sabes?", kind="theory", decided_by="model",
+                          state={"focus": ["Recursividad"], "trail": ["Recursividad"]})
+
+    monkeypatch.setattr(jobs, "name_conversation", name)
+    monkeypatch.setattr(jobs, "run_turn", answer)
+
+    jobs.handle_turn(job, SimpleNamespace())
+
+    saved = store.get(wired, ANA, record["id"])
+    assert saved["title"] == "Recursividad" and saved["titled"] is True
+    assert asked == [(["Hola, necesito ayuda con esto de llamarse a sí misma"], ["Recursividad"])]
+
+
+def test_a_greeting_leaves_the_first_line_as_the_title(wired, monkeypatch):
+    record, job = pending_turn(wired, message="Hola")
+    monkeypatch.setattr(jobs, "name_conversation", lambda *a, **k: pytest.fail("no title for a greeting"))
+    monkeypatch.setattr(
+        jobs, "run_turn",
+        lambda context, **kwargs: TurnResult(text="¡Hola! ¿Qué trabajamos?", kind="social", decided_by="model", state={}),
+    )
+
+    jobs.handle_turn(job, SimpleNamespace())
+
+    saved = store.get(wired, ANA, record["id"])
+    assert saved["title"] == "Hola" and saved["titled"] is False
+
+
+def test_a_title_is_cleaned_or_refused():
+    from tutor.title import clean
+
+    assert clean(' «recursividad y caso base». ') == "Recursividad y caso base"
+    assert clean("") is None and clean("x" * 61) is None and clean('{"title": 1}') is None

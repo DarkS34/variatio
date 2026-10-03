@@ -8,15 +8,16 @@ import json
 
 LANGUAGE = "en"
 
-FIXED_RULES: tuple[str, ...] = (
+METHOD_RULES: tuple[str, ...] = (
     "Asks at least one guiding question in every reply and at most {max_questions}: about "
     "understanding, design or analysis, or one that leads the student to find their own mistake.",
     "Points to the notes in every reply: names the unit or the section where what the student "
     "needs is, and only one of those the card lists.",
-    "Before explaining a concept, briefly checks whether the student knows what it needs. If "
-    "they have not seen it, tells them what to look for and where, without explaining it; if "
-    "they have, asks them to explain it in their own words. Checks each concept once: if the "
-    "student does not answer, does not ask again and carries on from what the student said.",
+    "Takes as known what the syllabus places before the concept the student asks about: does "
+    "not quiz them on it nor steer the conversation towards it. Works on the concept the "
+    "student asked for. Only when the student says something earlier is missing, or their "
+    "message shows it, tells them in one sentence where to review it in the notes, without "
+    "asking about it, and its question goes back to what the student asked.",
     "Writes no complete code and no solution that could be copied. At most, quotes one line of "
     "the student's code to ask about it.",
     "Does not run, simulate or debug code, does not calculate, and never says whether something "
@@ -28,8 +29,6 @@ FIXED_RULES: tuple[str, ...] = (
     "asks about it and names the section of the notes.",
     "When the student insists on the solution, does not give in: acknowledges the effort and "
     "goes back to a smaller question.",
-    "Administrative questions and questions outside the subject get a fixed answer that never "
-    "reaches the model.",
 )
 
 GOLDEN_RULE = "If the student can copy your reply and move on without thinking, you have failed as a tutor."
@@ -54,8 +53,9 @@ _KIND_LABELS = {
 
 _KIND_TASKS = {
     "theory": (
-        "The student asks about the theory. If needed, first check what they already know; "
-        "then lead them with a question towards the section of the notes that explains it."
+        "The student asks about the theory. Work on the concept they ask about, taking what "
+        "comes before as known, and lead them with a question towards the section of the notes "
+        "that explains it."
     ),
     "exercise": (
         "The student brings an exercise statement. Help them understand it: what data it gives, "
@@ -92,7 +92,8 @@ _FAILURES = {
 # A sentence that opens by telling the student they are right, read on folded text.
 VALIDATION_PATTERN = (
     r"(?:^|[.!?]\s+)\s*(?:yes\b[,!]?\s*)?(?:exactly|correct|that.s right|right\b|perfect|"
-    r"well done|that.s it|you got it|spot on|good job|you are right|you.re right)\b"
+    r"well done|that.s it(?=\s*(?:[.!,;:]|$))|you got it|spot on|good job|you are right|"
+    r"you.re right)\b"
 )
 
 NORMATIVE_PATTERN = (
@@ -109,7 +110,7 @@ def method(max_questions: int) -> str:
     """Return the system prompt every reply is written under."""
     rules = "\n".join(
         f"{index}. {rule.format(max_questions=max_questions)}"
-        for index, rule in enumerate(FIXED_RULES[:-1], 1)
+        for index, rule in enumerate(METHOD_RULES, 1)
     )
     return (
         "You are the Socratic tutor of a subject. Your job is to make the student reason: you "
@@ -163,12 +164,9 @@ def card_block(card) -> str:
                 lines.append(f"  [{_place(passage)}] {passage.text}")
             if concept.prerequisites:
                 lines.append(
-                    "  Prior knowledge it needs: "
-                    + "; ".join(
-                        _named_place(p.name, p.location)
-                        + (" (already asked)" if p.name in card.verified else "")
-                        for p in concept.prerequisites
-                    )
+                    "  Taken as known (do not ask about it; if the student lacks it, only tell "
+                    "them where to review it): "
+                    + "; ".join(_named_place(p.name, p.location) for p in concept.prerequisites)
                     + "."
                 )
             if concept.neighbours:
@@ -191,15 +189,6 @@ def card_block(card) -> str:
         lines.append("Passages of the notes related to the message:")
         lines += [f"[{_place(passage)}] {passage.text}" for passage in card.passages]
         lines.append("")
-
-    if card.verified:
-        lines += [
-            "You already asked the student about: "
-            + ", ".join(f"«{c}»" for c in card.verified)
-            + ". Do not ask about it again: work with what they answered, even if they "
-            "answered something else.",
-            "",
-        ]
 
     if card.criteria:
         lines.append("The subject's teaching criteria:")
@@ -311,6 +300,24 @@ def classify_prompt(subject: str, units: list[str], last_reply: str | None, mess
     )
 
 
+# THE TITLE -----------------------------------------------------------------------------
+
+
+def title_prompt(messages: list[str], concepts: list[str]) -> str:
+    """Return the prompt that names a conversation from what the student has written so far."""
+    written = "\n\n".join(f"- {text}" for text in messages) or "(none)"
+    worked = ", ".join(f"«{c}»" for c in concepts) or "(none)"
+    return (
+        "Give a title to a conversation between a student and the tutor of their subject.\n\n"
+        f"The student's messages:\n{written}\n\n"
+        f"Concepts of the syllabus being worked on: {worked}.\n\n"
+        "The title says what the conversation is about: the concept or the exercise, not the "
+        "greeting nor the way it was asked. Two to six words, in English, in sentence case, "
+        "without quotes and without a final full stop.\n\n"
+        'Answer only with the JSON {"title": "<title>"}.'
+    )
+
+
 # THE CRITERIA --------------------------------------------------------------------------
 
 
@@ -346,9 +353,11 @@ def criteria_unit_prompt(
         "- A mistake the notes point out, or a practice they advise against.\n"
         "- A convention ALL the cited solutions follow, even if the notes do not say it.\n\n"
         "Rules:\n"
-        f"- Write at most {max_criteria} criteria: the ones that matter most for guiding a student.\n"
-        "- Write each criterion in one or two sentences addressed to the tutor, with no complete "
-        "programs.\n"
+        f"- Write at most {max_criteria} criteria: only the ones that matter most for guiding a "
+        "student. Fewer is better than many.\n"
+        "- Each criterion is ONE sentence of at most 20 words, in plain language, saying what is "
+        "asked for or what is avoided. Start with what is asked, without formulas such as "
+        "«Require that», «Insist that» or «Remember that». No programs and no lists of cases.\n"
         "- Each criterion cites in \"evidence\" at least one passage or solution that supports it. "
         "No citation, no criterion.\n"
         "- Write nothing from general knowledge that the material does not say.\n"
@@ -356,7 +365,7 @@ def criteria_unit_prompt(
         "it recommends it or only warns.\n"
         "- \"scope\": \"subject\" if it holds for the whole subject; \"unit\" if it belongs to "
         "this unit.\n"
-        "- \"concepts\": the concepts of the list it refers to; it may stay empty.\n"
+        "- \"concepts\": at most three concepts of the list it refers to; it may stay empty.\n"
         "- \"forbidden\": ONLY names of statements, keywords or functions of the language that "
         "the material forbids or advises against, written as they appear in code (one or two "
         "words, for instance break or global), with the reason and the citation. A practice to "

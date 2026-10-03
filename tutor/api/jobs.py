@@ -9,7 +9,8 @@ WHAT A TURN'S JOB SAYS IN PUBLIC IS NOTHING. The event stream is the workspace's
 member's screen hears a job's parameters and its result; a conversation is its author's
 alone. The job therefore names the conversation and the turn and carries no text either way:
 the student's message is read from the author's own file, and the reply is written back to
-it, where only the author's routes read it. While the turn runs, only its steps reach the
+it, where only the author's routes read it — and so is the title the first substantive
+reply brings, written in the same write as that reply. While the turn runs, only its steps reach the
 stream (`_QuietEmitter`): the guardrail announces what it blocked and the repair quotes the
 answer it repairs, and neither is anybody else's to hear.
 """
@@ -23,17 +24,22 @@ from server.jobs.runner import JobControl
 from variatio import entrypoints
 from variatio.core import progress
 
+from .. import ATTEMPT, EXERCISE, SOLUTION, THEORY
 from .. import config as tutor_config
 from .. import criteria as criteria_store
 from .. import paths
 from .. import prompts as tutor_prompts_pkg
 from ..criteria_builder import build_criteria
 from ..passages import cut_corpus, index_for
+from ..title import name_conversation
 from ..turn import run_turn
 from . import store
 
 TURN = "tutor_turn"
 CRITERIA = "tutor_criteria"
+
+# The kinds of reply that work on the subject, after which a conversation gets its title.
+_TITLED_BY = (THEORY, EXERCISE, ATTEMPT, SOLUTION)
 
 
 class _QuietEmitter:
@@ -95,6 +101,16 @@ def handle_turn(job: Job, control: JobControl) -> dict:
             state=record.get("state") or {},
             given_focus=list(opened.get("concepts") or []) or None,
         )
+        title = None
+        if not record.get("titled") and result.kind in _TITLED_BY:
+            asked = record["turns"][: turn + 1]
+            title = name_conversation(
+                [str(t.get("text") or "") for t in asked if t.get("role") == store.STUDENT],
+                list(result.state.get("focus") or []),
+                model=tutor_config.CLASSIFY_MODEL,
+                tutor_prompts=tutor_prompts,
+                prompts=context.prompts,
+            )
     except progress.Cancelled:
         _release(ws, job, conversation_id, turn, "cancelled")
         raise
@@ -112,6 +128,8 @@ def handle_turn(job: Job, control: JobControl) -> dict:
             return {"conversation": conversation_id, "turn": turn}
         store.append_tutor(fresh, result.text, result.record())
         fresh["state"] = result.state
+        if title:
+            fresh["title"], fresh["titled"] = title, True
         fresh["pending"] = None
         store.write(ws, job.user_id, fresh)
     return {"conversation": conversation_id, "turn": turn + 1}

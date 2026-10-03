@@ -56,7 +56,7 @@ def test_both_prompt_sets_have_the_same_names_and_signatures():
         if not name.startswith("_") and name not in ("json",)
     }
     assert public(es) == public(en)
-    assert len(es.FIXED_RULES) == len(en.FIXED_RULES)
+    assert len(es.METHOD_RULES) == len(en.METHOD_RULES)
 
 
 def test_every_tutor_switch_is_a_bool_with_its_effort_drawn_under_its_call():

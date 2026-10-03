@@ -1,23 +1,24 @@
 """The tutor's prompts and fixed texts, in Spanish.
 
-The method's rules are ONE list (`FIXED_RULES`): the reply prompt numbers them and the
-criteria screen shows them to the teacher as the rules no file can switch off, so the two
-can never disagree. JSON keys the model emits are never translated.
+The method's rules are ONE list (`METHOD_RULES`), numbered in the system prompt of every
+reply. They live in the prompt alone: the screens describe the tutor in prose and never list
+them. JSON keys the model emits are never translated.
 """
 
 import json
 
 LANGUAGE = "es"
 
-FIXED_RULES: tuple[str, ...] = (
+METHOD_RULES: tuple[str, ...] = (
     "Hace al menos una pregunta guiada en cada respuesta y como mucho {max_questions}: de "
     "comprensión, de diseño, de análisis o que lleve al alumno a encontrar su propio error.",
     "Remite a los apuntes en cada respuesta: nombra el tema o el apartado donde está lo que el "
     "alumno necesita, y solo uno de los que aparecen en la ficha.",
-    "Antes de explicar un concepto, comprueba de forma breve si el alumno conoce lo que necesita. "
-    "Si no lo ha visto, le dice qué buscar y dónde, sin explicárselo; si lo ha visto, le pide "
-    "que lo explique con sus palabras. Hace esa comprobación una sola vez por concepto: si el "
-    "alumno no la contesta, no la repite y sigue desde lo que el alumno haya dicho.",
+    "Da por sabido lo que el temario sitúa antes del concepto por el que pregunta el alumno: no "
+    "le examina de ello ni lleva la conversación hacia ello. Trabaja el concepto que el alumno "
+    "ha pedido. Solo si el alumno dice que algo previo le falta, o su mensaje lo muestra, le "
+    "dice en una frase dónde repasarlo en los apuntes, sin preguntarle por ello, y su pregunta "
+    "vuelve a lo que el alumno preguntó.",
     "No escribe código completo ni una solución que se pueda copiar. Como mucho, cita una línea "
     "del código del alumno para preguntar por ella.",
     "No ejecuta, simula ni depura código, no hace cálculos y no dice si algo está bien o mal: ni "
@@ -30,8 +31,6 @@ FIXED_RULES: tuple[str, ...] = (
     "pregunta por ello y nombra el apartado de los apuntes.",
     "Si el alumno insiste en la solución, no cede: reconoce su esfuerzo y vuelve a una pregunta "
     "más pequeña.",
-    "Las consultas administrativas y las preguntas ajenas a la asignatura reciben una respuesta "
-    "fija, sin pasar por el modelo.",
 )
 
 GOLDEN_RULE = "Si el alumno puede copiar tu respuesta y avanzar sin pensar, has fallado como tutor."
@@ -56,8 +55,9 @@ _KIND_LABELS = {
 
 _KIND_TASKS = {
     "theory": (
-        "El alumno pregunta por la teoría. Si hace falta, comprueba antes lo que ya sabe; "
-        "después llévale con una pregunta hacia el apartado de los apuntes que lo explica."
+        "El alumno pregunta por la teoría. Trabaja el concepto por el que pregunta, dando por "
+        "sabido lo anterior, y llévale con una pregunta hacia el apartado de los apuntes que lo "
+        "explica."
     ),
     "exercise": (
         "El alumno trae un enunciado. Ayúdale a entenderlo: qué datos tiene, qué le pide y qué "
@@ -90,11 +90,13 @@ _FAILURES = {
     "empty": "llegó vacía",
 }
 
-# A sentence that opens by telling the student they are right, read on folded text.
+# A sentence that opens by telling the student they are right, read on folded text. «Eso es»
+# and «así es» count only standing alone («¡Eso es!»): opening a sentence they are as often
+# a description («Eso es un ejemplo de…»), which the live replies used and the check refused.
 VALIDATION_PATTERN = (
     r"(?:^|[.!?]\s+)[¡¿]?\s*(?:si\b[,!]?\s*)?(?:exact[oa]mente|exact[oa]|correct[oa]|"
-    r"perfecto|muy bien|bien hecho|asi es|eso es|efectivamente|en efecto|tienes razon|"
-    r"has acertado)\b"
+    r"perfecto|muy bien|bien hecho|(?:asi|eso) es(?=\s*(?:[.!,;:]|$))|efectivamente|en efecto|"
+    r"tienes razon|has acertado)\b"
 )
 
 NORMATIVE_PATTERN = (
@@ -113,7 +115,7 @@ def method(max_questions: int) -> str:
     """Return the system prompt every reply is written under."""
     rules = "\n".join(
         f"{index}. {rule.format(max_questions=max_questions)}"
-        for index, rule in enumerate(FIXED_RULES[:-1], 1)
+        for index, rule in enumerate(METHOD_RULES, 1)
     )
     return (
         "Eres el tutor socrático de una asignatura. Tu trabajo es que el alumno razone: le guías "
@@ -168,12 +170,9 @@ def card_block(card) -> str:
                 lines.append(f"  [{_place(passage)}] {passage.text}")
             if concept.prerequisites:
                 lines.append(
-                    "  Conocimiento previo que necesita: "
-                    + "; ".join(
-                        _named_place(p.name, p.location)
-                        + (" (ya preguntado)" if p.name in card.verified else "")
-                        for p in concept.prerequisites
-                    )
+                    "  Se da por sabido (no preguntes por ello; si al alumno le falta, dile solo "
+                    "dónde repasarlo): "
+                    + "; ".join(_named_place(p.name, p.location) for p in concept.prerequisites)
                     + "."
                 )
             if concept.neighbours:
@@ -196,15 +195,6 @@ def card_block(card) -> str:
         lines.append("Pasajes de los apuntes relacionados con el mensaje:")
         lines += [f"[{_place(passage)}] {passage.text}" for passage in card.passages]
         lines.append("")
-
-    if card.verified:
-        lines += [
-            "Ya preguntaste al alumno por: "
-            + ", ".join(f"«{c}»" for c in card.verified)
-            + ". No vuelvas a preguntarle por eso: trabaja con lo que haya contestado, aunque "
-            "conteste a otra cosa.",
-            "",
-        ]
 
     if card.criteria:
         lines.append("Criterios docentes de la asignatura:")
@@ -316,6 +306,24 @@ def classify_prompt(subject: str, units: list[str], last_reply: str | None, mess
     )
 
 
+# THE TITLE -----------------------------------------------------------------------------
+
+
+def title_prompt(messages: list[str], concepts: list[str]) -> str:
+    """Return the prompt that names a conversation from what the student has written so far."""
+    written = "\n\n".join(f"- {text}" for text in messages) or "(ninguno)"
+    worked = ", ".join(f"«{c}»" for c in concepts) or "(ninguno)"
+    return (
+        "Pon título a una conversación entre un alumno y su tutor de la asignatura.\n\n"
+        f"Mensajes del alumno:\n{written}\n\n"
+        f"Conceptos del temario que se trabajan: {worked}.\n\n"
+        "El título dice de qué trata la conversación: el concepto o el ejercicio, no el saludo "
+        "ni la forma de pedirlo. De dos a seis palabras, en español, con mayúscula solo al "
+        "principio y en los nombres propios, sin comillas y sin punto final.\n\n"
+        'Contesta solo con el JSON {"title": "<título>"}.'
+    )
+
+
 # THE CRITERIA --------------------------------------------------------------------------
 
 
@@ -350,8 +358,11 @@ def criteria_unit_prompt(
         "- Un error que los apuntes señalan, o una práctica que desaconsejan.\n"
         "- Una convención que TODAS las soluciones citadas siguen, aunque los apuntes no la digan.\n\n"
         "Reglas:\n"
-        f"- Escribe como mucho {max_criteria} criterios: los más importantes para guiar al alumno.\n"
-        "- Escribe cada criterio en una o dos frases dirigidas al tutor, sin programas completos.\n"
+        f"- Escribe como mucho {max_criteria} criterios: solo los más importantes para guiar al "
+        "alumno. Menos es mejor que muchos.\n"
+        "- Cada criterio es UNA frase de 20 palabras como mucho, en lenguaje llano, que diga qué "
+        "se pide o qué se evita. Empieza por lo que se pide, sin fórmulas como «Exige que», "
+        "«Insiste en que» o «Recuerda que». Sin programas ni listas de casos.\n"
         "- Cada criterio cita en \"evidence\" al menos un pasaje o una solución que lo sostiene. "
         "Sin cita no hay criterio.\n"
         "- No escribas nada de conocimiento general que el material no diga.\n"
@@ -359,7 +370,8 @@ def criteria_unit_prompt(
         "recomienda o solo avisa.\n"
         "- \"scope\": \"subject\" si vale para toda la asignatura; \"unit\" si es propio de esta "
         "unidad.\n"
-        "- \"concepts\": los conceptos de la lista a los que se refiere; puede quedar vacía.\n"
+        "- \"concepts\": como mucho tres conceptos de la lista a los que se refiere; puede "
+        "quedar vacía.\n"
         "- \"forbidden\": SOLO nombres de instrucciones, palabras reservadas o funciones del "
         "lenguaje que el material prohíbe o desaconseja, escritos tal como aparecen en el código "
         "(una o dos palabras, por ejemplo break o global), con la razón y la cita. Una práctica "

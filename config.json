@@ -120,7 +120,7 @@
     ]
   },
   "tutor": {
-    "message_max_chars": 4000,
+    "message_max_chars": 12000,
     "history_turns": 8,
     "reply_max_tokens": 1024,
     "max_questions": 3,
@@ -135,7 +135,7 @@
     "focus_margin": 0.05,
     "criteria_max_chars": 3000,
     "criteria_evidence_chars": 14000,
-    "criteria_per_unit": 10,
+    "criteria_per_unit": 5,
     "criteria_max_tokens": 4096,
     "criteria_solutions": 6
   },

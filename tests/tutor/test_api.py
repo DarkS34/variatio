@@ -171,12 +171,12 @@ def test_a_student_cannot_read_or_touch_the_criteria(ws, runner):
     assert viewer.get("/api/tutor").json()["can_edit"] is False
 
 
-def test_a_teacher_reads_the_fixed_rules_and_the_units_and_saves_a_correction(ws, runner):
+def test_a_teacher_reads_the_units_and_saves_a_correction_and_never_the_method_s_rules(ws, runner):
     teacher = client(ws, role="editor")
 
     first = teacher.get("/api/tutor/criteria").json()
     assert first["origin"] == "missing"
-    assert first["fixed_rules"] and "{max_questions}" not in " ".join(first["fixed_rules"])
+    assert "fixed_rules" not in first, "the method's rules live in the prompt alone"
     assert [u["name"] for u in first["units"]] == ["Fundamentos", "Avanzado"]
 
     saved = teacher.put(
@@ -276,3 +276,17 @@ def test_the_generic_job_route_does_not_take_the_tutor_s_jobs():
     install(App())
 
     assert jobs.TURN not in JOB_LABELS and jobs.CRITERIA not in JOB_LABELS
+
+
+def test_a_student_opens_the_notes_a_reply_cites_and_nothing_outside_them(ws, runner, monkeypatch):
+    viewer = client(ws, role="viewer")
+    monkeypatch.setattr(router_module.entrypoints, "load_concept_sources", lambda ws: {})
+    monkeypatch.setattr(
+        router_module,
+        "read_document",
+        lambda ws, sources, name: [{"location": "Tema 1", "text": "Texto."}] if name == "apuntes.pdf" else None,
+    )
+
+    found = viewer.get("/api/tutor/notes", params={"document": "apuntes.pdf"})
+    assert found.status_code == 200 and found.json()["sections"][0]["location"] == "Tema 1"
+    assert viewer.get("/api/tutor/notes", params={"document": "otro.pdf"}).status_code == 404

@@ -31,6 +31,7 @@ from .. import config as tutor_config
 from .. import criteria as criteria_store
 from .. import paths
 from .. import prompts as tutor_prompts_pkg
+from ..passages import read_document
 from . import jobs, store
 
 router = APIRouter(prefix="/api/tutor", tags=["tutor"], dependencies=[auth.VIEW])
@@ -53,7 +54,7 @@ class CriteriaBody(BaseModel):
 
 @router.get("")
 def status(access: auth.Access = auth.VIEW) -> dict:
-    """Answer what the screen needs before anything else: the criteria's state and the limits."""
+    """Answer whether the tutor can answer here, and the state of the subject's criteria."""
     data, origin = criteria_store.read(access.ws)
     job = _criteria_job(access.ws.slug)
     blocked = _chain_error(access)
@@ -66,7 +67,6 @@ def status(access: auth.Access = auth.VIEW) -> dict:
             "job": job.to_dict() if job else None,
         },
         "can_edit": access.role in ("editor", "owner"),
-        "message_max_chars": tutor_config.MESSAGE_MAX_CHARS,
     }
 
 
@@ -104,7 +104,7 @@ def open_conversation(body: MessageBody, access: auth.Access = auth.VIEW) -> dic
 
 @router.get("/criteria", dependencies=[auth.EDIT])
 def criteria(access: auth.Access = auth.EDIT) -> dict:
-    """Answer the criteria in force, cleaned against the graph, with the method's fixed rules."""
+    """Answer the criteria in force, cleaned against the graph, with the subject's units."""
     tutor_prompts = tutor_prompts_pkg.of(_language(access))
     data, origin = criteria_store.read(access.ws)
     graph = _graph(access)
@@ -117,10 +117,6 @@ def criteria(access: auth.Access = auth.EDIT) -> dict:
         "origin": origin,
         "criteria": document,
         "warnings": warnings,
-        "fixed_rules": [
-            rule.format(max_questions=tutor_config.MAX_QUESTIONS)
-            for rule in tutor_prompts.FIXED_RULES
-        ],
         "units": [
             {"name": unit, "concepts": list(graph.concepts_by_domains.get(unit, []))}
             for unit in getattr(graph, "domains", [])
@@ -162,6 +158,20 @@ def build_criteria(access: auth.Access = auth.EDIT) -> dict:
         user_name=access.user.name,
     )
     return {"job": job.to_dict(), "queue_position": singletons.runner.queue_position(job.id)}
+
+
+@router.get("/notes")
+def notes(document: str, access: auth.Access = auth.VIEW) -> dict:
+    """Answer one document of the notes by sections, for the reader a reply's places open.
+
+    A reader's route like the rest: the notes are what the tutor sends a student to read, and
+    a place it cites has to open. Only a document of the corpus the tutor searches is served
+    (`passages.read_document`); any other name answers 404.
+    """
+    sections = read_document(access.ws, entrypoints.load_concept_sources(access.ws), document)
+    if sections is None:
+        raise HTTPException(404, "Ese documento no está en los apuntes de la asignatura.")
+    return {"document": document, "sections": sections}
 
 
 @router.get("/conversations/{conversation_id}")

@@ -17,6 +17,7 @@ file can switch them off.
 """
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -206,7 +207,12 @@ def _clean_criterion(entry, known_concepts: set[str], warnings: list[str], where
 
 
 def _clean_terms(entries) -> list[dict]:
-    """Clean the forbidden terms, dropping empty ones and repeats regardless of case."""
+    """Clean the forbidden terms, dropping empty ones, repeats regardless of case, and symbols.
+
+    A term with no letter (`/`, `*`) is an operator, and an operator cannot be checked in a
+    reply: the demo subject's draft vetoed `*`, and every reply that set a heading in bold
+    failed as one that suggested it.
+    """
     kept: list[dict] = []
     seen: set[str] = set()
     for entry in entries if isinstance(entries, list) else []:
@@ -215,7 +221,7 @@ def _clean_terms(entries) -> list[dict]:
         if not isinstance(entry, dict):
             continue
         term = _clip(entry.get("term"), _TERM_MAX)
-        if not term or fold(term) in seen:
+        if not term or not re.search(r"[^\W\d_]", term) or fold(term) in seen:
             continue
         seen.add(fold(term))
         kept.append(

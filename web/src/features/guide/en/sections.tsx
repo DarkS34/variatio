@@ -2168,14 +2168,14 @@ function Tutor() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.tutor")}>
         <p>
-          The second door after the construction: a conversation with a tutor that guides with
-          questions. It opens on the same conditions as "{t("nav.create")}" and it is meant for
+          The second door after the construction: a conversation with a Socratic tutor, which
+          guides with questions instead of giving answers. It opens on the same conditions as "{t("nav.create")}" and it is meant for
           students: a reader of the subject can use it even without being able to build or
           generate anything.
         </p>
         <p>
-          The tutor <strong>gives no solutions</strong>. It asks, checks what you already know
-          and tells you where to look in the notes. To practise, the door is "{t("nav.create")}".
+          The tutor <strong>gives no solutions</strong>: it asks you questions so that you reach
+          them yourself, and tells you where to look in the notes. To practise, the door is "{t("nav.create")}".
         </p>
       </SectionHead>
 
@@ -2189,17 +2189,17 @@ function Tutor() {
             {
               key: "focus",
               head: "The concept being discussed",
-              body: "It comes from the syllabus. The first message that clearly names one sets it, and it only moves when another message is clearly about something else. An «I don't get it» does not move it.",
+              body: "It comes from the syllabus. The first message that clearly names one sets it, and it only moves when another message is clearly about something else. An «I don't get it» does not move it, and neither does talking about something the syllabus places earlier.",
             },
             {
               key: "notes",
               head: "Where the notes explain it",
-              body: "The passages the syllabus anchored to that concept and the pieces of the notes closest to the message. The references under each reply come from here, never from what the model writes.",
+              body: "The passages the syllabus anchored to that concept and the pieces of the notes closest to the message. The references under each reply come from here, never from what the model writes, and each one opens the notes at that section.",
             },
             {
               key: "before",
               head: "What you need to know first",
-              body: "The concept's direct prerequisites. The tutor checks you know them before explaining, and does not check twice in one conversation.",
+              body: "The concept's direct prerequisites. The tutor takes them as known: if you ask about a concept, it works on that concept and does not walk you through the earlier ones. Only if you say something earlier is missing does it tell you where to review it.",
             },
             {
               key: "after",
@@ -2236,6 +2236,19 @@ function Tutor() {
         </Paragraph>
       </Block>
 
+      <Block title="Writing and reading">
+        <Paragraph>
+          Enter sends the message; Shift + Enter opens a new line. The conversation has a fixed
+          height and scrolls inside its box. Once it is about something, the system gives it a
+          short title, which is the one the list shows; until then it carries its first line.
+        </Paragraph>
+        <Paragraph>
+          Under each reply, "{t("tutor.references")}" lists the sections it names. Each one
+          opens the notes at that section, formatted, and from there you can move to the
+          previous or the next one.
+        </Paragraph>
+      </Block>
+
       <Block title="The queue">
         <Paragraph>
           Every reply is a job of the queue, like a generation. With the local engine alone, a
@@ -2254,8 +2267,9 @@ function Tutor() {
         <Paragraph>
           The criteria belong to the teachers: the "{t("tutor.tab.criteria")}" tab only appears
           with edit permission. The system generates them with "{t("tutor.criteria.build")}",
-          and they are reviewed and corrected like any step of the construction. Above them
-          are the tutor's fixed rules, which hold in every subject and do not change.
+          and they are reviewed and corrected like any step of the construction. The review shows
+          the sentences alone, each unit folded; each criterion's concepts and sources appear
+          when correcting. The tutor's method is not written here: it holds in every subject.
         </Paragraph>
       </Block>
 

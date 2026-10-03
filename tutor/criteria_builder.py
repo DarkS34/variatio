@@ -40,6 +40,10 @@ _TERMS_PER_UNIT = 8
 # («Uso de variables globales para la comunicación…»), which no check can find in a reply.
 _TERM_MAX_WORDS = 3
 
+# A criterion names the few concepts it is about. The demo subject's first draft tied each
+# one to four or five, and the screen became a field of chips nobody read.
+_CONCEPTS_PER_CRITERION = 3
+
 
 @dataclass(frozen=True)
 class _Evidence:
@@ -247,7 +251,11 @@ def _unit_schema(concepts: list[str], evidence_ids: list[str], per_unit: int) ->
                         "text": {"type": "string"},
                         "strength": {"type": "string", "enum": list(STRENGTHS)},
                         "scope": {"type": "string", "enum": ["unit", "subject"]},
-                        "concepts": {"type": "array", "items": one_of(concepts)},
+                        "concepts": {
+                            "type": "array",
+                            "maxItems": _CONCEPTS_PER_CRITERION,
+                            "items": one_of(concepts),
+                        },
                         "evidence": {"type": "array", "items": one_of(evidence_ids)},
                     },
                     "required": ["text", "strength", "scope", "concepts", "evidence"],
@@ -293,7 +301,9 @@ def _verify(
         criterion = {
             "text": text,
             "strength": entry.get("strength") if entry.get("strength") in STRENGTHS else "should",
-            "concepts": [c for c in dict.fromkeys(entry.get("concepts") or []) if c in known],
+            "concepts": [c for c in dict.fromkeys(entry.get("concepts") or []) if c in known][
+                :_CONCEPTS_PER_CRITERION
+            ],
             "sources": cited,
         }
         (subject_wide if entry.get("scope") == "subject" else unit_wide).append(criterion)
@@ -369,7 +379,9 @@ def _combine(group: list[dict]) -> dict:
     """Merge one group into its first criterion, with the firmest strength and every source."""
     first = dict(group[0])
     first["strength"] = MUST if any(c["strength"] == MUST for c in group) else first["strength"]
-    first["concepts"] = list(dict.fromkeys(name for c in group for name in c["concepts"]))
+    first["concepts"] = list(dict.fromkeys(name for c in group for name in c["concepts"]))[
+        :_CONCEPTS_PER_CRITERION
+    ]
     first["sources"] = []
     for criterion in group:
         for place in criterion["sources"]:

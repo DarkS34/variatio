@@ -15,7 +15,7 @@ import { takeTutorDraft, type TutorDraft } from "./draft";
 import { useTutorStatus } from "./queries";
 
 /**
- * THE TUTOR: A CHAT, AND FOR A TEACHER ALSO THE SUBJECT'S CRITERIA.
+ * THE SOCRATIC TUTOR: A CHAT, AND FOR A TEACHER ALSO THE SUBJECT'S CRITERIA.
  *
  * A student sees one thing — their conversations, the list beside the one open — because the
  * advantage over a chatbot is on the server (the card each reply is written with) and not in
@@ -101,7 +101,6 @@ export function TutorScreen() {
             key={selected ?? "new"}
             id={selected}
             ready={status.data.ready && !offline}
-            maxChars={status.data.message_max_chars}
             draft={selected === null ? draft : null}
             onOpened={(id) => {
               setDraft(null);

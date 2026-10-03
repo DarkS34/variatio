@@ -1,4 +1,4 @@
-import { Lock, Plus, RefreshCw, Sparkles, X } from "lucide-react";
+import { ChevronRight, Plus, RefreshCw, Sparkles, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,16 +14,19 @@ import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 import { useBuildCriteria, useSaveCriteria, useTutorCriteria } from "./queries";
-import type { CriteriaDocument, CriteriaPayload, Criterion, ForbiddenTerm, Strength } from "./types";
+import type { CriteriaDocument, Criterion, ForbiddenTerm, Strength } from "./types";
 
 /**
  * THE SUBJECT'S CRITERIA: BUILT BY THE SYSTEM, CORRECTED BY A TEACHER, NEVER BY A STUDENT.
  *
  * The same two moments as every stage of the construction: a review that only reads, and a
- * correction opened on purpose («Quiero corregir algo») with a bar that saves. Above both, the
- * method's fixed rules, folded and read-only, so a teacher sees what is already enforced in
- * every subject and does not write it again. A rebuild replaces a correction, which is why it
- * asks first; the correction is not lost, it goes to the history.
+ * correction opened on purpose («Quiero corregir algo») with a bar that saves. The review is
+ * kept short on purpose — the first draft, drawn with every concept and every source under
+ * every criterion, was a wall nobody read — so it shows the sentences alone, the units
+ * folded, and leaves concepts and sources to the correction. The method's own rules are not
+ * listed: they live in the reply prompt, and the header says in prose what the tutor does in
+ * every subject. A rebuild replaces a correction, which is why it asks first; the correction
+ * is not lost, it goes to the history.
  */
 export function CriteriaPanel({ ready }: { ready: boolean }) {
   const { t } = useT();
@@ -76,9 +79,6 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
           </p>
         ) : null}
       </CardHeader>
-      <CardContent>
-        <FixedRules rules={data.fixed_rules} />
-      </CardContent>
     </Card>
   );
 
@@ -162,23 +162,32 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
         </Button>
       </div>
 
-      <Section
-        title={t("tutor.criteria.general")}
-        concepts={data.units.flatMap((unit) => unit.concepts)}
-        criteria={shown.general}
-        editing={editing}
-        onChange={(general) => draft && setDraft({ ...draft, general })}
-      />
-      {data.units.map((unit) => (
-        <Section
-          key={unit.name}
-          title={unit.name}
-          concepts={unit.concepts}
-          criteria={shown.units[unit.name] ?? []}
-          editing={editing}
-          onChange={(listed) => draft && setDraft({ ...draft, units: { ...draft.units, [unit.name]: listed } })}
+      {editing ? (
+        <>
+          <Section
+            title={t("tutor.criteria.general")}
+            concepts={data.units.flatMap((unit) => unit.concepts)}
+            criteria={shown.general}
+            onChange={(general) => draft && setDraft({ ...draft, general })}
+          />
+          {data.units.map((unit) => (
+            <Section
+              key={unit.name}
+              title={unit.name}
+              concepts={unit.concepts}
+              criteria={shown.units[unit.name] ?? []}
+              onChange={(listed) =>
+                draft && setDraft({ ...draft, units: { ...draft.units, [unit.name]: listed } })
+              }
+            />
+          ))}
+        </>
+      ) : (
+        <Review
+          general={shown.general}
+          units={data.units.map((unit) => ({ name: unit.name, criteria: shown.units[unit.name] ?? [] }))}
         />
-      ))}
+      )}
 
       <Terms
         terms={shown.forbidden_terms}
@@ -225,37 +234,76 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
   );
 }
 
-function FixedRules({ rules }: { rules: CriteriaPayload["fixed_rules"] }) {
+/** The criteria as a teacher reviews them: the sentences, the subject's open, each unit folded. */
+function Review({
+  general,
+  units,
+}: {
+  general: Criterion[];
+  units: { name: string; criteria: Criterion[] }[];
+}) {
   const { t } = useT();
   return (
-    <details className="group rounded-md border border-border px-3 py-2">
-      <summary className="flex cursor-pointer items-center gap-2 font-medium">
-        <Lock className="size-4" aria-hidden />
-        {t("tutor.criteria.fixed")}
-      </summary>
-      <p className="mt-2 text-small text-muted-foreground">{t("tutor.criteria.fixed.body")}</p>
-      <ol className="mt-2 list-decimal space-y-1 pl-5 text-small">
-        {rules.map((rule) => (
-          <li key={rule}>{rule}</li>
-        ))}
-      </ol>
-    </details>
+    <Card>
+      <CardContent className="space-y-5 pt-5">
+        <div className="space-y-2">
+          <h3 className="font-medium">{t("tutor.criteria.general")}</h3>
+          <Sentences criteria={general} />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-medium">{t("tutor.criteria.byUnit")}</h3>
+          {units.map((unit) => (
+            <details key={unit.name} className="group border-t border-border py-2 first-of-type:border-t-0">
+              <summary className="flex cursor-pointer list-none items-center gap-2">
+                <ChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+                <span className="min-w-0 flex-1">{unit.name}</span>
+                <span className="text-small text-muted-foreground">{unit.criteria.length}</span>
+              </summary>
+              <div className="pb-1 pl-6 pt-2">
+                <Sentences criteria={unit.criteria} />
+              </div>
+            </details>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** A list of criteria as plain sentences; only what is required says so. */
+function Sentences({ criteria }: { criteria: Criterion[] }) {
+  const { t } = useT();
+  if (criteria.length === 0) {
+    return <p className="text-small text-muted-foreground">{t("tutor.criteria.none")}</p>;
+  }
+  return (
+    <ul className="list-disc space-y-1.5 pl-5">
+      {criteria.map((criterion, index) => (
+        <li key={index}>
+          {criterion.text}
+          {criterion.strength === "must" ? (
+            <span className="ml-2 text-micro font-condensed uppercase text-muted-foreground">
+              {t("tutor.criteria.must")}
+            </span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 
 const EMPTY: Criterion = { text: "", strength: "should", concepts: [], sources: [] };
 
+/** One block of criteria under correction: the subject's, or one unit's. */
 function Section({
   title,
   concepts,
   criteria,
-  editing,
   onChange,
 }: {
   title: string;
   concepts: string[];
   criteria: Criterion[];
-  editing: boolean;
   onChange: (criteria: Criterion[]) => void;
 }) {
   const { t } = useT();
@@ -268,52 +316,21 @@ function Section({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {criteria.length === 0 && !editing ? (
-          <p className="text-small text-muted-foreground">{t("tutor.criteria.none")}</p>
-        ) : null}
-        {criteria.map((criterion, index) =>
-          editing ? (
-            <EditableCriterion
-              key={index}
-              criterion={criterion}
-              concepts={concepts}
-              onChange={(next) => put(index, next)}
-              onRemove={() => onChange(criteria.filter((_, i) => i !== index))}
-            />
-          ) : (
-            <ReadCriterion key={index} criterion={criterion} />
-          ),
-        )}
-        {editing ? (
-          <Button variant="outline" size="sm" onClick={() => onChange([...criteria, { ...EMPTY }])}>
-            <Plus />
-            {t("tutor.criteria.add")}
-          </Button>
-        ) : null}
+        {criteria.map((criterion, index) => (
+          <EditableCriterion
+            key={index}
+            criterion={criterion}
+            concepts={concepts}
+            onChange={(next) => put(index, next)}
+            onRemove={() => onChange(criteria.filter((_, i) => i !== index))}
+          />
+        ))}
+        <Button variant="outline" size="sm" onClick={() => onChange([...criteria, { ...EMPTY }])}>
+          <Plus />
+          {t("tutor.criteria.add")}
+        </Button>
       </CardContent>
     </Card>
-  );
-}
-
-function ReadCriterion({ criterion }: { criterion: Criterion }) {
-  const { t } = useT();
-  return (
-    <div className="space-y-1.5 border-l-2 border-border pl-3">
-      <div className="flex flex-wrap items-start gap-2">
-        <Badge variant={criterion.strength === "must" ? "default" : "outline"}>
-          {t(criterion.strength === "must" ? "tutor.criteria.must" : "tutor.criteria.should")}
-        </Badge>
-        <p className="min-w-0 flex-1">{criterion.text}</p>
-      </div>
-      {criterion.concepts.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {criterion.concepts.map((name) => (
-            <ConceptChip key={name}>{name}</ConceptChip>
-          ))}
-        </div>
-      ) : null}
-      <Sources sources={criterion.sources} />
-    </div>
   );
 }
 
@@ -449,13 +466,10 @@ function Terms({
               </Button>
             </div>
           ) : (
-            <div key={index} className="space-y-0.5">
-              <p>
-                <code className="font-mono">{term.term}</code>
-                {term.reason ? <span className="text-muted-foreground"> — {term.reason}</span> : null}
-              </p>
-              <Sources sources={term.sources} />
-            </div>
+            <p key={index}>
+              <code className="font-mono">{term.term}</code>
+              {term.reason ? <span className="text-muted-foreground"> — {term.reason}</span> : null}
+            </p>
           ),
         )}
         {editing ? (

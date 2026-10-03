@@ -37,7 +37,8 @@ AUTHOR_PREFIX = "user_"
 STUDENT = "student"
 TUTOR = "tutor"
 
-# A title is the first message's opening, which is what a list of conversations is read by.
+# Until the model titles it (`tutor.title`), a conversation is titled by its first message's
+# opening, which is what a list of conversations is read by.
 _TITLE_CHARS = 80
 
 # `<UTC>-<six hex>`. Checked on every route, since it is joined to a path.
@@ -73,8 +74,9 @@ def create(
         "created_at": _iso(moment),
         "updated_at": _iso(moment),
         "title": _title(message),
+        "titled": False,
         "opened_from": opened_from or {"kind": "message"},
-        "state": {"focus": [], "trail": [], "verified": []},
+        "state": {"focus": [], "trail": []},
         "turns": [{"role": STUDENT, "text": message, "at": _iso(moment)}],
         "pending": None,
     }
@@ -208,7 +210,7 @@ def _read(path: Path) -> dict | None:
 
 
 def _title(message: str) -> str:
-    """Return a conversation's title: the first line of its first message, clipped."""
+    """Return a conversation's first title: the first line of its first message, clipped."""
     first = next((line.strip() for line in message.splitlines() if line.strip()), "")
     return first if len(first) <= _TITLE_CHARS else first[: _TITLE_CHARS - 1].rstrip() + "…"
 

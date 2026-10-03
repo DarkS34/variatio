@@ -53,9 +53,10 @@ education is out of scope; hardcoding a subject is equally a regression.
 - **`variatio-web`**: the product WITHOUT the evaluation. No worktree at present
   (`git worktree add ../variatio-noeval variatio-web` to recreate). Its route-order detector
   lives in `tests/server/test_route_order.py`.
-- **`variatio-web-tutor`** (worktree `/home/deploy/variatio-tutor`): `variatio-web` plus the
-  Socratic tutor (`tutor/`, `web/src/tutor/`, the `tutor_turn` and `tutor_criteria` jobs). Its
-  second door is «Tutor», where the study's branch has «Evaluar el sistema».
+- **`variatio-web-tutor`**: `variatio-web` plus the Socratic tutor (`tutor/`, `web/src/tutor/`,
+  the `tutor_turn` and `tutor_criteria` jobs). Its second door is «Tutor socrático», where the
+  study's branch has «Evaluar el sistema». It has no worktree of its own: it is checked out in
+  the development tree when it is the one being worked on.
 - **`main`**: the library and its CLI alone.
 - **The database never moves**: `evaluation_sessions`, `stage_evaluations` and
   `users.evaluator_profile` keep their migrations and ORM models on every branch.
@@ -636,7 +637,10 @@ admin's read.
 - **A chat and a card.** The interaction is a plain conversation; the advantage is the CARD
   (`tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
   definition and the graph's anchored passages, its direct prerequisites with where the notes
-  explain them, its direct dependents (not to be introduced), its closest same-unit concepts
+  explain them (TAKEN AS KNOWN: the reply neither quizzes the student on them nor steers
+  towards them, and only names where to review one the student says is missing — decision of
+  2026-10-03, after a question about recursion was walked back through functions and
+  procedures), its direct dependents (not to be introduced), its closest same-unit concepts
   (by description vectors), the passages of the notes nearest the message (`passages.py`), the
   subject's criteria, the bank exercise the message is and a simpler one of its concept.
 - **A turn** (`tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
@@ -649,9 +653,10 @@ admin's read.
   an `off_topic` verdict on a message whose best concept clears `tutor.focus_threshold`.
 - **The focus belongs to the conversation**: set by a message whose best concept clears
   `tutor.focus_threshold` (0.55, measured: content questions 0.61–0.66, a greeting 0.49) and
-  moved only past `tutor.focus_margin`. A prerequisite the reply ASKS about is recorded as
-  `verified` and the next cards say so; it does NOT join the focus (that made the tutor ask it
-  again). Social messages never move it.
+  moved only past `tutor.focus_margin`, and NEVER to a concept in the prerequisite closure of
+  the current focus (a student answering about functions inside a conversation on recursion is
+  still on recursion). Social messages never move it. The state is the focus and the trail;
+  older records may still carry a `verified` list, which nothing reads.
 - **The method is code, not only prompt.** `tutor/checks.py` verifies what a machine can: at
   least one question and at most `max_questions`, at most `max_code_lines` in fences, no run
   longer than `copy_max_words` copied from the card's passages, no dependent of the focus the
@@ -664,14 +669,17 @@ admin's read.
   `NORMATIVE_PATTERN` first — its anchored passages and up to `criteria_solutions` bank
   solutions; every criterion must cite an id it was given or it is dropped; subject-wide ones
   are merged by one grouping call, read as a partition; each call is capped by
-  `criteria_per_unit` as the grammar's `maxItems` and by `criteria_max_tokens` — uncapped, the
-  grammar let the model add criteria for minutes; a forbidden term is a name as code writes
-  it, three words at most — the model wrote practices there, which no check can find) and
+  `criteria_per_unit` (5) as the grammar's `maxItems` and by `criteria_max_tokens` — uncapped,
+  the grammar let the model add criteria for minutes; each criterion is one plain sentence of
+  20 words at most with at most three concepts — the first draft was long sentences tied to
+  four or five concepts and eight sources, and unreadable; a forbidden term is a name as code
+  writes it, three words at most — the model wrote practices there, which no check can find) and
   `instance/tutor_criteria.json`
   (a teacher's correction, which wins). A rebuild retires the curated file to `.history/`.
   `criteria.normalize` is the one cleaner of both, validated against the graph on read. The
-  method's rules (`prompts.FIXED_RULES`, one list numbered into the system prompt) are shown
-  read-only above them. Criteria routes are `auth.EDIT`: the membership role, never
+  method's rules (`prompts.METHOD_RULES`) are one list numbered into the system prompt and
+  live there alone: no route returns them and no screen lists them (the screens describe the
+  tutor in prose). Criteria routes are `auth.EDIT`: the membership role, never
   `users.evaluator_profile`, which the registrant chooses.
 - **Grammar**: `calls.grammar_for` drops it when the call reasons or the model is remote
   (Cerebras mangles non-ASCII under constrained decoding); the schema then goes in the prompt.
@@ -685,7 +693,16 @@ admin's read.
   under a per-file lock; the job reads it under that lock too (the route holds it until
   `pending` is written — a free lane started the job before that). `pending` names the job;
   a job gone (failed, cancelled while queued, lost to a restart) marks the student turn
-  `failed` and frees the conversation; «Pedir la respuesta otra vez» is `/retry`.
+  `failed` and frees the conversation; «Pedir la respuesta otra vez» is `/retry`. A
+  conversation starts titled by its first line; the first reply of a substantive kind (not
+  social, blocked or a fixed text) asks the classify model for a short title once
+  (`tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
+- **Places and the reader**: the places shown under a reply are the card's, chosen by what the
+  reply names (its section, else any part of its path, else the card's first two —
+  `Card.references`). Each opens `GET /api/tutor/notes?document=…` (`auth.VIEW`), which serves
+  only a document of the corpus the tutor searches, cut by whole sections
+  (`passages.read_document`); the client shows one section at a time, formatted.
+- `tutor.message_max_chars` (12 000) is a hidden safety cap, never shown as a counter.
 - **A turn's job carries no text**: params and result name the conversation and the turn
   only, because the event stream is the workspace's and a conversation is its author's. One
   reply on its way per conversation and per account in the workspace (409).
@@ -820,12 +837,16 @@ never `oklch` (hue interpolation turns greens blue).
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
   `cfg.hint.<key>`; a key missing there draws nothing.
 
-- Tutor (`web/src/tutor/`, `/tutor`): the conversation list beside the open conversation; a
-  reply polled from the author's own route while `pending`, shown whole with its references
-  (the card's places) under it; «En cola» while queued, «Detener», «Pedir la respuesta otra
-  vez». A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: fixed rules
-  folded and read-only, then review / «Quiero corregir algo» with a sticky save bar, and a
-  rebuild that asks first when there is a correction. «Trabajar con el tutor» on a saved
+- Tutor socrático (`web/src/tutor/`, `/tutor`): the conversation list beside the open
+  conversation, both one fixed height (`PANEL_HEIGHT`) scrolling inside; a reply polled from
+  the author's own route while `pending`, shown whole with its references under it, each
+  opening the notes reader (`NotesReader`, one section at a time); «En cola» while queued,
+  «Detener», «Pedir la respuesta otra vez». The box to write in has its send button inside on
+  the right; Enter sends, Shift+Enter breaks the line, and no character counter is drawn.
+  A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: a review of plain
+  sentences (the subject's open, each unit folded; concepts and sources only when
+  correcting), «Quiero corregir algo» with a sticky save bar, and a rebuild that asks first
+  when there is a correction. «Trabajar con el tutor» on a saved
   exercise — in «Mis asignaturas y ejercicios», and on a result card once its file exists —
   stashes the statement and the generation id (`tutor/draft.ts`). The admin reads
   conversations from «Asignaturas» (`AdminConversations`).
@@ -953,12 +974,15 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The exemplars profile is edited through the form alone.
 
 **Tutor (decided 2026-10-03)**
-- Two doors on the tutor branch: «Generar ejercicios» and «Tutor»; no third door.
+- Two doors on the tutor branch: «Generar ejercicios» and «Tutor socrático»; no third door.
 - The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
   after the checks, never streamed.
 - Conversations are private to their author; the administrator reads them read-only.
 - The subject's criteria are generated by the system and curated by a teacher (edit role);
-  a student never sees or changes them. The method's rules are fixed and not editable.
+  a student never sees or changes them. The method's rules are fixed, not editable, and live
+  in the prompt alone (not listed on any screen).
+- What the syllabus places before the concept asked about is taken as known; the focus never
+  moves back to it.
 - The tutor screens with the guardrail alone (`screen_message`), not admissibility.
 - A bank exercise's solution never enters the card.
 - No "System One" classifier (Jev, Laya…): the kind is decided by signals and one grammar call.

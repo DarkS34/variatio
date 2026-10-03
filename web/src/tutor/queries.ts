@@ -15,6 +15,7 @@ export const tutorKeys = {
   conversations: (ws: string | null) => ["tutor", ws, "conversations"] as const,
   conversation: (ws: string | null, id: string) => ["tutor", ws, "conversation", id] as const,
   criteria: (ws: string | null) => ["tutor", ws, "criteria"] as const,
+  notes: (ws: string | null, document: string) => ["tutor", ws, "notes", document] as const,
   admin: (slug: string, author: number | null, offset: number) =>
     ["tutor", "admin", slug, author, offset] as const,
   adminOne: (slug: string, author: number, id: string) =>
@@ -107,6 +108,17 @@ export function useDeleteConversation() {
   return useMutation({
     mutationFn: (id: string) => tutorApi.remove(id),
     onSuccess: () => client.invalidateQueries({ queryKey: tutorKeys.conversations(ws) }),
+  });
+}
+
+/** One document of the notes, for the reader; read once per visit, since notes change rarely. */
+export function useNotes(document: string | null) {
+  const ws = useActiveWorkspace();
+  return useQuery({
+    queryKey: tutorKeys.notes(ws, document ?? ""),
+    queryFn: () => tutorApi.notes(document as string),
+    enabled: document !== null,
+    staleTime: 5 * 60_000,
   });
 }
 

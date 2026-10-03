@@ -81,3 +81,13 @@ def test_a_turn_carries_the_general_rules_then_the_focus_s_within_the_budget():
         "De otra unidad, sobre la recursividad.",
     ]
     assert [c.text for c in loaded.for_focus("Avanzado", [], max_chars=20)] == ["General."]
+
+
+def test_a_term_with_no_letter_is_an_operator_and_is_dropped(tutor_context):
+    clean, _ = criteria.normalize(
+        {"forbidden_terms": [{"term": "*"}, {"term": "/"}, {"term": "print()"}, {"term": "global"}]},
+        tutor_context.knowledge_graph,
+        "Pregunta a tu docente.",
+    )
+
+    assert [t["term"] for t in clean["forbidden_terms"]] == ["print()", "global"]

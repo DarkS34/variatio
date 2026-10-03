@@ -2153,14 +2153,14 @@ function Tutor() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.tutor")}>
         <p>
-          La segunda puerta tras la construcción: una conversación con un tutor que guía con
-          preguntas. Se abre con las mismas condiciones que «{t("nav.create")}» y está pensada
+          La segunda puerta tras la construcción: una conversación con un tutor socrático, que
+          guía con preguntas en vez de dar respuestas. Se abre con las mismas condiciones que «{t("nav.create")}» y está pensada
           para los alumnos: un lector de la asignatura puede usarla aunque no pueda construir
           ni generar nada.
         </p>
         <p>
-          El tutor <strong>no da soluciones</strong>. Pregunta, comprueba lo que ya sabes y te
-          dice dónde mirar en los apuntes. Si quieres practicar, la puerta es «
+          El tutor <strong>no da soluciones</strong>: te hace preguntas para que llegues tú a
+          ellas y te dice dónde mirar en los apuntes. Si quieres practicar, la puerta es «
           {t("nav.create")}».
         </p>
       </SectionHead>
@@ -2176,17 +2176,17 @@ function Tutor() {
             {
               key: "focus",
               head: "El concepto del que se habla",
-              body: "Sale del temario. Se fija con el primer mensaje que lo nombra con claridad y solo cambia cuando otro mensaje habla claramente de otra cosa. Un «no lo entiendo» no lo mueve.",
+              body: "Sale del temario. Se fija con el primer mensaje que lo nombra con claridad y solo cambia cuando otro mensaje habla claramente de otra cosa. Un «no lo entiendo» no lo mueve, y hablar de algo que el temario pone antes tampoco.",
             },
             {
               key: "notes",
               head: "Dónde lo explican los apuntes",
-              body: "Los pasajes que el temario ancló a ese concepto y los fragmentos de los apuntes más parecidos al mensaje. Las referencias que aparecen bajo cada respuesta salen de aquí, nunca de lo que escribe el modelo.",
+              body: "Los pasajes que el temario ancló a ese concepto y los fragmentos de los apuntes más parecidos al mensaje. Las referencias que aparecen bajo cada respuesta salen de aquí, nunca de lo que escribe el modelo, y cada una abre los apuntes por ese apartado.",
             },
             {
               key: "before",
               head: "Lo que hay que saber antes",
-              body: "Los prerrequisitos directos del concepto. El tutor comprueba que los conoces antes de explicar, y no repite la comprobación en la misma conversación.",
+              body: "Los prerrequisitos directos del concepto. El tutor los da por sabidos: si preguntas por un concepto, trabaja ese concepto y no te lleva por los anteriores. Solo si dices que te falta algo previo te dice dónde repasarlo.",
             },
             {
               key: "after",
@@ -2223,6 +2223,20 @@ function Tutor() {
         </Paragraph>
       </Block>
 
+      <Block title="Escribir y leer">
+        <Paragraph>
+          Intro envía el mensaje; Mayús + Intro abre una línea nueva. La conversación tiene una
+          altura fija y se desplaza dentro de su recuadro. Cuando ya trata de algo, el sistema
+          le pone un título corto, que es el que ves en la lista; hasta entonces lleva su
+          primera línea.
+        </Paragraph>
+        <Paragraph>
+          Bajo cada respuesta, «{t("tutor.references")}» lista los apartados que nombra. Cada
+          uno abre los apuntes por ese apartado, con formato, y desde ahí puedes pasar al
+          anterior o al siguiente.
+        </Paragraph>
+      </Block>
+
       <Block title="La cola">
         <Paragraph>
           Cada respuesta es un trabajo de la cola, como una generación. Con el motor solo local,
@@ -2241,8 +2255,10 @@ function Tutor() {
         <Paragraph>
           Los criterios son de los docentes: la pestaña «{t("tutor.tab.criteria")}» solo
           aparece con permiso de edición. El sistema los genera con «{t("tutor.criteria.build")}
-          », y se revisan y corrigen como cualquier paso de la construcción. Encima aparecen
-          las reglas fijas del tutor, que valen en todas las asignaturas y no se cambian.
+          », y se revisan y corrigen como cualquier paso de la construcción. La revisión muestra
+          solo las frases, con cada unidad plegada; los conceptos y las fuentes de cada criterio
+          aparecen al corregir. El método del tutor no se escribe aquí: vale en todas las
+          asignaturas.
         </Paragraph>
       </Block>
 

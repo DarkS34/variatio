@@ -7,22 +7,18 @@ first message that clearly names one, and moves only when a later message is cle
 another: its best concept has to clear the threshold AND beat the current focus on that same
 message by a margin.
 
+A message about something the syllabus places BEFORE the focus never moves it. What comes
+before is taken as known: a student asking about recursion who answers a question about
+functions is still working on recursion, and a focus that followed them back made the next
+card about functions and the tutor walk them through the prerequisites one by one. The card
+keeps every direct prerequisite with where the notes explain it, which is all a reply needs
+to send a student who says one is missing to the right section.
+
 One other thing moves it, read off the artifacts and not off the model's say-so: a message
-that IS a bank exercise brings that exercise's tagged concepts. A reply that asks about one
-of the focus's prerequisites does NOT move it — the card already carries every prerequisite
-with where the notes explain it, which is all a step back through the graph needs, and a
-prerequisite pulled into the focus made the next card about it and the tutor ask it again.
-The prerequisite is remembered as checked instead, and the next cards say so.
+that IS a bank exercise brings that exercise's tagged concepts.
 """
 
-import re
-
-from variatio.core.lexicon import mentions
-
 MAX_FOCUS = 2
-
-# A question of a reply: from the end of the previous sentence to its question mark.
-_QUESTION = re.compile(r"[^.!?\n]*\?")
 
 
 def next_focus(
@@ -32,6 +28,7 @@ def next_focus(
     threshold: float,
     margin: float,
     eligible: set[str],
+    before: set[str] | None = None,
     given: list[str] | None = None,
 ) -> list[str]:
     """Return the focus a turn is answered with.
@@ -39,7 +36,8 @@ def next_focus(
     `given` are concepts the turn already knows the message is about — a bank exercise's
     tags, a generated exercise's targets — and they win outright. Otherwise the scores of
     the message decide, against `current`, within `eligible` (the graph's concepts minus the
-    generic ones, which name no topic anybody can work on).
+    generic ones, which name no topic anybody can work on); a best concept in `before` — the
+    prerequisite closure of the current focus — keeps the focus where it is.
     """
     current = [name for name in current if name in eligible]
     if given:
@@ -55,6 +53,8 @@ def next_focus(
     best, best_score = ranked[0]
     if best in current:
         return current
+    if current and before and best in before:
+        return current
     if current:
         held = max(scores.get(name, 0.0) for name in current)
         if best_score - held <= margin:
@@ -68,20 +68,14 @@ def next_focus(
     return focus[:MAX_FOCUS]
 
 
-def after_reply(state: dict, focus: list[str], prerequisites: list[str], reply: str, wording) -> dict:
+def after_reply(state: dict, focus: list[str]) -> dict:
     """Return the conversation's state once a reply is written.
 
-    A prerequisite the reply ASKS about is recorded as checked, which the next cards say so
-    the tutor does not check it again. Only the reply's questions are read: its other
-    sentences cite places of the notes, and a heading such as «Funciones y recursividad»
-    would mark as checked a concept nobody asked about. The trail keeps every concept the
-    conversation has stood on, in order, for whoever reads the conversation afterwards.
+    The trail keeps every concept the conversation has stood on, in order, for whoever reads
+    the conversation afterwards.
     """
-    questions = " ".join(_QUESTION.findall(reply))
-    named = [name for name in prerequisites if mentions(questions, name, wording)]
-    verified = list(dict.fromkeys([*state.get("verified", []), *named]))
     trail = list(state.get("trail", []))
     for name in focus:
         if name not in trail[-MAX_FOCUS:]:
             trail.append(name)
-    return {"focus": list(focus)[:MAX_FOCUS], "trail": trail, "verified": verified}
+    return {"focus": list(focus)[:MAX_FOCUS], "trail": trail}

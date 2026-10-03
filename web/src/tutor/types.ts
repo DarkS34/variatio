@@ -12,7 +12,6 @@ export interface TutorStatus {
   };
   /** Whether this account's role lets it correct the criteria: a teacher's, never a student's. */
   can_edit: boolean;
-  message_max_chars: number;
 }
 
 export type CriteriaOrigin = "curated" | "draft" | "missing";
@@ -73,7 +72,7 @@ export interface Pending {
 
 export interface Conversation extends Omit<ConversationRow, "turns" | "pending"> {
   opened_from: { kind: "message" } | { kind: "generation"; generation_id: string; concepts?: string[] };
-  state: { focus?: string[]; trail?: string[]; verified?: string[] };
+  state: { focus?: string[]; trail?: string[] };
   turns: Turn[];
   pending: Pending | null;
 }
@@ -111,10 +110,14 @@ export interface CriteriaPayload {
   origin: CriteriaOrigin;
   criteria: CriteriaDocument;
   warnings: string[];
-  /** The method's rules, which hold in every subject and which no file can switch off. */
-  fixed_rules: string[];
   units: { name: string; concepts: string[] }[];
   job: Job | null;
+}
+
+/** One document of the notes as the reader shows it: its sections, in reading order. */
+export interface NotesDocument {
+  document: string;
+  sections: { location: string; text: string }[];
 }
 
 export interface AdminConversationRow extends Omit<ConversationRow, "pending"> {

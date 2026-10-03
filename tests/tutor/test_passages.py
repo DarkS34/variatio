@@ -75,3 +75,16 @@ def test_the_index_is_cached_by_fingerprint_and_rebuilt_when_the_notes_change(tm
     page.write_text(page.read_text(encoding="utf-8") + "\n\nUn párrafo corregido a mano.", encoding="utf-8")
     passages.index_for(ws, SOURCES, 200)
     assert calls == [2, 2]
+
+
+def test_the_reader_serves_a_document_of_the_notes_by_whole_sections_and_nothing_else(tmp_path):
+    ws = cached_workspace(tmp_path)
+
+    sections = passages.read_document(ws, SOURCES, "apuntes.pdf")
+
+    assert [s["location"] for s in sections] == [
+        "Tema 1 Fundamentos > Variables",
+        "Tema 2 Avanzado > Recursividad",
+    ]
+    assert sections[1]["text"].startswith("## Recursividad")
+    assert passages.read_document(ws, SOURCES, "../../etc/passwd") is None

@@ -177,6 +177,30 @@ def cut_corpus(ws: Workspace, sources: dict, max_chars: int) -> list[Passage]:
     return passages
 
 
+def read_document(ws: Workspace, sources: dict, name: str) -> list[dict] | None:
+    """Return one document of the notes as the reader shows it: its sections, in order.
+
+    None when `name` is not a document of the corpus the tutor reads, so a request can name
+    nothing else on disk. Cut as `cut_corpus` cuts, by heading, but whole: the reader shows a
+    section entire and a reply's place is a section. Navigation paragraphs are dropped, and
+    so is a section left with nothing but its heading — its title is already in the path of
+    the sections under it.
+    """
+    if name not in _documents(ws, sources):
+        return None
+    text = _document_text(paths.corpus_pages_dir(ws) / name)
+    sections = []
+    for location, _title, body in split_sections(text) if text else []:
+        kept = [
+            paragraph.strip()
+            for paragraph in re.split(r"\n\s*\n", body)
+            if paragraph.strip() and not is_navigation(paragraph)
+        ]
+        if kept and not all(_HEADING.match(paragraph) for paragraph in kept):
+            sections.append({"location": location, "text": "\n\n".join(kept)})
+    return sections
+
+
 def _documents(ws: Workspace, sources: dict) -> list[str]:
     """Return the corpus documents to read, the graph's own first."""
     named = [str(name) for name in sources.get("documents") or [] if name]

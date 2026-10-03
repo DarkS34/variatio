@@ -74,6 +74,8 @@ def test_a_sentence_that_opens_by_telling_the_student_they_are_right_fails():
     assert failures("Lo has visto. Correcto: ¿y ahora?", validation=pattern) == ["validated"]
     assert failures("¿Qué crees que es exactamente el caso base?", validation=pattern) == []
     assert failures("Está bien que preguntes. ¿Qué parte te cuesta?", validation=pattern) == []
+    assert failures("¡Eso es! ¿Y qué pasa después?", validation=pattern) == ["validated"]
+    assert failures("Eso es un ejemplo de función. ¿Y en general?", validation=pattern) == []
 
 
 def test_the_shared_run_is_counted_in_words_and_ignores_accents_and_case():

@@ -9,7 +9,8 @@ The sequence is fixed, and every step is the cheapest one that can still decide:
    document side, is compared on that side (`classify.bank_match`).
 3. The kind is decided (`classify`). An administrative question and one outside the subject
    are answered by code with a fixed text.
-4. The focus moves only if the message is clearly about something else (`focus`).
+4. The focus moves only if the message is clearly about something else, and never back to
+   what the syllabus places before it (`focus`).
 5. The card is written from the artifacts (`card`).
 6. The reply model answers under the method, and code checks the answer (`checks`). A broken
    answer is asked again ONCE, with a note naming the rules it broke; a second failure sends a
@@ -85,13 +86,13 @@ def run_turn(
     """Answer one message of a conversation, following the sequence above.
 
     `history` is the conversation before this message, as `{role, text}` turns; `state` its
-    focus, trail and checked concepts; `given_focus` the concepts the conversation was opened
+    focus and trail; `given_focus` the concepts the conversation was opened
     on, when it was opened from a generated exercise.
     """
     started = time.perf_counter()
     tutor_prompts = tutor_prompts_pkg.of(context.language)
     wording = wording_sets.beside(context.prompts)
-    state = {"focus": [], "trail": [], "verified": [], **(state or {})}
+    state = {"focus": [], "trail": [], **(state or {})}
 
     def done(text: str, kind: str, decided_by: str, **extra) -> TurnResult:
         """Close the turn with its elapsed time."""
@@ -140,12 +141,19 @@ def run_turn(
     eligible = set(graph.all_concepts) - set(graph.generic_non_taggable_concepts)
     current = state["focus"]
     if classified.kind != SOCIAL:
+        relation = context.generator.prerequisite_relation
+        before = (
+            set(graph.prerequisite_closure(list(current), relation))
+            if current and relation and graph.has_relation(relation)
+            else set()
+        )
         current = focus.next_focus(
             state["focus"],
             scores,
             threshold=tutor_config.FOCUS_THRESHOLD,
             margin=tutor_config.FOCUS_MARGIN,
             eligible=eligible,
+            before=before,
             given=given,
         )
 
@@ -157,7 +165,6 @@ def run_turn(
         index=index,
         vector=vector,
         focus=current,
-        verified=state["verified"],
         exercise_id=classified.exercise_id,
     )
     turns = tutor_config.HISTORY_TURNS
@@ -176,22 +183,21 @@ def run_turn(
     fallback = bool(failures)
     if fallback:
         first = the_card.focus[0] if the_card.focus else None
-        place = (first.anchors[0].location if first and first.anchors else None) or next(
-            (q.location for q in the_card.passages if q.location), None
-        )
+        place = next(
+            (q.location for q in (first.anchors if first else ()) if q.location), None
+        ) or next((q.location for q in the_card.passages if q.location), None)
         text = tutor_prompts.fallback_reply(first.name if first else None, place)
         logger.warning(
             f"[tutor] Dos respuestas incumplieron el método ({', '.join(c for c, _ in failures)}); "
             "se envía la pregunta de reserva"
         )
 
-    prerequisites = [p.name for concept in the_card.focus for p in concept.prerequisites]
     return done(
         text,
         classified.kind,
         classified.decided_by,
-        next_state=focus.after_reply(state, current, prerequisites, text, wording),
-        references=the_card.references(),
+        next_state=focus.after_reply(state, current),
+        references=the_card.references(text),
         card={
             **the_card.record(),
             **({"exercise_score": classified.exercise_score} if classified.exercise_score else {}),

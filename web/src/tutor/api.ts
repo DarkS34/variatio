@@ -8,6 +8,7 @@ import type {
   ConversationRow,
   CriteriaDocument,
   CriteriaPayload,
+  NotesDocument,
   TurnQueued,
   TutorStatus,
 } from "./types";
@@ -33,6 +34,8 @@ export const tutorApi = {
   cancel: (id: string) =>
     request<{ cancelled: boolean }>(`${conversation(id)}/turn`, { method: "DELETE" }),
   remove: (id: string) => request<{ deleted: string }>(conversation(id), { method: "DELETE" }),
+  notes: (document: string) =>
+    request<NotesDocument>(`/api/tutor/notes?${new URLSearchParams({ document }).toString()}`),
   criteria: () => request<CriteriaPayload>("/api/tutor/criteria"),
   saveCriteria: (criteria: CriteriaDocument) =>
     request<{ origin: string; criteria: CriteriaDocument; warnings: string[] }>(

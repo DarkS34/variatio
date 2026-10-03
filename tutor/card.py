@@ -6,8 +6,8 @@ and the job is one of the method's rules:
 - the subject's context says what is being taught (the role and its scope);
 - each focus concept carries its unit, its definition from the notes and the passages the
   graph anchored to it — the reply's reference to the notes;
-- its direct prerequisites, each with where the notes explain it — the prior-knowledge check
-  and the step back through the graph;
+- its direct prerequisites, each with where the notes explain it — what the reply takes as
+  known, and where to send a student who says it is missing;
 - its direct dependents — what comes later and must not be introduced, which the checks then
   enforce on the reply;
 - its closest concepts of the same unit — something to contrast it with when the student
@@ -22,9 +22,12 @@ What a kind of message does not need stays off its card: a greeting carries no n
 fixed answer has no card at all.
 """
 
+import re
 from dataclasses import dataclass, field
 
 import numpy as np
+
+from variatio.core.lexicon import fold
 
 from . import ATTEMPT, EXERCISE, SOCIAL, SOLUTION, THEORY
 from . import config as tutor_config
@@ -37,6 +40,13 @@ from .passages import PassageIndex, text_key
 _ANCHOR_CHARS = 900
 _STATEMENT_CHARS = 700
 _NEIGHBOURS = 2
+
+# How many places a reply that names none of the card's shows under it.
+_SHOWN = 2
+
+# A part of a heading path shorter than this («Introducción», «Ejemplos») names too many
+# sections to say which one a reply meant.
+_PART_MIN_CHARS = 8
 
 
 @dataclass(frozen=True)
@@ -55,6 +65,7 @@ class Prerequisite:
 
     name: str
     location: str | None = None
+    document: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,7 +99,6 @@ class Card:
     subject: str = ""
     focus: tuple[FocusConcept, ...] = ()
     passages: tuple[Quote, ...] = ()
-    verified: tuple[str, ...] = ()
     criteria: tuple[Criterion, ...] = ()
     forbidden_terms: tuple[str, ...] = ()
     exercise: BankExercise | None = None
@@ -99,22 +109,46 @@ class Card:
         """Return every piece of the notes the card carries, anchors first."""
         return [quote for concept in self.focus for quote in concept.anchors] + list(self.passages)
 
-    def references(self) -> list[dict]:
-        """Return the distinct places of the notes the card carries, in the order it holds them.
+    def references(self, reply: str = "") -> list[dict]:
+        """Return the places of the notes a reply shows under it, drawn from the card alone.
 
-        What a reply shows the student under it, and therefore drawn from the card and never
-        from the reply: a place the model invented cannot reach the screen.
+        Drawn from the card and never from the reply, so a place the model invented cannot
+        reach the screen; but CHOSEN by the reply, since the card carries more places than any
+        reply cites. The places whose own section the reply names come first; failing that,
+        those of whose path it names any part; failing both, the card's first `_SHOWN`. A
+        prerequisite's place counts only when the reply names it — it is where a student who
+        lacks one is sent. A place with no section is dropped when its document has one that has.
         """
-        found: list[dict] = []
-        for quote in self.quotes():
-            place = {"document": quote.document, "location": quote.location}
-            if place not in found:
-                found.append(place)
-        return found
+        places = _distinct(
+            {"document": quote.document, "location": quote.location} for quote in self.quotes()
+        )
+        if not reply:
+            return places
+        earlier = _distinct(
+            {"document": p.document, "location": p.location}
+            for concept in self.focus
+            for p in concept.prerequisites
+            if p.document and p.location
+        )
+        candidates = places + [place for place in earlier if place not in places]
+        said = f" {_plain(reply)} "
+        for named in (_last_part, _any_part):
+            chosen = [place for place in candidates if named(place["location"], said)]
+            if chosen:
+                return chosen
+        return places[:_SHOWN]
 
     def later(self) -> list[str]:
-        """Return what the focus's dependents are, the concepts a reply must not introduce."""
-        return list(dict.fromkeys(name for concept in self.focus for name in concept.later))
+        """Return what the focus's dependents are, the concepts a reply must not introduce.
+
+        A concept of the focus is never one of them, even when it depends on the other: a
+        focus of «Recursividad» and «Subproblema» made every reply that said «subproblema»
+        fail as one that introduced a later concept.
+        """
+        own = {concept.name for concept in self.focus}
+        return list(
+            dict.fromkeys(name for concept in self.focus for name in concept.later if name not in own)
+        )
 
     def record(self) -> dict:
         """Return what a saved turn keeps of its card: names, places and ids, never the texts."""
@@ -144,7 +178,6 @@ def assemble(
     index: PassageIndex,
     vector: np.ndarray,
     focus: list[str],
-    verified: list[str],
     exercise_id: str | None = None,
 ) -> Card:
     """Write the card one reply of this kind is answered with."""
@@ -178,7 +211,6 @@ def assemble(
         subject=context.content_context.prompt_block(),
         focus=concepts,
         passages=passages,
-        verified=tuple(name for name in verified),
         criteria=tuple(chosen),
         forbidden_terms=tuple(criteria.terms()) if kind != SOCIAL else (),
         exercise=exercise,
@@ -213,7 +245,7 @@ def _focus_concept(name: str, context, sources: dict) -> FocusConcept:
             if isinstance(entry, dict) and entry.get("text")
         ),
         prerequisites=tuple(
-            Prerequisite(name=prerequisite, location=_first_location(prerequisite, sources))
+            Prerequisite(prerequisite, *_first_place(prerequisite, sources))
             for prerequisite in prerequisites
         ),
         neighbours=tuple(_neighbours(name, context, set(prerequisites) | set(later))),
@@ -221,12 +253,12 @@ def _focus_concept(name: str, context, sources: dict) -> FocusConcept:
     )
 
 
-def _first_location(name: str, sources: dict) -> str | None:
-    """Return where the notes first explain a concept, by its first anchored passage."""
+def _first_place(name: str, sources: dict) -> tuple[str | None, str | None]:
+    """Return where the notes first explain a concept — section, then document — or Nones."""
     for entry in (sources.get("concepts") or {}).get(name) or []:
         if isinstance(entry, dict) and entry.get("location"):
-            return str(entry["location"])
-    return None
+            return str(entry["location"]), str(entry.get("document") or "") or None
+    return None, None
 
 
 def _neighbours(name: str, context, excluded: set[str]) -> list[str]:
@@ -306,3 +338,35 @@ def _statement(item: dict, context) -> str:
     except (KeyError, ValueError):
         return ""
     return text.strip()[:_STATEMENT_CHARS]
+
+
+def _distinct(places) -> list[dict]:
+    """Return places once each, without the bare document of one that has a located place."""
+    found: list[dict] = []
+    for place in places:
+        if place not in found:
+            found.append(place)
+    located = {place["document"] for place in found if place["location"]}
+    return [place for place in found if place["location"] or place["document"] not in located]
+
+
+def _last_part(location: str, said: str) -> bool:
+    """Say whether a reply names the section a heading path ends in."""
+    parts = _parts(location)
+    return bool(parts) and f" {parts[-1]} " in said
+
+
+def _any_part(location: str, said: str) -> bool:
+    """Say whether a reply names any section of a heading path."""
+    return any(f" {part} " in said for part in _parts(location))
+
+
+def _parts(location: str) -> list[str]:
+    """Return the sections of a heading path as a reply would name them, short ones left out."""
+    parts = [_plain(part) for part in location.split(" > ")]
+    return [part for part in parts if len(part) >= _PART_MIN_CHARS]
+
+
+def _plain(text: str) -> str:
+    """Return text folded, with every run of punctuation read as one space."""
+    return " ".join(re.sub(r"[^\w]+", " ", fold(text)).split())

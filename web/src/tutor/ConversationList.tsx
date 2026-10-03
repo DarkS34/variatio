@@ -12,7 +12,9 @@ import { useConversations, useDeleteConversation } from "./queries";
 /**
  * One's own conversations in this subject, the most recently active first, and the way to a new
  * one. A row says how long it is and whether a reply is on its way; nothing else, because what
- * a conversation is about is its first line, which is its title.
+ * a conversation is about is its title, which the model writes once the conversation is about
+ * something (until then, its first line). Beside the conversation it is as tall as it, and
+ * scrolls inside itself.
  */
 export function ConversationList({
   selected,
@@ -38,7 +40,9 @@ export function ConversationList({
   };
 
   return (
-    <aside className="space-y-3">
+    // Beside the conversation from `lg` up, as tall as its panel (`PANEL_HEIGHT`, written out
+    // because Tailwind only builds the classes it finds whole in the source).
+    <aside className="flex flex-col gap-3 lg:h-[max(24rem,calc(100dvh-18rem))]">
       <Button
         className="w-full"
         variant={selected === null ? "default" : "outline"}
@@ -56,7 +60,7 @@ export function ConversationList({
         <p className="px-1 text-small text-muted-foreground">{t("tutor.list.empty")}</p>
       ) : null}
 
-      <ul className="space-y-1">
+      <ul className="thin-scroll min-h-0 flex-1 space-y-1 overflow-y-auto">
         {(list.data?.conversations ?? []).map((row) => (
           <li key={row.id} className="group flex items-start gap-1">
             <button
