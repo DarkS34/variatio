@@ -8,6 +8,9 @@ rule of the method, and a failure is a code the retry note turns back into the r
   `too_many_questions`);
 - it carries no more lines of code than the cap — enough to quote one line of the student's
   (`code`);
+- it draws no diagram: a concept map is read off the graph by code (`tutor.concept_map`),
+  where a relation cannot be invented, and a model's own flowchart of an algorithm is its
+  solution drawn (`diagram`). A formula between dollar signs is not code and is not counted;
 - it does not copy a passage of its own card for more than a few words running: the notes are
   pointed to, not pasted (`copied`);
 - it does not name a concept the card listed as coming later, unless the student brought it
@@ -29,6 +32,7 @@ from variatio.core.lexicon import fold, mentions
 
 _FENCE = re.compile(r"```[^\n]*\n(.*?)(?:```|\Z)", re.DOTALL)
 _INLINE = re.compile(r"`([^`\n]+)`")
+_DIAGRAM = re.compile(r"(?:```|~~~)[ \t]*mermaid\b", re.IGNORECASE)
 _WORD = re.compile(r"\w+")
 
 
@@ -59,7 +63,9 @@ def check_reply(
     elif questions > max_questions:
         failures.append(("too_many_questions", {}))
 
-    if code_lines(text) > max_code_lines:
+    if _DIAGRAM.search(text):
+        failures.append(("diagram", {}))
+    elif code_lines(text) > max_code_lines:
         failures.append(("code", {}))
 
     if any(longest_shared_run(text, quote) > copy_max_words for quote in quotes):

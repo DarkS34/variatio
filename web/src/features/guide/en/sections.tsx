@@ -2175,7 +2175,7 @@ function Tutor() {
         </p>
         <p>
           The tutor <strong>gives no solutions</strong>: it asks you questions so that you reach
-          them yourself, and tells you where to look in the notes. To practise, the door is "{t("nav.create")}".
+          them yourself, and shows you where to look in the notes. To practise, the door is "{t("nav.create")}".
         </p>
       </SectionHead>
 
@@ -2189,7 +2189,7 @@ function Tutor() {
             {
               key: "focus",
               head: "The concept being discussed",
-              body: "It comes from the syllabus. The first message that clearly names one sets it, and it only moves when another message is clearly about something else. An «I don't get it» does not move it, and neither does talking about something the syllabus places earlier.",
+              body: "It comes from the syllabus. The first message that clearly names one sets it, and it only moves when another message is clearly about something else. An «I don't get it» does not move it, and neither does talking about something the syllabus places earlier. You can also choose it yourself on the «About» line of the box you write in: the tutor then deduces nothing and works on that concept.",
             },
             {
               key: "notes",
@@ -2199,7 +2199,12 @@ function Tutor() {
             {
               key: "before",
               head: "What you need to know first",
-              body: "The concept's direct prerequisites. The tutor takes them as known: if you ask about a concept, it works on that concept and does not walk you through the earlier ones. Only if you say something earlier is missing does it tell you where to review it.",
+              body: "The concept's direct prerequisites. The tutor takes them as known: if you ask about a concept, it works on that concept and does not walk you through the earlier ones. Only if you say something earlier is missing does it tell you to review it, and its section appears under the reply.",
+            },
+            {
+              key: "map",
+              head: "The concept map",
+              body: "A diagram of the concept with what it takes as known, what comes later and its other relations in the syllabus. The system draws it from the syllabus, never the model, so it cannot invent a relation. It does not come with every reply: it appears the first time the conversation reaches a concept, and when the tutor sends you back to review something earlier, with that concept marked.",
             },
             {
               key: "after",
@@ -2224,7 +2229,7 @@ function Tutor() {
         <Paragraph>
           Before you read it, a reply goes through some checks: it has to ask at least one
           question and not too many, it cannot carry more than a few lines of code, it cannot
-          copy a passage of the notes, it cannot introduce a later concept and it cannot suggest
+          draw a diagram of its own, it cannot copy a passage of the notes, it cannot introduce a later concept and it cannot suggest
           what the criteria rule out. If it fails, the model writes another one with the reason;
           if it fails again, you get a fallback question that points you to the notes. That is
           why the reply appears whole and not word by word.
@@ -2236,6 +2241,30 @@ function Tutor() {
         </Paragraph>
       </Block>
 
+      <Block title="Choosing what the message is about">
+        <Paragraph>
+          The box you write in has an "{t("tutor.topic.label")}" line at its top. It says which
+          concept the tutor takes the conversation to be about. "{t("tutor.topic.choose")}"
+          opens the syllabus: the numbered units on one side and the unit's concepts on the
+          other, with a search box that finds a concept by its name or by its unit's. One click
+          chooses the concept and closes the panel; the concept holds for the message you are
+          writing.
+        </Paragraph>
+        <Paragraph>
+          With a concept chosen and the box empty, the box offers the commonest question,
+          "{t("tutor.composer.suggestion", { name: "…" })}". The Tab key writes it, and so does
+          the "{t("tutor.composer.tab")}" button that appears beside it. You can then change it
+          or send it with Enter.
+        </Paragraph>
+        <Paragraph>
+          Choosing is optional: with nothing chosen, the tutor works the concept out from your
+          message. The keyboard needs no mouse: type to search, the up and down arrows change
+          unit, left and right move through the concepts, Enter chooses and Esc closes. With
+          something typed in the search, up and down move through the results. In a
+          new conversation, the list of units in the middle opens the same panel on that unit.
+        </Paragraph>
+      </Block>
+
       <Block title="Writing and reading">
         <Paragraph>
           Enter sends the message; Shift + Enter opens a new line. The conversation has a fixed
@@ -2243,9 +2272,17 @@ function Tutor() {
           short title, which is the one the list shows; until then it carries its first line.
         </Paragraph>
         <Paragraph>
-          Under each reply, "{t("tutor.references")}" lists the sections it names. Each one
-          opens the notes at that section, formatted, and from there you can move to the
-          previous or the next one.
+          Every reply has two parts: the explanation, in plain text, and the question it ends
+          with, larger and in bold, because that is what you are to answer. The reply speaks
+          of "the notes" without naming the unit or the section: the exact place is below it. Under each reply, "{t("tutor.references")}" lists the sections it
+          comes from. Each one opens the notes at that section, formatted, and from there you
+          can move to the previous or the next one.
+        </Paragraph>
+        <Paragraph>
+          When what is being worked on is written in mathematical notation —a formula, a
+          recurrence, a cost—, the tutor writes it as a formula and not in words. On a narrow
+          screen, the concept map draws only what comes before and after, and writes the other
+          relations under it.
         </Paragraph>
       </Block>
 
@@ -2254,7 +2291,9 @@ function Tutor() {
           Every reply is a job of the queue, like a generation. With the local engine alone, a
           build in progress leaves the conversation "queued" until it ends. You can stop a reply
           that is waiting; the message stays marked as unanswered and you can ask for the reply
-          again. Each account has one reply on its way at a time.
+          again. Each account has one reply on its way at a time. While the tutor works, a
+          question mark is written square by square; while queued, the mark is hollow and
+          still.
         </Paragraph>
       </Block>
 

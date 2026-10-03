@@ -65,6 +65,7 @@ def create(
     message: str,
     opened_from: dict | None = None,
     now: datetime | None = None,
+    concept: str | None = None,
 ) -> dict:
     """Start a conversation with its first message and return the record, already written."""
     moment = now or datetime.now(timezone.utc)
@@ -77,19 +78,34 @@ def create(
         "titled": False,
         "opened_from": opened_from or {"kind": "message"},
         "state": {"focus": [], "trail": []},
-        "turns": [{"role": STUDENT, "text": message, "at": _iso(moment)}],
+        "turns": [_student_turn(message, moment, concept)],
         "pending": None,
     }
     write(ws, user_id, record)
     return record
 
 
-def append_student(record: dict, message: str, now: datetime | None = None) -> int:
+def append_student(
+    record: dict, message: str, now: datetime | None = None, concept: str | None = None
+) -> int:
     """Append the student's message to a record in memory and return its index."""
     moment = now or datetime.now(timezone.utc)
-    record["turns"].append({"role": STUDENT, "text": message, "at": _iso(moment)})
+    record["turns"].append(_student_turn(message, moment, concept))
     record["updated_at"] = _iso(moment)
     return len(record["turns"]) - 1
+
+
+def _student_turn(message: str, moment: datetime, concept: str | None) -> dict:
+    """Return a student's turn, with the concept they chose it to be about when they did.
+
+    The concept travels on the turn and not on the job that answers it, like the text: a
+    job's parameters are heard by the whole workspace, and what one student asks about is
+    theirs.
+    """
+    turn = {"role": STUDENT, "text": message, "at": _iso(moment)}
+    if concept:
+        turn["concept"] = concept
+    return turn
 
 
 def append_tutor(record: dict, text: str, details: dict, now: datetime | None = None) -> None:

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveWorkspace } from "@/state/queries";
 
 import { tutorApi } from "./api";
+import { unitsOf } from "./syllabus";
 import type { Conversation, CriteriaDocument, TurnQueued } from "./types";
 
 /**
@@ -16,6 +17,7 @@ export const tutorKeys = {
   conversation: (ws: string | null, id: string) => ["tutor", ws, "conversation", id] as const,
   criteria: (ws: string | null) => ["tutor", ws, "criteria"] as const,
   notes: (ws: string | null, document: string) => ["tutor", ws, "notes", document] as const,
+  syllabus: (ws: string | null) => ["tutor", ws, "syllabus"] as const,
   admin: (slug: string, author: number | null, offset: number) =>
     ["tutor", "admin", slug, author, offset] as const,
   adminOne: (slug: string, author: number, id: string) =>
@@ -70,8 +72,15 @@ function useAdoptConversation() {
 export function useOpenConversation() {
   const adopt = useAdoptConversation();
   return useMutation({
-    mutationFn: ({ message, generationId }: { message: string; generationId?: string | null }) =>
-      tutorApi.open(message, generationId),
+    mutationFn: ({
+      message,
+      generationId,
+      concept,
+    }: {
+      message: string;
+      generationId?: string | null;
+      concept?: string | null;
+    }) => tutorApi.open(message, generationId, concept),
     onSuccess: (queued: TurnQueued) => adopt(queued.conversation),
   });
 }
@@ -79,7 +88,8 @@ export function useOpenConversation() {
 export function useSendMessage(id: string | null) {
   const adopt = useAdoptConversation();
   return useMutation({
-    mutationFn: (message: string) => tutorApi.send(id as string, message),
+    mutationFn: ({ message, concept }: { message: string; concept?: string | null }) =>
+      tutorApi.send(id as string, message, concept),
     onSuccess: (queued: TurnQueued) => adopt(queued.conversation),
   });
 }
@@ -108,6 +118,19 @@ export function useDeleteConversation() {
   return useMutation({
     mutationFn: (id: string) => tutorApi.remove(id),
     onSuccess: () => client.invalidateQueries({ queryKey: tutorKeys.conversations(ws) }),
+  });
+}
+
+/**
+ * The units and concepts a message can be sent about. Read once per visit: the syllabus is
+ * closed before the tutor opens, so it does not change under a conversation.
+ */
+export function useSyllabus() {
+  const ws = useActiveWorkspace();
+  return useQuery({
+    queryKey: tutorKeys.syllabus(ws),
+    queryFn: async () => unitsOf(await tutorApi.syllabus()),
+    staleTime: 5 * 60_000,
   });
 }
 

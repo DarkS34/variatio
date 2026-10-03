@@ -23,13 +23,15 @@ export const tutorApi = {
   status: () => request<TutorStatus>("/api/tutor"),
   conversations: () => request<{ conversations: ConversationRow[] }>("/api/tutor/conversations"),
   conversation: (id: string) => request<Conversation>(conversation(id)),
-  open: (message: string, generationId?: string | null) =>
+  open: (message: string, generationId?: string | null, concept?: string | null) =>
     post<TurnQueued>("/api/tutor/conversations", {
       message,
       ...(generationId ? { generation_id: generationId } : {}),
+      ...(concept ? { concept } : {}),
     }),
-  send: (id: string, message: string) =>
-    post<TurnQueued>(`${conversation(id)}/messages`, { message }),
+  send: (id: string, message: string, concept?: string | null) =>
+    post<TurnQueued>(`${conversation(id)}/messages`, { message, ...(concept ? { concept } : {}) }),
+  syllabus: () => request<{ units?: unknown }>("/api/tutor/syllabus"),
   retry: (id: string) => post<TurnQueued>(`${conversation(id)}/retry`),
   cancel: (id: string) =>
     request<{ cancelled: boolean }>(`${conversation(id)}/turn`, { method: "DELETE" }),

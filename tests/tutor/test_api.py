@@ -290,3 +290,30 @@ def test_a_student_opens_the_notes_a_reply_cites_and_nothing_outside_them(ws, ru
     found = viewer.get("/api/tutor/notes", params={"document": "apuntes.pdf"})
     assert found.status_code == 200 and found.json()["sections"][0]["location"] == "Tema 1"
     assert viewer.get("/api/tutor/notes", params={"document": "otro.pdf"}).status_code == 404
+
+
+def test_a_message_carries_the_concept_the_student_chose_on_its_turn_and_never_on_its_job(ws, runner):
+    response = client(ws).post(
+        "/api/tutor/conversations", json={"message": "Explícamelo", "concept": "Recursividad"}
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["conversation"]["turns"][0]["concept"] == "Recursividad"
+    assert "Recursividad" not in json.dumps(body["job"]["params"]), "a job's parameters are public"
+
+
+def test_a_concept_the_syllabus_does_not_offer_is_refused(ws, runner):
+    for name in ("No existe", "Notación asintótica"):
+        refused = client(ws).post("/api/tutor/conversations", json={"message": "Hola", "concept": name})
+        assert refused.status_code == 422, name
+    assert store.list_for(ws, ANA) == []
+
+
+def test_a_student_reads_the_units_and_the_concepts_to_choose_from(ws, runner):
+    units = client(ws, role="viewer").get("/api/tutor/syllabus").json()["units"]
+
+    assert units == [
+        {"name": "Fundamentos", "concepts": ["Variable", "Función"]},
+        {"name": "Avanzado", "concepts": ["Recursividad", "Memoización"]},
+    ], "in the syllabus's order, without the generic concept"

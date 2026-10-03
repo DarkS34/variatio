@@ -143,6 +143,39 @@ function scales(fill: string, label: string, peer: string, alternate: string): R
   return out;
 }
 
+/**
+ * How a caller paints a class of nodes: in TOKENS, never in colours.
+ *
+ * Mermaid's `classDef` wants literal colours, and a literal in a diagram's source is one
+ * `pnpm check:color` cannot see and the theme cannot change. So a caller names tokens, and
+ * the `classDef` lines are written here, at draw time, by the same conversion that paints
+ * the rest of the diagram.
+ */
+export interface NodeStyle {
+  fill?: string;
+  stroke?: string;
+  text?: string;
+  dashed?: boolean;
+  bold?: boolean;
+}
+
+function classDefs(classes: Record<string, NodeStyle>, theme: Theme): string {
+  const [paper, ink] = INK_FALLBACK[theme];
+  return Object.entries(classes)
+    .map(([name, style]) => {
+      const rules = [
+        style.fill ? `fill:${sRGB(style.fill, paper)}` : "",
+        style.stroke ? `stroke:${sRGB(style.stroke, ink)}` : "",
+        style.text ? `color:${sRGB(style.text, ink)}` : "",
+        style.dashed ? "stroke-dasharray:5 4" : "",
+        style.bold ? "stroke-width:2px,font-weight:600" : "",
+      ].filter(Boolean);
+      return rules.length ? `classDef ${name} ${rules.join(",")}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
 function reasonOf(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   // Mermaid's parser says «Parse error on line N:», then the offending excerpt, then a
@@ -175,7 +208,21 @@ function useTheme(): Theme {
   return useSyncExternalStore(subscribeToTheme, readTheme, () => "light");
 }
 
-export function Diagram({ code, className }: { code: string; className?: string }) {
+export function Diagram({
+  code,
+  className,
+  classes,
+  sourceToggle = true,
+}: {
+  code: string;
+  className?: string;
+  /** Whether the reader may turn the drawing into its source. Off for a diagram the app
+   *  wrote itself from data: its source is nobody's text, and there is nothing to judge in it. */
+  sourceToggle?: boolean;
+  /** Styles for the classes the source assigns to its nodes. Pass a constant: a new object
+   *  on every render would redraw the diagram on every render. */
+  classes?: Record<string, NodeStyle>;
+}) {
   const { t } = useT();
   const theme = useTheme();
   const id = `diagram-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -203,8 +250,9 @@ export function Diagram({ code, className }: { code: string; className?: string 
           er: { useMaxWidth: true },
           gantt: { useMaxWidth: true },
         });
-        await mermaid.parse(code);
-        const { svg } = await mermaid.render(id, code);
+        const source = classes ? `${code}\n${classDefs(classes, theme)}` : code;
+        await mermaid.parse(source);
+        const { svg } = await mermaid.render(id, source);
         if (alive) setState({ kind: "drawn", svg });
       } catch (error) {
         // Mermaid leaves its scratch element behind when a render throws.
@@ -215,12 +263,12 @@ export function Diagram({ code, className }: { code: string; className?: string 
     return () => {
       alive = false;
     };
-  }, [code, id, theme]);
+  }, [code, classes, id, theme]);
 
   if (state.kind === "invalid") {
     return (
       <div className={cn("space-y-1", className)}>
-        <CodeBlock code={code} language="text" maxHeight="18rem" />
+        {sourceToggle ? <CodeBlock code={code} language="text" maxHeight="18rem" /> : null}
         <p className="text-small text-destructive">{t("diagram.invalid", { reason: state.reason })}</p>
       </div>
     );
@@ -236,17 +284,19 @@ export function Diagram({ code, className }: { code: string; className?: string 
 
   return (
     <div className={cn("group relative", className)}>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => setShowSource((value) => !value)}
-        aria-label={t(showSource ? "diagram.showDiagram" : "diagram.showSource")}
-        title={t(showSource ? "diagram.showDiagram" : "diagram.showSource")}
-        className="absolute right-1.5 top-1.5 z-10 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-      >
-        {showSource ? <Workflow /> : <Code2 />}
-      </Button>
-      {showSource ? (
+      {sourceToggle ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setShowSource((value) => !value)}
+          aria-label={t(showSource ? "diagram.showDiagram" : "diagram.showSource")}
+          title={t(showSource ? "diagram.showDiagram" : "diagram.showSource")}
+          className="absolute right-1.5 top-1.5 z-10 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          {showSource ? <Workflow /> : <Code2 />}
+        </Button>
+      ) : null}
+      {sourceToggle && showSource ? (
         <CodeBlock code={code} language="text" maxHeight="18rem" />
       ) : (
         <div

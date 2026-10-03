@@ -638,7 +638,7 @@ admin's read.
   (`tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
   definition and the graph's anchored passages, its direct prerequisites with where the notes
   explain them (TAKEN AS KNOWN: the reply neither quizzes the student on them nor steers
-  towards them, and only names where to review one the student says is missing — decision of
+  towards them, and only tells a student who says one is missing to review it — decision of
   2026-10-03, after a question about recursion was walked back through functions and
   procedures), its direct dependents (not to be introduced), its closest same-unit concepts
   (by description vectors), the passages of the notes nearest the message (`passages.py`), the
@@ -651,11 +651,34 @@ admin's read.
   (bank match ≥ `tutor.bank_match_threshold`, a conversation opened on a generated exercise),
   then one grammar call to the classify model, failing open to `theory`; the graph overrules
   an `off_topic` verdict on a message whose best concept clears `tutor.focus_threshold`.
+- **The concept map** (`tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
+  of the graph around a focus concept — prerequisites (`before`), dependents (`after`) and the
+  other relations (`links`, with the graph's own label and direction) — capped (4/3/3, the
+  closest by description vectors kept, the rest counted) and sent as data in the turn's
+  `concept_map`; the client writes the Mermaid (`web/src/tutor/conceptMap.ts`) in the
+  interface language and the palette's tokens. It is shown at TWO moments only: the first
+  time the conversation stands on a concept (one per move of the focus; the card says so,
+  `map_of`), and when a reply sends the student back to a prerequisite (`Card.sent_back`: one
+  sentence names the prerequisite AND tells the student to go over it, the prompt set's
+  `REVIEW_PATTERN`), with
+  that prerequisite marked — once per prerequisite and never within `REVIEW_GAP` (2) replies
+  of another map. A concept with nothing before or after it has no map. The state keeps
+  `mapped` and `since_map`. A reply with a ```mermaid fence of its own fails the `diagram`
+  check.
+- **Formulas are the model's**: the system prompt lets a reply write notation between dollar
+  signs (KaTeX draws it), only where it is clearer than the sentence it replaces and never as
+  the result the student has to find. No check counts them.
 - **The focus belongs to the conversation**: set by a message whose best concept clears
   `tutor.focus_threshold` (0.55, measured: content questions 0.61–0.66, a greeting 0.49) and
   moved only past `tutor.focus_margin`, and NEVER to a concept in the prerequisite closure of
   the current focus (a student answering about functions inside a conversation on recursion is
-  still on recursion). Social messages never move it. The state is the focus and the trail;
+  still on recursion). Social messages never move it. **The student may choose it**: a message
+  may carry one `concept` (validated against the graph, never a generic one; stored on the
+  student's turn, never on the job), and then nothing is deduced — the chosen concept leads
+  (`focus.with_chosen`), joined by the message's own best concept when that clears the
+  threshold and is not a prerequisite of it; a `social`/`off_topic` verdict for such a
+  message is answered as theory (`decided_by: "chosen"`), an administrative one stays.
+  `GET /api/tutor/syllabus` (`auth.VIEW`) lists the units and their non-generic concepts. The state is the focus and the trail;
   older records may still carry a `verified` list, which nothing reads.
 - **The method is code, not only prompt.** `tutor/checks.py` verifies what a machine can: at
   least one question and at most `max_questions`, at most `max_code_lines` in fences, no run
@@ -697,9 +720,15 @@ admin's read.
   conversation starts titled by its first line; the first reply of a substantive kind (not
   social, blocked or a fixed text) asks the classify model for a short title once
   (`tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
-- **Places and the reader**: the places shown under a reply are the card's, chosen by what the
-  reply names (its section, else any part of its path, else the card's first two —
-  `Card.references`). Each opens `GET /api/tutor/notes?document=…` (`auth.VIEW`), which serves
+- **Where something is, is written UNDER the reply and never in it** (user's decision of
+  2026-10-03: «tema 2, modularidad» in the prose repeated the line below it). The card quotes
+  the notes without their headings, the method tells the reply to say «en los apuntes» and to
+  name no unit, section or document, and the fallback question points at «el apartado que ves
+  aquí abajo».
+- **Places and the reader**: the places shown under a reply are the card's (`Card.references`):
+  those whose section title the reply's words contain, else any part of their path, else the
+  card's first two; the place of a prerequisite the reply sends the student back to leads.
+  Each opens `GET /api/tutor/notes?document=…` (`auth.VIEW`), which serves
   only a document of the corpus the tutor searches, cut by whole sections
   (`passages.read_document`); the client shows one section at a time, formatted.
 - `tutor.message_max_chars` (12 000) is a hidden safety cap, never shown as a counter.
@@ -727,7 +756,8 @@ never `oklch` (hue interpolation turns greens blue).
 - Theme: three-state (`system`/`light`/`dark`), dark tokens only under
   `:root[data-theme="dark"]`.
 - Typography: Archivo only, roles by width axis and weight; six ordered steps. Tutorial alone
-  uses Literata (self-hosted — the CSP forbids external fonts).
+  uses Literata (self-hosted — the CSP forbids external fonts). The tutor read in Literata
+  for one afternoon and the user took it back: one face across the system.
 - **Global `*` rules in `index.css` go in `@layer base`** or they silently override every
   Tailwind utility (this once disabled every `border-<colour>`).
 - `vertical-align` on a `<tr>` does nothing; select the cells (`[&>td]:align-top`).
@@ -839,10 +869,36 @@ never `oklch` (hue interpolation turns greens blue).
 
 - Tutor socrático (`web/src/tutor/`, `/tutor`): the conversation list beside the open
   conversation, both one fixed height (`PANEL_HEIGHT`) scrolling inside; a reply polled from
-  the author's own route while `pending`, shown whole with its references under it, each
-  opening the notes reader (`NotesReader`, one section at a time); «En cola» while queued,
-  «Detener», «Pedir la respuesta otra vez». The box to write in has its send button inside on
-  the right; Enter sends, Shift+Enter breaks the line, and no character counter is drawn.
+  the author's own route while `pending`, shown whole with its concept map when the server
+  gave one (`ConceptMap`: `Diagram` with `classes` in tokens and `sourceToggle={false}`, since
+  a map the app wrote has no source to show — the concept in `--attention`,
+  or the prerequisite to review; what is known settled, what comes later dashed; on a narrow
+  screen the learning order alone, stacked, the other relations written under it) and its
+  references under it, each opening the notes reader (`NotesReader`, one section at a time);
+  a new turn scrolls the panel to its START, since a reply with a map is taller than the panel; the reply on its way is `Thinking`: a question mark written square by square
+  (opacity only, so it stays on under reduced motion) beside one line of what happens and one
+  of why the reply arrives whole — hollow and still, saying «En cola», while queued — with
+  «Detener»; then «Pedir la respuesta otra vez». The box to write in (`Composer`) is two rows in one
+  frame: the «Sobre» line — the concept chosen for the message (filled, removable), else the
+  conversation's own focus (quiet), with the button that opens the picker and, with nothing
+  to show, the word that choosing is optional — over the message and its send button; Enter
+  sends, Shift+Enter breaks the line, and no character counter is drawn. With a concept
+  chosen and the box empty, the placeholder is the commonest question («Explícame «…»») and
+  Tab — or the key drawn beside it — writes it; Tab is taken only then. The two voices are two
+  materials, each named above its turn: the student's message is a block of ink on the
+  right, the tutor's reply open text on the left at a reading measure, tied by one ink rule
+  to its map and its places. A reply is drawn in two registers (`Reply`): the explanation as
+  body text and the question(s) it CLOSES with a step larger in the heading's weight. The cut
+  is read off the prose by the client (`reply.splitReply`: the trailing blocks ending in a
+  question mark, the first cut again by sentence so its lead-in stays with the explanation;
+  never inside code, a formula or an emphasis) and never asked of the model. `TopicPicker` is the
+  third concept picker of the app and the only single-pick one: a panel over the box with the
+  numbered units down the left (each in its `domainColour`), the unit's concepts as
+  `ConceptChip`s on the right and a search across both (`syllabus.searchSyllabus`); one click
+  chooses and closes; keyboard: type to search, ↑↓ units, ←→ concepts (with something
+  typed, ↑↓ results and ←→ the caret's), Enter, Esc. On a
+  narrow screen the units are a scrolling row of tabs. The empty conversation lists the units
+  as a numbered index, each row opening the picker on itself.
   A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: a review of plain
   sentences (the subject's open, each unit folded; concepts and sources only when
   correcting), «Quiero corregir algo» with a sticky save bar, and a rebuild that asks first
@@ -983,6 +1039,15 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   in the prompt alone (not listed on any screen).
 - What the syllabus places before the concept asked about is taken as known; the focus never
   moves back to it.
+- The student may say what a message is about by choosing ONE concept beside the box; choosing
+  is optional, units organise the choice and are never themselves chosen.
+- Diagrams of the graph are drawn by code from the graph and shown sparingly (a concept's
+  first reply, a send-back to a prerequisite); the model draws none. Formulas are the model's,
+  between dollar signs, with no cap in code.
+- A reply names no unit, section or document: it says «en los apuntes», and the places are
+  listed under it by code.
+- One typeface in the tutor as everywhere (Archivo); the two voices differ by material and
+  side, not by letter. The concept map cannot be turned into its Mermaid source.
 - The tutor screens with the guardrail alone (`screen_message`), not admissibility.
 - A bank exercise's solution never enters the card.
 - No "System One" classifier (Jev, Laya…): the kind is decided by signals and one grammar call.

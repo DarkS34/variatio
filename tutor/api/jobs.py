@@ -100,6 +100,7 @@ def handle_turn(job: Job, control: JobControl) -> dict:
             ],
             state=record.get("state") or {},
             given_focus=list(opened.get("concepts") or []) or None,
+            chosen=record["turns"][turn].get("concept") or None,
         )
         title = None
         if not record.get("titled") and result.kind in _TITLED_BY:

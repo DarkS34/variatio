@@ -1,5 +1,7 @@
 import type { Job, JobStatus } from "@/lib/types";
 
+import type { ConceptMapData } from "./conceptMap";
+
 /** What `/api/tutor` answers before anything else: whether the tutor can answer here at all. */
 export interface TutorStatus {
   ready: boolean;
@@ -46,6 +48,8 @@ export interface StudentTurn {
   role: "student";
   text: string;
   at: string;
+  /** The concept the student chose this message to be about, when they chose one. */
+  concept?: string;
   failed?: FailedReason;
 }
 
@@ -56,6 +60,8 @@ export interface TutorTurn {
   kind?: string;
   references?: Place[];
   card?: { concepts?: string[]; [key: string]: unknown } | null;
+  /** The concept map shown under this reply, on the few replies the server gives one. */
+  concept_map?: ConceptMapData | null;
   fallback?: boolean;
   retried?: boolean;
 }

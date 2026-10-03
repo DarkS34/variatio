@@ -1,7 +1,6 @@
 import { ArrowLeft, MessagesSquare } from "lucide-react";
 import { useState } from "react";
 
-import { Markdown } from "@/components/Markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/input";
@@ -11,7 +10,9 @@ import { useT, type Key } from "@/lib/i18n";
 import type { AdminWorkspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { ConceptMap } from "./ConceptMap";
 import { useAdminConversation, useAdminConversations } from "./queries";
+import { Reply } from "./Reply";
 
 const PAGE = 30;
 
@@ -153,7 +154,10 @@ function Transcript({ slug, author, id }: { slug: string; author: number; id: st
             ) : null}
           </p>
           {turn.role === "tutor" ? (
-            <Markdown>{turn.text}</Markdown>
+            <>
+              <Reply text={turn.text} />
+              <ConceptMap map={turn.concept_map} />
+            </>
           ) : (
             <p className="whitespace-pre-wrap">{turn.text}</p>
           )}

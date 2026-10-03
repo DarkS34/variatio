@@ -180,3 +180,21 @@ def test_a_title_is_cleaned_or_refused():
 
     assert clean(' «recursividad y caso base». ') == "Recursividad y caso base"
     assert clean("") is None and clean("x" * 61) is None and clean('{"title": 1}') is None
+
+
+def test_the_concept_chosen_for_a_message_reaches_its_turn(wired, monkeypatch):
+    record = store.create(wired, ANA, "Explícamelo", concept="Recursividad")
+    job = Job(kind=jobs.TURN, params={"conversation": record["id"], "turn": 0}, workspace="ws", user_id=ANA)
+    record["pending"] = {"job_id": job.id, "turn": 0}
+    store.write(wired, ANA, record)
+    seen = {}
+
+    def answer(context, **kwargs):
+        seen.update(kwargs)
+        return TurnResult(text="¿Qué sabes?", kind="social", decided_by="model", state={})
+
+    monkeypatch.setattr(jobs, "run_turn", answer)
+
+    jobs.handle_turn(job, SimpleNamespace())
+
+    assert seen["chosen"] == "Recursividad"

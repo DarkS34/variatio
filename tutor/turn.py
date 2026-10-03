@@ -10,8 +10,11 @@ The sequence is fixed, and every step is the cheapest one that can still decide:
 3. The kind is decided (`classify`). An administrative question and one outside the subject
    are answered by code with a fixed text.
 4. The focus moves only if the message is clearly about something else, and never back to
-   what the syllabus places before it (`focus`).
-5. The card is written from the artifacts (`card`).
+   what the syllabus places before it (`focus`) — unless the student chose the concept
+   themselves, which leads the focus without anything being deduced.
+5. The card is written from the artifacts (`card`), and code decides whether a concept map
+   goes under this reply (`concept_map`): the first time the conversation stands on a
+   concept, and when a reply sends the student back to a prerequisite.
 6. The reply model answers under the method, and code checks the answer (`checks`). A broken
    answer is asked again ONCE, with a note naming the rules it broke; a second failure sends a
    fixed question built from the card instead, so a student never reads a reply that broke
@@ -30,7 +33,7 @@ from variatio.core import inference, progress
 from variatio.runtime import screening
 from variatio import wording as wording_sets
 
-from . import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL, card, checks, classify, focus
+from . import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL, card, checks, classify, concept_map, focus
 from . import config as tutor_config
 from . import prompts as tutor_prompts_pkg
 from .criteria import Criteria
@@ -47,6 +50,7 @@ class TurnResult:
     state: dict
     references: list[dict] = field(default_factory=list)
     card: dict | None = None
+    concept_map: dict | None = None
     checks: dict = field(default_factory=dict)
     retried: bool = False
     fallback: bool = False
@@ -62,6 +66,7 @@ class TurnResult:
             "decided_by": self.decided_by,
             "references": self.references,
             "card": self.card,
+            "concept_map": self.concept_map,
             "checks": self.checks,
             "retried": self.retried,
             "fallback": self.fallback,
@@ -82,12 +87,14 @@ def run_turn(
     history: list[dict],
     state: dict,
     given_focus: list[str] | None = None,
+    chosen: str | None = None,
 ) -> TurnResult:
     """Answer one message of a conversation, following the sequence above.
 
     `history` is the conversation before this message, as `{role, text}` turns; `state` its
-    focus and trail; `given_focus` the concepts the conversation was opened
-    on, when it was opened from a generated exercise.
+    focus, its trail and the concept maps it has shown; `given_focus` the concepts the conversation was opened
+    on, when it was opened from a generated exercise; `chosen` the concept the student picked
+    beside the box for this message, if they picked one.
     """
     started = time.perf_counter()
     tutor_prompts = tutor_prompts_pkg.of(context.language)
@@ -123,6 +130,7 @@ def run_turn(
         opened_from_exercise=bool(given_focus) and not history,
         bank_threshold=tutor_config.BANK_MATCH_THRESHOLD,
         concept_threshold=tutor_config.FOCUS_THRESHOLD,
+        pinned=chosen is not None,
     )
     logger.info(f"[tutor] Mensaje de tipo «{classified.kind}» (decidido por {classified.decided_by})")
 
@@ -139,12 +147,23 @@ def run_turn(
         item = context.exemplars_bank.get(classified.exercise_id) or {}
         given = [c for c in [item.get("primary_concept"), *(item.get("concepts") or [])] if c]
     eligible = set(graph.all_concepts) - set(graph.generic_non_taggable_concepts)
+    relation = context.generator.prerequisite_relation
+    ordered = bool(relation) and graph.has_relation(relation)
+    chosen = chosen if chosen in eligible else None
+    if chosen:
+        joined = focus.with_chosen(
+            chosen,
+            scores,
+            threshold=tutor_config.FOCUS_THRESHOLD,
+            eligible=eligible,
+            before=set(graph.prerequisite_closure([chosen], relation)) if ordered else set(),
+        )
+        given = [chosen, *(name for name in (given or joined) if name != chosen)]
     current = state["focus"]
     if classified.kind != SOCIAL:
-        relation = context.generator.prerequisite_relation
         before = (
             set(graph.prerequisite_closure(list(current), relation))
-            if current and relation and graph.has_relation(relation)
+            if current and ordered
             else set()
         )
         current = focus.next_focus(
@@ -157,6 +176,10 @@ def run_turn(
             given=given,
         )
 
+    the_map = concept_map.opening(
+        classified.kind, current, list(state.get("mapped") or []), context
+    )
+    drawn = list(current) if the_map else []
     the_card = card.assemble(
         classified.kind,
         context=context,
@@ -166,6 +189,8 @@ def run_turn(
         vector=vector,
         focus=current,
         exercise_id=classified.exercise_id,
+        map_of=the_map.concept if the_map else "",
+        chosen=chosen or "",
     )
     turns = tutor_config.HISTORY_TURNS
     pairs = [
@@ -183,21 +208,27 @@ def run_turn(
     fallback = bool(failures)
     if fallback:
         first = the_card.focus[0] if the_card.focus else None
-        place = next(
-            (q.location for q in (first.anchors if first else ()) if q.location), None
-        ) or next((q.location for q in the_card.passages if q.location), None)
-        text = tutor_prompts.fallback_reply(first.name if first else None, place)
+        text = tutor_prompts.fallback_reply(first.name if first else None, bool(the_card.quotes()))
         logger.warning(
             f"[tutor] Dos respuestas incumplieron el método ({', '.join(c for c, _ in failures)}); "
             "se envía la pregunta de reserva"
         )
 
+    sent_back = None if fallback else the_card.sent_back(text, tutor_prompts.REVIEW_PATTERN, wording)
+    if the_map is None:
+        the_map = concept_map.review(classified.kind, sent_back, state, context)
+        if the_map and the_map.review:
+            drawn = [concept_map.review_key(the_map.concept, the_map.review)]
+        else:
+            the_map = None
+
     return done(
         text,
         classified.kind,
         classified.decided_by,
-        next_state=focus.after_reply(state, current),
-        references=the_card.references(text),
+        next_state=focus.after_reply(state, current, drawn),
+        references=the_card.references(text, sent_back),
+        concept_map=the_map.record() if the_map else None,
         card={
             **the_card.record(),
             **({"exercise_score": classified.exercise_score} if classified.exercise_score else {}),

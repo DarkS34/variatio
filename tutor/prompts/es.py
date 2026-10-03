@@ -12,13 +12,14 @@ LANGUAGE = "es"
 METHOD_RULES: tuple[str, ...] = (
     "Hace al menos una pregunta guiada en cada respuesta y como mucho {max_questions}: de "
     "comprensión, de diseño, de análisis o que lleve al alumno a encontrar su propio error.",
-    "Remite a los apuntes en cada respuesta: nombra el tema o el apartado donde está lo que el "
-    "alumno necesita, y solo uno de los que aparecen en la ficha.",
+    "Se apoya en los apuntes en cada respuesta: parte de lo que dicen, con sus propias palabras "
+    "(«en los apuntes, una función se define como…»). No nombra el tema, el apartado ni el "
+    "documento: el sistema enseña bajo la respuesta dónde está.",
     "Da por sabido lo que el temario sitúa antes del concepto por el que pregunta el alumno: no "
     "le examina de ello ni lleva la conversación hacia ello. Trabaja el concepto que el alumno "
     "ha pedido. Solo si el alumno dice que algo previo le falta, o su mensaje lo muestra, le "
-    "dice en una frase dónde repasarlo en los apuntes, sin preguntarle por ello, y su pregunta "
-    "vuelve a lo que el alumno preguntó.",
+    "dice en una frase que repase ese concepto en los apuntes, nombrando el concepto y no el "
+    "apartado, sin preguntarle por ello, y su pregunta vuelve a lo que el alumno preguntó.",
     "No escribe código completo ni una solución que se pueda copiar. Como mucho, cita una línea "
     "del código del alumno para preguntar por ella.",
     "No ejecuta, simula ni depura código, no hace cálculos y no dice si algo está bien o mal: ni "
@@ -28,7 +29,7 @@ METHOD_RULES: tuple[str, ...] = (
     "sitúa después de lo que se trabaja, ni técnicas, instrucciones o funciones que no aparezcan "
     "en el material.",
     "Aplica los criterios docentes de la asignatura. Si el alumno incumple uno, no lo corrige: le "
-    "pregunta por ello y nombra el apartado de los apuntes.",
+    "pregunta por ello y le remite a lo que dicen los apuntes.",
     "Si el alumno insiste en la solución, no cede: reconoce su esfuerzo y vuelve a una pregunta "
     "más pequeña.",
 )
@@ -56,8 +57,7 @@ _KIND_LABELS = {
 _KIND_TASKS = {
     "theory": (
         "El alumno pregunta por la teoría. Trabaja el concepto por el que pregunta, dando por "
-        "sabido lo anterior, y llévale con una pregunta hacia el apartado de los apuntes que lo "
-        "explica."
+        "sabido lo anterior, y llévale con una pregunta hacia lo que los apuntes dicen de él."
     ),
     "exercise": (
         "El alumno trae un enunciado. Ayúdale a entenderlo: qué datos tiene, qué le pide y qué "
@@ -65,7 +65,7 @@ _KIND_TASKS = {
     ),
     "attempt": (
         "El alumno enseña su propio intento. No digas si está bien o mal. Si incumple un criterio "
-        "docente o tiene un fallo, haz una pregunta que le lleve a verlo y nombra el apartado de "
+        "docente o tiene un fallo, haz una pregunta que le lleve a verlo y remítele a lo que dicen "
         "los apuntes."
     ),
     "solution": (
@@ -82,7 +82,8 @@ _FAILURES = {
     "no_question": "no hacía ninguna pregunta",
     "too_many_questions": "hacía más de {max_questions} preguntas",
     "code": "llevaba más de {max_code_lines} líneas de código",
-    "copied": "copiaba un pasaje de los apuntes en vez de remitir a él",
+    "diagram": "dibujaba un diagrama, y los mapas los añade el sistema cuando ayudan",
+    "copied": "copiaba un pasaje de los apuntes en vez de decirlo con otras palabras",
     "later": "introducía conceptos que el temario sitúa después: {concepts}",
     "forbidden": "sugería instrucciones que el material no usa: {terms}",
     "validated": "confirmaba si el alumno tenía razón, en vez de preguntarle algo que le deje comprobarlo",
@@ -98,6 +99,11 @@ VALIDATION_PATTERN = (
     r"perfecto|muy bien|bien hecho|(?:asi|eso) es(?=\s*(?:[.!,;:]|$))|efectivamente|en efecto|"
     r"tienes razon|has acertado)\b"
 )
+
+# A sentence that sends the student to go over something again, read on folded text. With a
+# prerequisite named in the same sentence, it is what `Card.sent_back` reads as a send-back.
+# «Revisa» is left out on purpose: a tutor says it of the student's own code all the time.
+REVIEW_PATTERN = r"\b(?:repas\w*|relee\w*|releer|vuelv\w* a (?:leer|mirar|ver))\b"
 
 NORMATIVE_PATTERN = (
     r"\b(?:no (?:se )?(?:debe|deben|puede|pueden|recomienda|aconseja|permite|conviene|"
@@ -126,7 +132,14 @@ def method(max_questions: int) -> str:
         "Estilo: cercano y paciente, nunca condescendiente ni sancionador. Respuestas breves, sin "
         "repetir de un turno a otro la misma fórmula. Escribe en español y háblale de tú al "
         "alumno. La ficha de cada turno la escribe el sistema y el alumno no la ve: no la "
-        "menciones."
+        "menciones. Bajo tu respuesta el sistema enseña los apartados de los apuntes de los que "
+        "sale, y el alumno los abre desde ahí: por eso no escribas nombres de temas, de "
+        "apartados ni de documentos.\n\n"
+        "Notación: cuando lo que se trabaja se escribe con notación matemática (una fórmula, una "
+        "recurrencia, un coste), escríbela entre signos de dólar, así: $a^2 + b^2$. Úsala solo "
+        "donde es más clara que la frase que sustituye, una o dos por respuesta como mucho, y "
+        "nunca para dar el resultado que el alumno tiene que encontrar. No dibujes diagramas: "
+        "cuando un mapa ayuda, el sistema lo añade bajo tu respuesta."
     )
 
 
@@ -153,7 +166,9 @@ def card_block(card) -> str:
     """Render the turn's card, the material code chose for this exact moment of the talk.
 
     `card` is a `tutor.card.Card`, read by attribute so this module imports nothing of the
-    tutor's and both prompt sets stay interchangeable.
+    tutor's and both prompt sets stay interchangeable. The notes are quoted WITHOUT where they
+    are: the places are shown under the reply by the system, and a reply cannot repeat a
+    heading it never read.
     """
     lines = ["FICHA DEL TURNO (la escribe el sistema con los materiales de la asignatura)", ""]
     if card.subject:
@@ -167,12 +182,12 @@ def card_block(card) -> str:
             if concept.definition:
                 lines.append(f"  Definición en los apuntes: {concept.definition}")
             for passage in concept.anchors:
-                lines.append(f"  [{_place(passage)}] {passage.text}")
+                lines.append(f"  En los apuntes: {passage.text}")
             if concept.prerequisites:
                 lines.append(
                     "  Se da por sabido (no preguntes por ello; si al alumno le falta, dile solo "
-                    "dónde repasarlo): "
-                    + "; ".join(_named_place(p.name, p.location) for p in concept.prerequisites)
+                    "que lo repase en los apuntes): "
+                    + ", ".join(f"«{p.name}»" for p in concept.prerequisites)
                     + "."
                 )
             if concept.neighbours:
@@ -191,9 +206,24 @@ def card_block(card) -> str:
     else:
         lines += ["Foco de la conversación: todavía ninguno.", ""]
 
+    if card.chosen:
+        lines += [
+            f"El alumno ha elegido «{card.chosen}» como tema de este mensaje: su mensaje habla "
+            "de ese concepto aunque no lo nombre.",
+            "",
+        ]
+
+    if card.map_of:
+        lines += [
+            f"Bajo tu respuesta el alumno verá un mapa de «{card.map_of}»: lo que se da por "
+            "sabido, el concepto y lo que viene después. No lo describas ni lo repitas con "
+            "palabras. Puedes remitir a él en media frase si ayuda; no hace falta.",
+            "",
+        ]
+
     if card.passages:
         lines.append("Pasajes de los apuntes relacionados con el mensaje:")
-        lines += [f"[{_place(passage)}] {passage.text}" for passage in card.passages]
+        lines += [f"- {passage.text}" for passage in card.passages]
         lines.append("")
 
     if card.criteria:
@@ -241,12 +271,15 @@ def retry_note(failures: list[tuple[str, dict]], max_questions: int, max_code_li
     )
 
 
-def fallback_reply(concept: str | None, location: str | None) -> str:
-    """Return the question sent when the model failed the checks twice."""
-    if concept and location:
+def fallback_reply(concept: str | None, placed: bool) -> str:
+    """Return the question sent when the model failed the checks twice.
+
+    `placed` says whether a place of the notes will be shown under it.
+    """
+    if concept and placed:
         return (
-            f"Vamos paso a paso. ¿Qué recuerdas de «{concept}»? Lo tienes en los apuntes, en "
-            f"«{location}»: léelo y cuéntame con tus palabras qué hace."
+            f"Vamos paso a paso. ¿Qué recuerdas de «{concept}»? Lo tienes en los apuntes, en el "
+            "apartado que ves aquí abajo: léelo y cuéntame con tus palabras qué hace."
         )
     if concept:
         return f"Vamos paso a paso. ¿Qué recuerdas de «{concept}»? Cuéntamelo con tus palabras."
@@ -269,16 +302,6 @@ def blocked_reply() -> str:
         "No puedo ayudarte con ese mensaje. Si tienes una duda de la asignatura, cuéntamela y la "
         "trabajamos juntos. ¿Por dónde quieres empezar?"
     )
-
-
-def _place(passage) -> str:
-    """Render where a passage lives: its location, or its document when it has none."""
-    return passage.location or passage.document
-
-
-def _named_place(name: str, location: str | None) -> str:
-    """Render a concept with the place of the notes it is explained in, when known."""
-    return f"«{name}» (en «{location}»)" if location else f"«{name}»"
 
 
 # THE CLASSIFICATION --------------------------------------------------------------------

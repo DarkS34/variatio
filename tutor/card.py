@@ -5,9 +5,9 @@ and the job is one of the method's rules:
 
 - the subject's context says what is being taught (the role and its scope);
 - each focus concept carries its unit, its definition from the notes and the passages the
-  graph anchored to it — the reply's reference to the notes;
+  graph anchored to it — what the reply leans on, and the places shown under it;
 - its direct prerequisites, each with where the notes explain it — what the reply takes as
-  known, and where to send a student who says it is missing;
+  known, and the place shown to a student the reply sends back to one;
 - its direct dependents — what comes later and must not be introduced, which the checks then
   enforce on the reply;
 - its closest concepts of the same unit — something to contrast it with when the student
@@ -20,6 +20,9 @@ and the job is one of the method's rules:
 
 What a kind of message does not need stays off its card: a greeting carries no notes, and a
 fixed answer has no card at all.
+
+The card also says when a concept map will be shown under the reply (`map_of`), so the reply
+can lean on it instead of describing in prose what the student is about to see drawn.
 """
 
 import re
@@ -27,7 +30,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from variatio.core.lexicon import fold
+from variatio.core.lexicon import fold, mentions
 
 from . import ATTEMPT, EXERCISE, SOCIAL, SOLUTION, THEORY
 from . import config as tutor_config
@@ -103,40 +106,70 @@ class Card:
     forbidden_terms: tuple[str, ...] = ()
     exercise: BankExercise | None = None
     step_down: BankExercise | None = None
+    map_of: str = ""
+    chosen: str = ""
     extra: dict = field(default_factory=dict)
 
     def quotes(self) -> list[Quote]:
         """Return every piece of the notes the card carries, anchors first."""
         return [quote for concept in self.focus for quote in concept.anchors] + list(self.passages)
 
-    def references(self, reply: str = "") -> list[dict]:
+    def references(self, reply: str = "", sent_back: tuple[str, str] | None = None) -> list[dict]:
         """Return the places of the notes a reply shows under it, drawn from the card alone.
 
-        Drawn from the card and never from the reply, so a place the model invented cannot
-        reach the screen; but CHOSEN by the reply, since the card carries more places than any
-        reply cites. The places whose own section the reply names come first; failing that,
-        those of whose path it names any part; failing both, the card's first `_SHOWN`. A
-        prerequisite's place counts only when the reply names it — it is where a student who
-        lacks one is sent. A place with no section is dropped when its document has one that has.
+        They are the ONLY place a student reads where something is: the card quotes the notes
+        without their headings and the method forbids a reply to name one, so the reply says
+        «en los apuntes» and the exact section is here, one click from the reader. Drawn from
+        the card, so a place the model invented cannot reach the screen; but CHOSEN by the
+        reply, since the card carries more places than any reply leans on. The places whose
+        own section title the reply's words contain come first — a section is usually titled
+        after what it explains; failing that, those of whose path it contains any part;
+        failing both, the card's first `_SHOWN`. A prerequisite's place is shown only under
+        the reply that sends the student back to it (`sent_back`), and leads. A place with no
+        section is dropped when its document has one that has.
         """
         places = _distinct(
             {"document": quote.document, "location": quote.location} for quote in self.quotes()
         )
         if not reply:
             return places
-        earlier = _distinct(
+        said = f" {_plain(reply)} "
+        chosen = places[:_SHOWN]
+        for named in (_last_part, _any_part):
+            found = [place for place in places if named(place["location"], said)]
+            if found:
+                chosen = found
+                break
+        review = [
             {"document": p.document, "location": p.location}
             for concept in self.focus
             for p in concept.prerequisites
-            if p.document and p.location
-        )
-        candidates = places + [place for place in earlier if place not in places]
-        said = f" {_plain(reply)} "
-        for named in (_last_part, _any_part):
-            chosen = [place for place in candidates if named(place["location"], said)]
-            if chosen:
-                return chosen
-        return places[:_SHOWN]
+            if sent_back and p.name == sent_back[1] and p.document and p.location
+        ][:1]
+        return _distinct(review + chosen)
+
+    def sent_back(self, reply: str, review: str, wording=None) -> tuple[str, str] | None:
+        """Return the focus concept and the prerequisite of it a reply sends the student to.
+
+        Both signs are asked for in ONE sentence, because either alone is everyday prose: the
+        sentence names the prerequisite AND tells the student to go over it again (`review`,
+        the prompt set's `REVIEW_PATTERN`). «Una función que se llama a sí misma» names a
+        prerequisite of recursion and sends nobody anywhere; «si te falta qué es una función,
+        repásalo en los apuntes» does.
+        """
+        own = {concept.name for concept in self.focus}
+        sentences = [
+            sentence
+            for sentence in re.split(r"(?<=[.!?…])\s+|\n+", reply)
+            if re.search(review, fold(sentence))
+        ]
+        for concept in self.focus:
+            for earlier in concept.prerequisites:
+                if earlier.name in own:
+                    continue
+                if any(mentions(sentence, earlier.name, wording) for sentence in sentences):
+                    return concept.name, earlier.name
+        return None
 
     def later(self) -> list[str]:
         """Return what the focus's dependents are, the concepts a reply must not introduce.
@@ -165,6 +198,8 @@ class Card:
             "forbidden_terms": list(self.forbidden_terms),
             "exercise": self.exercise.id if self.exercise else None,
             "step_down": self.step_down.id if self.step_down else None,
+            "map_of": self.map_of or None,
+            "chosen": self.chosen or None,
             **self.extra,
         }
 
@@ -179,8 +214,14 @@ def assemble(
     vector: np.ndarray,
     focus: list[str],
     exercise_id: str | None = None,
+    map_of: str = "",
+    chosen: str = "",
 ) -> Card:
-    """Write the card one reply of this kind is answered with."""
+    """Write the card one reply of this kind is answered with.
+
+    `map_of` is the concept whose map will be shown under the reply, when one will; `chosen`
+    the concept the student picked for this message, when they picked one.
+    """
     concepts = () if kind == SOCIAL else tuple(_focus_concept(n, context, sources) for n in focus)
     anchored = {text_key(q.text) for concept in concepts for q in concept.anchors}
 
@@ -196,10 +237,10 @@ def assemble(
             )
         )
 
-    chosen: list[Criterion] = []
+    applied: list[Criterion] = []
     if kind != SOCIAL:
         unit = concepts[0].unit if concepts else None
-        chosen = criteria.for_focus(unit, list(focus), tutor_config.CRITERIA_MAX_CHARS)
+        applied = criteria.for_focus(unit, list(focus), tutor_config.CRITERIA_MAX_CHARS)
 
     exercise = _bank_exercise(exercise_id, context) if exercise_id else None
     step_down = None
@@ -211,10 +252,12 @@ def assemble(
         subject=context.content_context.prompt_block(),
         focus=concepts,
         passages=passages,
-        criteria=tuple(chosen),
+        criteria=tuple(applied),
         forbidden_terms=tuple(criteria.terms()) if kind != SOCIAL else (),
         exercise=exercise,
         step_down=step_down,
+        map_of=map_of,
+        chosen=chosen,
     )
 
 

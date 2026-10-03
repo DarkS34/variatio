@@ -40,10 +40,15 @@ _LIVE = ("queued", "running")
 
 
 class MessageBody(BaseModel):
-    """A student's message, and the generated exercise it opens a conversation on, if any."""
+    """A student's message, with what it is about when the student said so.
+
+    `generation_id` is the generated exercise a conversation is opened on; `concept` the
+    concept of the syllabus the student chose beside the box for this one message.
+    """
 
     message: str
     generation_id: str | None = None
+    concept: str | None = None
 
 
 class CriteriaBody(BaseModel):
@@ -84,6 +89,7 @@ def conversations(access: auth.Access = auth.VIEW) -> dict:
 def open_conversation(body: MessageBody, access: auth.Access = auth.VIEW) -> dict:
     """Start a conversation with its first message and queue the tutor's reply."""
     message = _checked_message(body.message, access)
+    concept = _checked_concept(body.concept, access)
     _admit(access)
     opened_from = None
     if body.generation_id:
@@ -96,7 +102,7 @@ def open_conversation(body: MessageBody, access: auth.Access = auth.VIEW) -> dic
             "concepts": generations_store.concepts_of(record),
             "item_type": generations_store.item_type_of(record),
         }
-    conversation = store.create(access.ws, access.user.id, message, opened_from)
+    conversation = store.create(access.ws, access.user.id, message, opened_from, concept=concept)
     with store.lock_for(access.ws, access.user.id, conversation["id"]):
         job = _queue_turn(access, conversation, 0)
     return {"conversation": _detail(conversation), "job": job.to_dict()}
@@ -160,6 +166,23 @@ def build_criteria(access: auth.Access = auth.EDIT) -> dict:
     return {"job": job.to_dict(), "queue_position": singletons.runner.queue_position(job.id)}
 
 
+@router.get("/syllabus")
+def syllabus(access: auth.Access = auth.VIEW) -> dict:
+    """Answer the subject's units and the concepts a student may choose a message to be about.
+
+    The graph's own order, which is the syllabus's. Only what a conversation can stand on:
+    a generic concept names no topic anybody can work on (`turn.run_turn` never takes one as
+    a focus), and a unit left with none is not listed.
+    """
+    graph = _graph(access)
+    generic = set(graph.generic_non_taggable_concepts)
+    units = [
+        {"name": unit, "concepts": [c for c in graph.concepts_by_domains.get(unit, []) if c not in generic]}
+        for unit in graph.domains
+    ]
+    return {"units": [unit for unit in units if unit["concepts"]]}
+
+
 @router.get("/notes")
 def notes(document: str, access: auth.Access = auth.VIEW) -> dict:
     """Answer one document of the notes by sections, for the reader a reply's places open.
@@ -184,12 +207,13 @@ def conversation(conversation_id: str, access: auth.Access = auth.VIEW) -> dict:
 def send(conversation_id: str, body: MessageBody, access: auth.Access = auth.VIEW) -> dict:
     """Append a message to one of your conversations and queue the tutor's reply."""
     message = _checked_message(body.message, access)
+    concept = _checked_concept(body.concept, access)
     with store.lock_for(access.ws, access.user.id, conversation_id):
         record = _heal(access, _require(conversation_id, access), locked=True)
         _admit(access)
         if record.get("pending"):
             raise HTTPException(409, "El tutor todavía está contestando el mensaje anterior.")
-        turn = store.append_student(record, message)
+        turn = store.append_student(record, message, concept=concept)
         store.write(access.ws, access.user.id, record)
         job = _queue_turn(access, record, turn)
     return {"conversation": _detail(record), "job": job.to_dict()}
@@ -351,6 +375,17 @@ def _checked_message(message: str, access: auth.Access) -> str:
     if len(text) > limit:
         raise HTTPException(422, f"Un mensaje no puede pasar de {limit} caracteres; lleva {len(text)}.")
     return text
+
+
+def _checked_concept(concept: str | None, access: auth.Access) -> str | None:
+    """Return the concept a message was sent about, or refuse one the syllabus does not offer."""
+    name = (concept or "").strip()
+    if not name:
+        return None
+    graph = _graph(access)
+    if name not in graph.concept_domain or name in graph.generic_non_taggable_concepts:
+        raise HTTPException(422, f"«{name}» no es un concepto que se pueda elegir en esta asignatura.")
+    return name
 
 
 def _require_engine() -> None:

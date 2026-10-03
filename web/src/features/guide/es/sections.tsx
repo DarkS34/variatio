@@ -2160,7 +2160,7 @@ function Tutor() {
         </p>
         <p>
           El tutor <strong>no da soluciones</strong>: te hace preguntas para que llegues tú a
-          ellas y te dice dónde mirar en los apuntes. Si quieres practicar, la puerta es «
+          ellas y te enseña dónde mirar en los apuntes. Si quieres practicar, la puerta es «
           {t("nav.create")}».
         </p>
       </SectionHead>
@@ -2176,7 +2176,7 @@ function Tutor() {
             {
               key: "focus",
               head: "El concepto del que se habla",
-              body: "Sale del temario. Se fija con el primer mensaje que lo nombra con claridad y solo cambia cuando otro mensaje habla claramente de otra cosa. Un «no lo entiendo» no lo mueve, y hablar de algo que el temario pone antes tampoco.",
+              body: "Sale del temario. Se fija con el primer mensaje que lo nombra con claridad y solo cambia cuando otro mensaje habla claramente de otra cosa. Un «no lo entiendo» no lo mueve, y hablar de algo que el temario pone antes tampoco. También puedes elegirlo tú en la línea «Sobre» del cuadro de escribir: entonces el tutor no deduce nada y trabaja ese concepto.",
             },
             {
               key: "notes",
@@ -2186,7 +2186,12 @@ function Tutor() {
             {
               key: "before",
               head: "Lo que hay que saber antes",
-              body: "Los prerrequisitos directos del concepto. El tutor los da por sabidos: si preguntas por un concepto, trabaja ese concepto y no te lleva por los anteriores. Solo si dices que te falta algo previo te dice dónde repasarlo.",
+              body: "Los prerrequisitos directos del concepto. El tutor los da por sabidos: si preguntas por un concepto, trabaja ese concepto y no te lleva por los anteriores. Solo si dices que te falta algo previo te dice que lo repases, y su apartado aparece bajo la respuesta.",
+            },
+            {
+              key: "map",
+              head: "El mapa del concepto",
+              body: "Un diagrama del concepto con lo que da por sabido, lo que viene después y sus demás relaciones en el temario. Lo dibuja el sistema a partir del temario, nunca el modelo, así que no puede inventar una relación. No sale en cada respuesta: aparece la primera vez que la conversación llega a un concepto y cuando el tutor te manda a repasar algo anterior, con ese concepto marcado.",
             },
             {
               key: "after",
@@ -2211,8 +2216,9 @@ function Tutor() {
         <Paragraph>
           Antes de que la leas, una respuesta pasa unas comprobaciones: tiene que hacer al
           menos una pregunta y no demasiadas, no puede llevar más de unas pocas líneas de
-          código, no puede copiar un pasaje de los apuntes, no puede introducir un concepto
-          posterior y no puede sugerir lo que los criterios descartan. Si falla, el modelo
+          código, no puede dibujar un diagrama por su cuenta, no puede copiar un pasaje de los
+          apuntes, no puede introducir un concepto posterior y no puede sugerir lo que los
+          criterios descartan. Si falla, el modelo
           escribe otra con el motivo; si vuelve a fallar, recibes una pregunta de reserva que
           te remite a los apuntes. Por eso la respuesta aparece entera y no palabra a palabra.
         </Paragraph>
@@ -2220,6 +2226,29 @@ function Tutor() {
           Las consultas administrativas (notas, fechas, entregas) y las preguntas ajenas a la
           asignatura reciben una respuesta fija, sin pasar por el modelo. Un mensaje que el
           guardián rechaza tampoco llega al modelo.
+        </Paragraph>
+      </Block>
+
+      <Block title="Elegir de qué va el mensaje">
+        <Paragraph>
+          El cuadro de escribir tiene arriba una línea «{t("tutor.topic.label")}». Dice de qué
+          concepto trata la conversación según el tutor. «{t("tutor.topic.choose")}» abre el
+          temario: las unidades numeradas a un lado y los conceptos de la unidad al otro, con
+          un buscador que encuentra un concepto por su nombre o por el de su unidad. Un clic
+          elige el concepto y cierra el panel; el concepto vale para el mensaje que escribes.
+        </Paragraph>
+        <Paragraph>
+          Con un concepto elegido y el cuadro vacío, el cuadro propone la pregunta más común,
+          «{t("tutor.composer.suggestion", { name: "…" })}». La tecla Tab la escribe, y también
+          el botón «{t("tutor.composer.tab")}» que aparece a su lado. Después puedes cambiarla
+          o enviarla con Intro.
+        </Paragraph>
+        <Paragraph>
+          Elegir es opcional: sin elegir, el tutor deduce el concepto de tu mensaje. Con el
+          teclado no hace falta el ratón: escribe para buscar, las flechas arriba y abajo
+          cambian de unidad, izquierda y derecha recorren los conceptos, Intro elige y Esc
+          cierra. Con algo escrito en el buscador, arriba y abajo recorren los resultados. En una conversación nueva, la lista de unidades del centro abre el mismo
+          panel por esa unidad.
         </Paragraph>
       </Block>
 
@@ -2231,9 +2260,18 @@ function Tutor() {
           primera línea.
         </Paragraph>
         <Paragraph>
-          Bajo cada respuesta, «{t("tutor.references")}» lista los apartados que nombra. Cada
-          uno abre los apuntes por ese apartado, con formato, y desde ahí puedes pasar al
-          anterior o al siguiente.
+          Cada respuesta tiene dos partes: la explicación, en texto normal, y la pregunta con
+          la que termina, más grande y en negrita, porque es lo que te toca contestar. La
+          respuesta habla de «los apuntes» sin nombrar el tema ni el apartado: el sitio
+          exacto está debajo. Bajo cada respuesta, «{t("tutor.references")}» lista los
+          apartados de los que sale. Cada uno abre los apuntes por ese apartado, con formato, y
+          desde ahí puedes pasar al anterior o al siguiente.
+        </Paragraph>
+        <Paragraph>
+          Cuando lo que se trabaja se escribe con notación matemática —una fórmula, una
+          recurrencia, un coste—, el tutor la escribe como fórmula y no con palabras. En una
+          pantalla estrecha, el mapa del concepto dibuja solo lo anterior y lo posterior, y
+          escribe las demás relaciones debajo.
         </Paragraph>
       </Block>
 
@@ -2242,7 +2280,9 @@ function Tutor() {
           Cada respuesta es un trabajo de la cola, como una generación. Con el motor solo local,
           una construcción en marcha deja la conversación «en cola» hasta que termina. Puedes
           detener una respuesta que espera; el mensaje se queda marcado sin respuesta y puedes
-          pedirla otra vez. Cada cuenta tiene una respuesta en camino a la vez.
+          pedirla otra vez. Cada cuenta tiene una respuesta en camino a la vez. Mientras el
+          tutor trabaja, un signo de interrogación se escribe cuadro a cuadro; en cola, el
+          signo está hueco y quieto.
         </Paragraph>
       </Block>
 

@@ -51,9 +51,23 @@ def test_a_message_about_what_comes_before_the_focus_never_moves_it():
     assert step(["Recursividad"], {"Memoización": 0.8, "Recursividad": 0.6}) == ["Memoización"]
 
 
-def test_the_state_after_a_reply_is_the_focus_and_the_trail_it_has_stood_on():
+def test_the_state_after_a_reply_is_the_focus_the_trail_and_the_maps_shown():
     state = {"focus": ["Variable"], "trail": ["Variable"], "verified": ["Función"]}
 
     after = focus.after_reply(state, ["Recursividad"])
+    assert after == {"focus": ["Recursividad"], "trail": ["Variable", "Recursividad"], "mapped": []}
 
-    assert after == {"focus": ["Recursividad"], "trail": ["Variable", "Recursividad"]}
+    drawn = focus.after_reply(after, ["Recursividad"], ["Recursividad"])
+    assert drawn["mapped"] == ["Recursividad"] and drawn["since_map"] == 0
+    assert focus.after_reply(drawn, ["Recursividad"])["since_map"] == 1
+
+
+def test_a_chosen_concept_leads_and_the_message_s_own_may_join_it():
+    chosen = lambda scores, before=None: focus.with_chosen(  # noqa: E731
+        "Recursividad", scores, threshold=0.55, eligible=ELIGIBLE, before=before
+    )
+
+    assert chosen({"Variable": 0.3}) == ["Recursividad"]
+    assert chosen({"Memoización": 0.7, "Recursividad": 0.9}) == ["Recursividad", "Memoización"]
+    assert chosen({"Función": 0.8}, before={"Función", "Variable"}) == ["Recursividad"]
+    assert chosen({"Notación asintótica": 0.9}) == ["Recursividad"], "a generic concept never joins"

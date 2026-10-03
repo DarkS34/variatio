@@ -40,6 +40,14 @@ def test_a_line_of_the_student_s_code_may_be_quoted_but_a_program_may_not():
     assert failures(program) == ["code"]
 
 
+def test_a_formula_is_not_code_and_a_diagram_of_the_model_s_own_is_refused():
+    formula = "Los apuntes lo escriben así: $n! = n \\cdot (n-1)!$. ¿Qué pasa cuando $n = 0$?"
+    drawn = "Míralo así:\n```mermaid\nflowchart LR\n  A --> B\n```\n¿Qué ves?"
+
+    assert failures(formula) == []
+    assert failures(drawn) == ["diagram"]
+
+
 def test_copying_a_passage_of_the_card_fails_but_naming_a_few_of_its_words_does_not():
     passage = "Una función recursiva necesita un caso base y reduce el problema en cada llamada."
 

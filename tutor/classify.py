@@ -12,6 +12,11 @@ in order, each only when the one before cannot answer:
 3. Failing open: a call that cannot be read is a question about the theory, which is the
    kind whose card carries the most and whose reply is never a fixed text.
 
+The student has the last word on two verdicts: a message sent about a concept they chose
+beside the box (`pinned`) is about the subject, so a model's "greeting" or "off-topic" for it
+— «explícamelo», «no entiendo esto» — is answered as theory. An administrative question
+stays one, whatever was chosen.
+
 The graph has the last word on one verdict: a message the model calls off-topic but whose
 best concept clears the focus threshold IS about the subject, and is answered as theory. The
 focus threshold and not the syllabus one, because a message is one sentence: measured, a
@@ -25,7 +30,7 @@ from loguru import logger
 
 from variatio.core import inference, progress
 
-from . import EXERCISE, KINDS, OFF_TOPIC, THEORY, calls
+from . import EXERCISE, KINDS, OFF_TOPIC, SOCIAL, THEORY, calls
 
 # The answer is one word inside a tiny object; the cap only stops a model that keeps going.
 _CLASSIFY_MAX_TOKENS = 64
@@ -34,6 +39,7 @@ BANK = "bank"
 OPENED = "opened"
 MODEL = "model"
 GRAPH = "graph"
+CHOSEN = "chosen"
 DEFAULT = "default"
 
 
@@ -58,8 +64,12 @@ def classify(
     opened_from_exercise: bool,
     bank_threshold: float,
     concept_threshold: float,
+    pinned: bool = False,
 ) -> Classification:
-    """Decide the kind of one message, the cheapest layer first."""
+    """Decide the kind of one message, the cheapest layer first.
+
+    `pinned` says the student chose the concept the message is about.
+    """
     match = bank_match(message, context.embedder)
     if match is not None and match[1] >= bank_threshold:
         return Classification(EXERCISE, BANK, exercise_id=match[0], exercise_score=round(match[1], 4))
@@ -92,6 +102,8 @@ def classify(
     kind = (answer or {}).get("kind")
     if kind not in KINDS:
         return Classification(THEORY, DEFAULT)
+    if pinned and kind in (OFF_TOPIC, SOCIAL):
+        return Classification(THEORY, CHOSEN)
     if kind == OFF_TOPIC and max(concept_scores.values(), default=0.0) >= concept_threshold:
         return Classification(THEORY, GRAPH)
     return Classification(kind, MODEL)

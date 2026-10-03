@@ -479,6 +479,29 @@ body {
   }
 }
 
+/* One square of the question mark the tutor's waiting sign writes (`tutor/Thinking.tsx`):
+   it comes on, holds and goes out. Every square runs this same cycle a beat after the one
+   before it, so the mark is written square by square and unwritten in the same order.
+   Opacity alone, like the pulse, and for the pulse's reason it stays on under
+   `prefers-reduced-motion`: it is the only sign that the reply is still being made. */
+@keyframes vg-square-write {
+  0%,
+  100% {
+    opacity: 0.14;
+  }
+  10%,
+  62% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 0.14;
+  }
+}
+
+.animate-square-write {
+  animation: vg-square-write 2.8s var(--ease) infinite both;
+}
+
 .animate-fade-in {
   animation: vg-fade-in var(--motion-enter) var(--ease);
 }
