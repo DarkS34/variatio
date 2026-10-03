@@ -47,26 +47,25 @@ education is out of scope; hardcoding a subject is equally a regression.
 
 ## Branches
 
-- **`variatio-web-eval`** (this tree, `/home/deploy/variatio`): the complete system WITH
-  the study (`evaluation/`, `web/src/evaluation/`, the `evaluate` job, evaluator profiles,
-  the stage questionnaires). Production serves a separate worktree, `/home/deploy/variatio-prod`.
-- **`variatio-web`**: the product WITHOUT the evaluation. No worktree at present
-  (`git worktree add ../variatio-noeval variatio-web` to recreate). Its route-order detector
-  lives in `tests/server/test_route_order.py`.
-- **`variatio-web-tutor`**: `variatio-web` plus the Socratic tutor (`tutor/`, `web/src/tutor/`,
-  the `tutor_turn` and `tutor_criteria` jobs). Its second door is «Tutor socrático», where the
-  study's branch has «Evaluar el sistema». It has no worktree of its own: it is checked out in
-  the development tree when it is the one being worked on.
-- **`main`**: the library and its CLI alone.
+- **`main`** (this tree, `/home/deploy/variatio-dev`): the complete system — the library,
+  the API, the client, the study (`evaluation/`, `web/src/evaluation/`, the `evaluate` job,
+  evaluator profiles, the stage questionnaires) and the Socratic tutor (`tutor/`,
+  `web/src/tutor/`, the `tutor_turn` and `tutor_criteria` jobs). Production serves a separate
+  worktree, `/home/deploy/variatio-prod`. Until 2026-10-03 this was three branches
+  (`variatio-web`, `variatio-web-eval`, `variatio-web-tutor`); this one replaces them.
+- **`variatio-vanilla`**: the library and its CLI alone (the branch `main` named until
+  2026-10-03). No worktree at present (`git worktree add ../variatio-vanilla variatio-vanilla`
+  to recreate).
 - **The database never moves**: `evaluation_sessions`, `stage_evaluations` and
   `users.evaluator_profile` keep their migrations and ORM models on every branch.
-- **Derived branches are brought forward by MERGING this one and re-removing what they do
-  not carry** (never by cherry-picking). After the merge: `git rm` the study's files again;
-  git's rename detection files new `tests/evaluation/` tests under `tests/server/` — delete
-  them; the i18n catalogues conflict and the HEAD side is right; read `len(REGISTRY)` and
-  `len(BY_NAME)` off the branch before writing `tests/settings/test_settings_registry.py`.
-- `AGENTS.md` is tracked and travels with every branch; on `main` and `variatio-web` the
-  evaluation sections describe code that branch does not carry.
+- **`variatio-vanilla` is brought forward by MERGING `main` and re-removing what it does not
+  carry** (never by cherry-picking). After the merge: `git rm` the server, the client, the
+  study and the tutor again; `README.md` conflicts and the HEAD side is right (each branch
+  describes itself); `version` in `pyproject.toml` and `uv.lock` conflicts — keep the branch's
+  own line, then bump it; read `len(REGISTRY)` and `len(BY_NAME)` off the branch before
+  writing `tests/settings/test_settings_registry.py`.
+- `AGENTS.md` is tracked and travels with every branch; on `variatio-vanilla` the server,
+  client, evaluation and tutor sections describe code that branch does not carry.
 
 ## Commands
 
@@ -171,7 +170,7 @@ table and refuses while a row has no file: on an installation that still has the
 
 The hard line: **`instance/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
-`evaluation/` (the TFM's study), `tutor/` (the Socratic tutor, on `variatio-web-tutor`),
+`evaluation/` (the TFM's study), `tutor/` (the Socratic tutor),
 `web/` (React client), `migrations/`.
 
 ### `variatio/` layout
@@ -625,7 +624,7 @@ A top-level package, always mounted. **`evaluation` imports `variatio`, never th
 
 ## `tutor/` — the Socratic tutor, beside the system it reads
 
-A top-level package on `variatio-web-tutor`, mounted like the evaluation: **`tutor` imports
+A top-level package, mounted like the evaluation: **`tutor` imports
 `variatio` and never the reverse** (the registry's optional import is the exception);
 `tutor/__init__.py` never imports `tutor/api/`, so `import tutor` stays free of
 FastAPI/SQLAlchemy (pinned by `tests/tutor/test_tutor_boundary.py`). `server/app.py` calls
@@ -766,9 +765,9 @@ never `oklch` (hue interpolation turns greens blue).
 ### Navigation and the four steps
 
 - [lib/steps.ts](web/src/lib/steps.ts) is the single home of the path: `STEPS` (raw
-  material, profile, graph, bank, numbered 1-4 as «Fase de construcción») and `USES` (the two
-  unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» — «Tutor»
-  on `variatio-web-tutor`). The
+  material, profile, graph, bank, numbered 1-4 as «Fase de construcción») and `USES` (the three
+  unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» and
+  «Tutor socrático»). The
   first not-done step is `now`; done steps show a bare tick, no box. Doors are half-dimmed and
   unclickable until construction is complete. Once all four are done and you are not on one,
   the phase folds into one pill. There is **no dashboard**: `/` redirects to the current step.
@@ -1010,7 +1009,7 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 **Interface**
 - The palette is measured; `--primary` is ink; `--radius: 0`; arm colours fixed; theme
   three-state.
-- The bar is the path: four numbered steps and two unnumbered doors; no dashboard; the rail
+- The bar is the path: four numbered steps and three unnumbered doors; no dashboard; the rail
   is gone.
 - View and correct are two moments; «Continuar» closes a stage; no «Aprobar»/«Reabrir»; no
   rebuild except for document drift.
@@ -1030,7 +1029,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The exemplars profile is edited through the form alone.
 
 **Tutor (decided 2026-10-03)**
-- Two doors on the tutor branch: «Generar ejercicios» and «Tutor socrático»; no third door.
+- Three doors after the construction: «Generar ejercicios», «Evaluar el sistema» and «Tutor
+  socrático» (the two-door rule ended with the single branch, 2026-10-03); no fourth door.
 - The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
   after the checks, never streamed.
 - Conversations are private to their author; the administrator reads them read-only.
