@@ -10,13 +10,15 @@ exists. Two screens for one question is how an installation ends up with two ans
 
 What this is NOT: a second way into the pipeline. Nothing here builds, edits or approves
 anything. It reads what the installation has recorded, hands out access, and exports a CSV.
-The administrator bypass lives in `auth.deps.access_for`, in one `if`, and nowhere else.
+It reads across accounts once: the exercises generated in each workspace, read-only,
+which no other route shows anybody but their author. The administrator bypass lives in
+`auth.deps.access_for`, in one `if`, and nowhere else.
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
@@ -28,7 +30,9 @@ from ..auth import links
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import identity, repository
 from ..db.models import EDITOR, ROLES, Invite, User, Workspace
+from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
+from .generations import row_view
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
@@ -532,6 +536,47 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     result = installation.clear_cache(ws)
     deps.invalidate(slug, "caché vaciada desde administración")
     return {"workspace": slug, **result}
+
+
+@router.get("/workspaces/{slug}/generations")
+def workspace_generations(
+    slug: str,
+    author: int | None = None,
+    q: str | None = None,
+    limit: int = Query(30, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Answer one page of every exercise generated in this workspace, whoever wrote it.
+
+    Read-only: nothing here promotes or deletes, which stay the author's. It carries the
+    workspace's profile because the rows are drawn with it and the administrator need not
+    be a member. `authors` lists every account with exercises here, for the filter.
+    """
+    if repository.get_workspace(db, slug) is None:
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
+    ws = installation.workspace_for(slug)
+    accounts = {user.id: user for user in identity.list_users(db)}
+    pairs, total = generations_store.list_all(
+        ws, author=author, query=q, limit=limit, offset=offset
+    )
+    return {
+        "workspace": slug,
+        "generations": [row_view(record, accounts.get(user_id)) for user_id, record in pairs],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "authors": [
+            {
+                "id": user_id,
+                "username": accounts[user_id].username,
+                "name": accounts[user_id].name,
+            }
+            for user_id in generations_store.authors(ws)
+            if user_id is not None and user_id in accounts
+        ],
+        "profile": profile_edit.load(ws).get("profile"),
+    }
 
 
 @router.get("/workspaces/{slug}/export")

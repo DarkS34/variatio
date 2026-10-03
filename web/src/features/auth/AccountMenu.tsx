@@ -107,8 +107,8 @@ export function AccountMenu() {
             />
             <MenuItem
               icon={<Archive className="size-4" />}
-              label={t("nav.myVariants")}
-              onClick={() => go("/account/variants")}
+              label={t("nav.mySubjects")}
+              onClick={() => go("/account/workspaces")}
             />
           </div>
 

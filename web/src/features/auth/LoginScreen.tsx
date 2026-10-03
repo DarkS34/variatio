@@ -13,7 +13,7 @@ import { useT } from "@/lib/i18n";
  *
  * There is no "he olvidado mi contraseña": most accounts here have no address at all, so
  * the link promised a mail nobody could receive. The way back in is an administrator handing
- * over a reset link from "Cuentas y accesos". `/reset` and `POST /api/auth/forgot` are
+ * over a reset link from "Cuentas". `/reset` and `POST /api/auth/forgot` are
  * untouched — screenless, not gone — so a link already issued still works and nothing about
  * the enumeration defences moved.
  */

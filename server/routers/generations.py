@@ -11,8 +11,10 @@ EVERY ROUTE IS SCOPED TO THE ACCOUNT THAT ASKS, and there is no second scope to 
 filter somebody can turn off is not privacy. The membership bounds the workspace and the
 author bounds the files inside it — each account's exercises are a directory of their own —
 so two accounts preparing one subject do not read each other's exercises. Neither the owner
-nor the administrator is an exception — `_require` answers 404 for an exercise that is not
-yours, because "it exists but is not yours" is itself something this refuses to say.
+nor the administrator is an exception HERE — `_require` answers 404 for an exercise that is
+not yours, because "it exists but is not yours" is itself something this refuses to say. The
+installation administrator reads every account's, read-only, through its own panel
+(`GET /api/admin/workspaces/{slug}/generations`), never through these routes.
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -53,7 +55,7 @@ def listing(
         offset=offset,
     )
     return {
-        "generations": [_view(record, access.user) for record in records],
+        "generations": [row_view(record, access.user) for record in records],
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -67,7 +69,7 @@ def detail(generation_id: str, access: auth.Access = auth.VIEW) -> dict:
     output = record.get("output") or {}
     return {
         "generation": {
-            **_view(record, access.user),
+            **row_view(record, access.user),
             "thinking": output.get("thinking"),
             "retried": output.get("retried"),
             "format": record.get("format"),
@@ -126,13 +128,14 @@ def _require(generation_id: str, access: auth.Access) -> dict:
     return record
 
 
-def _view(record: dict, user) -> dict:
+def row_view(record: dict, user) -> dict:
     """Render one stored exercise with its commission and the item itself.
 
     `concepts` is what was ASKED for, which is what «Generar más como este» reopens;
     `targets` is what ran — the bank's most frequent concepts when nothing was asked.
-    `think` is the commission's too, a level or a bool. The author is the account asking,
-    since nobody else's exercises can reach this.
+    `think` is the commission's too, a level or a bool. The author is the account asking
+    on these routes; on the administrator's it is whoever wrote it, and None for an exercise
+    whose account no longer exists.
     """
     commission = record.get("commission") or {}
     resolved = record.get("resolved") or {}
@@ -154,7 +157,7 @@ def _view(record: dict, user) -> dict:
         # screen says nothing rather than naming today's default, which did not write it.
         "model": resolved.get("model") or None,
         "author": {
-            "id": user.id,
+            "id": getattr(user, "id", None),
             "name": getattr(user, "name", None),
             "username": getattr(user, "username", None),
         },

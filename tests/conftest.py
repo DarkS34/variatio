@@ -46,8 +46,8 @@ PREREQUISITE = "tiene como prerrequisito"
 # whatever resolves a default resolves PRODUCTION.
 #
 # The first stops a test spending real money's worth of budget. `CerebrasEngine` records
-# every call in a ledger at the project root, so the engine tests — which answer a simulated
-# transport — charged six phantom requests to the installation's own Cerebras budget and the
+# every call in the account's ledger, so the engine tests — which answer a simulated
+# transport — charged six phantom requests to the real Cerebras budget and the
 # panel then reported them as spent.
 @pytest.fixture(autouse=True)
 def _isolated_cerebras_ledger(tmp_path):

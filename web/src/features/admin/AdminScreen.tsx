@@ -21,16 +21,16 @@ import { jobName } from "@/lib/names";
 /**
  * The installation seen from outside: four tabs, one per thing an administrator runs.
  *
- * "Cuentas" decides who exists and where they get in;
- * "Workspaces" lists the instances and what they weigh; "Motor" is the machine and the
- * process — the GPU, the tunnel, the models on disk, the queue; "Configuración" is every
- * value the registry exposes. Each tab is its own file, because the screen that crosses
+ * "Motor" is the machine and the process — the GPU, the tunnel, the models on disk, the
+ * queue; "Configuración" is every value the registry exposes; "Cuentas" decides who exists
+ * and where they get in; "Asignaturas" lists the instances and what they weigh. Each tab is
+ * its own file, because the screen that crosses
  * every account and every workspace is also the one that grows.
  */
 export function AdminScreen() {
   const { t } = useT();
   const session = useSession();
-  const [tab, setTab] = useState("cuentas");
+  const [tab, setTab] = useState("motor");
 
   const overview = useAdminOverview();
 
@@ -70,10 +70,10 @@ export function AdminScreen() {
 
       <Tabs
         items={[
-          { value: "cuentas", label: t("admin.tab.accounts") },
-          { value: "workspaces", label: t("admin.tab.workspaces") },
           { value: "motor", label: t("admin.tab.engine") },
           { value: "config", label: t("admin.tab.config") },
+          { value: "cuentas", label: t("admin.tab.accounts") },
+          { value: "workspaces", label: t("admin.tab.workspaces") },
         ]}
         value={tab}
         onChange={setTab}

@@ -1,5 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Check, KeyRound, Languages, Trash2, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  KeyRound,
+  Languages,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,9 +21,10 @@ import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
-import { GenerationsPanel } from "@/features/generations/GenerationsPanel";
+import { SubjectExercises } from "@/features/generations/GenerationsPanel";
 import { LANGUAGES, LANGUAGE_NAMES, useT, type Key, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
+import { cn } from "@/lib/utils";
 import {
   ROLE_HINT_KEYS,
   ROLE_LABEL_KEYS,
@@ -45,10 +54,9 @@ import type { WorkspaceRow } from "@/lib/types";
  */
 export const ACCOUNT_TABS = [
   { value: "cuenta", label: "tabs.account", path: "/account" },
-  // Before the exercises: one belongs to an instance, so which instances this account can
-  // open is the question that comes first.
+  // One tab for the subjects and the exercises: an exercise is saved inside the subject it
+  // was generated in, so each subject carries its own under a fold.
   { value: "workspaces", label: "tabs.workspaces", path: "/account/workspaces" },
-  { value: "variantes", label: "tabs.variants", path: "/account/variants" },
 ] as const satisfies readonly { value: string; label: Key; path: string }[];
 
 export type AccountTab = (typeof ACCOUNT_TABS)[number]["value"];
@@ -90,7 +98,6 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
 
       {tab === "cuenta" ? <AccountTabView /> : null}
       {tab === "workspaces" ? <MyWorkspacesTab /> : null}
-      {tab === "variantes" ? <GenerationsPanel /> : null}
     </div>
   );
 }
@@ -400,11 +407,14 @@ function PasswordCard() {
   );
 }
 
-/* Accesos ----------------------------------------------------------------------------- */
+/* Asignaturas y ejercicios ------------------------------------------------------------ */
 
 /**
- * Which instances this account may enter, on what grounds, and the one thing it may do to
- * them: dispose of the ones it owns.
+ * Which instances this account may enter, on what grounds, the exercises it generated in
+ * each, and the one thing it may do to them: dispose of the ones it owns.
+ *
+ * The subject in use opens with its exercises unfolded, because that is where a link from
+ * "Generar" lands; the others start folded, and nothing remembers the fold.
  *
  * It reads `/api/workspaces` and not the session's membership list, which are different
  * questions for an administrator: the session appends whichever workspace they are standing
@@ -423,8 +433,10 @@ function MyWorkspacesTab() {
   const active = useActiveWorkspace();
   const switching = useSwitchWorkspace();
   const [target, setTarget] = useState<WorkspaceRow | null>(null);
+  const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
   const workspaces = listing.data?.workspaces ?? [];
   const current = active ?? listing.data?.active ?? null;
+  const isOpen = (slug: string) => unfolded[slug] ?? slug === current;
   const mine = workspaces.filter((workspace) => !workspace.as_admin);
 
   return (
@@ -500,6 +512,30 @@ function MyWorkspacesTab() {
                   reason this list is more than a row of slugs: two workspaces called
                   "Compiladores" and "CS0" say nothing about which course each one is. */}
               <WorkspaceContext slug={workspace.slug} />
+
+              <button
+                type="button"
+                aria-expanded={isOpen(workspace.slug)}
+                onClick={() =>
+                  setUnfolded((was) => ({ ...was, [workspace.slug]: !isOpen(workspace.slug) }))
+                }
+                className="flex items-center gap-1.5 text-small font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                <ChevronDown
+                  aria-hidden
+                  className={cn(
+                    "size-4 transition-transform",
+                    !isOpen(workspace.slug) && "-rotate-90",
+                  )}
+                />
+                {t("generations.title")}
+                {workspace.exercises !== undefined ? (
+                  <span className="nums text-muted-foreground">{workspace.exercises}</span>
+                ) : null}
+              </button>
+              {isOpen(workspace.slug) ? (
+                <SubjectExercises slug={workspace.slug} inUse={workspace.slug === current} />
+              ) : null}
             </li>
           ))}
         </ul>

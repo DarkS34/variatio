@@ -2,9 +2,9 @@ import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
   AdminEngine,
+  AdminGenerationListing,
   AdminJobQueue,
   AdminOverview,
-  AdminSystem,
   ArtifactName,
   BankListing,
   BuildPlans,
@@ -28,7 +28,6 @@ import type {
   MaintenanceState,
   MintedInvite,
   Pipeline,
-  PullStatus,
   TunnelStatus,
   ProfilePayload,
   RawKind,
@@ -338,28 +337,47 @@ export const api = {
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
 
-  // No `scope`: the endpoint answers your own rows and nothing else.
-  generations: (params: {
-    concept?: string;
-    item_type?: string;
-    q?: string;
-    limit?: number;
-    offset?: number;
-  }) => {
+  // No `scope`: the endpoint answers your own rows and nothing else. `workspace` reads
+  // another subject's without switching to it, which is what "Mis asignaturas y
+  // ejercicios" does for every subject it lists.
+  generations: (
+    params: {
+      concept?: string;
+      item_type?: string;
+      q?: string;
+      limit?: number;
+      offset?: number;
+    },
+    workspace?: string | null,
+  ) => {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== "" && value !== null) search.set(key, String(value));
     }
-    return request<GenerationListing>(`/api/generations?${search.toString()}`);
+    return request<GenerationListing>(`/api/generations?${search.toString()}`, { workspace });
   },
   generation: (id: string) =>
     request<GenerationDetail>(`/api/generations/${encodeURIComponent(id)}`),
-  deleteGeneration: (id: string) =>
+  deleteGeneration: (id: string, workspace?: string | null) =>
     request<{ deleted: string }>(`/api/generations/${encodeURIComponent(id)}`, {
       method: "DELETE",
+      workspace,
     }),
 
   adminOverview: () => request<AdminOverview>("/api/admin/overview"),
+  // Read-only, and the one place anybody reads exercises that are not their own.
+  adminWorkspaceGenerations: (
+    slug: string,
+    params: { author?: number; q?: string; limit?: number; offset?: number },
+  ) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") search.set(key, String(value));
+    }
+    return request<AdminGenerationListing>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}/generations?${search.toString()}`,
+    );
+  },
   setAccountEnabled: (userId: number, enabled: boolean) =>
     post<{ disabled?: number; enabled?: number }>(
       `/api/admin/accounts/${userId}/${enabled ? "enable" : "disable"}`,
@@ -413,16 +431,12 @@ export const api = {
   adminJobs: () => request<AdminJobQueue>("/api/admin/jobs"),
   adminCancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/admin/jobs/${id}`, { method: "DELETE" }),
-  adminJobHistory: (limit = 50) =>
-    request<{ jobs: Job[] }>(`/api/admin/jobs/history?limit=${limit}`),
 
   // The machine and the process: what is resident, what is on disk, the tunnel that reaches
   // the engine and the contexts this process keeps warm. Every write here is felt by every
   // workspace, which is why they are the administrator's.
   adminEngine: () => request<AdminEngine>("/api/admin/engine"),
   adminReleaseGpu: () => post<{ released: string[] }>("/api/admin/engine/release"),
-  adminPullModel: (model: string) =>
-    post<{ pull: PullStatus }>("/api/admin/engine/models/pull", { model }),
   adminDeleteModel: (model: string) =>
     request<{ deleted: string }>(`/api/admin/engine/models/${encodeURIComponent(model)}`, {
       method: "DELETE",
@@ -436,7 +450,6 @@ export const api = {
     ),
   adminTunnelStart: () => post<TunnelStatus>("/api/admin/engine/tunnel/start"),
   adminTunnelStop: () => post<TunnelStatus>("/api/admin/engine/tunnel/stop"),
-  adminSystem: () => request<AdminSystem>("/api/admin/system"),
   adminSetAdmin: (userId: number, isAdmin: boolean) =>
     post<{ user_id: number; is_admin: boolean }>(`/api/admin/accounts/${userId}/admin`, {
       is_admin: isAdmin,

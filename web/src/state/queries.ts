@@ -47,13 +47,13 @@ export const keys = {
   generation: (id: string) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
   adminOverview: ["admin", "overview"] as const,
+  adminGenerations: (slug: string, params: Record<string, unknown>) =>
+    ["admin", "generations", slug, params] as const,
   adminInvites: ["admin", "invites"] as const,
   adminJobs: ["admin", "jobs"] as const,
-  adminJobHistory: ["admin", "jobs", "history"] as const,
   adminEngine: ["admin", "engine"] as const,
   maintenance: ["maintenance"] as const,
   adminMaintenance: ["admin", "maintenance"] as const,
-  adminSystem: ["admin", "system"] as const,
 };
 
 /** The slug this tab is looking at, as a React value. */
@@ -497,15 +497,18 @@ export function useDeleteWorkspace() {
 
 /* Saved variants -------------------------------------------------------------------- */
 
-export function useGenerations(params: {
-  concept?: string;
-  q?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export function useGenerations(
+  params: {
+    concept?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  },
+  workspace?: string | null,
+) {
   return useQuery({
-    queryKey: keys.generations(params),
-    queryFn: () => api.generations(params),
+    queryKey: scoped(keys.generations(params), workspace),
+    queryFn: () => api.generations(params, workspace),
     placeholderData: (previous) => previous,
   });
 }
@@ -518,11 +521,15 @@ export function useGeneration(id: string | null) {
   });
 }
 
-export function useDeleteGeneration() {
+/** Deletes one of your own exercises in `workspace`, and the count its subject shows. */
+export function useDeleteGeneration(workspace?: string | null) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.deleteGeneration(id),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["generations"] }),
+    mutationFn: (id: string) => api.deleteGeneration(id, workspace),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["generations"] });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+    },
   });
 }
 
@@ -530,6 +537,17 @@ export function useDeleteGeneration() {
 
 export function useAdminOverview() {
   return useQuery({ queryKey: keys.adminOverview, queryFn: api.adminOverview });
+}
+
+export function useAdminWorkspaceGenerations(
+  slug: string,
+  params: { author?: number; q?: string; limit?: number; offset?: number },
+) {
+  return useQuery({
+    queryKey: keys.adminGenerations(slug, params),
+    queryFn: () => api.adminWorkspaceGenerations(slug, params),
+    placeholderData: (previous) => previous,
+  });
 }
 
 export function useAdminJobs() {
@@ -551,14 +569,6 @@ export function useAdminCancelJob() {
   });
 }
 
-export function useAdminJobHistory() {
-  return useQuery({
-    queryKey: keys.adminJobHistory,
-    queryFn: () => api.adminJobHistory(50),
-    refetchInterval: 10_000,
-  });
-}
-
 /**
  * The engine's reading, polled: residency and the tunnel change on their own, and a model
  * being pulled moves every second.
@@ -577,10 +587,6 @@ export function useAdminEngine() {
   });
 }
 
-export function useAdminSystem() {
-  return useQuery({ queryKey: keys.adminSystem, queryFn: api.adminSystem });
-}
-
 function useEngineMutation<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) {
   const client = useQueryClient();
   return useMutation({
@@ -596,7 +602,6 @@ function useEngineMutation<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>
 export function useEngineActions() {
   return {
     release: useEngineMutation(() => api.adminReleaseGpu()),
-    pull: useEngineMutation((model: string) => api.adminPullModel(model)),
     remove: useEngineMutation((model: string) => api.adminDeleteModel(model)),
     invalidateAll: useEngineMutation(() => api.adminInvalidateContexts()),
     invalidate: useEngineMutation((slug: string) => api.adminInvalidateContext(slug)),

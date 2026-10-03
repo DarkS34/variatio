@@ -23,6 +23,23 @@ WORKSPACES_DIR = Path(os.environ.get("WORKSPACES_DIR", PROJECT_ROOT / "workspace
 LOGS_DIR = Path(os.environ.get("VARIATIO_LOGS_DIR", PROJECT_ROOT / "logs"))
 
 
+def cerebras_budget_path() -> Path:
+    """Return where the Cerebras ledger lives: `CEREBRAS_BUDGET_PATH`, else the user's state.
+
+    Outside the tree on purpose. Cerebras applies its rate limits to the ORGANISATION, not
+    to the key, so every installation of one account on this machine has to count against
+    one ledger: one per tree lets each of them spend the whole quota. Sharing is therefore
+    the default, and the variable exists for an installation whose key belongs to another
+    account — the cheap mistake is the shared one, which only waits longer than it had to.
+    """
+    explicit = os.environ.get("CEREBRAS_BUDGET_PATH", "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+    state_home = os.environ.get("XDG_STATE_HOME", "").strip()
+    base = Path(state_home) if state_home else Path.home() / ".local" / "state"
+    return base / "variatio" / "cerebras_budget.json"
+
+
 def workspace_logs_dir(slug: str) -> Path:
     """Return the log directory of the workspace called `slug`, creating it if needed.
 

@@ -1291,7 +1291,7 @@ function Generate() {
           are and which one is worth avoiding is the model's business. Some models answer the
           same whatever level you set: those draw no bar, and which ones they are is declared
           by whoever administers the installation too. The model is stored with every exercise,
-          so in «{t("menu.savedVariants")}» you can compare two statements knowing what wrote
+          so in «{t("nav.mySubjects")}» you can compare two statements knowing what wrote
           each.
         </Paragraph>
       </Block>
@@ -1328,7 +1328,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Every exercise is saved into "{t("menu.savedVariants")}"{" "}
+                  Every exercise is saved inside its subject, in "{t("nav.mySubjects")}",{" "}
                   <em>the moment it validates</em>, with its whole commission. A batch cancelled
                   at the third keeps three.
                 </>
@@ -1384,7 +1384,7 @@ function Generate() {
               head: <>"{t("generations.moreLikeThis")}"</>,
               body: (
                 <>
-                  It is in "{t("nav.myVariants")}" and recovers the commission of one
+                  It is in "{t("nav.mySubjects")}", under each exercise, and recovers the commission of one
                   particular exercise, even from another day.
                 </>
               ),
@@ -1532,8 +1532,8 @@ function Account() {
         <p>
           Everything that is yours and is not part of the chain lives in "{t("account.title")}",
           behind the account icon at the top right — the same menu you got here from, and where
-          "{t("admin.title")}" lives too. "{t("nav.myVariants")}" has a button of its own right
-          beside it, because it is opened daily.
+          "{t("admin.title")}" lives too. The same menu leads straight to
+          "{t("nav.mySubjects")}", because it is opened daily.
         </p>
       </SectionHead>
 
@@ -1550,9 +1550,9 @@ function Account() {
             body: "Which subjects you are in and with what role, and where to enter another from. Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
           },
           {
-            key: "variantes",
-            head: t("tabs.variants"),
-            body: 'Everything YOU have generated, with the commission that produced it: it can be searched, relaunched as "more like this one", and deleted. It is private: even in a subject you share with other people, each of you sees only their own.',
+            key: "ejercicios",
+            head: t("generations.title"),
+            body: 'Under each subject, a fold with everything YOU have generated in it, with the commission that produced it: it can be searched, downloaded, relaunched as "more like this one", and deleted. The subject in use opens already unfolded. "More like this one" in another subject enters it first, because generating always happens in the subject in use. It is private: even in a subject you share with other people, each of you sees only their own.',
           },
         ]}
       />
@@ -1634,11 +1634,10 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          The installation seen from outside, in four tabs: "{t("admin.tab.accounts")}"
-          (invitations, roles, unlocks), "
-          {t("admin.tab.workspaces")}" (disk usage, export, delete), "{t("admin.tab.engine")}"
-          and "{t("admin.tab.config")}" (every setting, each with what it will
-          invalidate on saving). It has a section of its own next door: "
+          The installation seen from outside, in four tabs: "{t("admin.tab.engine")}", "
+          {t("admin.tab.config")}" (every setting, each with what it will invalidate on
+          saving), "{t("admin.tab.accounts")}" (invitations, roles, unlocks) and "
+          {t("admin.tab.workspaces")}" (disk usage, export, delete). It has a section of its own next door: "
           {t("guide.sec.admin")}".
         </Paragraph>
       </Block>
@@ -1687,7 +1686,8 @@ function Admin() {
           chooses their username and their password.
         </Paragraph>
         <Paragraph>
-          Each invitation is created under the terms you choose: an <strong>alias</strong> only
+          Each invitation is created with «{t("acc.invite.open")}», which opens a window with
+          the terms you choose: an <strong>alias</strong> only
           you see — whoever opens the link sees the subject, the permission and the date, never
           the alias —, the subject and permission it carries, or none, and the day and time it
           expires, with no upper limit. «{t("acc.invite.count")}» creates several at once with
@@ -1776,9 +1776,10 @@ function Admin() {
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
           Every instance of the installation with its members, its exercises and the state of its
-          chain. What each one weighs is broken down by role — {t("ws.disk.raw")},{" "}
-          {t("ws.disk.instance")}, {t("ws.disk.cache")} and {t("ws.disk.history")} — which is the
-          only way to see that the expensive part is almost never the artifacts.
+          chain. The exercise count opens every exercise generated in that subject, by any
+          account and with its author, to read: it is the only place anybody sees exercises
+          that are not their own. Deleting them or generating more like them is still up to
+          whoever wrote them, from «{t("nav.mySubjects")}».
         </Paragraph>
         <Rows
           items={[
@@ -1808,21 +1809,38 @@ function Admin() {
 
       <Block title={t("admin.tab.engine")}>
         <Paragraph>
-          It is one engine with as many halves as the engine has. With a single one it is a panel
-          about one machine and carries no headings at all: "{t("eng.half.local")}" with no "
-          {t("eng.half.remote")}" beside it divides nothing. With the engine split, three ruled
-          sections appear.
+          At the top sits a <strong>board</strong> with one cell per part of the engine, and each
+          cell says in a word how that part is doing: the grey square asks for nothing, the black
+          one is working, the blue one needs you, the red one means calls are failing and the
+          hollow one is not there yet. Pressing a cell opens its screen, and the tab opens by
+          itself on the one that needs you, when one does. "{t("eng.half.remote")}" only appears
+          with the hybrid engine.
         </Paragraph>
         <Rows
           items={[
+            {
+              key: "general",
+              head: t("eng.board.general"),
+              body: (
+                <>
+                  First, <strong>which engine the installation runs</strong>: "
+                  {t("eng.kind.local")}", with every model on your own GPU, or "
+                  {t("eng.kind.hybrid")}", which sends Cerebras the models Cerebras serves. Under
+                  it, the installation's whole queue, across every subject — what is running,
+                  what is waiting and whose each one is —; the SSH tunnel to the GPU machine,
+                  raised and stopped from here; and the contexts the API keeps in memory,
+                  invalidated from here.
+                </>
+              ),
+            },
             {
               key: "local",
               head: t("eng.half.local"),
               body: (
                 <>
-                  {t("eng.half.localNote")}. The SSH tunnel to the GPU machine, raised and
-                  stopped from here and keeping ssh's last lines of error; the resident models
-                  and how they share the VRAM; and the ones on disk, with their downloads.
+                  The GPU: the resident models, how they share the VRAM, how long until they are
+                  released for lack of jobs and the button that releases them now. And the models
+                  on that machine's disk, which can be deleted when no setting names them.
                 </>
               ),
             },
@@ -1831,31 +1849,30 @@ function Admin() {
               head: t("eng.half.remote"),
               body: (
                 <>
-                  {t("eng.half.remoteNote")}: meters per minute and per day, and under them the
-                  breakdown of what was spent per phase, which downloads as CSV.
-                </>
-              ),
-            },
-            {
-              key: "process",
-              head: t("eng.half.process"),
-              body: (
-                <>
-                  {t("eng.half.processNote")}. The installation's whole queue, across every
-                  subject: what is running, what is waiting, and whose each one is.
+                  Nothing to load; what limits it is the quota. Meters per minute and per day, and
+                  under them the breakdown of what was spent per phase, which downloads as CSV.
+                  Beside them, which models are sent to Cerebras — ticked from the list of the
+                  ones there are, never typed — and the four ceilings, under the same names and
+                  in the same order as the meters they bound, and never above the account's
+                  maximum.
                 </>
               ),
             },
           ]}
         />
+        <Paragraph>
+          There is one save bar for the whole tab, and the cell of a part with pending changes
+          counts them, so they are not left behind when moving to another. What the panel cannot
+          change — the environment fixes it, or it is edited in "config.json" — is not shown.
+        </Paragraph>
         <Detail title="Three things the panel refuses to do">
           <p>
-            <strong>Delete a model the configuration names.</strong> It tells you which settings
-            ask for it: change those first.
+            <strong>Delete a model the configuration names.</strong> Change the settings that
+            ask for it first.
           </p>
           <p>
-            <strong>Put a download in the queue.</strong> Pulling a model is network and disk,
-            never the GPU, so it runs beside the queue rather than behind a two-hour build.
+            <strong>Download models.</strong> A build downloads the ones it lacks before it
+            starts; for anything else they are downloaded on the GPU machine.
           </p>
           <p>
             <strong>Release the GPU or invalidate a context while a job is running.</strong> That
@@ -1966,9 +1983,10 @@ const problems = (
           job hanging for hours with no explanation is worse than refusing it.
         </p>
         <p>
-          There are three ways forward: wait, switch the engine to "ollama", or raise the ceiling
-          if the account really does allow more. All three are done in Administration → Engine,
-          where the settings sit in the right-hand column beside the meters that explain them.
+          There are three ways forward: wait, switch the engine to "{t("eng.kind.local")}", or
+          raise the ceiling if it is not yet at the account's maximum. All three are done in
+          Administration → Engine: the engine is chosen under "{t("eng.board.general")}" and the
+          ceilings under "{t("eng.half.remote")}", beside the meters that explain them.
         </p>
         <p>
           There is a third case that is not about a spent quota but about size: a call needing
@@ -1988,9 +2006,10 @@ const problems = (
     question: `A model shows as "${t("model.notInstalled")}"`,
     answer: (
       <p>
-        Only the jobs that use that model fail; the rest of the chain works. It is downloaded
-        from Administration → Engine, and the download runs beside the queue rather than inside
-        it: it does not have to wait for a two-hour build to finish.
+        Only the jobs that use that model fail; the rest of the chain works. A build downloads
+        the models it lacks before it starts; for any other job it has to be downloaded on the
+        GPU machine with "ollama pull". Administration → Engine says which one is missing and
+        which settings ask for it.
       </p>
     ),
   },

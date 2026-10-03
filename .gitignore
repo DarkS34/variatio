@@ -12,7 +12,5 @@ web/tsconfig.tsbuildinfo
 .pytest_cache
 
 /workspaces/
-/.cerebras_budget.json
-/.cerebras_budget.json.lock
 /.maintenance.json
 /.invite_link_key

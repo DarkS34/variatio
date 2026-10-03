@@ -496,6 +496,8 @@ export interface WorkspaceRow {
   active: boolean;
   /** Listed only because the account administers the installation, not by membership. */
   as_admin: boolean;
+  /** This account's own exercises there. Only the listing sends it, and an older API not even that. */
+  exercises?: number;
 }
 
 export interface WorkspaceListing {
@@ -569,6 +571,15 @@ export interface GenerationListing {
   total: number;
   limit: number;
   offset: number;
+}
+
+/** Every account's exercises of one workspace, as the administrator's panel reads them. */
+export interface AdminGenerationListing extends GenerationListing {
+  workspace: string;
+  /** Every account with exercises there that still exists, for the filter. */
+  authors: { id: number; username: string; name: string | null }[];
+  /** The workspace's profile, which draws the rows: the administrator need not be a member. */
+  profile: ExemplarsProfile | null;
 }
 
 export interface GenerationDetail {
@@ -752,16 +763,6 @@ export interface AdminEngine {
   tunnel: TunnelStatus;
   /** Absent when the API is older than this client: version skew must not blank the tab. */
   cerebras?: CerebrasState;
-}
-
-export interface AdminSystem {
-  database: {
-    location: string;
-    revision: string | null;
-    head: string | null;
-    tables: Record<string, number>;
-  };
-  process: { started_at: number; uptime_seconds: number; log_level: string };
 }
 
 export interface InvitePreview {

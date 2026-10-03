@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import type { CerebrasModel, CerebrasState, CerebrasWindow } from "@/lib/types";
+import type { CerebrasModel, CerebrasState } from "@/lib/types";
+import { cerebrasState } from "@/features/admin/engineState";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -27,22 +28,7 @@ import { useT } from "@/lib/i18n";
  */
 export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
   const { t } = useT();
-  const waiting = cerebras.inflight?.waiting_until != null;
-  const blocked = cerebras.usage.some(
-    (entry) => entry.windows.day.requests_remaining <= 0 || entry.windows.day.tokens_remaining <= 0,
-  );
-
-  // Only ever rendered while the engine routes here, so there is no "motor inactivo" state
-  // to name: with the plain `ollama` engine the whole half is gone from the tab.
-  const state = blocked
-    ? { label: t("cere.state.exhausted"), tone: "danger" as const }
-    : waiting
-      ? { label: t("cere.state.waiting"), tone: "attention" as const }
-      : cerebras.inflight
-        ? { label: t("cere.state.running"), tone: "settled" as const }
-        : !cerebras.configured
-          ? { label: t("cere.state.noKey"), tone: "outline" as const }
-          : { label: t("cere.state.idle"), tone: "settled" as const };
+  const state = cerebrasState(cerebras);
 
   return (
     <Card>
@@ -50,7 +36,7 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
         <div className="flex flex-wrap items-center gap-2">
           <Cloud className="size-4 text-muted-foreground" />
           <CardTitle>Cerebras</CardTitle>
-          <Badge variant={state.tone}>{state.label}</Badge>
+          <Badge variant={state.tone}>{t(state.labelKey)}</Badge>
           <InfoHint label={t("cere.budgetHint")}>
             {t("cere.budgetHint.body1")}
             <br />
@@ -334,4 +320,3 @@ function hours(seconds: number): string {
   return `${(seconds / 3_600).toFixed(1).replace(".", ",")} h`;
 }
 
-export type { CerebrasWindow };

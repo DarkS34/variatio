@@ -61,9 +61,11 @@ export const MODEL_FAMILIES: ModelFamily[] = [
     label: "Gemma 4 (Cerebras)", // i18n-exempt
     url: "https://huggingface.co/google/gemma-4-31B-it",
     speed: "fast",
-    // Measured: on this family the three levels answer the same, which is why it is the
-    // one name "Modelos generadores" ships in `generation.fixed_effort`. The switch stays
-    // there — reasoning on or off is a real choice, and it is what the run records.
+    // Measured: on this family the three levels answer the same, which is why it was the
+    // one name "Modelos generadores" shipped in `generation.fixed_effort` until Cerebras
+    // stopped listing the model (2026-10-03). The family stays declared: exercises it
+    // wrote still carry its name. The switch stays there too — reasoning on or off is a
+    // real choice, and it is what the run records.
     levels: ["low", "medium", "high"],
   },
   /*

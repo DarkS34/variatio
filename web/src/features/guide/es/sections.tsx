@@ -1281,7 +1281,7 @@ function Generate() {
           cuál conviene evitar es cosa del modelo. Hay modelos que contestan igual pongas el
           nivel que pongas: en esos no se dibuja la barra, y quién es quién también lo declara
           quien administra. El modelo queda guardado con cada ejercicio, así que en
-          «{t("menu.savedVariants")}» puedes comparar dos enunciados sabiendo qué escribió
+          «{t("nav.mySubjects")}» puedes comparar dos enunciados sabiendo qué escribió
           cada uno.
         </Paragraph>
       </Block>
@@ -1318,7 +1318,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Cada ejercicio se guarda en «{t("menu.savedVariants")}» <em>en cuanto valida</em>,
+                  Cada ejercicio se guarda en su asignatura, en «{t("nav.mySubjects")}», <em>en cuanto valida</em>,
                   con su encargo entero. Un lote cancelado a la tercera conserva tres.
                 </>
               ),
@@ -1373,7 +1373,7 @@ function Generate() {
               head: <>«{t("generations.moreLikeThis")}»</>,
               body: (
                 <>
-                  Está en «{t("nav.myVariants")}» y recupera el encargo de un ejercicio
+                  Está en «{t("nav.mySubjects")}», bajo cada ejercicio, y recupera el encargo de un ejercicio
                   concreto, aunque sea de otro día.
                 </>
               ),
@@ -1521,8 +1521,8 @@ function Account() {
         <p>
           Todo lo que es tuyo y no es parte de la cadena vive en «{t("account.title")}», detrás
           del icono de cuenta de arriba a la derecha — el mismo menú desde el que has llegado
-          aquí, y donde está también «{t("admin.title")}». «{t("nav.myVariants")}» tiene su
-          propio botón justo al lado, porque se abre a diario.
+          aquí, y donde está también «{t("admin.title")}». El mismo menú lleva directamente a
+          «{t("nav.mySubjects")}», porque se abre a diario.
         </p>
       </SectionHead>
 
@@ -1539,9 +1539,9 @@ function Account() {
             body: "En qué asignaturas estás y con qué papel, y desde cuál entrar a otra. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellas es eliminar una tuya — de las que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearla y solo lo cambia quien administra.",
           },
           {
-            key: "variantes",
-            head: t("tabs.variants"),
-            body: "Todo lo que TÚ has generado, con el encargo que lo produjo: se puede buscar, relanzar «más como este» y borrar. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo.",
+            key: "ejercicios",
+            head: t("generations.title"),
+            body: "Bajo cada asignatura, un desplegable con todo lo que TÚ has generado en ella, con el encargo que lo produjo: se puede buscar, descargar, relanzar «más como este» y borrar. La asignatura en uso se abre ya desplegada. «Más como este» en otra asignatura entra primero en ella, porque se genera siempre en la asignatura en uso. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo.",
           },
         ]}
       />
@@ -1622,11 +1622,11 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">solo administradores</Badge>
         <Paragraph>
-          La instalación vista desde fuera, en cuatro pestañas: «{t("admin.tab.accounts")}»
-          (invitaciones, papeles, desbloqueos), «
-          {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar), «
-          {t("admin.tab.engine")}» y «{t("admin.tab.config")}» (todos los ajustes, cada uno con
-          lo que invalidará al guardarlo). Tiene sección propia aquí al lado: «{t("guide.sec.admin")}».
+          La instalación vista desde fuera, en cuatro pestañas: «{t("admin.tab.engine")}», «
+          {t("admin.tab.config")}» (todos los ajustes, cada uno con lo que invalidará al
+          guardarlo), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos) y «
+          {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar). Tiene sección propia
+          aquí al lado: «{t("guide.sec.admin")}».
         </Paragraph>
       </Block>
 
@@ -1672,7 +1672,8 @@ function Admin() {
           deja en un sitio compartido. Quien lo abre elige su usuario y su contraseña.
         </Paragraph>
         <Paragraph>
-          Cada invitación se crea con las condiciones que elijas: un <strong>alias</strong> que
+          Cada invitación se crea con «{t("acc.invite.open")}», que abre una ventana con las
+          condiciones que elijas: un <strong>alias</strong> que
           solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el
           alias—, la asignatura y el permiso que trae, o ninguna, y el día y la hora en que
           caduca, sin máximo. Con «{t("acc.invite.count")}» se crean varias de una vez, con el
@@ -1761,9 +1762,10 @@ function Admin() {
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
           Todas las instancias de la instalación con sus miembros, sus ejercicios y el estado de
-          su cadena. Lo que pesa cada una va repartido por papel —{t("ws.disk.raw")},{" "}
-          {t("ws.disk.instance")}, {t("ws.disk.cache")} e {t("ws.disk.history")}—, que es la
-          única forma de ver que lo caro casi nunca son los artefactos.
+          su cadena. El número de ejercicios abre todos los generados en esa asignatura, de
+          cualquier cuenta y con su autor, para leerlos: es el único sitio donde se ven
+          ejercicios ajenos. Borrarlos o generar más como ellos sigue siendo cosa de quien los
+          escribió, desde «{t("nav.mySubjects")}».
         </Paragraph>
         <Rows
           items={[
@@ -1793,21 +1795,39 @@ function Admin() {
 
       <Block title={t("admin.tab.engine")}>
         <Paragraph>
-          Es un motor con tantas mitades como tenga. Con uno solo es un panel sobre una máquina y
-          no lleva ni títulos: «{t("eng.half.local")}» sin un «{t("eng.half.remote")}» al lado no
-          divide nada. Con el motor partido aparecen tres secciones con su raya.
+          Arriba hay un <strong>tablero</strong> con una casilla por cada parte del motor, y cada
+          casilla dice en una palabra cómo está esa parte: el cuadrado gris es que no pide nada,
+          el negro que está trabajando, el azul que te necesita, el rojo que las llamadas están
+          fallando y el hueco que todavía no existe. Pulsar una casilla abre su pantalla, y la
+          pestaña se abre sola por la que te necesite, si hay alguna. «{t("eng.half.remote")}»
+          solo aparece con el motor híbrido.
         </Paragraph>
         <Rows
           items={[
+            {
+              key: "general",
+              head: t("eng.board.general"),
+              body: (
+                <>
+                  Lo primero, <strong>qué motor usa la instalación</strong>: «
+                  {t("eng.kind.local")}», con todos los modelos en la GPU propia, o «
+                  {t("eng.kind.hybrid")}», que manda a Cerebras los modelos que Cerebras sirve.
+                  Debajo, la cola entera de la instalación, de todas las asignaturas —lo que se
+                  está ejecutando, lo que espera y de quién es cada cosa—; el túnel SSH hasta la
+                  máquina de la GPU, que se levanta y se para desde aquí; y los contextos que la
+                  API guarda en memoria, que se invalidan desde aquí.
+                </>
+              ),
+            },
             {
               key: "local",
               head: t("eng.half.local"),
               body: (
                 <>
-                  {t("eng.half.localNote")}. El túnel SSH hasta la máquina de la GPU, que se
-                  levanta y se para desde aquí y guarda las últimas líneas de error de ssh; los
-                  modelos residentes y cómo se reparten la VRAM; y los que hay en disco, con sus
-                  descargas.
+                  La GPU: los modelos residentes, cómo se reparten la VRAM, cuánto les falta para
+                  liberarse solos por falta de trabajos y el botón que los libera ya. Y los
+                  modelos que hay en el disco de esa máquina, que se pueden borrar si ningún
+                  ajuste los nombra.
                 </>
               ),
             },
@@ -1816,32 +1836,29 @@ function Admin() {
               head: t("eng.half.remote"),
               body: (
                 <>
-                  {t("eng.half.remoteNote")}: medidores por minuto y por día, y bajo ellos el
-                  desglose de lo gastado por fase, que se descarga en CSV.
-                </>
-              ),
-            },
-            {
-              key: "process",
-              head: t("eng.half.process"),
-              body: (
-                <>
-                  {t("eng.half.processNote")}. La cola entera de la instalación, de todas las
-                  asignaturas: lo que se está ejecutando, lo que espera y de quién es cada cosa.
+                  Nada que cargar; lo que limita es la cuota. Medidores por minuto y por día, y
+                  bajo ellos el desglose de lo gastado por fase, que se descarga en CSV. Al lado,
+                  qué modelos se mandan a Cerebras —se marcan de la lista de los que hay, no se
+                  escriben— y los cuatro topes, con el mismo nombre y en el mismo orden que los
+                  medidores que acotan y sin poder pasar del máximo de la cuenta.
                 </>
               ),
             },
           ]}
         />
+        <Paragraph>
+          Hay una sola barra de guardar para toda la pestaña, y la casilla de una parte con
+          cambios pendientes los cuenta, así que no se quedan atrás al pasar a otra. Lo que el
+          panel no puede cambiar —lo fija el entorno, o se edita en «config.json»— no aparece.
+        </Paragraph>
         <Detail title="Tres cosas que el panel se niega a hacer">
           <p>
-            <strong>Borrar un modelo que la configuración nombra.</strong> Te dice qué ajustes lo
-            piden: cámbialos antes.
+            <strong>Borrar un modelo que la configuración nombra.</strong> Cambia antes los
+            ajustes que lo piden.
           </p>
           <p>
-            <strong>Meter una descarga en la cola.</strong> Descargar un modelo es red y disco,
-            nunca la GPU, así que corre al lado de la cola y no detrás de una construcción de dos
-            horas.
+            <strong>Descargar modelos.</strong> Una construcción descarga sola los que le falten
+            antes de empezar; para lo demás se descargan en la máquina de la GPU.
           </p>
           <p>
             <strong>Liberar la GPU o invalidar un contexto con un trabajo en curso.</strong> Sería
@@ -1951,9 +1968,10 @@ const problems = (
           trabajo colgado horas sin explicación es peor que rechazarlo.
         </p>
         <p>
-          Las salidas son tres: esperar, cambiar el motor a «ollama», o subir el techo si la
-          cuenta de verdad da para más. Las tres se hacen en Administración → Motor, donde los
-          ajustes están en la columna de la derecha, al lado de los medidores que los explican.
+          Las salidas son tres: esperar, cambiar el motor a «{t("eng.kind.local")}», o subir el
+          techo si todavía no está en el máximo de la cuenta. Las tres se hacen en Administración
+          → Motor: el motor se elige en «{t("eng.board.general")}» y los techos en «
+          {t("eng.half.remote")}», al lado de los medidores que los explican.
         </p>
         <p>
           Hay un tercer caso que no es de cuota gastada sino de tamaño: una llamada que necesita
@@ -1972,9 +1990,10 @@ const problems = (
     question: `Un modelo aparece como «${t("model.notInstalled")}»`,
     answer: (
       <p>
-        Solo fallan los trabajos que usan ese modelo; el resto de la cadena funciona. Se descarga
-        desde Administración → Motor, y la descarga corre al lado de la cola, no dentro: no tiene
-        que esperar a que termine una construcción de dos horas.
+        Solo fallan los trabajos que usan ese modelo; el resto de la cadena funciona. Una
+        construcción descarga sola los modelos que le falten antes de empezar; para cualquier
+        otro trabajo hay que descargarlo en la máquina de la GPU con «ollama pull». Administración
+        → Motor dice cuál falta y qué ajustes lo piden.
       </p>
     ),
   },

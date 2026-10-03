@@ -135,7 +135,7 @@ def sandbox(tmp_path):
 def test_update_writes_into_the_active_profile_and_preserves_the_other(sandbox):
     vg_settings.update({"models.phases.kg_extract": "qwen-mio"})
     vg_settings.update({"engine.name": "cerebras+ollama"})
-    assert vg_settings.values()["models.phases.kg_extract"] == "gemma-4-31b"
+    assert vg_settings.values()["models.phases.kg_extract"] == "qwen-3.8-27b"
     vg_settings.update({"models.phases.kg_extract": "gemma-mio"})
     vg_settings.update({"engine.name": "ollama"})
     assert vg_settings.values()["models.phases.kg_extract"] == "qwen-mio"
@@ -156,7 +156,7 @@ def test_reset_removes_the_key_from_the_active_profile_only(sandbox):
     vg_settings.update({"engine.name": "cerebras+ollama"})
     vg_settings.update({"models.phases.kg_extract": "gemma-mio"})
     vg_settings.reset(["models.phases.kg_extract"])
-    assert vg_settings.values()["models.phases.kg_extract"] == "gemma-4-31b"
+    assert vg_settings.values()["models.phases.kg_extract"] == "qwen-3.8-27b"
     vg_settings.update({"engine.name": "ollama"})
     assert vg_settings.values()["models.phases.kg_extract"] == "qwen-mio"
 
@@ -164,5 +164,5 @@ def test_reset_removes_the_key_from_the_active_profile_only(sandbox):
 def test_the_snapshot_default_follows_the_active_engine(sandbox):
     vg_settings.update({"engine.name": "cerebras+ollama"})
     row = next(row for row in vg_settings.snapshot() if row["key"] == "models.phases.kg_extract")
-    assert row["default"] == "gemma-4-31b"
+    assert row["default"] == "qwen-3.8-27b"
     assert row["scope"] == "engine"

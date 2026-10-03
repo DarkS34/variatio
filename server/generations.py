@@ -2,7 +2,8 @@
 
 `<workspace>/generations/user_<id>/<id>.json`. The author's id names the directory, so
 privacy is where a reader looks rather than a filter it applies: every reader here takes an
-account and opens that account's directory alone. The id and never the username, because ids
+account and opens that account's directory alone, except `list_all`, which only the
+installation administrator's panel calls. The id and never the username, because ids
 are not reused — a new account taking a deleted one's name must not inherit its exercises.
 The `user_` prefix is for whoever lists the tree by hand.
 
@@ -116,15 +117,49 @@ def list_for(
     offset: int = 0,
 ) -> tuple[list[dict], int]:
     """Return one page of this account's exercises, newest first, and the total matched."""
-    records = _newest_first(ws, user_id)
-    if item_type:
-        records = [r for r in records if item_type_of(r) == item_type]
-    if concept:
-        records = [r for r in records if concept in concepts_of(r)]
-    if query:
-        needle = query.lower()
-        records = [r for r in records if needle in _searchable(r)]
+    records = [
+        r for r in _newest_first(ws, user_id) if _matches(r, concept, item_type, query)
+    ]
     return records[offset : offset + limit], len(records)
+
+
+def list_all(
+    ws: Workspace,
+    author: int | None = None,
+    query: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[tuple[int | None, dict]], int]:
+    """Return one page of every account's exercises, newest first, each with its author's id.
+
+    The administrator's read and nobody else's: the orphaned directory's author is None.
+    `author` narrows it to one account's directory.
+    """
+    pairs = [
+        (user_id, record)
+        for user_id in authors(ws)
+        if author is None or user_id == author
+        for record in _newest_first(ws, user_id)
+        if _matches(record, None, None, query)
+    ]
+    pairs.sort(key=lambda pair: _order(pair[1]), reverse=True)
+    return pairs[offset : offset + limit], len(pairs)
+
+
+def authors(ws: Workspace) -> list[int | None]:
+    """Return the ids of every account with a directory here, None for the orphaned one."""
+    if not ws.generations_dir.is_dir():
+        return []
+    found: list[int | None] = []
+    for directory in sorted(ws.generations_dir.iterdir()):
+        if not directory.is_dir():
+            continue
+        match = _AUTHOR_DIR.fullmatch(directory.name)
+        if match:
+            found.append(int(match.group(1)))
+        elif directory.name == ORPHANED:
+            found.append(None)
+    return found
 
 
 def get(ws: Workspace, user_id: int, generation_id: str) -> dict | None:
@@ -167,6 +202,14 @@ def count(ws: Workspace) -> int:
     return sum(1 for _ in ws.generations_dir.glob("*/*.json"))
 
 
+def count_for(ws: Workspace, user_id: int) -> int:
+    """Count one account's own exercises in this workspace."""
+    directory = author_dir(ws, user_id)
+    if not directory.is_dir():
+        return 0
+    return sum(1 for _ in directory.glob("*.json"))
+
+
 def count_by_author(workspaces: Iterable[Workspace]) -> dict[int, int]:
     """Count each account's exercises across these workspaces, leaving out the orphaned."""
     counts: dict[int, int] = {}
@@ -181,17 +224,30 @@ def count_by_author(workspaces: Iterable[Workspace]) -> dict[int, int]:
     return counts
 
 
-def _newest_first(ws: Workspace, user_id: int) -> list[dict]:
+def _newest_first(ws: Workspace, user_id: int | None) -> list[dict]:
     """Read every record of one account, newest first and in batch order within a second."""
     directory = author_dir(ws, user_id)
     if not directory.is_dir():
         return []
     records = [r for r in (_read(path) for path in directory.glob("*.json")) if r is not None]
-    records.sort(
-        key=lambda r: (str(r.get("created_at") or ""), (r.get("job") or {}).get("index") or 0),
-        reverse=True,
-    )
+    records.sort(key=_order, reverse=True)
     return records
+
+
+def _order(record: dict) -> tuple[str, int]:
+    """Return the key that sorts records by date, and by batch position within a second."""
+    return str(record.get("created_at") or ""), (record.get("job") or {}).get("index") or 0
+
+
+def _matches(
+    record: dict, concept: str | None, item_type: str | None, query: str | None
+) -> bool:
+    """Say whether a record is of this modality, practises this concept and holds this text."""
+    if item_type and item_type_of(record) != item_type:
+        return False
+    if concept and concept not in concepts_of(record):
+        return False
+    return not query or query.lower() in _searchable(record)
 
 
 def _read(path: Path) -> dict | None:

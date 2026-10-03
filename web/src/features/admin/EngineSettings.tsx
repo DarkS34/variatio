@@ -1,23 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
-import { Save } from "lucide-react";
+import { Save, Undo2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { FormError } from "@/features/auth/AuthLayout";
-import { DiffSummary, SettingRow, useConfigDraft } from "@/features/admin/SettingFields";
+import {
+  canReset,
+  DiffSummary,
+  formatValue,
+  SettingRow,
+  useConfigDraft,
+} from "@/features/admin/SettingFields";
 import { api } from "@/lib/api";
 import { useT, type Key } from "@/lib/i18n";
 import type { ConfigPayload, ConfigSetting } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 /* The engine's own settings, on the engine's own tab, so each sits beside the meter that
-   says what it does: the local ones beside the GPU, the Cerebras ones beside the quota.
-   That is what the two columns of this tab encode — the left one measures, the right sets.
+   says what it does: the choice of engine on "General", the local ones beside the GPU, the
+   Cerebras ones beside the quota.
 
-   Addressed by KEY and not by group: the registry's "Motor" group spans both halves, so
+   Addressed by KEY and not by group: the registry's "Motor" group spans every screen, so
    splitting by group puts the remote quota's ceilings under the local GPU. */
+const ENGINE_KEYS = ["engine.name"];
+
 export const LOCAL_KEYS = [
-  "engine.name",
   "engine.ollama_host",
   "engine.idle_unload_seconds",
   "engine.idle_unload_poll_seconds",
@@ -60,6 +69,7 @@ export function useEngineSettings() {
     loading: query.isLoading,
     payload,
     stored,
+    engine: pick(ENGINE_KEYS),
     local: pick(LOCAL_KEYS),
     remote: pick(REMOTE_KEYS),
     tunnel: (payload?.settings ?? []).filter((s) => s.group === TUNNEL_GROUP),
@@ -69,7 +79,12 @@ export function useEngineSettings() {
 /* A settings card is drawn as a CONTROL and never as one more report: the ink rule down its
    leading edge is what separates it, at a glance, from the measuring cards it sits beside —
    the same distinction the screens elsewhere make by not putting a control and a report on
-   one line. */
+   one line.
+
+   WHAT THE PANEL CANNOT CHANGE IS NOT DRAWN AT ALL. A value the environment fixes, or one
+   read from the file at start-up, is nothing an administrator can act on from here: on an
+   installation configured from `.env` it was seven rows of disabled fields. A card left
+   with nothing to set is not drawn either. */
 export function SettingsPanel({
   titleKey,
   noteKey,
@@ -83,7 +98,9 @@ export function SettingsPanel({
 }) {
   const { t } = useT();
   if (config.loading) return <Skeleton className="h-64" />;
-  if (settings.length === 0) return null;
+  const open = settings.filter(changeable);
+  if (open.length === 0) return null;
+  const ceilings = open.filter((setting) => setting.key in CEILINGS);
 
   return (
     <Card className="border-l-2 border-l-primary">
@@ -92,18 +109,112 @@ export function SettingsPanel({
         <CardDescription>{t(noteKey)}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {settings.map((setting) => (
-          <SettingRow
-            key={setting.key}
-            setting={setting}
-            value={config.valueOf(setting)}
-            onChange={(next) => config.change(setting.key, next)}
-            onReset={() => config.reset.mutate(setting.key)}
-            models={config.payload?.models ?? null}
-          />
-        ))}
+        {open.map((setting) =>
+          setting.key in CEILINGS ? (
+            setting === ceilings[0] ? (
+              <Ceilings key="ceilings" settings={ceilings} config={config} />
+            ) : null
+          ) : (
+            <SettingRow
+              key={setting.key}
+              setting={setting}
+              value={config.valueOf(setting)}
+              onChange={(next) => config.change(setting.key, next)}
+              onReset={() => config.reset.mutate(setting.key)}
+              models={config.payload?.models ?? null}
+            />
+          ),
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+/** Whether the panel may write this setting: the registry allows it and no variable pins it. */
+function changeable(setting: ConfigSetting): boolean {
+  return setting.editable && setting.source !== "env";
+}
+
+/* The four ceilings of the quota are the limits of the four meters beside them, so they are
+   set in the meters' own arrangement and under the meters' own names: minute over day,
+   requests before tokens. Four boxed rows named after their variables said the same thing
+   in four times the height, and left matching each to its meter to the reader. The
+   variable's name stays one hover away. */
+const CEILINGS: Record<string, Key> = {
+  "engine.cerebras_max_requests_minute": "cere.meter.requestsMinute",
+  "engine.cerebras_max_tokens_minute": "cere.meter.tokensMinute",
+  "engine.cerebras_max_requests_day": "cere.meter.requestsDay",
+  "engine.cerebras_max_tokens_day": "cere.meter.tokensDay",
+};
+
+function Ceilings({ settings, config }: { settings: ConfigSetting[]; config: EngineSettings }) {
+  const { t } = useT();
+  return (
+    <fieldset className="border border-border p-3">
+      <legend className="px-1 text-micro font-condensed uppercase text-muted-foreground">
+        {t("eng.cfg.ceilings")}
+      </legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {settings.map((setting) => (
+          <CeilingField key={setting.key} setting={setting} config={config} />
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/* A ceiling has a ceiling of its own: what the account admits, declared in the registry.
+   A number typed above it is brought down to it as it is typed — the API would refuse the
+   save anyway, and a field that takes 451 only to fail later teaches nothing. */
+function CeilingField({ setting, config }: { setting: ConfigSetting; config: EngineSettings }) {
+  const { t, language } = useT();
+  const id = `config-${setting.key}`;
+  const value = config.valueOf(setting);
+  const pending = setting.key in config.draft;
+  const maximum = setting.maximum ?? null;
+
+  return (
+    <div className="space-y-1" title={setting.name || setting.key}>
+      <Label htmlFor={id}>{t(CEILINGS[setting.key])}</Label>
+      <div className="flex items-center gap-1">
+        <Input
+          id={id}
+          type="number"
+          min={setting.minimum ?? undefined}
+          max={maximum ?? undefined}
+          step={1}
+          aria-describedby={maximum === null ? undefined : `${id}-max`}
+          value={value === null || value === undefined ? "" : String(value)}
+          onChange={(event) => {
+            const raw = event.target.value;
+            if (raw === "") {
+              config.change(setting.key, null);
+              return;
+            }
+            const num = Number.parseInt(raw, 10);
+            if (Number.isNaN(num)) return;
+            config.change(setting.key, maximum === null ? num : Math.min(num, maximum));
+          }}
+          className={cn("nums", pending && "border-attention ring-1 ring-attention")}
+        />
+        {canReset(setting) ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title={t("cfg.backTo", { value: formatValue(setting.default, t) })}
+            aria-label={t("cfg.backTo", { value: formatValue(setting.default, t) })}
+            onClick={() => config.reset.mutate(setting.key)}
+          >
+            <Undo2 />
+          </Button>
+        ) : null}
+      </div>
+      {maximum === null ? null : (
+        <p id={`${id}-max`} className="nums text-small text-muted-foreground">
+          {t("eng.cfg.ceilingMax", { n: maximum.toLocaleString(language) })}
+        </p>
+      )}
+    </div>
   );
 }
 

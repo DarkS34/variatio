@@ -185,6 +185,7 @@ def test_counts_are_per_workspace_and_per_author(ws, tmp_path):
     assert store.count(ws) == 4
     assert store.count(Workspace(tmp_path / "vacía", slug="vacia")) == 0
     assert store.count_by_author([ws, other]) == {7: 3, 8: 1}
+    assert (store.count_for(ws, 7), store.count_for(other, 7), store.count_for(ws, 9)) == (2, 1, 0)
 
 
 def test_promoting_rewrites_the_record_in_place(ws):
