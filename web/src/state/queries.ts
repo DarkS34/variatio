@@ -53,6 +53,7 @@ export const keys = {
     ["admin", "generations", slug, params] as const,
   adminInvites: ["admin", "invites"] as const,
   adminJobs: ["admin", "jobs"] as const,
+  adminJobHistory: ["admin", "jobs", "history"] as const,
   adminEngine: ["admin", "engine"] as const,
   maintenance: ["maintenance"] as const,
   adminMaintenance: ["admin", "maintenance"] as const,
@@ -569,6 +570,24 @@ export function useAdminCancelJob() {
       client.invalidateQueries({ queryKey: keys.adminJobs });
       client.invalidateQueries({ queryKey: keys.adminOverview });
     },
+  });
+}
+
+/** What the queue has finished since the API started, newest first; it lives in memory. */
+export function useAdminJobHistory() {
+  return useQuery({
+    queryKey: keys.adminJobHistory,
+    queryFn: () => api.adminJobHistory(30),
+    refetchInterval: 10_000,
+  });
+}
+
+/** Empty the panel's list of finished jobs; the jobs stay readable by their authors. */
+export function useAdminClearJobHistory() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.adminClearJobHistory(),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.adminJobHistory }),
   });
 }
 

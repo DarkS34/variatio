@@ -2116,7 +2116,9 @@ function Admin() {
                   {t("eng.kind.local")}», con todos los modelos en la GPU propia, o «
                   {t("eng.kind.hybrid")}», que manda a Cerebras los modelos que Cerebras sirve.
                   Debajo, la cola entera de la instalación, de todas las asignaturas —lo que se
-                  está ejecutando, lo que espera y de quién es cada cosa—; el túnel SSH hasta la
+                  está ejecutando, lo que espera, los últimos treinta que han terminado (la lista se puede limpiar) y de quién
+                  es cada cosa—; la conexión con Ollama,
+                  que es directa cuando Ollama corre en la misma máquina o un túnel SSH hasta la
                   máquina de la GPU, que se levanta y se para desde aquí; y los contextos que la
                   API guarda en memoria, que se invalidan desde aquí.
                 </>
@@ -2255,7 +2257,8 @@ const problems = (
         <p>
           Si la GPU está en otra máquina, mira Administración → Motor: el túnel SSH se levanta y
           se para desde ahí, y guarda las últimas líneas de error, que es donde se ve un problema
-          de clave.
+          de clave. Si la conexión es directa, comprueba que Ollama está en marcha en la
+          dirección que muestra esa misma tarjeta.
         </p>
       </>
     ),

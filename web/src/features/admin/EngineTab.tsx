@@ -1,6 +1,7 @@
 import {
   Ban,
   Cable,
+  Eraser,
   Flame,
   HardDrive,
   ListOrdered,
@@ -50,7 +51,9 @@ import type {
 import { cn } from "@/lib/utils";
 import {
   useAdminCancelJob,
+  useAdminClearJobHistory,
   useAdminEngine,
+  useAdminJobHistory,
   useAdminJobs,
   useEngineActions,
 } from "@/state/queries";
@@ -190,7 +193,7 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
   );
 }
 
-/* The tunnel ----------------------------------------------------------------------------- */
+/* The connection to Ollama: direct, or through the tunnel ------------------------------- */
 
 function TunnelCard({
   tunnel,
@@ -206,30 +209,39 @@ function TunnelCard({
   const toast = useToast();
 
   const state = tunnelState(tunnel, available);
-  const external = state.external;
+  const { direct, external } = state;
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <Cable className="size-4 text-muted-foreground" />
-          <CardTitle>{t("eng.tunnel.title")}</CardTitle>
+          <CardTitle>{t("eng.tunnel.cardTitle")}</CardTitle>
           <Badge variant={state.tone}>{t(state.labelKey)}</Badge>
-          <InfoHint label={t("eng.tunnel.hintLabel")}>{t("eng.tunnel.hint")}</InfoHint>
+          <InfoHint label={t(direct ? "eng.tunnel.directHintLabel" : "eng.tunnel.hintLabel")}>
+            {t(direct ? "eng.tunnel.directHint" : "eng.tunnel.hint")}
+          </InfoHint>
         </div>
         <CardDescription>
-          {external
-            ? t("eng.tunnel.external", { host }) +
-              (tunnel.configured ? "" : t("eng.tunnel.externalFill"))
-            : tunnel.configured
-              ? `${host} → ${tunnel.host}:${tunnel.remote_port}`
-              : t("eng.tunnel.unconfigured")}
-          {tunnel.autostart ? t("eng.tunnel.autostart") : ""}
+          {direct
+            ? t("eng.tunnel.direct", { host })
+            : external
+              ? t("eng.tunnel.external", { host })
+              : t("eng.tunnel.route", {
+                  local: host,
+                  remote: `${tunnel.host}:${tunnel.remote_port}`,
+                })}
+          {!direct && tunnel.autostart ? t("eng.tunnel.autostart") : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {direct && !available ? (
+          <Alert tone="attention" title={t("eng.tunnel.directSilentTitle")}>
+            <p className="text-small">{t("eng.tunnel.directSilent")}</p>
+          </Alert>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          {tunnel.wanted ? (
+          {direct ? null : tunnel.wanted ? (
             <Button
               variant="outline"
               disabled={tunnelStop.isPending}
@@ -276,7 +288,6 @@ function TunnelCard({
                 ? t("eng.tunnel.engineResponds")
                 : t("eng.tunnel.engineSilent")
               : null}
-            {external ? t("eng.tunnel.engineRespondsBare") : null}
           </span>
         </div>
         <FormError error={tunnelStart.error ?? tunnelStop.error} />
@@ -687,7 +698,7 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
 /* The queue ----------------------------------------------------------------------------- */
 
 /**
- * The one GPU's queue, across every workspace and every account.
+ * Every job of the installation, local and remote, across every workspace and account.
  *
  * Jobs run strictly in the order they were asked for: the running one first, then the
  * waiting ones by position. Each member sees only their own workspace's entries from
@@ -704,6 +715,8 @@ function QueueSection() {
   const running = jobs.data?.running ?? null;
   const queued = jobs.data?.queued ?? [];
   const rows = [...(running ? [running] : []), ...queued];
+  const past = useAdminJobHistory().data?.jobs ?? [];
+  const clear = useAdminClearJobHistory();
 
   const confirmCancel = async (job: Job) => {
     const verb = job.status === "running" ? t("eng.queue.stop") : t("eng.queue.remove");
@@ -728,6 +741,10 @@ function QueueSection() {
     });
   };
 
+  // One list, three moments, drawn in the palette's own terms: what waits is ahead and
+  // dimmed, what runs is the ink, what finished is settled — and red only where it failed.
+  const empty = rows.length === 0 && past.length === 0;
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -743,60 +760,146 @@ function QueueSection() {
       <CardContent className="space-y-3">
         {jobs.isLoading ? (
           <Skeleton className="h-16" />
-        ) : rows.length === 0 ? null : (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <Table minWidth="48rem">
+        ) : empty ? null : (
+          <div className="overflow-hidden border border-border">
+            <Table minWidth="36rem">
               <THead>
                 <TR>
-                  <TH align="num">#</TH>
+                  <TH className="w-8" />
                   <TH>{t("eng.queue.col.job")}</TH>
-                  <TH>{t("eng.queue.col.workspace")}</TH>
-                  <TH>{t("eng.queue.col.askedBy")}</TH>
-                  <TH>{t("eng.queue.col.asked")}</TH>
+                  <TH>{t("eng.queue.col.when")}</TH>
+                  <TH align="num">{t("eng.queue.col.elapsed")}</TH>
                   <TH>{t("eng.queue.col.state")}</TH>
                   <TH />
                 </TR>
               </THead>
               <TBody>
-                {rows.map((job, index) => {
+                {rows.map((job) => {
                   const active = job.status === "running";
                   return (
-                    <TR key={job.id}>
-                      <TD align="num" className="px-3 py-2 nums text-muted-foreground">
-                        {active ? "—" : index + (running ? 0 : 1)}
+                    <TR key={job.id} className={cn(!active && "text-muted-foreground")}>
+                      <TD className="py-2 pl-3 pr-0">
+                        <JobMark status={job.status} />
                       </TD>
-                      <TD className="px-3 py-2">{jobName(job.kind, t, job.label)}</TD>
-                      <TD className="px-3 py-2 font-mono text-small">{job.workspace}</TD>
-                      <TD className="px-3 py-2 text-small">{job.user_name ?? "—"}</TD>
-                      <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
+                      <TD className="px-3 py-2">
+                        <span className={cn("block", active && "font-medium text-foreground")}>
+                          {jobName(job.kind, t, job.label)}
+                        </span>
+                        <JobOrigin job={job} />
+                      </TD>
+                      <TD className="whitespace-nowrap px-3 py-2 text-small">
                         {when(new Date(job.created_at * 1000).toISOString())}
                       </TD>
-                      <TD className="whitespace-nowrap px-3 py-2">
-                        <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
-                          {t(JOB_STATUS[job.status].labelKey)}
-                        </span>
+                      <TD align="num" className="whitespace-nowrap px-3 py-2 text-small">
+                        {active ? duration(job.elapsed_ms) : "—"}
                       </TD>
-                      <TD align="num" className="whitespace-nowrap px-3 py-2">
+                      <TD className="whitespace-nowrap px-3 py-2 text-small font-medium">
+                        {active
+                          ? t(JOB_STATUS.running.labelKey)
+                          : t("eng.queue.position", { n: job.queue_position ?? 0 })}
+                      </TD>
+                      <TD align="num" className="py-2 pl-0 pr-2">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-sm"
                           disabled={cancel.isPending}
                           title={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
+                          aria-label={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
                           onClick={() => confirmCancel(job)}
                         >
                           {active ? <Ban /> : <Trash2 />}
-                          {active ? t("eng.queue.stop") : t("eng.queue.removeShort")}
                         </Button>
                       </TD>
                     </TR>
                   );
                 })}
+                {past.length > 0 ? (
+                  <TR className="bg-muted">
+                    <TD
+                      colSpan={4}
+                      className="px-3 py-1.5 text-micro font-condensed uppercase text-muted-foreground"
+                    >
+                      {t("eng.queue.past", { n: past.length })}
+                    </TD>
+                    <TD colSpan={2} align="num" className="py-1 pl-0 pr-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={clear.isPending}
+                        title={t("eng.queue.clear")}
+                        onClick={() =>
+                          clear.mutate(undefined, {
+                            onSuccess: () => toast({ title: t("eng.queue.cleared") }),
+                          })
+                        }
+                      >
+                        {clear.isPending ? <Spinner /> : <Eraser />}
+                        {t("eng.queue.clearShort")}
+                      </Button>
+                    </TD>
+                  </TR>
+                ) : null}
+                {past.map((job) => (
+                  <TR key={job.id} className="text-settled">
+                    <TD className="py-2 pl-3 pr-0">
+                      <JobMark status={job.status} />
+                    </TD>
+                    <TD className="max-w-72 px-3 py-2">
+                      <span className="block">{jobName(job.kind, t, job.label)}</span>
+                      <JobOrigin job={job} />
+                      {job.error ? (
+                        <span className="block truncate text-small text-destructive" title={job.error}>
+                          {job.error}
+                        </span>
+                      ) : null}
+                    </TD>
+                    <TD className="whitespace-nowrap px-3 py-2 text-small">
+                      {job.finished_at ? when(new Date(job.finished_at * 1000).toISOString()) : "—"}
+                    </TD>
+                    <TD align="num" className="whitespace-nowrap px-3 py-2 text-small">
+                      {duration(job.elapsed_ms)}
+                    </TD>
+                    <TD className="whitespace-nowrap px-3 py-2">
+                      <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
+                        {t(JOB_STATUS[job.status].labelKey)}
+                      </span>
+                    </TD>
+                    <TD />
+                  </TR>
+                ))}
               </TBody>
             </Table>
           </div>
         )}
-        <FormError error={cancel.error} />
+        <FormError error={cancel.error ?? clear.error} />
       </CardContent>
     </Card>
+  );
+}
+
+/** Whose job it is and of which subject, under its name: one line, never a column each. */
+function JobOrigin({ job }: { job: Job }) {
+  return (
+    <span className="block truncate text-small text-muted-foreground" title={job.workspace}>
+      <span className="font-mono">{job.workspace || "—"}</span>
+      {job.user_name ? ` · ${job.user_name}` : ""}
+    </span>
+  );
+}
+
+/** A job's moment as the mark's square: hollow ahead, ink now, grey behind, red where it broke. */
+function JobMark({ status }: { status: Job["status"] }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "block size-2.5",
+        status === "running" && "animate-pulse-soft bg-primary",
+        status === "queued" && "border-[1.5px] border-dashed border-muted-foreground",
+        status === "succeeded" && "bg-settled",
+        status === "failed" && "bg-destructive",
+        status === "cancelled" && "border-[1.5px] border-settled",
+      )}
+    />
   );
 }

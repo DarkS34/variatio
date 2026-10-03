@@ -721,13 +721,16 @@ never `oklch` (hue interpolation turns greens blue).
   its screen; the tab opens on the part that needs somebody, else on «General». The readings
   are `features/admin/engineState.ts`, shared by the cells and the cards' badges. «General»
   leads with the choice of engine («Solo local» / «Híbrido», `engine.name`), then the queue,
-  the SSH tunnel and the warm contexts; «Local» is the GPU and the models on ITS disk (a
+  the connection to Ollama (direct when no `OLLAMA_SSH_HOST` is named — never drawn as a
+  tunnel left unconfigured — else the SSH tunnel) and the warm contexts; «Local» is the GPU and the models on ITS disk (a
   remote model has no row there); «Remoto» is the quota. A setting the panel cannot change
   (environment, or `editable=False`) is not drawn. Models are never downloaded from the
   panel (a build pulls what it lacks). `CEREBRAS_MODELS` is ticked from the catalogue plus
   what the engine already lists, never typed. The four Cerebras ceilings are one group named
   and ordered as the four meters, each capped at the registry's `maximum` (the account's
-  quota). No job history and no database card. One save bar for the tab; a part's cell counts
+  quota). The queue card is one list of three moments — waiting (dimmed, hollow mark), running (ink)
+  and the last 30 finished (settled; red where it failed), which the admin may clear: clearing
+  moves a window (`POST /api/admin/jobs/history/clear`), it never deletes a job. No database card. One save bar for the tab; a part's cell counts
   its unsaved changes; the guardrail and embedder models are read-only. «Configuración» is **one screen per stage**, named and
   numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
   down the page, each node with model, reasoning and sampling and its own settings under it;

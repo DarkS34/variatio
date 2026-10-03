@@ -77,6 +77,21 @@ describe("the tunnel in one word", () => {
   it("is off when nobody asked for it and nothing answers", () => {
     expect(tunnelState(TUNNEL, false).labelKey).toBe("tunnel.off");
   });
+
+  it("is a direct connection, not a missing tunnel, when no host is named", () => {
+    const bare = { ...TUNNEL, configured: false, host: "" };
+    expect(tunnelState(bare, true)).toMatchObject({
+      labelKey: "tunnel.direct",
+      tone: "settled",
+      direct: true,
+      external: false,
+    });
+    expect(tunnelState(bare, false)).toMatchObject({
+      labelKey: "tunnel.directSilent",
+      tone: "attention",
+      direct: true,
+    });
+  });
 });
 
 describe("the local cell", () => {
