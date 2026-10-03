@@ -91,5 +91,6 @@ def test_the_registry_holds_what_this_work_transcribed():
     # and 117 → 153 the same day: every stage's hard-coded knobs became settings.
     # 256 → 290 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
     # optional import of `tutor.settings`; none carries a name, so `BY_NAME` does not move.
-    assert len(REGISTRY) == 290
+    # 290 → 291 the same day: the tutor's daily limit of messages per account.
+    assert len(REGISTRY) == 291
     assert len(BY_NAME) == 153

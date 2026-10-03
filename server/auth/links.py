@@ -63,6 +63,7 @@ def mint(
     created_by: int | None = None,
     label: str | None = None,
     token: str | None = None,
+    features: list[str] | None = None,
 ) -> tuple[Invite, str]:
     """Insert one invitation and return it with its token, a fresh one unless one is given.
 
@@ -80,6 +81,7 @@ def mint(
         created_by=created_by,
         label=label,
         token_sealed=seal(token),
+        features=features,
     )
     return invite, token
 

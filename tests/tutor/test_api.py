@@ -14,6 +14,8 @@ from fastapi.testclient import TestClient
 from server import auth, installation, singletons
 from server.auth.deps import Access
 from server.db import identity, repository
+from server.db import session as db_session
+from server.db.models import Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from tutor import paths
@@ -26,6 +28,12 @@ from variatio.core.workspace import Workspace
 from ..conftest import CHAIN_GRAPH
 
 ANA, BEA = 1, 2
+
+
+@pytest.fixture(autouse=True)
+def _schema():
+    """Give the throwaway database its tables: queueing a turn counts it there."""
+    Base.metadata.create_all(db_session.engine())
 
 
 @pytest.fixture
@@ -63,6 +71,7 @@ def client(ws, *, user_id=ANA, role="viewer") -> TestClient:
     app.include_router(router_module.router)
     app.dependency_overrides[auth.VIEW.dependency] = lambda: access
     app.dependency_overrides[auth.EDIT.dependency] = edit
+    app.dependency_overrides[auth.TUTOR.dependency] = lambda: None
     return TestClient(app)
 
 
@@ -103,6 +112,31 @@ def test_one_reply_at_a_time_per_account_across_conversations(ws, runner):
 
     assert another.status_code == 409
     assert len(store.list_for(ws, ANA)) == 1, "a refused turn writes nothing"
+
+
+def test_the_daily_limit_refuses_the_next_turn_and_says_when_it_reopens(ws, runner, monkeypatch):
+    monkeypatch.setattr(router_module.tutor_config, "DAILY_MESSAGES", 1, raising=False)
+    first = opened(ws)["conversation"]["id"]
+    client(ws).delete(f"/api/tutor/conversations/{first}/turn")
+
+    refused = client(ws).post("/api/tutor/conversations", json={"message": "Otra duda"})
+
+    assert refused.status_code == 429
+    assert refused.headers["x-error-code"] == "tutor_daily_limit"
+    assert int(refused.headers["retry-after"]) > 0
+    assert "dentro de" in refused.json()["detail"]
+    assert len(store.list_for(ws, ANA)) == 1, "a refused turn writes nothing"
+
+
+def test_the_daily_limit_is_the_account_s_and_counts_a_reply_asked_again(ws, runner, monkeypatch):
+    monkeypatch.setattr(router_module.tutor_config, "DAILY_MESSAGES", 2, raising=False)
+    first = opened(ws)["conversation"]["id"]
+    client(ws).delete(f"/api/tutor/conversations/{first}/turn")
+    assert client(ws).post(f"/api/tutor/conversations/{first}/retry").status_code == 200
+    client(ws).delete(f"/api/tutor/conversations/{first}/turn")
+
+    assert client(ws).post(f"/api/tutor/conversations/{first}/retry").status_code == 429
+    assert opened(ws, user_id=BEA, message="La duda de Bea")["job"]["kind"] == jobs.TURN
 
 
 def test_another_account_finds_nothing_whatever_it_asks(ws, runner):

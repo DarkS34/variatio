@@ -24,7 +24,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
-from .. import installation
+from .. import features, installation
 from ..auth import deps, mail, passwords, tokens
 from ..auth.rate_limit import forgive, throttle
 from ..db import identity
@@ -401,6 +401,7 @@ def accept_invite(
         ui_language=body.ui_language,
     )
     _apply_membership(session, invite, user)
+    _apply_features(session, invite, user)
     identity.attribute_invite(session, invite, user.id)
     _issue_session(session, user, request, response)
     return _me(session, user)
@@ -458,6 +459,9 @@ def _me(session: DbSession, user: User) -> dict:
         # included: a `null` here is what makes the panel offer "crea tu workspace", so it
         # must not say that to somebody every route is about to let through.
         "role": _role_here(user, current, mine),
+        # Which optional functions are open to this account: the bar draws a door, and the
+        # browser fetches that function's code, only for a true here.
+        "features": features.for_user(session, user),
     }
 
 
@@ -515,3 +519,14 @@ def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:
     if invite.workspace_id is None:
         return
     identity.grant(session, invite.workspace_id, user.id, invite.role)
+
+
+def _apply_features(session: DbSession, invite: Invite, user: User) -> None:
+    """List the new account for the optional functions its invitation named.
+
+    A name this installation no longer knows is skipped: an invitation outlives the code
+    that minted it.
+    """
+    for feature in invite.features or []:
+        if feature in features.FEATURES:
+            features.list_account(session, feature, user.id)

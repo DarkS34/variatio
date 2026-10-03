@@ -288,6 +288,17 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   mail is configured (`mail_configured` on `/api/auth/me`). No «forgot password» link on the
   login screen; admins hand out reset links. No password generator anywhere.
 - `users.evaluator_profile` (`teacher`/`student`/NULL) is **not an authorisation**.
+- **The evaluation and the tutor are optional functions** ([server/features.py](server/features.py)):
+  each is `off`, `all` or `selected` (a list of accounts), set by the administrator
+  (`GET /api/admin/features`, `PUT /api/admin/features/{feature}`; the list is replaced only
+  when `accounts` is sent and survives a change of mode). A function with no row is off.
+  `auth.EVALUATION` and `auth.TUTOR` sit beside `auth.VIEW` on the routers of
+  `/api/evaluation`, `/api/stage-evaluations` and `/api/tutor`, and `routers/jobs.FEATURE_OF`
+  closes `POST /api/jobs` for an `evaluate` job. **No administrator bypass**: the admin lists
+  their own account. The admin's read routes are not behind it. A refusal is a 403 with
+  `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its
+  holder (`invites.features`), applied at registration. `GET /api/health` leaves out the
+  models only a switched-off function names.
 - Invitations are the admin's alone (`routers/admin.py`): chosen expiry (floor, no ceiling),
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
@@ -731,6 +742,11 @@ admin's read.
   only a document of the corpus the tutor searches, cut by whole sections
   (`passages.read_document`); the client shows one section at a time, formatted.
 - `tutor.message_max_chars` (12 000) is a hidden safety cap, never shown as a counter.
+- **A daily limit per account** (`tutor.daily_messages`, empty = none): counted in the
+  database (`tutor_usage`, by UTC day) across every workspace, because the queue is the
+  installation's and a count of files could be reset by deleting a conversation. Only a turn
+  that enters the queue counts, a reply asked again included. The refusal is a 429 with
+  `X-Error-Code: tutor_daily_limit`, `Retry-After` and the wait in words.
 - **A turn's job carries no text**: params and result name the conversation and the turn
   only, because the event stream is the workspace's and a conversation is its author's. One
   reply on its way per conversation and per account in the workspace (409).
@@ -1002,6 +1018,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   takes the tree; `.history/` is never emptied by it. CORS off.
 - Exercises are private to their author; the installation administrator alone reads every
   account's, read-only, from the panel (never through `/api/generations`).
+- The evaluation and the tutor are switched by the administrator for nobody, everybody or a
+  list of accounts; both start off; the administrator follows the same rule as any account;
+  an invitation may list its holder; the tutor's daily limit is the account's across the
+  installation (decided 2026-10-03).
 - Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;
   the database keeps none of them. The library returns how an item was made; the server
   writes it. `uv run variatio generate` (the CLI) saves nothing.

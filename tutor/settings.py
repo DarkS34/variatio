@@ -197,6 +197,18 @@ buena parte de la ventana de contexto.""",
         minimum=200,
     ),
     _number(
+        "daily_messages",
+        "int",
+        None,
+        """Cuántos mensajes puede enviar una cuenta al tutor en un día, sumando todas sus asignaturas.
+Vacío es sin límite. Cada mensaje es un trabajo de la cola, y el carril local atiende uno a la
+vez: sin tope, una sola cuenta retrasa las construcciones y a las demás cuentas. Solo cuenta
+el mensaje que entra en la cola, también cuando se pide la respuesta otra vez. El día es el
+de UTC. Sin medir: no hay todavía un uso real del que leer un valor.""",
+        nullable=True,
+        minimum=1,
+    ),
+    _number(
         "history_turns",
         "int",
         8,

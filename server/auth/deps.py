@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core.workspace import Workspace as PathWorkspace
 
-from .. import installation, maintenance
+from .. import features, installation, maintenance
 from ..db import identity, repository, session_scope
 from ..db.models import OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
 from .tokens import digest
@@ -201,6 +201,25 @@ def require_open(user: User = Depends(current_user)) -> User:
     if not user.is_admin and maintenance.active():
         raise HTTPException(503, maintenance.CLOSED)
     return user
+
+
+def require_feature(feature: str):
+    """Build the dependency refusing an account `feature` is not open to.
+
+    Beside the membership check and never instead of it, and with no administrator bypass:
+    the function is open to an account or it is not (`server/features.py`).
+    """
+
+    def dependency(
+        user: User = Depends(current_user), session: DbSession = Depends(db)
+    ) -> None:
+        """Raise 403 with the stable code unless the function is open to this account."""
+        if not features.enabled(session, user, feature):
+            raise HTTPException(
+                403, features.REFUSALS[feature], headers={"X-Error-Code": features.OFF_CODE}
+            )
+
+    return dependency
 
 
 # WORKSPACE -----------------------------------------------------------------------------

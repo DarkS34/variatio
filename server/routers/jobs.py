@@ -7,14 +7,15 @@ cannot be silently consumed. A job is only ever visible to the workspace it was 
 for: without that the id is a twelve-hex guess away from another instance's event log.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy.orm import Session as DbSession
 
 from variatio import config, entrypoints
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from .. import approvals, auth, raw_data, singletons
+from .. import approvals, auth, features, raw_data, singletons
 from ..jobs import lanes
 from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS
 
@@ -31,6 +32,10 @@ GATES: dict[str, str | None] = {
     "generate": "__all__",
     "evaluate": "__all__",
 }
+
+# The job kinds that belong to an optional function (`server/features.py`): queued here only
+# by an account the function is open to. The tutor's kinds are not in `JOB_LABELS` at all.
+FEATURE_OF: dict[str, str] = {"evaluate": features.EVALUATION}
 
 # `GATES` answers "are the UPSTREAM of X approved?", which is the question for building X.
 # Taggability asks a different one — that a SPECIFIC artifact is approved — and cannot
@@ -173,10 +178,20 @@ def _mine(job_id: str, access: auth.Access):
 
 
 @router.post("/jobs", dependencies=[auth.EDIT])
-def submit(body: JobBody, access: auth.Access = auth.VIEW) -> dict:
+def submit(
+    body: JobBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
+) -> dict:
     """Queue one job, answering its position behind whatever is already on its lanes."""
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
+
+    # A kind that belongs to an optional function is that function's: this route must not be
+    # a way round the dependency its own router declares.
+    feature = FEATURE_OF.get(body.kind)
+    if feature and not features.enabled(db, access.user, feature):
+        raise HTTPException(
+            403, features.REFUSALS[feature], headers={"X-Error-Code": features.OFF_CODE}
+        )
 
     # Without an engine no job can succeed: every kind calls a model. `force` skips the
     # chain's gates, which are the user's decision, and never this, which is impossible.

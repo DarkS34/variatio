@@ -20,7 +20,9 @@ from server import approvals, auth, singletons
 from . import stage_instruments, stage_queries
 
 router = APIRouter(
-    prefix="/api/stage-evaluations", tags=["stage-evaluations"], dependencies=[auth.VIEW]
+    prefix="/api/stage-evaluations",
+    tags=["stage-evaluations"],
+    dependencies=[auth.VIEW, auth.EVALUATION],
 )
 
 

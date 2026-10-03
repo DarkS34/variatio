@@ -12,12 +12,17 @@ workspace's and a malformed id all answer the same 404. The installation adminis
 every account's, read-only, through its own panel (`tutor.api.admin`), never through these.
 
 A message is answered by a job of the queue, so it waits behind a build on the local lane like
-any other model call. Two rules keep that queue from filling with one person's turns: one
-reply at a time per conversation (409 while it is live), and one per account in the workspace.
+any other model call. Three rules keep that queue from filling with one person's turns: one
+reply at a time per conversation (409 while it is live), one per account in the workspace, and
+the installation's daily limit per account (`tutor.daily_messages`, 429 when it is reached).
+
+The whole router is also behind `auth.TUTOR`: the tutor is open to nobody, to every account or
+to a list, as the administrator set it (`server/features.py`).
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session as DbSession
 
 from server import approvals, auth, singletons, storage
 from server import generations as generations_store
@@ -32,9 +37,9 @@ from .. import criteria as criteria_store
 from .. import paths
 from .. import prompts as tutor_prompts_pkg
 from ..passages import read_document
-from . import jobs, store
+from . import jobs, store, usage
 
-router = APIRouter(prefix="/api/tutor", tags=["tutor"], dependencies=[auth.VIEW])
+router = APIRouter(prefix="/api/tutor", tags=["tutor"], dependencies=[auth.VIEW, auth.TUTOR])
 
 _LIVE = ("queued", "running")
 
@@ -86,11 +91,13 @@ def conversations(access: auth.Access = auth.VIEW) -> dict:
 
 
 @router.post("/conversations", status_code=201)
-def open_conversation(body: MessageBody, access: auth.Access = auth.VIEW) -> dict:
+def open_conversation(
+    body: MessageBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
+) -> dict:
     """Start a conversation with its first message and queue the tutor's reply."""
     message = _checked_message(body.message, access)
     concept = _checked_concept(body.concept, access)
-    _admit(access)
+    _admit(access, db)
     opened_from = None
     if body.generation_id:
         record = generations_store.get(access.ws, access.user.id, body.generation_id)
@@ -104,7 +111,7 @@ def open_conversation(body: MessageBody, access: auth.Access = auth.VIEW) -> dic
         }
     conversation = store.create(access.ws, access.user.id, message, opened_from, concept=concept)
     with store.lock_for(access.ws, access.user.id, conversation["id"]):
-        job = _queue_turn(access, conversation, 0)
+        job = _queue_turn(access, db, conversation, 0)
     return {"conversation": _detail(conversation), "job": job.to_dict()}
 
 
@@ -204,32 +211,39 @@ def conversation(conversation_id: str, access: auth.Access = auth.VIEW) -> dict:
 
 
 @router.post("/conversations/{conversation_id}/messages")
-def send(conversation_id: str, body: MessageBody, access: auth.Access = auth.VIEW) -> dict:
+def send(
+    conversation_id: str,
+    body: MessageBody,
+    access: auth.Access = auth.VIEW,
+    db: DbSession = Depends(auth.db),
+) -> dict:
     """Append a message to one of your conversations and queue the tutor's reply."""
     message = _checked_message(body.message, access)
     concept = _checked_concept(body.concept, access)
     with store.lock_for(access.ws, access.user.id, conversation_id):
         record = _heal(access, _require(conversation_id, access), locked=True)
-        _admit(access)
+        _admit(access, db)
         if record.get("pending"):
             raise HTTPException(409, "El tutor todavía está contestando el mensaje anterior.")
         turn = store.append_student(record, message, concept=concept)
         store.write(access.ws, access.user.id, record)
-        job = _queue_turn(access, record, turn)
+        job = _queue_turn(access, db, record, turn)
     return {"conversation": _detail(record), "job": job.to_dict()}
 
 
 @router.post("/conversations/{conversation_id}/retry")
-def retry(conversation_id: str, access: auth.Access = auth.VIEW) -> dict:
+def retry(
+    conversation_id: str, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
+) -> dict:
     """Ask again for the reply to your last message, when it got none."""
     with store.lock_for(access.ws, access.user.id, conversation_id):
         record = _heal(access, _require(conversation_id, access), locked=True)
-        _admit(access)
+        _admit(access, db)
         turns = record["turns"]
         if record.get("pending") or not turns or not turns[-1].get("failed"):
             raise HTTPException(409, "Ese mensaje no espera una nueva respuesta.")
         turns[-1].pop("failed", None)
-        job = _queue_turn(access, record, len(turns) - 1)
+        job = _queue_turn(access, db, record, len(turns) - 1)
     return {"conversation": _detail(record), "job": job.to_dict()}
 
 
@@ -266,11 +280,12 @@ def _require(conversation_id: str, access: auth.Access) -> dict:
     return record
 
 
-def _admit(access: auth.Access) -> None:
+def _admit(access: auth.Access, db: DbSession) -> None:
     """Refuse a turn the queue could not or should not take, before anything is written.
 
-    The engine has to answer, the construction has to be closed, and the account may have
-    one reply on its way in this workspace at a time.
+    The engine has to answer, the construction has to be closed, the account may have one
+    reply on its way in this workspace at a time, and it must be under the installation's
+    daily limit.
     """
     _require_engine()
     error = _chain_error(access)
@@ -281,10 +296,16 @@ def _admit(access: auth.Access) -> None:
             raise HTTPException(
                 409, "El tutor ya está contestando otra conversación tuya; espera a que termine."
             )
+    refused = usage.refusal(db, access.user.id, tutor_config.DAILY_MESSAGES)
+    if refused:
+        message, wait = refused
+        raise HTTPException(
+            429, message, headers={"X-Error-Code": usage.LIMIT_CODE, "Retry-After": str(wait)}
+        )
 
 
-def _queue_turn(access: auth.Access, record: dict, turn: int) -> Job:
-    """Queue the reply to one student turn and record it as pending, under the caller's lock."""
+def _queue_turn(access: auth.Access, db: DbSession, record: dict, turn: int) -> Job:
+    """Queue the reply to one student turn, count it and record it as pending, under the caller's lock."""
     job = singletons.runner.submit(
         jobs.TURN,
         {"conversation": record["id"], "turn": turn},
@@ -292,6 +313,7 @@ def _queue_turn(access: auth.Access, record: dict, turn: int) -> Job:
         user_id=access.user.id,
         user_name=access.user.name,
     )
+    usage.record(db, access.user.id)
     record["pending"] = {"job_id": job.id, "turn": turn}
     store.write(access.ws, access.user.id, record)
     return job

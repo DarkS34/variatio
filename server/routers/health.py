@@ -9,12 +9,13 @@ Residency is NEVER cached: `running_models()` is the live measurement the panel'
 exists to show, and caching it would make the panel lie about the GPU.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session as DbSession
 
 from variatio import config, entrypoints
 from variatio.core import inference
 
-from .. import auth, deps, singletons
+from .. import auth, deps, features, singletons
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
 
@@ -56,11 +57,11 @@ def _missing_models(required: dict, installed: list[str], remote: set[str]) -> l
 
 
 @router.get("/health")
-def health(access: auth.Access = auth.VIEW) -> dict:
+def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) -> dict:
     """Answer the engine's reachability, its models, and this workspace's own paths."""
     ws = access.ws
     available = inference.is_available()
-    required = inference.required_models()
+    required = _required(db)
 
     installed: list[str] = []
     running: list[dict] = []
@@ -104,4 +105,18 @@ def health(access: auth.Access = auth.VIEW) -> dict:
             "raw_corpus_exists": ws.raw_corpus_dir.is_dir(),
         },
         "busy": singletons.runner.is_busy(),
+    }
+
+
+def _required(db: DbSession) -> dict[str, str]:
+    """Return the models the registry asks for, without those only a switched-off function calls.
+
+    A setting of an optional function is keyed under the function's name (`tutor.models.reply`),
+    so a function that is off for everybody does not report its own model as missing.
+    """
+    off = tuple(
+        f"{feature}." for feature in features.FEATURES if features.mode(db, feature) == features.OFF
+    )
+    return {
+        key: model for key, model in inference.required_models().items() if not key.startswith(off)
     }

@@ -13,6 +13,7 @@ CRITERIA_MODEL: str
 THINK_REPLY: bool | str
 THINK_CRITERIA: bool | str
 MESSAGE_MAX_CHARS: int
+DAILY_MESSAGES: int | None
 HISTORY_TURNS: int
 REPLY_MAX_TOKENS: int
 MAX_QUESTIONS: int
@@ -44,6 +45,7 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         "THINK_REPLY": _think(values, "reply"),
         "THINK_CRITERIA": _think(values, "criteria"),
         "MESSAGE_MAX_CHARS": values["tutor.message_max_chars"],
+        "DAILY_MESSAGES": values["tutor.daily_messages"],
         "HISTORY_TURNS": values["tutor.history_turns"],
         "REPLY_MAX_TOKENS": values["tutor.reply_max_tokens"],
         "MAX_QUESTIONS": values["tutor.max_questions"],

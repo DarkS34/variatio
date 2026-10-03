@@ -1,11 +1,13 @@
 """What a router imports to protect itself.
 
-`VIEW`, `EDIT` and `MANAGE` are the three membership levels as FastAPI dependencies; the
-rest is re-exported from `deps`, `rate_limit` and `tokens`.
+`VIEW`, `EDIT` and `MANAGE` are the three membership levels as FastAPI dependencies, and
+`EVALUATION` and `TUTOR` the two optional functions (`server/features.py`); the rest is
+re-exported from `deps`, `rate_limit` and `tokens`.
 """
 
 from fastapi import Depends
 
+from .. import features
 from ..db.models import EDITOR, OWNER, VIEWER
 from .deps import (
     Access,
@@ -18,6 +20,7 @@ from .deps import (
     db,
     optional_user,
     require_admin,
+    require_feature,
     require_member,
     require_open,
     requested_slug,
@@ -35,9 +38,16 @@ VIEW = Depends(require_member(VIEWER))
 EDIT = Depends(require_member(EDITOR))
 MANAGE = Depends(require_member(OWNER))
 
+# The two optional functions, declared by their routers beside VIEW: the membership says
+# whether the account may enter the workspace, these whether the function is open to it.
+EVALUATION = Depends(require_feature(features.EVALUATION))
+TUTOR = Depends(require_feature(features.TUTOR))
+
 __all__ = [
     "EDIT",
+    "EVALUATION",
     "MANAGE",
+    "TUTOR",
     "VIEW",
     "Access",
     "access_for",
@@ -52,6 +62,7 @@ __all__ = [
     "new_token",
     "optional_user",
     "require_admin",
+    "require_feature",
     "require_member",
     "require_open",
     "requested_slug",

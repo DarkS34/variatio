@@ -27,7 +27,9 @@ from ..arms import external
 from . import instruments, queries
 from . import store as evaluation_store
 
-router = APIRouter(prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW])
+router = APIRouter(
+    prefix="/api/evaluation", tags=["evaluation"], dependencies=[auth.VIEW, auth.EVALUATION]
+)
 
 
 class EvaluationBody(BaseModel):

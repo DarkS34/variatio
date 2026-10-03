@@ -5,12 +5,13 @@ deployment target: the plain half exists so import/export can be exercised again
 without a server, and it changes no line of the Postgres DDL.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -287,8 +288,9 @@ class Invite(Base):
     There is no open registration — an account exists because the installation's
     administrator issued one of these, or because it was the first and came from the CLI.
 
-    `label` is the administrator's own name for it and never reaches the person holding
-    the link. `token_sealed` is the token encrypted with a key kept outside the database
+    `features` names the optional functions (`server/features.py`) the account is listed for
+    the moment it registers. `label` is the administrator's own name for it and never reaches
+    the person holding the link. `token_sealed` is the token encrypted with a key kept outside the database
     (`server/auth/links.py`), so the panel can show the link again; it is emptied the
     moment the invitation is used, and it is NULL on every row minted before it existed.
     """
@@ -303,6 +305,7 @@ class Invite(Base):
         ForeignKey("workspaces.id", ondelete="CASCADE"), default=None, index=True
     )
     role: Mapped[str] = mapped_column(String(16), default=EDITOR)
+    features: Mapped[list] = mapped_column(Json, default=list, server_default="[]")
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
@@ -488,3 +491,48 @@ class StageEvaluation(Base):
 
     workspace: Mapped[Workspace] = relationship(back_populates="stage_evaluations")
     user: Mapped[User | None] = relationship()
+
+
+class FeatureAccess(Base):
+    """Who an optional function of the installation is open to: nobody, everybody or a list.
+
+    One row per function (`server/features.py`); a function with no row is off. The list of a
+    `selected` function is `FeatureGrant`, kept whatever the mode, so switching to everybody
+    and back does not lose it.
+    """
+
+    __tablename__ = "feature_access"
+
+    feature: Mapped[str] = mapped_column(String(32), primary_key=True)
+    mode: Mapped[str] = mapped_column(String(16), default="off", server_default="off")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class FeatureGrant(Base):
+    """One account listed for one optional function; it leaves with the account."""
+
+    __tablename__ = "feature_grants"
+    __table_args__ = (UniqueConstraint("feature", "user_id", name="uq_feature_grant"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    feature: Mapped[str] = mapped_column(String(32), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TutorUsage(Base):
+    """How many turns of the tutor one account queued on one day, across every workspace.
+
+    A row and not a count of the conversation files: a conversation can be deleted, and a
+    limit somebody resets by deleting is none. The day is UTC.
+    """
+
+    __tablename__ = "tutor_usage"
+    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_tutor_usage_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date)
+    turns: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

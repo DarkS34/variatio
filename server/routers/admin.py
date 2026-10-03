@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from evaluation.api import store as evaluation_store
 
-from .. import approvals, auth, deps, installation, maintenance, singletons, storage
+from .. import approvals, auth, deps, features, installation, maintenance, singletons, storage
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import links
@@ -46,8 +46,10 @@ class InviteTerms(BaseModel):
 
     `workspace` may be absent — an invitation granting no membership creates an account
     and no access, which is the honest way to add somebody who will be given a workspace
-    later. There is no evaluator profile here on purpose: the link binds the access and
-    nothing else, and whoever registers answers for themselves. An absent `expires_at` is
+    later. `features` lists the new account for the optional functions named
+    (`server/features.py`), which is access too. There is no evaluator profile here on
+    purpose: the link binds the access and nothing else, and whoever registers answers for
+    themselves. An absent `expires_at` is
     the installation's default week, and a chosen one has no upper bound; `label` is the
     administrator's alias and never reaches the person holding the link.
     """
@@ -56,6 +58,7 @@ class InviteTerms(BaseModel):
     role: str = EDITOR
     expires_at: datetime | None = None
     label: str | None = None
+    features: list[str] = []
 
 
 class InviteBody(InviteTerms):
@@ -80,6 +83,7 @@ class InviteEditBody(BaseModel):
     role: str | None = None
     expires_at: datetime | None = None
     label: str | None = None
+    features: list[str] | None = None
 
 
 class MembershipBody(BaseModel):
@@ -99,6 +103,13 @@ class ProfileBody(BaseModel):
     """The evaluator profile being corrected: `teacher`, `student` or nothing."""
 
     evaluator_profile: str | None = None
+
+
+class FeatureBody(BaseModel):
+    """Who one optional function is for: its mode and, when sent, the accounts on its list."""
+
+    mode: str
+    accounts: list[int] | None = None
 
 
 class MaintenanceBody(BaseModel):
@@ -254,6 +265,7 @@ def create_invite(
             role=terms.role,
             created_by=admin.id,
             label=label,
+            features=terms.features,
         )
         minted.append(_minted(db, request, invite, token))
     logger.info(
@@ -315,6 +327,7 @@ def import_invite(
         role=terms.role,
         created_by=admin.id,
         label=terms.label,
+        features=terms.features,
     )
     logger.info("[invitaciones] {} ha recuperado un enlace como invitación {}", admin.username, invite.id)
     return {"outcome": "created", **_minted(db, request, invite, token)}
@@ -378,6 +391,8 @@ def edit_invite(
     if "workspace" in sent:
         workspace = _workspace(db, body.workspace)
         changes["workspace_id"] = workspace.id if workspace else None
+    if "features" in sent:
+        changes["features"] = _features(body.features)
     identity.edit_invite(db, invite, **changes)
     if changes:
         logger.info(
@@ -808,6 +823,47 @@ def set_maintenance(
     return maintenance.set_state(body.active, body.message, admin.username)
 
 
+@router.get("/features")
+def read_features(db: DbSession = Depends(auth.db)) -> dict:
+    """Answer who each optional function is for: its mode and the accounts on its list."""
+    return {"features": features.snapshot(db)}
+
+
+@router.put("/features/{feature}")
+def set_feature(
+    feature: str,
+    body: FeatureBody,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Set who one optional function is for.
+
+    The list is replaced only when `accounts` is sent, so switching the mode alone keeps it.
+    """
+    if feature not in features.FEATURES:
+        raise HTTPException(404, f"No existe la función '{feature}'.")
+    if body.mode not in features.MODES:
+        raise HTTPException(
+            422, f"Modo desconocido: '{body.mode}'. Usa uno de {', '.join(features.MODES)}."
+        )
+    if body.accounts is not None:
+        missing = [uid for uid in body.accounts if identity.get_user_by_id(db, uid) is None]
+        if missing:
+            raise HTTPException(
+                422, f"No existe la cuenta {', '.join(str(uid) for uid in missing)}."
+            )
+        features.set_listed(db, feature, body.accounts)
+    features.set_mode(db, feature, body.mode)
+    logger.info(
+        "[funciones] {} ha puesto '{}' en modo '{}' · {} cuenta(s) en la lista",
+        admin.username,
+        feature,
+        body.mode,
+        len(features.listed(db, feature)),
+    )
+    return {"features": features.snapshot(db)}
+
+
 # HELPERS ---------------------------------------------------------------------------------
 
 
@@ -833,6 +889,7 @@ class _Terms:
     role: str
     expires_at: datetime
     label: str | None
+    features: list[str]
 
 
 def _terms(db: DbSession, body: InviteTerms) -> _Terms:
@@ -842,6 +899,7 @@ def _terms(db: DbSession, body: InviteTerms) -> _Terms:
         role=_role(body.role),
         expires_at=_expiry(body.expires_at),
         label=_label(body.label),
+        features=_features(body.features),
     )
 
 
@@ -860,6 +918,18 @@ def _role(role: str | None) -> str:
     if role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{role}'. Usa uno de {', '.join(ROLES)}.")
     return role
+
+
+def _features(names: list[str] | None) -> list[str]:
+    """Accept the optional functions an invitation lists its holder for, each once."""
+    names = list(dict.fromkeys(names or []))
+    unknown = features.unknown(names)
+    if unknown:
+        raise HTTPException(
+            422,
+            f"Función desconocida: {', '.join(unknown)}. Usa de {', '.join(features.FEATURES)}.",
+        )
+    return names
 
 
 def _expiry(value: datetime | None) -> datetime:
@@ -922,6 +992,7 @@ def _invite(db: DbSession, invite: Invite, moment: datetime | None = None) -> di
         "id": invite.id,
         "label": invite.label,
         "role": invite.role,
+        "features": list(invite.features or []),
         "workspace": workspace.name if workspace else None,
         "workspace_slug": workspace.slug if workspace else None,
         "created_at": invite.created_at.isoformat(),

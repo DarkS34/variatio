@@ -355,7 +355,9 @@ def revoke_all_sessions(session: Session, user_id: int) -> int:
 # INVITES -------------------------------------------------------------------------------
 
 # What may change on an invitation after it is minted: its four terms and its sealed link.
-_EDITABLE_INVITE_FIELDS = frozenset({"label", "expires_at", "workspace_id", "role", "token_sealed"})
+_EDITABLE_INVITE_FIELDS = frozenset(
+    {"label", "expires_at", "workspace_id", "role", "token_sealed", "features"}
+)
 
 _NUMBER = re.compile(r"[0-9]+")
 
@@ -385,6 +387,7 @@ def create_invite(
     expires_at: datetime | None = None,
     label: str | None = None,
     token_sealed: str | None = None,
+    features: list[str] | None = None,
 ) -> Invite:
     """Insert an invitation for this token digest, expiring at a moment or after a `ttl`."""
     if expires_at is None:
@@ -397,6 +400,7 @@ def create_invite(
         label=label,
         workspace_id=workspace_id,
         role=role,
+        features=list(features or []),
         created_by=created_by,
         expires_at=expires_at,
     )
