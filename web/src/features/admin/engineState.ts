@@ -123,22 +123,36 @@ export function remoteCell(engine: AdminEngine, tr: Translate): Reading {
 }
 
 /**
- * The tunnel in one word, read the same by its card and by the board.
+ * The connection to Ollama in one word, read the same by its card and by the board.
  *
- * The engine answering on the local port while this process runs no ssh means the port is
- * reached some other way — a tunnel opened by hand, or Ollama on this machine. That is not
+ * An installation that names no tunnel host speaks to `OLLAMA_HOST` directly — Ollama on
+ * this machine, or one reached over the network. That is a way of connecting and not a
+ * tunnel left unconfigured: there is nothing to raise, only an engine that answers or not.
+ *
+ * With a tunnel named, the engine answering on the local port while this process runs no
+ * ssh means the port is reached some other way — a tunnel opened by hand. That is not
  * "apagado", and offering "Conectar" would launch an ssh onto a port already taken.
  */
 export function tunnelState(
   tunnel: TunnelStatus,
   available: boolean,
-): { labelKey: Key; tone: "settled" | "attention" | "outline"; external: boolean } {
+): {
+  labelKey: Key;
+  tone: "settled" | "attention" | "outline";
+  direct: boolean;
+  external: boolean;
+} {
+  const direct = !tunnel.configured;
+  if (direct) {
+    return available
+      ? { labelKey: "tunnel.direct", tone: "settled", direct, external: false }
+      : { labelKey: "tunnel.directSilent", tone: "attention", direct, external: false };
+  }
   const external = available && !tunnel.running && !tunnel.wanted;
-  if (external) return { labelKey: "tunnel.external", tone: "settled", external };
-  if (!tunnel.configured) return { labelKey: "tunnel.unconfigured", tone: "outline", external };
-  if (tunnel.running) return { labelKey: "tunnel.connected", tone: "settled", external };
-  if (tunnel.wanted) return { labelKey: "tunnel.reconnecting", tone: "attention", external };
-  return { labelKey: "tunnel.off", tone: "outline", external };
+  if (external) return { labelKey: "tunnel.external", tone: "settled", direct, external };
+  if (tunnel.running) return { labelKey: "tunnel.connected", tone: "settled", direct, external };
+  if (tunnel.wanted) return { labelKey: "tunnel.reconnecting", tone: "attention", direct, external };
+  return { labelKey: "tunnel.off", tone: "outline", direct, external };
 }
 
 /**

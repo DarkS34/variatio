@@ -2,9 +2,11 @@
 
 from ..types import Impact, Setting
 
-_TUNNEL_DOC = """El motor no corre en esta máquina: `OLLAMA_HOST` apunta a un puerto local que un túnel SSH
-reenvía a la máquina de la GPU. Lo levanta la API, con el cliente `ssh` del sistema como
-subproceso, y el panel lo enciende y lo apaga.
+_TUNNEL_DOC = """Para cuando el motor no corre en esta máquina: `OLLAMA_HOST` apunta a un puerto local que un
+túnel SSH reenvía a la máquina de la GPU. Lo levanta la API, con el cliente `ssh` del sistema
+como subproceso, y el panel lo enciende y lo apaga. Si Ollama corre en esta misma máquina no
+hace falta túnel: `OLLAMA_SSH_HOST` se deja vacío y `OLLAMA_HOST` nombra su puerto
+(`localhost:11434`); el panel lo muestra como conexión directa.
 
 Se usa el `ssh` instalado y no una librería: es lo que ya resuelve claves, agente,
 `~/.ssh/config` y `known_hosts`. Nada de contraseñas — `BatchMode=yes` hace que un `ssh`

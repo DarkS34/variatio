@@ -1827,7 +1827,9 @@ function Admin() {
                   {t("eng.kind.local")}", with every model on your own GPU, or "
                   {t("eng.kind.hybrid")}", which sends Cerebras the models Cerebras serves. Under
                   it, the installation's whole queue, across every subject — what is running,
-                  what is waiting and whose each one is —; the SSH tunnel to the GPU machine,
+                  what is waiting, the last thirty that finished (the list can be cleared) and whose each one is —; the
+                  connection to Ollama, which is
+                  direct when Ollama runs on the same machine or an SSH tunnel to the GPU machine,
                   raised and stopped from here; and the contexts the API keeps in memory,
                   invalidated from here.
                 </>
@@ -1966,7 +1968,8 @@ const problems = (
         <p>
           If the GPU is on another machine, look at Administration → Engine: the SSH tunnel is
           raised and stopped from there, and it keeps the last few lines of error, which is where
-          a key problem shows up.
+          a key problem shows up. If the connection is direct, check that Ollama is running at
+          the address that same card shows.
         </p>
       </>
     ),

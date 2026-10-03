@@ -316,19 +316,38 @@ def tunnel_stop() -> dict:
 # THE QUEUE'S PAST ------------------------------------------------------------------------
 
 
+# What the panel's list shows is a WINDOW over the runner's jobs and never the jobs
+# themselves: each one stays readable by its author at `/api/jobs/{id}`, so clearing the
+# list only moves the point the window starts from. In memory, like the queue it reads.
+_history_cleared_at = 0.0
+
+
 @router.get("/jobs/history")
-def job_history(limit: int = Query(50, ge=1, le=200)) -> dict:
-    """Answer the jobs that have finished, of every workspace.
+def job_history(limit: int = Query(30, ge=1, le=200)) -> dict:
+    """Answer the last jobs that have finished, of every workspace, newest first.
 
     Reads a wider window than it returns, because what it filters out — the running and
-    the queued — is what `admin.job_queue` already reports.
+    the queued — is what `admin.job_queue` already reports. Older ones fall off the end.
     """
     settled = [
         job.to_dict()
         for job in singletons.runner.all(limit=400)
         if job.status not in ("running", "queued")
+        and (job.finished_at or 0.0) > _history_cleared_at
     ]
     return {"jobs": settled[:limit]}
+
+
+@router.post("/jobs/history/clear")
+def clear_job_history() -> dict:
+    """Empty the panel's list of finished jobs; the jobs keep answering to their authors.
+
+    A POST on a path of its own and not `DELETE /jobs/history`: that one is matched first
+    by `DELETE /jobs/{job_id}`, which answers that no job is called "history".
+    """
+    global _history_cleared_at
+    _history_cleared_at = time.time()
+    return {"cleared": True}
 
 
 # THE DATABASE ----------------------------------------------------------------------------

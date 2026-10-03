@@ -509,7 +509,9 @@ llamadas al motor, así que reescribirla desde el panel es pedirle al servidor q
 cualquier dirección de la red interna y devuelva por pantalla lo que conteste. Por eso el
 bloque `tunnel.*` tampoco se toca desde el panel.
 
-Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando la API.""",
+Apuntarlo a otra máquina se hace por `OLLAMA_HOST` (o el `.env`) y reiniciando la API. El
+valor por defecto es el extremo local del túnel SSH; con Ollama en esta misma máquina y
+`OLLAMA_SSH_HOST` vacío, es `localhost:11434` y la conexión es directa.""",
     ),
     Setting(
         key="engine.idle_unload_seconds",

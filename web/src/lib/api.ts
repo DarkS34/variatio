@@ -432,6 +432,11 @@ export const api = {
   adminCancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/admin/jobs/${id}`, { method: "DELETE" }),
 
+  adminJobHistory: (limit = 30) =>
+    request<{ jobs: Job[] }>(`/api/admin/jobs/history?limit=${limit}`),
+  adminClearJobHistory: () =>
+    post<{ cleared: boolean }>("/api/admin/jobs/history/clear"),
+
   // The machine and the process: what is resident, what is on disk, the tunnel that reaches
   // the engine and the contexts this process keeps warm. Every write here is felt by every
   // workspace, which is why they are the administrator's.
