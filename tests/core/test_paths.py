@@ -55,3 +55,24 @@ def test_project_root_is_the_repository():
     assert (paths.PROJECT_ROOT / "pyproject.toml").is_file()
     package_dir = Path(paths.__file__).resolve().parents[1]
     assert paths.PROJECT_ROOT == package_dir.parent
+
+
+# The quota is the account's, so the ledger is not the tree's: two installations sharing an
+# account, each with a ledger at its own root, each believed it had the whole quota.
+def test_the_cerebras_ledger_lives_outside_the_tree(tmp_path, monkeypatch):
+    monkeypatch.delenv("CEREBRAS_BUDGET_PATH", raising=False)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+
+    assert paths.cerebras_budget_path() == tmp_path / "variatio" / "cerebras_budget.json"
+
+    monkeypatch.delenv("XDG_STATE_HOME")
+    default = paths.cerebras_budget_path()
+    assert default == Path.home() / ".local" / "state" / "variatio" / "cerebras_budget.json"
+    assert paths.PROJECT_ROOT not in default.parents
+
+
+def test_an_installation_of_another_account_names_its_own_ledger(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("CEREBRAS_BUDGET_PATH", str(tmp_path / "otra" / "budget.json"))
+
+    assert paths.cerebras_budget_path() == tmp_path / "otra" / "budget.json"

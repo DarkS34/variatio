@@ -118,8 +118,12 @@ table and refuses while a row has no file: on an installation that still has the
   and drops `strict` above 5 000 chars or on open-ended maps. Each degradation is warned once
   per schema per process. Images travel before text in the body.
 - **The Cerebras rate limit is enforced before the call** from a flock'ed file ledger
-  (`/.cerebras_budget.json`, [core/cerebras_budget.py](variatio/core/cerebras_budget.py)):
-  per-model buckets, rolling minute and day windows, `usage` charges tokens, and **a header may
+  ([core/cerebras_budget.py](variatio/core/cerebras_budget.py)). **The ledger is the
+  account's, not the tree's**: Cerebras limits the organisation, not the key, so it lives at
+  `paths.cerebras_budget_path()` — `~/.local/state/variatio/cerebras_budget.json`
+  (`$XDG_STATE_HOME` honoured), shared by every installation of this user — and
+  `CEREBRAS_BUDGET_PATH` is only for an installation whose key belongs to another account.
+  Per-model buckets, rolling minute and day windows, `usage` charges tokens, and **a header may
   only lower what is believed left — never raise the configured `CEREBRAS_MAX_*` ceilings**
   (reading `limit-*`/`remaining-*` as the account's budget once disabled the throttle).
   `wait` books a `Claim` before the call; `record`/`release` settle it; stale claims age out.
@@ -764,6 +768,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The domains naming call runs without reasoning; the phase context window is 65536.
 - Embedding model fixed at `qwen3-embedding:4b`.
 - The Cerebras throttle is a hard cap no header may raise; the gate books claims.
+- The Cerebras ledger lives outside the tree and is shared by default: the quota is the
+  account's, and one ledger per installation let each spend all of it.
 - No grammar to a remote model on the bank extraction (or its repair).
 - The commission chooses its writing model from the offered list; rows record it.
 - Every model call has its own temperature, top-k and top-p; empty inherits, so adding a
@@ -834,7 +840,7 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 ## Notes for working in this repo
 
 - Gitignored: `/raw*`, `web/node_modules`, `web/dist`, `/workspaces/` in full (the repo ships no
-  instance), `logs/`, `/.cerebras_budget.json`, `/.invite_link_key` (a secret; back it up
+  instance), `logs/`, `/.maintenance.json`, `/.invite_link_key` (a secret; back it up
   beside `.env`).
 - `config.json` at the root is versioned and holds no secrets; deleting it falls back to
   registry defaults.
