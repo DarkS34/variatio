@@ -1,5 +1,9 @@
 """`create-user`, `users`, `grant` and `invite`."""
 
+# What the two profiles are called when a command prints one. The web keeps its own copy
+# for the same reason every other label does: this one is read in a terminal.
+PROFILE_LABELS = {"teacher": "docente", "student": "alumno"}
+
 
 def create_user(args) -> int:
     """Create one account, with an optional membership.
@@ -47,6 +51,7 @@ def create_user(args) -> int:
             email=args.email or None,
             is_admin=args.admin,
             email_verified=bool(args.email),
+            evaluator_profile=getattr(args, "profile", None),
             ui_language=getattr(args, "language", None),
         )
         membership = "sin asignatura"
@@ -54,10 +59,11 @@ def create_user(args) -> int:
             workspace = ensure_workspace(session, args.workspace)
             grant(session, workspace.id, user.id, args.role)
             membership = f"{args.role} de '{workspace.slug}'"
+        profile = PROFILE_LABELS.get(user.evaluator_profile, "sin perfil de evaluador")
         print(
             f"Cuenta creada: {user.username} "
             f"({'administrador' if user.is_admin else 'usuario'}), "
-            f"{membership}."
+            f"{membership}, {profile}."
         )
     return 0
 
@@ -88,7 +94,7 @@ def _ask_password(args) -> str | None:
 
 
 def list_users(_args) -> int:
-    """Print every account with its roles and its flags."""
+    """Print every account with its roles, its flags and its evaluator profile."""
     from ..db import session_scope
     from ..db.identity import list_users as rows_of, memberships_for
 
@@ -101,7 +107,11 @@ def list_users(_args) -> int:
             roles = ", ".join(f"{w.slug}:{m.role}" for m, w in memberships_for(session, user.id))
             flags = " [admin]" if user.is_admin else ""
             flags += " [desactivada]" if not user.active else ""
-            print(f"{user.id:>4}  {user.username:<24} {roles or '(sin asignaturas)'}{flags}")
+            profile = PROFILE_LABELS.get(user.evaluator_profile, "—")
+            print(
+                f"{user.id:>4}  {user.username:<24} {profile:<8} "
+                f"{roles or '(sin asignaturas)'}{flags}"
+            )
     return 0
 
 
@@ -128,9 +138,9 @@ def grant_role(args) -> int:
 def invite(args) -> int:
     """Mint single-use invitations and print their links, one per line.
 
-    The link *is* the invitation: whoever opens it chooses their own username, so it
-    binds the access and nothing else. `--alias` names it for the administration panel
-    only, numbered when `--count` asks for several.
+    The link *is* the invitation: whoever opens it chooses their own username and says
+    whether they teach or study, so it binds the access and nothing else. `--alias` names it
+    for the administration panel only, numbered when `--count` asks for several.
     """
     from datetime import timedelta
 
@@ -182,7 +192,10 @@ def invite(args) -> int:
 
     for line, _ in printed:
         print(line)
-    print(f"Caducan en {args.days} día(s). Quien canjee cada enlace elegirá su usuario y su contraseña.")
+    print(
+        f"Caducan en {args.days} día(s). Quien canjee cada enlace elegirá su usuario "
+        "y dirá si da clase o si estudia."
+    )
     if not all(stored for _, stored in printed):
         print("No se ha podido guardar el enlace para volver a verlo en el panel: cópialo ahora.")
     return 0

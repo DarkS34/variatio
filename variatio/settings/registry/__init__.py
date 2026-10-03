@@ -10,9 +10,19 @@ from ..types import STAGES as PIPELINE_STAGES
 from ..types import Setting
 from . import builders, generation, inference, logging, reasoning, retrieval, sampling, tunnel
 
-# The one place `variatio` names the tutor, and optional on purpose: `tutor` imports
-# `variatio` and never the reverse, so the registry reaches it by name, not by import. Only
-# the package being absent switches it off; a tutor whose own import breaks fails loudly.
+# The one place `variatio` names the evaluation and the tutor, and optional on purpose: both
+# import `variatio` and never the reverse, so the registry reaches them by name, not by
+# import. Only the tutor's package being absent switches the tutor off; a tutor whose own
+# import breaks fails loudly.
+try:
+    from evaluation.settings import LANE as STUDY_LANE
+    from evaluation.settings import READS as STUDY_READS
+    from evaluation.settings import SETTINGS as STUDY_SETTINGS
+except ImportError:
+    STUDY_LANE = None
+    STUDY_READS: tuple[str, ...] = ()
+    STUDY_SETTINGS: list[Setting] = []
+
 try:
     from tutor.settings import LANE as TUTOR_LANE
     from tutor.settings import MODEL_KEYS as TUTOR_MODEL_KEYS
@@ -27,15 +37,18 @@ except ModuleNotFoundError as missing:
     TUTOR_SETTINGS: list[Setting] = []
 
 
-def _with_tutor_stage(setting: Setting) -> Setting:
-    """Return `setting` with the tutor's stage appended when a turn reads it too."""
-    if TUTOR_LANE is None or setting.key not in TUTOR_READS:
-        return setting
-    return replace(setting, stages=setting.stages + (TUTOR_LANE.key,))
+def _with_reader_stages(setting: Setting) -> Setting:
+    """Return `setting` with the study's and the tutor's stages appended when they read it too."""
+    stages = setting.stages
+    if STUDY_LANE is not None and setting.key in STUDY_READS:
+        stages += (STUDY_LANE.key,)
+    if TUTOR_LANE is not None and setting.key in TUTOR_READS:
+        stages += (TUTOR_LANE.key,)
+    return setting if stages == setting.stages else replace(setting, stages=stages)
 
 
 REGISTRY: tuple[Setting, ...] = tuple(
-    _with_tutor_stage(setting)
+    _with_reader_stages(setting)
     for setting in inference.SETTINGS
     + tunnel.SETTINGS
     + reasoning.SETTINGS
@@ -43,6 +56,7 @@ REGISTRY: tuple[Setting, ...] = tuple(
     + builders.SETTINGS
     + retrieval.SETTINGS
     + generation.SETTINGS
+    + STUDY_SETTINGS
     + logging.SETTINGS
     + TUTOR_SETTINGS
 )
@@ -62,14 +76,24 @@ GROUPS = (
     "Constructores",
     "Recuperación",
     "Etiquetado y generación",
+    *(("Evaluación",) if STUDY_LANE else ()),
     *(("Tutor",) if TUTOR_LANE else ()),
     "Registro",
 )
 
-PIPELINE = reasoning.PIPELINE + ((TUTOR_LANE,) if TUTOR_LANE else ())
+PIPELINE = (
+    reasoning.PIPELINE
+    + ((STUDY_LANE,) if STUDY_LANE else ())
+    + ((TUTOR_LANE,) if TUTOR_LANE else ())
+)
 
-# One screen per stage, in the order of the path; the tutor's comes last when it is mounted.
-STAGES = PIPELINE_STAGES + ((TUTOR_LANE.key,) if TUTOR_LANE else ())
+# One screen per stage, in the order of the path; the study's and the tutor's come last, in
+# the order of their doors, when they are mounted.
+STAGES = (
+    PIPELINE_STAGES
+    + ((STUDY_LANE.key,) if STUDY_LANE else ())
+    + ((TUTOR_LANE.key,) if TUTOR_LANE else ())
+)
 
 # The settings outside the pipeline's phases that name a model a call is made with: each gets
 # the context cap and the protection every phase model has.

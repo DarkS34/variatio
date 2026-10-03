@@ -33,6 +33,8 @@ def triples(monkeypatch):
 
 
 def test_every_call_of_the_pipeline_has_its_triple():
+    # The pipeline's own lanes: the study's local arms write with the variant's sampling
+    # and its commercial arm with the provider's.
     for lane in reasoning.PIPELINE:
         for phase in lane.phases:
             for param in ("temperature", "top_k", "top_p"):

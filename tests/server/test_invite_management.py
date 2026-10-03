@@ -126,6 +126,7 @@ def _redeem(db, link: str, username: str = "ana"):
             username=username,
             name=username,
             password="una-contraseña-larga",
+            evaluator_profile="teacher",
         ),
         _request(),
         Response(),

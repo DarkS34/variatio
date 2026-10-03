@@ -5,8 +5,11 @@ import { EFFORT_ORDER, type EffortLevel } from "./effort";
 /**
  * The commission as the form holds it, and its two conversions to what the API takes.
  *
- * Pure, and in a module of its own rather than beside the component: a conversion that
- * lives inside a component cannot be tested without a DOM.
+ * Pure, and in a module of its own rather than beside the component, because three
+ * different screens convert a form into a request — the generate screen, the evaluator's
+ * own commission and the panel's stock — and the one field they disagree about is `n`.
+ * A conversion that lives inside a component cannot be tested without a DOM, and this one
+ * shipped wrong: see `evaluation/commission.ts`.
  */
 
 export interface FormState {
@@ -28,6 +31,7 @@ export interface FormState {
   curriculum: string[];
   decisions: Record<string, unknown>;
   instructions: string;
+  /** Only the "generate" variant reads it: an evaluation draws its own, at random. */
   think: boolean;
   /** Only counts with `think` on; what the engine receives as reasoning effort. */
   effort: EffortLevel;
@@ -36,7 +40,9 @@ export interface FormState {
    *
    * Null is "the default one", the first of `generation.models`. The server resolves it,
    * never the form: what a run RECORDS is the model that actually wrote it and not one a
-   * browser guessed.
+   * browser guessed. Only the "generate" variant sets it — a comparison's two local
+   * proposals are written by the installation's own `evaluation.local_model`, and
+   * `evaluation/commission.ts` strips the field on the way.
    *
    * An installation that would rather decide offers ONE model, and then nothing is drawn.
    */

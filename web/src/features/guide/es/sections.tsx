@@ -1,10 +1,11 @@
-import { Check, MessagesSquare, Play, type LucideIcon } from "lucide-react";
+import { Check, MessagesSquare, Play, Scale, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
+import { ARM_META } from "@/evaluation/arms";
 import {
   USES,
   STEPS,
@@ -30,6 +31,8 @@ const STATE_HINTS: Record<StatusKey, string> = {
   blocked: "No es «no está hecho», es «no te toca todavía»: falta cerrar algo de lo que depende.",
 };
 
+const ARM_ORDER = ["naive", "rag", "system"] as const;
+
 /**
  * The graph builder's real plan, read from the API as the panel reads it.
  *
@@ -44,12 +47,26 @@ function BuildPlanBar() {
 }
 
 /**
- * The door after the construction, drawn as the bar draws it: an icon and no number,
- * because it is not a stop on the path but what the path leads to.
+ * One of the two doors of the testing phase, drawn as the bar draws it: an icon and no
+ * number, because the two have no order between them.
  */
-function Pill({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+function Pill({
+  icon: Icon,
+  label,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  tone?: "evaluation";
+}) {
   return (
-    <span className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium">
+    <span
+      className={
+        tone === "evaluation"
+          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]"
+          : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
+      }
+    >
       <Icon className="size-4" />
       {label}
     </span>
@@ -90,14 +107,26 @@ function Start() {
             </div>
           </div>
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <div className="flex flex-wrap items-center gap-2">
-            {USES.map((door) => (
-              <Pill key={door.key} icon={door.key === "tutor" ? MessagesSquare : Play} label={t(door.labelKey)} />
-            ))}
+          <div className="space-y-1.5">
+            <p className="font-condensed text-micro uppercase text-muted-foreground">
+              {t("nav.phase.test")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {USES.map((door) => (
+                <Pill
+                  key={door.key}
+                  icon={
+                    door.key === "generate" ? Play : door.key === "tutor" ? MessagesSquare : Scale
+                  }
+                  label={t(door.labelKey)}
+                  tone={door.evaluation ? "evaluation" : undefined}
+                />
+              ))}
+            </div>
           </div>
         </div>
         <Paragraph>
-          Es exactamente la barra de arriba. La{" "}
+          Es exactamente la barra de arriba, y son dos fases con nombre. La{" "}
           <strong>{t("nav.phase.build").toLowerCase()}</strong> son cuatro pasos numerados{" "}
           <strong>{stepNumber(0)}</strong> a <strong>{stepNumber(3)}</strong> porque son un solo
           trabajo, <em>preparar la asignatura</em>, y se hacen en ese orden: cada uno necesita
@@ -108,11 +137,14 @@ function Start() {
           vuelve a mostrar los pasos, y el navegador lo recuerda.
         </Paragraph>
         <Paragraph>
-          Tras la raya van «{t("nav.create")}» y «{t("nav.tutor")}», aquello para lo que existe
-          la construcción. No llevan número porque no son pasos sino las puertas a las que
-          llevan los cuatro, y ninguna espera a la otra: se encienden cuando la construcción
-          está cerrada, y hasta entonces están medio apagadas, dicen «
+          La <strong>{t("nav.phase.test").toLowerCase()}</strong> son tres cosas que puedes
+          hacer con la asignatura construida, y por eso no llevan número: ninguna va antes que
+          otra y ninguna necesita a otra. Las tres se encienden a la vez, cuando la
+          construcción está cerrada; hasta entonces están medio apagadas, dicen «
           {t("nav.state.later").toLowerCase()}» y no responden al pulsarlas.
+          «{t("nav.create")}» y «{t("nav.tutor")}» son aquello para lo que existe la
+          construcción. «{t("nav.compare")}» va aparte en color: no produce material para tu
+          asignatura, sirve para medir el sistema.
         </Paragraph>
       </Block>
 
@@ -182,7 +214,7 @@ function Start() {
               puesto a cada uno es el que de verdad practica.
             </>,
             <>
-              Con los cuatro cerrados se abre «{t("nav.create")}».
+              Con los cuatro cerrados se abren «{t("nav.create")}» y «{t("nav.compare")}».
             </>,
           ]}
         />
@@ -259,8 +291,8 @@ function Workspace() {
         <Paragraph>
           Mientras tanto la aplicación no se queda bloqueada: esta guía, «{t("account.title")}» y
           —si administras la instalación— «{t("admin.title")}» funcionan sin ninguna
-          asignatura. Lo que espera es todo lo que lee una instancia: los cuatro pasos y «
-          {t("nav.create")}».
+          asignatura. Lo que espera es todo lo que lee una instancia: los cuatro pasos, «
+          {t("nav.create")}» y «{t("nav.compare")}».
         </Paragraph>
       </Block>
 
@@ -593,7 +625,7 @@ function Raw() {
 
 /**
  * How each of the three building steps ends. The same block in all three sections because
- * it is the same task.
+ * it is the same task: the only difference is the questions, which the server writes.
  */
 function Verdict({ artifact }: { artifact: string }) {
   const { t } = useT();
@@ -603,14 +635,23 @@ function Verdict({ artifact }: { artifact: string }) {
       <Paragraph>
         El paso se abre <strong>en modo lectura</strong>: se mira, no se toca. Ver y corregir
         son dos cosas distintas, y por eso están en dos momentos distintos. Al final de la
-        pantalla, y no al entrar, hay dos cosas seguidas: la oferta de corregir y el paso
-        siguiente.
+        pantalla, y no al entrar, hay tres cosas seguidas: la valoración, la oferta de
+        corregir y el paso siguiente.
       </Paragraph>
       <Steps
         items={[
           <>
-            <strong>Mira lo que hay arriba.</strong> No hace falta leerlo entero: basta con
-            ver si te suena a tu asignatura.
+            <strong>Mira lo que hay arriba.</strong> No hace falta leerlo entero: lo que se
+            pregunta después es si te suena a tu asignatura.
+          </>,
+          <>
+            <strong>«{t("stageReview.openTitle")}»</strong>, el botón del final, despliega
+            debajo un cuestionario corto: cinco afirmaciones, y para cada una dices cuánto
+            estás de acuerdo, del 1 («totalmente en desacuerdo») al 5 («totalmente de
+            acuerdo»). Son las mismas cinco ideas en los tres pasos. Puedes dejarlo a medias
+            y volver, porque media respuesta también es un dato, y en cuanto guardas puedes
+            cerrarlo sin perder nada. Está ahí aunque el paso anterior se haya vuelto a
+            abrir: lo que se valora es lo que hay construido.
           </>,
           <>
             <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que hay
@@ -632,9 +673,39 @@ function Verdict({ artifact }: { artifact: string }) {
         ]}
       />
       <Paragraph>
-        Corregir es opcional: puedes continuar sin haber tocado nada. Lo que no se puede es
-        avanzar sin cerrar, porque el paso siguiente necesita que este esté dado por bueno.
+        Corregir es opcional y valorar también: puedes continuar sin haber hecho ninguna de
+        las dos. Lo que no se puede es avanzar sin cerrar, porque el paso siguiente necesita
+        que este esté dado por bueno.
       </Paragraph>
+      <Detail title="Qué se guarda exactamente">
+        <p>
+          Tus respuestas, con la <em>versión concreta</em> que juzgaste. Si vuelves a
+          construir el paso y lo valoras otra vez, no se sobrescribe: son dos datos, porque
+          «salió mal» y «lo rehíce y salió bien» son dos cosas distintas. Volver a contestar
+          sobre lo mismo sí corrige tu respuesta anterior.
+        </p>
+        <p>
+          Se guarda también <strong>si corregiste antes de valorar</strong>. No es
+          vigilancia: es una variable del estudio, porque no es lo mismo la nota de quien ha
+          curado el resultado a mano que la de quien lo juzga tal como salió, y sin
+          distinguirlas las dos se mezclan en el mismo promedio.
+        </p>
+        <p>
+          Son cinco afirmaciones en cada paso, todas sobre la misma escala de acuerdo, y
+          siguen el mismo orden en los tres: que todo lo que hay es tuyo, que no falta nada,
+          que lo que ese paso tiene que hacer lo hace —las partes de cada tipo, el orden del
+          temario, el concepto de cada ejercicio—, que lo podrías usar tal cual, y que en
+          conjunto ha salido bien. Están redactadas para que estar de acuerdo sea siempre la
+          buena noticia, así que el número es la nota: 5 es lo mejor. Las dos últimas son
+          idénticas en los tres, y son las que permiten comparar un paso con otro. Al final
+          hay una caja opcional para lo que no quepa en la escala.
+        </p>
+        <p>
+          Es lo único que se te pide a cambio de usar esto, y es lo que se está midiendo:
+          sin ello no hay forma de saber si el sistema prepara bien una asignatura o solo lo
+          parece.
+        </p>
+      </Detail>
     </Block>
   );
 }
@@ -1152,8 +1223,8 @@ function Generate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.generate")}>
         <p>
-          La puerta tras la construcción, y aquello para lo que existe: un encargo, una tanda
-          de ejercicios nuevos. El formulario es un
+          La primera puerta de la <strong>{t("nav.phase.test").toLowerCase()}</strong>, y
+          aquello para lo que existe la construcción: un encargo, una tanda de ejercicios nuevos. El formulario es un
           acordeón — se responde de arriba abajo y cada pregunta se cierra en una línea al
           contestarla, así que volver a cambiar los conceptos cuesta un clic y ningún scroll.
         </p>
@@ -1386,6 +1457,219 @@ function Generate() {
   );
 }
 
+function Evaluate() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.evaluate")}>
+        <p>
+          El mismo encargo resuelto por dos arquitecturas distintas y presentado{" "}
+          <strong>a ciegas</strong>, para que elijas sin saber cuál es cuál. Una de las dos es
+          siempre este sistema; la otra se sortea en cada sesión entre las dos alternativas —
+          un modelo comercial, o una búsqueda por similitud sobre tus documentos —. Es la
+          parte del sistema que sirve para medirlo, no para producir material.
+        </p>
+        <p>
+          Tú pides la comparación y tú la juzgas: eliges de qué concepto quieres el ejercicio,
+          se preparan las dos versiones y las lees cuando estén.
+        </p>
+      </SectionHead>
+
+      <Facts
+        items={[
+          {
+            label: "Qué se te pide",
+            value: "Leer dos propuestas, una pregunta por tarjeta y una elección.",
+          },
+          {
+            label: "Qué produce",
+            value: "Una sesión guardada con las dos propuestas y tu juicio.",
+          },
+          {
+            label: "Qué necesitas",
+            value: "Los cuatro pasos cerrados: las dos versiones se escriben con tu asignatura.",
+          },
+        ]}
+      />
+
+      <Block title="Las dos pestañas">
+        <Rows
+          items={[
+            {
+              key: "encargo",
+              head: t("eval.tab.compose"),
+              body: "Donde abre la pantalla. Eliges de qué concepto y de qué tipo quieres el ejercicio: es el mismo formulario de «Generación de ejercicios», sin dos controles —cuántos ejercicios y si el modelo delibera—, porque una comparación es siempre uno por versión. El modelo que escribe las dos propuestas locales no se elige aquí: lo fija quien administra en «Configuración → Evaluar el sistema», y la comercial usa el suyo.",
+            },
+            {
+              key: "sesiones",
+              head: t("eval.tab.history"),
+              body: "Tu histórico. Puedes releer cualquier sesión ya cerrada, con la revelación incluida.",
+            },
+          ]}
+        />
+        <Paragraph>
+          Mientras una comparación está abierta las pestañas desaparecen, y con ellas el detalle
+          técnico: diría de qué arquitectura sale cada propuesta antes de que la leas. Se vuelve a
+          la lista con el botón de la cabecera. Al salir de la pantalla y volver, se abre en el
+          formulario: una comparación ya terminada se relee desde «{t("eval.tab.history")}».
+        </Paragraph>
+      </Block>
+
+      <Block title="Cómo va una comparación">
+        <Steps
+          items={[
+            <>
+              Aparecen las dos propuestas, sin etiquetar y en un orden que es solo tuyo.
+              Encima, en una línea, el encargo: el tipo de ejercicio, los conceptos, el nivel si
+              se fijó uno y, si se sorteó, el escenario en el que se ambientan las dos. Si en
+              «Instrucciones adicionales» ya dijiste de qué va el ejercicio, no se sortea ninguno:
+              tus palabras llegan a las dos propuestas tal cual. Sea cual sea, es el mismo para
+              las dos, así que no delata nada. Tampoco se dice cuál de las dos alternativas le
+              ha tocado a esta sesión.
+            </>,
+            <>
+              Las dos tarjetas son cajas de la misma altura, corta o larga la propuesta, y cada
+              una se desplaza por dentro. El botón azul «{t("reveal.read")}» de su cabecera la
+              abre entera, a tamaño de lectura y con la pregunta al pie; ← y → pasan de una a
+              otra.
+            </>,
+            <>
+              <strong>Respondes una pregunta por tarjeta</strong>: si la pondrías en clase —
+              o, si eres alumno, si te serviría para practicar. Un clic, primera impresión, sin
+              darle vueltas.
+            </>,
+            <>
+              <strong>Eliges una</strong>. La barra de elección queda fija al pie de la ventana;
+              no se activa hasta que has respondido a las dos, y siempre puedes decir que
+              ninguna te convence.
+            </>,
+            <>
+              Solo entonces se revela qué arquitectura escribió cada una: una columna por
+              propuesta, con lo que respondiste sobre ella, el modelo y el tiempo, y un
+              «{t("reveal.read")}» que la abre entera junto con de dónde salió.
+            </>,
+            <>
+              Con ella se destapan también <strong>los conceptos de cada propuesta</strong>,
+              leídos con el mismo etiquetador que el banco, y una línea que dice si el
+              ejercicio se ha metido en algo que va después en el temario. La regla es la
+              misma para las dos y es la que el sistema lleva en su prompt, solo que
+              únicamente una de las dos la conoce. Con currículo, cuenta cualquier mención
+              de lo que la clase no ha dado; sin él, solo cuenta que la propuesta practique
+              un concepto posterior a lo pedido.
+            </>,
+            <>
+              Si te apetece, afinas la del sistema en cuatro escalas, con su ejercicio al lado.
+              Es <strong>opcional</strong>: la comparación ya quedó registrada al elegir.
+            </>,
+            <>
+              Debajo, «{t("eval.orderAnother")}» cierra la sesión y te deja en el formulario,
+              listo para pedir la siguiente. Si alguien te ha dejado comparaciones en la cola,
+              ese mismo botón abre la que viene.
+            </>,
+          ]}
+        />
+      </Block>
+
+      <Alert tone="settled" title="Todo lo que se mide va antes de la revelación">
+        <p>
+          Una puntuación dada después de saber qué es cada cosa es una puntuación sobre un
+          nombre, no sobre un ejercicio. Por eso la pregunta por tarjeta y la elección van
+          antes, y la revelación es lo último: es la recompensa por terminar, no una puerta
+          delante de más trabajo.
+        </p>
+      </Alert>
+
+      <Block title="Si no es de lo tuyo, dilo">
+        <Paragraph>
+          Abajo a la derecha hay un enlace discreto:{" "}
+          <strong>«No tengo criterio para juzgar esto»</strong>. Los evaluadores vienen de
+          asignaturas y cursos distintos, así que encontrarte con un ejercicio que no te toca
+          es normal y no es un fallo tuyo.
+        </Paragraph>
+        <Paragraph>
+          Saltarla es la respuesta correcta y queda registrada como tal:{" "}
+          <strong>no cuenta como preferencia</strong> ni ensucia ningún promedio. Contestar
+          por compromiso sí lo haría, y no habría forma de saberlo después.
+        </Paragraph>
+      </Block>
+
+      <Alert tone="settled" title="No verás el marcador acumulado">
+        <p>
+          Enseñarte el resultado de lo que estás a punto de juzgar es invitarte a compensarlo. Tus
+          sesiones son tuyas y las puedes releer; el recuento es de quien analiza el estudio.
+        </p>
+      </Alert>
+
+      <Detail title="Las tres arquitecturas, de las que cada sesión enfrenta dos">
+        {ARM_ORDER.map((arm) => (
+          <div key={arm} className="flex gap-3">
+            <span
+              aria-hidden
+              className="mt-1.5 size-3 shrink-0"
+              style={{ background: ARM_META[arm].colour }}
+            />
+            <p className="flex-1">
+              <span className="font-medium text-foreground">{t(ARM_META[arm].labelKey)}</span> —{" "}
+              {t(ARM_META[arm].descriptionKey)}
+            </p>
+          </div>
+        ))}
+        <p>
+          Cada sesión enfrenta a este sistema con <strong>una</strong> de las otras dos, elegida
+          a cara o cruz por la misma semilla que decide el orden. Así la pregunta que se
+          responde es la que importa —¿escribe el sistema mejores ejercicios que esta
+          alternativa?— y, sobre muchas sesiones, cada alternativa se enfrenta al sistema
+          tantas veces como la otra.
+        </p>
+        <p>
+          Cada arquitectura tiene su color fijo y siempre el mismo, en todas las sesiones y en
+          todas las gráficas, para que dos sesiones separadas por meses se puedan leer juntas.
+        </p>
+        <p>
+          El color aparece <strong>solo tras la revelación</strong>. Mientras la comparación
+          es ciega, una tarjeta con color sería una tarjeta que lleva información.
+        </p>
+        <p>
+          Qué recibe exactamente cada una está escrito, fila a fila, bajo el formulario de «
+          {t("eval.tab.compose")}»: es la tabla «{t("fair.title")}», y dice quién ve los
+          conceptos, quién las descripciones, quién trozos de tus documentos, quién tus
+          ejercicios del banco como ejemplo, quién los prerrequisitos. {t("fair.footnote")}
+        </p>
+      </Detail>
+
+      <Detail title="Por qué el orden de las tarjetas es distinto para cada persona">
+        <p>
+          Si dos evaluadores juzgan los mismos dos ejercicios, cada uno los ve en un orden
+          propio. Compartir el orden significaría compartir también la tendencia a elegir la
+          primera o la última, y entonces lo que parecería acuerdo sobre los ejercicios sería
+          en parte acuerdo sobre dónde estaban colocados.
+        </p>
+        <p>
+          Ese orden se sortea con una semilla que queda guardada con la sesión, así que meses
+          después se puede reconstruir exactamente qué viste y en qué posición.
+        </p>
+      </Detail>
+
+      <Detail title="Lo que no eliges tú">
+        <p>
+          <strong>Cuántos ejercicios se generan</strong>: siempre uno por propuesta, dos por
+          sesión. Es lo que hace de la sesión la unidad de análisis.
+        </p>
+        <p>
+          <strong>Contra cuál de las dos alternativas se compara el sistema</strong>: lo sortea
+          cada sesión, y no se dice hasta la revelación. Elegirlo dejaría fuera la alternativa
+          que menos apetece leer, y el estudio necesita medir las dos.
+        </p>
+        <p>
+          <strong>Si el modelo razona antes de responder</strong>: lo sortea cada sesión, no
+          tú. Elegirlo lo correlacionaría con tu ánimo y con el tiempo que tengas; sorteado,
+          es una condición que se puede medir aparte después. Se aplica igual a las dos
+          propuestas locales, así que nunca separa a una de la otra.
+        </p>
+      </Detail>
+    </div>
+  );
+}
 
 function Runs() {
   const { t } = useT();
@@ -1585,8 +1869,8 @@ function Account() {
       <Block title="Dos cosas que sorprenden">
         <Alert tone="info" title="El usuario no se puede cambiar">
           <p>
-            Es lo que identifica todo lo que has hecho: cada ejercicio y cada línea del
-            registro apuntan a él. El nombre visible sí se cambia cuando quieras.
+            Es lo que identifica todo lo que has hecho: cada ejercicio, cada sesión de evaluación y
+            cada línea del registro apuntan a él. El nombre visible sí se cambia cuando quieras.
           </p>
         </Alert>
         <Alert tone="info" title="Cambiar la contraseña cierra el resto de sesiones">
@@ -1603,7 +1887,7 @@ function Account() {
           <strong>enlace de invitación de un solo uso</strong> y tú elegiste tu nombre de usuario
           al abrirlo. Ese enlace <em>es</em> la invitación: no está atado a ningún correo, así que
           no lo dejes en un sitio compartido. Al abrirlo eliges también tu contraseña —la que
-          quieras, o la que te sugiera tu gestor.
+          quieras, o la que te sugiera tu gestor— y dices si das clase o si estudias.
         </Paragraph>
         <Paragraph>
           La invitación puede traer ya una asignatura y un papel dentro de ella, o no traer
@@ -1623,11 +1907,12 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">solo administradores</Badge>
         <Paragraph>
-          La instalación vista desde fuera, en cuatro pestañas: «{t("admin.tab.engine")}», «
+          La instalación vista desde fuera, en cinco pestañas: «{t("admin.tab.engine")}», «
           {t("admin.tab.config")}» (todos los ajustes, cada uno con lo que invalidará al
-          guardarlo), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos) y «
-          {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar). Tiene sección propia
-          aquí al lado: «{t("guide.sec.admin")}».
+          guardarlo), «{t("admin.tab.accounts")}» (invitaciones, papeles, desbloqueos), «
+          {t("admin.tab.workspaces")}» (espacio en disco, exportar, borrar) y, separada al final,
+          «{t("admin.tab.evaluation")}» (el estudio). Tiene sección propia aquí al lado: «
+          {t("guide.sec.admin")}».
         </Paragraph>
       </Block>
 
@@ -1661,7 +1946,15 @@ function Admin() {
           instancias y qué está haciendo la máquina. Vive detrás del avatar, en{" "}
           <strong>«{t("admin.title")}»</strong>, y solo la ve quien administra la instalación.
         </p>
-        <p>Son cuatro pestañas, y esta sección las cubre todas.</p>
+        <p>
+          Son cinco pestañas, y esta sección las cubre todas. La de «
+          {t("admin.tab.evaluation")}» reúne lo que ha contestado la gente, en dos bloques: las
+          comparaciones a ciegas de la fase de pruebas, con sus recuentos y sus contrastes, y los
+          formularios que cierran cada paso de la fase de construcción, resumidos paso a paso.
+          Arriba de los dos va un solo filtro —una cuenta, un tipo de cuenta (docentes o
+          alumnos) y una asignatura— que acota ambos bloques a la vez, y cada bloque descarga
+          en CSV exactamente lo que muestra.
+        </p>
       </SectionHead>
 
       <Block title={t("admin.tab.accounts")}>
@@ -1670,7 +1963,8 @@ function Admin() {
           es una decisión, no una carencia: una cuenta existe porque alguien abrió un enlace de
           invitación de un solo uso, o porque se creó desde la línea de órdenes. El enlace{" "}
           <em>es</em> la invitación y no va atado a ningún correo, así que se pasa a mano y no se
-          deja en un sitio compartido. Quien lo abre elige su usuario y su contraseña.
+          deja en un sitio compartido. Quien lo abre elige su usuario, su contraseña y si da
+          clase o si estudia.
         </Paragraph>
         <Paragraph>
           Cada invitación se crea con «{t("acc.invite.open")}», que abre una ventana con las
@@ -1717,7 +2011,7 @@ function Admin() {
             { key: "owner", head: t("role.owner"), body: t("role.owner.hint") },
           ]}
         />
-        <Paragraph>Y aparte de los accesos, cada fila ofrece tres cosas más:</Paragraph>
+        <Paragraph>Y aparte de los accesos, cada fila ofrece cuatro cosas más:</Paragraph>
         <Rows
           items={[
             {
@@ -1735,6 +2029,16 @@ function Admin() {
               head: <>«{t("acc.badge.locked")}»</>,
               body: "Tras varios intentos fallidos, el limitador cierra el login de esa cuenta un rato. Desde aquí se abre sin esperar, y desde aquí se le cierran también todas las sesiones abiertas.",
             },
+            {
+              key: "perfil",
+              head: <>«{t("acc.profileLabel")}»</>,
+              body: "Docente o alumno. Decide con qué palabras se le pregunta al comparar propuestas y cómo agrupa el estudio sus respuestas; no da ni quita ningún permiso, y por eso se corrige aquí sin más trámite.",
+            },
+            {
+              key: "sesiones",
+              head: <>«{t("acc.seeSessions")}»</>,
+              body: "Solo si esa cuenta ha evaluado algo: salta a «Evaluaciones» con el filtro ya puesto en ella.",
+            },
           ]}
         />
       </Block>
@@ -1750,7 +2054,7 @@ function Admin() {
             {
               key: "eliminar",
               head: <>«{t("common.delete")}»</>,
-              body: "Borra la cuenta de verdad, y no se puede deshacer. Lo que produjo NO se va con ella: los ejercicios generados se quedan, sin autor. Un curso preparado sobre ese material no se cae porque se dé de baja a quien lo generó.",
+              body: "Borra la cuenta de verdad, y no se puede deshacer. Lo que produjo NO se va con ella: los ejercicios generados y las sesiones de evaluación se quedan, sin autor. Un curso preparado sobre ese material no se cae porque se dé de baja a quien lo generó, y el estudio no pierde las comparaciones que contó.",
             },
           ]}
         />
@@ -1874,13 +2178,13 @@ function Admin() {
         <Paragraph>
           Todos los ajustes de la instalación, con <strong>una pestaña por etapa</strong> y con
           los nombres y números de la barra: «{t("nav.step.raw")}», «{t("nav.step.profile")}», «
-          {t("nav.step.graph")}», «{t("nav.step.bank")}» y «{t("nav.create")}». Cada pestaña
-          tiene todo lo que usa su etapa, y el <strong>buscador</strong> de arriba encuentra un
-          ajuste del que solo recuerdas media palabra, esté en la pestaña que esté. Cuando el
-          nombre de un ajuste no basta para saber qué controla, o cambiarlo tiene una
-          consecuencia que no se adivina, lleva al lado un (i) que lo dice en una frase. Lo del
-          motor —el motor de inferencia, el túnel, Cerebras— no es de ninguna etapa y está en «
-          {t("admin.tab.engine")}».
+          {t("nav.step.graph")}», «{t("nav.step.bank")}», «{t("nav.create")}» y «
+          {t("nav.compare")}». Cada pestaña tiene todo lo que usa su etapa, y el{" "}
+          <strong>buscador</strong> de arriba encuentra un ajuste del que solo recuerdas media
+          palabra, esté en la pestaña que esté. Cuando el nombre de un ajuste no basta para saber
+          qué controla, o cambiarlo tiene una consecuencia que no se adivina, lleva al lado un (i)
+          que lo dice en una frase. Lo del motor —el motor de inferencia, el túnel, Cerebras— no
+          es de ninguna etapa y está en «{t("admin.tab.engine")}».
         </Paragraph>
         <Paragraph>
           Cada pestaña empieza por <strong>{t("cfg.flow").toLowerCase()}</strong>: las llamadas al
@@ -1888,8 +2192,9 @@ function Admin() {
           modelo la atiende; el círculo dice si razona antes de contestar y, mientras razona, el
           selector de al lado fija cuánto. Las paradas que no llevan interruptor lo dicen con el
           círculo a trazos: el guardián porque su modelo no razona, el ejercicio porque eso lo
-          decide cada encargo y la reparación porque va con gramática. Debajo de cada parada va
-          su <strong>muestreo</strong> —temperatura, top_k y top_p— y después sus propios ajustes.
+          decide cada encargo, la reparación porque va con gramática, y en la evaluación porque
+          lo sortea cada sesión o lo decide el proveedor. Debajo de cada parada va su{" "}
+          <strong>muestreo</strong> —temperatura, top_k y top_p— y después sus propios ajustes.
           Un campo de muestreo vacío hereda, y dice de qué: la temperatura sigue al interruptor de
           razonamiento, y top_k y top_p los pone el modelo. Cerebras no admite top_k, así que en
           una parada servida allí ese campo no se ofrece.
@@ -1932,7 +2237,7 @@ const problems = (
         <p>
           No es un fallo: quien administra la instalación la ha cerrado a propósito para
           aplicar cambios. El aviso dice desde cuándo, y lo tuyo sigue donde estaba —
-          artefactos y ejercicios se leen igual cuando vuelva a abrirse.
+          artefactos, ejercicios y evaluaciones se leen igual cuando vuelva a abrirse.
         </p>
         <p>
           No hay hora prevista de vuelta, y no la hay porque nadie la sabe. «
@@ -2321,6 +2626,7 @@ export const BODIES: Record<string, () => ReactNode> = {
   graph: Graph,
   bank: Bank,
   generate: Generate,
+  evaluate: Evaluate,
   tutor: Tutor,
   runs: Runs,
   account: Account,

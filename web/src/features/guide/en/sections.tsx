@@ -1,10 +1,11 @@
-import { Check, MessagesSquare, Play, type LucideIcon } from "lucide-react";
+import { Check, MessagesSquare, Play, Scale, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Alert, PhaseBar, Skeleton } from "@/components/ui/misc";
 import { StatusMark } from "@/components/ui/status";
 import { STATUS, type StatusKey } from "@/lib/status";
+import { ARM_META } from "@/evaluation/arms";
 import {
   USES,
   STEPS,
@@ -31,6 +32,8 @@ const STATE_HINTS: Record<StatusKey, string> = {
     'Not "it is not done", but "it is not your turn yet": something it depends on is not closed.',
 };
 
+const ARM_ORDER = ["naive", "rag", "system"] as const;
+
 /**
  * The graph builder's real plan, read from the API the way the panel reads it.
  *
@@ -46,12 +49,26 @@ function BuildPlanBar() {
 }
 
 /**
- * The door after the construction, drawn as the bar draws it: an icon and no number,
- * because it is not a stop on the path but what the path leads to.
+ * One of the two doors of the testing phase, drawn as the bar draws it: an icon and no
+ * number, because the two have no order between them.
  */
-function Pill({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+function Pill({
+  icon: Icon,
+  label,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  tone?: "evaluation";
+}) {
   return (
-    <span className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium">
+    <span
+      className={
+        tone === "evaluation"
+          ? "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]"
+          : "flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-small font-medium"
+      }
+    >
       <Icon className="size-4" />
       {label}
     </span>
@@ -94,14 +111,26 @@ function Start() {
             </div>
           </div>
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <div className="flex flex-wrap items-center gap-2">
-            {USES.map((door) => (
-              <Pill key={door.key} icon={door.key === "tutor" ? MessagesSquare : Play} label={t(door.labelKey)} />
-            ))}
+          <div className="space-y-1.5">
+            <p className="font-condensed text-micro uppercase text-muted-foreground">
+              {t("nav.phase.test")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {USES.map((door) => (
+                <Pill
+                  key={door.key}
+                  icon={
+                    door.key === "generate" ? Play : door.key === "tutor" ? MessagesSquare : Scale
+                  }
+                  label={t(door.labelKey)}
+                  tone={door.evaluation ? "evaluation" : undefined}
+                />
+              ))}
+            </div>
           </div>
         </div>
         <Paragraph>
-          It is exactly the bar above. The{" "}
+          It is exactly the bar above, and it is two named phases. The{" "}
           <strong>{t("nav.phase.build").toLowerCase()}</strong> is four steps numbered{" "}
           <strong>{stepNumber(0)}</strong> to <strong>{stepNumber(3)}</strong> because they are
           one single job, <em>preparing the subject</em>, and they are done in that order: each
@@ -113,11 +142,14 @@ function Start() {
           steps again, and the browser remembers.
         </Paragraph>
         <Paragraph>
-          After the rule come "{t("nav.create")}" and "{t("nav.tutor")}", what the construction
-          exists for. They carry no number because they are not steps but the doors the four
-          steps lead to, and neither waits for the other: they light up when the construction is
-          closed, and until then they are half off, say "{t("nav.state.later").toLowerCase()}"
-          and answer no click.
+          The <strong>{t("nav.phase.test").toLowerCase()}</strong> is three things you can do
+          with the subject once it is built, and that is why they carry no number: none comes
+          before another and none needs another. All three light up at once, when the
+          construction is closed; until then they are half off, they say "
+          {t("nav.state.later").toLowerCase()}" and they answer no click.
+          "{t("nav.create")}" and "{t("nav.tutor")}" are what the construction exists for. "
+          {t("nav.compare")}" stands apart in its own colour: it produces no material for your
+          subject, it is there to measure the system.
         </Paragraph>
       </Block>
 
@@ -186,7 +218,7 @@ function Start() {
               been given is the one it really practises.
             </>,
             <>
-              With the four closed, "{t("nav.create")}" opens up.
+              With the four closed, "{t("nav.create")}" and "{t("nav.compare")}" open up.
             </>,
           ]}
         />
@@ -269,8 +301,8 @@ function Workspace() {
         <Paragraph>
           Meanwhile the application is not blocked: this guide, "{t("account.title")}" and — if
           you administer the installation — "{t("admin.title")}" work with no subject at all.
-          What waits is everything that reads an instance: the four steps and
-          "{t("nav.create")}".
+          What waits is everything that reads an instance: the four steps, "{t("nav.create")}"
+          and "{t("nav.compare")}".
         </Paragraph>
       </Block>
 
@@ -599,7 +631,8 @@ function Raw() {
 
 /**
  * How each of the three steps that build something ends. The same block in all three
- * sections because it is the same task.
+ * sections because it is the same task: the only difference is the questions, which the
+ * server writes.
  */
 function Verdict({ artifact }: { artifact: string }) {
   const { t } = useT();
@@ -609,14 +642,23 @@ function Verdict({ artifact }: { artifact: string }) {
       <Paragraph>
         A step opens <strong>read-only</strong>: it is there to be looked at, not touched.
         Looking and correcting are two different things, and that is why they are two
-        different moments. At the foot of the screen, not on the way in, two things follow
-        one another: the offer to correct, and the next step.
+        different moments. At the foot of the screen, not on the way in, three things follow
+        one another: the verdict, the offer to correct, and the next step.
       </Paragraph>
       <Steps
         items={[
           <>
-            <strong>Look at what is above.</strong> You do not have to read all of it: it is
-            enough to see whether it sounds like your subject.
+            <strong>Look at what is above.</strong> You do not have to read all of it: what is
+            asked afterwards is whether it sounds like your subject.
+          </>,
+          <>
+            <strong>"{t("stageReview.openTitle")}"</strong>, the button at the foot, unfolds a
+            short questionnaire beneath it: five statements, and for each you say how far you
+            agree, from 1 ("strongly disagree") to 5 ("strongly agree"). They are the same
+            five ideas on all three steps. You can leave it half done and come back, because
+            half an answer is a datum too, and once you have saved you can close it without
+            losing anything. It is there even when the previous step has been reopened: what
+            is judged is what is built.
           </>,
           <>
             <strong>"{t("stage.curate.start")}"</strong> unlocks the editing of what is above.
@@ -638,9 +680,39 @@ function Verdict({ artifact }: { artifact: string }) {
         ]}
       />
       <Paragraph>
-        Correcting is optional: you can carry on having touched nothing. What you cannot do is
-        move on without closing, because the next step needs this one taken as good.
+        Correcting is optional and so is the verdict: you can carry on having done neither.
+        What you cannot do is move on without closing, because the next step needs this one
+        taken as good.
       </Paragraph>
+      <Detail title="What exactly is kept">
+        <p>
+          Your answers, with the <em>particular version</em> you judged. If you build the
+          step again and judge it again, nothing is overwritten: they are two data, because
+          "it came out badly" and "I redid it and it came out well" are two different things.
+          Answering again about the same one does correct your earlier answer.
+        </p>
+        <p>
+          Whether you <strong>corrected before judging</strong> is kept too. It is not
+          surveillance: it is a variable of the evaluation, because the mark of somebody who has
+          curated the result by hand is not the mark of somebody judging it as it came out,
+          and without telling them apart the two are mixed into the same average.
+        </p>
+        <p>
+          There are five statements on every step, all on the same agreement scale, and they
+          follow the same order on all three: that everything there is yours, that nothing is
+          missing, that the step does what it is for — the parts of each type, the order of
+          the syllabus, the concept on each exercise — that you could use it as it is, and
+          that all in all it came out well. They are worded so that agreeing is always the
+          good news, so the number is the mark: 5 is best. The last two are identical on all
+          three, and those are the ones that let one step be compared with another. At the
+          end there is an optional box for whatever does not fit the scale.
+        </p>
+        <p>
+          It is the only thing asked in return for using this, and it is what is being
+          measured: without it there is no way to know whether the system prepares a subject
+          well or only looks as if it does.
+        </p>
+      </Detail>
     </Block>
   );
 }
@@ -1164,8 +1236,8 @@ function Generate() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.generate")}>
         <p>
-          The door after the construction, and what it exists for: one commission, one batch
-          of new exercises. The form is an accordion — it is answered
+          The first door of the <strong>{t("nav.phase.test").toLowerCase()}</strong>, and what
+          the construction exists for: one commission, one batch of new exercises. The form is an accordion — it is answered
           top to bottom and each question collapses to a single line once answered, so changing
           the concepts again costs one click and no scrolling.
         </p>
@@ -1397,6 +1469,219 @@ function Generate() {
   );
 }
 
+function Evaluate() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.evaluate")}>
+        <p>
+          The same commission solved by two different architectures and presented{" "}
+          <strong>blind</strong>, so that you choose without knowing which is which. One of the
+          two is always this system; the other is drawn for each session from the two
+          alternatives — a commercial model, or a similarity search over your documents. It is
+          the part of the system that exists to measure it, not to produce material.
+        </p>
+        <p>
+          You ask for the comparison and you judge it: you pick the concept you want the
+          exercise on, the two versions are prepared, and you read them when they are ready.
+        </p>
+      </SectionHead>
+
+      <Facts
+        items={[
+          {
+            label: "What you are asked for",
+            value: "Reading two proposals, one question per card, and one choice.",
+          },
+          {
+            label: "What it produces",
+            value: "A saved session with the two proposals and your judgement.",
+          },
+          {
+            label: "What you need",
+            value: "The four steps closed: the two versions are written from your subject.",
+          },
+        ]}
+      />
+
+      <Block title="The two tabs">
+        <Rows
+          items={[
+            {
+              key: "encargo",
+              head: t("eval.tab.compose"),
+              body: 'Where the screen opens. You pick the concept and the type of exercise you want: the same "Generate exercises" form, without two controls — how many exercises, and whether the model deliberates — because a comparison is always one per version. The model that writes the two local proposals is not chosen here: the administrator sets it in "Configuration → Evaluate the system", and the commercial one uses its own.',
+            },
+            {
+              key: "sesiones",
+              head: t("eval.tab.history"),
+              body: "Your history. You can reread any closed session, reveal included.",
+            },
+          ]}
+        />
+        <Paragraph>
+          While a comparison is open the tabs disappear, and so does the technical detail: it
+          would say which architecture each proposal comes from before you have read it. The
+          button in the header takes you back to the list. Leaving the screen and coming back
+          opens it on the form: a finished comparison is reread from "{t("eval.tab.history")}".
+        </Paragraph>
+      </Block>
+
+      <Block title="How a comparison goes">
+        <Steps
+          items={[
+            <>
+              The two proposals appear, unlabelled and in an order that is yours alone. Above
+              them, in one line, the commission: the type of exercise, the concepts, the level if
+              one was pinned and, when one was drawn, the scenario both are set in. If your
+              «Additional instructions» already said what the exercise is about, none is drawn:
+              your words reach both proposals as they are. Either way it is the same for both,
+              so it gives nothing away. Which of the two alternatives this session drew is not
+              said either.
+            </>,
+            <>
+              The two cards are boxes of the same height, short or long the proposal, and each
+              one scrolls inside. The blue "{t("reveal.read")}" button in its header opens it in
+              full, at reading size and with the question at the foot; ← and → move between
+              them.
+            </>,
+            <>
+              <strong>You answer one question per card</strong>: whether you would set it in
+              class — or, if you are a student, whether it would be useful to practise with. One
+              click, first impression, no dwelling on it.
+            </>,
+            <>
+              <strong>You choose one</strong>. The choice bar stays pinned to the foot of the
+              window; it does not activate until you have answered both, and you can
+              always say that none of them convinces you.
+            </>,
+            <>
+              Only then is it revealed which architecture wrote each one: a column per
+              proposal, with what you answered about it, the model and the time, and a
+              "{t("reveal.read")}" that opens it in full along with where it came from.
+            </>,
+            <>
+              It also uncovers <strong>each proposal's concepts</strong>, read with the same
+              tagger the bank is read with, and a line saying whether the exercise strayed
+              into something that comes later in the syllabus. The rule is the same for
+              both and it is the one the system carries in its prompt, except that only one
+              of the two knows about it. With a curriculum, any mention of what the class
+              has not covered counts; without one, only the proposal practising a concept
+              that comes after what was asked for.
+            </>,
+            <>
+              If you feel like it, you rate the system's one on four scales, with its exercise
+              beside them. It is <strong>optional</strong>: the comparison was already recorded
+              when you chose.
+            </>,
+            <>
+              Below it, "{t("eval.orderAnother")}" closes the session and leaves you on the
+              form, ready to ask for the next one. If somebody has left comparisons in your
+              queue, that same button opens the one that comes next.
+            </>,
+          ]}
+        />
+      </Block>
+
+      <Alert tone="settled" title="Everything measured comes before the reveal">
+        <p>
+          A score given after knowing what each thing is, is a score about a name and not about
+          an exercise. That is why the per-card question and the choice come first, and the
+          reveal is last: it is the reward for finishing, not a gate in front of more work.
+        </p>
+      </Alert>
+
+      <Block title="If it is not your area, say so">
+        <Paragraph>
+          At the bottom right there is a discreet link:{" "}
+          <strong>"I have no basis for judging this"</strong>. Evaluators come from different
+          subjects and different years, so running into an exercise that is not yours is normal
+          and is not a failing of yours.
+        </Paragraph>
+        <Paragraph>
+          Skipping it is the right answer and it is recorded as such:{" "}
+          <strong>it does not count as a preference</strong> and does not dirty any average.
+          Answering out of politeness would, and there would be no way to tell afterwards.
+        </Paragraph>
+      </Block>
+
+      <Alert tone="settled" title="You will not see the running score">
+        <p>
+          Showing you the result of what you are about to judge is an invitation to even it out.
+          Your sessions are yours and you can reread them; the count belongs to whoever analyses
+          the evaluation.
+        </p>
+      </Alert>
+
+      <Detail title="The three architectures, of which each session pits two">
+        {ARM_ORDER.map((arm) => (
+          <div key={arm} className="flex gap-3">
+            <span
+              aria-hidden
+              className="mt-1.5 size-3 shrink-0"
+              style={{ background: ARM_META[arm].colour }}
+            />
+            <p className="flex-1">
+              <span className="font-medium text-foreground">{t(ARM_META[arm].labelKey)}</span> —{" "}
+              {t(ARM_META[arm].descriptionKey)}
+            </p>
+          </div>
+        ))}
+        <p>
+          Each session pits this system against <strong>one</strong> of the other two, chosen by
+          a coin the same seed flips that decides the order. That way the question answered is
+          the one that matters — does the system write better exercises than this alternative?
+          — and, over many sessions, each alternative meets the system as often as the other.
+        </p>
+        <p>
+          Each architecture has its own fixed colour, always the same, in every session and every
+          chart, so that two sessions months apart can be read together.
+        </p>
+        <p>
+          The colour appears <strong>only after the reveal</strong>. While the comparison is
+          blind, a coloured card would be a card carrying information.
+        </p>
+        <p>
+          Exactly what each one receives is written out, row by row, under the "
+          {t("eval.tab.compose")}" form: it is the "{t("fair.title")}" table, and it says who
+          sees the concepts, who the descriptions, who pieces of your documents, who the
+          bank's exercises as examples, who the prerequisites. {t("fair.footnote")}
+        </p>
+      </Detail>
+
+      <Detail title="Why the order of the cards is different for each person">
+        <p>
+          If two evaluators judge the same two exercises, each of them sees them in an order of
+          their own. Sharing the order would mean sharing the tendency to pick the first or the
+          last one too, and then what looked like agreement about the exercises would partly be
+          agreement about where they were placed.
+        </p>
+        <p>
+          That order is drawn with a seed kept with the session, so months later it can be
+          reconstructed exactly what you saw and in which position.
+        </p>
+      </Detail>
+
+      <Detail title="What you do not choose">
+        <p>
+          <strong>How many exercises are generated</strong>: always one per proposal, two per
+          session. It is what makes the session the unit of analysis.
+        </p>
+        <p>
+          <strong>Which of the two alternatives the system is compared against</strong>: each
+          session draws it, and it is not said until the reveal. Choosing it would leave out the
+          alternative one least feels like reading, and the evaluation needs to measure both.
+        </p>
+        <p>
+          <strong>Whether the model reasons before answering</strong>: each session draws it, not
+          you. Choosing it would correlate it with your mood and with the time you have; drawn,
+          it is a condition that can be measured separately afterwards. It applies equally to the
+          two local proposals, so it never separates one from the other.
+        </p>
+      </Detail>
+    </div>
+  );
+}
 
 function Runs() {
   const { t } = useT();
@@ -1596,8 +1881,8 @@ function Account() {
       <Block title="Two things that come as a surprise">
         <Alert tone="info" title="The username cannot be changed">
           <p>
-            It is what identifies everything you have done: every exercise and every line of
-            the log point at it. The visible name can be changed
+            It is what identifies everything you have done: every exercise, every evaluation
+            session and every line of the log point at it. The visible name can be changed
             whenever you like.
           </p>
         </Alert>
@@ -1615,7 +1900,7 @@ function Account() {
           <strong>single-use invitation link</strong> and you chose your username on opening it.
           That link <em>is</em> the invitation: it is not tied to any address, so do not leave it
           in a shared place. On opening it you also choose your password — whichever you like, or
-          the one your manager suggests.
+          the one your manager suggests — and say whether you teach or study.
         </Paragraph>
         <Paragraph>
           The invitation may already carry a subject and a role inside it, or carry none: in
@@ -1635,10 +1920,11 @@ function Account() {
       <Block title={t("admin.title")}>
         <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          The installation seen from outside, in four tabs: "{t("admin.tab.engine")}", "
+          The installation seen from outside, in five tabs: "{t("admin.tab.engine")}", "
           {t("admin.tab.config")}" (every setting, each with what it will invalidate on
-          saving), "{t("admin.tab.accounts")}" (invitations, roles, unlocks) and "
-          {t("admin.tab.workspaces")}" (disk usage, export, delete). It has a section of its own next door: "
+          saving), "{t("admin.tab.accounts")}" (invitations, roles, unlocks), "
+          {t("admin.tab.workspaces")}" (disk usage, export, delete) and, set apart at the end, "
+          {t("admin.tab.evaluation")}" (the evaluation). It has a section of its own next door: "
           {t("guide.sec.admin")}".
         </Paragraph>
       </Block>
@@ -1674,7 +1960,14 @@ function Admin() {
           <strong>"{t("admin.title")}"</strong>, and only whoever administers the installation
           sees it.
         </p>
-        <p>Four tabs, and this section covers all of them.</p>
+        <p>
+          Five tabs, and this section covers all of them. "{t("admin.tab.evaluation")}" gathers what
+          people have answered, in two blocks: the blind comparisons of the testing phase, with
+          their tallies and their contrasts, and the forms that close each step of the
+          construction phase, summarised step by step. Above both sits one filter — an account,
+          a kind of account (teachers or students) and a subject — that narrows both blocks at
+          once, and each block downloads as CSV exactly what it shows.
+        </p>
       </SectionHead>
 
       <Block title={t("admin.tab.accounts")}>
@@ -1684,7 +1977,7 @@ function Admin() {
           account exists because somebody opened a single-use invitation link, or because it was
           created from the command line. The link <em>is</em> the invitation and it is tied to no
           address, so it is handed over by hand and not left in a shared place. Whoever opens it
-          chooses their username and their password.
+          chooses their username, their password, and whether they teach or study.
         </Paragraph>
         <Paragraph>
           Each invitation is created with «{t("acc.invite.open")}», which opens a window with
@@ -1749,6 +2042,16 @@ function Admin() {
               head: <>"{t("acc.badge.locked")}"</>,
               body: "After several failed attempts the rate limiter closes that account's login for a while. From here it is opened without waiting, and from here every open session of theirs can be closed too.",
             },
+            {
+              key: "perfil",
+              head: <>"{t("acc.profileLabel")}"</>,
+              body: "Teacher or student. It decides the wording of the question asked when comparing proposals, and how the evaluation groups the answers; it grants and removes no permission, which is why it is corrected here with no further ceremony.",
+            },
+            {
+              key: "sesiones",
+              head: <>"{t("acc.seeSessions")}"</>,
+              body: 'Only if that account has evaluated anything: it jumps to "Evaluations" with the filter already set to them.',
+            },
           ]}
         />
       </Block>
@@ -1764,7 +2067,7 @@ function Admin() {
             {
               key: "eliminar",
               head: <>"{t("common.delete")}"</>,
-              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated exercises stay, without an author. A course built on that material does not collapse because whoever generated it was removed.",
+              body: "Actually deletes the account, and it cannot be undone. What it produced does NOT go with it: the generated exercises and the evaluation sessions stay, without an author. A course built on that material does not collapse because whoever generated it was removed, and the evaluation does not lose the comparisons it counted.",
             },
           ]}
         />
@@ -1888,13 +2191,13 @@ function Admin() {
         <Paragraph>
           Every setting of the installation, with <strong>one tab per stage</strong>, named and
           numbered as the bar names them: "{t("nav.step.raw")}", "{t("nav.step.profile")}", "
-          {t("nav.step.graph")}", "{t("nav.step.bank")}" and "{t("nav.create")}". Each tab
-          holds everything its stage uses, and the <strong>search box</strong> above finds a
-          setting you only remember half a word of, whichever tab it is on. When a setting's
-          name does not tell what it controls, or changing it has a consequence nobody would
-          guess, an (i) beside it says so in one sentence. What belongs to the engine — the
-          inference engine, the tunnel, Cerebras — is no stage's and lives in "
-          {t("admin.tab.engine")}".
+          {t("nav.step.graph")}", "{t("nav.step.bank")}", "{t("nav.create")}" and "
+          {t("nav.compare")}". Each tab holds everything its stage uses, and the{" "}
+          <strong>search box</strong> above finds a setting you only remember half a word of,
+          whichever tab it is on. When a setting's name does not tell what it controls, or
+          changing it has a consequence nobody would guess, an (i) beside it says so in one
+          sentence. What belongs to the engine — the inference engine, the tunnel, Cerebras — is
+          no stage's and lives in "{t("admin.tab.engine")}".
         </Paragraph>
         <Paragraph>
           Each tab opens with <strong>{t("cfg.flow").toLowerCase()}</strong>: the stage's calls
@@ -1902,8 +2205,9 @@ function Admin() {
           serves it; the circle says whether it deliberates before answering and, while it does,
           the selector beside it sets how much. The stops with no switch say so with a dashed
           circle: the guardrail because its model does not reason, the exercise because each
-          commission decides that, and the repair because it runs under a grammar. Under each
-          stop sits its <strong>sampling</strong> — temperature, top_k and top_p — and then its own
+          commission decides that, the repair because it runs under a grammar, and in the
+          evaluation because each session draws it or the provider decides. Under each stop sits
+          its <strong>sampling</strong> — temperature, top_k and top_p — and then its own
           settings. An empty sampling field is inherited and says from what: the temperature
           follows the reasoning switch, and top_k and top_p are the model's. Cerebras takes no
           top_k, so on a stop served there that field is not offered.
@@ -1946,8 +2250,8 @@ const problems = (
       <>
         <p>
           It is not a failure: whoever administers the installation has closed it deliberately to
-          apply changes. The notice says since when, and yours is where it was — artifacts and
-          exercises read exactly the same when it opens again.
+          apply changes. The notice says since when, and yours is where it was — artifacts,
+          exercises and evaluations read exactly the same when it opens again.
         </p>
         <p>
           There is no expected time of return, and there is none because nobody knows it. "
@@ -2331,6 +2635,7 @@ export const BODIES: Record<string, () => ReactNode> = {
   graph: Graph,
   bank: Bank,
   generate: Generate,
+  evaluate: Evaluate,
   tutor: Tutor,
   runs: Runs,
   account: Account,

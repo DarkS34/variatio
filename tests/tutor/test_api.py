@@ -230,7 +230,7 @@ def test_the_administrator_reads_every_account_s_conversations(ws, admin):
 
 
 def test_no_fixed_route_of_the_tutor_sits_below_a_wildcard():
-    from tests.server.test_route_order import _wildcard_shadows
+    from tests.evaluation.test_route_order import _wildcard_shadows
 
     assert _wildcard_shadows(router_module.router) == []
     assert _wildcard_shadows(admin_module.router) == []

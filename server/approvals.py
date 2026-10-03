@@ -128,7 +128,8 @@ def current_path(ws: Workspace, artifact: str) -> Path | None:
 
 # What stops making sense once the artifact is gone: regenerable derivations, never user
 # data, deleted so the next build does not start on the cache of a graph that no longer
-# exists.
+# exists. The evaluation's RAG index is NOT here — it derives from the raw documents and not
+# from the bank, so emptying a stage leaves it alone.
 DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
     KNOWLEDGE_GRAPH: (
         attrgetter("concept_descriptions_path"),

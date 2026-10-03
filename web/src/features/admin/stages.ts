@@ -1,4 +1,4 @@
-import { MessagesSquare, Play, type LucideIcon } from "lucide-react";
+import { MessagesSquare, Play, Scale, type LucideIcon } from "lucide-react";
 
 import type { Key } from "@/lib/i18n";
 import { STEPS, USES, stepNumber } from "@/lib/steps";
@@ -6,11 +6,11 @@ import type { ConfigSetting } from "@/lib/types";
 
 /**
  * THE CONFIGURATION'S SCREENS ARE THE PATH'S STAGES, named and numbered as the bar names
- * and numbers them: the four construction steps carry their number, the door its icon.
+ * and numbers them: the four construction steps carry their number, the two doors their icon.
  *
- * The keys are the server's (`variatio.settings.types.STAGES`), matched against what
- * `/api/admin/config` sends; the labels come from `lib/steps.ts`, the one home of the path,
- * so a stage cannot be called one thing in the bar and another here.
+ * The keys are the server's (`variatio.settings.types.STAGES` plus the study's), matched
+ * against what `/api/admin/config` sends; the labels come from `lib/steps.ts`, the one home
+ * of the path, so a stage cannot be called one thing in the bar and another here.
  */
 export type ConfigStage = {
   key: string;
@@ -42,7 +42,8 @@ export const CONFIG_STAGES: ConfigStage[] = [
   step(2, "graph", "cfg.stage.graph"),
   step(3, "bank", "cfg.stage.bank"),
   door(USES[0], "generation", Play, "cfg.stage.generation"),
-  door(USES[1], "tutoring", MessagesSquare, "cfg.stage.tutoring"),
+  door(USES[1], "evaluation", Scale, "cfg.stage.evaluation"),
+  door(USES[2], "tutoring", MessagesSquare, "cfg.stage.tutoring"),
 ];
 
 /** The construction stages: a setting every one of them reads is common to the whole path. */

@@ -86,6 +86,7 @@ def test_the_pictures_are_read_with_the_page_model():
 
 
 def test_only_the_three_documented_exceptions_are_fixed():
+    # The pipeline's own lanes: the study's calls are all fixed, none being the pipeline's.
     own = [phase for lane in reasoning.PIPELINE for phase in lane.phases]
     fixed = {phase.key: phase.fixed for phase in own if phase.fixed}
     assert fixed == {

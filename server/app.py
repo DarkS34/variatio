@@ -1,8 +1,8 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
-Nothing inside `server` may import this module. It is also the only place the tutor is
-mounted, because `tutor.api` imports `server.auth` and the job runner back and mounting it
-from the router package would close a cycle.
+Nothing inside `server` may import this module. It is also the only place the evaluation and
+the tutor are mounted, because `evaluation.api` and `tutor.api` import `server.auth` and the
+job runner back and mounting them from the router package would close a cycle.
 """
 
 import asyncio
@@ -20,6 +20,11 @@ from . import installation, jobs, middleware, singletons
 from .routers import ROUTERS
 
 try:
+    from evaluation import api as evaluation_api
+except ImportError:
+    evaluation_api = None
+
+try:
     from tutor import api as tutor_api
 except ModuleNotFoundError as missing:
     if missing.name != "tutor":
@@ -28,7 +33,7 @@ except ModuleNotFoundError as missing:
 
 
 def create_app() -> FastAPI:
-    """Assemble the whole application: middleware, routers, the tutor and the bundle."""
+    """Assemble the whole application: middleware, routers, the evaluation, the tutor and the bundle."""
     app = FastAPI(
         title="Graph-Guided Variant Generator",
         description="Pipeline por etapas con revisión humana en cada eslabón.",
@@ -56,8 +61,10 @@ def create_app() -> FastAPI:
     for router in ROUTERS:
         app.include_router(router)
 
-    # The tutor registers its own routers, jobs and lanes here, and only here: importing it
-    # from the router package would close a cycle.
+    # The evaluation and the tutor register their own routers, jobs and lanes here, and only
+    # here: importing them from the router package would close a cycle.
+    if evaluation_api is not None:
+        evaluation_api.install(app)
     if tutor_api is not None:
         tutor_api.install(app)
 

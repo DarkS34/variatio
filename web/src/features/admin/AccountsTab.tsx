@@ -13,14 +13,16 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/hint";
 import { Label, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
+import { PROFILE_LABEL_KEYS, PROFILES, profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
-import type { AdminAccount, AdminOverview, Role } from "@/lib/types";
+import type { AdminAccount, AdminOverview, EvaluatorProfile, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
@@ -48,7 +50,13 @@ const ROLES: Role[] = ["viewer", "editor", "owner"];
  * Access is per workspace and this panel crosses them all, so a row's memberships open
  * where the row is rather than obliging the administrator to change workspace to grant one.
  */
-export function AccountsTab({ overview }: { overview: AdminOverview }) {
+export function AccountsTab({
+  overview,
+  onInspect,
+}: {
+  overview: AdminOverview;
+  onInspect: (id: number) => void;
+}) {
   const { plural, t } = useT();
   const confirm = useConfirm();
   const toggle = useSetAccountEnabled();
@@ -62,6 +70,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   const confirmDelete = async (account: AdminAccount) => {
     const kept = [
       account.generations ? plural("acc.savedVariants", account.generations) : "",
+      account.evaluations ? plural("acc.comparisons", account.evaluations) : "",
     ].filter(Boolean);
     const message =
       t("acc.deleteConfirm", { username: account.username }) +
@@ -94,6 +103,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
                 <TH>{t("acc.col.account")}</TH>
                 <TH>{t("acc.col.access")}</TH>
                 <TH align="num">{t("acc.col.variants")}</TH>
+                <TH align="num">{t("acc.col.comparisons")}</TH>
                 <TH align="num">{t("acc.col.sessions")}</TH>
                 <TH>{t("acc.col.created")}</TH>
                 <TH />
@@ -108,6 +118,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
                   self={account.id === session.data?.user.id}
                   expanded={open === account.id}
                   onToggle={() => setOpen(open === account.id ? null : account.id)}
+                  onInspect={() => onInspect(account.id)}
                   onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
                   onDelete={() => confirmDelete(account)}
                   busy={toggle.isPending || remove.isPending}
@@ -128,6 +139,7 @@ function AccountRows({
   self,
   expanded,
   onToggle,
+  onInspect,
   onEnabled,
   onDelete,
   busy,
@@ -137,6 +149,7 @@ function AccountRows({
   self: boolean;
   expanded: boolean;
   onToggle: () => void;
+  onInspect: () => void;
   onEnabled: (enabled: boolean) => void;
   onDelete: () => void;
   busy: boolean;
@@ -164,7 +177,9 @@ function AccountRows({
               </Badge>
             ) : null}
           </span>
-          <span className="block text-small text-muted-foreground">{account.name}</span>
+          <span className="block text-small text-muted-foreground">
+            {account.name} · {profileLabel(account.evaluator_profile, t).toLowerCase()}
+          </span>
         </TD>
         <TD className="px-3 py-2">
           <button
@@ -193,11 +208,22 @@ function AccountRows({
           </button>
         </TD>
         <TD align="num" className="px-3 py-2 nums">{account.generations}</TD>
+        <TD align="num" className="px-3 py-2 nums">
+          {account.evaluations}
+          <span className="ml-1 text-small text-muted-foreground">
+            {t("acc.decidedShort", { n: account.decided })}
+          </span>
+        </TD>
         <TD align="num" className="px-3 py-2 nums">{account.sessions}</TD>
         <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
           {account.created_at ? when(account.created_at) : "—"}
         </TD>
         <TD align="num" className="whitespace-nowrap px-3 py-2">
+          {account.evaluations > 0 ? (
+            <Button variant="ghost" size="sm" onClick={onInspect}>
+              {t("acc.seeSessions")}
+            </Button>
+          ) : null}
           {/* Deactivating or deleting one's own account leaves the installation with nobody to
               administer it, and the server refuses both anyway; not offering them avoids a surprise
               409. They go together and in this order because they are one decision at two
@@ -248,7 +274,7 @@ function AccountRows({
 function AccountControls({ account, self }: { account: AdminAccount; self: boolean }) {
   const { plural, t } = useT();
   const confirm = useConfirm();
-  const { setAdmin, resetLink, revokeSessions, unlock } = useAccountActions();
+  const { setAdmin, setProfile, resetLink, revokeSessions, unlock } = useAccountActions();
   const toast = useToast();
   const locked = account.locked_seconds > 0;
 
@@ -288,6 +314,27 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
       onError: (error: Error) =>
         toast({ title: t("acc.failed"), description: error.message, tone: "danger" }),
     });
+  };
+
+  // Not confirmed, unlike everything else on this row: it grants nothing, nobody is locked
+  // out by it, and setting it back costs one more click.
+  const changeProfile = (value: string) => {
+    const profile = (value || null) as EvaluatorProfile | null;
+    setProfile.mutate(
+      { id: account.id, profile },
+      {
+        onSuccess: () =>
+          toast({
+            title: t("acc.profileToast"),
+            description: t("acc.profileToastBody", {
+              username: account.username,
+              profile: profileLabel(profile, t).toLowerCase(),
+            }),
+          }),
+        onError: (error: Error) =>
+          toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
+      },
+    );
   };
 
   return (
@@ -343,9 +390,32 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           </Button>
         ) : null}
       </div>
+      {/* An administrator is a teacher or a student like anybody else: the profile decides
+          what somebody is asked when they compare, and `require_member` never reads it. It
+          lives here rather than beside the memberships for exactly that reason. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Label htmlFor={`profile-${account.id}`}>{t("acc.profileLabel")}</Label>
+        <Select
+          id={`profile-${account.id}`}
+          value={account.evaluator_profile ?? ""}
+          className="w-44"
+          disabled={setProfile.isPending}
+          onChange={(event) => changeProfile(event.target.value)}
+        >
+          <option value="">{t("acc.profileUnset")}</option>
+          {PROFILES.map((option) => (
+            <option key={option} value={option}>
+              {t(PROFILE_LABEL_KEYS[option])}
+            </option>
+          ))}
+        </Select>
+        <InfoHint label={t("acc.profileHint")}>{t("acc.profileHint.body")}</InfoHint>
+      </div>
+
       <FormError
         error={
           setAdmin.error ??
+          setProfile.error ??
           resetLink.error ??
           revokeSessions.error ??
           unlock.error

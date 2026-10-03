@@ -93,5 +93,5 @@ def test_another_workspace_is_not_held_up(stand):
 def test_only_the_three_builds_read_a_slot(stand):
     stand.runner.submit("transcribe", {"slot": "exemplars"}, workspace="aula")
     assert stand.started.wait(3.0)
-    for kind in ("tag", "index", "generate", "transcribe"):
+    for kind in ("tag", "index", "generate", "evaluate", "transcribe"):
         assert transcribing_slot("aula", kind) is None

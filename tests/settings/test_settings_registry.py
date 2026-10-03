@@ -7,7 +7,8 @@ DERIVED_ONLY = {
     "TEMPERATURE_DEFAULT",
     "LLM_CONTEXT",
     # Not a setting: the commission picks its writer out of `generation.models`, and this is
-    # the FIRST of them — what the CLI and a request naming none are written with.
+    # the FIRST of them — what the CLI, the evaluation's arms and a request naming none are
+    # written with.
     "VARIANT_GENERATION_LLM",
     # Each phase's sampling triple, read through `inference.sampling` and never by name.
     "SAMPLING",
@@ -80,15 +81,15 @@ def test_every_phase_key_is_declared_in_the_registry():
 # The two counts are a tripwire, not a fact worth knowing: adding, removing or renaming a
 # setting has to be a deliberate edit here. `REGISTRY` is every declaration, `BY_NAME` only
 # those carrying a `name` and therefore becoming a `config` attribute — the four context
-# windows and the per-phase reasoning efforts feed derived values and never land in
-# `variatio.config`.
+# windows, the per-phase reasoning efforts and the evaluation's own settings feed derived
+# values and never land in `variatio.config`.
 def test_the_registry_holds_what_this_work_transcribed():
-    # 141 → 140 and 118 → 117 on 2026-09-16: `builders.transcribe_prompt_version` left with
-    # the rule that a prompt change expires every page.
-    # 140 → 206 on 2026-10-02: a temperature, top-k and top-p per model call, three of them
-    # the temperatures that already were one call's (renamed, their names kept). 206 → 242
+    # 150 → 149 and 118 → 117 on 2026-09-16: `builders.transcribe_prompt_version` left with the
+    # rule that a prompt change expires every page (see AGENTS.md).
+    # 149 → 218 on 2026-10-02: a temperature, top-k and top-p per model call, three of them
+    # the temperatures that already were one call's (renamed, their names kept). 218 → 256
     # and 117 → 153 the same day: every stage's hard-coded knobs became settings.
-    # 242 → 276 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
+    # 256 → 290 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
     # optional import of `tutor.settings`; none carries a name, so `BY_NAME` does not move.
-    assert len(REGISTRY) == 276
+    assert len(REGISTRY) == 290
     assert len(BY_NAME) == 153
