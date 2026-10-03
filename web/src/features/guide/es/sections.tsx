@@ -2098,21 +2098,39 @@ function Admin() {
 
       <Block title={t("admin.tab.engine")}>
         <Paragraph>
-          Es un motor con tantas mitades como tenga. Con uno solo es un panel sobre una máquina y
-          no lleva ni títulos: «{t("eng.half.local")}» sin un «{t("eng.half.remote")}» al lado no
-          divide nada. Con el motor partido aparecen tres secciones con su raya.
+          Arriba hay un <strong>tablero</strong> con una casilla por cada parte del motor, y cada
+          casilla dice en una palabra cómo está esa parte: el cuadrado gris es que no pide nada,
+          el negro que está trabajando, el azul que te necesita, el rojo que las llamadas están
+          fallando y el hueco que todavía no existe. Pulsar una casilla abre su pantalla, y la
+          pestaña se abre sola por la que te necesite, si hay alguna. «{t("eng.half.remote")}»
+          solo aparece con el motor híbrido.
         </Paragraph>
         <Rows
           items={[
+            {
+              key: "general",
+              head: t("eng.board.general"),
+              body: (
+                <>
+                  Lo primero, <strong>qué motor usa la instalación</strong>: «
+                  {t("eng.kind.local")}», con todos los modelos en la GPU propia, o «
+                  {t("eng.kind.hybrid")}», que manda a Cerebras los modelos que Cerebras sirve.
+                  Debajo, la cola entera de la instalación, de todas las asignaturas —lo que se
+                  está ejecutando, lo que espera y de quién es cada cosa—; el túnel SSH hasta la
+                  máquina de la GPU, que se levanta y se para desde aquí; y los contextos que la
+                  API guarda en memoria, que se invalidan desde aquí.
+                </>
+              ),
+            },
             {
               key: "local",
               head: t("eng.half.local"),
               body: (
                 <>
-                  {t("eng.half.localNote")}. El túnel SSH hasta la máquina de la GPU, que se
-                  levanta y se para desde aquí y guarda las últimas líneas de error de ssh; los
-                  modelos residentes y cómo se reparten la VRAM; y los que hay en disco, con sus
-                  descargas.
+                  La GPU: los modelos residentes, cómo se reparten la VRAM, cuánto les falta para
+                  liberarse solos por falta de trabajos y el botón que los libera ya. Y los
+                  modelos que hay en el disco de esa máquina, que se pueden borrar si ningún
+                  ajuste los nombra.
                 </>
               ),
             },
@@ -2121,32 +2139,29 @@ function Admin() {
               head: t("eng.half.remote"),
               body: (
                 <>
-                  {t("eng.half.remoteNote")}: medidores por minuto y por día, y bajo ellos el
-                  desglose de lo gastado por fase, que se descarga en CSV.
-                </>
-              ),
-            },
-            {
-              key: "process",
-              head: t("eng.half.process"),
-              body: (
-                <>
-                  {t("eng.half.processNote")}. La cola entera de la instalación, de todas las
-                  asignaturas: lo que se está ejecutando, lo que espera y de quién es cada cosa.
+                  Nada que cargar; lo que limita es la cuota. Medidores por minuto y por día, y
+                  bajo ellos el desglose de lo gastado por fase, que se descarga en CSV. Al lado,
+                  qué modelos se mandan a Cerebras —se marcan de la lista de los que hay, no se
+                  escriben— y los cuatro topes, con el mismo nombre y en el mismo orden que los
+                  medidores que acotan y sin poder pasar del máximo de la cuenta.
                 </>
               ),
             },
           ]}
         />
+        <Paragraph>
+          Hay una sola barra de guardar para toda la pestaña, y la casilla de una parte con
+          cambios pendientes los cuenta, así que no se quedan atrás al pasar a otra. Lo que el
+          panel no puede cambiar —lo fija el entorno, o se edita en «config.json»— no aparece.
+        </Paragraph>
         <Detail title="Tres cosas que el panel se niega a hacer">
           <p>
-            <strong>Borrar un modelo que la configuración nombra.</strong> Te dice qué ajustes lo
-            piden: cámbialos antes.
+            <strong>Borrar un modelo que la configuración nombra.</strong> Cambia antes los
+            ajustes que lo piden.
           </p>
           <p>
-            <strong>Meter una descarga en la cola.</strong> Descargar un modelo es red y disco,
-            nunca la GPU, así que corre al lado de la cola y no detrás de una construcción de dos
-            horas.
+            <strong>Descargar modelos.</strong> Una construcción descarga sola los que le falten
+            antes de empezar; para lo demás se descargan en la máquina de la GPU.
           </p>
           <p>
             <strong>Liberar la GPU o invalidar un contexto con un trabajo en curso.</strong> Sería
@@ -2257,9 +2272,10 @@ const problems = (
           trabajo colgado horas sin explicación es peor que rechazarlo.
         </p>
         <p>
-          Las salidas son tres: esperar, cambiar el motor a «ollama», o subir el techo si la
-          cuenta de verdad da para más. Las tres se hacen en Administración → Motor, donde los
-          ajustes están en la columna de la derecha, al lado de los medidores que los explican.
+          Las salidas son tres: esperar, cambiar el motor a «{t("eng.kind.local")}», o subir el
+          techo si todavía no está en el máximo de la cuenta. Las tres se hacen en Administración
+          → Motor: el motor se elige en «{t("eng.board.general")}» y los techos en «
+          {t("eng.half.remote")}», al lado de los medidores que los explican.
         </p>
         <p>
           Hay un tercer caso que no es de cuota gastada sino de tamaño: una llamada que necesita
@@ -2278,9 +2294,10 @@ const problems = (
     question: `Un modelo aparece como «${t("model.notInstalled")}»`,
     answer: (
       <p>
-        Solo fallan los trabajos que usan ese modelo; el resto de la cadena funciona. Se descarga
-        desde Administración → Motor, y la descarga corre al lado de la cola, no dentro: no tiene
-        que esperar a que termine una construcción de dos horas.
+        Solo fallan los trabajos que usan ese modelo; el resto de la cadena funciona. Una
+        construcción descarga sola los modelos que le falten antes de empezar; para cualquier
+        otro trabajo hay que descargarlo en la máquina de la GPU con «ollama pull». Administración
+        → Motor dice cuál falta y qué ajustes lo piden.
       </p>
     ),
   },

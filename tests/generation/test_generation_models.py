@@ -74,14 +74,21 @@ def test_naming_a_model_nobody_offers_as_fixed_effort_is_not_an_error(offered, m
     assert entrypoints.resolve_generation_model(None) == "el-rapido"
 
 
-def test_the_two_lists_default_to_the_same_model_on_the_hybrid_engine():
-    # Today's behaviour, moved out of `models.ts` unchanged: the one model measured to
-    # answer the same at every level is the one the hybrid profile offers first.
+def test_the_hybrid_engine_offers_a_model_cerebras_serves_and_locks_none():
+    # `gemma-4-31b` was both — offered first and locked, because it was measured to answer
+    # the same at every level — until Cerebras stopped listing it. Its replacement is
+    # unmeasured there, so nothing is locked by default: a lock is a measurement.
     fixed = BY_KEY["generation.fixed_effort"]
     offered_setting = BY_KEY["generation.models"]
     assert fixed.default == []
-    assert dict(fixed.engine_defaults or ()) == {"cerebras+ollama": ["gemma-4-31b"]}
-    assert dict(offered_setting.engine_defaults or ())["cerebras+ollama"][0] == "gemma-4-31b"
+    assert not fixed.engine_defaults
+    assert dict(offered_setting.engine_defaults or ())["cerebras+ollama"] == ["qwen-3.8-27b"]
+
+
+def test_no_default_names_the_model_cerebras_retired():
+    for setting in BY_KEY.values():
+        named = [setting.default, *dict(setting.engine_defaults or ()).values()]
+        assert "gemma-4-31b" not in repr(named), setting.key
 
 
 def test_a_fixed_effort_value_reads_as_a_comma_list_or_is_refused():

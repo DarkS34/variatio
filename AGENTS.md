@@ -8,6 +8,30 @@ ask before implementing. Numbers quoted are measurements; re-measure before chan
 what they justify. When a decision's reason is only summarised here, look for it in the
 commit that introduced it (`git log -S`) before changing it.
 
+## Writing to the user
+
+**Write every answer, explanation and detail for the user 80% of the way to ASD-STE100**
+(Simplified Technical English). The user asked for this so that the text is clear at first
+reading. The language stays Spanish; the STE rules apply to the Spanish text.
+
+- Write short sentences: 20 words at most for an instruction, 25 for a description.
+- Put one idea in each sentence, and one topic in each paragraph (six sentences at most).
+- Use the active voice and the simple tenses. Say who does what.
+- Use one word for one thing. Do not change the term for variety.
+- Write an instruction as a command, one action per sentence, in the order of the work.
+  Put the condition before the action it controls.
+- Prefer common words. Do not use idioms, metaphors or filler.
+- Write a technical name (identifier, setting, command) as it is. Explain it the first time
+  if the user may not know it.
+- Keep the articles and the connectors; do not write telegraphic text. Do not chain more
+  than three nouns.
+- Use a list for steps and for parallel items.
+
+«80%» means that the rules guide the text but STE's dictionary does not bind it: when a
+rule and precision conflict, precision wins. The rule covers what is said to the user in the
+conversation (answers, summaries, plans, questions). It does not change code, commit
+messages, UI copy, the in-app guide or this file, which keep their own conventions.
+
 ## Project
 
 *Knowledge Graph-Guided LLM Content Generator* — TFM (Máster en IA) for adaptive
@@ -687,8 +711,19 @@ never `oklch` (hue interpolation turns greens blue).
 - The in-app guide (`/guide`) is user-facing copy: a behaviour change is not finished until
   its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
-  «Motor» tab: left column measures, right column sets; one save bar; the guardrail and
-  embedder models are read-only. «Configuración» is **one screen per stage**, named and
+  «Motor» tab: **a board with one cell per part of the engine** — «General», «Local», and
+  «Remoto» only when the engine has that half — each cell its state in a word and the door to
+  its screen; the tab opens on the part that needs somebody, else on «General». The readings
+  are `features/admin/engineState.ts`, shared by the cells and the cards' badges. «General»
+  leads with the choice of engine («Solo local» / «Híbrido», `engine.name`), then the queue,
+  the SSH tunnel and the warm contexts; «Local» is the GPU and the models on ITS disk (a
+  remote model has no row there); «Remoto» is the quota. A setting the panel cannot change
+  (environment, or `editable=False`) is not drawn. Models are never downloaded from the
+  panel (a build pulls what it lacks). `CEREBRAS_MODELS` is ticked from the catalogue plus
+  what the engine already lists, never typed. The four Cerebras ceilings are one group named
+  and ordered as the four meters, each capped at the registry's `maximum` (the account's
+  quota). No job history and no database card. One save bar for the tab; a part's cell counts
+  its unsaved changes; the guardrail and embedder models are read-only. «Configuración» is **one screen per stage**, named and
   numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
   down the page, each node with model, reasoning and sampling and its own settings under it;
   then «General de la etapa», «Común a todas las etapas», and folded what it reads of
@@ -844,8 +879,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   beside `.env`).
 - `config.json` at the root is versioned and holds no secrets; deleting it falls back to
   registry defaults.
-- The working language with the user is Spanish; code, identifiers, comments and
-  `variatio/` logs are English.
+- The working language with the user is Spanish, written as *Writing to the user* says;
+  code, identifiers, comments and `variatio/` logs are English.
 
 ## Deliberate heuristics
 

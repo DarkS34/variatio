@@ -64,6 +64,23 @@ export function sameValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
+/**
+ * Whether "por defecto" has anything to do for this setting.
+ *
+ * Only a value that actually left the default has anything to go back to; a file value
+ * equal to the default is the same number with a different badge. A row that cannot be
+ * edited cannot be reset either — `settings.reset` refuses a locked key — so offering the
+ * button there would be offering a call that answers 400.
+ */
+export function canReset(setting: ConfigSetting): boolean {
+  return (
+    setting.editable &&
+    setting.source === "file" &&
+    !setting.secret &&
+    !sameValue(setting.value, setting.default)
+  );
+}
+
 export function formatValue(value: unknown, t: Translate["t"]): string {
   if (value === null || value === undefined) return "—";
   if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
@@ -241,20 +258,31 @@ export function ModelSelect({
   );
 }
 
+/**
+ * Which models the hybrid engine sends to Cerebras, ticked from the ones there are.
+ *
+ * NEVER TYPED. The field used to fall back to a free text box whenever the catalogue could
+ * not be read, and a name written by hand is a model routed to an API that may not serve
+ * it — every call of the phases naming it then fails. What is offered is what is known:
+ * Cerebras' own catalogue, the remote models the running engine already lists (its last
+ * read of that catalogue survives a blip) and whatever is declared today, so nothing in
+ * force can vanish from the list and nothing new can be invented in it.
+ */
 export function CerebrasModelsField({
-  id,
   label,
   hint,
   value,
   disabled,
+  known,
   onChange,
 }: {
-  id: string;
   label: string;
   /** The setting's (i), drawn beside its name when it has one. */
   hint?: ReactNode;
   value: unknown;
   disabled: boolean;
+  /** The remote models the engine lists right now. */
+  known: string[];
   onChange: (next: unknown) => void;
 }) {
   const { t } = useT();
@@ -265,83 +293,47 @@ export function CerebrasModelsField({
   });
   const selected = Array.isArray(value) ? value.map(String) : [];
   const listed = catalog.data?.source === "api" ? catalog.data.models : null;
+  const options = [
+    ...new Set([...(catalog.data?.models ?? []), ...known, ...selected]),
+  ].sort();
   const toggle = (model: string, next: boolean) =>
-    onChange(next ? [...selected, model] : selected.filter((name) => name !== model));
+    onChange(next ? [...selected, model].sort() : selected.filter((name) => name !== model));
 
-  if (catalog.isLoading) {
-    return (
-      <div className="space-y-1">
-        <Titled hint={hint}>
-          <span className="text-body">{label}</span>
-        </Titled>
-        <p className="flex items-center gap-2 text-small text-muted-foreground">
-          <Spinner />
-          {t("cfg.cerebrasLoading")}
-        </p>
-      </div>
-    );
-  }
-
-  if (!listed) {
-    return (
-      <div className="space-y-1">
-        <Titled hint={hint}>
-          <Label htmlFor={id}>{label}</Label>
-        </Titled>
-        <Input
-          id={id}
-          disabled={disabled}
-          value={selected.join(", ")}
-          onChange={(event) =>
-            onChange(
-              event.target.value
-                .split(",")
-                .map((part) => part.trim())
-                .filter(Boolean),
-            )
-          }
-        />
-        <p className="text-small text-muted-foreground">
-          {catalog.data?.error ?? t("cfg.cerebrasDown")} {t("cfg.commaSeparated")}
-        </p>
-      </div>
-    );
-  }
-
-  const extras = selected.filter((name) => !listed.includes(name));
   return (
     <div className="space-y-1.5">
       <Titled hint={hint}>
         <span className="text-body">{label}</span>
       </Titled>
-      <ul className="space-y-1.5">
-        {listed.map((model) => (
-          <li key={model} className="flex items-center gap-2">
-            <Checkbox
-              checked={selected.includes(model)}
-              disabled={disabled}
-              onCheckedChange={(next) => toggle(model, next)}
-              label={t("cfg.routeTo", { model })}
-            />
-            <span className="font-mono text-body">{model}</span>
-          </li>
-        ))}
-        {extras.map((model) => (
-          <li key={model} className="flex items-center gap-2">
-            <Checkbox
-              checked
-              disabled={disabled}
-              onCheckedChange={(next) => toggle(model, next)}
-              label={t("cfg.routeTo", { model })}
-            />
-            <span className="font-mono text-body">{model}</span>
-            <Badge variant="outline">{t("cfg.offCatalog")}</Badge>
-          </li>
-        ))}
-      </ul>
-      <p className="text-small text-muted-foreground">
-        {t("cfg.cerebrasNote")}
-      </p>
+      {catalog.isLoading ? (
+        <p className="flex items-center gap-2 text-small text-muted-foreground">
+          <Spinner />
+          {t("cfg.cerebrasLoading")}
+        </p>
+      ) : (
+        <>
+          <ul className="space-y-1.5">
+            {options.map((model) => (
+              <li key={model} className="flex items-center gap-2">
+                <Checkbox
+                  checked={selected.includes(model)}
+                  disabled={disabled}
+                  onCheckedChange={(next) => toggle(model, next)}
+                  label={t("cfg.routeTo", { model })}
+                />
+                <span className="font-mono text-body">{model}</span>
+                {listed && !listed.includes(model) ? (
+                  <Badge variant="outline">{t("cfg.offCatalog")}</Badge>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <p className="text-small text-muted-foreground">
+            {listed
+              ? t("cfg.cerebrasNote")
+              : `${(catalog.data?.error ?? t("cfg.cerebrasDown")).replace(/\.$/, "")}. ${t("cfg.cerebrasKnown")}`}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -659,15 +651,7 @@ export function SettingRow({
   ) : null;
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
-  // Only a value that actually left the default has anything to go back to; a file value
-  // equal to the default is the same number with a different badge. A row that cannot be
-  // edited cannot be reset either — `settings.reset` refuses a locked key — so offering the
-  // button there would be offering a call that answers 400.
-  const resettable =
-    setting.editable &&
-    setting.source === "file" &&
-    !setting.secret &&
-    !sameValue(setting.value, setting.default);
+  const resettable = canReset(setting);
 
   return (
     <div className="space-y-2 rounded-md border border-border p-3">
@@ -718,11 +702,13 @@ export function SettingRow({
             />
           ) : setting.key === "engine.cerebras_models" ? (
             <CerebrasModelsField
-              id={id}
               label={label}
               hint={hint}
               value={value}
               disabled={disabled}
+              known={(models?.installed ?? [])
+                .filter((model) => model.remote)
+                .map((model) => model.model)}
               onChange={onChange}
             />
           ) : models && isModelSetting(setting) ? (
@@ -917,6 +903,9 @@ export function useConfigDraft(stored: Map<string, unknown>) {
     onSuccess: () => {
       setDraft({});
       client.invalidateQueries({ queryKey: ["admin", "config"] });
+      // The engine's reading too: which models it routes and whether it has a remote half
+      // are settings, and the board would otherwise say the old thing until its next poll.
+      client.invalidateQueries({ queryKey: ["admin", "engine"] });
       client.invalidateQueries({ queryKey: ["health"] });
       toast({ title: t("cfg.saved") });
     },

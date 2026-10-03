@@ -1,10 +1,9 @@
 import {
   Ban,
   Cable,
-  Database,
-  Download,
   Flame,
   HardDrive,
+  ListOrdered,
   PlugZap,
   Power,
   Trash2,
@@ -17,12 +16,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label } from "@/components/ui/input";
 import { Alert, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { CerebrasCard } from "@/features/admin/CerebrasCard";
+import { EngineBoard, panelId, tabId } from "@/features/admin/EngineBoard";
+import { EngineChoice } from "@/features/admin/EngineChoice";
+import {
+  generalCell,
+  HYBRID,
+  localCell,
+  remoteCell,
+  tunnelState,
+  type BoardCell,
+  type ScreenKey,
+} from "@/features/admin/engineState";
 import {
   EngineSaveBar,
   SettingsPanel,
@@ -33,8 +42,8 @@ import { bytes, duration, JOB_STATUS, when } from "@/lib/format";
 import type {
   AdminEngine,
   AdminOverview,
+  ConfigSetting,
   Job,
-  PullStatus,
   RunningModel,
   TunnelStatus,
 } from "@/lib/types";
@@ -42,92 +51,130 @@ import { cn } from "@/lib/utils";
 import {
   useAdminCancelJob,
   useAdminEngine,
-  useAdminJobHistory,
   useAdminJobs,
-  useAdminSystem,
   useEngineActions,
 } from "@/state/queries";
-import { useT, type Key } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { jobName } from "@/lib/names";
 
 /**
- * The machine and the process, as one screen.
+ * The engine, one screen per part behind a board that reads them all.
  *
- * Everything here is global to the installation: the one GPU and what it holds, the port
- * forward that reaches it, the models on the engine's disk, the contexts this process keeps
- * warm, the queue and its past, and the database. None of it belongs to a workspace, which
- * is why it was scattered — a count on the panel's "Sistema" card, the queue under
- * "Workspaces" — and why it is gathered here.
+ * Everything here is global to the installation: which engine it runs, the queue, the port
+ * forward that reaches the GPU, the contexts this process keeps warm, the one GPU and what
+ * it holds, the models on its disk and the remote quota. None of it belongs to a workspace,
+ * which is why it is gathered here.
  */
 export function EngineTab({ overview }: { overview: AdminOverview }) {
   const { t } = useT();
   const engine = useAdminEngine();
-  const config = useEngineSettings();
   if (engine.isLoading) return <Skeleton className="h-96" />;
   if (!engine.data)
     return (
       <LoadError title={t("engine.unreadable")} error={engine.error} onRetry={engine.refetch} />
     );
-  const data = engine.data;
+  return <EngineScreens engine={engine.data} overview={overview} />;
+}
 
-  // The tab is about ONE engine, and the engine decides how many halves it has. What makes
-  // the two one subject rather than two lists is the question they both answer — what
-  // limits the work here — so "Local" leads with the VRAM three models share and "Remoto"
-  // with the quota, drawn with the same meters at a very different magnitude.
-  //
-  // The split is drawn only where there ARE two halves, headings included: "Local" with no
-  // "Remoto" beside it divides nothing, and a Cerebras card kept alive by yesterday's
-  // spending would describe an engine this installation is no longer running. The ledger
-  // keeps that history either way.
+function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: AdminOverview }) {
+  const tr = useT();
+  const { t } = tr;
+  const config = useEngineSettings();
+  const jobs = useAdminJobs();
+
+  // The engine decides how many parts the board has. The remote one is drawn from TWO
+  // readings on purpose: its meters need the engine to be actually running Cerebras, its
+  // settings only that somebody is ABOUT to. Reading the draft is what lets a person switch
+  // engine on "General" and check the ceilings before saving.
   //
   // `cerebras` is read defensively: an older API does not send it, and a bare
-  // `data.cerebras.active` takes the WHOLE tab down with a blank screen. Missing means no
-  // remote half, which is what the plain `ollama` engine means.
-  const remote = data.cerebras?.active ?? false;
-
-  // The two columns encode a DISTINCTION and not a width: the left one MEASURES — the VRAM
-  // three models share, the quota, the queue — and the right one SETS, so each setting sits
-  // beside the thing it governs.
-  //
-  // The remote half is drawn from TWO readings on purpose: its meters need the engine to be
-  // actually running Cerebras, its settings only that somebody is ABOUT to. Reading the
-  // draft is what lets a person switch engine and fill in the key before saving.
+  // `engine.cerebras.active` takes the WHOLE tab down with a blank screen. Missing means no
+  // remote part, which is what the plain `ollama` engine means.
+  const remote = engine.cerebras?.active ?? false;
   const engineName = String(
     ("engine.name" in config.draft ? config.draft["engine.name"] : config.stored.get("engine.name")) ??
       "ollama",
   );
-  const wantsRemote = engineName === "cerebras+ollama";
+  const paired = remote || engineName === HYBRID;
+
+  // The draft is the tab's and not the screen's, so a change left behind on another part
+  // has to be visible from this one: its cell counts it and the save bar follows it here.
+  const pendingIn = (settings: ConfigSetting[]) =>
+    settings.filter((setting) => setting.key in config.draft).length;
+  const cells: BoardCell[] = [
+    {
+      ...generalCell(engine, jobs.data, tr),
+      pending: pendingIn([...config.engine, ...config.tunnel]),
+    },
+    { ...localCell(engine, tr), pending: pendingIn(config.local) },
+    ...(paired ? [{ ...remoteCell(engine, tr), pending: pendingIn(config.remote) }] : []),
+  ];
+
+  // The tab opens on the part that needs somebody, when one does, and on "General"
+  // otherwise. Decided once: a part going wrong later changes its cell, never the screen
+  // under a hand.
+  const [chosen, setChosen] = useState<ScreenKey>(
+    () => cells.find((cell) => cell.tone === "act" || cell.tone === "down")?.key ?? "general",
+  );
+  const active = cells.some((cell) => cell.key === chosen) ? chosen : "general";
 
   return (
     <div className="space-y-5">
-      {remote || wantsRemote ? <Half titleKey="eng.half.local" noteKey="eng.half.localNote" /> : null}
-      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-4">
-          <ResidencyCard engine={data} />
-          <TunnelCard tunnel={data.tunnel} available={data.available} host={data.host} />
-          <ModelsCard engine={data} />
-        </div>
-        <div className="space-y-4">
-          <SettingsPanel
-            titleKey="eng.cfg.engine"
-            noteKey="eng.cfg.engineNote"
-            settings={config.local}
-            config={config}
-          />
-          <SettingsPanel
-            titleKey="eng.cfg.tunnel"
-            noteKey="eng.cfg.tunnelNote"
-            settings={config.tunnel}
-            config={config}
-          />
-        </div>
-      </div>
+      <EngineBoard cells={cells} value={active} onChange={setChosen} />
 
-      {remote || wantsRemote ? (
-        <>
-          <Half titleKey="eng.half.remote" noteKey="eng.half.remoteNote" />
-          <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
-            {remote ? <CerebrasCard cerebras={data.cerebras!} /> : <div />}
+      <div
+        role="tabpanel"
+        id={panelId(active)}
+        aria-labelledby={tabId(active)}
+        className="min-w-0 space-y-4"
+      >
+        {/* What the installation runs on comes first and alone: it is the one choice here
+            that changes every other screen of the tab, the remote one's existence included. */}
+        {active === "general" ? (
+          <>
+            <EngineChoice config={config} />
+            <div className="grid items-start gap-4 *:min-w-0 lg:grid-cols-[3fr_2fr]">
+              <QueueSection />
+              <div className="space-y-4">
+                <TunnelCard tunnel={engine.tunnel} available={engine.available} host={engine.host} />
+                <SettingsPanel
+                  titleKey="eng.cfg.tunnel"
+                  noteKey="eng.cfg.tunnelNote"
+                  settings={config.tunnel}
+                  config={config}
+                />
+                <ContextsCard engine={engine} overview={overview} />
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {/* Inside these two the columns encode a DISTINCTION and not a width: the left one
+            MEASURES and the right one SETS, so each setting sits beside what it governs. */}
+        {active === "local" ? (
+          <div className="grid items-start gap-4 *:min-w-0 lg:grid-cols-[3fr_2fr]">
+            <div className="space-y-4">
+              <ResidencyCard engine={engine} />
+              <ModelsCard engine={engine} />
+            </div>
+            <SettingsPanel
+              titleKey="eng.cfg.local"
+              noteKey="eng.cfg.localNote"
+              settings={config.local}
+              config={config}
+            />
+          </div>
+        ) : null}
+
+        {active === "remote" ? (
+          <div className="grid items-start gap-4 *:min-w-0 lg:grid-cols-[3fr_2fr]">
+            {remote ? (
+              <CerebrasCard cerebras={engine.cerebras!} />
+            ) : (
+              <p className="border border-dashed border-border p-4 text-small text-muted-foreground">
+                {t("eng.remote.notYet")}
+              </p>
+            )}
             <SettingsPanel
               titleKey="eng.cfg.cerebras"
               noteKey="eng.cfg.cerebrasNote"
@@ -135,32 +182,10 @@ export function EngineTab({ overview }: { overview: AdminOverview }) {
               config={config}
             />
           </div>
-        </>
-      ) : null}
-
-      {remote || wantsRemote ? (
-        <Half titleKey="eng.half.process" noteKey="eng.half.processNote" />
-      ) : null}
-      <div className="grid items-start gap-4 lg:grid-cols-[3fr_2fr]">
-        <QueueSection />
-        <div className="space-y-4">
-          <ContextsCard engine={data} overview={overview} />
-          <SystemCard />
-        </div>
+        ) : null}
       </div>
-      <HistorySection />
-      <EngineSaveBar config={config} />
-    </div>
-  );
-}
 
-/** A rule under a display-width word, drawn only while the tab has more than one subject. */
-function Half({ titleKey, noteKey }: { titleKey: Key; noteKey: Key }) {
-  const { t } = useT();
-  return (
-    <div className="flex flex-wrap items-baseline gap-3 border-b border-primary pb-2">
-      <h2 className="font-expanded text-title">{t(titleKey)}</h2>
-      <p className="text-small text-muted-foreground">{t(noteKey)}</p>
+      <EngineSaveBar config={config} />
     </div>
   );
 }
@@ -180,19 +205,8 @@ function TunnelCard({
   const { tunnelStart, tunnelStop } = useEngineActions();
   const toast = useToast();
 
-  // The engine answering on the local port while this process runs no ssh means the port is
-  // reached some other way — a tunnel opened by hand, or Ollama on this machine. That is
-  // not "apagado", and offering "Conectar" would launch an ssh onto a port already taken.
-  const external = available && !tunnel.running && !tunnel.wanted;
-  const state = external
-    ? { labelKey: "tunnel.external" as const, tone: "settled" as const }
-    : !tunnel.configured
-      ? { labelKey: "tunnel.unconfigured" as const, tone: "outline" as const }
-      : tunnel.running
-        ? { labelKey: "tunnel.connected" as const, tone: "settled" as const }
-        : tunnel.wanted
-          ? { labelKey: "tunnel.reconnecting" as const, tone: "attention" as const }
-          : { labelKey: "tunnel.off" as const, tone: "outline" as const };
+  const state = tunnelState(tunnel, available);
+  const external = state.external;
 
   return (
     <Card>
@@ -291,7 +305,7 @@ function ResidencyCard({ engine }: { engine: AdminEngine }) {
   const { release } = useEngineActions();
   const toast = useToast();
   const vram = engine.running.reduce((sum, m) => sum + (m.size_vram ?? 0), 0);
-  const idleMinutes = Math.floor(engine.idle.seconds / 60);
+  const resident = engine.running.length > 0;
 
   return (
     <Card>
@@ -303,32 +317,33 @@ function ResidencyCard({ engine }: { engine: AdminEngine }) {
             {engine.available ? t("eng.gpu.online") : t("eng.gpu.offline")}
           </Badge>
         </div>
-        <CardDescription>
-          {engine.running.length > 0
-            ? plural("eng.gpu.resident", engine.running.length, { size: bytes(vram) })
-            : t("eng.gpu.nothingResident")}
-          {engine.busy
-            ? t("eng.gpu.working")
-            : engine.idle.threshold > 0
-              ? t("eng.gpu.idle", {
-                  n: idleMinutes,
-                  threshold: Math.floor(engine.idle.threshold / 60),
-                })
-              : t("eng.gpu.autoReleaseOff")}
-        </CardDescription>
+        {resident ? null : (
+          <CardDescription>
+            {t("eng.gpu.nothingResident")}
+            {engine.available ? t("eng.gpu.loadsOnDemand") : ""}
+          </CardDescription>
+        )}
       </CardHeader>
-      <CardContent className="space-y-3">
-        {engine.running.length > 0 ? <Vram running={engine.running} total={vram} /> : null}
+      <CardContent className="space-y-4">
+        {resident ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Vram running={engine.running} total={vram} />
+              <IdleClock engine={engine} />
+            </div>
+            <Residents running={engine.running} />
+          </>
+        ) : null}
         <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
-            disabled={release.isPending || engine.running.length === 0 || engine.busy}
+            disabled={release.isPending || !resident || engine.busy}
             title={
               engine.busy
                 ? t("eng.gpu.jobRunning")
-                : engine.running.length === 0
-                  ? t("eng.gpu.nothingLoaded")
-                  : t("eng.gpu.releaseHint")
+                : resident
+                  ? t("eng.gpu.releaseHint")
+                  : t("eng.gpu.nothingLoaded")
             }
             onClick={() =>
               release.mutate(undefined, {
@@ -356,8 +371,16 @@ function ResidencyCard({ engine }: { engine: AdminEngine }) {
   );
 }
 
+// One ink, four strengths: the residents are one thing shared out, not four entities, so
+// the identity channel stays free and the bar and its legend agree by position.
+const SHARE_TINT = ["bg-primary", "bg-primary/55", "bg-primary/30", "bg-primary/18"];
+
+function byShare(running: RunningModel[]): RunningModel[] {
+  return [...running].sort((a, b) => (b.size_vram ?? 0) - (a.size_vram ?? 0));
+}
+
 /**
- * What the GPU is holding, as one bar plus its legend.
+ * What the GPU is holding, as a figure over one bar.
  *
  * IT IS A PROPORTION AND NOT A FRACTION, and that is the whole reason it has no "de 45 GB":
  * `/api/ps` reports how much each resident model occupies and never how much the card has,
@@ -369,59 +392,117 @@ function ResidencyCard({ engine }: { engine: AdminEngine }) {
  * What it is worth seeing is the shape: the main model is two thirds of the residency and
  * the guardrail's context window was capped at 4096 precisely so the three of them fit at
  * once. That is legible in a bar and invisible in a list of three numbers.
+ *
+ * It is set like the remote half's meters — a small label, the figure, the bar — because
+ * the two answer the same question, what limits the work, at very different magnitudes.
  */
 function Vram({ running, total }: { running: RunningModel[]; total: number }) {
-  const { t, language } = useT();
-  const shares = [...running].sort((a, b) => (b.size_vram ?? 0) - (a.size_vram ?? 0));
-  const tint = ["bg-primary", "bg-primary/55", "bg-primary/30", "bg-primary/18"];
-
+  const { t, plural } = useT();
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
+      <p className="flex items-center gap-1.5 text-micro font-condensed uppercase text-muted-foreground">
+        {t("eng.vram.label")}
+        <InfoHint label={t("eng.vram.noteLabel")}>{t("eng.vram.note")}</InfoHint>
+      </p>
+      <p className="nums text-title">
+        {bytes(total)}{" "}
+        <span className="text-small font-normal text-muted-foreground">
+          {plural("eng.vram.residents", running.length)}
+        </span>
+      </p>
       {total > 0 ? (
-        <div className="flex h-2.5 gap-0.5" role="img" aria-label={t("eng.vram.inUse", { size: bytes(total) })}>
-          {shares.map((model, index) => (
+        <div
+          className="flex h-1.5 gap-0.5"
+          role="img"
+          aria-label={t("eng.vram.inUse", { size: bytes(total) })}
+        >
+          {byShare(running).map((model, index) => (
             <span
               key={model.model}
-              className={cn("h-full", tint[Math.min(index, tint.length - 1)])}
+              className={cn("h-full", SHARE_TINT[Math.min(index, SHARE_TINT.length - 1)])}
               style={{ width: `${((model.size_vram ?? 0) * 100) / total}%` }}
             />
           ))}
         </div>
       ) : null}
-      <ul className="divide-y divide-border border border-border text-small">
-        {shares.map((model, index) => (
-          <li key={model.model} className="flex flex-wrap items-center gap-2 px-2 py-1.5">
-            <span
-              className={cn("size-2.5 shrink-0", tint[Math.min(index, tint.length - 1)])}
-              aria-hidden="true"
-            />
-            <span className="font-mono">{model.model}</span>
-            <span className="grow" />
-            <span className="nums text-muted-foreground">
-              {model.size_vram ? bytes(model.size_vram) : "—"}
-              {model.context_length
-                ? t("eng.vram.ctx", { n: model.context_length.toLocaleString(language) })
-                : ""}
-              {model.expires_at ? t("eng.vram.until", { when: when(model.expires_at) }) : ""}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="text-small text-muted-foreground">
-        {t("eng.vram.note")}
-      </p>
     </div>
+  );
+}
+
+/**
+ * How close the residents are to being unloaded for lack of work.
+ *
+ * Drawn only beside something resident: with the card empty the clock keeps counting and
+ * has nothing to release, and "850 min sin trabajos (se libera a los 30)" was a sentence
+ * about nothing. A running job stops the clock rather than resetting the figure to zero.
+ */
+function IdleClock({ engine }: { engine: AdminEngine }) {
+  const { t } = useT();
+  const threshold = Math.floor(engine.idle.threshold / 60);
+  const idle = Math.min(Math.floor(engine.idle.seconds / 60), threshold);
+  const counting = threshold > 0 && !engine.busy;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-micro font-condensed uppercase text-muted-foreground">
+        {t("eng.idle.label")}
+      </p>
+      <p className="nums text-title">
+        {counting ? idle : "—"}{" "}
+        <span className="text-small font-normal text-muted-foreground">
+          {threshold <= 0
+            ? t("eng.idle.off")
+            : engine.busy
+              ? t("eng.idle.busy")
+              : t("eng.idle.of", { threshold })}
+        </span>
+      </p>
+      <Progress value={counting ? idle : 0} max={threshold > 0 ? threshold : 1} tone="settled" />
+    </div>
+  );
+}
+
+function Residents({ running }: { running: RunningModel[] }) {
+  const { t, language } = useT();
+  return (
+    <ul className="divide-y divide-border border border-border text-small">
+      {byShare(running).map((model, index) => (
+        <li key={model.model} className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+          <span
+            className={cn("size-2.5 shrink-0", SHARE_TINT[Math.min(index, SHARE_TINT.length - 1)])}
+            aria-hidden="true"
+          />
+          <span className="font-mono">{model.model}</span>
+          <span className="grow" />
+          <span className="nums text-muted-foreground">
+            {model.size_vram ? bytes(model.size_vram) : "—"}
+            {model.context_length
+              ? t("eng.vram.ctx", { n: model.context_length.toLocaleString(language) })
+              : ""}
+            {model.expires_at ? t("eng.vram.until", { when: when(model.expires_at) }) : ""}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 /* Models on disk ------------------------------------------------------------------------- */
 
+/**
+ * What Ollama holds on the GPU machine's disk, and nothing else.
+ *
+ * A model Cerebras serves is not on this disk and has no row here: the engine lists it so a
+ * phase can name it, and that listing belongs to the remote screen. Nothing is downloaded
+ * from here either — a build pulls what it lacks before its first phase, so the panel only
+ * says what is missing and lets a model nobody names be deleted.
+ */
 function ModelsCard({ engine }: { engine: AdminEngine }) {
   const { t, plural } = useT();
   const confirm = useConfirm();
-  const { pull, remove } = useEngineActions();
+  const { remove } = useEngineActions();
   const toast = useToast();
-  const [name, setName] = useState("");
+  const onDisk = engine.installed.filter((model) => !model.remote);
   const resident = new Set(engine.running.map((m) => m.model));
   const missing = engine.required.filter((r) => r.state === "not_installed");
 
@@ -436,17 +517,6 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
     });
   };
 
-  const startPull = (model: string) => {
-    pull.mutate(model, {
-      onSuccess: () => {
-        setName("");
-        toast({ title: t("eng.models.pullStarted"), description: model });
-      },
-      onError: (error: Error) =>
-        toast({ title: t("eng.models.pullFailed"), description: error.message, tone: "danger" }),
-    });
-  };
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -456,12 +526,13 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
           <InfoHint label={t("eng.models.hintLabel")}>{t("eng.models.hint")}</InfoHint>
         </div>
         <CardDescription>
-          {plural("eng.models.onDisk", engine.installed.filter((m) => !m.remote).length)} ·{" "}
-          {bytes(engine.installed.reduce((sum, m) => sum + (m.size ?? 0), 0))}
-          {engine.installed.some((m) => m.remote)
-            ? plural("eng.models.remoteCount", engine.installed.filter((m) => m.remote).length)
-            : ""}
-          {missing.length > 0 ? plural("eng.models.missingCount", missing.length) : ""}
+          {onDisk.length > 0
+            ? `${plural("eng.models.onDisk", onDisk.length)} · ${bytes(
+                onDisk.reduce((sum, m) => sum + (m.size ?? 0), 0),
+              )}`
+            : engine.available
+              ? t("eng.models.empty")
+              : t("eng.models.noEngine")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -469,51 +540,20 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
           <Alert tone="attention" title={t("eng.models.missingTitle")}>
             <ul className="space-y-1">
               {missing.map((row) => (
-                <li key={row.model} className="flex flex-wrap items-center gap-2">
+                <li key={row.model} className="flex flex-wrap items-baseline gap-2">
                   <span className="font-mono">{row.model}</span>
                   <span className="text-muted-foreground">({row.asked_by.join(", ")})</span>
-                  <Button size="sm" variant="outline" disabled={pull.isPending} onClick={() => startPull(row.model)}>
-                    <Download />
-                    {t("eng.models.pull")}
-                  </Button>
                 </li>
               ))}
             </ul>
+            <p>{t("eng.models.missingNote")}</p>
           </Alert>
         ) : null}
+        <FormError error={remove.error} />
 
-        {engine.pulls.length > 0 ? (
-          <ul className="space-y-2">
-            {engine.pulls.map((item) => (
-              <PullRow key={item.model} pull={item} />
-            ))}
-          </ul>
-        ) : null}
-
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-64 flex-1 space-y-1">
-            <Label htmlFor="pull-model">{t("eng.models.pullLabel")}</Label>
-            <Input
-              id="pull-model"
-              placeholder={t("eng.models.pullPlaceholder")}
-              value={name}
-              disabled={!engine.available}
-              onChange={(event) => setName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && name.trim()) startPull(name.trim());
-              }}
-            />
-          </div>
-          <Button disabled={!name.trim() || !engine.available || pull.isPending} onClick={() => startPull(name.trim())}>
-            {pull.isPending ? <Spinner /> : <Download />}
-            {t("eng.models.pull")}
-          </Button>
-        </div>
-        <FormError error={pull.error ?? remove.error} />
-
-        {engine.installed.length > 0 ? (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <Table minWidth="40rem">
+        {onDisk.length > 0 ? (
+          <div className="overflow-hidden border border-border">
+            <Table minWidth="32rem">
               <THead>
                 <TR>
                   <TH>{t("eng.models.col.model")}</TH>
@@ -523,10 +563,10 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                 </TR>
               </THead>
               <TBody>
-                {engine.installed.map((model) => {
-                  // Still read, and only for the delete guard: a model some setting names
-                  // cannot be removed. WHICH setting names it is read in the reasoning
-                  // pipeline, where it can also be changed.
+                {onDisk.map((model) => {
+                  // Read only for the delete guard: a model some setting names cannot be
+                  // removed. WHICH setting names it is read in "Configuración", where it
+                  // can also be changed.
                   const asked = model.asked_by.length > 0;
                   return (
                     <TR key={model.model}>
@@ -535,9 +575,7 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                         {model.size ? bytes(model.size) : "—"}
                       </TD>
                       <TD className="px-3 py-2">
-                        {model.remote ? (
-                          <Badge variant="outline">{t("eng.models.remote")}</Badge>
-                        ) : resident.has(model.model) ? (
+                        {resident.has(model.model) ? (
                           <Badge variant="settled">{t("eng.models.loaded")}</Badge>
                         ) : (
                           <Badge variant="outline">{t("eng.models.stored")}</Badge>
@@ -547,15 +585,14 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          disabled={Boolean(model.remote) || asked || remove.isPending || engine.busy}
+                          disabled={asked || remove.isPending || engine.busy}
+                          aria-label={t("eng.models.deleteOne", { model: model.model })}
                           title={
-                            model.remote
-                              ? t("eng.models.remoteDeleteHint")
-                              : asked
-                                ? t("eng.models.askedDeleteHint")
-                                : engine.busy
-                                  ? t("eng.gpu.jobRunning")
-                                  : t("eng.models.deleteHint")
+                            asked
+                              ? t("eng.models.askedDeleteHint")
+                              : engine.busy
+                                ? t("eng.gpu.jobRunning")
+                                : t("eng.models.deleteHint")
                           }
                           onClick={() => confirmDelete(model.model)}
                         >
@@ -568,41 +605,9 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
               </TBody>
             </Table>
           </div>
-        ) : (
-          <p className="text-small text-muted-foreground">
-            {engine.available ? t("eng.models.empty") : t("eng.models.noEngine")}
-          </p>
-        )}
+        ) : null}
       </CardContent>
     </Card>
-  );
-}
-
-function PullRow({ pull }: { pull: PullStatus }) {
-  const { t } = useT();
-  const running = pull.status === "running";
-  const tone = pull.status === "failed" ? "danger" : pull.status === "succeeded" ? "settled" : "primary";
-  return (
-    <li className="space-y-1 rounded-md border border-border p-2 text-small">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono">{pull.model}</span>
-        <span className="nums text-muted-foreground">
-          {running
-            ? pull.total > 0
-              ? t("eng.pull.progress", {
-                  done: bytes(pull.completed),
-                  total: bytes(pull.total),
-                })
-              : t("eng.pull.preparing")
-            : pull.status === "succeeded"
-              ? t("eng.pull.done")
-              : t("eng.pull.failed")}
-          {pull.user ? ` · ${pull.user}` : ""}
-        </span>
-      </div>
-      <Progress value={pull.completed} max={running ? pull.total : pull.total || 1} tone={tone} />
-      {pull.error ? <p className="text-destructive">{pull.error}</p> : null}
-    </li>
   );
 }
 
@@ -679,59 +684,6 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
   );
 }
 
-/* The database and the process ----------------------------------------------------------- */
-
-function SystemCard() {
-  const { t, language } = useT();
-  const system = useAdminSystem();
-  if (system.isLoading) return <Skeleton className="h-40" />;
-  const data = system.data;
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Database className="size-4 text-muted-foreground" />
-          <CardTitle>{t("eng.sys.title")}</CardTitle>
-        </div>
-        <CardDescription>
-          {data ? (
-            <>
-              {data.database.location} · {t("eng.sys.schema")}{" "}
-              <span className="font-mono">{data.database.revision ?? "—"}</span>
-              {data.database.head && data.database.head !== data.database.revision ? (
-                <Badge variant="attention" className="ml-2">
-                  {t("eng.sys.pendingMigration", { head: data.database.head })}
-                </Badge>
-              ) : null}
-            </>
-          ) : (
-            t("eng.sys.noDatabase")
-          )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <FormError error={system.error} />
-        {data ? (
-          <>
-            <p className="text-small text-muted-foreground">
-              {t("eng.sys.uptime", { elapsed: duration(data.process.uptime_seconds * 1000) })}{" "}
-              <span className="font-mono">{data.process.log_level}</span>
-            </p>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-small sm:grid-cols-3">
-              {Object.entries(data.database.tables).map(([table, count]) => (
-                <div key={table} className="flex justify-between gap-2">
-                  <dt className="font-mono text-muted-foreground">{table}</dt>
-                  <dd className="nums">{count.toLocaleString(language)}</dd>
-                </div>
-              ))}
-            </dl>
-          </>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
 /* The queue ----------------------------------------------------------------------------- */
 
 /**
@@ -777,136 +729,74 @@ function QueueSection() {
   };
 
   return (
-    <section className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("eng.queue.title", { n: rows.length })}
-        </h2>
-        <InfoHint label={t("eng.queue.hintLabel")}>{t("eng.queue.hint")}</InfoHint>
-      </div>
-
-      {jobs.isLoading ? (
-        <Skeleton className="h-16" />
-      ) : rows.length === 0 ? (
-        <p className="text-small text-muted-foreground">{t("eng.queue.empty")}</p>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <Table minWidth="48rem">
-            <THead>
-              <TR>
-                <TH align="num">#</TH>
-                <TH>{t("eng.queue.col.job")}</TH>
-                <TH>{t("eng.queue.col.workspace")}</TH>
-                <TH>{t("eng.queue.col.askedBy")}</TH>
-                <TH>{t("eng.queue.col.asked")}</TH>
-                <TH>{t("eng.queue.col.state")}</TH>
-                <TH />
-              </TR>
-            </THead>
-            <TBody>
-              {rows.map((job, index) => {
-                const active = job.status === "running";
-                return (
-                  <TR key={job.id}>
-                    <TD align="num" className="px-3 py-2 nums text-muted-foreground">
-                      {active ? "—" : index + (running ? 0 : 1)}
-                    </TD>
-                    <TD className="px-3 py-2">{jobName(job.kind, t, job.label)}</TD>
-                    <TD className="px-3 py-2 font-mono text-small">{job.workspace}</TD>
-                    <TD className="px-3 py-2 text-small">{job.user_name ?? "—"}</TD>
-                    <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
-                      {when(new Date(job.created_at * 1000).toISOString())}
-                    </TD>
-                    <TD className="px-3 py-2">
-                      <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
-                        {t(JOB_STATUS[job.status].labelKey)}
-                      </span>
-                    </TD>
-                    <TD align="num" className="whitespace-nowrap px-3 py-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={cancel.isPending}
-                        title={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
-                        onClick={() => confirmCancel(job)}
-                      >
-                        {active ? <Ban /> : <Trash2 />}
-                        {active ? t("eng.queue.stop") : t("eng.queue.removeShort")}
-                      </Button>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ListOrdered className="size-4 text-muted-foreground" />
+          <CardTitle>{t("eng.queue.title", { n: rows.length })}</CardTitle>
+          <InfoHint label={t("eng.queue.hintLabel")}>{t("eng.queue.hint")}</InfoHint>
         </div>
-      )}
-      <FormError error={cancel.error} />
-    </section>
-  );
-}
-
-/* The queue's past ----------------------------------------------------------------------- */
-
-function HistorySection() {
-  const { t } = useT();
-  const history = useAdminJobHistory();
-  const jobs = history.data?.jobs ?? [];
-  return (
-    <section className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("eng.hist.title", { n: jobs.length })}
-        </h2>
-        <InfoHint label={t("eng.hist.hintLabel")}>{t("eng.hist.hint")}</InfoHint>
-      </div>
-      {history.isLoading ? (
-        <Skeleton className="h-16" />
-      ) : jobs.length === 0 ? (
-        <p className="text-small text-muted-foreground">{t("eng.hist.empty")}</p>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <Table minWidth="48rem">
-            <THead>
-              <TR>
-                <TH>{t("eng.queue.col.job")}</TH>
-                <TH>{t("eng.queue.col.workspace")}</TH>
-                <TH>{t("eng.queue.col.askedBy")}</TH>
-                <TH>{t("eng.hist.col.finished")}</TH>
-                <TH align="num">{t("eng.hist.col.elapsed")}</TH>
-                <TH>{t("eng.queue.col.state")}</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {jobs.map((job) => (
-                <TR key={job.id}>
-                  <TD className="px-3 py-2">
-                    {jobName(job.kind, t, job.label)}
-                    {job.error ? (
-                      <span className="block truncate text-small text-destructive" title={job.error}>
-                        {job.error}
-                      </span>
-                    ) : null}
-                  </TD>
-                  <TD className="px-3 py-2 font-mono text-small">{job.workspace || "—"}</TD>
-                  <TD className="px-3 py-2 text-small">{job.user_name ?? "—"}</TD>
-                  <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
-                    {job.finished_at ? when(new Date(job.finished_at * 1000).toISOString()) : "—"}
-                  </TD>
-                  <TD align="num" className="whitespace-nowrap px-3 py-2 nums text-small">
-                    {duration(job.elapsed_ms)}
-                  </TD>
-                  <TD className="px-3 py-2">
-                    <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
-                      {t(JOB_STATUS[job.status].labelKey)}
-                    </span>
-                  </TD>
+        {jobs.isLoading || rows.length > 0 ? null : (
+          <CardDescription>{t("eng.queue.empty")}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {jobs.isLoading ? (
+          <Skeleton className="h-16" />
+        ) : rows.length === 0 ? null : (
+          <div className="overflow-hidden rounded-lg border border-border">
+            <Table minWidth="48rem">
+              <THead>
+                <TR>
+                  <TH align="num">#</TH>
+                  <TH>{t("eng.queue.col.job")}</TH>
+                  <TH>{t("eng.queue.col.workspace")}</TH>
+                  <TH>{t("eng.queue.col.askedBy")}</TH>
+                  <TH>{t("eng.queue.col.asked")}</TH>
+                  <TH>{t("eng.queue.col.state")}</TH>
+                  <TH />
                 </TR>
-              ))}
-            </TBody>
-          </Table>
-        </div>
-      )}
-    </section>
+              </THead>
+              <TBody>
+                {rows.map((job, index) => {
+                  const active = job.status === "running";
+                  return (
+                    <TR key={job.id}>
+                      <TD align="num" className="px-3 py-2 nums text-muted-foreground">
+                        {active ? "—" : index + (running ? 0 : 1)}
+                      </TD>
+                      <TD className="px-3 py-2">{jobName(job.kind, t, job.label)}</TD>
+                      <TD className="px-3 py-2 font-mono text-small">{job.workspace}</TD>
+                      <TD className="px-3 py-2 text-small">{job.user_name ?? "—"}</TD>
+                      <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
+                        {when(new Date(job.created_at * 1000).toISOString())}
+                      </TD>
+                      <TD className="whitespace-nowrap px-3 py-2">
+                        <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
+                          {t(JOB_STATUS[job.status].labelKey)}
+                        </span>
+                      </TD>
+                      <TD align="num" className="whitespace-nowrap px-3 py-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={cancel.isPending}
+                          title={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
+                          onClick={() => confirmCancel(job)}
+                        >
+                          {active ? <Ban /> : <Trash2 />}
+                          {active ? t("eng.queue.stop") : t("eng.queue.removeShort")}
+                        </Button>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </div>
+        )}
+        <FormError error={cancel.error} />
+      </CardContent>
+    </Card>
   );
 }

@@ -2111,21 +2111,38 @@ function Admin() {
 
       <Block title={t("admin.tab.engine")}>
         <Paragraph>
-          It is one engine with as many halves as the engine has. With a single one it is a panel
-          about one machine and carries no headings at all: "{t("eng.half.local")}" with no "
-          {t("eng.half.remote")}" beside it divides nothing. With the engine split, three ruled
-          sections appear.
+          At the top sits a <strong>board</strong> with one cell per part of the engine, and each
+          cell says in a word how that part is doing: the grey square asks for nothing, the black
+          one is working, the blue one needs you, the red one means calls are failing and the
+          hollow one is not there yet. Pressing a cell opens its screen, and the tab opens by
+          itself on the one that needs you, when one does. "{t("eng.half.remote")}" only appears
+          with the hybrid engine.
         </Paragraph>
         <Rows
           items={[
+            {
+              key: "general",
+              head: t("eng.board.general"),
+              body: (
+                <>
+                  First, <strong>which engine the installation runs</strong>: "
+                  {t("eng.kind.local")}", with every model on your own GPU, or "
+                  {t("eng.kind.hybrid")}", which sends Cerebras the models Cerebras serves. Under
+                  it, the installation's whole queue, across every subject — what is running,
+                  what is waiting and whose each one is —; the SSH tunnel to the GPU machine,
+                  raised and stopped from here; and the contexts the API keeps in memory,
+                  invalidated from here.
+                </>
+              ),
+            },
             {
               key: "local",
               head: t("eng.half.local"),
               body: (
                 <>
-                  {t("eng.half.localNote")}. The SSH tunnel to the GPU machine, raised and
-                  stopped from here and keeping ssh's last lines of error; the resident models
-                  and how they share the VRAM; and the ones on disk, with their downloads.
+                  The GPU: the resident models, how they share the VRAM, how long until they are
+                  released for lack of jobs and the button that releases them now. And the models
+                  on that machine's disk, which can be deleted when no setting names them.
                 </>
               ),
             },
@@ -2134,31 +2151,30 @@ function Admin() {
               head: t("eng.half.remote"),
               body: (
                 <>
-                  {t("eng.half.remoteNote")}: meters per minute and per day, and under them the
-                  breakdown of what was spent per phase, which downloads as CSV.
-                </>
-              ),
-            },
-            {
-              key: "process",
-              head: t("eng.half.process"),
-              body: (
-                <>
-                  {t("eng.half.processNote")}. The installation's whole queue, across every
-                  subject: what is running, what is waiting, and whose each one is.
+                  Nothing to load; what limits it is the quota. Meters per minute and per day, and
+                  under them the breakdown of what was spent per phase, which downloads as CSV.
+                  Beside them, which models are sent to Cerebras — ticked from the list of the
+                  ones there are, never typed — and the four ceilings, under the same names and
+                  in the same order as the meters they bound, and never above the account's
+                  maximum.
                 </>
               ),
             },
           ]}
         />
+        <Paragraph>
+          There is one save bar for the whole tab, and the cell of a part with pending changes
+          counts them, so they are not left behind when moving to another. What the panel cannot
+          change — the environment fixes it, or it is edited in "config.json" — is not shown.
+        </Paragraph>
         <Detail title="Three things the panel refuses to do">
           <p>
-            <strong>Delete a model the configuration names.</strong> It tells you which settings
-            ask for it: change those first.
+            <strong>Delete a model the configuration names.</strong> Change the settings that
+            ask for it first.
           </p>
           <p>
-            <strong>Put a download in the queue.</strong> Pulling a model is network and disk,
-            never the GPU, so it runs beside the queue rather than behind a two-hour build.
+            <strong>Download models.</strong> A build downloads the ones it lacks before it
+            starts; for anything else they are downloaded on the GPU machine.
           </p>
           <p>
             <strong>Release the GPU or invalidate a context while a job is running.</strong> That
@@ -2270,9 +2286,10 @@ const problems = (
           job hanging for hours with no explanation is worse than refusing it.
         </p>
         <p>
-          There are three ways forward: wait, switch the engine to "ollama", or raise the ceiling
-          if the account really does allow more. All three are done in Administration → Engine,
-          where the settings sit in the right-hand column beside the meters that explain them.
+          There are three ways forward: wait, switch the engine to "{t("eng.kind.local")}", or
+          raise the ceiling if it is not yet at the account's maximum. All three are done in
+          Administration → Engine: the engine is chosen under "{t("eng.board.general")}" and the
+          ceilings under "{t("eng.half.remote")}", beside the meters that explain them.
         </p>
         <p>
           There is a third case that is not about a spent quota but about size: a call needing
@@ -2292,9 +2309,10 @@ const problems = (
     question: `A model shows as "${t("model.notInstalled")}"`,
     answer: (
       <p>
-        Only the jobs that use that model fail; the rest of the chain works. It is downloaded
-        from Administration → Engine, and the download runs beside the queue rather than inside
-        it: it does not have to wait for a two-hour build to finish.
+        Only the jobs that use that model fail; the rest of the chain works. A build downloads
+        the models it lacks before it starts; for any other job it has to be downloaded on the
+        GPU machine with "ollama pull". Administration → Engine says which one is missing and
+        which settings ask for it.
       </p>
     ),
   },

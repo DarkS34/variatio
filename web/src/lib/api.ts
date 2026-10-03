@@ -5,7 +5,6 @@ import type {
   AdminGenerationListing,
   AdminJobQueue,
   AdminOverview,
-  AdminSystem,
   ArtifactName,
   BankListing,
   BuildPlans,
@@ -30,7 +29,6 @@ import type {
   MaintenanceState,
   MintedInvite,
   Pipeline,
-  PullStatus,
   TunnelStatus,
   ProfilePayload,
   RawKind,
@@ -431,16 +429,12 @@ export const api = {
   adminJobs: () => request<AdminJobQueue>("/api/admin/jobs"),
   adminCancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/admin/jobs/${id}`, { method: "DELETE" }),
-  adminJobHistory: (limit = 50) =>
-    request<{ jobs: Job[] }>(`/api/admin/jobs/history?limit=${limit}`),
 
   // The machine and the process: what is resident, what is on disk, the tunnel that reaches
   // the engine and the contexts this process keeps warm. Every write here is felt by every
   // workspace, which is why they are the administrator's.
   adminEngine: () => request<AdminEngine>("/api/admin/engine"),
   adminReleaseGpu: () => post<{ released: string[] }>("/api/admin/engine/release"),
-  adminPullModel: (model: string) =>
-    post<{ pull: PullStatus }>("/api/admin/engine/models/pull", { model }),
   adminDeleteModel: (model: string) =>
     request<{ deleted: string }>(`/api/admin/engine/models/${encodeURIComponent(model)}`, {
       method: "DELETE",
@@ -454,7 +448,6 @@ export const api = {
     ),
   adminTunnelStart: () => post<TunnelStatus>("/api/admin/engine/tunnel/start"),
   adminTunnelStop: () => post<TunnelStatus>("/api/admin/engine/tunnel/stop"),
-  adminSystem: () => request<AdminSystem>("/api/admin/system"),
   adminSetAdmin: (userId: number, isAdmin: boolean) =>
     post<{ user_id: number; is_admin: boolean }>(`/api/admin/accounts/${userId}/admin`, {
       is_admin: isAdmin,

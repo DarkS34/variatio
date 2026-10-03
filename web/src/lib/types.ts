@@ -777,16 +777,6 @@ export interface AdminEngine {
   cerebras?: CerebrasState;
 }
 
-export interface AdminSystem {
-  database: {
-    location: string;
-    revision: string | null;
-    head: string | null;
-    tables: Record<string, number>;
-  };
-  process: { started_at: number; uptime_seconds: number; log_level: string };
-}
-
 export interface InvitePreview {
   role: Role;
   workspace: string | null;
