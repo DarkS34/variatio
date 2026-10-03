@@ -1,4 +1,4 @@
-import { Check, Play, type LucideIcon } from "lucide-react";
+import { Check, MessagesSquare, Play, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -92,7 +92,7 @@ function Start() {
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
           <div className="flex flex-wrap items-center gap-2">
             {USES.map((door) => (
-              <Pill key={door.key} icon={Play} label={t(door.labelKey)} />
+              <Pill key={door.key} icon={door.key === "tutor" ? MessagesSquare : Play} label={t(door.labelKey)} />
             ))}
           </div>
         </div>
@@ -108,10 +108,11 @@ function Start() {
           vuelve a mostrar los pasos, y el navegador lo recuerda.
         </Paragraph>
         <Paragraph>
-          Tras la raya va «{t("nav.create")}», aquello para lo que existe la construcción. No
-          lleva número porque no es un paso sino la puerta a la que llevan los cuatro: se
-          enciende cuando la construcción está cerrada, y hasta entonces está medio apagada,
-          dice «{t("nav.state.later").toLowerCase()}» y no responde al pulsarla.
+          Tras la raya van «{t("nav.create")}» y «{t("nav.tutor")}», aquello para lo que existe
+          la construcción. No llevan número porque no son pasos sino las puertas a las que
+          llevan los cuatro, y ninguna espera a la otra: se encienden cuando la construcción
+          está cerrada, y hasta entonces están medio apagadas, dicen «
+          {t("nav.state.later").toLowerCase()}» y no responden al pulsarlas.
         </Paragraph>
       </Block>
 
@@ -2146,6 +2147,116 @@ function Troubleshooting() {
   );
 }
 
+function Tutor() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.tutor")}>
+        <p>
+          La segunda puerta tras la construcción: una conversación con un tutor que guía con
+          preguntas. Se abre con las mismas condiciones que «{t("nav.create")}» y está pensada
+          para los alumnos: un lector de la asignatura puede usarla aunque no pueda construir
+          ni generar nada.
+        </p>
+        <p>
+          El tutor <strong>no da soluciones</strong>. Pregunta, comprueba lo que ya sabes y te
+          dice dónde mirar en los apuntes. Si quieres practicar, la puerta es «
+          {t("nav.create")}».
+        </p>
+      </SectionHead>
+
+      <Block title="Qué lo distingue de un chat cualquiera">
+        <Paragraph>
+          Cada respuesta se escribe con una ficha que el sistema prepara a partir de los
+          artefactos de la asignatura. El alumno no la ve, pero decide lo que el tutor sabe en
+          ese momento:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "focus",
+              head: "El concepto del que se habla",
+              body: "Sale del temario. Se fija con el primer mensaje que lo nombra con claridad y solo cambia cuando otro mensaje habla claramente de otra cosa. Un «no lo entiendo» no lo mueve.",
+            },
+            {
+              key: "notes",
+              head: "Dónde lo explican los apuntes",
+              body: "Los pasajes que el temario ancló a ese concepto y los fragmentos de los apuntes más parecidos al mensaje. Las referencias que aparecen bajo cada respuesta salen de aquí, nunca de lo que escribe el modelo.",
+            },
+            {
+              key: "before",
+              head: "Lo que hay que saber antes",
+              body: "Los prerrequisitos directos del concepto. El tutor comprueba que los conoces antes de explicar, y no repite la comprobación en la misma conversación.",
+            },
+            {
+              key: "after",
+              head: "Lo que viene después",
+              body: "Los conceptos que el temario pone a continuación. El tutor no los introduce, y el sistema comprueba que no lo haga.",
+            },
+            {
+              key: "bank",
+              head: "El ejercicio que traes",
+              body: "Si pegas un enunciado del banco, el tutor lo reconoce y sabe qué conceptos practica. Si te atascas, puede proponerte uno más sencillo del mismo concepto.",
+            },
+            {
+              key: "criteria",
+              head: "Los criterios de la asignatura",
+              body: "Las convenciones y los errores que los apuntes señalan, redactados por el sistema y corregidos por un docente.",
+            },
+          ]}
+        />
+      </Block>
+
+      <Block title="Lo que el sistema comprueba en cada respuesta">
+        <Paragraph>
+          Antes de que la leas, una respuesta pasa unas comprobaciones: tiene que hacer al
+          menos una pregunta y no demasiadas, no puede llevar más de unas pocas líneas de
+          código, no puede copiar un pasaje de los apuntes, no puede introducir un concepto
+          posterior y no puede sugerir lo que los criterios descartan. Si falla, el modelo
+          escribe otra con el motivo; si vuelve a fallar, recibes una pregunta de reserva que
+          te remite a los apuntes. Por eso la respuesta aparece entera y no palabra a palabra.
+        </Paragraph>
+        <Paragraph>
+          Las consultas administrativas (notas, fechas, entregas) y las preguntas ajenas a la
+          asignatura reciben una respuesta fija, sin pasar por el modelo. Un mensaje que el
+          guardián rechaza tampoco llega al modelo.
+        </Paragraph>
+      </Block>
+
+      <Block title="La cola">
+        <Paragraph>
+          Cada respuesta es un trabajo de la cola, como una generación. Con el motor solo local,
+          una construcción en marcha deja la conversación «en cola» hasta que termina. Puedes
+          detener una respuesta que espera; el mensaje se queda marcado sin respuesta y puedes
+          pedirla otra vez. Cada cuenta tiene una respuesta en camino a la vez.
+        </Paragraph>
+      </Block>
+
+      <Block title="Quién ve qué">
+        <Paragraph>
+          Una conversación es de quien la tiene: nadie más de la asignatura la lee. La única
+          excepción es quien administra la instalación, que puede leerlas todas desde «
+          {t("admin.tab.workspaces")}», sin poder cambiarlas.
+        </Paragraph>
+        <Paragraph>
+          Los criterios son de los docentes: la pestaña «{t("tutor.tab.criteria")}» solo
+          aparece con permiso de edición. El sistema los genera con «{t("tutor.criteria.build")}
+          », y se revisan y corrigen como cualquier paso de la construcción. Encima aparecen
+          las reglas fijas del tutor, que valen en todas las asignaturas y no se cambian.
+        </Paragraph>
+      </Block>
+
+      <Block title={`Desde un ejercicio: «${t("tutor.fromExercise")}»`}>
+        <Paragraph>
+          En «{t("nav.mySubjects")}», cada ejercicio generado ofrece abrir una conversación
+          sobre él. El enunciado llega ya escrito al cuadro y el tutor empieza por los conceptos
+          que ese ejercicio practica.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
 export const BODIES: Record<string, () => ReactNode> = {
   start: Start,
   workspace: Workspace,
@@ -2154,6 +2265,7 @@ export const BODIES: Record<string, () => ReactNode> = {
   graph: Graph,
   bank: Bank,
   generate: Generate,
+  tutor: Tutor,
   runs: Runs,
   account: Account,
   admin: Admin,

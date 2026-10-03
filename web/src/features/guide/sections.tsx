@@ -6,6 +6,7 @@ import {
   Layers,
   Library,
   LifeBuoy,
+  MessagesSquare,
   Network,
   Play,
   ShieldCheck,
@@ -112,6 +113,12 @@ export const GUIDE_SECTIONS = [
     icon: Library,
   },
   { slug: "generate", labelKey: "guide.sec.generate", groupKey: "guide.group.use", icon: Play },
+  {
+    slug: "tutor",
+    labelKey: "guide.sec.tutor",
+    groupKey: "guide.group.use",
+    icon: MessagesSquare,
+  },
   {
     slug: "runs",
     labelKey: "guide.sec.runs",

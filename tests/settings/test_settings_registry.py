@@ -88,5 +88,7 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 140 → 206 on 2026-10-02: a temperature, top-k and top-p per model call, three of them
     # the temperatures that already were one call's (renamed, their names kept). 206 → 242
     # and 117 → 153 the same day: every stage's hard-coded knobs became settings.
-    assert len(REGISTRY) == 242
+    # 242 → 276 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
+    # optional import of `tutor.settings`; none carries a name, so `BY_NAME` does not move.
+    assert len(REGISTRY) == 276
     assert len(BY_NAME) == 153

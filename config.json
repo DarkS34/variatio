@@ -119,6 +119,26 @@
       "docling"
     ]
   },
+  "tutor": {
+    "message_max_chars": 4000,
+    "history_turns": 8,
+    "reply_max_tokens": 1024,
+    "max_questions": 3,
+    "max_code_lines": 3,
+    "copy_max_words": 20,
+    "passages_top_k": 3,
+    "passage_threshold": 0.5,
+    "passage_chars": 1200,
+    "anchors_per_concept": 2,
+    "bank_match_threshold": 0.85,
+    "focus_threshold": 0.55,
+    "focus_margin": 0.05,
+    "criteria_max_chars": 3000,
+    "criteria_evidence_chars": 14000,
+    "criteria_per_unit": 10,
+    "criteria_max_tokens": 4096,
+    "criteria_solutions": 6
+  },
   "profiles": {
     "cerebras+ollama": {
       "models": {

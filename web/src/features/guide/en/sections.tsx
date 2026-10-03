@@ -1,4 +1,4 @@
-import { Check, Play, type LucideIcon } from "lucide-react";
+import { Check, MessagesSquare, Play, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -96,7 +96,7 @@ function Start() {
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
           <div className="flex flex-wrap items-center gap-2">
             {USES.map((door) => (
-              <Pill key={door.key} icon={Play} label={t(door.labelKey)} />
+              <Pill key={door.key} icon={door.key === "tutor" ? MessagesSquare : Play} label={t(door.labelKey)} />
             ))}
           </div>
         </div>
@@ -113,10 +113,11 @@ function Start() {
           steps again, and the browser remembers.
         </Paragraph>
         <Paragraph>
-          After the rule comes "{t("nav.create")}", what the construction exists for. It
-          carries no number because it is not a step but the door the four steps lead to: it
-          lights up when the construction is closed, and until then it is half off, says
-          "{t("nav.state.later").toLowerCase()}" and answers no click.
+          After the rule come "{t("nav.create")}" and "{t("nav.tutor")}", what the construction
+          exists for. They carry no number because they are not steps but the doors the four
+          steps lead to, and neither waits for the other: they light up when the construction is
+          closed, and until then they are half off, say "{t("nav.state.later").toLowerCase()}"
+          and answer no click.
         </Paragraph>
       </Block>
 
@@ -2161,6 +2162,114 @@ function Troubleshooting() {
   );
 }
 
+function Tutor() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.use")} title={t("guide.sec.tutor")}>
+        <p>
+          The second door after the construction: a conversation with a tutor that guides with
+          questions. It opens on the same conditions as "{t("nav.create")}" and it is meant for
+          students: a reader of the subject can use it even without being able to build or
+          generate anything.
+        </p>
+        <p>
+          The tutor <strong>gives no solutions</strong>. It asks, checks what you already know
+          and tells you where to look in the notes. To practise, the door is "{t("nav.create")}".
+        </p>
+      </SectionHead>
+
+      <Block title="What sets it apart from any chat">
+        <Paragraph>
+          Every reply is written with a card the system prepares from the subject's artifacts.
+          The student never sees it, but it decides what the tutor knows at that moment:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "focus",
+              head: "The concept being discussed",
+              body: "It comes from the syllabus. The first message that clearly names one sets it, and it only moves when another message is clearly about something else. An «I don't get it» does not move it.",
+            },
+            {
+              key: "notes",
+              head: "Where the notes explain it",
+              body: "The passages the syllabus anchored to that concept and the pieces of the notes closest to the message. The references under each reply come from here, never from what the model writes.",
+            },
+            {
+              key: "before",
+              head: "What you need to know first",
+              body: "The concept's direct prerequisites. The tutor checks you know them before explaining, and does not check twice in one conversation.",
+            },
+            {
+              key: "after",
+              head: "What comes later",
+              body: "The concepts the syllabus places next. The tutor does not introduce them, and the system checks that it does not.",
+            },
+            {
+              key: "bank",
+              head: "The exercise you bring",
+              body: "If you paste a statement from the bank, the tutor recognises it and knows which concepts it practises. If you get stuck, it can offer a simpler one on the same concept.",
+            },
+            {
+              key: "criteria",
+              head: "The subject's criteria",
+              body: "The conventions and mistakes the notes point out, drafted by the system and corrected by a teacher.",
+            },
+          ]}
+        />
+      </Block>
+
+      <Block title="What the system checks in every reply">
+        <Paragraph>
+          Before you read it, a reply goes through some checks: it has to ask at least one
+          question and not too many, it cannot carry more than a few lines of code, it cannot
+          copy a passage of the notes, it cannot introduce a later concept and it cannot suggest
+          what the criteria rule out. If it fails, the model writes another one with the reason;
+          if it fails again, you get a fallback question that points you to the notes. That is
+          why the reply appears whole and not word by word.
+        </Paragraph>
+        <Paragraph>
+          Administrative questions (grades, dates, submissions) and questions outside the subject
+          get a fixed answer that never reaches the model. A message the guardrail refuses does
+          not reach the model either.
+        </Paragraph>
+      </Block>
+
+      <Block title="The queue">
+        <Paragraph>
+          Every reply is a job of the queue, like a generation. With the local engine alone, a
+          build in progress leaves the conversation "queued" until it ends. You can stop a reply
+          that is waiting; the message stays marked as unanswered and you can ask for the reply
+          again. Each account has one reply on its way at a time.
+        </Paragraph>
+      </Block>
+
+      <Block title="Who sees what">
+        <Paragraph>
+          A conversation belongs to whoever holds it: nobody else in the subject reads it. The
+          one exception is whoever administers the installation, who can read them all from "
+          {t("admin.tab.workspaces")}", without being able to change them.
+        </Paragraph>
+        <Paragraph>
+          The criteria belong to the teachers: the "{t("tutor.tab.criteria")}" tab only appears
+          with edit permission. The system generates them with "{t("tutor.criteria.build")}",
+          and they are reviewed and corrected like any step of the construction. Above them
+          are the tutor's fixed rules, which hold in every subject and do not change.
+        </Paragraph>
+      </Block>
+
+      <Block title={`From an exercise: "${t("tutor.fromExercise")}"`}>
+        <Paragraph>
+          In "{t("nav.mySubjects")}", every generated exercise offers to open a conversation
+          about it. The statement arrives already written in the box and the tutor starts from
+          the concepts that exercise practises.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
 export const BODIES: Record<string, () => ReactNode> = {
   start: Start,
   workspace: Workspace,
@@ -2169,6 +2278,7 @@ export const BODIES: Record<string, () => ReactNode> = {
   graph: Graph,
   bank: Bank,
   generate: Generate,
+  tutor: Tutor,
   runs: Runs,
   account: Account,
   admin: Admin,

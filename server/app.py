@@ -1,6 +1,8 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
-Nothing inside `server` may import this module.
+Nothing inside `server` may import this module. It is also the only place the tutor is
+mounted, because `tutor.api` imports `server.auth` and the job runner back and mounting it
+from the router package would close a cycle.
 """
 
 import asyncio
@@ -17,9 +19,16 @@ from variatio import config
 from . import installation, jobs, middleware, singletons
 from .routers import ROUTERS
 
+try:
+    from tutor import api as tutor_api
+except ModuleNotFoundError as missing:
+    if missing.name != "tutor":
+        raise
+    tutor_api = None
+
 
 def create_app() -> FastAPI:
-    """Assemble the whole application: middleware, routers and the bundle."""
+    """Assemble the whole application: middleware, routers, the tutor and the bundle."""
     app = FastAPI(
         title="Graph-Guided Variant Generator",
         description="Pipeline por etapas con revisión humana en cada eslabón.",
@@ -46,6 +55,11 @@ def create_app() -> FastAPI:
 
     for router in ROUTERS:
         app.include_router(router)
+
+    # The tutor registers its own routers, jobs and lanes here, and only here: importing it
+    # from the router package would close a cycle.
+    if tutor_api is not None:
+        tutor_api.install(app)
 
     _mount_web(app)
     return app

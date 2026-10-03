@@ -53,6 +53,9 @@ education is out of scope; hardcoding a subject is equally a regression.
 - **`variatio-web`**: the product WITHOUT the evaluation. No worktree at present
   (`git worktree add ../variatio-noeval variatio-web` to recreate). Its route-order detector
   lives in `tests/server/test_route_order.py`.
+- **`variatio-web-tutor`** (worktree `/home/deploy/variatio-tutor`): `variatio-web` plus the
+  Socratic tutor (`tutor/`, `web/src/tutor/`, the `tutor_turn` and `tutor_criteria` jobs). Its
+  second door is «Tutor», where the study's branch has «Evaluar el sistema».
 - **`main`**: the library and its CLI alone.
 - **The database never moves**: `evaluation_sessions`, `stage_evaluations` and
   `users.evaluator_profile` keep their migrations and ORM models on every branch.
@@ -167,7 +170,8 @@ table and refuses while a row has no file: on an installation that still has the
 
 The hard line: **`instance/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
-`evaluation/` (the TFM's study), `web/` (React client), `migrations/`.
+`evaluation/` (the TFM's study), `tutor/` (the Socratic tutor, on `variatio-web-tutor`),
+`web/` (React client), `migrations/`.
 
 ### `variatio/` layout
 
@@ -243,6 +247,11 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
   `READS` are declared in `evaluation/settings.py`, picked up by an optional import — the one
   place `variatio/` names the evaluation.
+- The tutor's are declared the same way in `tutor/settings.py` (`LANE` «Tutor», stage
+  `tutoring`, last; `READS`; `MODEL_KEYS`), picked up by an optional import that switches off
+  only on `ModuleNotFoundError` for `tutor` itself. Their names are empty: they are read through
+  `tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
+  only there the context cap (`derived`) and the deletion guard (`required_models`).
 
 ### Database (`server/db/`)
 
@@ -613,6 +622,75 @@ A top-level package, always mounted. **`evaluation` imports `variatio`, never th
   version and arm configuration produced each result; there is no version column, so change
   dates are boundaries.
 
+## `tutor/` — the Socratic tutor, beside the system it reads
+
+A top-level package on `variatio-web-tutor`, mounted like the evaluation: **`tutor` imports
+`variatio` and never the reverse** (the registry's optional import is the exception);
+`tutor/__init__.py` never imports `tutor/api/`, so `import tutor` stays free of
+FastAPI/SQLAlchemy (pinned by `tests/tutor/test_tutor_boundary.py`). `server/app.py` calls
+`tutor.api.install(app)`, which registers the two jobs in `HANDLERS` (never in `JOB_LABELS`,
+which is what `POST /api/jobs` accepts: a turn comes through the tutor's routes or not at
+all), their models in `server/jobs/lanes.EXTRA_MODELS`, and mounts `/api/tutor` and the
+admin's read.
+
+- **A chat and a card.** The interaction is a plain conversation; the advantage is the CARD
+  (`tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
+  definition and the graph's anchored passages, its direct prerequisites with where the notes
+  explain them, its direct dependents (not to be introduced), its closest same-unit concepts
+  (by description vectors), the passages of the notes nearest the message (`passages.py`), the
+  subject's criteria, the bank exercise the message is and a simpler one of its concept.
+- **A turn** (`tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
+  2026-10-03; admissibility rules on commissions) → one query-side embedding (concepts and
+  passages) and one document-side one (`classify.bank_match`) → kind → focus → card → reply →
+  checks. Seven kinds (`theory exercise attempt solution social administrative off_topic`);
+  the last two are fixed texts that never reach the model. Classification is signals first
+  (bank match ≥ `tutor.bank_match_threshold`, a conversation opened on a generated exercise),
+  then one grammar call to the classify model, failing open to `theory`; the graph overrules
+  an `off_topic` verdict on a message whose best concept clears `tutor.focus_threshold`.
+- **The focus belongs to the conversation**: set by a message whose best concept clears
+  `tutor.focus_threshold` (0.55, measured: content questions 0.61–0.66, a greeting 0.49) and
+  moved only past `tutor.focus_margin`. A prerequisite the reply ASKS about is recorded as
+  `verified` and the next cards say so; it does NOT join the focus (that made the tutor ask it
+  again). Social messages never move it.
+- **The method is code, not only prompt.** `tutor/checks.py` verifies what a machine can: at
+  least one question and at most `max_questions`, at most `max_code_lines` in fences, no run
+  longer than `copy_max_words` copied from the card's passages, no dependent of the focus the
+  student did not bring up, no forbidden term (in code ever, in prose when unprompted), no
+  sentence opening by telling the student they are right (`VALIDATION_PATTERN`), not empty,
+  not cut. A failure is retried ONCE with a note naming it; a second failure sends a fixed
+  question built from the card. Replies are shown whole, never streamed.
+- **Criteria are an artifact of their own**: `instance/tutor_criteria_autogenerated.json`
+  (the `tutor_criteria` job: one grammar call per KG domain over its normative paragraphs —
+  `NORMATIVE_PATTERN` first — its anchored passages and up to `criteria_solutions` bank
+  solutions; every criterion must cite an id it was given or it is dropped; subject-wide ones
+  are merged by one grouping call, read as a partition; each call is capped by
+  `criteria_per_unit` as the grammar's `maxItems` and by `criteria_max_tokens` — uncapped, the
+  grammar let the model add criteria for minutes; a forbidden term is a name as code writes
+  it, three words at most — the model wrote practices there, which no check can find) and
+  `instance/tutor_criteria.json`
+  (a teacher's correction, which wins). A rebuild retires the curated file to `.history/`.
+  `criteria.normalize` is the one cleaner of both, validated against the graph on read. The
+  method's rules (`prompts.FIXED_RULES`, one list numbered into the system prompt) are shown
+  read-only above them. Criteria routes are `auth.EDIT`: the membership role, never
+  `users.evaluator_profile`, which the registrant chooses.
+- **Grammar**: `calls.grammar_for` drops it when the call reasons or the model is remote
+  (Cerebras mangles non-ASCII under constrained decoding); the schema then goes in the prompt.
+- **Passages** are cut by SECTION from the page cache (`split_sections`, long ones by
+  paragraph), never packed across units, navigation and heading-only pieces dropped, no model
+  call; cached in `cache/embeddings/tutor_passages.npz` by fingerprint (model, prefix, cut,
+  text), held per slug in memory and rebuilt when a page changes.
+- **Conversations** are files, `<workspace>/tutor/user_<id>/<id>.json`, private to their
+  author (the same 404 for others' and malformed ids); the installation administrator reads
+  every account's, read-only, at `/api/admin/workspaces/{slug}/tutor`. A file is written whole
+  under a per-file lock; the job reads it under that lock too (the route holds it until
+  `pending` is written — a free lane started the job before that). `pending` names the job;
+  a job gone (failed, cancelled while queued, lost to a restart) marks the student turn
+  `failed` and frees the conversation; «Pedir la respuesta otra vez» is `/retry`.
+- **A turn's job carries no text**: params and result name the conversation and the turn
+  only, because the event stream is the workspace's and a conversation is its author's. One
+  reply on its way per conversation and per account in the workspace (409).
+- Logs in Spanish with `[tutor]`; never the message text.
+
 ## The web interface (`web/`)
 
 ### Material and tokens
@@ -642,7 +720,8 @@ never `oklch` (hue interpolation turns greens blue).
 
 - [lib/steps.ts](web/src/lib/steps.ts) is the single home of the path: `STEPS` (raw
   material, profile, graph, bank, numbered 1-4 as «Fase de construcción») and `USES` (the two
-  unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema»). The
+  unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» — «Tutor»
+  on `variatio-web-tutor`). The
   first not-done step is `now`; done steps show a bare tick, no box. Doors are half-dimmed and
   unclickable until construction is complete. Once all four are done and you are not on one,
   the phase folds into one pill. There is **no dashboard**: `/` redirects to the current step.
@@ -740,6 +819,16 @@ never `oklch` (hue interpolation turns greens blue).
   most one (i), and only where its name does not say what it controls or a change has a
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
   `cfg.hint.<key>`; a key missing there draws nothing.
+
+- Tutor (`web/src/tutor/`, `/tutor`): the conversation list beside the open conversation; a
+  reply polled from the author's own route while `pending`, shown whole with its references
+  (the card's places) under it; «En cola» while queued, «Detener», «Pedir la respuesta otra
+  vez». A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: fixed rules
+  folded and read-only, then review / «Quiero corregir algo» with a sticky save bar, and a
+  rebuild that asks first when there is a correction. «Trabajar con el tutor» on a saved
+  exercise — in «Mis asignaturas y ejercicios», and on a result card once its file exists —
+  stashes the statement and the generation id (`tutor/draft.ts`). The admin reads
+  conversations from «Asignaturas» (`AdminConversations`).
 
 ### Client rules
 
@@ -862,6 +951,17 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The mark is three equal squares (settled, attention, outline).
 - Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - The exemplars profile is edited through the form alone.
+
+**Tutor (decided 2026-10-03)**
+- Two doors on the tutor branch: «Generar ejercicios» and «Tutor»; no third door.
+- The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
+  after the checks, never streamed.
+- Conversations are private to their author; the administrator reads them read-only.
+- The subject's criteria are generated by the system and curated by a teacher (edit role);
+  a student never sees or changes them. The method's rules are fixed and not editable.
+- The tutor screens with the guardrail alone (`screen_message`), not admissibility.
+- A bank exercise's solution never enters the card.
+- No "System One" classifier (Jev, Laya…): the kind is decided by signals and one grammar call.
 
 ## Code conventions
 

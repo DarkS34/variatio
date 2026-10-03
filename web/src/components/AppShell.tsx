@@ -1,5 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Loader2, Play, Wrench } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MessagesSquare,
+  Play,
+  Wrench,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 
 import { Lockup } from "@/components/ui/logo";
@@ -451,7 +459,7 @@ function MainNav({
           <DoorPill
             key={door.key}
             door={door}
-            icon={Play}
+            icon={door.key === "tutor" ? MessagesSquare : Play}
             active={path === door.path}
             open={locked === null}
             disabledReason={locked}

@@ -54,6 +54,8 @@ const JOB_KEYS: Record<string, Key> = {
   tag: "job.tag.label",
   review_taggability: "job.review_taggability.label",
   generate: "job.generate.label",
+  tutor_turn: "job.tutor_turn.label",
+  tutor_criteria: "job.tutor_criteria.label",
 };
 
 export function artifactName(

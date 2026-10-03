@@ -262,6 +262,14 @@ class Embedder:
         """Embed one text on the indexed side."""
         return self._embed(text, "document")
 
+    def embed_query(self, text: str) -> np.ndarray:
+        """Embed one text on the query side, memoised like every other embedding.
+
+        Public for a caller that scores one query against several indices — the concepts and
+        an index of its own — and must not pay the embedding once per index.
+        """
+        return self._embed(text, "query")
+
     def _embed(self, text: str, kind: str) -> np.ndarray:
         """Embed one text, memoised by PREFIXED text.
 
@@ -351,6 +359,14 @@ class Embedder:
             return []
 
         return ranked[:k]
+
+    def concept_scores(self, vector: np.ndarray) -> dict[str, float]:
+        """Score every concept against a query vector, unranked and ungated.
+
+        What `top_k_concepts` ranks and gates, for a caller that keeps the vector: the
+        threshold and the cut are then the caller's to apply, against its own state.
+        """
+        return self._score_concepts(vector)
 
     def _score_concepts(self, vec: np.ndarray) -> dict[str, float]:
         """Score every concept against a query vector, as a two-signal MAX.

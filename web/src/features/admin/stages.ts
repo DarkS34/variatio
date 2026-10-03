@@ -1,4 +1,4 @@
-import { Play, type LucideIcon } from "lucide-react";
+import { MessagesSquare, Play, type LucideIcon } from "lucide-react";
 
 import type { Key } from "@/lib/i18n";
 import { STEPS, USES, stepNumber } from "@/lib/steps";
@@ -42,6 +42,7 @@ export const CONFIG_STAGES: ConfigStage[] = [
   step(2, "graph", "cfg.stage.graph"),
   step(3, "bank", "cfg.stage.bank"),
   door(USES[0], "generation", Play, "cfg.stage.generation"),
+  door(USES[1], "tutoring", MessagesSquare, "cfg.stage.tutoring"),
 ];
 
 /** The construction stages: a setting every one of them reads is common to the whole path. */

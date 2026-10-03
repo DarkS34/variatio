@@ -13,6 +13,8 @@ Everything is read through `config.<NAME>` at the moment a job is queued and nev
 here: the engine is switched from the panel while the process runs.
 """
 
+from collections.abc import Callable
+
 from loguru import logger
 
 from variatio import config, entrypoints
@@ -73,6 +75,11 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# The kinds a mounted package brings (the tutor's), each with what it calls: its models live
+# in that package's own settings, which this module may not import. Filled by the package's
+# `install`; read at queueing time like everything else here.
+EXTRA_MODELS: dict[str, Callable[[dict | None], list[str]]] = {}
+
 
 def backend_of(model: str) -> str:
     """Return the lane one model is served from."""
@@ -117,6 +124,8 @@ def models_for(kind: str, params: dict | None = None) -> list[str]:
     """Return the generative models a job of this kind will call, in declaration order."""
     if kind in _BUILD_ARTIFACT:
         models = entrypoints.build_models(_BUILD_ARTIFACT[kind])
+    elif kind in EXTRA_MODELS:
+        models = EXTRA_MODELS[kind](params)
     else:
         models = [getattr(config, name, None) for name in _COMPONENT_MODELS.get(kind, ())]
 

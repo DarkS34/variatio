@@ -9,6 +9,9 @@ caller cannot carry its own copy of the order and the two error sentences.
 Both fail open, each in its own way: an unreadable guardrail criterion is skipped and clears
 `Verdict.checked`, and a judge that cannot answer returns `Ruling(checked=False)`. A screen
 that blocks when its model is down blocks everything.
+
+`screen_message` is the second sequence and the shorter one: the guardrail alone, for a
+message of the tutor's conversation, which has no commission whose scope a judge could hold.
 """
 
 from ... import wording as wording_sets
@@ -91,6 +94,22 @@ def screen_instructions(
     return ruling
 
 
+def screen_message(message: str | None, *, prompts, step_prefix: str = "") -> Verdict:
+    """Run the guardrail alone over one message of a conversation and return its verdict.
+
+    A verdict and not a raise: a refused message is a turn the tutor answers in its own
+    words, not a failed job. Admissibility stays out because it rules on a commission's
+    scope, and a student's question has none — what the subject covers is the tutor's own
+    classification to decide.
+    """
+    if not message:
+        return Verdict(blocked_by=None, checked=True)
+
+    wording = wording_sets.beside(prompts)
+    with progress.step(f"{step_prefix}guardrail", "Checking the message"):
+        return guardrail.check(message, wording=wording)
+
+
 def sentence_case(text: str) -> str:
     """Upper-case the first letter and leave the rest alone.
 
@@ -116,5 +135,6 @@ __all__ = [
     "owners",
     "screen",
     "screen_instructions",
+    "screen_message",
     "sentence_case",
 ]

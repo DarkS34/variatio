@@ -1,4 +1,4 @@
-import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, Copy, MessagesSquare, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Diagram } from "@/components/Diagram";
@@ -137,6 +137,7 @@ export function ResultCard({
   retried,
   profile,
   saved,
+  onTutor,
 }: {
   index: number;
   item: Record<string, unknown>;
@@ -146,6 +147,8 @@ export function ResultCard({
   profile: ExemplarsProfile;
   /** Whether the server has already kept this item as a row of "Mis variantes". */
   saved?: boolean;
+  /** Opens a conversation with the tutor on this exercise; only offered once it is saved. */
+  onTutor?: () => void;
 }) {
   const { t } = useT();
   const spec = itemTypeOf(profile, { item_type: itemType });
@@ -168,6 +171,12 @@ export function ResultCard({
             </Badge>
           ) : null}
           <div className="ml-auto flex gap-1">
+            {onTutor ? (
+              <Button variant="ghost" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+                <MessagesSquare />
+                {t("tutor.fromExercise")}
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               size="icon-sm"

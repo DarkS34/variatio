@@ -811,12 +811,18 @@ def required_models() -> dict[str, str]:
     holding a list, and the key is what the delete guard prints when it refuses to remove
     a model from the disk. The first of them is `VARIANT_GENERATION_LLM` as well.
     """
+    from ..settings import values
     from ..settings.derived import PHASES
+    from ..settings.registry import EXTRA_MODEL_KEYS
 
     names = ["GUARDRAIL_LLM", "EMBEDDING_LLM", *PHASES.values()]
     required = {name: getattr(config, name) for name in names}
     for index, model in enumerate(config.GENERATION_MODELS):
         required[f"GENERATION_MODELS[{index}]"] = str(model)
+    resolved = values()
+    for key in EXTRA_MODEL_KEYS:
+        if resolved.get(key):
+            required[key] = str(resolved[key])
     return required
 
 

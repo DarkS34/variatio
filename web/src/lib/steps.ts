@@ -36,6 +36,7 @@ export const STEPS = [
  */
 export const USES = [
   { key: "generate", path: "/generate", labelKey: "nav.create" },
+  { key: "tutor", path: "/tutor", labelKey: "nav.tutor" },
 ] as const satisfies readonly { key: string; path: string; labelKey: Key }[];
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */

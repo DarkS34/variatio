@@ -6,6 +6,10 @@ from variatio.settings.registry.reasoning import Phase
 
 PHASES = [phase for lane in PIPELINE for phase in lane.phases]
 
+# The pipeline's own calls, without a mounted package's lane: the tutor declares its switches
+# in its own group and reads them through its own config, and `tests/tutor` pins those.
+OWN_PHASES = [phase for lane in reasoning.PIPELINE for phase in lane.phases]
+
 # The three transcription nodes are the step the three builders share, so they are one lane
 # of their own rather than a repeated head on each of the three.
 SHARED = {"transcribe", "transcribe_image", "transcribe_seam"}
@@ -46,7 +50,7 @@ def test_every_phase_either_toggles_or_says_why_not():
 
 
 def test_every_toggle_is_a_bool_setting_of_the_reasoning_group():
-    for phase in PHASES:
+    for phase in OWN_PHASES:
         if phase.setting is None:
             continue
         setting = BY_KEY[phase.setting]
@@ -59,8 +63,8 @@ def test_every_toggle_is_a_bool_setting_of_the_reasoning_group():
 def test_every_reasoning_switch_has_a_place_in_the_pipeline():
     # The default effort is no phase's: it is what a bare `think=True` becomes.
     declared = {s.key for s in reasoning.SETTINGS} - {"reasoning.default_effort"}
-    drawn = {phase.setting for phase in PHASES if phase.setting} | {
-        phase.effort for phase in PHASES if phase.effort
+    drawn = {phase.setting for phase in OWN_PHASES if phase.setting} | {
+        phase.effort for phase in OWN_PHASES if phase.effort
     }
     assert declared == drawn
 
@@ -119,7 +123,7 @@ def test_the_serialised_pipeline_carries_the_same_shape():
 
 
 def test_every_toggle_carries_an_effort_setting_and_fixed_phases_none():
-    for phase in PHASES:
+    for phase in OWN_PHASES:
         if phase.setting is None:
             assert phase.effort is None, phase.key
             continue

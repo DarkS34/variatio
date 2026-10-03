@@ -9,9 +9,12 @@ import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton } from "@/components/ui/misc";
 import { isLive, isQueued, waitOf, waitReason } from "@/lib/queue";
-import { Link } from "@/lib/router";
+import { Link, useRouter } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { fieldText } from "@/lib/fields";
+import { itemTypeOf } from "@/lib/profile";
+import { stashTutorDraft } from "@/tutor/draft";
 import type { RunView } from "@/state/runStore";
 import {
   useEngineOffline,
@@ -390,6 +393,7 @@ function Results({
   savedCount: number;
 }) {
   const { t, plural } = useT();
+  const { navigate } = useRouter();
   const requested = run?.job?.result?.requested;
   const produced = run?.job?.result?.produced;
   const asJson = JSON.stringify(
@@ -434,6 +438,20 @@ function Results({
           retried={result.retried}
           profile={profile}
           saved={Boolean(result.saved_id)}
+          onTutor={
+            result.saved_id
+              ? () => {
+                  const spec = itemTypeOf(profile, { item_type: result.item_type });
+                  stashTutorDraft({
+                    message: t("tutor.fromExercise.message", {
+                      statement: spec ? fieldText(result.item[spec.primary_field]) : "",
+                    }),
+                    generationId: String(result.saved_id),
+                  });
+                  navigate("/tutor");
+                }
+              : undefined
+          }
         />
       ))}
 

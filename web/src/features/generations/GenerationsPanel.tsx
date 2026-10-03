@@ -1,12 +1,4 @@
-import {
-  Archive,
-  Copy,
-  Download,
-  Library,
-  Search,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { Archive, Copy, Download, Library, MessagesSquare, Search, Sparkles, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { fromGeneration, stashDraft } from "@/features/generate/draft";
+import { stashTutorDraft } from "@/tutor/draft";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/generate/ResultCard";
 import { fieldText } from "@/lib/fields";
 import { useRouter } from "@/lib/router";
@@ -71,23 +64,36 @@ export function SubjectExercises({ slug, inUse }: { slug: string; inUse: boolean
     [rows, profile, t],
   );
 
-  const again = (row: GenerationRow) => {
-    const draft = fromGeneration(row);
+  // Both actions work on the subject in use, so from another subject they switch into it
+  // first. `mutateAsync` and not `mutate`'s callbacks: switching drops the listing this list
+  // is drawn from, so the list unmounts before the switch answers, and a mutation forgets
+  // the per-call callbacks of an unmounted caller.
+  const goTo = (path: string, stash: () => void) => {
     if (inUse) {
-      stashDraft(draft);
-      navigate("/generate");
+      stash();
+      navigate(path);
       return;
     }
-    // `mutateAsync` and not `mutate`'s callbacks: switching drops the listing this list is
-    // drawn from, so the list unmounts before the switch answers, and a mutation forgets
-    // the per-call callbacks of an unmounted caller.
     void switching
       .mutateAsync(slug)
       .then(() => {
-        stashDraft(draft);
-        navigate("/generate");
+        stash();
+        navigate(path);
       })
       .catch(() => undefined);
+  };
+  const again = (row: GenerationRow) => {
+    const draft = fromGeneration(row);
+    goTo("/generate", () => stashDraft(draft));
+  };
+  // The statement goes into the tutor's box and the exercise is named, so the conversation
+  // starts on the concepts the exercise practises.
+  const withTutor = (row: GenerationRow) => {
+    const spec = profile ? itemTypeOf(profile, { item_type: row.item_type }) : null;
+    const statement = spec ? fieldText(row.item[spec.primary_field]) : "";
+    goTo("/tutor", () =>
+      stashTutorDraft({ message: t("tutor.fromExercise.message", { statement }), generationId: row.id }),
+    );
   };
 
   if (profileQuery.isLoading) return <Skeleton className="h-40" />;
@@ -188,6 +194,7 @@ export function SubjectExercises({ slug, inUse }: { slug: string; inUse: boolean
               expanded={open === row.id}
               onToggle={() => setOpen(open === row.id ? null : row.id)}
               onAgain={switching.isPending ? undefined : () => again(row)}
+              onTutor={switching.isPending ? undefined : () => withTutor(row)}
               onDelete={() => remove.mutate(row.id)}
             />
           ))}
@@ -210,6 +217,7 @@ export function GenerationCard({
   expanded,
   onToggle,
   onAgain,
+  onTutor,
   onDelete,
   showAuthor = false,
 }: {
@@ -218,6 +226,8 @@ export function GenerationCard({
   expanded: boolean;
   onToggle: () => void;
   onAgain?: () => void;
+  /** Opens a conversation with the tutor on this exercise; absent on the read-only view. */
+  onTutor?: () => void;
   onDelete?: () => void;
   showAuthor?: boolean;
 }) {
@@ -271,6 +281,12 @@ export function GenerationCard({
               >
                 <Sparkles />
                 {t("generations.moreLikeThis")}
+              </Button>
+            ) : null}
+            {onTutor ? (
+              <Button variant="ghost" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+                <MessagesSquare />
+                {t("tutor.fromExercise")}
               </Button>
             ) : null}
             <Button

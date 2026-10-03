@@ -1,4 +1,4 @@
-import { Download, Eraser, Pencil, Trash2 } from "lucide-react";
+import { Download, Eraser, MessagesSquare, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import { useT } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
 import { WorkspaceGenerations } from "./WorkspaceGenerations";
+import { AdminConversations } from "@/tutor/AdminConversations";
 
 /**
  * The installation's instances, and what this panel writes about them: their name, their
@@ -58,9 +59,15 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   // By slug, so the view follows the overview's refreshes and closes if the row goes.
   const viewing = overview.workspaces.find((w) => w.slug === viewingSlug) ?? null;
   const setViewing = (workspace: AdminWorkspace | null) => setViewingSlug(workspace?.slug ?? null);
+  // The tutor's conversations of one subject, the administrator's other read across accounts.
+  const [talksSlug, setTalksSlug] = useState<string | null>(null);
+  const talks = overview.workspaces.find((w) => w.slug === talksSlug) ?? null;
 
   if (viewing) {
     return <WorkspaceGenerations workspace={viewing} onBack={() => setViewing(null)} />;
+  }
+  if (talks) {
+    return <AdminConversations workspace={talks} onBack={() => setTalksSlug(null)} />;
   }
 
   return (
@@ -124,6 +131,15 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                     onClick={() => setRenaming(workspace)}
                   >
                     <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title={t("tutor.admin.view", { name: workspace.name })}
+                    aria-label={t("tutor.admin.view", { name: workspace.name })}
+                    onClick={() => setTalksSlug(workspace.slug)}
+                  >
+                    <MessagesSquare />
                   </Button>
                   <ExportButton workspace={workspace} />
                   <ClearCacheButton workspace={workspace} />

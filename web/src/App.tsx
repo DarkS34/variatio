@@ -37,6 +37,9 @@ const GenerateScreen = lazy(() =>
 const RawScreen = lazy(() =>
   import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),
 );
+const TutorScreen = lazy(() =>
+  import("@/tutor/TutorScreen").then((m) => ({ default: m.TutorScreen })),
+);
 const TutorialScreen = lazy(() =>
   import("@/features/tutorial/TutorialScreen").then((m) => ({ default: m.TutorialScreen })),
 );
@@ -53,6 +56,7 @@ const NEEDS_WORKSPACE = [
   "/prepare/graph",
   "/prepare/bank",
   "/generate",
+  "/tutor",
 ];
 
 export function App() {
@@ -95,6 +99,8 @@ export function App() {
         return <BankScreen stage={stage("exemplars_bank")} />;
       case "/generate":
         return <GenerateScreen />;
+      case "/tutor":
+        return <TutorScreen />;
       // The account of whoever is looking: their data, and the subjects they can open with
       // the exercises they generated in each. Each tab is a route so that it stays a link
       // that can be bookmarked.

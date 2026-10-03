@@ -11,7 +11,9 @@ export type JobKind =
   | "index"
   | "tag"
   | "review_taggability"
-  | "generate";
+  | "generate"
+  | "tutor_turn"
+  | "tutor_criteria";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 

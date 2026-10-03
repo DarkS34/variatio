@@ -1,6 +1,6 @@
 """What the registry does not store: the phase models, the context map, efforts and sampling."""
 
-from .registry import PIPELINE
+from .registry import EXTRA_MODEL_KEYS, PIPELINE
 from .registry.reasoning import PHASE_KEYS
 from .registry.sampling import PARAMS
 
@@ -71,6 +71,11 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     # this map exists to cap.
     for model in offered:
         out["LLM_CONTEXT"].setdefault(model, values["context_window.overrides"])
+    # A model named only outside the pipeline (the tutor's) is capped the same way; an empty
+    # one reads with an offered model, already capped above.
+    for key in EXTRA_MODEL_KEYS:
+        if values.get(key):
+            out["LLM_CONTEXT"].setdefault(str(values[key]), values["context_window.overrides"])
 
     out["SAMPLING"] = _sampling(values)
     return out
