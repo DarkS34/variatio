@@ -47,22 +47,25 @@ education is out of scope; hardcoding a subject is equally a regression.
 
 ## Branches
 
-- **`variatio-web-eval`** (this tree, `/home/deploy/variatio`): the complete system WITH
-  the study (`evaluation/`, `web/src/evaluation/`, the `evaluate` job, evaluator profiles,
-  the stage questionnaires). Production serves a separate worktree, `/home/deploy/variatio-prod`.
-- **`variatio-web`**: the product WITHOUT the evaluation. No worktree at present
-  (`git worktree add ../variatio-noeval variatio-web` to recreate). Its route-order detector
-  lives in `tests/server/test_route_order.py`.
-- **`main`**: the library and its CLI alone.
+- **`main`** (this tree, `/home/deploy/variatio-dev`): the complete system — the library,
+  the API, the client, the study (`evaluation/`, `web/src/evaluation/`, the `evaluate` job,
+  evaluator profiles, the stage questionnaires) and the Socratic tutor (`tutor/`,
+  `web/src/tutor/`, the `tutor_turn` and `tutor_criteria` jobs). Production serves a separate
+  worktree, `/home/deploy/variatio-prod`. Until 2026-10-03 this was three branches
+  (`variatio-web`, `variatio-web-eval`, `variatio-web-tutor`); this one replaces them.
+- **`variatio-vanilla`**: the library and its CLI alone (the branch `main` named until
+  2026-10-03). No worktree at present (`git worktree add ../variatio-vanilla variatio-vanilla`
+  to recreate).
 - **The database never moves**: `evaluation_sessions`, `stage_evaluations` and
   `users.evaluator_profile` keep their migrations and ORM models on every branch.
-- **Derived branches are brought forward by MERGING this one and re-removing what they do
-  not carry** (never by cherry-picking). After the merge: `git rm` the study's files again;
-  git's rename detection files new `tests/evaluation/` tests under `tests/server/` — delete
-  them; the i18n catalogues conflict and the HEAD side is right; read `len(REGISTRY)` and
-  `len(BY_NAME)` off the branch before writing `tests/settings/test_settings_registry.py`.
-- `AGENTS.md` is tracked and travels with every branch; on `main` and `variatio-web` the
-  evaluation sections describe code that branch does not carry.
+- **`variatio-vanilla` is brought forward by MERGING `main` and re-removing what it does not
+  carry** (never by cherry-picking). After the merge: `git rm` the server, the client, the
+  study and the tutor again; `README.md` conflicts and the HEAD side is right (each branch
+  describes itself); `version` in `pyproject.toml` and `uv.lock` conflicts — keep the branch's
+  own line, then bump it; read `len(REGISTRY)` and `len(BY_NAME)` off the branch before
+  writing `tests/settings/test_settings_registry.py`.
+- `AGENTS.md` is tracked and travels with every branch; on `variatio-vanilla` the server,
+  client, evaluation and tutor sections describe code that branch does not carry.
 
 ## Commands
 

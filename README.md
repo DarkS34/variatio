@@ -6,11 +6,10 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
-> **This branch is the core system**: the library and its command line, with no web interface,
-> no API, no database and no evaluation harness. The product — this same library plus the API
-> and the front end — is **`variatio-web`**, and **`variatio-web-eval`** is that product plus
-> the TFM's own instrument: the blind comparison and the questionnaire that closes each step.
-> See [Using the web interface](#using-the-web-interface).
+> **This branch, `variatio-vanilla`, is the core system**: the library and its command line,
+> with no web interface, no API, no database, no evaluation harness and no tutor. The complete
+> system — this same library plus the API, the front end, the TFM's blind evaluation and the
+> Socratic tutor — is **`main`**. See [Using the web interface](#using-the-web-interface).
 
 ## What it does
 
@@ -93,13 +92,14 @@ uv run variatio all        --workspace <slug>   # build what is missing, then in
 ## Using the web interface
 
 The web half — a FastAPI + PostgreSQL API and a React front end — is not on this branch. It
-lives on **`variatio-web`**, which carries this same library plus `server/`, `web/` and the
-Alembic migrations. **`variatio-web-eval`** is that branch plus `evaluation/`: the blind
-comparison that measures the system against one alternative per session, and the
-questionnaire that closes each step of the construction.
+lives on **`main`**, which carries this same library plus `server/`, `web/` and the Alembic
+migrations, and two packages beside them: `evaluation/`, the blind comparison that measures
+the system against one alternative per session and the questionnaire that closes each step of
+the construction, and `tutor/`, the Socratic tutor that answers a student from the subject's
+own material.
 
 ```bash
-git switch variatio-web            # or variatio-web-eval, for the study as well
+git switch main
 uv sync                            # now installs the server extra as well
 docker compose up -d postgres      # PostgreSQL 16 on :5432, credentials in .env
 uv run alembic upgrade head        # create the schema
