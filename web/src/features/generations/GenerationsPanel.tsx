@@ -12,7 +12,6 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InfoHint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { fromGeneration, stashDraft } from "@/features/generate/draft";
@@ -25,12 +24,12 @@ import {
   useDeleteGeneration,
   useGenerations,
   useProfile,
+  useSwitchWorkspace,
 } from "@/state/queries";
-import { useHasWorkspace } from "@/state/auth";
 import { useT } from "@/lib/i18n";
 
 /**
- * Everything this account has generated, kept.
+ * Everything this account has generated in one subject, kept.
  *
  * Every validated item is saved, with the commission that produced it — concepts,
  * curriculum, fixed fields, instructions, whether the model reasoned — because a statement
@@ -39,39 +38,22 @@ import { useT } from "@/lib/i18n";
  * YOURS AND NOBODY ELSE'S: the endpoint answers your own rows and only those, so there is
  * no scope to flip and no author to print on a row.
  *
- * A panel and not a screen: it is a tab of "Mi perfil", which already carries the page's
- * title.
- *
- * With no subject it asks for NOTHING. "Mi perfil" is reachable without belonging to an
- * instance, and the two reads would only answer 403 — with the server's sentence, in
- * Spanish whatever the reader's language. The list is a child component so that its hooks
- * do not run at all in that state.
+ * It unfolds under its subject on "Mis asignaturas y ejercicios", which already names the
+ * subject, so it carries no title. Every read carries `slug` as its own `X-Workspace`: the
+ * list is read where it lives, without switching the tab into that subject. «Generar más
+ * como este» does switch, because "Generar" works on the subject in use.
  */
-export function GenerationsPanel() {
+export function SubjectExercises({ slug, inUse }: { slug: string; inUse: boolean }) {
   const { t } = useT();
-  const hasWorkspace = useHasWorkspace();
-  if (!hasWorkspace) {
-    return (
-      <div className="space-y-5">
-        <h2 className="text-heading">{t("generations.title")}</h2>
-        <EmptyState icon={<Archive className="size-6" />} title={t("generations.noSubject")}>
-          {t("generations.noSubjectHint")}
-        </EmptyState>
-      </div>
-    );
-  }
-  return <GenerationsList />;
-}
-
-function GenerationsList() {
-  const { t } = useT();
-  const profileQuery = useProfile();
+  const { navigate } = useRouter();
+  const profileQuery = useProfile(slug);
+  const switching = useSwitchWorkspace();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<string | null>(null);
 
-  const listing = useGenerations({ q: search || undefined, limit: 60 });
-  const remove = useDeleteGeneration();
+  const listing = useGenerations({ q: search || undefined, limit: 60 }, slug);
+  const remove = useDeleteGeneration(slug);
 
   const profile = profileQuery.data?.profile ?? null;
   const rows = listing.data?.generations ?? [];
@@ -89,7 +71,26 @@ function GenerationsList() {
     [rows, profile, t],
   );
 
-  if (profileQuery.isLoading) return <Skeleton className="h-96" />;
+  const again = (row: GenerationRow) => {
+    const draft = fromGeneration(row);
+    if (inUse) {
+      stashDraft(draft);
+      navigate("/generate");
+      return;
+    }
+    // `mutateAsync` and not `mutate`'s callbacks: switching drops the listing this list is
+    // drawn from, so the list unmounts before the switch answers, and a mutation forgets
+    // the per-call callbacks of an unmounted caller.
+    void switching
+      .mutateAsync(slug)
+      .then(() => {
+        stashDraft(draft);
+        navigate("/generate");
+      })
+      .catch(() => undefined);
+  };
+
+  if (profileQuery.isLoading) return <Skeleton className="h-40" />;
   if (profileQuery.isError)
     return (
       <LoadError
@@ -99,43 +100,16 @@ function GenerationsList() {
       />
     );
 
+  // Nothing generated here yet: one line under the fold, not a search box over nothing.
+  if (!listing.isLoading && !listing.isError && total === 0 && !search)
+    return (
+      <p className="text-small text-muted-foreground">
+        {t("generations.empty")}. {t("generations.emptyHint")}
+      </p>
+    );
+
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-heading">{t("generations.title")}</h2>
-        <InfoHint label={t("generations.whatIsHere")}>
-          {t("generations.whatIsHere.body")}
-        </InfoHint>
-        <span className="text-body nums text-muted-foreground">{total}</span>
-
-        {rows.length > 0 && profile ? (
-          <div className="ml-auto flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => download("variantes.md", asMarkdown, "text/markdown")}
-            >
-              <Download />
-              Markdown
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                download(
-                  "variantes.json",
-                  JSON.stringify(rows.map((r) => r.item), null, 2),
-                  "application/json",
-                )
-              }
-            >
-              <Download />
-              JSON
-            </Button>
-          </div>
-        ) : null}
-      </header>
-
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <form
           className="flex min-w-56 flex-1 items-center gap-2"
@@ -155,22 +129,57 @@ function GenerationsList() {
             {t("common.search")}
           </Button>
         </form>
+
+        {rows.length > 0 && profile ? (
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => download(`${slug}-ejercicios.md`, asMarkdown, "text/markdown")}
+            >
+              <Download />
+              Markdown
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                download(
+                  `${slug}-ejercicios.json`,
+                  JSON.stringify(rows.map((r) => r.item), null, 2),
+                  "application/json",
+                )
+              }
+            >
+              <Download />
+              JSON
+            </Button>
+          </div>
+        ) : null}
       </div>
 
-      {listing.isLoading ? (
-        <Skeleton className="h-64" />
+      {listing.isError ? (
+        <LoadError
+          title={t("generations.unreadable")}
+          error={listing.error}
+          onRetry={() => listing.refetch()}
+        />
+      ) : listing.isLoading ? (
+        <Skeleton className="h-40" />
       ) : rows.length === 0 ? (
         <EmptyState
-          // The same glyph the header's "Mis variantes" pill carries: an empty state is
-          // the first thing a new account sees of this screen, and it should be looking at
-          // the icon it just pressed. `Sparkles` stays below, where it means GENERATING.
           icon={<Archive className="size-6" />}
-          title={search ? t("generations.noMatch") : t("generations.empty")}
+          title={t("generations.noMatch")}
         >
-          {search ? t("generations.noMatchHint") : t("generations.emptyHint")}
+          {t("generations.noMatchHint")}
         </EmptyState>
       ) : (
         <div className="space-y-3">
+          {total > rows.length ? (
+            <p className="text-small text-muted-foreground">
+              {t("generations.newest", { shown: rows.length, total })}
+            </p>
+          ) : null}
           {rows.map((row) => (
             <GenerationCard
               key={row.id}
@@ -178,6 +187,7 @@ function GenerationsList() {
               profile={profile}
               expanded={open === row.id}
               onToggle={() => setOpen(open === row.id ? null : row.id)}
+              onAgain={switching.isPending ? undefined : () => again(row)}
               onDelete={() => remove.mutate(row.id)}
             />
           ))}
@@ -190,15 +200,16 @@ function GenerationsList() {
 /**
  * One saved exercise, folded to its statement.
  *
- * `onDelete` absent is the administrator's read-only view: no «Generar más como este» (it
- * would open another workspace's commission in this one) and no delete, which stays the
- * author's. `showAuthor` names who wrote it, which only that view needs.
+ * `onAgain` and `onDelete` absent is the administrator's read-only view: no «Generar más
+ * como este» and no delete, which stay the author's. `showAuthor` names who wrote it, which
+ * only that view needs.
  */
 export function GenerationCard({
   row,
   profile,
   expanded,
   onToggle,
+  onAgain,
   onDelete,
   showAuthor = false,
 }: {
@@ -206,11 +217,11 @@ export function GenerationCard({
   profile: ExemplarsProfile | null;
   expanded: boolean;
   onToggle: () => void;
+  onAgain?: () => void;
   onDelete?: () => void;
   showAuthor?: boolean;
 }) {
   const { t } = useT();
-  const { navigate } = useRouter();
   const spec = profile ? itemTypeOf(profile, { item_type: row.item_type }) : null;
   const manyTypes = profile ? Object.keys(profile.item_types).length > 1 : false;
   const primary = spec ? fieldText(row.item[spec.primary_field]) : "";
@@ -251,15 +262,12 @@ export function GenerationCard({
                 {t("generations.inBank", { id: row.promoted_item_id })}
               </Badge>
             ) : null}
-            {onDelete ? (
+            {onAgain ? (
               <Button
                 variant="ghost"
                 size="sm"
                 title={t("generations.againHint")}
-                onClick={() => {
-                  stashDraft(fromGeneration(row));
-                  navigate("/generate");
-                }}
+                onClick={onAgain}
               >
                 <Sparkles />
                 {t("generations.moreLikeThis")}
@@ -273,7 +281,7 @@ export function GenerationCard({
             >
               <Copy />
             </Button>
-            {/* Offered on every row of "Mi perfil": each is this account's own, and the
+            {/* Offered on every row of the author's own list: each is this account's own, and the
                 endpoint refuses anybody else's before this screen could draw one. */}
             {onDelete ? (
               <Button

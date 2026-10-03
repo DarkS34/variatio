@@ -500,15 +500,18 @@ export function useDeleteWorkspace() {
 
 /* Saved variants -------------------------------------------------------------------- */
 
-export function useGenerations(params: {
-  concept?: string;
-  q?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export function useGenerations(
+  params: {
+    concept?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  },
+  workspace?: string | null,
+) {
   return useQuery({
-    queryKey: keys.generations(params),
-    queryFn: () => api.generations(params),
+    queryKey: scoped(keys.generations(params), workspace),
+    queryFn: () => api.generations(params, workspace),
     placeholderData: (previous) => previous,
   });
 }
@@ -521,11 +524,15 @@ export function useGeneration(id: string | null) {
   });
 }
 
-export function useDeleteGeneration() {
+/** Deletes one of your own exercises in `workspace`, and the count its subject shows. */
+export function useDeleteGeneration(workspace?: string | null) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.deleteGeneration(id),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["generations"] }),
+    mutationFn: (id: string) => api.deleteGeneration(id, workspace),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["generations"] });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+    },
   });
 }
 

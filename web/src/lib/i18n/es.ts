@@ -65,7 +65,7 @@ export const es = {
   "account.title": "Mi perfil",
   "account.whatIsHere": "Qué hay aquí",
   "account.whatIsHere.body":
-    "Tu cuenta y lo que es tuyo: los datos con los que entras, los ejercicios que has generado y las asignaturas a las que tienes acceso. Nada de esto es uno de los cuatro pasos, por eso no está en la barra de arriba.",
+    "Tu cuenta y lo que es tuyo: los datos con los que entras, las asignaturas a las que tienes acceso y, dentro de cada una, los ejercicios que has generado en ella. Nada de esto es uno de los cuatro pasos, por eso no está en la barra de arriba.",
   "account.admin": "Administrador",
   "account.identity.title": "Datos de la cuenta",
   "account.identity.username": "Usuario",
@@ -103,8 +103,7 @@ export const es = {
   "access.notAMember": "No eres miembro: entras porque administras la instalación.",
 
   "tabs.account": "Cuenta",
-  "tabs.workspaces": "Asignaturas",
-  "tabs.variants": "Ejercicios",
+  "tabs.workspaces": "Asignaturas y ejercicios",
 
   "acc.ws.delete": "Eliminar «{name}»",
   "acc.ws.deleteTitle": "Eliminar «{name}»",
@@ -266,7 +265,7 @@ export const es = {
     one: "Queda 1 documento sin transcribir. Puedes construir igualmente: cada construcción transcribe lo que le falte.",
     other: "Quedan {n} documentos sin transcribir. Puedes construir igualmente: cada construcción transcribe lo que le falte.",
   },
-  "nav.myVariants": "Mis ejercicios",
+  "nav.mySubjects": "Mis asignaturas y ejercicios",
   "nav.needsApproved": "Antes hay que terminar la fase de construcción: preparar la asignatura",
   // The path, in the words of whoever teaches. Not one of them names an artifact: a teacher
   // opening this for the first time does not know what an "exemplars profile" is, and knows
@@ -377,7 +376,7 @@ export const es = {
   "tutorial.s4.b1":
     "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
   "tutorial.s4.b2":
-    "Cada ejercicio queda guardado automáticamente en «Mis ejercicios», en el menú de tu cuenta, junto con lo que pediste para obtenerlo. No hace falta copiarlo a ningún sitio.",
+    "Cada ejercicio queda guardado automáticamente dentro de su asignatura, en «Mis asignaturas y ejercicios» del menú de tu cuenta, junto con lo que pediste para obtenerlo. No hace falta copiarlo a ningún sitio.",
   "tutorial.s4.b3":
     "Puedes volver a cualquier paso de la construcción cuando quieras. Si cambias algo, se te avisa de qué pasos posteriores se han quedado desfasados.",
 
@@ -407,9 +406,9 @@ export const es = {
   // accepted an invitation cannot be told to "choose" one. Neither points at a place on the
   // screen — the deck draws no header, so they say what to do and not where to press.
   "tutorial.s6.outro.create":
-    "Todavía no tienes ninguna asignatura: lo primero es crear la tuya, y hasta que exista no hay nada que preparar. Al terminar esta explicación aparece la aplicación, con los cuatro pasos y las dos pruebas a mano; en el menú de tu cuenta están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
+    "Todavía no tienes ninguna asignatura: lo primero es crear la tuya, y hasta que exista no hay nada que preparar. Al terminar esta explicación aparece la aplicación, con los cuatro pasos y las dos pruebas a mano; en el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación por si quieres volver a verla.",
   "tutorial.s6.outro.choose":
-    "Al terminar esta explicación aparece la aplicación: eliges ahí tu asignatura —o creas otra— y empiezas por el Paso 1. En el menú de tu cuenta están «Mis ejercicios», la guía y esta explicación por si quieres volver a verla.",
+    "Al terminar esta explicación aparece la aplicación: eliges ahí tu asignatura —o creas otra— y empiezas por el Paso 1. En el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación por si quieres volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
@@ -667,15 +666,13 @@ export const es = {
   "chips.alreadyThere": "Ya estaba en la lista: {values}",
   "ui.closeNotice": "Cerrar aviso",
   "ui.moreInfo": "Más información",
-  "generations.noSubject": "Todavía no tienes ninguna asignatura",
-  "generations.noSubjectHint": "Aquí se guarda lo que generes dentro de una asignatura. Crea la tuya, o pide acceso a una existente a quien administra la instalación.",
   "generations.title": "Ejercicios generados",
-  "generations.whatIsHere": "Qué hay aquí",
+  "generations.newest": "Se muestran los {shown} más recientes de {total}. Busca para encontrar uno anterior.",
   "generations.inBank": "en el banco · {id}",
   "generations.search": "Buscar en el enunciado, el concepto o las instrucciones",
   "generations.search.placeholder": "Buscar en el enunciado, el concepto o las instrucciones…",
   "generations.noMatch": "Nada coincide con esa búsqueda",
-  "generations.noMatchHint": "Prueba con otro término, o cambia el ámbito a toda la asignatura.",
+  "generations.noMatchHint": "Prueba con otro término.",
   "generations.emptyHint": "Genera un ejercicio y quedará aquí, con los conceptos y las instrucciones con que lo pediste.",
   "generations.by": "de {username}",
   "generations.byNobody": "de una cuenta eliminada",
@@ -718,7 +715,6 @@ export const es = {
   "invite.languageHint": "Solo cambia lo que lees. El idioma de los prompts lo declara cada asignatura cuando se crea.",
   "invite.profileHint": "Decide qué se te preguntará cuando compares ejercicios. No cambia lo que puedes hacer aquí.",
   "menu.profile": "Perfil",
-  "menu.savedVariants": "Mis ejercicios",
   "menu.openAccount": "Cuenta de {name}",
   "menu.admin": "Administración",
   "menu.guide": "Guía",
@@ -962,7 +958,6 @@ export const es = {
   "bank.column.concepts": "conceptos",
   "bank.noneWithFilters": "Ningún ejercicio con estos filtros.",
   "bank.deselect": "Deseleccionar",
-  "generations.whatIsHere.body": "Cada ejercicio que el generador validó, con el encargo que lo produjo. Se guardan solos, uno a uno en cuanto se validan: no hay nada que pulsar al generar, y una tanda cancelada conserva lo que ya había salido.",
   "generations.moreLikeThis": "Generar más como este",
   "doc.notTranscribed": "Este documento no se ha transcrito aún. Lánzala desde «Transcripción», en datos en bruto, y vuelve aquí a revisar el resultado.",
   "doc.numbered": "Van numeradas: borrar o insertar una renumera las siguientes.",
@@ -971,7 +966,7 @@ export const es = {
   "fewshot.title": "Ejercicios tuyos que se le enseñaron como ejemplo",
   "fewshot.none": "Ningún ejercicio del banco lleva estos conceptos: el modelo genera sin ejemplos.",
   "fewshot.neighbour": "concepto previo",
-  "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada ejercicio validado se guarda solo en «Mis ejercicios».",
+  "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada ejercicio validado se guarda solo, dentro de esta asignatura, en «Mis asignaturas y ejercicios».",
   "workspace.switcher.label": "Asignatura",
   "workspace.switcher.choose": "Elegir asignatura",
   "workspace.switcher.current": "Asignatura: {name}",

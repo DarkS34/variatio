@@ -440,7 +440,7 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
   builder of its own**: the graph and profile builders each synthesise it in a final
   `context` phase. `prompt_block()` is the only renderer; capped at
   `CONTENT_CONTEXT_MAX_CHARS` (900); it feeds the description fingerprint. Read-only on
-  screen (under «Mi perfil → Espacios de trabajo»); `PUT /api/context` still exists.
+  screen (under «Mi perfil → Asignaturas y ejercicios»); `PUT /api/context` still exists.
 - `instance/locale.json` — the workspace's prompt language, chosen at creation and never
   after (relation labels are baked into the graph).
 
@@ -679,6 +679,11 @@ never `oklch` (hue interpolation turns greens blue).
 
 ### Specific screens
 
+- «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): one row
+  per subject, each with a fold of the account's own exercises there (read with the row's
+  slug as `X-Workspace`, no switch; the subject in use opens unfolded). «Generar más como
+  este» in another subject switches into it first. There is no exercises tab; the old
+  routes redirect here.
 - `/raw`: one row per document; multi-select delete; a finished origin is tinted with a
   filled tick; the foot offers «Continuar» once both origins hold something.
 - Graph: three columns (list, concept card, fixed-size graph card) plus a full-width

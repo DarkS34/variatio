@@ -101,22 +101,24 @@ export function App() {
         return <GenerateScreen />;
       case "/evaluate":
         return <EvaluationScreen />;
-      // The account of whoever is looking: their data, the instances they can open and their
-      // variants. Each tab is a route so that "mis variantes" stays a link that can be
-      // bookmarked.
+      // The account of whoever is looking: their data, and the subjects they can open with
+      // the exercises they generated in each. Each tab is a route so that it stays a link
+      // that can be bookmarked.
       case "/account":
         return <AccountScreen tab="cuenta" />;
       case "/account/workspaces":
         return <AccountScreen tab="workspaces" />;
+      // Where the exercises lived while they had a tab of their own; each subject now
+      // carries its own.
       case "/account/variants":
-        return <AccountScreen tab="variantes" />;
+        return <Redirect to="/account/workspaces" />;
       // Where the accesses lived while the tab was called "Accesos".
       case "/account/access":
         return <Redirect to="/account/workspaces" />;
       // Where the variants lived when they were a screen of their own. Redirected rather than
       // duplicating the screen: old links still lead to where they are now.
       case "/variants":
-        return <Redirect to="/account/variants" />;
+        return <Redirect to="/account/workspaces" />;
       // Guarded on the server by `require_admin`; the route exists for everyone because
       // hiding it in the client is not a permission, and the panel says so itself if a
       // non-administrator reaches it by typing the URL.

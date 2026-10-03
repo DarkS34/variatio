@@ -497,6 +497,8 @@ export interface WorkspaceRow {
   active: boolean;
   /** Listed only because the account administers the installation, not by membership. */
   as_admin: boolean;
+  /** This account's own exercises there. Only the listing sends it, and an older API not even that. */
+  exercises?: number;
 }
 
 export interface WorkspaceListing {

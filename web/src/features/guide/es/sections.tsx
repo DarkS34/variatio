@@ -1351,7 +1351,7 @@ function Generate() {
           cuál conviene evitar es cosa del modelo. Hay modelos que contestan igual pongas el
           nivel que pongas: en esos no se dibuja la barra, y quién es quién también lo declara
           quien administra. El modelo queda guardado con cada ejercicio, así que en
-          «{t("menu.savedVariants")}» puedes comparar dos enunciados sabiendo qué escribió
+          «{t("nav.mySubjects")}» puedes comparar dos enunciados sabiendo qué escribió
           cada uno.
         </Paragraph>
       </Block>
@@ -1388,7 +1388,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Cada ejercicio se guarda en «{t("menu.savedVariants")}» <em>en cuanto valida</em>,
+                  Cada ejercicio se guarda en su asignatura, en «{t("nav.mySubjects")}», <em>en cuanto valida</em>,
                   con su encargo entero. Un lote cancelado a la tercera conserva tres.
                 </>
               ),
@@ -1443,7 +1443,7 @@ function Generate() {
               head: <>«{t("generations.moreLikeThis")}»</>,
               body: (
                 <>
-                  Está en «{t("nav.myVariants")}» y recupera el encargo de un ejercicio
+                  Está en «{t("nav.mySubjects")}», bajo cada ejercicio, y recupera el encargo de un ejercicio
                   concreto, aunque sea de otro día.
                 </>
               ),
@@ -1804,8 +1804,8 @@ function Account() {
         <p>
           Todo lo que es tuyo y no es parte de la cadena vive en «{t("account.title")}», detrás
           del icono de cuenta de arriba a la derecha — el mismo menú desde el que has llegado
-          aquí, y donde está también «{t("admin.title")}». «{t("nav.myVariants")}» tiene su
-          propio botón justo al lado, porque se abre a diario.
+          aquí, y donde está también «{t("admin.title")}». El mismo menú lleva directamente a
+          «{t("nav.mySubjects")}», porque se abre a diario.
         </p>
       </SectionHead>
 
@@ -1822,9 +1822,9 @@ function Account() {
             body: "En qué asignaturas estás y con qué papel, y desde cuál entrar a otra. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellas es eliminar una tuya — de las que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearla y solo lo cambia quien administra.",
           },
           {
-            key: "variantes",
-            head: t("tabs.variants"),
-            body: "Todo lo que TÚ has generado, con el encargo que lo produjo: se puede buscar, relanzar «más como este» y borrar. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo.",
+            key: "ejercicios",
+            head: t("generations.title"),
+            body: "Bajo cada asignatura, un desplegable con todo lo que TÚ has generado en ella, con el encargo que lo produjo: se puede buscar, descargar, relanzar «más como este» y borrar. La asignatura en uso se abre ya desplegada. «Más como este» en otra asignatura entra primero en ella, porque se genera siempre en la asignatura en uso. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo.",
           },
         ]}
       />
@@ -2068,7 +2068,7 @@ function Admin() {
           su cadena. El número de ejercicios abre todos los generados en esa asignatura, de
           cualquier cuenta y con su autor, para leerlos: es el único sitio donde se ven
           ejercicios ajenos. Borrarlos o generar más como ellos sigue siendo cosa de quien los
-          escribió, desde «{t("generations.title")}» en su perfil.
+          escribió, desde «{t("nav.mySubjects")}».
         </Paragraph>
         <Rows
           items={[

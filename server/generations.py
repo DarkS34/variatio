@@ -202,6 +202,14 @@ def count(ws: Workspace) -> int:
     return sum(1 for _ in ws.generations_dir.glob("*/*.json"))
 
 
+def count_for(ws: Workspace, user_id: int) -> int:
+    """Count one account's own exercises in this workspace."""
+    directory = author_dir(ws, user_id)
+    if not directory.is_dir():
+        return 0
+    return sum(1 for _ in directory.glob("*.json"))
+
+
 def count_by_author(workspaces: Iterable[Workspace]) -> dict[int, int]:
     """Count each account's exercises across these workspaces, leaving out the orphaned."""
     counts: dict[int, int] = {}

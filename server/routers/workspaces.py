@@ -80,12 +80,19 @@ def listing(
 
     return {
         "workspaces": [
-            _view(
-                workspace,
-                mine.get(workspace.id) or (OWNER if user.is_admin else None),
-                workspace.id == active_id,
-                as_admin=workspace.id not in mine,
-            )
+            {
+                **_view(
+                    workspace,
+                    mine.get(workspace.id) or (OWNER if user.is_admin else None),
+                    workspace.id == active_id,
+                    as_admin=workspace.id not in mine,
+                ),
+                # The caller's own exercises there, which "Mis asignaturas y ejercicios"
+                # prints on each subject's fold before anybody opens it.
+                "exercises": generations_store.count_for(
+                    installation.workspace_for(workspace.slug), user.id
+                ),
+            }
             for workspace in workspaces
         ],
         "active": current.slug if current else None,

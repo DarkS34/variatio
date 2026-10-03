@@ -341,25 +341,31 @@ export const api = {
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
 
-  // No `scope`: the endpoint answers your own rows and nothing else.
-  generations: (params: {
-    concept?: string;
-    item_type?: string;
-    q?: string;
-    limit?: number;
-    offset?: number;
-  }) => {
+  // No `scope`: the endpoint answers your own rows and nothing else. `workspace` reads
+  // another subject's without switching to it, which is what "Mis asignaturas y
+  // ejercicios" does for every subject it lists.
+  generations: (
+    params: {
+      concept?: string;
+      item_type?: string;
+      q?: string;
+      limit?: number;
+      offset?: number;
+    },
+    workspace?: string | null,
+  ) => {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== "" && value !== null) search.set(key, String(value));
     }
-    return request<GenerationListing>(`/api/generations?${search.toString()}`);
+    return request<GenerationListing>(`/api/generations?${search.toString()}`, { workspace });
   },
   generation: (id: string) =>
     request<GenerationDetail>(`/api/generations/${encodeURIComponent(id)}`),
-  deleteGeneration: (id: string) =>
+  deleteGeneration: (id: string, workspace?: string | null) =>
     request<{ deleted: string }>(`/api/generations/${encodeURIComponent(id)}`, {
       method: "DELETE",
+      workspace,
     }),
 
   adminOverview: () => request<AdminOverview>("/api/admin/overview"),

@@ -1362,7 +1362,7 @@ function Generate() {
           are and which one is worth avoiding is the model's business. Some models answer the
           same whatever level you set: those draw no bar, and which ones they are is declared
           by whoever administers the installation too. The model is stored with every exercise,
-          so in «{t("menu.savedVariants")}» you can compare two statements knowing what wrote
+          so in «{t("nav.mySubjects")}» you can compare two statements knowing what wrote
           each.
         </Paragraph>
       </Block>
@@ -1399,7 +1399,7 @@ function Generate() {
               head: <Badge variant="settled">{t("result.saved")}</Badge>,
               body: (
                 <>
-                  Every exercise is saved into "{t("menu.savedVariants")}"{" "}
+                  Every exercise is saved inside its subject, in "{t("nav.mySubjects")}",{" "}
                   <em>the moment it validates</em>, with its whole commission. A batch cancelled
                   at the third keeps three.
                 </>
@@ -1455,7 +1455,7 @@ function Generate() {
               head: <>"{t("generations.moreLikeThis")}"</>,
               body: (
                 <>
-                  It is in "{t("nav.myVariants")}" and recovers the commission of one
+                  It is in "{t("nav.mySubjects")}", under each exercise, and recovers the commission of one
                   particular exercise, even from another day.
                 </>
               ),
@@ -1816,8 +1816,8 @@ function Account() {
         <p>
           Everything that is yours and is not part of the chain lives in "{t("account.title")}",
           behind the account icon at the top right — the same menu you got here from, and where
-          "{t("admin.title")}" lives too. "{t("nav.myVariants")}" has a button of its own right
-          beside it, because it is opened daily.
+          "{t("admin.title")}" lives too. The same menu leads straight to
+          "{t("nav.mySubjects")}", because it is opened daily.
         </p>
       </SectionHead>
 
@@ -1834,9 +1834,9 @@ function Account() {
             body: "Which subjects you are in and with what role, and where to enter another from. Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
           },
           {
-            key: "variantes",
-            head: t("tabs.variants"),
-            body: 'Everything YOU have generated, with the commission that produced it: it can be searched, relaunched as "more like this one", and deleted. It is private: even in a subject you share with other people, each of you sees only their own.',
+            key: "ejercicios",
+            head: t("generations.title"),
+            body: 'Under each subject, a fold with everything YOU have generated in it, with the commission that produced it: it can be searched, downloaded, relaunched as "more like this one", and deleted. The subject in use opens already unfolded. "More like this one" in another subject enters it first, because generating always happens in the subject in use. It is private: even in a subject you share with other people, each of you sees only their own.',
           },
         ]}
       />
@@ -2081,7 +2081,7 @@ function Admin() {
           chain. The exercise count opens every exercise generated in that subject, by any
           account and with its author, to read: it is the only place anybody sees exercises
           that are not their own. Deleting them or generating more like them is still up to
-          whoever wrote them, from «{t("generations.title")}» in their profile.
+          whoever wrote them, from «{t("nav.mySubjects")}».
         </Paragraph>
         <Rows
           items={[

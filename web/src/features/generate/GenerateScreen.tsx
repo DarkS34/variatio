@@ -440,8 +440,8 @@ function Results({
       {savedCount > 0 ? (
         <p className="text-small text-muted-foreground">
           {plural("generate.savedNotice", savedCount)}{" "}
-          <Link to="/account/variants" className="text-primary underline-offset-4 hover:underline">
-            {t("menu.savedVariants")}
+          <Link to="/account/workspaces" className="text-primary underline-offset-4 hover:underline">
+            {t("nav.mySubjects")}
           </Link>
           .
         </p>

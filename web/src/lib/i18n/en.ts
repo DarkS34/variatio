@@ -55,7 +55,7 @@ export const en: Catalogue = {
   "account.title": "My profile",
   "account.whatIsHere": "What is here",
   "account.whatIsHere.body":
-    "Your account and what is yours: the details you sign in with, the exercises you have generated and the subjects you have access to. None of this is part of the artifact chain, which is why it is not in the bar above.",
+    "Your account and what is yours: the details you sign in with, the subjects you have access to and, inside each one, the exercises you have generated in it. None of this is part of the artifact chain, which is why it is not in the bar above.",
   "account.admin": "Administrator",
   "account.identity.title": "Account details",
   "account.identity.username": "Username",
@@ -91,8 +91,7 @@ export const en: Catalogue = {
   "access.notAMember": "You are not a member: you get in because you administer the installation.",
 
   "tabs.account": "Account",
-  "tabs.workspaces": "Subjects",
-  "tabs.variants": "Exercises",
+  "tabs.workspaces": "Subjects and exercises",
 
   "acc.ws.delete": "Delete «{name}»",
   "acc.ws.deleteTitle": "Delete «{name}»",
@@ -243,7 +242,7 @@ export const en: Catalogue = {
     one: "1 document is still untranscribed. You can build anyway: every build transcribes what it needs.",
     other: "{n} documents are still untranscribed. You can build anyway: every build transcribes what it needs.",
   },
-  "nav.myVariants": "My exercises",
+  "nav.mySubjects": "My subjects and exercises",
   "nav.needsApproved": "The construction phase — preparing the subject — has to be finished first",
   "nav.step.raw": "Notes and exercises",
   "nav.step.profile": "Exercise types",
@@ -317,7 +316,7 @@ export const en: Catalogue = {
   "tutorial.s4.b1":
     "You can also tell it how far the class has got: the exercise will rest only on what you have already covered and use nothing you have not explained yet.",
   "tutorial.s4.b2":
-    "Every exercise is saved automatically under «My exercises», in your account menu, together with what you asked for to get it. You do not have to copy it anywhere.",
+    "Every exercise is saved automatically inside its subject, under «My subjects and exercises» in your account menu, together with what you asked for to get it. You do not have to copy it anywhere.",
   "tutorial.s4.b3":
     "You can go back to any step of the construction whenever you like. If you change something, you are told which later steps have gone stale.",
 
@@ -337,9 +336,9 @@ export const en: Catalogue = {
   "tutorial.s6.b1":
     "Whenever the system produces something — the syllabus, the exercise types… — you are offered the chance to correct or change it. It is entirely optional and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
   "tutorial.s6.outro.create":
-    "You do not have a subject yet: the first thing to do is create your own, and until it exists there is nothing to prepare. When this explanation ends the application appears, with the four steps and the two tests to hand; in your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
+    "You do not have a subject yet: the first thing to do is create your own, and until it exists there is nothing to prepare. When this explanation ends the application appears, with the four steps and the two tests to hand; in your account menu are «My subjects and exercises», the guide and this explanation in case you want to see it again.",
   "tutorial.s6.outro.choose":
-    "When this explanation ends the application appears: you pick your subject there — or create another one — and start at step 1. In your account menu are «My exercises», the guide and this explanation in case you want to see it again.",
+    "When this explanation ends the application appears: you pick your subject there — or create another one — and start at step 1. In your account menu are «My subjects and exercises», the guide and this explanation in case you want to see it again.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
@@ -546,15 +545,13 @@ export const en: Catalogue = {
   "chips.alreadyThere": "Already in the list: {values}",
   "ui.closeNotice": "Close notice",
   "ui.moreInfo": "More information",
-  "generations.noSubject": "You do not have a subject yet",
-  "generations.noSubjectHint": "What you generate inside a subject is kept here. Create your own, or ask whoever administers the installation for access to an existing one.",
   "generations.title": "Generated exercises",
-  "generations.whatIsHere": "What is here",
+  "generations.newest": "Showing the {shown} most recent of {total}. Search to find an older one.",
   "generations.inBank": "in the bank · {id}",
   "generations.search": "Search the statement, the concept or the instructions",
   "generations.search.placeholder": "Search the statement, the concept or the instructions…",
   "generations.noMatch": "Nothing matches that search",
-  "generations.noMatchHint": "Try another term, or change the scope to the whole subject.",
+  "generations.noMatchHint": "Try another term.",
   "generations.emptyHint": "Generate an exercise and it will stay here, with the concepts and the instructions you asked for it with.",
   "generations.by": "by {username}",
   "generations.byNobody": "by a deleted account",
@@ -597,7 +594,6 @@ export const en: Catalogue = {
   "invite.languageHint": "It only changes what you read. The prompt language is declared by each subject when it is created.",
   "invite.profileHint": "It decides what you will be asked when you compare exercises. It does not change what you can do here.",
   "menu.profile": "Profile",
-  "menu.savedVariants": "My exercises",
   "menu.openAccount": "{name}'s account",
   "menu.admin": "Administration",
   "menu.guide": "Guide",
@@ -839,7 +835,6 @@ export const en: Catalogue = {
   "bank.column.concepts": "concepts",
   "bank.noneWithFilters": "No exercise with these filters.",
   "bank.deselect": "Deselect",
-  "generations.whatIsHere.body": "Every exercise the generator validated, with the commission that produced it. They save themselves, one by one as they validate: there is nothing to press when generating, and a cancelled batch keeps what had already come out.",
   "generations.moreLikeThis": "Generate more like this one",
   "doc.notTranscribed": "This document has not been transcribed yet. Launch it from «Transcription», in raw data, and come back here to review the result.",
   "doc.numbered": "They are numbered: deleting or inserting one renumbers the rest.",
@@ -848,7 +843,7 @@ export const en: Catalogue = {
   "fewshot.title": "Exercises of yours shown to it as examples",
   "fewshot.none": "No exercise of the bank carries these concepts: the model generates with no examples.",
   "fewshot.neighbour": "prior concept",
-  "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated exercise saves itself in «My exercises».",
+  "generate.howItWorks.body": "You choose what has to be practised —for yourself or for your class— and the decisions the profile leaves in your hands; the model writes the rest, guided by the syllabus and by the bank's examples. Every validated exercise saves itself, inside this subject, in «My subjects and exercises».",
   "workspace.switcher.label": "Subject",
   "workspace.switcher.choose": "Choose subject",
   "workspace.switcher.current": "Subject: {name}",
