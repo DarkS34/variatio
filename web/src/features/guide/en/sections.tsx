@@ -1778,11 +1778,12 @@ function Admin() {
           that answer.
         </Paragraph>
         <Paragraph>
-          The tab has two sections: "{t("admin.tab.accounts")}", who exists, and
-          "{t("acc.invite")}", the links nobody has used yet. The accounts are in one table per
-          kind — «{t("acc.group.teachers")}», «{t("acc.group.students")}»,
-          «{t("acc.group.admins")}» and «{t("acc.group.disabled")}» — and each row lists the
-          account's subjects, one per line, with its permission.
+          The tab's list has one section per kind of account — «{t("acc.group.teachers")}», «
+          {t("acc.group.students")}», «{t("acc.group.admins")}» and «{t("acc.group.disabled")}»,
+          each with how many accounts it holds — and, last, «{t("acc.invite")}», the links
+          nobody has used yet. Each kind opens its table, and each row lists the account's
+          subjects, one per line, with its permission. The search over the list finds an
+          account by its name or by its username, whatever its kind.
           Each invitation is created with «{t("acc.invite.open")}», which opens a window with
           the terms you choose: an <strong>alias</strong> only
           you see — whoever opens the link sees the subject, the permission and the date, never

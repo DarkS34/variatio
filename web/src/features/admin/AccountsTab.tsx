@@ -2,21 +2,24 @@ import {
   ChevronDown,
   KeyRound,
   LockOpen,
+  GraduationCap,
   LogOut,
   MailPlus,
+  Presentation,
   ShieldCheck,
   ShieldOff,
   Trash2,
+  User,
   UserCheck,
-  Users,
   UserX,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
-import { Label, Select } from "@/components/ui/input";
+import { Input, Label, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
@@ -37,6 +40,7 @@ import {
   useSetAccountEnabled,
 } from "@/state/queries";
 
+import { groupOf, matchesAccount, type GroupKey } from "./accounts";
 import { CopyLink } from "./CopyLink";
 import { InvitesSection } from "./InvitesSection";
 import { SectionHeader, Sections } from "./Sections";
@@ -47,31 +51,16 @@ const ROLES: Role[] = ["viewer", "editor", "owner"];
 const ROLE_ORDER: Role[] = ["owner", "editor", "viewer"];
 
 /**
- * THE TABLES OF THE SCREEN: each account is listed in one, by what it most is.
- *
- * A deactivated account is that before anything else, and an administrator before a
- * profile: the first is who cannot enter, the second who enters everywhere. The other
- * accounts are told apart by the profile they chose, which is what the installation calls
- * a teacher or a student; one that chose none has a table of its own, drawn only when
- * there is such an account.
+ * The kinds of account in the order they are listed (`accounts.groupOf`), each with the
+ * sentence its section opens with. A kind with no account is not listed.
  */
-type GroupKey = "teachers" | "students" | "unset" | "admins" | "disabled";
-
-const GROUPS: { key: GroupKey; label: Key; note?: Key; showProfile: boolean }[] = [
-  { key: "teachers", label: "acc.group.teachers", showProfile: false },
-  { key: "students", label: "acc.group.students", showProfile: false },
-  { key: "unset", label: "acc.group.unset", note: "acc.group.unset.note", showProfile: false },
-  { key: "admins", label: "acc.group.admins", showProfile: true },
-  { key: "disabled", label: "acc.group.disabled", showProfile: true },
+const GROUPS: { key: GroupKey; label: Key; note: Key; mark: LucideIcon; showProfile: boolean }[] = [
+  { key: "teachers", label: "acc.group.teachers", note: "acc.group.teachers.note", mark: Presentation, showProfile: false },
+  { key: "students", label: "acc.group.students", note: "acc.group.students.note", mark: GraduationCap, showProfile: false },
+  { key: "unset", label: "acc.group.unset", note: "acc.group.unset.note", mark: User, showProfile: false },
+  { key: "admins", label: "acc.group.admins", note: "acc.group.admins.note", mark: ShieldCheck, showProfile: true },
+  { key: "disabled", label: "acc.group.disabled", note: "acc.group.disabled.note", mark: UserX, showProfile: true },
 ];
-
-function groupOf(account: AdminAccount): GroupKey {
-  if (account.disabled) return "disabled";
-  if (account.is_admin) return "admins";
-  if (account.evaluator_profile === "teacher") return "teachers";
-  if (account.evaluator_profile === "student") return "students";
-  return "unset";
-}
 
 /**
  * The one screen that decides who exists and who gets in.
@@ -79,14 +68,19 @@ function groupOf(account: AdminAccount): GroupKey {
  * It used to be two: an owner's "Personas e invitaciones" dialog, which handed out access
  * to one workspace, and this table, which listed the same accounts and could only switch
  * them off. Two places to answer one question is how the two answers drift apart, so the
- * dialog is gone and this is the whole of it, in two sections: the accounts — moving people
- * between workspaces, disabling one — and the invitations that bring a new one in.
+ * dialog is gone and this is the whole of it: the accounts — moving people between
+ * workspaces, disabling one — and the invitations that bring a new one in.
  *
  * ONE TABLE PER KIND OF ACCOUNT (the user's call, 2026-10-04): teachers, students,
- * administrators and the deactivated, each a block of its own with the same columns. A row
- * says who the account is and lists its subjects one per line, each with its permission;
- * what the account produced is not counted here — the exercises are its own, and what it
- * evaluated is read in «Evaluaciones».
+ * administrators and the deactivated, with the same columns. A row says who the account is
+ * and lists its subjects one per line, each with its permission; what the account produced
+ * is not counted here — the exercises are its own, and what it evaluated is read in
+ * «Evaluaciones».
+ *
+ * EACH KIND IS A SECTION OF THE LIST, and the search over the list crosses them all (the
+ * user's call, same day): stacked down one page, the students' table sat under every
+ * teacher. The search reads the name and the username, and its result is the same tables
+ * with the matching rows alone.
  *
  * Access is per workspace and this panel crosses them all, so a row's memberships open
  * where the row is rather than obliging the administrator to change workspace to grant one.
@@ -99,13 +93,46 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   const session = useSession();
   const toast = useToast();
   const [open, setOpen] = useState<number | null>(null);
-  const [section, setSection] = useState("accounts");
+  const [section, setSection] = useState<GroupKey | "invites">("teachers");
+  const [search, setSearch] = useState("");
   const invites = useAdminInvites();
   const now = Date.now();
   const waiting = invites.data
     ? invites.data.invites.filter((row) => inviteState(row, now) === "pending").length
     : null;
   const names = new Map(overview.workspaces.map((workspace) => [workspace.slug, workspace.name]));
+  const groups = GROUPS.map((group) => ({
+    ...group,
+    accounts: overview.accounts.filter((account) => groupOf(account) === group.key),
+  })).filter((group) => group.accounts.length > 0);
+  // An account that changes kind may empty the section open: the first one listed takes over.
+  const current =
+    section === "invites" ? null : (groups.find((group) => group.key === section) ?? groups[0]);
+  const term = search.trim();
+  const matches = term
+    ? groups
+        .map((group) => ({
+          ...group,
+          accounts: group.accounts.filter((account) => matchesAccount(account, term)),
+        }))
+        .filter((group) => group.accounts.length > 0)
+    : null;
+
+  // The row leaves the table it was in, so the change is said: a row that simply
+  // disappears is indistinguishable from a list that reloaded.
+  const setEnabled = (account: AdminAccount, enabled: boolean) =>
+    toggle.mutate(
+      { id: account.id, enabled },
+      {
+        onSuccess: () =>
+          toast({
+            title: t(enabled ? "acc.reactivated" : "acc.deactivated"),
+            description: account.username,
+          }),
+        onError: (error: Error) =>
+          toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
+      },
+    );
 
   // Irreversible, so it is spelled out before it happens — and what it spells out is the
   // half people get wrong: the account goes, the material it produced does not.
@@ -130,18 +157,45 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
     });
   };
 
+  const tableOf = (accounts: AdminAccount[], showProfile: boolean) => (
+    <AccountsTable
+      accounts={accounts}
+      overview={overview}
+      names={names}
+      showProfile={showProfile}
+      selfId={session.data?.user.id}
+      open={open}
+      onOpen={setOpen}
+      onEnabled={setEnabled}
+      onDelete={confirmDelete}
+      busy={toggle.isPending || remove.isPending}
+    />
+  );
+
   return (
     <Sections
       label={t("acc.sections")}
-      value={section}
-      onChange={setSection}
+      value={matches ? null : (current?.key ?? "invites")}
+      onChange={(key) => {
+        setSearch("");
+        setSection(key as GroupKey | "invites");
+      }}
+      before={
+        <Input
+          type="search"
+          aria-label={t("acc.search")}
+          placeholder={t("acc.searchPlaceholder")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      }
       items={[
-        {
-          key: "accounts",
-          label: t("admin.tab.accounts"),
-          mark: <Users className="size-4" />,
-          detail: plural("acc.count", overview.accounts.length),
-        },
+        ...groups.map((group) => ({
+          key: group.key,
+          label: t(group.label),
+          mark: <group.mark className="size-4" />,
+          detail: plural("acc.count", group.accounts.length),
+        })),
         {
           key: "invites",
           label: t("acc.invite"),
@@ -151,64 +205,99 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
         },
       ]}
     >
-      {section === "invites" ? <InvitesSection overview={overview} /> : null}
-
-      {section === "accounts" ? (
+      {matches ? (
         <>
-          <SectionHeader title={t("admin.tab.accounts")} description={t("acc.note")} />
-          {GROUPS.map((group) => {
-            const accounts = overview.accounts.filter((account) => groupOf(account) === group.key);
-            if (accounts.length === 0) return null;
-            return (
-              <section key={group.key} aria-labelledby={`accounts-${group.key}`} className="space-y-3">
-                <div className="space-y-1 px-1">
-                  <h3 id={`accounts-${group.key}`} className="flex items-baseline gap-2 text-heading">
-                    {t(group.label)}
-                    <span className="nums text-small font-normal text-muted-foreground">
-                      {accounts.length}
-                    </span>
-                  </h3>
-                  {group.note ? (
-                    <p className="text-small text-muted-foreground">{t(group.note)}</p>
-                  ) : null}
-                </div>
-                <div className="surface overflow-hidden p-2">
-                  {/* The same widths on every table, so a column is one line down the page. */}
-                  <Table minWidth="50rem" className="table-fixed">
-                    <THead>
-                      <TR>
-                        <TH className="w-[12.5rem]">{t("acc.col.account")}</TH>
-                        <TH>{t("acc.col.subjects")}</TH>
-                        <TH className="w-[7rem]">{t("acc.col.created")}</TH>
-                        <TH className="w-[15.5rem]" />
-                      </TR>
-                    </THead>
-                    <TBody>
-                      {accounts.map((account) => (
-                        <AccountRows
-                          key={account.id}
-                          account={account}
-                          overview={overview}
-                          names={names}
-                          showProfile={group.showProfile}
-                          self={account.id === session.data?.user.id}
-                          expanded={open === account.id}
-                          onToggle={() => setOpen(open === account.id ? null : account.id)}
-                          onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
-                          onDelete={() => confirmDelete(account)}
-                          busy={toggle.isPending || remove.isPending}
-                        />
-                      ))}
-                    </TBody>
-                  </Table>
-                </div>
-              </section>
-            );
-          })}
-          <FormError error={remove.error} />
+          <SectionHeader
+            title={plural(
+              "acc.matches",
+              matches.reduce((total, group) => total + group.accounts.length, 0),
+              { term },
+            )}
+            description={matches.length === 0 ? t("acc.noMatches") : undefined}
+          />
+          {matches.map((group) => (
+            <section key={group.key} aria-labelledby={`accounts-${group.key}`} className="space-y-3">
+              <h3 id={`accounts-${group.key}`} className="flex items-baseline gap-2 px-1 text-heading">
+                {t(group.label)}
+                <span className="nums text-small font-normal text-muted-foreground">
+                  {group.accounts.length}
+                </span>
+              </h3>
+              {tableOf(group.accounts, group.showProfile)}
+            </section>
+          ))}
         </>
-      ) : null}
+      ) : current ? (
+        <>
+          <SectionHeader title={t(current.label)} description={t(current.note)} />
+          {tableOf(current.accounts, current.showProfile)}
+        </>
+      ) : (
+        <InvitesSection overview={overview} />
+      )}
+      {matches || current ? <FormError error={remove.error} /> : null}
     </Sections>
+  );
+}
+
+/** The accounts of one kind: the same columns and widths wherever the table is drawn. */
+function AccountsTable({
+  accounts,
+  overview,
+  names,
+  showProfile,
+  selfId,
+  open,
+  onOpen,
+  onEnabled,
+  onDelete,
+  busy,
+}: {
+  accounts: AdminAccount[];
+  overview: AdminOverview;
+  /** Every subject's name by its slug: an account carries the slugs alone. */
+  names: Map<string, string>;
+  /** Where the table does not say it already: the administrators' and the deactivated. */
+  showProfile: boolean;
+  selfId: number | undefined;
+  /** The account whose controls are open under its row, across every table. */
+  open: number | null;
+  onOpen: (id: number | null) => void;
+  onEnabled: (account: AdminAccount, enabled: boolean) => void;
+  onDelete: (account: AdminAccount) => void;
+  busy: boolean;
+}) {
+  const { t } = useT();
+  return (
+    <div className="surface overflow-hidden p-2">
+      <Table minWidth="50rem" className="table-fixed">
+        <THead>
+          <TR>
+            <TH className="w-[12.5rem]">{t("acc.col.account")}</TH>
+            <TH>{t("acc.col.subjects")}</TH>
+            <TH className="w-[7rem]">{t("acc.col.created")}</TH>
+            <TH className="w-[15.5rem]" />
+          </TR>
+        </THead>
+        <TBody>
+          {accounts.map((account) => (
+            <AccountRows
+              key={account.id}
+              account={account}
+              overview={overview}
+              names={names}
+              showProfile={showProfile}
+              self={account.id === selfId}
+              expanded={open === account.id}
+              onToggle={() => onOpen(open === account.id ? null : account.id)}
+              onEnabled={(enabled) => onEnabled(account, enabled)}
+              onDelete={() => onDelete(account)}
+              busy={busy}
+            />
+          ))}
+        </TBody>
+      </Table>
+    </div>
   );
 }
 

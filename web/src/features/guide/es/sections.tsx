@@ -1762,11 +1762,13 @@ function Admin() {
           es la única función que lee esa respuesta.
         </Paragraph>
         <Paragraph>
-          La pestaña tiene dos apartados: «{t("admin.tab.accounts")}», con quién existe, y
-          «{t("acc.invite")}», con los enlaces que nadie ha usado todavía. Las cuentas van en
-          una tabla por clase —«{t("acc.group.teachers")}», «{t("acc.group.students")}»,
-          «{t("acc.group.admins")}» y «{t("acc.group.disabled")}»— y cada fila lista las
-          asignaturas de la cuenta, una por línea, con su permiso.
+          La lista de la pestaña tiene un apartado por clase de cuenta —«
+          {t("acc.group.teachers")}», «{t("acc.group.students")}», «{t("acc.group.admins")}» y «
+          {t("acc.group.disabled")}», cada uno con cuántas cuentas tiene— y, al final, «
+          {t("acc.invite")}», con los enlaces que nadie ha usado todavía. Cada clase abre su
+          tabla, y cada fila lista las asignaturas de la cuenta, una por línea, con su permiso.
+          El buscador de encima de la lista encuentra una cuenta por su nombre o por su usuario,
+          sea de la clase que sea.
           Cada invitación se crea con «{t("acc.invite.open")}», que abre una ventana con las
           condiciones que elijas: un <strong>alias</strong> que
           solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el

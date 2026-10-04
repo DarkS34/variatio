@@ -994,10 +994,14 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the ONE draft of the stages' settings (`useStagesDraft`), so a change left pending follows
   the link and any of the three save bars saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
   holder joins at registration («Funciones»), and each row shows them as badges in the
-  functions' tones. «Cuentas» has two sections, «Cuentas» and «Invitaciones». The accounts are ONE TABLE PER
-  KIND (user's request, 2026-10-04; `AccountsTab.groupOf`): «Docentes» and «Alumnos» by
-  `evaluator_profile`, «Sin perfil» only when such an account exists, «Administradores», and
+  functions' tones. «Cuentas» has one section per kind of account, then «Invitaciones». The accounts are ONE TABLE PER
+  KIND (user's request, 2026-10-04; `features/admin/accounts.ts`, `groupOf`): «Docentes» and «Alumnos» by
+  `evaluator_profile`, «Sin perfil», «Administradores», and
   «Desactivadas» — a deactivated account is that first, an administrator before a profile.
+  Each kind is a row of the list with its count, drawn only when such an account exists, and
+  opens its table alone (same day: stacked down one page, the students sat under every
+  teacher). The search over the list reads the name and the username (`matchesAccount`) and
+  draws the same tables with the matching rows alone, across every kind.
   Same columns and widths on each: the account, its subjects one per line (name, then the
   permission in a column of its own, the widest first), the date, and «Gestionar», which
   opens the memberships and the account's controls under the row. No count of exercises,
@@ -1230,8 +1234,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - «Mis asignaturas y ejercicios» shows an account its own subjects and its own exercises
   only, the administrator's included (2026-10-04); others' are read from the panel. The
   subjects are a list and the exercises open beside it, never folded under their subject.
-- «Cuentas» is one table per kind of account, and a row carries no figure of what the
-  account produced (2026-10-04).
+- «Cuentas» is one table per kind of account, each kind a section of the tab's list with
+  one search over the list across them all, and a row carries no figure of what the account
+  produced (2026-10-04).
 - «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
   drawn on every stage that reads it and unfolded only on its owner's. An optional function's
   stage lives in that function's own admin tab, under who may use it, not in «Configuración».
