@@ -68,11 +68,11 @@ export function AdminScreen() {
   // draft of who may use each function, which sits in that same tab above the link.
   const stagesDraft = useStagesDraft();
   const accessDrafts = useAccessDrafts();
-  // The evaluation's reading filter lives here and not in its tab, because "Cuentas" sets it
-  // ("ver sus sesiones") before switching over.
+  // The evaluation's reading filter lives here and not in its tab, so it survives a visit
+  // to another tab of the panel.
   const [filters, setFilters] = useState<EvaluationFilters>({});
-  // The section open in each function's tab lives here for the same two reasons: a folded
-  // link opens a function's settings, and "ver sus sesiones" opens the evaluation's reading.
+  // The section open in each function's tab lives here for the same link: a folded link
+  // opens a function's settings from another tab.
   const [sections, setSections] = useState<Record<FeatureName, FeatureSection>>({
     evaluation: "access",
     tutor: "access",
@@ -184,14 +184,7 @@ export function AdminScreen() {
       ) : null}
 
       {tab === "cuentas" && overview.data ? (
-        <AccountsTab
-          overview={overview.data}
-          onInspect={(id) => {
-            setFilters({ account: id });
-            openSection("evaluation", "analytics");
-            setTab("evaluation");
-          }}
-        />
+        <AccountsTab overview={overview.data} />
       ) : null}
 
       {tab === "workspaces" && overview.data ? (

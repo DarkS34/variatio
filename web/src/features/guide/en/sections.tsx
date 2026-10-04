@@ -1622,7 +1622,7 @@ function Account() {
           {
             key: "ejercicios",
             head: t("generations.title"),
-            body: 'Under each subject, a fold with everything YOU have generated in it, with the commission that produced it: it can be searched, downloaded, relaunched as "more like this one", and deleted. The subject in use opens already unfolded. "More like this one" in another subject enters it first, because generating always happens in the subject in use. It is private: even in a subject you share with other people, each of you sees only their own. Those of the subject in use are also in the "My exercises" tab of "Generate exercises".',
+            body: 'The button on each subject that counts its exercises opens, beside the list, everything YOU have generated in it, with the commission that produced it: it can be searched, downloaded, relaunched as "more like this one", and deleted. The list of subjects stays on the left to move from one to another, and the cross gives it the whole width back. "More like this one" in another subject enters it first, because generating always happens in the subject in use. It is private: even in a subject you share with other people, each of you sees only their own. Those of the subject in use are also in the "My exercises" tab of "Generate exercises".',
           },
         ]}
       />
@@ -1778,8 +1778,11 @@ function Admin() {
           that answer.
         </Paragraph>
         <Paragraph>
-          The tab has two sections: "{t("admin.tab.accounts")}", the table of who exists, and
-          "{t("acc.invite")}", the links nobody has used yet.
+          The tab has two sections: "{t("admin.tab.accounts")}", who exists, and
+          "{t("acc.invite")}", the links nobody has used yet. The accounts are in one table per
+          kind — «{t("acc.group.teachers")}», «{t("acc.group.students")}»,
+          «{t("acc.group.admins")}» and «{t("acc.group.disabled")}» — and each row lists the
+          account's subjects, one per line, with its permission.
           Each invitation is created with «{t("acc.invite.open")}», which opens a window with
           the terms you choose: an <strong>alias</strong> only
           you see — whoever opens the link sees the subject, the permission and the date, never
@@ -1818,7 +1821,7 @@ function Admin() {
         />
         <Paragraph>
           Access is granted and revoked afterwards, account by account and subject by subject,
-          from the table of "{t("admin.tab.accounts")}"; there are three roles:
+          with «{t("acc.manage")}» on the account's row; there are three roles:
         </Paragraph>
         <Rows
           items={[
@@ -1827,7 +1830,9 @@ function Admin() {
             { key: "owner", head: t("role.owner"), body: t("role.owner.hint") },
           ]}
         />
-        <Paragraph>And beside the access, every row offers four more things:</Paragraph>
+        <Paragraph>
+          And beside the access, «{t("acc.manage")}» offers four more things:
+        </Paragraph>
         <Rows
           items={[
             {
@@ -1849,11 +1854,6 @@ function Admin() {
               key: "perfil",
               head: <>"{t("acc.profileLabel")}"</>,
               body: "Teacher or student. It decides the wording of the question asked when comparing proposals, and how the evaluation groups the answers; it grants and removes no permission, which is why it is corrected here with no further ceremony.",
-            },
-            {
-              key: "sesiones",
-              head: <>"{t("acc.seeSessions")}"</>,
-              body: 'Only if that account has evaluated anything: it jumps to "Evaluations" with the filter already set to them.',
             },
           ]}
         />

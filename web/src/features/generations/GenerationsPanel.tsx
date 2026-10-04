@@ -50,7 +50,7 @@ export function useExerciseTotal(slug: string | null): number | undefined {
  * YOURS AND NOBODY ELSE'S: the endpoint answers your own rows and only those, so there is
  * no scope to flip and no author to print on a row.
  *
- * It unfolds under its subject on "Mis asignaturas y ejercicios", and it is the «Mis
+ * It opens beside its subject on "Mis asignaturas y ejercicios", and it is the «Mis
  * ejercicios» tab of "Generar" for the subject in use; both name the subject already, so it
  * carries no title. Every read carries `slug` as its own `X-Workspace`: the list is read
  * where it lives, without switching the tab into that subject. «Generar más como este» does
@@ -143,7 +143,7 @@ export function SubjectExercises({
       />
     );
 
-  // Nothing generated here yet: one line under the fold, not a search box over nothing.
+  // Nothing generated here yet: one line, not a search box over nothing.
   if (!listing.isLoading && !listing.isError && total === 0 && !search)
     return (
       <p className="text-small text-muted-foreground">
@@ -217,7 +217,8 @@ export function SubjectExercises({
           {t("generations.noMatchHint")}
         </EmptyState>
       ) : (
-        <div className="space-y-3">
+        // Each exercise is a block of its own on the ground, so they keep a block's distance.
+        <div className="space-y-7">
           {total > rows.length ? (
             <p className="text-small text-muted-foreground">
               {t("generations.newest", { shown: rows.length, total })}

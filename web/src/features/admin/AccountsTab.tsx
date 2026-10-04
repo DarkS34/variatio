@@ -1,5 +1,5 @@
 import {
-  ChevronRight,
+  ChevronDown,
   KeyRound,
   LockOpen,
   LogOut,
@@ -27,7 +27,7 @@ import { when } from "@/lib/format";
 import { inviteState } from "@/lib/invites";
 import type { AdminAccount, AdminOverview, EvaluatorProfile, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n";
+import { useT, type Key } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
 import {
   useAccountActions,
@@ -43,6 +43,36 @@ import { SectionHeader, Sections } from "./Sections";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 
+/** The permissions from the widest to the narrowest: the order an account's subjects are read in. */
+const ROLE_ORDER: Role[] = ["owner", "editor", "viewer"];
+
+/**
+ * THE TABLES OF THE SCREEN: each account is listed in one, by what it most is.
+ *
+ * A deactivated account is that before anything else, and an administrator before a
+ * profile: the first is who cannot enter, the second who enters everywhere. The other
+ * accounts are told apart by the profile they chose, which is what the installation calls
+ * a teacher or a student; one that chose none has a table of its own, drawn only when
+ * there is such an account.
+ */
+type GroupKey = "teachers" | "students" | "unset" | "admins" | "disabled";
+
+const GROUPS: { key: GroupKey; label: Key; note?: Key; showProfile: boolean }[] = [
+  { key: "teachers", label: "acc.group.teachers", showProfile: false },
+  { key: "students", label: "acc.group.students", showProfile: false },
+  { key: "unset", label: "acc.group.unset", note: "acc.group.unset.note", showProfile: false },
+  { key: "admins", label: "acc.group.admins", showProfile: true },
+  { key: "disabled", label: "acc.group.disabled", showProfile: true },
+];
+
+function groupOf(account: AdminAccount): GroupKey {
+  if (account.disabled) return "disabled";
+  if (account.is_admin) return "admins";
+  if (account.evaluator_profile === "teacher") return "teachers";
+  if (account.evaluator_profile === "student") return "students";
+  return "unset";
+}
+
 /**
  * The one screen that decides who exists and who gets in.
  *
@@ -52,16 +82,16 @@ const ROLES: Role[] = ["viewer", "editor", "owner"];
  * dialog is gone and this is the whole of it, in two sections: the accounts — moving people
  * between workspaces, disabling one — and the invitations that bring a new one in.
  *
+ * ONE TABLE PER KIND OF ACCOUNT (the user's call, 2026-10-04): teachers, students,
+ * administrators and the deactivated, each a block of its own with the same columns. A row
+ * says who the account is and lists its subjects one per line, each with its permission;
+ * what the account produced is not counted here — the exercises are its own, and what it
+ * evaluated is read in «Evaluaciones».
+ *
  * Access is per workspace and this panel crosses them all, so a row's memberships open
  * where the row is rather than obliging the administrator to change workspace to grant one.
  */
-export function AccountsTab({
-  overview,
-  onInspect,
-}: {
-  overview: AdminOverview;
-  onInspect: (id: number) => void;
-}) {
+export function AccountsTab({ overview }: { overview: AdminOverview }) {
   const { plural, t } = useT();
   const confirm = useConfirm();
   const toggle = useSetAccountEnabled();
@@ -75,6 +105,7 @@ export function AccountsTab({
   const waiting = invites.data
     ? invites.data.invites.filter((row) => inviteState(row, now) === "pending").length
     : null;
+  const names = new Map(overview.workspaces.map((workspace) => [workspace.slug, workspace.name]));
 
   // Irreversible, so it is spelled out before it happens — and what it spells out is the
   // half people get wrong: the account goes, the material it produced does not.
@@ -125,37 +156,55 @@ export function AccountsTab({
       {section === "accounts" ? (
         <>
           <SectionHeader title={t("admin.tab.accounts")} description={t("acc.note")} />
-          <div className="surface overflow-hidden p-2">
-            <Table minWidth="56rem">
-              <THead>
-                <TR>
-                  <TH>{t("acc.col.account")}</TH>
-                  <TH>{t("acc.col.access")}</TH>
-                  <TH align="num">{t("acc.col.variants")}</TH>
-                  <TH align="num">{t("acc.col.comparisons")}</TH>
-                  <TH align="num">{t("acc.col.sessions")}</TH>
-                  <TH>{t("acc.col.created")}</TH>
-                  <TH />
-                </TR>
-              </THead>
-              <TBody>
-                {overview.accounts.map((account) => (
-                  <AccountRows
-                    key={account.id}
-                    account={account}
-                    overview={overview}
-                    self={account.id === session.data?.user.id}
-                    expanded={open === account.id}
-                    onToggle={() => setOpen(open === account.id ? null : account.id)}
-                    onInspect={() => onInspect(account.id)}
-                    onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
-                    onDelete={() => confirmDelete(account)}
-                    busy={toggle.isPending || remove.isPending}
-                  />
-                ))}
-              </TBody>
-            </Table>
-          </div>
+          {GROUPS.map((group) => {
+            const accounts = overview.accounts.filter((account) => groupOf(account) === group.key);
+            if (accounts.length === 0) return null;
+            return (
+              <section key={group.key} aria-labelledby={`accounts-${group.key}`} className="space-y-3">
+                <div className="space-y-1 px-1">
+                  <h3 id={`accounts-${group.key}`} className="flex items-baseline gap-2 text-heading">
+                    {t(group.label)}
+                    <span className="nums text-small font-normal text-muted-foreground">
+                      {accounts.length}
+                    </span>
+                  </h3>
+                  {group.note ? (
+                    <p className="text-small text-muted-foreground">{t(group.note)}</p>
+                  ) : null}
+                </div>
+                <div className="surface overflow-hidden p-2">
+                  {/* The same widths on every table, so a column is one line down the page. */}
+                  <Table minWidth="50rem" className="table-fixed">
+                    <THead>
+                      <TR>
+                        <TH className="w-[12.5rem]">{t("acc.col.account")}</TH>
+                        <TH>{t("acc.col.subjects")}</TH>
+                        <TH className="w-[7rem]">{t("acc.col.created")}</TH>
+                        <TH className="w-[15.5rem]" />
+                      </TR>
+                    </THead>
+                    <TBody>
+                      {accounts.map((account) => (
+                        <AccountRows
+                          key={account.id}
+                          account={account}
+                          overview={overview}
+                          names={names}
+                          showProfile={group.showProfile}
+                          self={account.id === session.data?.user.id}
+                          expanded={open === account.id}
+                          onToggle={() => setOpen(open === account.id ? null : account.id)}
+                          onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
+                          onDelete={() => confirmDelete(account)}
+                          busy={toggle.isPending || remove.isPending}
+                        />
+                      ))}
+                    </TBody>
+                  </Table>
+                </div>
+              </section>
+            );
+          })}
           <FormError error={remove.error} />
         </>
       ) : null}
@@ -163,23 +212,33 @@ export function AccountsTab({
   );
 }
 
+/**
+ * One account: who it is, its subjects, since when, and what can be done with it.
+ *
+ * Every cell starts at the top of the row: an account with five subjects is five lines
+ * tall, and its name centred against them read as belonging to the third.
+ */
 function AccountRows({
   account,
   overview,
+  names,
+  showProfile,
   self,
   expanded,
   onToggle,
-  onInspect,
   onEnabled,
   onDelete,
   busy,
 }: {
   account: AdminAccount;
   overview: AdminOverview;
+  /** Every subject's name by its slug: an account carries the slugs alone. */
+  names: Map<string, string>;
+  /** Where the table does not say it already: the administrators' and the deactivated. */
+  showProfile: boolean;
   self: boolean;
   expanded: boolean;
   onToggle: () => void;
-  onInspect: () => void;
   onEnabled: (enabled: boolean) => void;
   onDelete: () => void;
   busy: boolean;
@@ -188,72 +247,38 @@ function AccountRows({
   const locked = account.locked_seconds > 0;
   return (
     <>
-      <TR>
-        <TD className="px-3 py-2">
+      <TR className={cn(expanded && "bg-none")}>
+        <TD className="py-3 align-top">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span
-              className={cn("truncate font-mono", account.disabled && "line-through opacity-60")}
-            >
-              {account.username}
-            </span>
-            {account.is_admin ? <Badge variant="secondary">{t("acc.badge.admin")}</Badge> : null}
-            {self ? <Badge variant="outline">{t("acc.badge.you")}</Badge> : null}
-            {account.disabled ? (
-              <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
+            <span className="truncate font-mono text-body">{account.username}</span>
+            {/* Only where the table is not the administrators' own: a deactivated one. */}
+            {account.is_admin && account.disabled ? (
+              <Badge variant="secondary">{t("acc.badge.admin")}</Badge>
             ) : null}
+            {self ? <Badge variant="outline">{t("acc.badge.you")}</Badge> : null}
             {locked ? (
               <Badge variant="attention" title={t("acc.lockedSeconds", { n: Math.ceil(account.locked_seconds) })}>
                 {t("acc.badge.locked")}
               </Badge>
             ) : null}
           </span>
-          <span className="block text-small text-muted-foreground">
-            {account.name} · {profileLabel(account.evaluator_profile, t).toLowerCase()}
+          <span className="block truncate text-muted-foreground">
+            {account.name}
+            {showProfile ? ` · ${profileLabel(account.evaluator_profile, t).toLowerCase()}` : ""}
           </span>
         </TD>
-        <TD className="px-3 py-2">
-          <button
-            type="button"
-            onClick={onToggle}
-            className="flex items-center gap-1.5 text-left text-small hover:text-foreground"
-          >
-            <ChevronRight
-              className={cn("size-3.5 shrink-0 transition-transform", expanded && "rotate-90")}
-            />
-            {/* For an administrator account the membership list does not describe what it can enter:
-                it enters everything. Saying "sin acceso a ninguno" there would be false. */}
-            {account.is_admin ? (
-              <span className="text-muted-foreground">{t("acc.fullAccess")}</span>
-            ) : account.workspaces.length === 0 ? (
-              <span className="text-muted-foreground">{t("acc.noAccess")}</span>
-            ) : (
-              <span className="flex flex-wrap gap-1">
-                {account.workspaces.map((w) => (
-                  <Badge key={w.slug} variant="outline">
-                    {w.slug} · {t(ROLE_LABEL_KEYS[w.role]).toLowerCase()}
-                  </Badge>
-                ))}
-              </span>
-            )}
-          </button>
+        <TD className="py-3 align-top">
+          <SubjectList account={account} names={names} />
         </TD>
-        <TD align="num" className="px-3 py-2 nums">{account.generations}</TD>
-        <TD align="num" className="px-3 py-2 nums">
-          {account.evaluations}
-          <span className="ml-1 text-small text-muted-foreground">
-            {t("acc.decidedShort", { n: account.decided })}
-          </span>
-        </TD>
-        <TD align="num" className="px-3 py-2 nums">{account.sessions}</TD>
-        <TD className="whitespace-nowrap px-3 py-2 text-small text-muted-foreground">
+        <TD className="whitespace-nowrap py-3 align-top text-muted-foreground">
           {account.created_at ? when(account.created_at) : "—"}
         </TD>
-        <TD align="num" className="whitespace-nowrap px-3 py-2">
-          {account.evaluations > 0 ? (
-            <Button variant="ghost" size="sm" onClick={onInspect}>
-              {t("acc.seeSessions")}
-            </Button>
-          ) : null}
+        <TD className="py-2 align-top">
+          <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={onToggle}>
+            {t("acc.manage")}
+            <ChevronDown className={cn("transition-transform", expanded && "rotate-180")} />
+          </Button>
           {/* Deactivating or deleting one's own account leaves the installation with nobody to
               administer it, and the server refuses both anyway; not offering them avoids a surprise
               409. They go together and in this order because they are one decision at two
@@ -280,18 +305,76 @@ function AccountRows({
               </Button>
             </>
           )}
+          </div>
         </TD>
       </TR>
 
       {expanded ? (
-        <TR className="bg-muted/30">
-          <TD colSpan={7} className="space-y-4 py-3">
-            <MembershipEditor account={account} overview={overview} />
-            <AccountControls account={account} self={self} />
+        <TR>
+          <TD colSpan={4} className="pb-4 pt-0">
+            <div className="well grid gap-x-8 gap-y-5 p-4 lg:grid-cols-2">
+              <div className="space-y-3">
+                <h4 className="text-micro font-condensed uppercase text-muted-foreground">
+                  {t("acc.col.subjects")}
+                </h4>
+                <MembershipEditor account={account} overview={overview} names={names} />
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-micro font-condensed uppercase text-muted-foreground">
+                  {t("acc.theAccount")}
+                </h4>
+                <AccountControls account={account} self={self} />
+              </div>
+            </div>
           </TD>
         </TR>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The subjects of one account, one per line: the name, then the permission in a column of
+ * its own, the widest permission first.
+ *
+ * A line each and not a row of pills: with four subjects the pills wrapped where they
+ * pleased, and which permission went with which subject had to be worked out.
+ */
+function SubjectList({ account, names }: { account: AdminAccount; names: Map<string, string> }) {
+  const { t } = useT();
+  const subjects = account.workspaces
+    .map((membership) => ({ ...membership, name: names.get(membership.slug) ?? membership.slug }))
+    .sort(
+      (a, b) =>
+        ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.name.localeCompare(b.name),
+    );
+  return (
+    <div className="space-y-1.5">
+      {/* For an administrator the membership list does not describe what it can enter: it
+          enters everything. Saying "sin acceso a ninguna" there would be false. */}
+      {account.is_admin ? (
+        <p className="text-muted-foreground">{t("acc.fullAccess")}</p>
+      ) : subjects.length === 0 ? (
+        <p className="text-muted-foreground">{t("acc.noAccess")}</p>
+      ) : null}
+      {subjects.length > 0 ? (
+        <ul className="space-y-1.5">
+          {subjects.map((subject) => (
+            <li
+              key={subject.slug}
+              className="grid grid-cols-[minmax(0,1fr)_5.5rem] items-baseline gap-3"
+            >
+              <span className="break-words" title={subject.slug}>
+                {subject.name}
+              </span>
+              <span className="text-micro font-condensed uppercase text-muted-foreground">
+                {t(ROLE_LABEL_KEYS[subject.role])}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -370,9 +453,6 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("acc.theAccount")}
-        </span>
         {self ? null : (
           <Button variant="outline" size="sm" disabled={setAdmin.isPending} onClick={confirmAdmin}>
             {account.is_admin ? <ShieldOff /> : <ShieldCheck />}
@@ -402,6 +482,7 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
         >
           <LogOut />
           {t("acc.closeSessions")}
+          <span className="nums text-muted-foreground">{account.sessions}</span>
         </Button>
         {locked ? (
           <Button
@@ -467,9 +548,11 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
 function MembershipEditor({
   account,
   overview,
+  names,
 }: {
   account: AdminAccount;
   overview: AdminOverview;
+  names: Map<string, string>;
 }) {
   const { t } = useT();
   const { grant, revoke } = useMembershipActions();
@@ -486,21 +569,7 @@ function MembershipEditor({
   // workspace come from, but they are not something this screen hands out.
   if (account.is_admin) {
     return (
-      <div className="space-y-2">
-        <p className="text-small text-muted-foreground">
-          {t("acc.adminNoMemberships")}
-        </p>
-        {account.workspaces.length > 0 ? (
-          <p className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
-            {t("acc.alsoMemberOf")}
-            {account.workspaces.map((membership) => (
-              <Badge key={membership.slug} variant="outline">
-                {membership.slug} · {t(ROLE_LABEL_KEYS[membership.role]).toLowerCase()}
-              </Badge>
-            ))}
-          </p>
-        ) : null}
-      </div>
+      <p className="text-small text-muted-foreground">{t("acc.adminNoMemberships")}</p>
     );
   }
 
@@ -511,11 +580,16 @@ function MembershipEditor({
           {t("acc.noMemberships")}
         </p>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-background">
+        <ul className="divide-y divide-border">
           {account.workspaces.map((membership) => (
-            <li key={membership.slug} className="flex flex-wrap items-center gap-2 p-2">
-              <span className="min-w-0 flex-1 truncate font-mono text-small">
-                {membership.slug}
+            <li key={membership.slug} className="flex flex-wrap items-center gap-2 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-small">
+                  {names.get(membership.slug) ?? membership.slug}
+                </span>
+                <span className="block truncate font-mono text-small text-muted-foreground">
+                  {membership.slug}
+                </span>
               </span>
               <Select
                 value={membership.role}

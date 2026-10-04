@@ -1,12 +1,15 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
   Check,
-  ChevronDown,
+  ChevronRight,
   KeyRound,
   Languages,
+  Library,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +30,6 @@ import { LANGUAGES, LANGUAGE_NAMES, useT, type Key, type Language } from "@/lib/
 import { useRouter } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import {
-  ROLE_HINT_KEYS,
   ROLE_LABEL_KEYS,
   useChangePassword,
   useSession,
@@ -56,7 +58,7 @@ import type { WorkspaceRow } from "@/lib/types";
 export const ACCOUNT_TABS = [
   { value: "cuenta", label: "tabs.account", path: "/account" },
   // One tab for the subjects and the exercises: an exercise is saved inside the subject it
-  // was generated in, so each subject carries its own under a fold.
+  // was generated in, so each subject opens its own beside the list.
   { value: "workspaces", label: "tabs.workspaces", path: "/account/workspaces" },
 ] as const satisfies readonly { value: string; label: Key; path: string }[];
 
@@ -414,12 +416,22 @@ function PasswordCard() {
 
 /* Asignaturas y ejercicios ------------------------------------------------------------ */
 
+/** How long the list takes to give the exercises their column: `--motion-overlay`. */
+const SPLIT_MS = 240;
+
 /**
  * Which instances this account may enter, on what grounds, the exercises it generated in
  * each, and the one thing it may do to them: dispose of the ones it owns.
  *
- * The subject in use opens with its exercises unfolded, because that is where a link from
- * "Generar" lands; the others start folded, and nothing remembers the fold.
+ * TWO COLUMNS, AND ONLY ONCE A SUBJECT IS CHOSEN (the user's call, 2026-10-04). Unfolded
+ * under their subject, the exercises were rows of the same block as the subjects and read as
+ * more of them. The screen opens on the subjects alone, across the whole width; «Ejercicios»
+ * on a row narrows that list into a column and opens the row's exercises beside it. The two
+ * are then two materials: the subjects are the rows of one block, the exercises are blocks
+ * of their own on the ground. Nothing remembers the choice.
+ *
+ * Below `lg` there is no room for two columns: the exercises take the list's place and a
+ * button leads back to it.
  *
  * ONLY THE ACCOUNT'S OWN, for an administrator like for anybody (the user's call,
  * 2026-10-04): the subjects a membership row gives it and the exercises it generated itself.
@@ -444,10 +456,12 @@ function MyWorkspacesTab() {
   const active = useActiveWorkspace();
   const switching = useSwitchWorkspace();
   const [target, setTarget] = useState<WorkspaceRow | null>(null);
-  const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
+  const { chosen, shown, moving, choose } = useSplit();
   const mine = (listing.data?.workspaces ?? []).filter((workspace) => !workspace.as_admin);
   const current = active ?? listing.data?.active ?? null;
-  const isOpen = (slug: string) => unfolded[slug] ?? slug === current;
+  // A subject that left the list (deleted, access withdrawn) takes its column with it.
+  const open = mine.find((workspace) => workspace.slug === shown) ?? null;
+  const split = open !== null && chosen !== null;
 
   return (
     <div className="space-y-4">
@@ -471,89 +485,269 @@ function MyWorkspacesTab() {
       ) : null}
 
       {mine.length > 0 ? (
-        <ul className="surface divide-y divide-border overflow-hidden">
-          {mine.map((workspace) => (
-            <li key={workspace.slug} className="space-y-2 p-3">
-              <div className="flex flex-wrap items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 truncate text-body font-medium">
-                  {workspace.name}
-                  <span className="font-mono text-small text-muted-foreground">
-                    {workspace.slug}
-                  </span>
-                  {workspace.slug === current ? (
-                    <Badge variant="secondary">{t("access.inUse")}</Badge>
-                  ) : null}
-                </p>
-                <p className="text-small text-muted-foreground">
-                  {workspace.role ? t(ROLE_HINT_KEYS[workspace.role]) : t("role.undeclared")}
-                </p>
-              </div>
-              {workspace.role ? (
-                <Badge variant="outline">{t(ROLE_LABEL_KEYS[workspace.role])}</Badge>
-              ) : null}
-              {workspace.slug === current ? null : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={switching.isPending}
-                  onClick={() => switching.mutate(workspace.slug)}
-                >
-                  {t("ws.enter")}
-                  <ArrowRight />
-                </Button>
-              )}
-              {/* Only over what you own. An administrator disposes of anybody's from
-                  "Administración", where the whole installation is on one screen. */}
-              {workspace.role === "owner" ? (
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  title={t("acc.ws.delete", { name: workspace.name })}
-                  onClick={() => setTarget(workspace)}
-                >
-                  <Trash2 />
-                </Button>
-              ) : null}
-              </div>
-
-              {/* The subject's context, beside the instance it describes. It is the whole
-                  reason this list is more than a row of slugs: two workspaces called
-                  "Compiladores" and "CS0" say nothing about which course each one is. */}
-              <WorkspaceContext slug={workspace.slug} />
-
-              <button
-                type="button"
-                aria-expanded={isOpen(workspace.slug)}
-                onClick={() =>
-                  setUnfolded((was) => ({ ...was, [workspace.slug]: !isOpen(workspace.slug) }))
-                }
-                className="flex items-center gap-1.5 text-small font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                <ChevronDown
-                  aria-hidden
-                  className={cn(
-                    "size-4 transition-transform",
-                    !isOpen(workspace.slug) && "-rotate-90",
-                  )}
+        <div className="lg:flex lg:items-start">
+          {/* The width is the one thing that moves: the list persists across the choice, so
+              the browser animates it from the whole row to its column and back. Cleared of
+              the sticky header like the panel's own list of sections. */}
+          <nav
+            aria-label={t("acc.ws.list")}
+            className={cn(
+              "surface p-2 lg:shrink-0 lg:transition-[width] lg:duration-[240ms] lg:ease-[var(--ease)] motion-reduce:transition-none",
+              split ? "hidden lg:sticky lg:top-40 lg:block lg:w-[22rem] xl:top-24" : "w-full",
+            )}
+          >
+            <ul className="space-y-1">
+              {mine.map((workspace) => (
+                <SubjectRow
+                  key={workspace.slug}
+                  workspace={workspace}
+                  inUse={workspace.slug === current}
+                  compact={split}
+                  chosen={split && workspace.slug === chosen}
+                  entering={switching.isPending}
+                  onExercises={() => choose(workspace.slug)}
+                  onEnter={() => switching.mutate(workspace.slug)}
+                  onDelete={() => setTarget(workspace)}
                 />
-                {t("generations.title")}
-                {workspace.exercises !== undefined ? (
-                  <span className="nums text-muted-foreground">{workspace.exercises}</span>
-                ) : null}
-              </button>
-              {isOpen(workspace.slug) ? (
-                <SubjectExercises slug={workspace.slug} inUse={workspace.slug === current} />
-              ) : null}
-            </li>
-          ))}
-        </ul>
+              ))}
+            </ul>
+          </nav>
+
+          {open ? (
+            // Clipped only while the column moves, and with room for the cards' shadows:
+            // the content keeps a width of its own, so it is uncovered and not reflowed.
+            <section
+              aria-labelledby="subject-exercises"
+              className={cn(
+                "min-w-0 lg:-m-6 lg:flex-1 lg:p-6 lg:pl-13",
+                moving && "lg:overflow-hidden",
+                chosen === null && "hidden lg:block",
+              )}
+            >
+              <div className="animate-fade-in space-y-5 lg:min-w-[30rem]">
+                <ExercisesHeader
+                  workspace={open}
+                  inUse={open.slug === current}
+                  entering={switching.isPending}
+                  onEnter={() => switching.mutate(open.slug)}
+                  onClose={() => choose(null)}
+                />
+                <SubjectExercises key={open.slug} slug={open.slug} inUse={open.slug === current} />
+              </div>
+            </section>
+          ) : null}
+        </div>
       ) : null}
 
       {target ? (
         <DeleteMineDialog workspace={target} here={target.slug === current} onClose={() => setTarget(null)} />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The subject whose exercises are open, and the one still drawn while its column closes.
+ *
+ * `shown` trails `chosen` by one transition on the way out, so the exercises leave with the
+ * column instead of vanishing before it; `moving` is true while the column changes width.
+ */
+function useSplit() {
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [trail, setTrail] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const choose = (slug: string | null) => {
+    if ((slug === null) !== (chosen === null)) {
+      setMoving(true);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => {
+        setMoving(false);
+        if (slug === null) setTrail(null);
+      }, SPLIT_MS);
+    }
+    if (slug !== null) setTrail(slug);
+    setChosen(slug);
+  };
+
+  return { chosen, shown: chosen ?? trail, moving, choose };
+}
+
+/**
+ * One subject of the list, in the two shapes the list takes.
+ *
+ * Whole, across the page: what the subject is — its name, the permission held, its context —
+ * and what can be done with it. `compact`, in the column beside the exercises: a name, the
+ * permission and the count, the whole row one button that moves the exercises to it. The
+ * chosen row is the sunk tint, as in every list of the app that sits beside what it opens.
+ */
+function SubjectRow({
+  workspace,
+  inUse,
+  compact,
+  chosen,
+  entering,
+  onExercises,
+  onEnter,
+  onDelete,
+}: {
+  workspace: WorkspaceRow;
+  inUse: boolean;
+  compact: boolean;
+  chosen: boolean;
+  entering: boolean;
+  onExercises: () => void;
+  onEnter: () => void;
+  onDelete: () => void;
+}) {
+  const { plural, t } = useT();
+  const role = workspace.role ? t(ROLE_LABEL_KEYS[workspace.role]) : t("role.undeclared");
+  const count =
+    workspace.exercises === undefined ? null : plural("form.items", workspace.exercises);
+
+  if (compact)
+    return (
+      <li>
+        <button
+          type="button"
+          aria-current={chosen ? "true" : undefined}
+          onClick={onExercises}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-inner px-3 py-2.5 text-left transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+            chosen ? "bg-sunk" : "hover:bg-accent",
+          )}
+        >
+          <span className="min-w-0 flex-1">
+            <span
+              className={cn(
+                "block truncate text-body font-medium",
+                chosen ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {workspace.name}
+            </span>
+            <span className="block truncate text-small text-muted-foreground">
+              {role}
+              {inUse ? ` · ${t("access.inUse")}` : ""}
+            </span>
+          </span>
+          {workspace.exercises !== undefined ? (
+            <span className="nums shrink-0 text-small text-muted-foreground">
+              {workspace.exercises}
+            </span>
+          ) : null}
+          <ChevronRight
+            aria-hidden
+            className={cn("size-4 shrink-0", chosen ? "text-foreground" : "text-muted-foreground")}
+          />
+        </button>
+      </li>
+    );
+
+  return (
+    <li className="mx-3 space-y-3 border-b border-border py-4 last:border-b-0">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="flex flex-wrap items-center gap-2 text-heading">
+            {workspace.name}
+            {inUse ? <Badge variant="secondary">{t("access.inUse")}</Badge> : null}
+          </p>
+          <p className="text-small text-muted-foreground">
+            <span className="font-mono">{workspace.slug}</span> · {role}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          <Button size="sm" variant="outline" onClick={onExercises}>
+            <Library />
+            {count ?? t("generations.title")}
+            <ChevronRight />
+          </Button>
+          {inUse ? null : (
+            <Button size="sm" variant="ghost" disabled={entering} onClick={onEnter}>
+              {t("ws.enter")}
+              <ArrowRight />
+            </Button>
+          )}
+          {/* Only over what you own. An administrator disposes of anybody's from
+              "Administración", where the whole installation is on one screen. */}
+          {workspace.role === "owner" ? (
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              title={t("acc.ws.delete", { name: workspace.name })}
+              onClick={onDelete}
+            >
+              <Trash2 />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* The subject's context, beside the instance it describes. It is the whole reason
+          this list is more than a row of slugs: two workspaces called "Compiladores" and
+          "CS0" say nothing about which course each one is. */}
+      <WorkspaceContext slug={workspace.slug} />
+    </li>
+  );
+}
+
+/**
+ * What heads the exercises' column: whose they are, and the two ways out of it.
+ *
+ * The subject is named here because the row that names it may have scrolled away, and
+ * below `lg` is not on screen at all: there the way back to the list leads the header.
+ */
+function ExercisesHeader({
+  workspace,
+  inUse,
+  entering,
+  onEnter,
+  onClose,
+}: {
+  workspace: WorkspaceRow;
+  inUse: boolean;
+  entering: boolean;
+  onEnter: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  return (
+    <header className="space-y-3">
+      <Button size="sm" variant="ghost" className="-ml-3 lg:hidden" onClick={onClose}>
+        <ArrowLeft />
+        {t("acc.ws.backToList")}
+      </Button>
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-small text-muted-foreground">{t("generations.title")}</p>
+          <h2 id="subject-exercises" className="font-display font-expanded text-title">
+            {workspace.name}
+          </h2>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {inUse ? null : (
+            <Button size="sm" variant="ghost" disabled={entering} onClick={onEnter}>
+              {t("ws.enter")}
+              <ArrowRight />
+            </Button>
+          )}
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="hidden lg:inline-flex"
+            title={t("acc.ws.closeExercises")}
+            aria-label={t("acc.ws.closeExercises")}
+            onClick={onClose}
+          >
+            <X />
+          </Button>
+        </div>
+      </div>
+    </header>
   );
 }
 

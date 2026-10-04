@@ -1610,7 +1610,7 @@ function Account() {
           {
             key: "ejercicios",
             head: t("generations.title"),
-            body: "Bajo cada asignatura, un desplegable con todo lo que TÚ has generado en ella, con el encargo que lo produjo: se puede buscar, descargar, relanzar «más como este» y borrar. La asignatura en uso se abre ya desplegada. «Más como este» en otra asignatura entra primero en ella, porque se genera siempre en la asignatura en uso. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo. Los de la asignatura en uso están también en la pestaña «Mis ejercicios» de «Generar ejercicios».",
+            body: "El botón de cada asignatura que cuenta sus ejercicios abre, al lado de la lista, todo lo que TÚ has generado en ella, con el encargo que lo produjo: se puede buscar, descargar, relanzar «más como este» y borrar. La lista de asignaturas queda a la izquierda para pasar de una a otra, y el aspa la devuelve a todo el ancho. «Más como este» en otra asignatura entra primero en ella, porque se genera siempre en la asignatura en uso. Es privado: aunque compartas la asignatura con otras personas, cada quien ve solo lo suyo. Los de la asignatura en uso están también en la pestaña «Mis ejercicios» de «Generar ejercicios».",
           },
         ]}
       />
@@ -1762,8 +1762,11 @@ function Admin() {
           es la única función que lee esa respuesta.
         </Paragraph>
         <Paragraph>
-          La pestaña tiene dos apartados: «{t("admin.tab.accounts")}», con la tabla de quién
-          existe, y «{t("acc.invite")}», con los enlaces que nadie ha usado todavía.
+          La pestaña tiene dos apartados: «{t("admin.tab.accounts")}», con quién existe, y
+          «{t("acc.invite")}», con los enlaces que nadie ha usado todavía. Las cuentas van en
+          una tabla por clase —«{t("acc.group.teachers")}», «{t("acc.group.students")}»,
+          «{t("acc.group.admins")}» y «{t("acc.group.disabled")}»— y cada fila lista las
+          asignaturas de la cuenta, una por línea, con su permiso.
           Cada invitación se crea con «{t("acc.invite.open")}», que abre una ventana con las
           condiciones que elijas: un <strong>alias</strong> que
           solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el
@@ -1802,7 +1805,7 @@ function Admin() {
         />
         <Paragraph>
           Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por asignatura,
-          desde la tabla de «{t("admin.tab.accounts")}»; son tres:
+          con «{t("acc.manage")}» en la fila de la cuenta; son tres:
         </Paragraph>
         <Rows
           items={[
@@ -1811,7 +1814,9 @@ function Admin() {
             { key: "owner", head: t("role.owner"), body: t("role.owner.hint") },
           ]}
         />
-        <Paragraph>Y aparte de los accesos, cada fila ofrece cuatro cosas más:</Paragraph>
+        <Paragraph>
+          Y aparte de los accesos, «{t("acc.manage")}» ofrece cuatro cosas más:
+        </Paragraph>
         <Rows
           items={[
             {
@@ -1833,11 +1838,6 @@ function Admin() {
               key: "perfil",
               head: <>«{t("acc.profileLabel")}»</>,
               body: "Docente o alumno. Decide con qué palabras se le pregunta al comparar propuestas y cómo agrupa el estudio sus respuestas; no da ni quita ningún permiso, y por eso se corrige aquí sin más trámite.",
-            },
-            {
-              key: "sesiones",
-              head: <>«{t("acc.seeSessions")}»</>,
-              body: "Solo si esa cuenta ha evaluado algo: salta a «Evaluaciones» con el filtro ya puesto en ella.",
             },
           ]}
         />

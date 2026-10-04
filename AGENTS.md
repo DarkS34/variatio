@@ -895,10 +895,16 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 ### Specific screens
 
-- «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): one row
-  per subject, each with a fold of the account's own exercises there (read with the row's
-  slug as `X-Workspace`, no switch; the subject in use opens unfolded). «Generar más como
-  este» in another subject switches into it first. It keeps every subject OF THE ACCOUNT'S
+- «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): the
+  subjects are the rows of ONE block and open alone, across the whole width; the button on a
+  row that counts its exercises narrows the list into a column (its width animated,
+  `--motion-overlay`) and opens beside it the account's own exercises there, each a block of
+  its own on the ground (read with the row's slug as `X-Workspace`, no switch). Nothing opens
+  by itself and nothing remembers the choice; in the column a row is a name, the permission
+  and the count, the chosen one the sunk tint. Below `lg` the exercises take the list's
+  place and a button leads back (user's request, 2026-10-04: unfolded under their subject,
+  the exercises read as more subjects). «Generar más como este» in another subject switches
+  into it first. It keeps every subject OF THE ACCOUNT'S
   OWN — the ones a membership row gives it — for an administrator like for anybody (user's
   decision, 2026-10-04): a subject reached only through the admin bypass (`as_admin` on
   `/api/workspaces`) has no row here; it is entered from the switcher and its exercises are
@@ -975,7 +981,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   title: one line while the installation is open, a red block across the page while it is
   closed; it is no tab and no section. A function's tab has three sections — «Permisos de
   uso», «Analíticas» («Evaluaciones» only) and «Configuración» — and `AdminScreen` holds
-  which is open, because a folded link and «ver sus sesiones» open one from another tab.
+  which is open, because a folded link opens one from another tab.
   «Permisos de uso» is
   `features/admin/FeatureAccess.tsx` (a radio group «Nadie» / «Todas las cuentas» /
   «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
@@ -988,7 +994,15 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the ONE draft of the stages' settings (`useStagesDraft`), so a change left pending follows
   the link and any of the three save bars saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
   holder joins at registration («Funciones»), and each row shows them as badges in the
-  functions' tones. «Cuentas» has two sections, «Cuentas» (the table) and «Invitaciones».
+  functions' tones. «Cuentas» has two sections, «Cuentas» and «Invitaciones». The accounts are ONE TABLE PER
+  KIND (user's request, 2026-10-04; `AccountsTab.groupOf`): «Docentes» and «Alumnos» by
+  `evaluator_profile`, «Sin perfil» only when such an account exists, «Administradores», and
+  «Desactivadas» — a deactivated account is that first, an administrator before a profile.
+  Same columns and widths on each: the account, its subjects one per line (name, then the
+  permission in a column of its own, the widest first), the date, and «Gestionar», which
+  opens the memberships and the account's controls under the row. No count of exercises,
+  no comparisons and no «ver sus sesiones» there: what an account evaluated is read in
+  «Evaluaciones».
   «Motor» tab: **one section per part of the engine** — «General», «Local», and
   «Remoto» only when the engine has that half — each row its state in a word (on «General»
   the queue's line, since its word is the engine chosen); the tab opens on the part that
@@ -1214,7 +1228,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   same list on all of them (2026-10-04); a tab with one section has none; no tiles of totals
   above the tabs; a list inside a block is ruled rows, never framed ones.
 - «Mis asignaturas y ejercicios» shows an account its own subjects and its own exercises
-  only, the administrator's included (2026-10-04); others' are read from the panel.
+  only, the administrator's included (2026-10-04); others' are read from the panel. The
+  subjects are a list and the exercises open beside it, never folded under their subject.
+- «Cuentas» is one table per kind of account, and a row carries no figure of what the
+  account produced (2026-10-04).
 - «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
   drawn on every stage that reads it and unfolded only on its owner's. An optional function's
   stage lives in that function's own admin tab, under who may use it, not in «Configuración».
@@ -1243,6 +1260,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   listed under it by code.
 - One typeface in the tutor as everywhere (Archivo); the two voices differ by material and
   side, not by letter. The concept map cannot be turned into its Mermaid source.
+- The notes open as the original document, scrolled freely from the section's page (a
+  section does not end where its page does), with the transcription as a second view in a
+  window of the same size (2026-10-04). A page is content, like a figure: it keeps its white in either
+  theme, inside a well. The page a Word section opens on is approximate.
 - The tutor screens with the guardrail alone (`screen_message`), not admissibility.
 - A bank exercise's solution never enters the card.
 - No "System One" classifier (Jev, Laya…): the kind is decided by signals and one grammar call.
@@ -1260,10 +1281,6 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Spanish survives only in string literals (UI copy, registry `doc=`, server/evaluation logs,
   error messages).
 - Built-in generics (`list[str]`, `str | None`), `Callable` from `collections.abc`; no
-- The notes open as the original document, scrolled freely from the section's page (a
-  section does not end where its page does), with the transcription as a second view in a
-  window of the same size (2026-10-04). A page is content, like a figure: it keeps its white in either
-  theme, inside a well. The page a Word section opens on is approximate.
   `typing` imports. No pandas in core. No multi-LLM validation frameworks or agent graphs.
   Heuristics first, LLM only on genuinely ambiguous input.
 - Incremental, surgical changes; no speculative abstractions.
