@@ -99,7 +99,7 @@ export function TabStrip<T extends string>({
             {item.count ? (
               // A count is a fact, not an action: it wears the ink. The one "act here"
               // colour is the screen's to spend on the thing to do.
-              <span className="inline-grid h-[18px] min-w-5 place-items-center bg-primary px-1.5 text-[12px] font-semibold text-primary-foreground nums">
+              <span className="inline-grid h-[18px] min-w-5 place-items-center rounded-full bg-ink px-1.5 text-[12px] font-semibold text-ink-foreground nums">
                 {item.count}
               </span>
             ) : null}

@@ -1,4 +1,4 @@
-import { Download, Eraser, MessagesSquare, Pencil, Trash2 } from "lucide-react";
+import { Download, Eraser, Eye, MessagesSquare, Pencil, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
 import { useT, withCatalogues } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
+import { SectionHeader } from "./Sections";
 import { WorkspaceGenerations } from "./WorkspaceGenerations";
 
 // The tutor's code, fetched when the administrator opens a subject's conversations. Offered
@@ -50,7 +51,7 @@ const AdminConversations = lazy(() =>
  * visible at once, which is what makes it the place to notice a name colliding.
  */
 export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
-  const { t } = useT();
+  const { t, plural } = useT();
   const remove = useAdminDeleteWorkspace();
   const toast = useToast();
   const [target, setTarget] = useState<AdminWorkspace | null>(null);
@@ -70,6 +71,9 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   const [talksSlug, setTalksSlug] = useState<string | null>(null);
   const talks = overview.workspaces.find((w) => w.slug === talksSlug) ?? null;
 
+  // One section, so no list of sections beside it (the user's call, 2026-10-04): the tab
+  // is its header and its table at full width, and the two reads opened from a row — a
+  // subject's exercises, its conversations — take the table's place.
   if (viewing) {
     return <WorkspaceGenerations workspace={viewing} onBack={() => setViewing(null)} />;
   }
@@ -82,13 +86,17 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   }
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-        {t("ws.heading", { n: overview.workspaces.length })}
-      </h2>
+    <div className="space-y-7">
+      <SectionHeader
+        title={t("admin.tab.workspaces")}
+        description={t("ws.note", {
+          subjects: plural("ws.count", overview.workspaces.length),
+          exercises: plural("acc.savedVariants", overview.totals.generations),
+        })}
+      />
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <Table minWidth="64rem">
+      <div className="surface overflow-hidden p-2">
+        <Table minWidth="60rem">
           <THead>
             <TR>
               <TH>{t("ws.col.workspace")}</TH>
@@ -119,14 +127,17 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                 <TD align="num" className="px-3 py-2 nums">{workspace.members}</TD>
                 <TD align="num" className="px-3 py-2 nums">
                   {workspace.generations > 0 ? (
-                    <button
-                      type="button"
+                    // A button that says what it opens: as a bare underlined figure it read
+                    // as a number, not as the way into the subject's exercises.
+                    <Button
+                      variant="outline"
+                      size="sm"
                       title={t("ws.viewVariants", { name: workspace.name })}
-                      className="font-medium text-primary underline underline-offset-4 hover:no-underline"
                       onClick={() => setViewing(workspace)}
                     >
-                      {workspace.generations}
-                    </button>
+                      <Eye />
+                      {plural("ws.viewCount", workspace.generations)}
+                    </Button>
                   ) : (
                     <span className="text-muted-foreground">0</span>
                   )}

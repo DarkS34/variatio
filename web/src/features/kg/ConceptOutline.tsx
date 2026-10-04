@@ -114,7 +114,7 @@ function UnitMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-7 z-30 w-60 overflow-hidden border border-border bg-popover py-1 shadow-overlay"
+          className="absolute right-0 top-7 z-30 w-60 overflow-hidden rounded-inner bg-popover py-1.5 shadow-overlay"
         >
           <button
             type="button"
@@ -201,7 +201,7 @@ function ConceptRow({
       }}
       className={cn(
         COLUMNS,
-        "h-9 cursor-pointer border-t border-border/55 transition-colors hover:bg-accent",
+        "mx-4 h-9 cursor-pointer border-t border-border/55 transition-colors hover:bg-accent",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         selected && "bg-primary/[0.09]",
       )}
@@ -418,7 +418,7 @@ export function ConceptOutline({
 
         return (
           <div key={unit}>
-            <div className="flex items-center gap-2.5 border-t border-border bg-muted/45 py-2 pl-2 pr-3">
+            <div className="mx-4 flex items-center gap-2.5 border-t border-border py-2 pr-1">
               <span
                 className="w-[3px] self-stretch"
                 style={{ background: colour }}

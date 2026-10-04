@@ -36,7 +36,7 @@ export function EngineChoice({ config }: { config: EngineSettings }) {
   const hintKey = settingHint(setting.key);
 
   return (
-    <Card className="border-l-2 border-l-primary">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle id="engine-choice-title">{t("eng.kind.title")}</CardTitle>
@@ -66,7 +66,7 @@ export function EngineChoice({ config }: { config: EngineSettings }) {
                 disabled={disabled}
                 onClick={() => config.change(setting.key, choice)}
                 className={cn(
-                  "flex items-start gap-3 border p-3 text-left transition-colors",
+                  "rounded-lg flex items-start gap-3 border p-3 text-left transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   "disabled:cursor-not-allowed disabled:opacity-60",
                   chosen ? "border-primary" : "border-input hover:border-primary",

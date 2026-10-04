@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 /**
  * The mark: the knowledge frontier, in three squares.
  *
- * What is behind you, solid in `--settled`; where you act, solid in the one ultramarine the
+ * What is behind you, solid in `--settled`; where you act, solid in the one coral the
  * palette spends on "act here"; what lies ahead, an outline. It draws the calculation the
  * generator performs on every prompt, so the mark introduces no colour of its own.
  *
@@ -39,7 +39,7 @@ export function Logo({ className, tight = false }: { className?: string; tight?:
       className={className}
     >
       <rect x="2" y="9.7" width="4.6" height="4.6" fill="var(--settled)" />
-      <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="var(--attention)" />
+      <rect x="9.7" y="9.7" width="4.6" height="4.6" fill="var(--attention-fill)" />
       <rect x="18" y="10.3" width="3.4" height="3.4" stroke="currentColor" strokeWidth={1.2} />
     </svg>
   );

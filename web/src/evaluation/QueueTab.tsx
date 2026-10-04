@@ -83,14 +83,14 @@ export function QueueTab({
           is spent once, on its button, because that is the only thing here to actually do —
           everything else on this screen is a record. */}
       {next ? (
-        <div className="flex flex-wrap items-center gap-6 border border-primary bg-card p-5 shadow-sm">
+        <div className="surface flex flex-wrap items-center gap-6 p-5">
           <div className="min-w-56 flex-1">
             <p className="text-micro font-condensed text-muted-foreground uppercase">{t("queue.next")}</p>
             <h2 className="mt-1.5 text-title">
               <Concepts names={next.concepts} />
             </h2>
             <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-              <span className="border border-border px-2 py-0.5 text-small">
+              <span className="rounded-md border border-border px-2 py-0.5 text-small">
                 {typeLabel(next.item_type)}
               </span>
               <span className="text-small text-muted-foreground">
@@ -106,7 +106,7 @@ export function QueueTab({
       ) : null}
 
       {rest.length > 0 ? (
-        <div className="border border-border bg-card shadow-sm">
+        <div className="surface overflow-hidden">
           <div className="border-b border-border bg-muted px-4 py-2.5">
             <p className="text-micro font-condensed text-muted-foreground uppercase">
               {t("queue.pendingMore", { n: rest.length })}
@@ -119,11 +119,11 @@ export function QueueTab({
               onClick={() => onOpen(item.id)}
               className="flex w-full items-center gap-3.5 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-accent/40"
             >
-              <span className="size-4 shrink-0 border border-input" />
+              <span className="rounded-sm size-4 shrink-0 border border-input" />
               <span className="flex-1 truncate text-body font-medium">
                 <Concepts names={item.concepts} />
               </span>
-              <span className="shrink-0 border border-border px-2 py-0.5 text-small">
+              <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-small">
                 {typeLabel(item.item_type)}
               </span>
             </button>
@@ -132,7 +132,7 @@ export function QueueTab({
       ) : null}
 
       {done.length > 0 ? (
-        <div className="border border-border bg-card shadow-sm">
+        <div className="surface overflow-hidden">
           <div className="border-b border-border bg-muted px-4 py-2.5">
             <p className="text-micro font-condensed text-muted-foreground uppercase">
               {t("queue.alreadyJudged", { n: done.length })}
@@ -150,7 +150,7 @@ export function QueueTab({
                   can judge — not a mistake by whoever said it. */}
               <span
                 className={cn(
-                  "size-4 shrink-0 border",
+                  "rounded-sm size-4 shrink-0 border",
                   item.declined ? "border-dashed border-settled" : "border-settled bg-settled",
                 )}
               />

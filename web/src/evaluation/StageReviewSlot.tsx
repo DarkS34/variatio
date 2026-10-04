@@ -26,8 +26,10 @@ const REVIEW_UNFOLD_MS = 300;
  * reviewed" over something nobody has looked at yet is a promise the screen cannot keep.
  *
  * This is where `--evaluation` is spent — the same token the bar's "Evaluar el sistema"
- * door carries. Filled while unanswered and quiet once answered, which is the only
- * difference that matters. `StageGate` does not mount it with the stage unbuilt, since there
+ * door carries. A block lit with it while unanswered — the clay with the colour falling in
+ * from the icon's side, the title written in it — and flat and quiet once answered, which
+ * is the only difference that matters. Never a slab of the colour: the one saturated fill
+ * of a stage screen stays the coral of «Continuar». `StageGate` does not mount it with the stage unbuilt, since there
  * would be nothing to judge, but DOES with the stage blocked: a built step whose predecessor
  * was reopened still has something to judge, and the questionnaire is what is being
  * measured.
@@ -93,18 +95,18 @@ export function StageReviewSlot({
           onClick={() => setOpen((was) => !was)}
           aria-expanded={open}
           className={cn(
-            "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
+            "group flex w-full items-center gap-3 px-6 py-4.5 text-left transition-colors [&>svg:first-child]:text-evaluation",
             answered
-              ? "border-[color-mix(in_oklch,var(--evaluation)_35%,transparent)] bg-[color-mix(in_oklab,var(--evaluation)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--evaluation)_12%,var(--card))]"
-              : "border-evaluation bg-evaluation text-evaluation-foreground hover:bg-[color-mix(in_oklab,var(--evaluation)_88%,var(--evaluation-foreground))]",
+              ? "rounded-inner border border-border text-foreground hover:bg-accent"
+              : "surface bg-[radial-gradient(90%_160%_at_0%_50%,color-mix(in_oklab,var(--evaluation)_15%,transparent),transparent_62%)] hover:bg-accent",
           )}
         >
           <ClipboardCheck aria-hidden className="size-5 shrink-0" />
           <span className="min-w-0 flex-1">
-            <span className="block text-heading font-semibold">{t("stageReview.openTitle")}</span>
-            <span
-              className={cn("block text-small", answered ? "text-muted-foreground" : "opacity-85")}
-            >
+            <span className={cn("block text-heading font-semibold", !answered && "text-evaluation")}>
+              {t("stageReview.openTitle")}
+            </span>
+            <span className="block text-small text-muted-foreground">
               {answered
                 ? t("stageReview.openAnswered")
                 : plural("stageReview.openPending", count)}

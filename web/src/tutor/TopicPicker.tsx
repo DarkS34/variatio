@@ -171,7 +171,7 @@ export function TopicPicker({
       role="dialog"
       aria-label={t("tutor.topic.picker")}
       onKeyDown={onKey}
-      className="absolute inset-x-0 bottom-full z-20 mb-2 flex max-h-[min(26rem,62dvh)] flex-col border border-foreground bg-card shadow-overlay animate-fade-in"
+      className="absolute inset-x-0 bottom-full z-20 mb-2 flex max-h-[min(26rem,62dvh)] flex-col overflow-hidden rounded-inner bg-popover text-popover-foreground shadow-overlay animate-fade-in"
     >
       <div className="flex items-center gap-2 border-b border-border px-3">
         <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />

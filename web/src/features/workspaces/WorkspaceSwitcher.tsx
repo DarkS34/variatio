@@ -86,7 +86,7 @@ export function WorkspaceSwitcher() {
               : t("workspace.switcher.choose")
           }
           className={cn(
-            "flex max-w-44 items-center gap-1.5 rounded-md border border-border px-2 py-1 text-body transition-colors hover:bg-accent",
+            "flex max-w-38 items-center gap-1.5 rounded-lg border border-border bg-sunk px-2.5 py-1 text-body transition-colors hover:bg-accent",
             open && "bg-accent",
           )}
         >
@@ -107,7 +107,7 @@ export function WorkspaceSwitcher() {
         {open ? (
           <div
             role="menu"
-            className="absolute left-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+            className="absolute left-0 top-full z-40 mt-2 w-72 overflow-hidden rounded-inner bg-popover text-popover-foreground shadow-overlay"
           >
             <div className="max-h-72 overflow-y-auto p-1">
               {workspaces.map((workspace) => (
@@ -228,9 +228,9 @@ function CreateForm({ onDone }: { onDone: () => void }) {
               onClick={() => setLanguage(option)}
               aria-pressed={language === option}
               className={cn(
-                "h-8 flex-1 border text-small font-medium transition-colors",
+                "rounded-md h-8 flex-1 border text-small font-medium transition-colors",
                 language === option
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "border-ink bg-ink text-ink-foreground"
                   : "border-border bg-card hover:bg-accent/60",
               )}
             >

@@ -100,7 +100,7 @@ function Evaluate() {
             </>,
             <>
               Las dos tarjetas son cajas de la misma altura, corta o larga la propuesta, y cada
-              una se desplaza por dentro. El botón azul «{t("reveal.read")}» de su cabecera la
+              una se desplaza por dentro. El botón coral «{t("reveal.read")}» de su cabecera la
               abre entera, a tamaño de lectura y con la pregunta al pie; ← y → pasan de una a
               otra.
             </>,

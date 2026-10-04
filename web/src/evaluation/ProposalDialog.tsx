@@ -139,9 +139,9 @@ export function ProposalDialog({
                     option: option.label,
                   })}
                   className={cn(
-                    "h-9 min-w-28 border px-4 text-body font-medium transition-colors disabled:opacity-60",
+                    "rounded-md h-9 min-w-28 border px-4 text-body font-medium transition-colors disabled:opacity-60",
                     answer === option.value
-                      ? "border-primary bg-primary text-primary-foreground"
+                      ? "border-ink bg-ink text-ink-foreground"
                       : answered
                         ? "border-input bg-card hover:bg-accent/60"
                         : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",

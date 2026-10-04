@@ -207,15 +207,17 @@ export function SlotDropzone({
           if (event.key === "Enter" || event.key === " ") input.current?.click();
         }}
         className={cn(
-          "flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed text-center transition-colors",
+          // A carved well with its dashed line drawn INSIDE, 8 px clear of the rounded edge;
+          // a focused zone trades the dashed line for the solid focus ring.
+          "well flex cursor-pointer items-center justify-center gap-2 text-center outline-dashed outline-[1.5px] -outline-offset-8 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
           // `flex-1` takes whatever the card has left — which, when the origin beside it
           // is stocked, is a lot. The floor is for the case where BOTH are empty and the
           // grid has no height to hand out: a first-run screen should still open on a drop
           // area you cannot miss, not on two short boxes.
           fill ? "min-h-[15rem] flex-1 flex-col gap-2.5 p-8" : "p-3",
           dragging
-            ? "border-primary bg-primary/10"
-            : "border-border hover:border-primary/60 hover:bg-accent/50",
+            ? "bg-primary/10 outline-primary"
+            : "outline-border hover:bg-accent/50 hover:outline-primary/60",
         )}
       >
         <UploadCloud

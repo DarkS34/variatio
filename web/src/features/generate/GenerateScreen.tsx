@@ -281,7 +281,7 @@ export function GenerateScreen() {
   // The commission sits directly above what it asked for: it is the heading of the result
   // and not a line about the run, so nothing — bar, clock, disclosure — comes between.
   const commissionBar = (
-    <div className="space-y-3 rounded-xl border border-border bg-card px-3 py-2.5">
+    <div className="surface space-y-3 px-5 py-4">
       <p className="truncate text-body text-muted-foreground">{summarize(again, profile, tr)}</p>
       {active ? null : (
         <div className="flex flex-wrap gap-2">

@@ -965,7 +965,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         ) : null}
 
         {listing ? (
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="surface overflow-hidden">
             {/* FIXED LAYOUT, or an open row widens the table. Under the auto algorithm a
                 cell is never narrower than its longest unbreakable line, and a code block
                 with one such line in it — measured: 376 characters — pushed the table to

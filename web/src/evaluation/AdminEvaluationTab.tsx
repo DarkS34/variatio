@@ -101,7 +101,7 @@ export function EvaluationTab({
   const filtered = Boolean(filters.workspace || filters.account != null || filters.profile);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {/* Handing comparisons out between evaluators is the CROSS half of the study, switched
           off in this build (`evaluation/config.ts`). The whole section goes and not merely its
           contents: a heading over an empty card says the feature is broken, which is the
@@ -239,7 +239,7 @@ function FilterBar({
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+    <div className="surface flex flex-wrap items-end gap-3 p-4">
       <Field label={t("adminEvaluation.filter.profile")}>
         {/* Three buttons and not a select: which KIND of person is the first question
             of the reading, and a control with all its options in view is one that gets
@@ -368,10 +368,10 @@ function Comparisons({ data }: { data: AdminEvaluations }) {
 }
 
 /**
- * The two halves of this screen, told apart by structure rather than by colour: an
- * eyebrow at the condensed micro step, a title two steps above the cards' own, and a rule
- * under both. The action slot holds the block's own CSV, on the title's line, because a
- * download is scoped to what the block shows and belongs beside its name.
+ * The two halves of the reading, told apart by structure rather than by colour: an eyebrow
+ * at the condensed micro step and a title one step under the section's own («Analíticas»,
+ * drawn by the panel). The action slot holds the block's own CSV, on the title's line,
+ * because a download is scoped to what the block shows and belongs beside its name.
  */
 function Section({
   eyebrow,
@@ -388,13 +388,13 @@ function Section({
 }) {
   return (
     <section className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border pb-2">
-        <div className="space-y-1">
+      <header className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
           {eyebrow ? (
             <p className="text-micro font-condensed uppercase text-muted-foreground">{eyebrow}</p>
           ) : null}
-          <h2 className="font-display font-expanded text-title">{title}</h2>
-          <p className="text-small text-muted-foreground">{description}</p>
+          <h3 className="font-expanded text-heading">{title}</h3>
+          <p className="max-w-3xl text-small text-muted-foreground">{description}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </header>
@@ -413,10 +413,10 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+    <section className="surface space-y-3 p-4">
       {title ? (
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-small font-medium">{title}</h3>
+          <h4 className="text-small font-medium">{title}</h4>
           {aside}
         </div>
       ) : null}

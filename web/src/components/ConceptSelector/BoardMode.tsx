@@ -139,7 +139,7 @@ export function BoardMode({
                       // A chip never changes width: both marks are the border and the
                       // ground and cost no inline space. An inline glyph widens it by 18 px
                       // and re-wraps the whole board.
-                      state === "selected" && "border-primary bg-primary text-primary-foreground",
+                      state === "selected" && "border-ink bg-ink text-ink-foreground",
                       state === "prerequisite" &&
                         "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20",
                       state === "free" &&

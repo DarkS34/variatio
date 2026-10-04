@@ -7,8 +7,9 @@ import type { Features } from "@/lib/types";
 export type FeatureTone = keyof Features;
 
 /**
- * A door of the testing phase in its function's colour: the face (text, inset ring and a
- * 9 % tint) and the hover and active steps over it.
+ * A door of the testing phase in its function's colour: the face (the colour as text, on the
+ * bar's own ground — a door is a word, not a block) and the hover and active steps over it.
+ * The active step is the bar's chosen tint (`--sunk`) warmed with the function's colour.
  *
  * One copy for the bar and for the guide's figure of the bar, so the figure cannot drift
  * from what it draws. Literal strings, one set per function, because Tailwind finds a class
@@ -16,13 +17,13 @@ export type FeatureTone = keyof Features;
  */
 export const DOOR_TONE: Record<FeatureTone, { face: string; hover: string; active: string }> = {
   evaluation: {
-    face: "text-evaluation ring-1 ring-inset ring-[color-mix(in_oklab,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklab,var(--evaluation)_9%,transparent)]",
-    hover: "hover:bg-[color-mix(in_oklab,var(--evaluation)_16%,transparent)]",
-    active: "bg-[color-mix(in_oklab,var(--evaluation)_18%,transparent)]",
+    face: "text-evaluation",
+    hover: "hover:bg-[color-mix(in_oklab,var(--evaluation)_8%,transparent)]",
+    active: "bg-[color-mix(in_oklab,var(--evaluation)_12%,var(--sunk))]",
   },
   tutor: {
-    face: "text-tutor ring-1 ring-inset ring-[color-mix(in_oklab,var(--tutor)_30%,transparent)] bg-[color-mix(in_oklab,var(--tutor)_9%,transparent)]",
-    hover: "hover:bg-[color-mix(in_oklab,var(--tutor)_16%,transparent)]",
-    active: "bg-[color-mix(in_oklab,var(--tutor)_18%,transparent)]",
+    face: "text-tutor",
+    hover: "hover:bg-[color-mix(in_oklab,var(--tutor)_8%,transparent)]",
+    active: "bg-[color-mix(in_oklab,var(--tutor)_12%,var(--sunk))]",
   },
 };

@@ -86,7 +86,7 @@ function ModelCard({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden border transition-colors",
+        "rounded-inner flex flex-col overflow-hidden border transition-colors",
         active ? "border-primary bg-primary/5" : "border-border",
       )}
     >

@@ -41,9 +41,9 @@ export function RawScreen() {
 
   if (raw.isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         <Skeleton className="h-24" />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-7 lg:grid-cols-2">
           <Skeleton className="h-96" />
           <Skeleton className="h-96" />
         </div>
@@ -69,7 +69,7 @@ export function RawScreen() {
   const blocked = !canEdit ? t("build.readOnly") : offline ? offline : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <header className="space-y-2">
         {/* The same header as the other three: ordinal, title, explanation, guide link.
             This screen does not go through `StageGate` — it writes no artifact and nobody
@@ -130,7 +130,7 @@ export function RawScreen() {
           phone held upright. Tailwind's `grid-cols-1` is `repeat(1, minmax(0, 1fr))`, and
           the 0 is the whole fix. Nothing is lost by it: the card's real min-content is
           247 px, so the content fits and it is the track that was refusing to. */}
-      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-7 lg:grid-cols-2">
         {slots.map((slot) => (
           <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
         ))}

@@ -14,17 +14,18 @@ export interface TabItem {
   separated?: boolean;
 }
 
-/** A tab in its function's colour, chosen and not: literal strings, so Tailwind finds them. */
+/** A tab in its function's colour, chosen and not: literal strings, so Tailwind finds them.
+ *  Chosen is the sunk tint warmed with the colour, never a relief: a tab is a small thing. */
 const TAB_TONE: Record<FeatureTone, { chosen: string; idle: string }> = {
   evaluation: {
     chosen:
-      "bg-[color-mix(in_oklab,var(--evaluation)_18%,var(--background))] text-evaluation shadow-raised ring-1 ring-inset ring-[color-mix(in_oklab,var(--evaluation)_30%,transparent)]",
-    idle: "text-evaluation hover:bg-[color-mix(in_oklab,var(--evaluation)_12%,transparent)]",
+      "bg-[color-mix(in_oklab,var(--evaluation)_12%,var(--sunk))] text-evaluation",
+    idle: "text-evaluation hover:bg-[color-mix(in_oklab,var(--evaluation)_8%,transparent)]",
   },
   tutor: {
     chosen:
-      "bg-[color-mix(in_oklab,var(--tutor)_18%,var(--background))] text-tutor shadow-raised ring-1 ring-inset ring-[color-mix(in_oklab,var(--tutor)_30%,transparent)]",
-    idle: "text-tutor hover:bg-[color-mix(in_oklab,var(--tutor)_12%,transparent)]",
+      "bg-[color-mix(in_oklab,var(--tutor)_12%,var(--sunk))] text-tutor",
+    idle: "text-tutor hover:bg-[color-mix(in_oklab,var(--tutor)_8%,transparent)]",
   },
 };
 
@@ -54,7 +55,7 @@ export function Tabs({
       // making the pill span the width of a desktop: it still shrinks to its content, it
       // simply stops growing past the parent and scrolls sideways from there.
       className={cn(
-        "inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-muted p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "inline-flex max-w-full items-center gap-1.5 overflow-x-auto rounded-xl p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
       // The roles were here without any of the behaviour they promise. Someone navigating
@@ -101,7 +102,7 @@ export function Tabs({
                 ? TAB_TONE[item.tone].chosen
                 : TAB_TONE[item.tone].idle
               : value === item.value
-                ? "bg-background text-foreground shadow-raised"
+                ? "bg-sunk text-foreground"
                 : "text-muted-foreground hover:text-foreground",
           )}
         >

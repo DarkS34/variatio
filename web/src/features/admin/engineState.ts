@@ -11,8 +11,8 @@ import type {
 /**
  * What each part of the engine is doing, in one word and one line.
  *
- * The board's cells and the cards' badges read the same functions, so a part cannot be
- * "en reposo" on its card and something else on the board. Nothing here draws.
+ * The rows of the tab's list and the cards' badges read the same functions, so a part
+ * cannot be "en reposo" on its card and something else on its row. Nothing here draws.
  */
 
 export type ScreenKey = "general" | "local" | "remote";
@@ -123,7 +123,7 @@ export function remoteCell(engine: AdminEngine, tr: Translate): Reading {
 }
 
 /**
- * The connection to Ollama in one word, read the same by its card and by the board.
+ * The connection to Ollama in one word, read the same by its card and by the list.
  *
  * An installation that names no tunnel host speaks to `OLLAMA_HOST` directly — Ollama on
  * this machine, or one reached over the network. That is a way of connecting and not a

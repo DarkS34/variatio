@@ -121,9 +121,9 @@ export function Composer({
         />
       ) : null}
 
-      <div className="rounded-lg border border-input bg-background transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
+      <div className="well transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
         {offered || about.length > 0 ? (
-          <div className="flex min-h-9 flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-2.5 py-1">
+          <div className="mx-3.5 flex min-h-9 flex-wrap items-center gap-x-2 gap-y-1 border-b border-border py-1.5">
             <span className="shrink-0 text-micro font-condensed uppercase text-muted-foreground">
               {t("tutor.topic.label")}
             </span>
@@ -184,7 +184,7 @@ export function Composer({
               onClick={accept}
               title={t("tutor.composer.useSuggestion", { text: suggestion })}
               aria-label={t("tutor.composer.useSuggestion", { text: suggestion })}
-              className="mb-1.5 shrink-0 border border-border px-1.5 py-0.5 font-mono text-small text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="mb-1.5 shrink-0 rounded-sm border border-border px-1.5 py-0.5 font-mono text-small text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               {t("tutor.composer.tab")}
             </button>

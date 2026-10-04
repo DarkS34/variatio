@@ -16,12 +16,18 @@ import { useT } from "@/lib/i18n";
  * rather than to its own clause, whose length is the criterion writer's. `overflow-hidden`
  * is what keeps a clause longer than the box from spilling past the border.
  *
- * It fixes the height and NOTHING ELSE: each list keeps its own layout — the modalities
- * in two columns, the rungs one under the next, because the rungs are a ladder and a
- * ladder is read down.
+ * It fixes the height and the material, and NOTHING ELSE: each list keeps its own layout —
+ * the modalities in two columns, the rungs one under the next, because the rungs are a
+ * ladder and a ladder is read down.
+ *
+ * The material is `.raised`: a card stands out of its step's block because it can be
+ * pressed, and the chosen one is pressed in (`CHOICE_CHOSEN`). The border stays, transparent:
+ * it is one of the pixels the height above was measured with.
  */
 export const CHOICE_CARD =
-  "h-[8.3125rem] overflow-hidden rounded-lg border p-2.5 text-left transition-colors";
+  "raised h-[8.3125rem] overflow-hidden border border-transparent p-2.5 text-left transition-[box-shadow,background-color] hover:bg-accent/40";
+/** The chosen card: carved into the block it stood out of. */
+export const CHOICE_CHOSEN = "shadow-well hover:bg-transparent";
 
 /**
  * One question of the form: open while it is being answered, one line once it is.
@@ -62,8 +68,9 @@ export function FormStep({
   return (
     <section
       className={cn(
-        "animate-slide-up rounded-xl border transition-colors",
-        open ? "border-border bg-card shadow-sm" : "border-transparent",
+        // The open step is the block; a step ahead or behind has no frame at all.
+        "animate-slide-up p-2 transition-shadow",
+        open && "surface",
       )}
     >
       {/* THE WHOLE ROW OPENS THE STEP, AND THE (i) IS NOT PART OF IT. It used to be — an
@@ -98,13 +105,13 @@ export function FormStep({
               answered
                 ? "bg-primary/12 text-primary"
                 : open
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-ink text-ink-foreground"
                   : "bg-muted text-muted-foreground",
             )}
           >
             {index}
             {answered && !open ? (
-              <span className="absolute -bottom-0.5 -right-0.5 flex size-3 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <span className="absolute -bottom-0.5 -right-0.5 flex size-3 items-center justify-center rounded-full bg-ink text-ink-foreground">
                 <Check className="size-2 stroke-[4]" />
               </span>
             ) : null}

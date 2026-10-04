@@ -78,9 +78,9 @@ export function NoWorkspace() {
                     onClick={() => setLanguage(option)}
                     aria-pressed={language === option}
                     className={cn(
-                      "h-9 flex-1 border text-small font-medium transition-colors",
+                      "rounded-md h-9 flex-1 border text-small font-medium transition-colors",
                       language === option
-                        ? "border-primary bg-primary text-primary-foreground"
+                        ? "border-ink bg-ink text-ink-foreground"
                         : "border-border bg-card hover:bg-accent/60",
                     )}
                   >

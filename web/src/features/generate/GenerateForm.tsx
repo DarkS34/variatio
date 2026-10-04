@@ -55,7 +55,7 @@ import {
   fixedEffort,
 } from "./effort";
 import { EffortSlider } from "./EffortSlider";
-import { CHOICE_CARD, FormStep } from "./FormStep";
+import { CHOICE_CARD, CHOICE_CHOSEN, FormStep } from "./FormStep";
 import { ModelChoice } from "./ModelChoice";
 import { modelLabel } from "./models";
 import { adjacency, covered, posteriors, priors } from "./prerequisites";
@@ -526,7 +526,7 @@ export function GenerateForm({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-3xl space-y-1 border border-border bg-muted/60 p-3",
+        "mx-auto w-full max-w-3xl space-y-5",
         disabled && "pointer-events-none opacity-50",
       )}
     >
@@ -539,7 +539,7 @@ export function GenerateForm({
           summary={typeSpec?.label || typeKey || t("form.type.none")}
           {...step("itemType")}
         >
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-4 p-1 sm:grid-cols-2">
             {types.map((key) => {
               const spec = profile!.item_types[key];
               const active = key === typeKey;
@@ -550,9 +550,7 @@ export function GenerateForm({
                   onClick={() => chooseType(key)}
                   className={cn(
                     CHOICE_CARD,
-                    active
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:bg-accent/40",
+                    active && CHOICE_CHOSEN,
                   )}
                 >
                   <span className="flex items-center gap-1.5">
@@ -913,7 +911,7 @@ export function GenerateForm({
         </details>
       ) : null}
       {chosen ? (
-        <div className="animate-slide-up space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div className="surface animate-slide-up space-y-3 p-4">
           {variant === "generate" ? (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-body font-medium">{t("form.howMany")}</span>

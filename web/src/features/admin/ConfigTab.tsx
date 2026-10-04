@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, RefreshCw, Save, Wrench } from "lucide-react";
-import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,8 @@ import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { ReasoningLegend } from "@/features/admin/PhaseNode";
-import { DiffSummary, GroupCard, sameValue } from "@/features/admin/SettingFields";
+import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
+import { DiffSummary, GroupCard, SETTING_LIST, sameValue } from "@/features/admin/SettingFields";
 import {
   FlowNode,
   nodeKeys,
@@ -120,110 +120,112 @@ export function ConfigTab({
       )
     : null;
 
+  const items: SectionEntry[] = [
+    ...stages.map((entry) => ({
+      key: entry.key,
+      label: t(entry.labelKey),
+      mark: <StageMark stage={entry} />,
+      detail: plural("cfg.nav.settings", settingsOf(entry.key).length),
+      pending: pendingOf(entry.key),
+    })),
+    ...(orphans.length > 0
+      ? [
+          {
+            key: OTHERS_KEY,
+            label: t("cfg.section.others"),
+            mark: <Wrench className="size-4" />,
+            detail: plural("cfg.nav.settings", orphans.length),
+            pending: pendingOf(OTHERS_KEY),
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-small text-muted-foreground">{t("cfg.intro")}</p>
-        <Button
-          variant="outline"
-          onClick={() => screen.reload.mutate()}
-          disabled={screen.reload.isPending}
-        >
-          {screen.reload.isPending ? <Spinner /> : <RefreshCw />}
-          {t("cfg.reload")}
-        </Button>
-      </div>
-
-      <FormError error={screen.reload.error} />
-      <AppliedNotice applied={screen.applied} />
-
-      <div className="grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <nav aria-label={t("cfg.nav")} className="space-y-2 lg:sticky lg:top-4">
-          <Input
-            aria-label={t("cfg.search")}
-            placeholder={t("cfg.searchPlaceholder")}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {stages.map((entry) => (
-              <NavItem
-                key={entry.key}
-                current={!matches && entry.key === activeKey}
-                pending={pendingOf(entry.key)}
-                onSelect={() => {
-                  setSearch("");
-                  onGo(entry.key);
-                }}
-                mark={<StageMark stage={entry} />}
-                label={t(entry.labelKey)}
-              />
-            ))}
-            {orphans.length > 0 ? (
-              <NavItem
-                current={!matches && activeKey === OTHERS_KEY}
-                pending={pendingOf(OTHERS_KEY)}
-                onSelect={() => {
-                  setSearch("");
-                  onGo(OTHERS_KEY);
-                }}
-                mark={<Wrench className="size-4 shrink-0" />}
-                label={t("cfg.section.others")}
-              />
-            ) : null}
-          </ul>
-        </nav>
-
-        <div className="min-w-0 space-y-4">
-          {matches ? (
-            <div className="space-y-3">
-              <p className="text-small text-muted-foreground">
-                {plural("cfg.matches", matches.length, { term: search.trim() })}
-              </p>
-              {matches.map((setting) => (
-                <div key={setting.key} className="space-y-1">
-                  <HomeCaption setting={setting} />
-                  <Row setting={setting} ctx={ctx} />
-                </div>
-              ))}
-            </div>
-          ) : activeKey === OTHERS_KEY ? (
-            <section className="space-y-4">
-              <StageHeader
-                mark={<Wrench className="size-4" />}
-                title={t("cfg.section.others")}
-                description={t("cfg.section.othersDesc")}
-              />
-              <GroupCard
-                title={null}
-                settings={orphans}
-                draft={draft}
-                onChange={screen.setValue}
-                onReset={(key) => screen.reset.mutate(key)}
-                models={payload.models ?? null}
-                offered={ctx.offered}
-                levels={ctx.levels}
-                onLevels={ctx.onLevels}
-              />
-            </section>
-          ) : (
-            <StageView
-              key={activeKey}
-              stage={stages.find((entry) => entry.key === activeKey)!}
-              lane={lanes.get(activeKey) ?? null}
-              lanes={payload.pipeline ?? []}
-              settings={settingsOf(activeKey)}
-              ctx={ctx}
-              onGo={onGo}
-            />
-          )}
-
-          <DiffSummary settings={payload.settings} draft={draft} />
+    <Sections
+      label={t("cfg.nav")}
+      items={items}
+      value={matches ? null : activeKey}
+      onChange={(key) => {
+        setSearch("");
+        onGo(key);
+      }}
+      before={
+        <Input
+          aria-label={t("cfg.search")}
+          placeholder={t("cfg.searchPlaceholder")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      }
+      after={
+        // What concerns every stage at once sits under their list: where a value comes
+        // from, and reading the file again.
+        <div className="space-y-2 px-1">
+          <p className="text-small text-muted-foreground">{t("cfg.intro")}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => screen.reload.mutate()}
+            disabled={screen.reload.isPending}
+          >
+            {screen.reload.isPending ? <Spinner /> : <RefreshCw />}
+            {t("cfg.reload")}
+          </Button>
+          <FormError error={screen.reload.error} />
         </div>
-      </div>
+      }
+    >
+      <AppliedNotice applied={screen.applied} />
+      {matches ? (
+        <>
+          <SectionHeader title={plural("cfg.matches", matches.length, { term: search.trim() })} />
+          {matches.length > 0 ? (
+            <Card>
+              <CardContent className={cn(SETTING_LIST, "pt-5")}>
+                {matches.map((setting) => (
+                  <div key={setting.key} className="space-y-1.5">
+                    <HomeCaption setting={setting} />
+                    <Row setting={setting} ctx={ctx} />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+        </>
+      ) : activeKey === OTHERS_KEY ? (
+        <>
+          <SectionHeader
+            title={t("cfg.section.others")}
+            description={t("cfg.section.othersDesc")}
+          />
+          <GroupCard
+            title={null}
+            settings={orphans}
+            draft={draft}
+            onChange={screen.setValue}
+            onReset={(key) => screen.reset.mutate(key)}
+            models={payload.models ?? null}
+            offered={ctx.offered}
+            levels={ctx.levels}
+            onLevels={ctx.onLevels}
+          />
+        </>
+      ) : (
+        <StageView
+          key={activeKey}
+          stage={stages.find((entry) => entry.key === activeKey)!}
+          lane={lanes.get(activeKey) ?? null}
+          lanes={payload.pipeline ?? []}
+          settings={settingsOf(activeKey)}
+          ctx={ctx}
+          onGo={onGo}
+        />
+      )}
 
+      <DiffSummary settings={payload.settings} draft={draft} />
       <SaveBar screen={screen} />
-    </div>
+    </Sections>
   );
 }
 
@@ -238,13 +240,13 @@ export function ConfigTab({
  */
 export function StageSettings({
   stage,
-  eyebrow,
+  title,
   onGo,
   draft: held,
 }: {
   stage: string;
-  /** A word over the screen, where what is above it is not configuration. */
-  eyebrow?: string;
+  /** The section's name where the list it is opened from calls it something else. */
+  title?: string;
   onGo: (stage: string) => void;
   draft: StagesDraft;
 }) {
@@ -268,15 +270,11 @@ export function StageSettings({
   const lanes = payload.pipeline ?? [];
 
   return (
-    <div className="space-y-4">
-      {eyebrow ? (
-        <p className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {eyebrow}
-        </p>
-      ) : null}
+    <>
       <AppliedNotice applied={screen.applied} />
       <StageView
         stage={entry}
+        title={title}
         lane={lanes.find((lane) => lane.key === stage) ?? null}
         lanes={lanes}
         settings={settings}
@@ -285,8 +283,29 @@ export function StageSettings({
       />
       <DiffSummary settings={payload.settings} draft={screen.draft} />
       <SaveBar screen={screen} />
-    </div>
+    </>
   );
+}
+
+/**
+ * How much one stage's screen holds, for the row that opens it: its settings and how many
+ * of them are changed and not saved. Null while unread, or when the server does not serve
+ * the stage or serves it with nothing to set — the cases in which `StageSettings` draws
+ * nothing, so no row should open it.
+ */
+export function useStageSummary(
+  stage: string,
+  held: StagesDraft,
+): { settings: number; pending: number } | null {
+  const query = useQuery({ queryKey: ["admin", "config"], queryFn: api.adminConfig });
+  const payload = query.data;
+  if (!payload || !(payload.stages ?? []).includes(stage)) return null;
+  const settings = visibleOf(payload).filter((setting) => readsIn(setting, stage));
+  if (settings.length === 0) return null;
+  return {
+    settings: settings.length,
+    pending: settings.filter((setting) => setting.key in held.values).length,
+  };
 }
 
 /** The stages' settings changed and not yet saved, and the way to change them. */
@@ -450,7 +469,7 @@ function SaveBar({ screen }: { screen: ConfigScreen }) {
   return (
     <>
       <FormError error={screen.save.error} />
-      <div className="sticky bottom-0 flex items-center gap-2 rounded-lg border border-border bg-card p-3 shadow-raised">
+      <div className="sticky bottom-3 flex items-center gap-2 rounded-inner bg-popover p-3 shadow-overlay">
         <Button disabled={!screen.dirty || screen.save.isPending} onClick={() => screen.save.mutate()}>
           {screen.save.isPending ? <Spinner /> : <Save />}
           {t("common.save")}
@@ -479,6 +498,7 @@ function readsIn(setting: ConfigSetting, stage: string): boolean {
  */
 function StageView({
   stage,
+  title,
   lane,
   lanes,
   settings,
@@ -486,6 +506,7 @@ function StageView({
   onGo,
 }: {
   stage: ConfigStage;
+  title?: string;
   lane: ReasoningLane | null;
   lanes: ReasoningLane[];
   settings: ConfigSetting[];
@@ -506,12 +527,8 @@ function StageView({
   const shared = settings.filter((setting) => isSharedInto(setting, stage.key));
 
   return (
-    <section className="space-y-4">
-      <StageHeader
-        mark={<StageMark stage={stage} />}
-        title={t(stage.labelKey)}
-        description={t(stage.descriptionKey)}
-      />
+    <>
+      <SectionHeader title={title ?? t(stage.labelKey)} description={t(stage.descriptionKey)} />
 
       {phases.length > 0 ? (
         <Card>
@@ -542,7 +559,7 @@ function StageView({
       {shared.length > 0 ? (
         <SharedBlock stage={stage} shared={shared} lanes={lanes} ctx={ctx} onGo={onGo} />
       ) : null}
-    </section>
+    </>
   );
 }
 
@@ -586,13 +603,13 @@ function SharedBlock({
   const looseHomes = [...new Set(loose.map((setting) => homeOf(setting)!))];
 
   return (
-    <details className="group rounded-lg border border-border bg-card">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
+    <details className="surface group">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-5 py-4">
         <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
         <span className="font-expanded text-body">{t("cfg.shared", { n: shared.length })}</span>
         <span className="text-small text-muted-foreground">{t("cfg.sharedDesc")}</span>
       </summary>
-      <div className="space-y-5 border-t border-border p-4">
+      <div className="space-y-5 px-5 pb-5 pt-1">
         {calls.length > 0 ? (
           <ol>
             {calls.map(({ lane, phase }, index) => (
@@ -610,13 +627,15 @@ function SharedBlock({
           </ol>
         ) : null}
         {looseHomes.map((home) => (
-          <div key={home} className="space-y-2">
+          <div key={home} className="space-y-3">
             <OwnerLink stageKey={home} onGo={onGo} />
-            {loose
-              .filter((setting) => homeOf(setting) === home)
-              .map((setting) => (
-                <Row key={setting.key} setting={setting} ctx={ctx} />
-              ))}
+            <div className={SETTING_LIST}>
+              {loose
+                .filter((setting) => homeOf(setting) === home)
+                .map((setting) => (
+                  <Row key={setting.key} setting={setting} ctx={ctx} />
+                ))}
+            </div>
           </div>
         ))}
       </div>
@@ -641,7 +660,7 @@ function SettingsCard({
         <CardTitle>{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className={SETTING_LIST}>
         {settings.map((setting) => (
           <Row key={setting.key} setting={setting} ctx={ctx} />
         ))}
@@ -683,64 +702,8 @@ function HomeCaption({ setting }: { setting: ConfigSetting }) {
 function StageMark({ stage }: { stage: ConfigStage }) {
   if (stage.icon) return <stage.icon className="size-4 shrink-0" />;
   return (
-    <span className="flex size-4 shrink-0 items-center justify-center border border-current text-micro leading-none">
+    <span className="rounded-sm flex size-4 shrink-0 items-center justify-center border border-current text-micro leading-none">
       {stage.number}
     </span>
-  );
-}
-
-function StageHeader({
-  mark,
-  title,
-  description,
-}: {
-  mark: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
-        {mark}
-      </span>
-      <div className="min-w-0">
-        <h2 className="font-expanded text-heading">{title}</h2>
-        <p className="text-small text-muted-foreground">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function NavItem({
-  current,
-  pending,
-  onSelect,
-  mark,
-  label,
-}: {
-  current: boolean;
-  pending: number;
-  onSelect: () => void;
-  mark: ReactNode;
-  label: string;
-}) {
-  return (
-    <li className="shrink-0 lg:shrink">
-      <button
-        type="button"
-        aria-current={current ? "true" : undefined}
-        onClick={onSelect}
-        className={cn(
-          "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-body transition-colors",
-          current
-            ? "border-border bg-card text-foreground shadow-raised"
-            : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-        )}
-      >
-        {mark}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-        {pending > 0 ? <Badge variant="attention">{pending}</Badge> : null}
-      </button>
-    </li>
   );
 }

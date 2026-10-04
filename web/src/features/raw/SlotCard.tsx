@@ -59,7 +59,7 @@ function DocumentRow({
   const notes = staleReasons(reasons, t);
 
   return (
-    <li className="border-t border-border first:border-t-0">
+    <li className="mx-2 border-t border-border first:border-t-0">
       <div className="group flex items-center gap-2 px-2 py-1.5 text-small">
         {/* The box goes where the eye starts the row, and it is drawn only for somebody
             who can actually delete: for a reader it would be a control down every row
@@ -214,10 +214,10 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   // to pick: over a single document the column would be a control that says "choose which
   // of the one".
   const picking = canEdit && rows.length > 1;
-  // Up to date tints the whole card: 8 % of `--attention` mixed INTO it (`oklab`, so the
-  // hue does not drift through chroma zero) so the ground stays opaque. Only the finished
-  // state — a card still owing something keeps the plain ground its rows are scanned
-  // against.
+  // Up to date lights the card from the corner its tick sits in: 15 % of the coral fill fading
+  // out across the block (`oklab`, so the hue does not drift through chroma zero), with no
+  // border — the block's edge is its depth. Only the finished state — a card still owing
+  // something keeps the plain ground its rows are scanned against.
   const upToDate =
     !empty &&
     !running &&
@@ -231,10 +231,10 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
       className={cn(
         "flex flex-col transition-colors",
         upToDate &&
-          "border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklab,var(--attention)_8%,var(--card))]",
+          "bg-[radial-gradient(120%_85%_at_100%_0%,color-mix(in_oklab,var(--attention-fill)_15%,transparent),transparent_58%)]",
       )}
     >
-      <div className="flex flex-col gap-1.5 border-b border-border p-4">
+      <div className="mx-5 flex flex-col gap-1.5 border-b border-border py-5">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <h2 className="min-w-0 flex-1 truncate text-heading">{slotLabel(slot, t)}</h2>
           {empty ? (
@@ -247,7 +247,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
         <p className="w-[90%] text-small text-muted-foreground">{slotPurpose(slot, t)}</p>
       </div>
 
-      <div className={cn("flex min-h-0 flex-1 flex-col gap-3 p-4")}>
+      <div className={cn("flex min-h-0 flex-1 flex-col gap-4 p-5")}>
         <SlotDropzone slot={slot} extensions={extensions} intake={intake} fill={empty} />
 
         {empty ? null : running ? <RunningBlock slot={slot} /> : null}
@@ -259,12 +259,12 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
             <p>{t("transcribe.noResponse", { path: `/api/raw/${slot.kind}/transcription` })}</p>
           </Alert>
         ) : (
-          <ul className="rounded-md border border-border">
+          <ul className="well px-1 py-1.5">
             {/* One strip over the list rather than a bar under it: what it carries is the
                 select-all box, which has to sit in the column its rows' boxes are in, and
                 the one action that acts on the picks. It only exists while the boxes do. */}
             {picking ? (
-              <li className="flex items-center gap-2 border-b border-border bg-muted/40 px-2 py-1.5 text-small">
+              <li className="mx-2 flex items-center gap-2 border-b border-border px-1 py-1.5 text-small">
                 <Checkbox
                   checked={allPicked}
                   indeterminate={selected.length > 0 && !allPicked}
@@ -311,7 +311,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
               />
             ))}
             {rows.length > VISIBLE ? (
-              <li className="border-t border-border px-2 py-1.5">
+              <li className="mx-2 border-t border-border px-1 py-1.5">
                 <button
                   type="button"
                   onClick={() => setExpanded((was) => !was)}

@@ -73,7 +73,7 @@ function QuestionMark({ live }: { live: boolean }) {
           }}
           className={cn(
             live
-              ? ["animate-square-write", index === STROKE.length ? "bg-attention" : "bg-foreground"]
+              ? ["animate-square-write", index === STROKE.length ? "bg-attention-fill" : "bg-foreground"]
               : "border border-muted-foreground",
           )}
         />

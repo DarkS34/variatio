@@ -39,7 +39,7 @@ function Chip({
           }
         }}
         style={{ width: `${Math.max(draft.length, 4) + 2}ch` }}
-        className="h-6 rounded-full border border-primary bg-background px-2.5 text-small outline-none"
+        className="h-6 rounded-full border border-primary bg-card px-2.5 text-small outline-none"
       />
     );
   }
@@ -133,9 +133,9 @@ export function ChipInput({
       <div
         onClick={() => (disabled ? undefined : inputRef.current?.focus())}
         className={cn(
-          "flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-1.5",
+          "flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-sunk p-1.5",
           "transition-colors focus-within:ring-2 focus-within:ring-ring",
-          disabled && "bg-muted/40",
+          disabled && "bg-transparent",
         )}
       >
         {values.map((value, index) =>

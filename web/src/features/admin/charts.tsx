@@ -31,7 +31,7 @@ export function StatTile({
   tone?: "plain" | "accent";
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2.5">
+    <div className="surface px-4 py-3">
       <p className="text-small text-muted-foreground">{label}</p>
       <p
         className={cn(
@@ -128,7 +128,7 @@ export function BarRows({
             </span>
 
             {hover === row.key && row.detail ? (
-              <div className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-micro shadow-md">
+              <div className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover px-2.5 py-1.5 text-micro shadow-overlay">
                 {row.detail}
               </div>
             ) : null}
@@ -218,7 +218,7 @@ export function DayColumns({ points, height = 96 }: { points: DayPoint[]; height
                 ) : null}
 
                 {hover === index ? (
-                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-micro shadow-md">
+                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover px-2.5 py-1.5 text-micro shadow-overlay">
                     <span className="font-medium">{point.day}</span>
                     <span className="ml-2 nums text-muted-foreground">
                       {t("charts.decidedOf", {

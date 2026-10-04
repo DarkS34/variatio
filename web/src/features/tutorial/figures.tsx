@@ -69,7 +69,7 @@ export function Box({
         // `justify-center` and not only `items-center`: the boxes of a row stretch to the
         // height of the tallest, so one with less inside leaves its text against the top.
         "flex min-w-0 flex-col items-center justify-center gap-2 text-center",
-        !bare && "border px-3 py-4",
+        !bare && "rounded-inner border px-3 py-4",
         !bare && marked
           ? "border-attention bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]"
           : null,
@@ -201,7 +201,7 @@ export function AskFigure() {
           </span>
           <span className="flex flex-wrap gap-2">
             {asked.map((key) => (
-              <span key={key} className="border border-input px-2.5 py-1.5 text-body">
+              <span key={key} className="rounded-md border border-input px-2.5 py-1.5 text-body">
                 {t(key)}
               </span>
             ))}

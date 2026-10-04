@@ -52,9 +52,9 @@ function Scale({
             aria-label={t("rubric.scoreOf", { n: score })}
             aria-pressed={value === score}
             className={cn(
-              "h-9 flex-1 border text-body nums transition-colors",
+              "rounded-md h-9 flex-1 border text-body nums transition-colors",
               value === score
-                ? "border-primary bg-primary text-primary-foreground font-medium"
+                ? "border-ink bg-ink text-ink-foreground font-medium"
                 : "border-input hover:bg-accent/60",
               // The target of `complexity` is 3, not 5. Marking it is the only way the
               // scale reads as "aim for the middle" instead of "more is better" — and it
@@ -96,7 +96,7 @@ export function RubricForm({
   const complete = instruments.rubric.every((scale) => draft[key(scale.key)] !== undefined);
 
   return (
-    <section className="space-y-4 border border-border bg-card p-5 shadow-sm">
+    <section className="surface space-y-4 p-5">
       <header className="space-y-1">
         <div className="flex flex-wrap items-center gap-2.5">
           <h2 className="text-heading font-semibold">{t("rubric.title")}</h2>

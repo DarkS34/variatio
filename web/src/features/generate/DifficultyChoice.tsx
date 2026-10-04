@@ -4,7 +4,7 @@ import { readableValue } from "@/lib/text";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-import { CHOICE_CARD } from "./FormStep";
+import { CHOICE_CARD, CHOICE_CHOSEN } from "./FormStep";
 
 /**
  * Which rung of the ladder the exercise being commissioned should sit on.
@@ -52,7 +52,7 @@ export function DifficultyChoice({
       <div
         role="radiogroup"
         aria-label={t("form.difficulty.title")}
-        className="grid gap-1.5"
+        className="grid gap-4 p-1"
         {...radios.group}
       >
         {levels.map((level) => (
@@ -100,9 +100,7 @@ function Rung({
       onClick={onClick}
       className={cn(
         CHOICE_CARD,
-        active
-          ? "border-primary bg-primary/10"
-          : "border-border hover:bg-accent",
+        active && CHOICE_CHOSEN,
       )}
     >
       <span className={cn("text-body font-medium", active ? "text-primary" : "text-foreground")}>

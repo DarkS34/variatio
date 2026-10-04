@@ -576,12 +576,12 @@ function GraphExplorer() {
           whole page. */}
       <div
         className={cn(
-          "grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]",
+          "grid gap-7 xl:grid-cols-[minmax(0,1fr)_24rem]",
           selectedConcept && "xl:grid-cols-[minmax(0,1fr)_26rem_24rem]",
         )}
       >
         <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
-          <div className="flex flex-wrap items-center gap-2 p-3">
+          <div className="flex flex-wrap items-center gap-2 px-5 pb-3 pt-4">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
               {t("kg.outlineHeader", {
                 concepts: plural("outline.conceptCount", totals.concepts),
@@ -682,7 +682,7 @@ function GraphExplorer() {
             The layout controls stay one click away in "Ampliar" — a column this wide has
             room for the graph or for the toolbars, not both. */}
         <Card className="flex h-[25rem] min-w-0 flex-col overflow-hidden xl:self-start">
-          <div className="flex items-center justify-between gap-2 p-3">
+          <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
               {t("kg.map")}
             </span>
@@ -691,10 +691,10 @@ function GraphExplorer() {
               {t("kg.enlarge")}
             </Button>
           </div>
-          <div className="min-h-0 flex-1 border-t border-border">{canvas(true)}</div>
+          <div className="min-h-0 flex-1 px-4">{canvas(true)}</div>
 
           {/* A stroke, not a dot: it is the colour of an edge on the canvas, not of a node. */}
-          <div className="flex flex-wrap gap-1 border-t border-border p-2">
+          <div className="flex flex-wrap gap-1.5 px-4 pb-4 pt-3">
             {graph.data.relations.map((relation, index) => {
               const hidden = hiddenRelations.has(index);
               return (
@@ -788,7 +788,7 @@ function GraphExplorer() {
               </div>
             ) : null}
           </div>
-          <div className="flex max-h-[45%] w-full shrink-0 flex-col overflow-hidden rounded-lg border border-border lg:max-h-none lg:w-[23rem]">
+          <div className="flex max-h-[45%] w-full shrink-0 flex-col overflow-hidden rounded-inner border border-border lg:max-h-none lg:w-[23rem]">
             {selectedConcept ? (
               <>
                 <header className="flex items-center gap-1.5 border-b border-border p-3">

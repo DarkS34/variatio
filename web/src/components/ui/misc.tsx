@@ -38,9 +38,9 @@ export function Progress({
   const indeterminate = fill === null;
   const pct = fill ?? 0;
   const colour = {
-    primary: "bg-primary",
+    primary: "bg-ink",
     settled: "bg-settled",
-    attention: "bg-attention",
+    attention: "bg-attention-fill",
     danger: "bg-destructive",
   }[tone];
 
@@ -134,7 +134,7 @@ export function PhaseBar({
             <div
               className={cn(
                 "relative h-full overflow-hidden rounded-full transition-[width] duration-500 ease-out",
-                fill >= 1 ? "bg-settled" : "bg-primary",
+                fill >= 1 ? "bg-settled" : "bg-ink",
               )}
               style={{ width: `${fill * 100}%` }}
             >
@@ -191,12 +191,12 @@ export function Switch({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         "inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
-        checked ? "bg-primary" : "bg-muted",
+        checked ? "bg-ink" : "bg-muted",
       )}
     >
       <span
         className={cn(
-          "block size-4 rounded-full bg-background shadow transition-transform",
+          "block size-4 rounded-full bg-card ring-1 ring-border transition-transform",
           checked ? "translate-x-4" : "translate-x-0.5",
         )}
       />
@@ -265,8 +265,8 @@ export function Checkbox({
         // row of a forty-row table. The pseudo-element is only hit testing.
         "before:absolute before:-inset-1 before:content-['']",
         marked
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-input bg-background hover:border-primary/70 hover:bg-accent",
+          ? "border-ink bg-ink text-ink-foreground"
+          : "border-input bg-transparent hover:border-primary/70 hover:bg-accent",
         className,
       )}
     >

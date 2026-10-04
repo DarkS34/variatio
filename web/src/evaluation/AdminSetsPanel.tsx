@@ -121,7 +121,7 @@ function PersonStep({
               key={account.id}
               type="button"
               onClick={() => onChoose(account)}
-              className="border border-border px-3 py-2 text-left transition-colors hover:bg-accent/40"
+              className="rounded-lg border border-border px-3 py-2 text-left transition-colors hover:bg-accent/40"
             >
               <span className="block text-body font-medium">{account.username}</span>
               <span className="block">
@@ -214,7 +214,7 @@ function WorkspaceOption({
       disabled={blocked}
       onClick={() => onChoose(entry.slug)}
       className={cn(
-        "max-w-full border border-border px-3 py-2 text-left transition-colors",
+        "rounded-lg max-w-full border border-border px-3 py-2 text-left transition-colors",
         blocked ? "cursor-not-allowed opacity-60" : "hover:bg-accent/40",
       )}
     >
@@ -279,7 +279,7 @@ function SetRow({
           <span
             key={entry.session_id}
             className={cn(
-              "inline-flex items-center gap-1 border px-2 py-0.5 text-small",
+              "rounded-md inline-flex items-center gap-1 border px-2 py-0.5 text-small",
               entry.decided || entry.declined
                 ? "border-settled text-settled"
                 : "border-border text-muted-foreground",
@@ -461,7 +461,7 @@ export function AdminSetsPanel() {
               {free.length === 0 && (sets.data?.sets.length ?? 0) === 0 ? (
                 <p className="text-small text-muted-foreground">{t("sets.noneYet")}</p>
               ) : (
-                <div className="border border-border">
+                <div className="overflow-hidden rounded-inner border border-border">
                   {(sets.data?.sets ?? []).map((set) => (
                     <SetRow
                       key={set.set_id}
@@ -501,7 +501,7 @@ export function AdminSetsPanel() {
               </div>
 
               {composing ? (
-                <div className="animate-fade-in space-y-3 border border-border bg-muted/30 p-3">
+                <div className="rounded-inner animate-fade-in space-y-3 border border-border bg-muted/30 p-3">
                   <p className="flex items-start gap-2 text-small text-muted-foreground">
                     <Sparkles className="mt-0.5 size-3.5 shrink-0" />
                     {t("sets.composeHint")}
@@ -560,7 +560,7 @@ function Step({
         <span
           className={cn(
             "flex size-6 shrink-0 items-center justify-center rounded-full text-small font-semibold nums",
-            done ? "bg-primary/12 text-primary" : "bg-primary text-primary-foreground",
+            done ? "bg-primary/12 text-primary" : "bg-ink text-ink-foreground",
           )}
         >
           {done ? <Check className="size-3.5" /> : index}

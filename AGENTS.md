@@ -351,7 +351,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   workspace scope, the same 404 for others' and malformed ids. The one exception is the
   installation administrator, read-only and only from the panel
   (`GET /api/admin/workspaces/{slug}/generations`, `generations.list_all`, opened from the
-  «Asignaturas» tab's exercise count); the author's own routes refuse the admin as anyone. Format 0 is a row exported
+  «Asignaturas» tab's «Ver N ejercicios» button); the author's own routes refuse the admin as anyone. Format 0 is a row exported
   from the retired table: what it never kept is null, never reconstructed.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
@@ -770,23 +770,46 @@ admin's read.
 
 ### Material and tokens
 
-[web/src/index.css](web/src/index.css) holds shadcn token names. **The grid**: black ink on
-white, `--radius: 0`, **`--primary` is the ink, not a hue**, so colour only appears where it
-means something. Semantics encode position relative to the knowledge frontier: `--settled`
-(behind you, grey), `--attention` (ultramarine, act here), dimmed/dashed (ahead),
-`--destructive` (damage), `--evaluation` (deep green, the study), `--tutor` (deep blue, the
-tutor). The last two are destination colours: each marks its function where something
-OUTSIDE its own screen names it (its door, a tab, the stage questionnaire, «Trabajar con el
-tutor» = `Button variant="tutor"`; the tone is the feature's name, `components/ui/tone.ts`).
-The tutor's is the door's quiet face (`DOOR_TONE`: its text, ring and a light tint), never a
-fill: «Trabajar con el tutor» sits on every saved exercise and must not outshout the screen's
-one `--attention`. Inside the tutor's screen `--attention` stays «act here».
-`--success/--warning/--info` stay retired. Every value is measured: **`pnpm check:color`** is
-the gate (contrast, ΔE under dichromacy, every `--X-foreground` against `--X`, and each
-destination colour against every `--arm-*` at ΔE ≥ 16 in all three visions, a missing token
-failing). A colour literal outside `index.css` is
-invisible to it, so a foreground must be a token. Tint surfaces with `color-mix(in oklab, …)`,
-never `oklch` (hue interpolation turns greens blue).
+[web/src/index.css](web/src/index.css) holds shadcn token names. **Atlas, worked in clay**
+(2026-10-04, the user's choice after five rounds of screenshots; it replaces the grid, black
+ink on white, which the user found had no identity): a sea-glass ground, a deep-sea ink and a
+coral for the land where you act. Semantics still encode position relative to the knowledge
+frontier: `--settled` (behind you, grey), `--attention` (coral, act here), dimmed/dashed
+(ahead), `--destructive` (damage), `--evaluation` (deep green, the study), `--tutor` (deep
+blue, the tutor). The last two are destination colours: each marks its function where
+something OUTSIDE its own screen names it (its door, a tab, the stage questionnaire, «Trabajar
+con el tutor» = `Button variant="tutor"`; the tone is the feature's name,
+`components/ui/tone.ts`). A door is its colour as TEXT (`DOOR_TONE`), never a fill; the tutor's
+button adds an inset ring. Inside the tutor's screen `--attention` stays «act here».
+`--success/--warning/--info` stay retired.
+
+- **No white anywhere**, the light half of a shadow included, in either mode: no token is
+  lighter than L 0.93 and `check:color` fails one that is. The ground and the card are ONE
+  value; a block is told from the ground by depth, not by a lighter sheet.
+- **Two levels of depth and no more**, three classes in `index.css`: `.surface` is a block
+  (it stands out of the ground; `Card` is one; a `.surface` inside a `.surface` goes flat);
+  `.raised` is what can be pressed inside a block (an option card, an `lg`/`xl` outline
+  button); `.well` is what holds something inside a block (a list of documents, the drop zone,
+  the graph's tray, the tutor's box, a diagram). **Small things never cast a shadow** — chips,
+  badges, tabs, fields, checkboxes, small buttons: what is chosen is the sunk tint (`bg-sunk`),
+  never a relief. A floating thing (dialog, menu, tooltip, sticky save bar) is `bg-popover` +
+  `shadow-overlay`.
+- **Edges**: no element carries a border and a shadow at once (depth draws the edge);
+  dividers stop short of a rounded edge (`rule-inset-b`, `rule-inset-head`, or an `mx-*` on
+  the row); radii step down as they nest (`rounded-block` 24, `rounded-inner` 16, controls 12
+  and under); blocks keep 28 px apart (`gap-7`/`space-y-7`) so two shadows never meet.
+- **The ink and the coral are each two tokens**: `--primary`/`--attention` are what a WORD is
+  written in (`check:color` measures them as text); `--ink`/`--attention-fill` (with their
+  `-foreground`) are what a filled control is painted with. In dark the text ink is a pale
+  sea, so `bg-primary` under a label is a white block: use `bg-ink text-ink-foreground` and
+  `bg-attention-fill text-attention-fill-foreground`.
+- Every value is measured: **`pnpm check:color`** is the gate (the no-white ceiling, contrast,
+  ΔE under dichromacy, every `--X-foreground` against `--X`, and each destination colour
+  against every `--arm-*` at ΔE ≥ 16 in all three visions, a missing token failing). The four
+  semantic hues were searched against every rule at once: an ochre evaluation sat ΔE 5.7 from
+  the coral under deuteranopia. A colour literal outside `index.css` is invisible to it, so a
+  foreground must be a token. Tint surfaces with `color-mix(in oklab, …)`, never `oklch` (hue
+  interpolation turns greens blue).
 
 - `--arm-naive/--arm-rag/--arm-system` are the one categorical scale, order fixed, slots per
   entity, bars and rows only.
@@ -803,11 +826,12 @@ never `oklch` (hue interpolation turns greens blue).
 ### Navigation and the four steps
 
 - [lib/steps.ts](web/src/lib/steps.ts) is the single home of the path: `STEPS` (raw
-  material, profile, graph, bank, numbered 1-4 as «Fase de construcción») and `USES` (the three
+  material, profile, graph, bank, numbered 1-4: the «Fase de construcción») and `USES` (the three
   unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» and
   «Tutor socrático»). Each door names its `feature`; the bar and the guide draw
   `usesFor(useFeatures())`, so a function closed to the account has no door, and its route
-  draws «not found». The
+  draws «not found». The bar no longer captions the two phases (user's request, 2026-10-04):
+  a rule sets the groups apart, and the guide and the tutorial still name them. The
   first not-done step is `now`; done steps show a bare tick, no box. Doors are half-dimmed and
   unclickable until construction is complete. Once all four are done and you are not on one,
   the phase folds into one pill. From `xl` the bar sits on the header's centre line while it
@@ -854,7 +878,11 @@ never `oklch` (hue interpolation turns greens blue).
 - «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): one row
   per subject, each with a fold of the account's own exercises there (read with the row's
   slug as `X-Workspace`, no switch; the subject in use opens unfolded). «Generar más como
-  este» in another subject switches into it first. It keeps every subject; Generate's
+  este» in another subject switches into it first. It keeps every subject OF THE ACCOUNT'S
+  OWN — the ones a membership row gives it — for an administrator like for anybody (user's
+  decision, 2026-10-04): a subject reached only through the admin bypass (`as_admin` on
+  `/api/workspaces`) has no row here; it is entered from the switcher and its exercises are
+  read from «Administración → Asignaturas». Generate's
   «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
   `/variants`) still redirect here.
 - `/raw`: one row per document; multi-select delete; a finished origin is tinted with a
@@ -912,22 +940,40 @@ never `oklch` (hue interpolation turns greens blue).
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   Six tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off, one per
   optional function in its own tone — «Evaluaciones» (`--evaluation`) and «Tutor»
-  (`--tutor`), drawn for the administrator whatever the function's mode. A function's tab is
-  `features/admin/FeatureAccess.tsx` on top (a radio group «Nadie» / «Todas las cuentas» /
+  (`--tutor`), drawn for the administrator whatever the function's mode. **Every tab is one
+  list of its sections beside the section open** (`features/admin/Sections.tsx`, user's
+  request of 2026-10-04: «Motor» had a board of cells, «Configuración» a column of stages
+  and the functions' tabs stacked everything down one page). A row of the list is a name and
+  ONE line of state (how many accounts, a part of the engine in a word, who may use a
+  function, how many settings) plus the count of what is changed there and not saved; the
+  list is the tab's summary, so no row of total tiles sits above the tabs. The section opens
+  under `SectionHeader` (name, one sentence, the section's one action on the name's line) as
+  ONE column of blocks, readings first and settings under them. A list inside a block is
+  rows parted by rules, never a frame per row or around a table (`.rows` in `index.css`;
+  `SETTING_LIST`). A tab with one section («Asignaturas») has no list. Below `lg` the list
+  lies down and scrolls sideways. The maintenance switch is in the header, beside the
+  title: one line while the installation is open, a red block across the page while it is
+  closed; it is no tab and no section. A function's tab has three sections — «Permisos de
+  uso», «Analíticas» («Evaluaciones» only) and «Configuración» — and `AdminScreen` holds
+  which is open, because a folded link and «ver sus sesiones» open one from another tab.
+  «Permisos de uso» is
+  `features/admin/FeatureAccess.tsx` (a radio group «Nadie» / «Todas las cuentas» /
   «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
   marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
   under another mode because the server keeps the list; one sentence states the SAVED state,
-  one line says the administrator is not exempt), then the evaluation's reading (lazy,
-  «Evaluaciones» only), then the function's stage settings (`ConfigTab.StageSettings`, its
+  one line says the administrator is not exempt); «Analíticas» is the evaluation's reading
+  (lazy); «Configuración» is the function's stage settings (`ConfigTab.StageSettings`, its
   own save bar over the same values; `tutor.daily_messages` is there). A folded link to
   another stage opens «Configuración» on it: `AdminScreen` owns the tab, the open stage and
   the ONE draft of the stages' settings (`useStagesDraft`), so a change left pending follows
   the link and any of the three save bars saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
   holder joins at registration («Funciones»), and each row shows them as badges in the
-  functions' tones. «Motor» tab: **a board with one cell per part of the engine** — «General», «Local», and
-  «Remoto» only when the engine has that half — each cell its state in a word and the door to
-  its screen; the tab opens on the part that needs somebody, else on «General». The readings
-  are `features/admin/engineState.ts`, shared by the cells and the cards' badges. «General»
+  functions' tones. «Cuentas» has two sections, «Cuentas» (the table) and «Invitaciones».
+  «Motor» tab: **one section per part of the engine** — «General», «Local», and
+  «Remoto» only when the engine has that half — each row its state in a word (on «General»
+  the queue's line, since its word is the engine chosen); the tab opens on the part that
+  needs somebody, else on «General». The readings
+  are `features/admin/engineState.ts`, shared by the rows and the cards' badges. «General»
   leads with the choice of engine («Solo local» / «Híbrido», `engine.name`), then the queue,
   the connection to Ollama (direct when no `OLLAMA_SSH_HOST` is named — never drawn as a
   tunnel left unconfigured — else the SSH tunnel) and the warm contexts; «Local» is the GPU and the models on ITS disk (a
@@ -938,12 +984,13 @@ never `oklch` (hue interpolation turns greens blue).
   and ordered as the four meters, each capped at the registry's `maximum` (the account's
   quota). The queue card is one list of three moments — waiting (dimmed, hollow mark), running (ink)
   and the last 30 finished (settled; red where it failed), which the admin may clear: clearing
-  moves a window (`POST /api/admin/jobs/history/clear`), it never deletes a job. No database card. One save bar for the tab; a part's cell counts
-  its unsaved changes; the guardrail and embedder models are read-only. «Configuración» is **one screen per stage**, named and
+  moves a window (`POST /api/admin/jobs/history/clear`), it never deletes a job. No database card. One save bar for the tab; a part's row counts
+  its unsaved changes; the guardrail and embedder models are read-only. «Configuración» is **one section per stage**, named and
   numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
   down the page, each node with model, reasoning and sampling and its own settings under it;
   then «General de la etapa», «Común a todas las etapas», and folded what it reads of
-  another stage's — the same value, unfolded on its owner's screen. Its nav lists the
+  another stage's — the same value, unfolded on its owner's screen. The search sits over
+  the list and «Recargar desde el fichero» under it. Its list holds the
   product's stages only: an optional function's stage (`ConfigStage.feature`) is drawn in
   that function's tab, and «Configuración»'s search still finds and edits its settings.
 - A setting's measured `doc` stays in the registry and never leaves the API. A row carries at
@@ -955,7 +1002,7 @@ never `oklch` (hue interpolation turns greens blue).
   conversation, both one fixed height (`PANEL_HEIGHT`) scrolling inside; a reply polled from
   the author's own route while `pending`, shown whole with its concept map when the server
   gave one (`ConceptMap`: `Diagram` with `classes` in tokens and `sourceToggle={false}`, since
-  a map the app wrote has no source to show — the concept in `--attention`,
+  a map the app wrote has no source to show — the concept in `--attention-fill`,
   or the prerequisite to review; what is known settled, what comes later dashed; on a narrow
   screen the learning order alone, stacked, the other relations written under it) and its
   references under it, each opening the notes reader (`NotesReader`, one section at a time);
@@ -1116,11 +1163,12 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   writes it. `uv run variatio generate` (the CLI) saves nothing.
 
 **Interface**
-- The palette is measured; `--primary` is ink; `--radius: 0`; arm colours fixed; theme
-  three-state.
+- The material is Atlas in clay (2026-10-04, reopening the grid, `--radius: 0` and the ink
+  `--primary`): no white, two levels of depth, small things flat, careful edges; the palette
+  is measured; arm colours fixed; theme three-state.
 - The bar is the path: four numbered steps and the unnumbered doors open to the account (up
-  to three); no dashboard; the rail
-  is gone.
+  to three), the two groups set apart by a rule and with no phase captions (2026-10-04); no
+  dashboard; the rail is gone.
 - View and correct are two moments; «Continuar» closes a stage; no «Aprobar»/«Reabrir»; no
   rebuild except for document drift.
 - A queued job is not a running one. No time estimates. No «loading model» signal. No log on
@@ -1134,6 +1182,11 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
 - Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
+- Every tab of «Administración» is one list of its sections beside the section open, the
+  same list on all of them (2026-10-04); a tab with one section has none; no tiles of totals
+  above the tabs; a list inside a block is ruled rows, never framed ones.
+- «Mis asignaturas y ejercicios» shows an account its own subjects and its own exercises
+  only, the administrator's included (2026-10-04); others' are read from the panel.
 - «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
   drawn on every stage that reads it and unfolded only on its owner's. An optional function's
   stage lives in that function's own admin tab, under who may use it, not in «Configuración».

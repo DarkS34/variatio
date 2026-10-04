@@ -26,9 +26,9 @@ import {
  * must be able to use the whole product without asking anybody.
  *
  * The two phases are NAMED and not numbered — the construction's four steps are numbered
- * because they go in order; generating and evaluating have no order between them — and the
- * bar draws the same two names (`lib/steps.ts`), or the deck would promise a shape the
- * navigation does not have.
+ * because they go in order; generating and evaluating have no order between them. The bar
+ * keeps the two groups (`lib/steps.ts`) apart with a rule and no longer captions them
+ * (2026-10-04); the deck still names them, since it is the manual.
  *
  * The shell draws NO header under this route, so the deck is the whole window and may not
  * point at parts of a bar that is not on screen. The slide is the PATH, which is what lets
@@ -155,7 +155,7 @@ const READING = `${PROSE} sm:text-justify sm:hyphens-auto`;
 function Steps() {
   const { t } = useT();
   return (
-    <ol className="border border-border bg-card">
+    <ol className="overflow-hidden rounded-inner border border-border bg-card">
       {STEPS.map((step, index) => (
         <li
           key={step.path}
@@ -164,7 +164,7 @@ function Steps() {
             index < STEPS.length - 1 && "border-b border-border",
           )}
         >
-          <span className="nums mt-1 flex h-[26px] min-w-[26px] shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+          <span className="nums mt-1 flex h-[26px] min-w-[26px] shrink-0 items-center justify-center rounded-sm bg-ink px-1 font-condensed text-small font-semibold text-ink-foreground">
             {stepNumber(index)}
           </span>
           <div className="min-w-0 space-y-1.5">
@@ -451,7 +451,7 @@ export function TutorialScreen({ at }: { at: number }) {
                 className={cn(
                   "block h-[3px] w-7 transition-colors",
                   index < at && "bg-settled group-hover:bg-foreground",
-                  index === at && "bg-attention",
+                  index === at && "bg-attention-fill",
                   index > at && "bg-border group-hover:bg-muted-foreground",
                 )}
               />

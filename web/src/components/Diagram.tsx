@@ -84,7 +84,8 @@ function themeVariables(theme: Theme): Record<string, string | boolean> {
     tertiaryColor: accent,
     tertiaryTextColor: foreground,
     tertiaryBorderColor: border,
-    lineColor: foreground,
+    // Lines in the quiet ink, words in the full one: on the clay a full-ink line shouts.
+    lineColor: mutedForeground,
     textColor: foreground,
     titleColor: foreground,
     nodeBorder: foreground,
@@ -111,7 +112,7 @@ function themeVariables(theme: Theme): Record<string, string | boolean> {
     classText: foreground,
     attributeBackgroundColorOdd: card,
     attributeBackgroundColorEven: muted,
-    arrowheadColor: foreground,
+    arrowheadColor: mutedForeground,
     pieOuterStrokeColor: foreground,
     pieStrokeColor: foreground,
     pieTitleTextColor: foreground,
@@ -276,7 +277,7 @@ export function Diagram({
 
   if (state.kind === "pending") {
     return (
-      <div className={cn("rounded-lg border border-border bg-card px-3 py-2 text-small text-muted-foreground", className)}>
+      <div className={cn("well px-4 py-3 text-small text-muted-foreground", className)}>
         {t("diagram.drawing")}
       </div>
     );
@@ -300,7 +301,9 @@ export function Diagram({
         <CodeBlock code={code} language="text" maxHeight="18rem" />
       ) : (
         <div
-          className="thin-scroll overflow-x-auto rounded-lg border border-border bg-card p-3 [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full"
+          // A carved tray. Mermaid gives its nodes a grey drop shadow of its own: off, since a
+          // node is a small thing inside the tray and depth belongs to blocks alone.
+          className="well thin-scroll overflow-x-auto p-4 [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full [&_svg_*]:filter-none! [&_.node_rect]:[rx:10px] [&_.node_rect]:[ry:10px] [&_.cluster_rect]:[rx:14px] [&_.cluster_rect]:[ry:14px] [&_.cluster_rect]:stroke-input!"
           dangerouslySetInnerHTML={{ __html: state.svg }}
         />
       )}

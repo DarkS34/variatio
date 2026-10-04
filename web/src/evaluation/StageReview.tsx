@@ -326,7 +326,7 @@ function Statement({
               title={name}
               onClick={() => onPick(rung)}
               className={cn(
-                "nums border px-2 py-1.5 text-small transition-colors",
+                "rounded-md nums border px-2 py-1.5 text-small transition-colors",
                 on ? "border-primary bg-accent font-medium" : "border-border bg-card hover:bg-accent",
               )}
             >

@@ -143,7 +143,7 @@ export function GuideScreen({ slug }: { slug: string }) {
               <Separator />
               <Link
                 to={`/guide/${next.slug}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
+                className="surface flex items-center justify-between gap-3 p-5 transition-colors hover:bg-accent"
               >
                 <span>
                   <span className="block text-micro font-condensed uppercase text-muted-foreground">

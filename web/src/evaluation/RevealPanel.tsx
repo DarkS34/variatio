@@ -52,7 +52,7 @@ function OriginCard({
 
   return (
     <div
-      className="flex h-full flex-col border bg-card"
+      className="flex h-full flex-col overflow-hidden rounded-inner border bg-card"
       style={{ borderColor: `color-mix(in oklch, ${meta.colour} 40%, transparent)` }}
     >
       <div className="space-y-2 px-3 py-2.5">
@@ -146,7 +146,7 @@ function SystemCard({
   const meta = ARM_META.system;
   return (
     <section
-      className="flex flex-col border bg-card shadow-sm"
+      className="flex flex-col overflow-hidden rounded-inner border bg-card"
       style={{ borderColor: `color-mix(in oklch, ${meta.colour} 40%, transparent)` }}
     >
       <header className="flex items-center gap-2.5 border-b border-border px-4 py-3">
@@ -240,7 +240,7 @@ export function RevealPanel({
           own token, and this band is the one place on the screen about the evaluation rather
           than about an exercise. The provenance of the draw is stored on the row and read by
           the panel, and tells the evaluator nothing they can use. */}
-      <section className="border border-border border-l-[3px] border-l-evaluation bg-card px-4 py-3 shadow-sm">
+      <section className="surface bg-[radial-gradient(90%_160%_at_0%_50%,color-mix(in_oklab,var(--evaluation)_14%,transparent),transparent_62%)] px-5 py-4">
         <h2 className="text-title">
           {session.choice === null ? (
             t("reveal.choseNone")

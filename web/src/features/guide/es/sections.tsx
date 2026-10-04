@@ -63,7 +63,7 @@ function Pill({
     <span
       className={cn(
         "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium",
-        tone ? DOOR_TONE[tone].face : "border border-border",
+        tone ? DOOR_TONE[tone].face : "text-foreground",
       )}
     >
       <Icon className="size-4" />
@@ -91,15 +91,12 @@ function Start() {
       <Block title="El recorrido, de un vistazo">
         {/* The bar above, drawn here: the steps come from `STEPS` and the doors from
             `usesFor`, so this figure cannot promise an order the navigation does not have. */}
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
-          <div className="space-y-1.5">
-            <p className="font-condensed text-micro uppercase text-muted-foreground">
-              {t("nav.phase.build")}
-            </p>
+        <div className="flex flex-wrap items-center gap-3 rounded-inner border border-border p-4 sm:p-6">
+          <div>
             <div className="flex flex-wrap items-center gap-3">
               {STEPS.map((step, index) => (
                 <div key={step.path} className="flex items-center gap-2">
-                  <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+                  <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center rounded-sm bg-ink px-1 font-condensed text-small font-semibold text-ink-foreground">
                     {stepNumber(index)}
                   </span>
                   <span className="text-body font-medium">{t(step.labelKey)}</span>
@@ -108,10 +105,7 @@ function Start() {
             </div>
           </div>
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <div className="space-y-1.5">
-            <p className="font-condensed text-micro uppercase text-muted-foreground">
-              {t("nav.phase.test")}
-            </p>
+          <div>
             <div className="flex flex-wrap items-center gap-2">
               {doors.map((door) => (
                 <Pill
@@ -127,7 +121,7 @@ function Start() {
           </div>
         </div>
         <Paragraph>
-          Es exactamente la barra de arriba, y son dos fases con nombre. La{" "}
+          Es exactamente la barra de arriba, y tiene dos fases, separadas por una línea. La{" "}
           <strong>{t("nav.phase.build").toLowerCase()}</strong> son cuatro pasos numerados{" "}
           <strong>{stepNumber(0)}</strong> a <strong>{stepNumber(3)}</strong> porque son un solo
           trabajo, <em>preparar la asignatura</em>, y se hacen en ese orden: cada uno necesita
@@ -146,7 +140,7 @@ function Start() {
           «{t("nav.create")}» está siempre. «{t("nav.tutor")}» y «{t("nav.compare")}» solo
           aparecen si quien administra la instalación los ha abierto a tu cuenta, así que la
           barra tiene una, dos o tres puertas. Esas dos llevan un color propio:
-          «{t("nav.tutor")}» un azul apagado, que no es el azul vivo que te necesita, y
+          «{t("nav.tutor")}» un azul y
           «{t("nav.compare")}» un verde. El botón «{t("tutor.fromExercise")}» de un ejercicio
           generado lleva el mismo azul que la puerta del tutor. «{t("nav.compare")}» no produce
           material para tu asignatura; sirve para medir el sistema.
@@ -517,7 +511,7 @@ function Raw() {
           iba a rehacer en silencio.
         </Paragraph>
         <Paragraph>
-          Cuando un origen queda al día, su tarjeta entera se tiñe del azul de su marca y el
+          Cuando un origen queda al día, su tarjeta se ilumina con el coral de su marca y el
           tick pasa a ser un círculo relleno. Y cuando los dos lo están, al final de la
           pantalla aparece el mismo bloque con el que se cierra cada paso: «
           {t("stage.continue", { n: stepNumber(1) })}».
@@ -1611,7 +1605,7 @@ function Account() {
           {
             key: "workspaces",
             head: t("tabs.workspaces"),
-            body: "En qué asignaturas estás y con qué papel, y desde cuál entrar a otra. Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellas es eliminar una tuya — de las que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearla y solo lo cambia quien administra.",
+            body: "En qué asignaturas estás y con qué papel, y desde cuál entrar a otra. Solo las tuyas: quien administra tampoco ve aquí las asignaturas en las que no es miembro, que se leen desde «Administración». Los accesos los concede quien administra: aquí no se piden. Lo único que puedes hacer sobre ellas es eliminar una tuya — de las que eres propietario —, y al hacerlo se te dice qué desaparece y qué se queda. El nombre no se cambia desde aquí: se pone al crearla y solo lo cambia quien administra.",
           },
           {
             key: "ejercicios",
@@ -1711,9 +1705,10 @@ function Account() {
       <Block title="Cerrar la instalación mientras se toca">
         <Badge variant="secondary">solo administradores</Badge>
         <Paragraph>
-          Arriba del todo de «{t("admin.title")}», por encima de las pestañas y no dentro de
-          ninguna, hay un interruptor de <strong>«{t("maint.title")}»</strong>. Cerrado,
-          cualquier otra cuenta ve una pantalla de aviso en lugar de la aplicación —con el texto
+          En la cabecera de «{t("admin.title")}», junto al título y no dentro de ninguna
+          pestaña, hay un interruptor de <strong>«{t("maint.title")}»</strong>. Abierta la
+          instalación es una sola línea; cerrada, ocupa un bloque rojo de lado a lado, con el
+          aviso que se puede editar. Cerrado, cualquier otra cuenta ve una pantalla de aviso en lugar de la aplicación —con el texto
           que se escriba ahí— y la API rechaza sus peticiones; quien administra sigue entrando,
           que es lo que permite volver a abrirla.
         </Paragraph>
@@ -1739,8 +1734,15 @@ function Admin() {
           <strong>«{t("admin.title")}»</strong>, y solo la ve quien administra la instalación.
         </p>
         <p>
-          Son seis pestañas, y esta sección las cubre todas. La de «
-          {t("admin.tab.evaluation")}» reúne lo que ha contestado la gente, en dos bloques: las
+          Son seis pestañas, y todas se leen igual: a la izquierda, la <strong>lista de sus
+          apartados</strong>, cada uno con su estado en una línea —cuántas cuentas hay, cómo
+          está una parte del motor, quién puede usar una función—; a la derecha, el apartado
+          abierto. Un apartado con cambios sin guardar los cuenta en su fila. «
+          {t("admin.tab.workspaces")}» tiene un solo apartado y no lleva lista.
+        </p>
+        <p>
+          Esta sección cubre las seis. En «{t("admin.tab.evaluation")}», el apartado «
+          {t("feature.section.analytics")}» reúne lo que ha contestado la gente, en dos bloques: las
           comparaciones a ciegas de la fase de pruebas, con sus recuentos y sus contrastes, y los
           formularios que cierran cada paso de la fase de construcción, resumidos paso a paso.
           Arriba de los dos va un solo filtro —una cuenta, un tipo de cuenta (docentes o
@@ -1760,6 +1762,8 @@ function Admin() {
           es la única función que lee esa respuesta.
         </Paragraph>
         <Paragraph>
+          La pestaña tiene dos apartados: «{t("admin.tab.accounts")}», con la tabla de quién
+          existe, y «{t("acc.invite")}», con los enlaces que nadie ha usado todavía.
           Cada invitación se crea con «{t("acc.invite.open")}», que abre una ventana con las
           condiciones que elijas: un <strong>alias</strong> que
           solo ves tú —quien abre el enlace ve la asignatura, el permiso y la fecha, nunca el
@@ -1798,7 +1802,7 @@ function Admin() {
         />
         <Paragraph>
           Los accesos se dan y se quitan después, cuenta por cuenta y asignatura por asignatura,
-          desde esta misma tabla; son tres:
+          desde la tabla de «{t("admin.tab.accounts")}»; son tres:
         </Paragraph>
         <Rows
           items={[
@@ -1863,10 +1867,12 @@ function Admin() {
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
           Todas las instancias de la instalación con sus miembros, sus ejercicios y el estado de
-          su cadena. El número de ejercicios abre todos los generados en esa asignatura, de
-          cualquier cuenta y con su autor, para leerlos: es el único sitio donde se ven
-          ejercicios ajenos. Borrarlos o generar más como ellos sigue siendo cosa de quien los
-          escribió, desde «{t("nav.mySubjects")}».
+          su cadena. El botón «Ver … ejercicios» de cada fila abre todos los generados en esa
+          asignatura, de cualquier cuenta y con su autor, para leerlos: es el único sitio donde
+          se ven ejercicios ajenos, también para quien administra, que en «
+          {t("nav.mySubjects")}» ve solo sus asignaturas y sus ejercicios, como cualquier
+          cuenta. Borrarlos o generar más como ellos sigue siendo cosa de quien los escribió,
+          desde «{t("nav.mySubjects")}».
         </Paragraph>
         <Rows
           items={[
@@ -1896,12 +1902,13 @@ function Admin() {
 
       <Block title={t("admin.tab.engine")}>
         <Paragraph>
-          Arriba hay un <strong>tablero</strong> con una casilla por cada parte del motor, y cada
-          casilla dice en una palabra cómo está esa parte: el cuadrado gris es que no pide nada,
-          el negro que está trabajando, el azul que te necesita, el rojo que las llamadas están
-          fallando y el hueco que todavía no existe. Pulsar una casilla abre su pantalla, y la
-          pestaña se abre sola por la que te necesite, si hay alguna. «{t("eng.half.remote")}»
-          solo aparece con el motor híbrido.
+          La lista tiene un apartado por cada <strong>parte del motor</strong>, y cada fila dice
+          en una palabra cómo está esa parte: el cuadrado gris es que no pide nada, el de tinta
+          que está trabajando, el coral que te necesita, el rojo que las llamadas están fallando
+          y el hueco que todavía no existe. Pulsar una fila abre su apartado, y la pestaña se
+          abre sola por el que te necesite, si hay alguno. «{t("eng.half.remote")}» solo aparece
+          con el motor híbrido. Dentro de cada apartado el orden es el mismo: primero lo que se
+          mide y debajo lo que se ajusta.
         </Paragraph>
         <Rows
           items={[
@@ -1940,7 +1947,7 @@ function Admin() {
               body: (
                 <>
                   Nada que cargar; lo que limita es la cuota. Medidores por minuto y por día, y
-                  bajo ellos el desglose de lo gastado por fase, que se descarga en CSV. Al lado,
+                  bajo ellos el desglose de lo gastado por fase, que se descarga en CSV. Debajo,
                   qué modelos se mandan a Cerebras —se marcan de la lista de los que hay, no se
                   escriben— y los cuatro topes, con el mismo nombre y en el mismo orden que los
                   medidores que acotan y sin poder pasar del máximo de la cuenta.
@@ -1950,7 +1957,7 @@ function Admin() {
           ]}
         />
         <Paragraph>
-          Hay una sola barra de guardar para toda la pestaña, y la casilla de una parte con
+          Hay una sola barra de guardar para toda la pestaña, y la fila de una parte con
           cambios pendientes los cuenta, así que no se quedan atrás al pasar a otra. Lo que el
           panel no puede cambiar —lo fija el entorno, o se edita en «config.json»— no aparece.
         </Paragraph>
@@ -1972,19 +1979,19 @@ function Admin() {
 
       <Block title={t("admin.tab.config")}>
         <Paragraph>
-          Todos los ajustes de la instalación, con <strong>una pestaña por etapa</strong> y con
+          Todos los ajustes de la instalación, con <strong>un apartado por etapa</strong> y con
           los nombres y números de la barra: «{t("nav.step.raw")}», «{t("nav.step.profile")}», «
           {t("nav.step.graph")}», «{t("nav.step.bank")}» y «{t("nav.create")}». Los ajustes de «
           {t("nav.compare")}» y de «{t("nav.tutor")}» no están aquí, sino en sus propias pestañas,
-          «{t("admin.tab.evaluation")}» y «{t("admin.tab.tutor")}». Cada pestaña tiene todo lo que
-          usa su etapa, y el <strong>buscador</strong> de arriba encuentra un ajuste del que solo
+          «{t("admin.tab.evaluation")}» y «{t("admin.tab.tutor")}». Cada apartado tiene todo lo que
+          usa su etapa, y el <strong>buscador</strong> de encima de la lista encuentra un ajuste del que solo
           recuerdas media palabra, esté donde esté, también los de esas dos funciones. Cuando el nombre de un ajuste no basta para saber
           qué controla, o cambiarlo tiene una consecuencia que no se adivina, lleva al lado un (i)
           que lo dice en una frase. Lo del motor —el motor de inferencia, el túnel, Cerebras— no
           es de ninguna etapa y está en «{t("admin.tab.engine")}».
         </Paragraph>
         <Paragraph>
-          Cada pestaña empieza por <strong>{t("cfg.flow").toLowerCase()}</strong>: las llamadas al
+          Cada apartado empieza por <strong>{t("cfg.flow").toLowerCase()}</strong>: las llamadas al
           modelo de la etapa, de arriba abajo y en el orden en que las hace. En cada parada, qué
           modelo la atiende; el círculo dice si razona antes de contestar y, mientras razona, el
           selector de al lado fija cuánto. Las paradas que no llevan interruptor lo dicen con el
@@ -2024,7 +2031,10 @@ function Admin() {
         <Paragraph>
           Una pestaña por función opcional, «{t("nav.compare")}» y «{t("nav.tutor")}», cada una
           en el color de su puerta. Las dos están siempre, abierta o cerrada la función: así se
-          configura antes de abrirla a nadie. Arriba, <strong>quién puede usarla</strong>, con
+          configura antes de abrirla a nadie. Cada una tiene sus apartados: «
+          {t("feature.section.access")}», «{t("feature.section.analytics")}» (solo en «
+          {t("admin.tab.evaluation")}») y «{t("admin.tab.config")}». En «
+          {t("feature.section.access")}» se decide <strong>quién puede usarla</strong>, con
           tres opciones:
         </Paragraph>
         <Rows
@@ -2055,9 +2065,9 @@ function Admin() {
           (en «{t("admin.tab.accounts")}»).
         </Paragraph>
         <Paragraph>
-          Debajo, en «{t("admin.tab.evaluation")}», la lectura del estudio; y al final de las
-          dos, los ajustes de la función, que «{t("admin.tab.config")}» no lista entre sus
-          etapas. Son los mismos valores y se guardan con su propia barra. Entre los del tutor
+          «{t("feature.section.analytics")}» es la lectura del estudio; y «
+          {t("admin.tab.config")}», en las dos, los ajustes de la función, que la pestaña «
+          {t("admin.tab.config")}» no lista entre sus etapas. Son los mismos valores y se guardan con su propia barra. Entre los del tutor
           está el <strong>límite diario</strong>: cuántos mensajes puede enviarle cada cuenta en
           un día. Vacío es sin límite. Se cuenta por cuenta y suma todas sus asignaturas. El día
           es el de UTC, así que el límite se reabre a la misma hora para todos. Cuenta cada

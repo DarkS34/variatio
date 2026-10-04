@@ -138,8 +138,8 @@ function TypeStrip({
             type="button"
             onClick={() => onSelect(key)}
             className={cn(
-              "group flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left transition-colors",
-              key === active ? "border-primary bg-primary/5" : "border-border hover:bg-accent/40",
+              "group flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-left transition-colors",
+              key === active ? "bg-sunk" : "hover:bg-accent/60",
             )}
           >
             <span className="text-body font-medium">{labels[key] || key}</span>

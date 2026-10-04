@@ -265,7 +265,7 @@ export function ConceptPicker({
                           className={cn(
                             "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-small transition-colors",
                             isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
+                              ? "border-ink bg-ink text-ink-foreground"
                               : "border-border bg-background hover:border-primary/50 hover:bg-accent",
                             disabled && "cursor-default opacity-70 hover:border-border hover:bg-background",
                           )}
@@ -277,8 +277,8 @@ export function ConceptPicker({
                                 className={cn(
                                   "size-1.5 shrink-0 rounded-full",
                                   isSelected
-                                    ? "bg-primary-foreground/70"
-                                    : "bg-attention",
+                                    ? "bg-ink-foreground/70"
+                                    : "bg-attention-fill",
                                 )}
                               />
                             ) : (
@@ -286,7 +286,7 @@ export function ConceptPicker({
                                 className={cn(
                                   "shrink-0 nums",
                                   isSelected
-                                    ? "text-primary-foreground/70"
+                                    ? "text-ink-foreground/70"
                                     : "text-muted-foreground",
                                 )}
                               >

@@ -305,7 +305,7 @@ export function StageGate({
 
   return (
     <StageScope locked={locked} register={register}>
-      <div className="space-y-5">
+      <div className="space-y-7">
         <header className="flex flex-wrap items-start justify-between gap-4">
           {/* The guide link goes UNDER the title, on a line of its own: beside it, it is one
               more chip in a row of chips and the only one there not about the stage's state.
@@ -459,7 +459,7 @@ export function StageGate({
              exactly as open: what is there is on disk and is what gets judged. Dimming it
              would hide the questionnaire too; the notice above says what blocks it, and
              "Continuar" is simply not offered. */
-          <div className="min-w-0 space-y-5">{children}</div>
+          <div className="min-w-0 space-y-7">{children}</div>
         )}
 
         {/* The stage questionnaire, at the FOOT of the artifact: its button and the form
@@ -540,7 +540,7 @@ export function StageGate({
             for ever is a false promise. Leaving with an unsaved draft asks first: it is the
             only thing here that can lose anything. */}
         {ready && !blocked && curating ? (
-          <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border border-border border-l-[3px] border-l-primary bg-card px-4 py-3 shadow-overlay">
+          <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-inner bg-popover px-5 py-3 shadow-overlay">
             <Pencil aria-hidden className="size-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-body font-semibold">{t("stage.curate.bar")}</p>
@@ -635,7 +635,7 @@ export function ClosingSection({
   children: ReactNode;
 }) {
   return (
-    <section className="border border-border bg-card p-4 sm:p-5">
+    <section className="surface p-5 sm:p-6">
       <h2 className="text-heading font-semibold">{title}</h2>
       <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">{body}</p>
       {error ? <p className="mt-2 text-body text-destructive">{error}</p> : null}

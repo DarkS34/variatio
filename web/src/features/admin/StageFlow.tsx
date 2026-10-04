@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { Input, Label } from "@/components/ui/input";
 import { PhaseNode } from "@/features/admin/PhaseNode";
-import { SettingRow } from "@/features/admin/SettingFields";
+import { SETTING_LIST, SettingRow } from "@/features/admin/SettingFields";
 import { useT, type Key } from "@/lib/i18n";
 import type { ConfigPayload, ConfigSetting, ReasoningLane, ReasoningPhase } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -110,7 +110,7 @@ export function FlowNode({
     >
       <SamplingFields phase={phase} ctx={ctx} />
       {rows.length > 0 ? (
-        <div className="space-y-3">
+        <div className={SETTING_LIST}>
           {rows.map((setting) => (
             <Row key={setting.key} setting={setting} ctx={ctx} />
           ))}

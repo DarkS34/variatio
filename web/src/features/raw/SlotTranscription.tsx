@@ -62,7 +62,7 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
   // reader.
   return (
     <span
-      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-attention text-attention-foreground"
+      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-attention-fill text-attention-fill-foreground"
       title={t("transcribe.upToDate")}
     >
       <Check aria-hidden className="size-4" strokeWidth={3} />

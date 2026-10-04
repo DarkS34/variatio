@@ -22,7 +22,6 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { CerebrasCard } from "@/features/admin/CerebrasCard";
-import { EngineBoard, panelId, tabId } from "@/features/admin/EngineBoard";
 import { EngineChoice } from "@/features/admin/EngineChoice";
 import {
   generalCell,
@@ -31,6 +30,7 @@ import {
   remoteCell,
   tunnelState,
   type BoardCell,
+  type CellTone,
   type ScreenKey,
 } from "@/features/admin/engineState";
 import {
@@ -38,8 +38,10 @@ import {
   SettingsPanel,
   useEngineSettings,
 } from "@/features/admin/EngineSettings";
+import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
 import { FormError } from "@/features/auth/AuthLayout";
 import { bytes, duration, JOB_STATUS, when } from "@/lib/format";
+import type { Key } from "@/lib/i18n";
 import type {
   AdminEngine,
   AdminOverview,
@@ -61,13 +63,43 @@ import { useT } from "@/lib/i18n";
 import { jobName } from "@/lib/names";
 
 /**
- * The engine, one screen per part behind a board that reads them all.
+ * The engine, one section per part behind the list that reads them all.
  *
  * Everything here is global to the installation: which engine it runs, the queue, the port
  * forward that reaches the GPU, the contexts this process keeps warm, the one GPU and what
  * it holds, the models on its disk and the remote quota. None of it belongs to a workspace,
  * which is why it is gathered here.
+ *
+ * The list answers for every part at once — the queue, the machine, the quota — so the part
+ * somebody then wants to look at is one press away. A part's square is the mark's own
+ * vocabulary and introduces nothing: solid grey for what needs nobody, solid coral for the
+ * one that needs the administrator, an outline for what is not there yet, the ink while it
+ * is working and red when calls are failing. The word beside it says the same thing, so the
+ * colour is never the only channel.
  */
+const MARK: Record<CellTone, string> = {
+  ok: "bg-settled",
+  live: "bg-primary animate-pulse-soft",
+  act: "bg-attention-fill",
+  down: "bg-destructive",
+  off: "border-[1.5px] border-muted-foreground",
+};
+
+const STATE_TEXT: Record<CellTone, string> = {
+  ok: "",
+  live: "text-foreground",
+  act: "text-attention",
+  down: "text-destructive",
+  off: "",
+};
+
+/* What each part's section is, said once under its name. */
+const SCREEN_NOTE: Record<ScreenKey, Key> = {
+  general: "eng.screen.general",
+  local: "eng.screen.local",
+  remote: "eng.screen.remote",
+};
+
 export function EngineTab({ overview }: { overview: AdminOverview }) {
   const { t } = useT();
   const engine = useAdminEngine();
@@ -85,7 +117,7 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
   const config = useEngineSettings();
   const jobs = useAdminJobs();
 
-  // The engine decides how many parts the board has. The remote one is drawn from TWO
+  // The engine decides how many parts the list has. The remote one is drawn from TWO
   // readings on purpose: its meters need the engine to be actually running Cerebras, its
   // settings only that somebody is ABOUT to. Reading the draft is what lets a person switch
   // engine on "General" and check the ceilings before saving.
@@ -100,8 +132,8 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
   );
   const paired = remote || engineName === HYBRID;
 
-  // The draft is the tab's and not the screen's, so a change left behind on another part
-  // has to be visible from this one: its cell counts it and the save bar follows it here.
+  // The draft is the tab's and not the section's, so a change left behind on another part
+  // has to be visible from this one: its row counts it and the save bar follows it here.
   const pendingIn = (settings: ConfigSetting[]) =>
     settings.filter((setting) => setting.key in config.draft).length;
   const cells: BoardCell[] = [
@@ -112,84 +144,90 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
     { ...localCell(engine, tr), pending: pendingIn(config.local) },
     ...(paired ? [{ ...remoteCell(engine, tr), pending: pendingIn(config.remote) }] : []),
   ];
+  // A row holds ONE line of state. A part's word is that line — «En línea», «En reposo» —
+  // except on "General", whose word is the engine chosen, a setting and not a state: there
+  // the line is the queue's. The pair is one hover away, and each section draws it in full.
+  const items: SectionEntry[] = cells.map((cell) => {
+    const line = (cell.key === "general" && cell.detail) || cell.state;
+    return {
+      key: cell.key,
+      label: cell.label,
+      mark: <span className={cn("size-2.5", MARK[cell.tone])} />,
+      detail: (
+        <span className={STATE_TEXT[cell.tone]}>
+          {line.charAt(0).toUpperCase() + line.slice(1)}
+        </span>
+      ),
+      title: [cell.state, cell.detail].filter(Boolean).join(" · "),
+      pending: cell.pending,
+    };
+  });
 
   // The tab opens on the part that needs somebody, when one does, and on "General"
-  // otherwise. Decided once: a part going wrong later changes its cell, never the screen
+  // otherwise. Decided once: a part going wrong later changes its row, never the section
   // under a hand.
   const [chosen, setChosen] = useState<ScreenKey>(
     () => cells.find((cell) => cell.tone === "act" || cell.tone === "down")?.key ?? "general",
   );
-  const active = cells.some((cell) => cell.key === chosen) ? chosen : "general";
+  const active = cells.find((cell) => cell.key === chosen) ?? cells[0];
 
   return (
-    <div className="space-y-5">
-      <EngineBoard cells={cells} value={active} onChange={setChosen} />
+    <Sections
+      label={t("eng.board.label")}
+      items={items}
+      value={active.key}
+      onChange={(key) => setChosen(key as ScreenKey)}
+    >
+      <SectionHeader title={active.label} description={t(SCREEN_NOTE[active.key])} />
 
-      <div
-        role="tabpanel"
-        id={panelId(active)}
-        aria-labelledby={tabId(active)}
-        className="min-w-0 space-y-4"
-      >
-        {/* What the installation runs on comes first and alone: it is the one choice here
-            that changes every other screen of the tab, the remote one's existence included. */}
-        {active === "general" ? (
-          <>
-            <EngineChoice config={config} />
-            <div className="grid items-start gap-4 *:min-w-0 lg:grid-cols-[3fr_2fr]">
-              <QueueSection />
-              <div className="space-y-4">
-                <TunnelCard tunnel={engine.tunnel} available={engine.available} host={engine.host} />
-                <SettingsPanel
-                  titleKey="eng.cfg.tunnel"
-                  noteKey="eng.cfg.tunnelNote"
-                  settings={config.tunnel}
-                  config={config}
-                />
-                <ContextsCard engine={engine} overview={overview} />
-              </div>
-            </div>
-          </>
-        ) : null}
+      {/* One column, in one order on every part: what the installation chose, what it is
+          doing, and last what can be set — each setting under the reading it governs. */}
+      {active.key === "general" ? (
+        <>
+          <EngineChoice config={config} />
+          <QueueSection />
+          <TunnelCard tunnel={engine.tunnel} available={engine.available} host={engine.host} />
+          <SettingsPanel
+            titleKey="eng.cfg.tunnel"
+            noteKey="eng.cfg.tunnelNote"
+            settings={config.tunnel}
+            config={config}
+          />
+          <ContextsCard engine={engine} overview={overview} />
+        </>
+      ) : null}
 
-        {/* Inside these two the columns encode a DISTINCTION and not a width: the left one
-            MEASURES and the right one SETS, so each setting sits beside what it governs. */}
-        {active === "local" ? (
-          <div className="grid items-start gap-4 *:min-w-0 lg:grid-cols-[3fr_2fr]">
-            <div className="space-y-4">
-              <ResidencyCard engine={engine} />
-              <ModelsCard engine={engine} />
-            </div>
-            <SettingsPanel
-              titleKey="eng.cfg.local"
-              noteKey="eng.cfg.localNote"
-              settings={config.local}
-              config={config}
-            />
-          </div>
-        ) : null}
+      {active.key === "local" ? (
+        <>
+          <ResidencyCard engine={engine} />
+          <ModelsCard engine={engine} />
+          <SettingsPanel
+            titleKey="eng.cfg.local"
+            noteKey="eng.cfg.localNote"
+            settings={config.local}
+            config={config}
+          />
+        </>
+      ) : null}
 
-        {active === "remote" ? (
-          <div className="grid items-start gap-4 *:min-w-0 lg:grid-cols-[3fr_2fr]">
-            {remote ? (
-              <CerebrasCard cerebras={engine.cerebras!} />
-            ) : (
-              <p className="border border-dashed border-border p-4 text-small text-muted-foreground">
-                {t("eng.remote.notYet")}
-              </p>
-            )}
-            <SettingsPanel
-              titleKey="eng.cfg.cerebras"
-              noteKey="eng.cfg.cerebrasNote"
-              settings={config.remote}
-              config={config}
-            />
-          </div>
-        ) : null}
-      </div>
+      {active.key === "remote" ? (
+        <>
+          {remote ? (
+            <CerebrasCard cerebras={engine.cerebras!} />
+          ) : (
+            <p className="text-small text-muted-foreground">{t("eng.remote.notYet")}</p>
+          )}
+          <SettingsPanel
+            titleKey="eng.cfg.cerebras"
+            noteKey="eng.cfg.cerebrasNote"
+            settings={config.remote}
+            config={config}
+          />
+        </>
+      ) : null}
 
       <EngineSaveBar config={config} />
-    </div>
+    </Sections>
   );
 }
 
@@ -476,9 +514,9 @@ function IdleClock({ engine }: { engine: AdminEngine }) {
 function Residents({ running }: { running: RunningModel[] }) {
   const { t, language } = useT();
   return (
-    <ul className="divide-y divide-border border border-border text-small">
+    <ul className="divide-y divide-border text-small">
       {byShare(running).map((model, index) => (
-        <li key={model.model} className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+        <li key={model.model} className="flex flex-wrap items-center gap-2 py-2">
           <span
             className={cn("size-2.5 shrink-0", SHARE_TINT[Math.min(index, SHARE_TINT.length - 1)])}
             aria-hidden="true"
@@ -563,7 +601,7 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
         <FormError error={remove.error} />
 
         {onDisk.length > 0 ? (
-          <div className="overflow-hidden border border-border">
+          <div className="-mx-3">
             <Table minWidth="32rem">
               <THead>
                 <TR>
@@ -645,9 +683,9 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
       </CardHeader>
       <CardContent className="space-y-3">
         {engine.contexts.length > 0 ? (
-          <ul className="divide-y divide-border rounded-md border border-border text-small">
+          <ul className="divide-y divide-border text-small">
             {engine.contexts.map((slug) => (
-              <li key={slug} className="flex items-center justify-between gap-2 px-2 py-1.5">
+              <li key={slug} className="flex items-center justify-between gap-2 py-2">
                 <span>
                   {names.get(slug) ?? slug}
                   <span className="ml-2 font-mono text-micro text-muted-foreground">{slug}</span>
@@ -761,7 +799,7 @@ function QueueSection() {
         {jobs.isLoading ? (
           <Skeleton className="h-16" />
         ) : empty ? null : (
-          <div className="overflow-hidden border border-border">
+          <div className="-mx-3">
             <Table minWidth="36rem">
               <THead>
                 <TR>

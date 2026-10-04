@@ -41,7 +41,7 @@ export function CommissionStrip({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border border-border bg-muted px-3.5 py-2",
+        "rounded-lg flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border border-border bg-muted px-3.5 py-2",
         className,
       )}
     >

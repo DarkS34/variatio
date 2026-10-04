@@ -131,7 +131,7 @@ export function TokenStream({
             <Button
               size="sm"
               variant="secondary"
-              className="absolute bottom-2 right-2 shadow"
+              className="absolute bottom-2 right-2"
               onClick={() => answerPane.setPinned(true)}
             >
               <CornerDownLeft />

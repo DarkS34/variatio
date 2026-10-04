@@ -95,6 +95,13 @@ export function formatValue(value: unknown, t: Translate["t"]): string {
 }
 
 
+/**
+ * A list of settings: rows parted by a rule, none in a box of its own (`.rows`, in
+ * `index.css`). Every list of the panel is drawn this way inside its block, so a setting, a
+ * model on disk and a waiting job read as rows of the same kind.
+ */
+export const SETTING_LIST = "rows";
+
 export function GroupCard({
   title,
   settings,
@@ -128,7 +135,7 @@ export function GroupCard({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
       ) : null}
-      <CardContent className={cn("space-y-3", !title && "pt-4")}>
+      <CardContent className={cn(SETTING_LIST, !title && "pt-5")}>
         {settings.map((setting) => (
           <SettingRow
             key={setting.key}
@@ -421,7 +428,7 @@ export function GenerationModelsField({
             <li
               key={model}
               className={cn(
-                "flex flex-wrap items-center gap-x-2 gap-y-1 border p-2",
+                "rounded-lg flex flex-wrap items-center gap-x-2 gap-y-1 border p-2",
                 chosen ? "border-primary bg-primary/5" : "border-border",
               )}
             >
@@ -571,7 +578,7 @@ export function FixedEffortField({
             return (
               <li
                 key={model}
-                className="flex flex-wrap items-center gap-x-2 gap-y-1 border border-border p-2"
+                className="rounded-lg flex flex-wrap items-center gap-x-2 gap-y-1 border border-border p-2"
               >
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-baseline gap-x-2">
@@ -660,7 +667,7 @@ export function SettingRow({
   const resettable = canReset(setting);
 
   return (
-    <div className="space-y-2 rounded-md border border-border p-3">
+    <div className="space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {setting.secret ? (
@@ -911,7 +918,7 @@ export function useConfigDraft(stored: Map<string, unknown>) {
       setDraft({});
       client.invalidateQueries({ queryKey: ["admin", "config"] });
       // The engine's reading too: which models it routes and whether it has a remote half
-      // are settings, and the board would otherwise say the old thing until its next poll.
+      // are settings, and the list would otherwise say the old thing until its next poll.
       client.invalidateQueries({ queryKey: ["admin", "engine"] });
       client.invalidateQueries({ queryKey: ["health"] });
       toast({ title: t("cfg.saved") });

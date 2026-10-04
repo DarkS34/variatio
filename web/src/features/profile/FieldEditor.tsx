@@ -225,7 +225,7 @@ function Segmented({
           className={cn(
             "flex-1 rounded-md px-3 py-1 text-small font-medium transition-colors",
             value === option.value
-              ? "bg-background text-foreground shadow-sm"
+              ? "bg-sunk text-foreground"
               : "text-muted-foreground hover:text-foreground",
             disabled && "cursor-not-allowed hover:text-muted-foreground",
           )}
@@ -350,9 +350,8 @@ export function FieldEditor({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border bg-card transition-colors",
+        "overflow-hidden rounded-inner border bg-card transition-colors",
         isPrimary ? "border-primary/40" : "border-border",
-        open && "shadow-sm",
       )}
     >
       <div className="flex items-center gap-2 pr-2">

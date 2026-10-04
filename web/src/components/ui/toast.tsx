@@ -34,10 +34,12 @@ export function useToast(): Push {
   return push;
 }
 
+// A notice floats, so its edge is its shadow; the tone is a tint of the popover, never a
+// border beside the shadow.
 const TONE: Record<Tone, string> = {
-  settled: "border-[color-mix(in_oklch,var(--settled)_45%,transparent)]",
-  attention: "border-[color-mix(in_oklch,var(--attention)_45%,transparent)]",
-  danger: "border-destructive/50",
+  settled: "bg-[color-mix(in_oklab,var(--settled)_10%,var(--popover))]",
+  attention: "bg-[color-mix(in_oklab,var(--attention)_10%,var(--popover))]",
+  danger: "bg-[color-mix(in_oklab,var(--destructive)_10%,var(--popover))]",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -93,7 +95,7 @@ function ToastCard({ item, onClose }: { item: Toast; onClose: () => void }) {
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-start gap-3 rounded-lg border bg-card p-3 shadow-overlay animate-fade-in",
+        "pointer-events-auto flex items-start gap-3 rounded-xl p-4 text-popover-foreground shadow-overlay animate-fade-in",
         TONE[item.tone],
       )}
     >

@@ -50,7 +50,7 @@ export function Dialog({
           // middle: with 16 px of margin either side there is nothing to float over, and
           // the bottom is where the thumb already is. `max-h` leaves the top of the screen
           // visible so it still reads as something laid ON the page.
-          "relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-lg border border-border bg-card shadow-overlay animate-fade-in sm:max-h-[85vh] sm:max-w-2xl sm:rounded-lg",
+          "relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-block bg-popover text-popover-foreground shadow-overlay animate-fade-in sm:max-h-[85vh] sm:max-w-2xl sm:rounded-block",
           className,
         )}
       >

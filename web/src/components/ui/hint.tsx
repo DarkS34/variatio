@@ -128,7 +128,7 @@ export function InfoHint({
         ? createPortal(
             <div
               role="tooltip"
-              className="animate-fade-in pointer-events-none fixed z-50 rounded-md border border-border bg-popover p-2.5 text-small font-normal leading-relaxed text-muted-foreground shadow-raised"
+              className="animate-fade-in pointer-events-none fixed z-50 rounded-lg bg-popover p-3 text-small font-normal leading-relaxed text-muted-foreground shadow-overlay"
               style={{
                 width: WIDTH,
                 left,

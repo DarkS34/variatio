@@ -3,10 +3,12 @@ import {
   KeyRound,
   LockOpen,
   LogOut,
+  MailPlus,
   ShieldCheck,
   ShieldOff,
   Trash2,
   UserCheck,
+  Users,
   UserX,
 } from "lucide-react";
 import { useState } from "react";
@@ -22,12 +24,14 @@ import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { PROFILE_LABEL_KEYS, PROFILES, profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
+import { inviteState } from "@/lib/invites";
 import type { AdminAccount, AdminOverview, EvaluatorProfile, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
 import {
   useAccountActions,
+  useAdminInvites,
   useDeleteAccount,
   useMembershipActions,
   useSetAccountEnabled,
@@ -35,6 +39,7 @@ import {
 
 import { CopyLink } from "./CopyLink";
 import { InvitesSection } from "./InvitesSection";
+import { SectionHeader, Sections } from "./Sections";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 
@@ -44,8 +49,8 @@ const ROLES: Role[] = ["viewer", "editor", "owner"];
  * It used to be two: an owner's "Personas e invitaciones" dialog, which handed out access
  * to one workspace, and this table, which listed the same accounts and could only switch
  * them off. Two places to answer one question is how the two answers drift apart, so the
- * dialog is gone and this is the whole of it — issuing invitations, moving people between
- * workspaces and disabling an account, in that order, which is the order they happen in.
+ * dialog is gone and this is the whole of it, in two sections: the accounts — moving people
+ * between workspaces, disabling one — and the invitations that bring a new one in.
  *
  * Access is per workspace and this panel crosses them all, so a row's memberships open
  * where the row is rather than obliging the administrator to change workspace to grant one.
@@ -64,6 +69,12 @@ export function AccountsTab({
   const session = useSession();
   const toast = useToast();
   const [open, setOpen] = useState<number | null>(null);
+  const [section, setSection] = useState("accounts");
+  const invites = useAdminInvites();
+  const now = Date.now();
+  const waiting = invites.data
+    ? invites.data.invites.filter((row) => inviteState(row, now) === "pending").length
+    : null;
 
   // Irreversible, so it is spelled out before it happens — and what it spells out is the
   // half people get wrong: the account goes, the material it produced does not.
@@ -89,47 +100,66 @@ export function AccountsTab({
   };
 
   return (
-    <div className="space-y-5">
-      <InvitesSection overview={overview} />
+    <Sections
+      label={t("acc.sections")}
+      value={section}
+      onChange={setSection}
+      items={[
+        {
+          key: "accounts",
+          label: t("admin.tab.accounts"),
+          mark: <Users className="size-4" />,
+          detail: plural("acc.count", overview.accounts.length),
+        },
+        {
+          key: "invites",
+          label: t("acc.invite"),
+          mark: <MailPlus className="size-4" />,
+          detail:
+            waiting === null ? undefined : plural("acc.invite.pendingHeading", waiting),
+        },
+      ]}
+    >
+      {section === "invites" ? <InvitesSection overview={overview} /> : null}
 
-      <section className="space-y-2">
-        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("acc.heading", { n: overview.accounts.length })}
-        </h2>
-        <div className="overflow-hidden rounded-lg border border-border">
-          <Table minWidth="56rem">
-            <THead>
-              <TR>
-                <TH>{t("acc.col.account")}</TH>
-                <TH>{t("acc.col.access")}</TH>
-                <TH align="num">{t("acc.col.variants")}</TH>
-                <TH align="num">{t("acc.col.comparisons")}</TH>
-                <TH align="num">{t("acc.col.sessions")}</TH>
-                <TH>{t("acc.col.created")}</TH>
-                <TH />
-              </TR>
-            </THead>
-            <TBody>
-              {overview.accounts.map((account) => (
-                <AccountRows
-                  key={account.id}
-                  account={account}
-                  overview={overview}
-                  self={account.id === session.data?.user.id}
-                  expanded={open === account.id}
-                  onToggle={() => setOpen(open === account.id ? null : account.id)}
-                  onInspect={() => onInspect(account.id)}
-                  onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
-                  onDelete={() => confirmDelete(account)}
-                  busy={toggle.isPending || remove.isPending}
-                />
-              ))}
-            </TBody>
-          </Table>
-        </div>
-        <FormError error={remove.error} />
-      </section>
-    </div>
+      {section === "accounts" ? (
+        <>
+          <SectionHeader title={t("admin.tab.accounts")} description={t("acc.note")} />
+          <div className="surface overflow-hidden p-2">
+            <Table minWidth="56rem">
+              <THead>
+                <TR>
+                  <TH>{t("acc.col.account")}</TH>
+                  <TH>{t("acc.col.access")}</TH>
+                  <TH align="num">{t("acc.col.variants")}</TH>
+                  <TH align="num">{t("acc.col.comparisons")}</TH>
+                  <TH align="num">{t("acc.col.sessions")}</TH>
+                  <TH>{t("acc.col.created")}</TH>
+                  <TH />
+                </TR>
+              </THead>
+              <TBody>
+                {overview.accounts.map((account) => (
+                  <AccountRows
+                    key={account.id}
+                    account={account}
+                    overview={overview}
+                    self={account.id === session.data?.user.id}
+                    expanded={open === account.id}
+                    onToggle={() => setOpen(open === account.id ? null : account.id)}
+                    onInspect={() => onInspect(account.id)}
+                    onEnabled={(enabled) => toggle.mutate({ id: account.id, enabled })}
+                    onDelete={() => confirmDelete(account)}
+                    busy={toggle.isPending || remove.isPending}
+                  />
+                ))}
+              </TBody>
+            </Table>
+          </div>
+          <FormError error={remove.error} />
+        </>
+      ) : null}
+    </Sections>
   );
 }
 

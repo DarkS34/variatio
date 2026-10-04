@@ -35,14 +35,14 @@ export function Table({
 export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={cn("sticky top-0 z-10 bg-card [&_th]:border-b [&_th]:border-border", className)}
+      className={cn("sticky top-0 z-10 bg-card rule-inset-head", className)}
       {...props}
     />
   );
 }
 
 export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn("[&_tr]:border-b [&_tr]:border-border/60", className)} {...props} />;
+  return <tbody className={cn("[&_tr]:rule-inset-b [&_tr:last-child]:bg-none", className)} {...props} />;
 }
 
 export function TR({

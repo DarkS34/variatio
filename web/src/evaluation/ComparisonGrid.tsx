@@ -75,8 +75,7 @@ function ProposalCard({
   return (
     <article
       className={cn(
-        "flex h-full flex-col border bg-card shadow-sm transition-colors",
-        answered ? "border-input" : "border-border",
+        "surface flex h-full flex-col overflow-hidden",
       )}
     >
       <header className="flex items-center gap-2.5 border-b border-border px-3 py-2.5">
@@ -148,9 +147,9 @@ function ProposalCard({
                 option: option.label,
               })}
               className={cn(
-                "h-8 flex-1 border text-small font-medium transition-colors disabled:opacity-60",
+                "rounded-md h-8 flex-1 border text-small font-medium transition-colors disabled:opacity-60",
                 triage === option.value
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "border-ink bg-ink text-ink-foreground"
                   : answered
                     ? "border-input bg-card hover:bg-accent/60"
                     : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
@@ -207,7 +206,7 @@ export function ComparisonGrid({
     <div className="space-y-4">
       {/* THE QUESTION, ASKED ONCE. The answers are per card, but the wording belongs to
           the task rather than to the card, so one copy per card would only be noise. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border border-border border-l-[3px] border-l-primary bg-card px-4 py-3 shadow-sm">
+      <div className="surface flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-4">
         <p className="text-body">
           <strong>
             {t("grid.forEach", { question: instruments.triage.question.toLowerCase() })}
@@ -240,7 +239,7 @@ export function ComparisonGrid({
           the shape of the task is visible, and inert until both are answered so the order
           is not a rule anybody has to be told. Forcing a pick between two bad ones turns
           noise into signal. */}
-      <div className="sticky bottom-0 z-10 space-y-3 border border-border bg-card p-3.5 shadow-overlay">
+      <div className="sticky bottom-3 z-10 space-y-3 rounded-inner bg-popover p-4 shadow-overlay">
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-heading font-semibold">
             {t("grid.whichWouldYouUse")}

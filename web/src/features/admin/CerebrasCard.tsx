@@ -80,7 +80,7 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
   const flying = cerebras.inflight;
   if (!flying) {
     return (
-      <div className="flex items-center gap-3 border border-border bg-muted px-3 py-2.5 text-small text-muted-foreground">
+      <div className="rounded-lg flex items-center gap-3 border border-border bg-muted px-3 py-2.5 text-small text-muted-foreground">
         <span className="size-2 rounded-full bg-muted-foreground/40" />
         {t("cere.noCalls")}
       </div>
@@ -95,14 +95,14 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
     <div
       className={
         waiting
-          ? "flex flex-wrap items-center gap-3 border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] px-3 py-2.5"
-          : "flex flex-wrap items-center gap-3 border border-border bg-muted px-3 py-2.5"
+          ? "rounded-lg flex flex-wrap items-center gap-3 border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] px-3 py-2.5"
+          : "rounded-lg flex flex-wrap items-center gap-3 border border-border bg-muted px-3 py-2.5"
       }
     >
       <span
         className={
           waiting
-            ? "size-2 shrink-0 animate-pulse rounded-full bg-attention"
+            ? "size-2 shrink-0 animate-pulse rounded-full bg-attention-fill"
             : "size-2 shrink-0 animate-pulse rounded-full bg-primary"
         }
       />
@@ -270,7 +270,7 @@ function Breakdown({ entry }: { entry: CerebrasModel }) {
           <p className="text-small text-muted-foreground">{t("cere.byPhase.sub")}</p>
         </div>
         <a
-          className="inline-flex items-center gap-1.5 border border-input px-3 py-1.5 text-small font-medium hover:bg-muted"
+          className="rounded-md inline-flex items-center gap-1.5 border border-input px-3 py-1.5 text-small font-medium hover:bg-muted"
           href="/api/admin/engine/cerebras/export.csv"
           download
         >

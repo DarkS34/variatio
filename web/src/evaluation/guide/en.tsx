@@ -100,7 +100,7 @@ function Evaluate() {
             </>,
             <>
               The two cards are boxes of the same height, short or long the proposal, and each
-              one scrolls inside. The blue "{t("reveal.read")}" button in its header opens it in
+              one scrolls inside. The coral "{t("reveal.read")}" button in its header opens it in
               full, at reading size and with the question at the foot; ← and → move between
               them.
             </>,

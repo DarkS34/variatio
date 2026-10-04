@@ -120,10 +120,10 @@ export function AcceptInvite({ token }: { token: string }) {
                 }}
                 aria-pressed={language === option}
                 className={cn(
-                  "inline-flex h-9 flex-1 items-center justify-center gap-2 border",
+                  "rounded-md inline-flex h-9 flex-1 items-center justify-center gap-2 border",
                   "text-small font-medium transition-colors",
                   language === option
-                    ? "border-primary bg-primary text-primary-foreground"
+                    ? "border-ink bg-ink text-ink-foreground"
                     : "border-border bg-card hover:bg-accent/60",
                 )}
               >
@@ -178,9 +178,9 @@ export function AcceptInvite({ token }: { token: string }) {
                   onClick={() => setProfile(option)}
                   aria-pressed={profile === option}
                   className={cn(
-                    "h-9 flex-1 border text-small font-medium transition-colors",
+                    "rounded-md h-9 flex-1 border text-small font-medium transition-colors",
                     profile === option
-                      ? "border-primary bg-primary text-primary-foreground"
+                      ? "border-ink bg-ink text-ink-foreground"
                       : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
                   )}
                 >

@@ -143,8 +143,8 @@ export function ConversationView({
   return (
     // `min-w-0`: a grid item is as wide as its widest content unless told otherwise, and an
     // unscaled concept map on a phone is wider than the phone.
-    <section className={`flex min-w-0 flex-col rounded-lg border border-border bg-card ${PANEL_HEIGHT}`}>
-      <div ref={scroller} className="thin-scroll min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:px-6">
+    <section className={`surface flex min-w-0 flex-col overflow-hidden ${PANEL_HEIGHT}`}>
+      <div ref={scroller} className="thin-scroll min-h-0 flex-1 space-y-6 overflow-y-auto p-5 sm:px-6">
         {id === null ? (
           <Welcome
             fromExercise={Boolean(draft?.generationId)}
@@ -176,7 +176,7 @@ export function ConversationView({
         ) : null}
       </div>
 
-      <div className="space-y-2 border-t border-border p-3">
+      <div className="space-y-2 px-5 pb-5 pt-3">
         {error ? <SendError error={error} /> : null}
         <Composer
           value={message}
@@ -302,7 +302,7 @@ function TurnBubble({ turn, onRead }: { turn: Turn; onRead: (place: Place) => vo
           <span className="font-semibold text-foreground">{t("tutor.you")}</span>
           {turn.concept ? ` · ${t("tutor.topic.about", { name: turn.concept })}` : ""} · {when(turn.at)}
         </p>
-        <div className="max-w-[85%] whitespace-pre-wrap break-words bg-primary px-3.5 py-2.5 text-body text-primary-foreground">
+        <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-[18px_18px_6px_18px] bg-ink px-4.5 py-3.5 text-body text-ink-foreground shadow-drop">
           {turn.text}
         </div>
       </div>

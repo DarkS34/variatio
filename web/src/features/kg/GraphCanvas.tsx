@@ -783,7 +783,8 @@ export function GraphCanvas({
         if (event.key === "Escape") onSelect(null);
       }}
       className={cn(
-        "relative h-full w-full overflow-hidden rounded-lg border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        // The tray of the graph: carved into its block, with no border beside the relief.
+        "well relative h-full w-full overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
     >
@@ -875,7 +876,7 @@ export function GraphCanvas({
       />
 
       {placing ? (
-        <span className="pointer-events-none absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1.5 rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur">
+        <span className="pointer-events-none absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1.5 rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground backdrop-blur">
           <Spinner className="size-3" />
           {t("canvas.placing", { concepts: plural("canvas.conceptCount", graph.nodes.length) })}
         </span>
@@ -886,7 +887,7 @@ export function GraphCanvas({
           move all of it. `hidden` takes the whole subtree out, tab order included. */}
       <div className={compact ? "hidden" : "contents"}>
 
-      <div className="pointer-events-auto absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border bg-card/90 p-0.5 shadow-sm backdrop-blur">
+      <div className="pointer-events-auto absolute left-2 top-2 flex items-center gap-1 rounded-md border border-border bg-card/90 p-0.5 backdrop-blur">
         {(
           [
             {
@@ -916,7 +917,7 @@ export function GraphCanvas({
             className={cn(
               "flex items-center gap-1.5 rounded px-2 py-1 text-small font-medium transition-colors disabled:opacity-40",
               mode === option.value
-                ? "bg-primary text-primary-foreground"
+                ? "bg-ink text-ink-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
@@ -973,11 +974,11 @@ export function GraphCanvas({
         <button
           type="button"
           onClick={() => setArrows(!arrows)}
-          className="pointer-events-auto w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground"
+          className="pointer-events-auto w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
         >
           {arrows ? t("canvas.hideArrows") : t("canvas.showArrows")}
         </button>
-        <span className="w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur">
+        <span className="w-fit rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground backdrop-blur">
           {plural("canvas.conceptCount", graph.nodes.length)} ·{" "}
           {plural("canvas.relations", graph.links.length)}
           {graph.meta.isolated > 0 ? plural("canvas.isolatedCount", graph.meta.isolated) : ""}
@@ -985,7 +986,7 @@ export function GraphCanvas({
 
         {/* Without a key, three colours on a canvas are three colours. */}
         {mode === "curriculum" && curriculumIndices ? (
-          <span className="flex w-fit items-center gap-3 rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground shadow-sm backdrop-blur">
+          <span className="flex w-fit items-center gap-3 rounded-md border border-border bg-card/90 px-2 py-1 text-[12px] text-muted-foreground backdrop-blur">
             {(
               [
                 [t("canvas.legend.covered"), "var(--settled)", curriculumIndices.size],
@@ -1009,7 +1010,7 @@ export function GraphCanvas({
       {/* A graph with few prerequisites piles almost everything on level 0. That is a fact about
           the graph, not a failure of the view: saying so keeps it from looking like the latter. */}
       {mode === "curriculum" && model.levelCount < 3 ? (
-        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[12px] shadow-sm">
+        <p className="pointer-events-none absolute left-1/2 top-12 max-w-md -translate-x-1/2 rounded-md border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_12%,var(--card))] px-3 py-1.5 text-center text-[12px]">
           {t("canvas.flatWarning", {
             edges: plural("canvas.relations", model.curriculumEdges),
             concepts: plural("canvas.conceptCount", graph.nodes.length),
@@ -1021,7 +1022,7 @@ export function GraphCanvas({
 
       {hoveredNode ? (
         <div
-          className="pointer-events-none absolute z-10 max-w-64 rounded-md border border-border bg-popover/95 px-2 py-1 text-small shadow-lg backdrop-blur"
+          className="pointer-events-none absolute z-10 max-w-64 rounded-lg bg-popover/95 px-2.5 py-1.5 text-small shadow-overlay backdrop-blur"
           style={{
             left: Math.min(tip.x + 14, Math.max(0, size.current.width - 260)),
             top: Math.max(4, tip.y - 46),
@@ -1043,7 +1044,7 @@ export function GraphCanvas({
         </div>
       ) : hoveredGroup ? (
         <div
-          className="pointer-events-none absolute z-10 max-w-64 rounded-md border border-border bg-popover/95 px-2 py-1 text-small shadow-lg backdrop-blur"
+          className="pointer-events-none absolute z-10 max-w-64 rounded-lg bg-popover/95 px-2.5 py-1.5 text-small shadow-overlay backdrop-blur"
           style={{
             left: Math.min(tip.x + 14, Math.max(0, size.current.width - 260)),
             top: Math.max(4, tip.y - 46),

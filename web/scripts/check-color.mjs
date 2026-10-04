@@ -110,6 +110,15 @@ const darkSrc = block(/:root\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
 const light = tokensIn(lightSrc);
 const dark = { ...light, ...tokensIn(darkSrc) };
 
+// The OKLCH lightness each token is written at, per mode, for the rule below.
+function lightnessIn(text) {
+  const out = {};
+  for (const [, name, L] of text.matchAll(/(--[\w-]+)\s*:\s*oklch\(\s*([\d.]+)\s/g)) out[name] = Number(L);
+  return out;
+}
+const lightL = lightnessIn(lightSrc);
+const darkL = { ...lightL, ...lightnessIn(darkSrc) };
+
 // ---------------------------------------------------------------- the claims
 
 const TEXT = [
@@ -164,6 +173,11 @@ const TINTED = [
 // Derived from the token names rather than listed, so a new pair is covered by existing.
 const TEXT_MIN = 4.5;
 const DE_MIN = 15;
+// NO WHITE ANYWHERE (user's rule, 2026-10-04): no token, the light half of a shadow included,
+// is lighter than this, in either mode. 0.93 is the lightest the Atlas material spends — its
+// popover and its pale sea-glass — and above it a tint stops reading as a colour and starts
+// reading as white.
+const WHITE_MAX = 0.93;
 
 let failures = 0;
 const fail = (line) => { failures++; console.log(`  FALLA  ${line}`); };
@@ -171,6 +185,12 @@ const ok = (line) => console.log(`  ok     ${line}`);
 
 for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
   console.log(`\n== ${mode} ==`);
+
+  const lightness = mode === "claro" ? lightL : darkL;
+  const whites = Object.entries(lightness).filter(([, L]) => L > WHITE_MAX);
+  whites.length
+    ? whites.forEach(([name, L]) => fail(`${name} L ${L} > ${WHITE_MAX}: blanco`))
+    : ok(`ningún token por encima de L ${WHITE_MAX} (${Object.keys(lightness).length} medidos)`);
 
   for (const name of TEXT) {
     if (!tokens[name]) { fail(`${name} no existe`); continue; }

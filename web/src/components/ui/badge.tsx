@@ -19,16 +19,17 @@ const badgeVariants = cva(
         // oversight: every other variant reports a STATE in its own hue, where this one
         // separates ONE badge from its siblings — the primary concept of an exercise among
         // the concepts it merely uses. A tint cannot do that. Measured on the bank's own
-        // rows, `default` against `secondary` is **1.03:1** of ground and 1.10:1 of text,
-        // which is the same badge twice; filled it is **15.88:1**, and the text on it
-        // 17.34:1. It is a figure/ground inversion and not a hue, so it survives greyscale
-        // and every colour vision, and the pair is `--primary`/`--primary-foreground`,
-        // which `check:color` already verifies in both themes. It is the same drawing as
+        // rows, two tints of the same ink are the same badge twice; filled, the label reads at
+        // 11.3:1 in light and 6.4:1 in dark. It is a figure/ground inversion and not a hue, so
+        // it survives greyscale and every colour vision, and the pair is the ink as a fill,
+        // `--ink`/`--ink-foreground`, which `check:color` verifies in both themes (the text
+        // ink in dark is a pale sea, and filled with it a badge was a white chip). Same as
         // `ConceptChip`'s `primary` tone, deliberately: the primary concept looks the same
         // wherever it is read, and which of the two components draws it is decided by the
         // room available and never by the meaning.
-        primary: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
+        primary: "border-transparent bg-ink text-ink-foreground",
+        // A hairline pill: on the clay a `--secondary` fill is the clay itself.
+        secondary: "border-border text-secondary-foreground",
         outline: "border-border text-muted-foreground",
         settled:
           "border-transparent bg-[color-mix(in_oklch,var(--settled)_8%,transparent)] text-settled",

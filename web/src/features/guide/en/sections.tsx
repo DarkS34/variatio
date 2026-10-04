@@ -65,7 +65,7 @@ function Pill({
     <span
       className={cn(
         "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-small font-medium",
-        tone ? DOOR_TONE[tone].face : "border border-border",
+        tone ? DOOR_TONE[tone].face : "text-foreground",
       )}
     >
       <Icon className="size-4" />
@@ -95,15 +95,12 @@ function Start() {
         {/* It is the bar above, drawn here: the steps come from `STEPS` and the doors from
             `usesFor`, so this figure cannot promise an order the navigation does not
             have. */}
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4 sm:p-6">
-          <div className="space-y-1.5">
-            <p className="font-condensed text-micro uppercase text-muted-foreground">
-              {t("nav.phase.build")}
-            </p>
+        <div className="flex flex-wrap items-center gap-3 rounded-inner border border-border p-4 sm:p-6">
+          <div>
             <div className="flex flex-wrap items-center gap-3">
               {STEPS.map((step, index) => (
                 <div key={step.path} className="flex items-center gap-2">
-                  <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center bg-primary px-1 font-condensed text-small font-semibold text-primary-foreground">
+                  <span className="nums flex h-6 min-w-6 shrink-0 items-center justify-center rounded-sm bg-ink px-1 font-condensed text-small font-semibold text-ink-foreground">
                     {stepNumber(index)}
                   </span>
                   <span className="text-body font-medium">{t(step.labelKey)}</span>
@@ -112,10 +109,7 @@ function Start() {
             </div>
           </div>
           <span aria-hidden className="mx-1 h-6 w-px bg-border" />
-          <div className="space-y-1.5">
-            <p className="font-condensed text-micro uppercase text-muted-foreground">
-              {t("nav.phase.test")}
-            </p>
+          <div>
             <div className="flex flex-wrap items-center gap-2">
               {doors.map((door) => (
                 <Pill
@@ -131,7 +125,7 @@ function Start() {
           </div>
         </div>
         <Paragraph>
-          It is exactly the bar above, and it is two named phases. The{" "}
+          It is exactly the bar above, and it holds two phases, set apart by a rule. The{" "}
           <strong>{t("nav.phase.build").toLowerCase()}</strong> is four steps numbered{" "}
           <strong>{stepNumber(0)}</strong> to <strong>{stepNumber(3)}</strong> because they are
           one single job, <em>preparing the subject</em>, and they are done in that order: each
@@ -150,8 +144,8 @@ function Start() {
           {t("nav.state.later").toLowerCase()}" and they answer no click. "{t("nav.create")}"
           is always there. "{t("nav.tutor")}" and "{t("nav.compare")}" appear only if whoever
           runs the installation has opened them to your account, so the bar holds one, two or
-          three doors. Those two carry a colour of their own: "{t("nav.tutor")}" a muted blue,
-          which is not the bright blue that needs you, and "{t("nav.compare")}" a green. The "
+          three doors. Those two carry a colour of their own: "{t("nav.tutor")}" a blue and
+          "{t("nav.compare")}" a green. The "
           {t("tutor.fromExercise")}" button on a generated exercise carries the same blue as
           the tutor's door. "{t("nav.compare")}" produces no material for your subject; it is
           there to measure the system.
@@ -526,7 +520,7 @@ function Raw() {
           was about to redo in silence.
         </Paragraph>
         <Paragraph>
-          Once an origin is up to date, its whole card takes the blue of its mark and the tick
+          Once an origin is up to date, its card is lit with the coral of its mark and the tick
           becomes a filled circle. And once both are, the same block that closes every step
           appears at the foot of the screen: "{t("stage.continue", { n: stepNumber(1) })}".
         </Paragraph>
@@ -1623,7 +1617,7 @@ function Account() {
           {
             key: "workspaces",
             head: t("tabs.workspaces"),
-            body: "Which subjects you are in and with what role, and where to enter another from. Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
+            body: "Which subjects you are in and with what role, and where to enter another from. Only your own: an administrator does not see here the subjects they are not a member of either, which are read from \"Administration\". Access is granted by whoever administers: it is not asked for here. The one thing you can do to them is delete one of your own — one you own — and doing so tells you what goes and what stays. The name is not changed from here: it is given at creation and only an administrator changes it.",
           },
           {
             key: "ejercicios",
@@ -1724,8 +1718,10 @@ function Account() {
       <Block title="Closing the installation while it is being worked on">
         <Badge variant="secondary">administrators only</Badge>
         <Paragraph>
-          At the very top of "{t("admin.title")}", above the tabs rather than inside any of them,
-          there is a <strong>"{t("maint.title")}"</strong> switch. Closed, every other account
+          In the header of "{t("admin.title")}", beside the title rather than inside any tab,
+          there is a <strong>"{t("maint.title")}"</strong> switch. While the installation is
+          open it is one line; closed, it takes a red block across the page, with the notice
+          to edit. Closed, every other account
           sees a notice screen instead of the application — with whatever text is written there —
           and the API refuses their requests; whoever administers still gets in, which is what
           makes it possible to open it again.
@@ -1753,8 +1749,16 @@ function Admin() {
           sees it.
         </p>
         <p>
-          Six tabs, and this section covers all of them. "{t("admin.tab.evaluation")}" gathers what
-          people have answered, in two blocks: the blind comparisons of the testing phase, with
+          Six tabs, all read the same way: on the left, the <strong>list of its sections</strong>,
+          each with its state in one line — how many accounts there are, how a part of the
+          engine is doing, who can use a function; on the right, the section open. A section
+          with unsaved changes counts them on its row. "{t("admin.tab.workspaces")}" has one
+          section and no list.
+        </p>
+        <p>
+          This section covers all six. In "{t("admin.tab.evaluation")}", the "
+          {t("feature.section.analytics")}" section gathers what people have answered, in two
+          blocks: the blind comparisons of the testing phase, with
           their tallies and their contrasts, and the forms that close each step of the
           construction phase, summarised step by step. Above both sits one filter — an account,
           a kind of account (teachers or students) and a subject — that narrows both blocks at
@@ -1774,6 +1778,8 @@ function Admin() {
           that answer.
         </Paragraph>
         <Paragraph>
+          The tab has two sections: "{t("admin.tab.accounts")}", the table of who exists, and
+          "{t("acc.invite")}", the links nobody has used yet.
           Each invitation is created with «{t("acc.invite.open")}», which opens a window with
           the terms you choose: an <strong>alias</strong> only
           you see — whoever opens the link sees the subject, the permission and the date, never
@@ -1812,7 +1818,7 @@ function Admin() {
         />
         <Paragraph>
           Access is granted and revoked afterwards, account by account and subject by subject,
-          from this same table; there are three roles:
+          from the table of "{t("admin.tab.accounts")}"; there are three roles:
         </Paragraph>
         <Rows
           items={[
@@ -1877,9 +1883,11 @@ function Admin() {
       <Block title={t("admin.tab.workspaces")}>
         <Paragraph>
           Every instance of the installation with its members, its exercises and the state of its
-          chain. The exercise count opens every exercise generated in that subject, by any
-          account and with its author, to read: it is the only place anybody sees exercises
-          that are not their own. Deleting them or generating more like them is still up to
+          chain. The "View … exercises" button of each row opens every exercise generated in
+          that subject, by any account and with its author, to read: it is the only place
+          anybody sees exercises that are not their own — an administrator included, who in «
+          {t("nav.mySubjects")}» sees only their own subjects and exercises, like any account.
+          Deleting them or generating more like them is still up to
           whoever wrote them, from «{t("nav.mySubjects")}».
         </Paragraph>
         <Rows
@@ -1910,12 +1918,13 @@ function Admin() {
 
       <Block title={t("admin.tab.engine")}>
         <Paragraph>
-          At the top sits a <strong>board</strong> with one cell per part of the engine, and each
-          cell says in a word how that part is doing: the grey square asks for nothing, the black
-          one is working, the blue one needs you, the red one means calls are failing and the
-          hollow one is not there yet. Pressing a cell opens its screen, and the tab opens by
-          itself on the one that needs you, when one does. "{t("eng.half.remote")}" only appears
-          with the hybrid engine.
+          The list has one section per <strong>part of the engine</strong>, and each row says
+          in a word how that part is doing: the grey square asks for nothing, the ink one is
+          working, the coral one needs you, the red one means calls are failing and the hollow
+          one is not there yet. Pressing a row opens its section, and the tab opens by itself on
+          the one that needs you, when one does. "{t("eng.half.remote")}" only appears with the
+          hybrid engine. Every section keeps one order: first what is measured, and under it
+          what is set.
         </Paragraph>
         <Rows
           items={[
@@ -1954,7 +1963,7 @@ function Admin() {
                 <>
                   Nothing to load; what limits it is the quota. Meters per minute and per day, and
                   under them the breakdown of what was spent per phase, which downloads as CSV.
-                  Beside them, which models are sent to Cerebras — ticked from the list of the
+                  Under them, which models are sent to Cerebras — ticked from the list of the
                   ones there are, never typed — and the four ceilings, under the same names and
                   in the same order as the meters they bound, and never above the account's
                   maximum.
@@ -1964,7 +1973,7 @@ function Admin() {
           ]}
         />
         <Paragraph>
-          There is one save bar for the whole tab, and the cell of a part with pending changes
+          There is one save bar for the whole tab, and the row of a part with pending changes
           counts them, so they are not left behind when moving to another. What the panel cannot
           change — the environment fixes it, or it is edited in "config.json" — is not shown.
         </Paragraph>
@@ -1986,19 +1995,19 @@ function Admin() {
 
       <Block title={t("admin.tab.config")}>
         <Paragraph>
-          Every setting of the installation, with <strong>one tab per stage</strong>, named and
+          Every setting of the installation, with <strong>one section per stage</strong>, named and
           numbered as the bar names them: "{t("nav.step.raw")}", "{t("nav.step.profile")}", "
           {t("nav.step.graph")}", "{t("nav.step.bank")}" and "{t("nav.create")}". The settings of
           "{t("nav.compare")}" and of "{t("nav.tutor")}" are not here but in their own tabs, "
-          {t("admin.tab.evaluation")}" and "{t("admin.tab.tutor")}". Each tab holds everything its
-          stage uses, and the <strong>search box</strong> above finds a setting you only remember
+          {t("admin.tab.evaluation")}" and "{t("admin.tab.tutor")}". Each section holds everything its
+          stage uses, and the <strong>search box</strong> over the list finds a setting you only remember
           half a word of, wherever it is, those of the two functions included. When a setting's name does not tell what it controls, or
           changing it has a consequence nobody would guess, an (i) beside it says so in one
           sentence. What belongs to the engine — the inference engine, the tunnel, Cerebras — is
           no stage's and lives in "{t("admin.tab.engine")}".
         </Paragraph>
         <Paragraph>
-          Each tab opens with <strong>{t("cfg.flow").toLowerCase()}</strong>: the stage's calls
+          Each section opens with <strong>{t("cfg.flow").toLowerCase()}</strong>: the stage's calls
           to the model, top to bottom, in the order it makes them. At each stop, which model
           serves it; the circle says whether it deliberates before answering and, while it does,
           the selector beside it sets how much. The stops with no switch say so with a dashed
@@ -2039,8 +2048,11 @@ function Admin() {
         <Paragraph>
           One tab per optional function, "{t("nav.compare")}" and "{t("nav.tutor")}", each in the
           colour of its door. Both are always there, whether the function is open or closed: that
-          way it is configured before it is opened to anybody. At the top,{" "}
-          <strong>who can use it</strong>, with three options:
+          way it is configured before it is opened to anybody. Each has its sections: "
+          {t("feature.section.access")}", "{t("feature.section.analytics")}" (only in "
+          {t("admin.tab.evaluation")}") and "{t("admin.tab.config")}". "
+          {t("feature.section.access")}" decides <strong>who can use it</strong>, with three
+          options:
         </Paragraph>
         <Rows
           items={[
@@ -2069,9 +2081,9 @@ function Admin() {
           {t("admin.tab.accounts")}").
         </Paragraph>
         <Paragraph>
-          Below, in "{t("admin.tab.evaluation")}", the study's reading; and at the foot of both,
-          the function's settings, which "{t("admin.tab.config")}" does not list among its
-          stages. They are the same values and are saved with their own bar. Among the tutor's is
+          "{t("feature.section.analytics")}" is the study's reading; and "
+          {t("admin.tab.config")}", in both, holds the function's settings, which the "
+          {t("admin.tab.config")}" tab does not list among its stages. They are the same values and are saved with their own bar. Among the tutor's is
           the <strong>daily limit</strong>: how many messages each account may send it in a day.
           Empty is no limit. It is counted per account, across all its subjects. The day is
           UTC's, so the limit reopens at the same moment for everybody. Every message that
@@ -2142,7 +2154,7 @@ const problems = (
           There are three ways forward: wait, switch the engine to "{t("eng.kind.local")}", or
           raise the ceiling if it is not yet at the account's maximum. All three are done in
           Administration → Engine: the engine is chosen under "{t("eng.board.general")}" and the
-          ceilings under "{t("eng.half.remote")}", beside the meters that explain them.
+          ceilings under "{t("eng.half.remote")}", under the meters that explain them.
         </p>
         <p>
           There is a third case that is not about a spent quota but about size: a call needing

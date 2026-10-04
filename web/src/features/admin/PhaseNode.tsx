@@ -312,7 +312,7 @@ function Toggle({
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "disabled:cursor-not-allowed disabled:opacity-50",
         on
-          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+          ? "border-ink bg-ink text-ink-foreground hover:bg-[color-mix(in_oklab,var(--ink)_88%,var(--ink-foreground))]"
           : "border-border bg-background text-muted-foreground hover:border-foreground/40",
         pending && "ring-2 ring-attention ring-offset-2 ring-offset-background",
       )}
@@ -345,7 +345,7 @@ export function ReasoningLegend() {
   return (
     <ul className="flex flex-wrap gap-x-5 gap-y-1 text-small text-muted-foreground">
       <li className="flex items-center gap-1.5">
-        <span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <span className="flex size-5 items-center justify-center rounded-full bg-ink text-ink-foreground">
           <Brain className="size-3" />
         </span>
         {t("pipe.legend.reasons")}

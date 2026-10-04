@@ -10,10 +10,11 @@ import { conceptMapSource, isDrawable, narrowed, type ConceptMapData } from "./c
  * How a map's nodes are painted, in the palette's own grammar of position: what is behind
  * the student is settled, what is ahead is dashed and dimmed, and the one thing to act on —
  * the concept itself, or the prerequisite a reply sent the student to review — is the
- * attention colour. A constant, as `Diagram` asks.
+ * attention colour: the coral FILL with its dark label for the concept, the coral as a line
+ * for the prerequisite. A constant, as `Diagram` asks.
  */
 const STYLES: Record<string, NodeStyle> = {
-  focus: { fill: "--attention", stroke: "--attention", text: "--attention-foreground", bold: true },
+  focus: { fill: "--attention-fill", stroke: "--attention-fill", text: "--attention-fill-foreground", bold: true },
   anchor: { fill: "--card", stroke: "--foreground", text: "--foreground", bold: true },
   known: { fill: "--card", stroke: "--settled", text: "--foreground" },
   review: { fill: "--card", stroke: "--attention", text: "--foreground", bold: true },

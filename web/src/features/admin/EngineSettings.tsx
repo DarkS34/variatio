@@ -10,6 +10,7 @@ import {
   canReset,
   DiffSummary,
   formatValue,
+  SETTING_LIST,
   SettingRow,
   useConfigDraft,
 } from "@/features/admin/SettingFields";
@@ -18,9 +19,9 @@ import { useT, type Key } from "@/lib/i18n";
 import type { ConfigPayload, ConfigSetting } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/* The engine's own settings, on the engine's own tab, so each sits beside the meter that
-   says what it does: the choice of engine on "General", the local ones beside the GPU, the
-   Cerebras ones beside the quota.
+/* The engine's own settings, on the engine's own tab, so each sits with the meter that
+   says what it does: the choice of engine on "General", the local ones under the GPU, the
+   Cerebras ones under the quota.
 
    Addressed by KEY and not by group: the registry's "Motor" group spans every screen, so
    splitting by group puts the remote quota's ceilings under the local GPU. */
@@ -76,10 +77,9 @@ export function useEngineSettings() {
   };
 }
 
-/* A settings card is drawn as a CONTROL and never as one more report: the ink rule down its
-   leading edge is what separates it, at a glance, from the measuring cards it sits beside —
-   the same distinction the screens elsewhere make by not putting a control and a report on
-   one line.
+/* A settings card is a CONTROL and never one more report: it is a block of its own, under
+   the readings it governs — the same distinction the screens elsewhere make by not putting
+   a control and a report on one line.
 
    WHAT THE PANEL CANNOT CHANGE IS NOT DRAWN AT ALL. A value the environment fixes, or one
    read from the file at start-up, is nothing an administrator can act on from here: on an
@@ -103,12 +103,12 @@ export function SettingsPanel({
   const ceilings = open.filter((setting) => setting.key in CEILINGS);
 
   return (
-    <Card className="border-l-2 border-l-primary">
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle>{t(titleKey)}</CardTitle>
         <CardDescription>{t(noteKey)}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={SETTING_LIST}>
         {open.map((setting) =>
           setting.key in CEILINGS ? (
             setting === ceilings[0] ? (
@@ -150,16 +150,18 @@ const CEILINGS: Record<string, Key> = {
 function Ceilings({ settings, config }: { settings: ConfigSetting[]; config: EngineSettings }) {
   const { t } = useT();
   return (
-    <fieldset className="border border-border p-3">
-      <legend className="px-1 text-micro font-condensed uppercase text-muted-foreground">
+    // A group and not a fieldset: a legend sits on its fieldset's edge, outside the padding
+    // the list gives each of its rows.
+    <div role="group" aria-labelledby="engine-ceilings" className="space-y-3">
+      <p id="engine-ceilings" className="text-micro font-condensed uppercase text-muted-foreground">
         {t("eng.cfg.ceilings")}
-      </legend>
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {settings.map((setting) => (
           <CeilingField key={setting.key} setting={setting} config={config} />
         ))}
       </div>
-    </fieldset>
+    </div>
   );
 }
 
@@ -236,7 +238,7 @@ export function EngineSaveBar({ config }: { config: EngineSettings }) {
       ) : null}
       <DiffSummary settings={config.payload?.settings ?? []} draft={config.draft} />
       <FormError error={config.save.error} />
-      <div className="sticky bottom-0 flex items-center gap-2 border border-border bg-card p-3 shadow-raised">
+      <div className="sticky bottom-3 flex items-center gap-2 rounded-inner bg-popover p-3 shadow-overlay">
         <Button
           disabled={!config.dirty || config.save.isPending}
           onClick={() => config.save.mutate()}

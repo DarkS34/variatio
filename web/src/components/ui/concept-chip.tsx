@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
  */
 const TONES = {
   default: "border-border bg-card text-foreground",
-  primary: "border-primary bg-primary text-primary-foreground",
+  primary: "border-ink bg-ink text-ink-foreground",
   prerequisite: "border-dashed border-primary/50 bg-primary/10 text-primary",
   attention:
     "border-[color-mix(in_oklch,var(--attention)_45%,transparent)] bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] text-attention",

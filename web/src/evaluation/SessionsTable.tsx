@@ -145,7 +145,7 @@ export function SessionsTable({
                         concepts are different comparisons when one asked for a four-option
                         question and the other for a whole program. */}
                     <TD className="whitespace-nowrap px-3 py-2">
-                      <span className="border border-border px-2 py-0.5 text-small">
+                      <span className="rounded-md border border-border px-2 py-0.5 text-small">
                         {typeLabel(session.item_type)}
                       </span>
                     </TD>

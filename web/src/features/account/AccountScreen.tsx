@@ -421,10 +421,16 @@ function PasswordCard() {
  * The subject in use opens with its exercises unfolded, because that is where a link from
  * "Generar" lands; the others start folded, and nothing remembers the fold.
  *
+ * ONLY THE ACCOUNT'S OWN, for an administrator like for anybody (the user's call,
+ * 2026-10-04): the subjects a membership row gives it and the exercises it generated itself.
+ * A subject an administrator reaches only through the bypass is not theirs and has no row
+ * here; it is entered from the switcher and read — its exercises, everybody's — from
+ * «Administración → Asignaturas».
+ *
  * It reads `/api/workspaces` and not the session's membership list, which are different
  * questions for an administrator: the session appends whichever workspace they are standing
  * in and labels it "Propietario", which is what the bypass grants and not what anybody
- * wrote in a row. The listing carries `as_admin`, so the row can say "por administración".
+ * wrote in a row. The listing carries `as_admin`, which is what leaves those out.
  *
  * Membership itself is read-only — only the installation's administrator writes those rows,
  * so offering to change one here would be offering a 403 — and renaming is deliberately not
@@ -439,17 +445,15 @@ function MyWorkspacesTab() {
   const switching = useSwitchWorkspace();
   const [target, setTarget] = useState<WorkspaceRow | null>(null);
   const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
-  const workspaces = listing.data?.workspaces ?? [];
+  const mine = (listing.data?.workspaces ?? []).filter((workspace) => !workspace.as_admin);
   const current = active ?? listing.data?.active ?? null;
   const isOpen = (slug: string) => unfolded[slug] ?? slug === current;
-  const mine = workspaces.filter((workspace) => !workspace.as_admin);
 
   return (
     <div className="space-y-4">
       {listing.isLoading ? <Spinner /> : null}
 
-      {/* Not to an ADMINISTRATOR. `mine` excludes every workspace reached through the admin
-          bypass, so an administrator with no membership of their own lands here — and
+      {/* Not to an ADMINISTRATOR, who with no membership of their own lands here too — and
           "an administrator can give you access" is addressed to the one person who does the
           giving. The notice is for the account that has to WAIT for somebody. An
           administrator with no workspace at all is not left in the dark either: `/` draws
@@ -460,9 +464,15 @@ function MyWorkspacesTab() {
         </Alert>
       ) : null}
 
-      {workspaces.length > 0 ? (
-        <ul className="divide-y divide-border rounded-xl border border-border">
-          {workspaces.map((workspace) => (
+      {/* The administrator with no subject of their own is told where the installation's
+          are, so a list left empty on purpose does not read as one that failed to load. */}
+      {!listing.isLoading && mine.length === 0 && session.data?.user.is_admin ? (
+        <p className="text-small text-muted-foreground">{t("access.none.admin")}</p>
+      ) : null}
+
+      {mine.length > 0 ? (
+        <ul className="surface divide-y divide-border overflow-hidden">
+          {mine.map((workspace) => (
             <li key={workspace.slug} className="space-y-2 p-3">
               <div className="flex flex-wrap items-center gap-3">
               <div className="min-w-0 flex-1">
@@ -476,16 +486,10 @@ function MyWorkspacesTab() {
                   ) : null}
                 </p>
                 <p className="text-small text-muted-foreground">
-                  {workspace.as_admin
-                    ? t("access.notAMember")
-                    : workspace.role
-                      ? t(ROLE_HINT_KEYS[workspace.role])
-                      : t("role.undeclared")}
+                  {workspace.role ? t(ROLE_HINT_KEYS[workspace.role]) : t("role.undeclared")}
                 </p>
               </div>
-              {workspace.as_admin ? (
-                <Badge variant="secondary">{t("access.byAdmin")}</Badge>
-              ) : workspace.role ? (
+              {workspace.role ? (
                 <Badge variant="outline">{t(ROLE_LABEL_KEYS[workspace.role])}</Badge>
               ) : null}
               {workspace.slug === current ? null : (
@@ -501,7 +505,7 @@ function MyWorkspacesTab() {
               )}
               {/* Only over what you own. An administrator disposes of anybody's from
                   "Administración", where the whole installation is on one screen. */}
-              {workspace.role === "owner" && !workspace.as_admin ? (
+              {workspace.role === "owner" ? (
                 <Button
                   size="icon-sm"
                   variant="ghost"

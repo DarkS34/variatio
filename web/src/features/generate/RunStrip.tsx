@@ -54,7 +54,7 @@ export function RunStrip({
   const step = run.steps.filter((s) => s.status === "running").at(-1);
 
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
         <span className="relative flex size-2 shrink-0">
           {running ? (

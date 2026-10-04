@@ -1,34 +1,42 @@
-import { ShieldCheck } from "lucide-react";
+import { BarChart3, KeyRound, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { lazy, Suspense, useRef, useState, type ReactNode } from "react";
 
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
-import type { AdminOverview, FeatureName } from "@/lib/types";
+import { featureAccessOf, type AdminOverview, type FeatureName } from "@/lib/types";
 import { useSession } from "@/state/auth";
-import { useAdminOverview } from "@/state/queries";
+import { useAdminFeatures, useAdminOverview } from "@/state/queries";
 
 import type { EvaluationFilters } from "@/evaluation/types";
 
 import { AccountsTab } from "./AccountsTab";
-import { StatTile } from "./charts";
-import { ConfigTab, StageSettings, useStagesDraft, type StagesDraft } from "./ConfigTab";
+import {
+  ConfigTab,
+  StageSettings,
+  useStagesDraft,
+  useStageSummary,
+  type StagesDraft,
+} from "./ConfigTab";
 import { EngineTab } from "./EngineTab";
 import { FeatureAccess, useAccessDrafts, type AccessDrafts } from "./FeatureAccess";
 import { MaintenanceSwitch } from "./MaintenanceSwitch";
+import { SectionHeader, Sections, type SectionEntry } from "./Sections";
 import { CONFIG_STAGES, stageOfFeature } from "./stages";
 import { WorkspacesTab } from "./WorkspacesTab";
 import { useT, withCatalogues } from "@/lib/i18n";
-import { jobName } from "@/lib/names";
 
-// The evaluation's reading is the evaluation's code, fetched when its tab is opened. The
+// The evaluation's reading is the evaluation's code, fetched when its section is opened. The
 // administrator reads it whatever the evaluation's mode: its routes are not behind it.
 const EvaluationTab = lazy(() =>
   withCatalogues(import("@/evaluation/AdminEvaluationTab")).then((m) => ({
     default: m.EvaluationTab,
   })),
 );
+
+/** The sections of an optional function's tab, in the order its list draws them. */
+type FeatureSection = "access" | "analytics" | "settings";
 
 /**
  * The installation seen from outside: six tabs, one per thing an administrator runs.
@@ -37,11 +45,16 @@ const EvaluationTab = lazy(() =>
  * queue; "Configuración" is every value the registry exposes for the product's stages;
  * "Cuentas" decides who exists and where they get in; "Asignaturas" lists the instances and
  * what they weigh. Then, ruled off and each in its own colour like its door in the bar, one
- * tab per optional function: "Evaluaciones" and "Tutor", each holding who may use the
- * function, what it recorded where there is a reading, and its stage's settings. Both are
- * always here, whatever their mode: the administrator configures a function before opening
- * it to anybody. Each tab is its own file, because the screen that crosses every account
- * and every workspace is also the one that grows.
+ * tab per optional function: "Evaluaciones" and "Tutor". Both are always here, whatever
+ * their mode: the administrator configures a function before opening it to anybody.
+ *
+ * EVERY TAB IS DRAWN THE SAME WAY (`Sections`): the list of its sections on the left, each
+ * row with the state of what it opens, and the section open on the right under one header.
+ * (A tab with one section, «Asignaturas», has no list: its header and its table.) The list
+ * is the tab's summary, so nothing above the tabs repeats it: the row of totals
+ * that used to sit there said what the lists now say where it can be acted on. Each tab is
+ * its own file, because the screen that crosses every account and every workspace is also
+ * the one that grows.
  */
 export function AdminScreen() {
   const { t } = useT();
@@ -58,17 +71,26 @@ export function AdminScreen() {
   // The evaluation's reading filter lives here and not in its tab, because "Cuentas" sets it
   // ("ver sus sesiones") before switching over.
   const [filters, setFilters] = useState<EvaluationFilters>({});
+  // The section open in each function's tab lives here for the same two reasons: a folded
+  // link opens a function's settings, and "ver sus sesiones" opens the evaluation's reading.
+  const [sections, setSections] = useState<Record<FeatureName, FeatureSection>>({
+    evaluation: "access",
+    tutor: "access",
+  });
+  const openSection = (feature: FeatureName, section: FeatureSection) =>
+    setSections((held) => ({ ...held, [feature]: section }));
   const tabs = useRef<HTMLDivElement>(null);
 
   const overview = useAdminOverview();
 
-  // Every way to a stage's settings: a function's own stage is its tab, any other one is
-  // "Configuración" open on it. Crossing tabs from the foot of a long one would land at the
-  // foot of the next, so the bar of tabs comes back into view.
+  // Every way to a stage's settings: a function's own stage is the settings of its tab, any
+  // other one is "Configuración" open on it. Crossing tabs from the foot of a long one would
+  // land at the foot of the next, so the bar of tabs comes back into view.
   const goToStage = (key: string) => {
     const feature = CONFIG_STAGES.find((stage) => stage.key === key)?.feature ?? null;
     const next = feature ?? "config";
-    if (!feature) setConfigStage(key);
+    if (feature) openSection(feature, "settings");
+    else setConfigStage(key);
     if (next !== tab) {
       setTab(next);
       tabs.current?.scrollIntoView({ block: "start" });
@@ -87,22 +109,23 @@ export function AdminScreen() {
 
   return (
     <div className="space-y-5">
-      <header className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-display font-expanded text-display">{t("admin.title")}</h1>
-          <InfoHint label={t("admin.whatIsThis")}>{t("admin.whatIsThis.body")}</InfoHint>
+      {/* The door of the installation shares the title's line while it is open, and takes a
+          line of its own, in red, while it is closed (`MaintenanceSwitch`). */}
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-display font-expanded text-display">{t("admin.title")}</h1>
+            <InfoHint label={t("admin.whatIsThis")}>{t("admin.whatIsThis.body")}</InfoHint>
+          </div>
+          <GuideLink slug="admin" />
         </div>
-        <GuideLink slug="admin" />
+        <MaintenanceSwitch />
       </header>
-
-      <MaintenanceSwitch />
 
       {/* Above the tabs on purpose: three of the six render nothing without this data, the
           functions' two lose who may use them, and an empty tab with no explanation reads as
           a feature that does not exist. */}
-      {overview.data ? (
-        <Totals overview={overview.data} />
-      ) : (
+      {overview.data ? null : (
         <LoadError
           title={t("admin.unreadable")}
           error={overview.error}
@@ -134,20 +157,25 @@ export function AdminScreen() {
       {tab === "evaluation" ? (
         <FeatureTab
           feature="evaluation"
+          section={sections.evaluation}
+          onSection={(section) => openSection("evaluation", section)}
           overview={overview.data}
           draft={stagesDraft}
           access={accessDrafts}
           onGo={goToStage}
-        >
-          <Suspense fallback={<Skeleton className="h-96" />}>
-            <EvaluationTab filters={filters} onFilters={setFilters} />
-          </Suspense>
-        </FeatureTab>
+          analytics={
+            <Suspense fallback={<Skeleton className="h-96" />}>
+              <EvaluationTab filters={filters} onFilters={setFilters} />
+            </Suspense>
+          }
+        />
       ) : null}
 
       {tab === "tutor" ? (
         <FeatureTab
           feature="tutor"
+          section={sections.tutor}
+          onSection={(section) => openSection("tutor", section)}
           overview={overview.data}
           draft={stagesDraft}
           access={accessDrafts}
@@ -160,6 +188,7 @@ export function AdminScreen() {
           overview={overview.data}
           onInspect={(id) => {
             setFilters({ account: id });
+            openSection("evaluation", "analytics");
             setTab("evaluation");
           }}
         />
@@ -179,70 +208,107 @@ export function AdminScreen() {
 }
 
 /**
- * One optional function's tab: who may use it, what it recorded (`children`, where it has a
- * reading), and its stage's settings, the same values «Configuración» edits.
+ * One optional function's tab, as the list every tab is: who may use it («Permisos de
+ * uso»), what it recorded where it has a reading («Analíticas»), and its stage's settings
+ * («Configuración»), the same values «Configuración» edits.
+ *
+ * Each row says its section's state: who the function is open to now, how much the reading
+ * holds, how many settings — and what is changed there and not saved yet, since both drafts
+ * outlive the section they were typed in.
  */
 function FeatureTab({
   feature,
+  section,
+  onSection,
   overview,
   draft,
   access,
   onGo,
-  children,
+  analytics,
 }: {
   feature: FeatureName;
+  section: FeatureSection;
+  onSection: (next: FeatureSection) => void;
   overview: AdminOverview | undefined;
   draft: StagesDraft;
   access: AccessDrafts;
   onGo: (stage: string) => void;
-  children?: ReactNode;
+  /** The function's reading, for the one that has it. */
+  analytics?: ReactNode;
 }) {
-  const { t } = useT();
+  const { t, plural } = useT();
+  const stage = stageOfFeature(feature);
+  const features = useAdminFeatures();
+  const summary = useStageSummary(stage.key, draft);
+  const saved = features.data ? featureAccessOf(features.data, feature) : null;
+
+  const items: SectionEntry[] = [
+    {
+      key: "access",
+      label: t("feature.section.access"),
+      mark: <KeyRound className="size-4" />,
+      detail: !saved
+        ? undefined
+        : saved.mode === "all"
+          ? t("feature.mode.all")
+          : saved.mode === "selected" && saved.accounts.length > 0
+            ? plural("acc.count", saved.accounts.length)
+            : t("feature.mode.off"),
+      pending: access.values[feature] ? 1 : 0,
+    },
+    ...(analytics
+      ? [
+          {
+            key: "analytics",
+            label: t("feature.section.analytics"),
+            mark: <BarChart3 className="size-4" />,
+            detail: overview ? plural("acc.comparisons", overview.totals.evaluations) : undefined,
+          },
+        ]
+      : []),
+    ...(summary
+      ? [
+          {
+            key: "settings",
+            label: t("admin.tab.config"),
+            mark: <SlidersHorizontal className="size-4" />,
+            detail: plural("cfg.nav.settings", summary.settings),
+            pending: summary.pending,
+          },
+        ]
+      : []),
+  ];
+  const open = items.some((item) => item.key === section) ? section : "access";
+
   return (
-    <div className="space-y-8">
-      {overview ? (
+    <Sections
+      label={t("feature.section.label", { name: t(stage.labelKey) })}
+      items={items}
+      value={open}
+      onChange={(key) => onSection(key as FeatureSection)}
+    >
+      {open === "access" && overview ? (
         <FeatureAccess feature={feature} accounts={overview.accounts} drafts={access} />
       ) : null}
-      {children}
-      <StageSettings
-        stage={stageOfFeature(feature).key}
-        eyebrow={t("admin.tab.config")}
-        draft={draft}
-        onGo={onGo}
-      />
-    </div>
-  );
-}
 
-function Totals({ overview }: { overview: AdminOverview }) {
-  const { t, plural, language } = useT();
-  const { totals, engine } = overview;
-  return (
-    <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
-      <StatTile label={t("admin.stat.accounts")} value={totals.users} />
-      <StatTile label={t("admin.stat.workspaces")} value={totals.workspaces} />
-      <StatTile
-        label={t("admin.stat.generations")}
-        value={totals.generations.toLocaleString(language)}
-      />
-      <StatTile
-        label={t("admin.stat.comparisons")}
-        value={totals.evaluations}
-        hint={t("admin.stat.decided", { n: totals.decided })}
-      />
-      <StatTile
-        label={t("admin.stat.engine")}
-        value={engine.busy ? t("admin.stat.busy") : t("admin.stat.free")}
-        tone={engine.busy ? "accent" : "plain"}
-        hint={
-          engine.busy
-            ? t("admin.stat.busyHint", {
-                label: engine.job ? jobName(engine.job.kind, t, engine.job.label) : t("admin.stat.job"),
-                n: engine.queued,
-              })
-            : plural("admin.warmContexts", engine.warm_contexts.length)
-        }
-      />
-    </div>
+      {open === "analytics" ? (
+        <>
+          <SectionHeader
+            title={t("feature.section.analytics")}
+            description={t("feature.section.analyticsNote")}
+          />
+          {analytics}
+        </>
+      ) : null}
+
+      {open === "settings" ? (
+        <StageSettings
+          stage={stage.key}
+          title={t("admin.tab.config")}
+          draft={draft}
+          onGo={onGo}
+        />
+      ) : null}
+    </Sections>
   );
 }

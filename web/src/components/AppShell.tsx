@@ -92,7 +92,7 @@ export function StepCounter({
           // The TOKEN and not its light-mode value: `--attention` is a light ground in dark
           // mode, so a literal puts a near-white number on it. `check:color` cannot see
           // this — it reads `index.css`, not a class in a component.
-          ? "bg-attention text-attention-foreground"
+          ? "bg-attention-fill text-attention-fill-foreground"
           : null,
         state === "later" && "border border-dashed border-input text-muted-foreground",
       )}
@@ -104,7 +104,7 @@ export function StepCounter({
 
 // `min-w` and not a fixed square: "1" and an icon are the same height, and the height is
 // what keeps the names of a row on one line.
-const COUNTER_BOX = "flex h-[22px] min-w-[20px] shrink-0 items-center justify-center px-1";
+const COUNTER_BOX = "flex h-[22px] min-w-[20px] shrink-0 items-center justify-center rounded-sm px-1";
 
 /**
  * One stop of the path: its number, its name, and one word saying where you are.
@@ -138,7 +138,7 @@ function StepPill({
       className={cn(
         PILL,
         state === "now" && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
-        active && "bg-accent",
+        active && "bg-sunk",
       )}
     >
       <span
@@ -173,8 +173,7 @@ function StepPill({
 // The paddings are measured: at 1280 the flanks leave the strip 874 px and at `px-1.5` the
 // six pills ask 857. Widening them overflows the row. Seven — the third door — ask 1003 on
 // a step's screen, which the flanks leave only from about 1390: below that the bar takes the
-// line under the header (`AppShell`). The phase caption's `pl` is this `px`, since the two
-// are one alignment.
+// line under the header (`AppShell`).
 const PILL =
   "flex shrink-0 flex-col gap-0.5 rounded-md px-1.5 py-1 transition-colors hover:bg-accent";
 const PILL_NAME = "flex items-center gap-1.5 whitespace-nowrap text-small";
@@ -265,7 +264,7 @@ function DoorPill({
         face,
         tone?.hover,
         tone && active && tone.active,
-        !tone && active && "bg-accent",
+        !tone && active && "bg-sunk",
       )}
     >
       {body}
@@ -274,36 +273,27 @@ function DoorPill({
 }
 
 /**
- * A phase: its name as a caption, and its pills under it in a row.
+ * A phase: its pills in a row.
  *
- * The caption carries the phase, which has no number. Its `pl-1.5` is the pills' own
- * `px-1.5`, so it starts exactly on the first pill's box edge.
+ * No caption since 2026-10-04 (user's request): the numbered steps and the doors say which
+ * phase they belong to on their own, and the rule between the two groups keeps them apart.
+ * The caption was `aria-hidden`, so nothing a screen reader announced went with it.
  */
 function PhaseGroup({
-  label,
   gap = "tight",
   children,
 }: {
-  label: string;
   /** `wide` is the doors' 4 px, the rule's own margin; the steps keep 2 px. */
   gap?: "tight" | "wide";
   children: ReactNode;
 }) {
   return (
-    <div className="flex shrink-0 flex-col gap-0.5">
-      <span
-        aria-hidden
-        className="pl-1.5 font-condensed text-micro uppercase text-muted-foreground"
-      >
-        {label}
-      </span>
-      <div className={cn("flex items-center", gap === "wide" ? "gap-1" : "gap-0.5")}>{children}</div>
-    </div>
+    <div className={cn("flex shrink-0 items-center", gap === "wide" ? "gap-1" : "gap-0.5")}>{children}</div>
   );
 }
 
 function NavRule() {
-  return <span aria-hidden className="mx-1 h-10 w-px shrink-0 self-end bg-border" />;
+  return <span aria-hidden className="mx-1 h-7 w-px shrink-0 self-center bg-border" />;
 }
 
 /**
@@ -483,7 +473,7 @@ function MainNav({
         className,
       )}
     >
-      <PhaseGroup label={t("nav.phase.build")}>
+      <PhaseGroup>
         {folded ? (
           <FoldedPhase onUnfold={() => onSteps(true)} />
         ) : (
@@ -521,7 +511,7 @@ function MainNav({
 
       <NavRule />
 
-      <PhaseGroup label={t("nav.phase.test")} gap="wide">
+      <PhaseGroup gap="wide">
         {doors.map((door) => (
           <DoorPill
             key={door.key}
@@ -618,7 +608,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Nothing but the slides under the deck: the header is not drawn at all while the
           tutorial runs. What it explains, it explains in words and in its own figures. */}
       {deck ? null : (
-      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+      <header className="sticky top-0 z-30 bg-background/95 shadow-[0_12px_24px_-18px_var(--shadow-dark)] backdrop-blur">
+        {/* No line under the bar: a soft sea shadow says where the page slides under it. */}
         {/* Three columns, and the middle one is the centre of the header: the flanks are
             `flex-1 basis-0`, so they are always the same width and the nav lands on the
             centre line whatever they contain. The nav is the only item that may shrink,
@@ -626,8 +617,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             The flanks carry NO `min-w-0`, and that is load-bearing: with `min-width: 0`
             they grow to nothing and their contents paint OUTSIDE the box, one flank over
             the other. `min-width: auto` holds each at its own min-content, which is
-            bounded — the lockup is fixed and the switcher is `max-w-44` and truncates. */}
-        <div className="mx-auto flex h-[4.5rem] w-full max-w-[1600px] items-center gap-2 px-3 sm:gap-4 sm:px-4">
+            bounded — the lockup is fixed and the switcher is `max-w-38` and truncates. */}
+        <div className="mx-auto flex h-[4.5rem] w-full max-w-[1600px] items-center gap-2 px-4 sm:gap-4 sm:px-7">
           {/* `compact` drops the wordmark below `lg`. The rule that separates the product's
               name from the subject's is the SWITCHER's own, and goes with it: with nothing
               to switch between there is nothing to separate. */}
@@ -710,7 +701,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         className={cn(
           deck
             ? "flex min-h-0 flex-1 flex-col"
-            : "mx-auto w-full max-w-[1600px] flex-1 px-3 pb-8 pt-4 sm:px-4 sm:pt-6",
+            : "mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-5 sm:px-7 sm:pt-7",
         )}
       >
         {children}

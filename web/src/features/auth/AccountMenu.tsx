@@ -64,11 +64,11 @@ export function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          "flex h-8 max-w-44 items-center gap-1.5 rounded-full border border-border bg-secondary py-0 pl-0.5 pr-0.5 text-body font-medium text-foreground transition-colors hover:bg-accent sm:pr-3",
+          "flex h-8 max-w-44 items-center gap-1.5 rounded-full border border-transparent bg-sunk py-0 pl-0.5 pr-0.5 text-body font-medium text-foreground transition-colors hover:bg-accent sm:pr-3",
           open && "bg-accent ring-2 ring-ring",
         )}
       >
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink text-ink-foreground">
           <UserRound aria-hidden className="size-4" />
         </span>
         <span className="hidden truncate sm:block">{user.username}</span>
@@ -77,7 +77,7 @@ export function AccountMenu() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-10 z-40 w-64 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+          className="absolute right-0 top-11 z-40 w-64 overflow-hidden rounded-inner bg-popover text-popover-foreground shadow-overlay"
         >
           <div className="p-3">
             <p className="truncate text-body font-medium">{user.name}</p>
@@ -210,7 +210,7 @@ function ThemeRow() {
               className={cn(
                 "flex size-7 items-center justify-center rounded transition-colors",
                 on
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-ink text-ink-foreground"
                   : "text-muted-foreground hover:bg-accent",
               )}
             >

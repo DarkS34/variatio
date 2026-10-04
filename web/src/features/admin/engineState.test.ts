@@ -6,7 +6,7 @@ import type { AdminEngine, CerebrasState, CerebrasWindow, Job, TunnelStatus } fr
 import { cerebrasState, generalCell, localCell, remoteCell, tunnelState } from "./engineState";
 
 /**
- * What the board says about each part of the engine.
+ * What the tab's list says about each part of the engine.
  *
  * A cell's tone is the one thing on the tab that claims «here is where you act», so the
  * cases worth pinning are the ones where two readings disagree: an engine that answers with

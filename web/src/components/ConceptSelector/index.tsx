@@ -310,7 +310,7 @@ export function ConceptSelector({
                   className={cn(
                     "flex items-center gap-1.5 rounded px-2.5 py-1 text-small font-medium transition-colors",
                     scope === option.value
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-ink text-ink-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
@@ -351,7 +351,7 @@ export function ConceptSelector({
                 className={cn(
                   "flex items-center gap-1.5 rounded px-2.5 py-1 text-small font-medium transition-colors disabled:opacity-40",
                   view === option.value
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-ink text-ink-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >

@@ -91,7 +91,7 @@ export function TutorScreen() {
       {tab === "criteria" && canEdit ? (
         <CriteriaPanel ready={status.data.ready} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="grid gap-7 lg:grid-cols-[18rem_minmax(0,1fr)]">
           <ConversationList
             selected={selected}
             onSelect={(id) => {

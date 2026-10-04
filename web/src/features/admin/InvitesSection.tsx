@@ -64,6 +64,7 @@ import {
 } from "@/state/queries";
 
 import { CopyButton, CopyLink } from "./CopyLink";
+import { SectionHeader } from "./Sections";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 
@@ -91,7 +92,8 @@ type Recovered = MintedInvite & { outcome: InviteImportOutcome };
  * What the administrator controls around that is everything but the single use: when it
  * expires, a name only this panel shows, the asignatura and permission it carries, reading
  * the link again, and pasting back the link of one deleted by mistake. Both forms live in a
- * window opened by «Crear invitación», so the section itself is the list. The listing never
+ * window opened by «Crear invitación», on the section's own line, so the section itself is
+ * the list. The listing never
  * carries a link; «Ver enlace» asks for that one and the server writes down who did.
  */
 export function InvitesSection({ overview }: { overview: AdminOverview }) {
@@ -108,17 +110,18 @@ export function InvitesSection({ overview }: { overview: AdminOverview }) {
   };
 
   return (
-    <section className="space-y-4 rounded-lg border border-border bg-card p-3 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
-          {t("acc.invite")}
-        </h2>
-        <InfoHint label={t("acc.invite.hintLabel")}>{t("acc.invite.hint")}</InfoHint>
-        <Button className="ml-auto" onClick={() => openAs("new")}>
-          <Plus />
-          {t("acc.invite.open")}
-        </Button>
-      </div>
+    <>
+      <SectionHeader
+        title={t("acc.invite")}
+        hint={<InfoHint label={t("acc.invite.hintLabel")}>{t("acc.invite.hint")}</InfoHint>}
+        description={t("acc.invite.note")}
+        action={
+          <Button onClick={() => openAs("new")}>
+            <Plus />
+            {t("acc.invite.open")}
+          </Button>
+        }
+      />
 
       <Dialog
         open={open}
@@ -162,13 +165,15 @@ export function InvitesSection({ overview }: { overview: AdminOverview }) {
       ) : invites.isLoading ? (
         <Spinner />
       ) : (
-        <InviteList
-          rows={invites.data?.invites ?? []}
-          overview={overview}
-          onRecover={() => openAs("recover")}
-        />
+        <section className="surface p-5">
+          <InviteList
+            rows={invites.data?.invites ?? []}
+            overview={overview}
+            onRecover={() => openAs("recover")}
+          />
+        </section>
       )}
-    </section>
+    </>
   );
 }
 
@@ -637,7 +642,7 @@ function InviteList({
           {inTab.length === 0 ? t("acc.invite.nonePending") : t("acc.invite.noMatch")}
         </p>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border">
           {shown.map((row) => (
             <InviteItem
               key={row.id}

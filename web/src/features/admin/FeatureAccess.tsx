@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
+import { SectionHeader } from "@/features/admin/Sections";
 import { FormError } from "@/features/auth/AuthLayout";
 import { useT, type Key, type Translate } from "@/lib/i18n";
 import { featureLabelKey } from "@/lib/steps";
@@ -49,7 +50,9 @@ export function useAccessDrafts(): AccessDrafts {
 }
 
 /**
- * WHO ONE OPTIONAL FUNCTION IS FOR: nobody, every account, or the accounts ticked.
+ * WHO ONE OPTIONAL FUNCTION IS FOR: nobody, every account, or the accounts ticked. It is
+ * the «Permisos de uso» section of the function's tab, header included: the header's one
+ * sentence is the SAVED state, and the block under it is the draft.
  *
  * The draft is the panel's (`useAccessDrafts`) and one button saves it. The server keeps the
  * list whatever the mode, so the ticks stay on screen, dimmed, while another mode is chosen:
@@ -144,127 +147,124 @@ export function FeatureAccess({
   );
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="space-y-3 rounded-lg border border-border bg-card p-4"
-    >
-      <div className="space-y-1">
-        <h2 id={headingId} className="font-expanded text-heading">
-          {t("feature.heading", { name })}
-        </h2>
-        <p className="text-small text-muted-foreground">{stateSentence(saved, t, plural)}</p>
-      </div>
-
-      <div
-        role="radiogroup"
-        aria-labelledby={headingId}
-        className="flex flex-wrap gap-2"
-        {...modes.group}
-      >
-        {MODES.map(({ mode, labelKey }) => {
-          const chosen = mode === current.mode;
-          return (
-            <button
-              key={mode}
-              {...modes.radio(mode)}
-              type="button"
-              role="radio"
-              aria-checked={chosen}
-              disabled={write.isPending}
-              onClick={() => change({ ...current, mode })}
-              className={cn(
-                "flex items-center gap-2 border px-3 py-2 text-left text-body transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-                chosen ? "border-primary" : "border-input hover:border-primary",
-              )}
-            >
-              {/* The square the mark is made of: filled is the one chosen. */}
-              <span
-                aria-hidden
+    <>
+      <SectionHeader
+        id={headingId}
+        title={t("feature.section.access")}
+        description={stateSentence(saved, t, plural)}
+      />
+      <section aria-labelledby={headingId} className="surface space-y-4 p-5">
+        <div
+          role="radiogroup"
+          aria-label={t("feature.heading", { name })}
+          className="flex flex-wrap gap-2"
+          {...modes.group}
+        >
+          {MODES.map(({ mode, labelKey }) => {
+            const chosen = mode === current.mode;
+            return (
+              <button
+                key={mode}
+                {...modes.radio(mode)}
+                type="button"
+                role="radio"
+                aria-checked={chosen}
+                disabled={write.isPending}
+                onClick={() => change({ ...current, mode })}
                 className={cn(
-                  "size-3 shrink-0 border-[1.5px]",
-                  chosen ? "border-primary bg-primary" : "border-input",
+                  "rounded-lg flex items-center gap-2 border px-3 py-2 text-left text-body transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                  chosen ? "border-primary" : "border-input hover:border-primary",
                 )}
-              />
-              {t(labelKey)}
-            </button>
-          );
-        })}
-      </div>
-
-      {selecting || known.length > 0 ? (
-        <div className="space-y-2">
-          {selecting && accounts.length >= SEARCH_FROM ? (
-            <Input
-              type="search"
-              value={search}
-              aria-label={t("feature.search")}
-              placeholder={t("feature.search")}
-              className="w-full sm:w-72"
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          ) : null}
-          <p className="text-small text-muted-foreground">
-            {selecting
-              ? t("feature.ticked", { n: known.length, total: accounts.length })
-              : t("feature.kept")}
-          </p>
-          {rows.length === 0 ? (
-            <p className="text-small text-muted-foreground">{t("feature.noMatch")}</p>
-          ) : (
-            // Only the list is dimmed while another mode is chosen: the sentence above it is
-            // the one that says why, and dimmed it fell under the contrast floor.
-            <ul
-              className={cn(
-                "max-h-72 divide-y divide-border overflow-y-auto rounded-md border border-border",
-                !selecting && "opacity-60",
-              )}
-            >
-              {rows.map((account) => (
-                <li key={account.id}>
-                  {/* A label around the box: the whole row ticks it, the name included. */}
-                  <label
-                    className={cn(
-                      "flex items-center gap-2 px-2 py-1.5",
-                      selecting && "cursor-pointer hover:bg-accent",
-                    )}
-                  >
-                    <Checkbox
-                      checked={ticked.has(account.id)}
-                      disabled={!selecting || write.isPending}
-                      onCheckedChange={(on) => tick(account.id, on)}
-                      label={account.username}
-                      // The kept list is dimmed once, as a whole; the box's own disabled
-                      // dimming on top would all but erase the ticks.
-                      className={selecting ? undefined : "disabled:opacity-100"}
-                    />
-                    <span className="truncate font-mono">{account.username}</span>
-                    {account.id === session.data?.user.id ? (
-                      <Badge variant="outline">{t("acc.badge.you")}</Badge>
-                    ) : null}
-                    {account.disabled ? (
-                      <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
-                    ) : null}
-                    <span className="min-w-0 flex-1 truncate text-small text-muted-foreground">
-                      {account.name}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          )}
+              >
+                {/* The square the mark is made of: filled is the one chosen. */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "size-3 shrink-0 border-[1.5px]",
+                    chosen ? "border-primary bg-primary" : "border-input",
+                  )}
+                />
+                {t(labelKey)}
+              </button>
+            );
+          })}
         </div>
-      ) : null}
 
-      <p className="text-small text-muted-foreground">{t("feature.adminNote")}</p>
+        {selecting || known.length > 0 ? (
+          <div className="space-y-2">
+            {selecting && accounts.length >= SEARCH_FROM ? (
+              <Input
+                type="search"
+                value={search}
+                aria-label={t("feature.search")}
+                placeholder={t("feature.search")}
+                className="w-full sm:w-72"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            ) : null}
+            <p className="text-small text-muted-foreground">
+              {selecting
+                ? t("feature.ticked", { n: known.length, total: accounts.length })
+                : t("feature.kept")}
+            </p>
+            {rows.length === 0 ? (
+              <p className="text-small text-muted-foreground">{t("feature.noMatch")}</p>
+            ) : (
+              // Only the list is dimmed while another mode is chosen: the sentence above it is
+              // the one that says why, and dimmed it fell under the contrast floor.
+              <ul
+                className={cn(
+                  "thin-scroll max-h-72 divide-y divide-border overflow-y-auto",
+                  !selecting && "opacity-60",
+                )}
+              >
+                {rows.map((account) => (
+                  <li key={account.id}>
+                    {/* A label around the box: the whole row ticks it, the name included. */}
+                    <label
+                      className={cn(
+                        "flex items-center gap-2 px-1 py-2",
+                        selecting && "cursor-pointer hover:bg-accent",
+                      )}
+                    >
+                      <Checkbox
+                        checked={ticked.has(account.id)}
+                        disabled={!selecting || write.isPending}
+                        onCheckedChange={(on) => tick(account.id, on)}
+                        label={account.username}
+                        // The kept list is dimmed once, as a whole; the box's own disabled
+                        // dimming on top would all but erase the ticks.
+                        className={selecting ? undefined : "disabled:opacity-100"}
+                      />
+                      <span className="truncate font-mono">{account.username}</span>
+                      {account.id === session.data?.user.id ? (
+                        <Badge variant="outline">{t("acc.badge.you")}</Badge>
+                      ) : null}
+                      {account.disabled ? (
+                        <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
+                      ) : null}
+                      <span className="min-w-0 flex-1 truncate text-small text-muted-foreground">
+                        {account.name}
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
 
-      <FormError error={write.error} />
-      <Button disabled={!dirty || write.isPending} onClick={submit}>
-        {write.isPending ? <Spinner /> : null}
-        {t("feature.save")}
-      </Button>
-    </section>
+        <p className="text-small text-muted-foreground">{t("feature.adminNote")}</p>
+
+        <FormError error={write.error} />
+        <Button disabled={!dirty || write.isPending} onClick={submit}>
+          {write.isPending ? <Spinner /> : null}
+          {t("feature.save")}
+        </Button>
+      </section>
+    </>
   );
 }
 
