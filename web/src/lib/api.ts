@@ -110,6 +110,17 @@ export interface RequestOptions extends RequestInit {
 }
 
 export async function request<T>(path: string, init?: RequestOptions): Promise<T> {
+  const response = await send(path, init);
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+/** A call whose answer is a file and not JSON: an image of a page, read as its bytes. */
+export async function requestBlob(path: string, init?: RequestOptions): Promise<Blob> {
+  return (await send(path, init)).blob();
+}
+
+async function send(path: string, init?: RequestOptions): Promise<Response> {
   const { workspace, ...rest } = init ?? {};
   const response = await fetch(path, {
     ...rest,
@@ -147,8 +158,7 @@ export async function request<T>(path: string, init?: RequestOptions): Promise<T
     );
   }
 
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  return response;
 }
 
 export const post = <T>(path: string, body?: unknown) =>

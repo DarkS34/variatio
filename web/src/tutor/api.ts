@@ -1,4 +1,4 @@
-import { post, request } from "@/lib/api";
+import { post, request, requestBlob } from "@/lib/api";
 import type { Job } from "@/lib/types";
 
 import type {
@@ -38,6 +38,11 @@ export const tutorApi = {
   remove: (id: string) => request<{ deleted: string }>(conversation(id), { method: "DELETE" }),
   notes: (document: string) =>
     request<NotesDocument>(`/api/tutor/notes?${new URLSearchParams({ document }).toString()}`),
+  /** One page of the original as an image. `version` only names the bytes, so a cache keeps them. */
+  notesPage: (document: string, page: number, version: string) =>
+    requestBlob(
+      `/api/tutor/notes/page?${new URLSearchParams({ document, page: String(page), v: version }).toString()}`,
+    ),
   criteria: () => request<CriteriaPayload>("/api/tutor/criteria"),
   saveCriteria: (criteria: CriteriaDocument) =>
     request<{ origin: string; criteria: CriteriaDocument; warnings: string[] }>(

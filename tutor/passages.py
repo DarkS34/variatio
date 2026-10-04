@@ -37,7 +37,7 @@ from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
 from variatio.runtime.embedder.vectors import embed_normalized, prefix_for
 
-from . import paths
+from . import originals, paths
 
 _FORMAT = 1
 
@@ -177,28 +177,45 @@ def cut_corpus(ws: Workspace, sources: dict, max_chars: int) -> list[Passage]:
     return passages
 
 
-def read_document(ws: Workspace, sources: dict, name: str) -> list[dict] | None:
+def read_document(ws: Workspace, sources: dict, name: str) -> dict | None:
     """Return one document of the notes as the reader shows it: its sections, in order.
 
     None when `name` is not a document of the corpus the tutor reads, so a request can name
     nothing else on disk. Cut as `cut_corpus` cuts, by heading, but whole: the reader shows a
     section entire and a reply's place is a section. Navigation paragraphs are dropped, and
     so is a section left with nothing but its heading — its title is already in the path of
-    the sections under it.
+    the sections under it. `original` says how many pages the document itself has when the
+    reader can show them (`originals`), and each section then carries the `page` it starts
+    on; without one both are None and the transcription is all there is to read.
     """
-    if name not in _documents(ws, sources):
+    if not in_corpus(ws, sources, name):
         return None
-    text = _document_text(paths.corpus_pages_dir(ws) / name)
+    pages, meta = _document_pages(paths.corpus_pages_dir(ws) / name)
+    seams = source_docs.valid_seams(meta.get("seams"))
+    split = split_sections(source_docs.join_pages(pages, seams))
+    original = originals.original_for(ws, name) if split else None
+    starts = originals.section_pages(original, meta, pages, seams, split) if original else []
     sections = []
-    for location, _title, body in split_sections(text) if text else []:
+    for index, (location, _title, body) in enumerate(split):
         kept = [
             paragraph.strip()
             for paragraph in re.split(r"\n\s*\n", body)
             if paragraph.strip() and not is_navigation(paragraph)
         ]
         if kept and not all(_HEADING.match(paragraph) for paragraph in kept):
-            sections.append({"location": location, "text": "\n\n".join(kept)})
-    return sections
+            sections.append(
+                {
+                    "location": location,
+                    "text": "\n\n".join(kept),
+                    "page": starts[index] if original else None,
+                }
+            )
+    return {"original": original.summary() if original else None, "sections": sections}
+
+
+def in_corpus(ws: Workspace, sources: dict, name: str) -> bool:
+    """Say whether `name` is a document of the corpus the tutor reads."""
+    return name in _documents(ws, sources)
 
 
 def _documents(ws: Workspace, sources: dict) -> list[str]:
@@ -214,14 +231,18 @@ def _documents(ws: Workspace, sources: dict) -> list[str]:
 
 def _document_text(directory: Path) -> str:
     """Return one document's transcription stitched as its build stitched it, or nothing."""
+    pages, meta = _document_pages(directory)
+    return source_docs.join_pages(pages, source_docs.valid_seams(meta.get("seams")))
+
+
+def _document_pages(directory: Path) -> tuple[list[str], dict]:
+    """Return one document's transcribed pages and what its transcription recorded."""
     pages = source_docs.read_pages(directory)
     if not pages:
         logger.warning(
             f"[tutor] «{directory.name}» no tiene páginas transcritas; el tutor no busca en él"
         )
-        return ""
-    seams = source_docs.valid_seams(source_docs.read_meta(directory).get("seams"))
-    return source_docs.join_pages(pages, seams)
+    return pages, source_docs.read_meta(directory)
 
 
 def _unit_of(location: str, headings: list[str], units: list[dict]) -> str | None:

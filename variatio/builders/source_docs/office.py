@@ -34,6 +34,11 @@ CONTENT_MARGIN_PX = 16
 # `EMPTY_IMAGE_MARK` to — once, since every such picture hashes the same.
 BLANK_SIDE_PX = 64
 
+# Impress leaves hidden slides out of a PDF unless told otherwise.
+_PDF_TARGETS = {
+    ".pptx": 'pdf:impress_pdf_Export:{"ExportHiddenSlides":{"type":"boolean","value":"true"}}'
+}
+
 _RELS_TARGET_RE = r'(Target="[^"]*?){name}"'
 _SLIDE_ENTRY_RE = re.compile(r"^ppt/slides/slide\d+\.xml$")
 _PNG_DEFAULT = '<Default Extension="png" ContentType="image/png"/>'
@@ -81,6 +86,47 @@ def metafiles(source: str | Path) -> list[str]:
             ]
     except (zipfile.BadZipFile, OSError):
         return []
+
+
+def pdf_copy(source: str | Path, workdir: str | Path, timeout: float) -> Path | None:
+    """Export an Office document to PDF through LibreOffice into `workdir`, or return None.
+
+    For a person to read the document as it was laid out; nothing a builder reads comes
+    from it. A deck is asked for with its hidden slides, so the PDF holds one page per slide
+    exactly as the page cache does, and for a plain export if LibreOffice refuses that.
+    """
+    source, workdir = Path(source), Path(workdir)
+    tool = rasteriser()
+    if tool is None:
+        return None
+    profile = (workdir / "profile").resolve()
+    made = workdir / f"{source.stem}.pdf"
+    for target in dict.fromkeys((_PDF_TARGETS.get(source.suffix.lower(), "pdf"), "pdf")):
+        command = [
+            tool,
+            "--headless",
+            "--norestore",
+            f"-env:UserInstallation={profile.as_uri()}",
+            "--convert-to",
+            target,
+            "--outdir",
+            str(workdir),
+            str(source),
+        ]
+        try:
+            subprocess.run(
+                command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=timeout,
+            )
+        except (OSError, subprocess.TimeoutExpired) as e:
+            logger.warning(f"LibreOffice export failed ({e})")
+            return None
+        if made.is_file():
+            return made
+    return None
 
 
 def rasteriser() -> str | None:

@@ -145,6 +145,21 @@ export function useNotes(document: string | null) {
   });
 }
 
+/**
+ * One page of a document of the notes, as an image of the original. Never stale: the version
+ * in the key names the bytes. Asked for only once the page is near the screen (`enabled`),
+ * since the reader lays out every page of the document and most are never scrolled to.
+ */
+export function useNotesPage(document: string, version: string, page: number, enabled: boolean) {
+  const ws = useActiveWorkspace();
+  return useQuery({
+    queryKey: [...tutorKeys.notes(ws, document), "page", version, page] as const,
+    queryFn: () => tutorApi.notesPage(document, page, version),
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
 export function useTutorCriteria(enabled: boolean) {
   const ws = useActiveWorkspace();
   return useQuery({

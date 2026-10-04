@@ -132,8 +132,21 @@ function Tutor() {
           la que termina, más grande y en negrita, porque es lo que te toca contestar. La
           respuesta habla de «los apuntes» sin nombrar el tema ni el apartado: el sitio
           exacto está debajo. Bajo cada respuesta, «{t("tutor.references")}» lista los
-          apartados de los que sale. Cada uno abre los apuntes por ese apartado, con formato, y
-          desde ahí puedes pasar al anterior o al siguiente.
+          apartados de los que sale. Cada uno abre los apuntes por ese apartado.
+        </Paragraph>
+        <Paragraph>
+          Los apuntes se abren en «{t("tutor.notes.view.original")}»: el documento tal como es
+          —las páginas del PDF, las diapositivas, el documento de Word—, con todas sus páginas una
+          debajo de otra, abierto por la página donde empieza el apartado. Desde ahí te
+          desplazas con libertad: si el apartado sigue en la página siguiente, basta con seguir
+          bajando, y la línea bajo la lista dice en qué página estás. Las flechas y la lista
+          saltan a otro apartado. En un documento de Word, o en uno cuyas páginas se
+          reordenaron a mano, la página abierta es aproximada: si el apartado no está ahí,
+          sigue bajando. «{t("tutor.notes.view.text")}» muestra el mismo apartado como texto,
+          que es de donde lee el tutor y lo que puedes seleccionar y copiar. La ventana tiene
+          el mismo tamaño en las dos vistas, y la vista que eliges se mantiene mientras sigues
+          en la conversación. Un documento que no se puede mostrar en su forma original se
+          abre directamente como texto.
         </Paragraph>
         <Paragraph>
           Cuando lo que se trabaja se escribe con notación matemática —una fórmula, una

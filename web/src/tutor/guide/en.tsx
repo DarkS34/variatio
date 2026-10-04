@@ -128,8 +128,20 @@ function Tutor() {
           Every reply has two parts: the explanation, in plain text, and the question it ends
           with, larger and in bold, because that is what you are to answer. The reply speaks
           of "the notes" without naming the unit or the section: the exact place is below it. Under each reply, "{t("tutor.references")}" lists the sections it
-          comes from. Each one opens the notes at that section, formatted, and from there you
-          can move to the previous or the next one.
+          comes from. Each one opens the notes at that section.
+        </Paragraph>
+        <Paragraph>
+          The notes open in "{t("tutor.notes.view.original")}": the document as it is —the
+          pages of the PDF, the slides, the Word document—, with all its pages one under
+          another, opened at the page where the section starts. From there you scroll freely:
+          if the section goes on to the next page, keep scrolling, and the line under the list
+          says which page you are on. The arrows and the list jump to another section. In a
+          Word document, or in one whose pages were rearranged by hand, the page opened is
+          approximate: if the section is not there, keep scrolling.
+          "{t("tutor.notes.view.text")}" shows the same section as text, which is what the
+          tutor reads and what you can select and copy. The window is the same size in both
+          views, and the view you choose holds while you stay in the conversation. A document
+          that cannot be shown in its original form opens as text straight away.
         </Paragraph>
         <Paragraph>
           When what is being worked on is written in mathematical notation —a formula, a

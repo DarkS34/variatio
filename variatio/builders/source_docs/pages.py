@@ -837,6 +837,79 @@ def page_images(
     return count, render()
 
 
+def page_picture(pdf_path: str | Path, number: int, width_px: int):
+    """One page of a PDF as a PIL image `width_px` wide, or None when it cannot be drawn.
+
+    The page as a PERSON reads it, not as the model is sent it (`page_images`): no DPI
+    setting and no fingerprint depend on it. A page far taller than it is wide is drawn
+    narrower, so its height never passes three times `width_px`.
+    """
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return None
+    try:
+        with _PDFIUM_LOCK:
+            document = pdfium.PdfDocument(str(pdf_path))
+            try:
+                if not 1 <= number <= len(document):
+                    return None
+                page = document[number - 1]
+                width, height = page.get_size()
+                scale = min(width_px / max(width, 1.0), 3 * width_px / max(height, 1.0))
+                image = page.render(scale=scale).to_pil()
+                page.close()
+                return image
+            finally:
+                document.close()
+    except Exception:
+        return None
+
+
+def page_sizes(pdf_path: str | Path) -> list[tuple[float, float]]:
+    """The `(width, height)` of every page of a PDF in points, in order; `[]` when unreadable."""
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return []
+    try:
+        with _PDFIUM_LOCK:
+            document = pdfium.PdfDocument(str(pdf_path))
+            try:
+                return [document.get_page_size(index) for index in range(len(document))]
+            finally:
+                document.close()
+    except Exception:
+        return []
+
+
+def page_texts(pdf_path: str | Path) -> list[str]:
+    """The text layer of every page of a PDF, in order; `[]` when the file cannot be read."""
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return []
+    try:
+        with _PDFIUM_LOCK:
+            document = pdfium.PdfDocument(str(pdf_path))
+            count = len(document)
+        texts: list[str] = []
+        try:
+            for index in range(count):
+                with _PDFIUM_LOCK:
+                    page = document[index]
+                    textpage = page.get_textpage()
+                    texts.append(textpage.get_text_bounded())
+                    textpage.close()
+                    page.close()
+        finally:
+            with _PDFIUM_LOCK:
+                document.close()
+        return texts
+    except Exception:
+        return []
+
+
 # THE PAGE AS THE MODEL RECEIVES IT ----------------------------------------------------------------
 #
 # What reaches the model is bounded in BYTES, and a scanned page is where the bound bites: a
@@ -1361,14 +1434,35 @@ _CONTINUATION_HEADS = ",;:)]}»…"
 
 def join_pages(pages: list[str], seams: list[dict] | None = None) -> str:
     """The pages as one markdown document, each seam closed as tightly as it deserves."""
+    return "".join(_stitched(pages, seams))
+
+
+def page_starts(pages: list[str], seams: list[dict] | None = None) -> list[int]:
+    """Where each page begins in what `join_pages` returns: one offset per page.
+
+    A page's start is where its separator starts, so anything of its own body lies after
+    it; a page that adds nothing starts where the next one does.
+    """
+    starts: list[int] = []
+    length = 0
+    for piece in _stitched(pages, seams):
+        starts.append(length)
+        length += len(piece)
+    return starts
+
+
+def _stitched(pages: list[str], seams: list[dict] | None) -> Iterator[str]:
+    """Yield what each page adds to the joined document: its separator, its mark, its body."""
     decided = {record["page"]: record for record in valid_seams(seams)}
     out = ""
     for index, page in enumerate(pages, 1):
         body = _trim(page)
         if not body:
+            yield ""
             continue
         if not out:
             out = body
+            yield body
             continue
         separator, certain = seam(out, body)
         record = decided.get(index)
@@ -1383,12 +1477,14 @@ def join_pages(pages: list[str], seams: list[dict] | None = None) -> str:
                 else _drop_repeated_header(body)
             )
         if not body.strip():
+            yield ""
             continue
         if separator == PARAGRAPH:
-            out = f"{out}\n\n{page_mark(index)}\n\n{body}"
+            piece = f"\n\n{page_mark(index)}\n\n{body}"
         else:
-            out = f"{out}{SEPARATORS[separator]}{body}"
-    return out
+            piece = f"{SEPARATORS[separator]}{body}"
+        out = f"{out}{piece}"
+        yield piece
 
 
 def valid_seams(records) -> list[dict]:

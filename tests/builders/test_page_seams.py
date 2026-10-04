@@ -65,6 +65,18 @@ def test_an_empty_page_is_skipped_without_leaving_a_seam():
     assert pages.join_pages(["Uno.", "   ", "Dos."]) == "Uno.\n\n<!-- page 3 -->\n\nDos."
 
 
+def test_every_page_says_where_it_starts_in_the_joined_document():
+    listed = ["# Uno\n\nTexto.", "   ", "## Dos\n\nMás.", SENTENCE_OPEN, SENTENCE_REST]
+    joined = pages.join_pages(listed)
+
+    starts = pages.page_starts(listed)
+
+    assert len(starts) == len(listed) and starts == sorted(starts)
+    assert starts[1] == starts[2], "an empty page starts where the next one does"
+    assert joined[starts[2] :].lstrip().startswith(markdown.page_mark(3))
+    assert joined[starts[4] :].strip() == pages._trim(SENTENCE_REST).strip()
+
+
 # THE PAGE MARK -----------------------------------------------------------------------------------
 
 

@@ -120,10 +120,21 @@ export interface CriteriaPayload {
   job: Job | null;
 }
 
-/** One document of the notes as the reader shows it: its sections, in reading order. */
+/** One section of the notes: its heading path, its transcription and the page it starts on. */
+export interface NotesSection {
+  location: string;
+  text: string;
+  page?: number | null;
+}
+
+/**
+ * One document of the notes as the reader shows it: its sections, in reading order, and how
+ * many pages the document itself has when the server can draw them (`original`).
+ */
 export interface NotesDocument {
   document: string;
-  sections: { location: string; text: string }[];
+  original?: { pages?: number; version?: string; ratios?: number[] } | null;
+  sections: NotesSection[];
 }
 
 export interface AdminConversationRow extends Omit<ConversationRow, "pending"> {

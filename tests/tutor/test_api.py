@@ -318,12 +318,41 @@ def test_a_student_opens_the_notes_a_reply_cites_and_nothing_outside_them(ws, ru
     monkeypatch.setattr(
         router_module,
         "read_document",
-        lambda ws, sources, name: [{"location": "Tema 1", "text": "Texto."}] if name == "apuntes.pdf" else None,
+        lambda ws, sources, name: (
+            {"original": {"pages": 4, "version": "abc"}, "sections": [{"location": "Tema 1", "text": "Texto.", "page": 2}]}
+            if name == "apuntes.pdf"
+            else None
+        ),
     )
 
     found = viewer.get("/api/tutor/notes", params={"document": "apuntes.pdf"})
-    assert found.status_code == 200 and found.json()["sections"][0]["location"] == "Tema 1"
+    assert found.status_code == 200 and found.json()["document"] == "apuntes.pdf"
+    assert found.json()["sections"][0] == {"location": "Tema 1", "text": "Texto.", "page": 2}
+    assert found.json()["original"]["pages"] == 4
     assert viewer.get("/api/tutor/notes", params={"document": "otro.pdf"}).status_code == 404
+
+
+def test_a_page_of_the_notes_is_an_image_of_a_document_of_the_corpus_and_of_nothing_else(ws, runner, monkeypatch):
+    viewer = client(ws, role="viewer")
+    original = router_module.originals.Original(pdf=None, ratios=(1.4,) * 4, digest="0" * 64)
+    asked = []
+    monkeypatch.setattr(router_module.entrypoints, "load_concept_sources", lambda ws: {})
+    monkeypatch.setattr(router_module, "in_corpus", lambda ws, sources, name: name == "apuntes.pdf")
+    monkeypatch.setattr(
+        router_module.originals, "original_for", lambda ws, name: asked.append(name) or original
+    )
+    monkeypatch.setattr(
+        router_module.originals,
+        "page_image",
+        lambda ws, original, number: (b"png", "image/png") if 1 <= number <= original.pages else None,
+    )
+
+    page = viewer.get("/api/tutor/notes/page", params={"document": "apuntes.pdf", "page": 2, "v": "abc"})
+    assert page.status_code == 200 and page.content == b"png"
+    assert page.headers["content-type"] == "image/png" and "immutable" in page.headers["cache-control"]
+    assert viewer.get("/api/tutor/notes/page", params={"document": "apuntes.pdf", "page": 5}).status_code == 404
+    assert viewer.get("/api/tutor/notes/page", params={"document": "otro.pdf", "page": 1}).status_code == 404
+    assert asked == ["apuntes.pdf", "apuntes.pdf"], "a document outside the corpus is never looked for on disk"
 
 
 def test_a_message_carries_the_concept_the_student_chose_on_its_turn_and_never_on_its_job(ws, runner):

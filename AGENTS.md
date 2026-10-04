@@ -127,7 +127,8 @@ table and refuses while a row has no file: on an installation that still has the
 - `[dependency-groups] dev` — builders + server.
 - **LibreOffice is a system dependency of the builders** (`soffice`, looked up at call time)
   for rasterising EMF/WMF metafiles in Office files. Without it those pictures read as
-  `[IMAGEN NO LEGIBLE]`.
+  `[IMAGEN NO LEGIBLE]`. The tutor's reader uses it too, to export a Word file (Writer) or a
+  deck (`libreoffice-impress`) to PDF; without it those documents open as text.
 
 ### Runtime prerequisites
 
@@ -752,6 +753,25 @@ admin's read.
   Each opens `GET /api/tutor/notes?document=…` (`auth.VIEW`), which serves
   only a document of the corpus the tutor searches, cut by whole sections
   (`passages.read_document`); the client shows one section at a time, formatted.
+- **The reader shows the document itself first** (`tutor/originals.py`, user's decision of
+  2026-10-04): «Original» is the PDF's pages, the deck's slides or the Word document,
+  scrolled freely, and «Texto» is the transcription, which stays the view to select, copy and
+  read aloud. Every format takes one road: a PDF as it is, an Office file exported to PDF by
+  LibreOffice once (`office.pdf_copy`, a deck with its hidden slides), a page drawn by PDFium
+  (`pages.page_picture`, under `_PDFIUM_LOCK`) as PNG, or JPEG when heavy; both kept under
+  `cache/tutor_originals/` by the SOURCE's hash. `/notes` adds `original` (`pages`,
+  `version`, and `ratios`, each page's height over its width, so the reader lays the whole
+  document out before a page arrives) and each section's `page`; `GET /api/tutor/notes/page` serves one page as an
+  image, only of a document of the corpus, cacheable because the client sends the version.
+  **A section's page is counted where the cache holds one file per page of that very file**
+  (same hash, not `restructured`, equal counts: a PDF, a deck): the heading's offset in the
+  joined text against `pages.page_starts`. Otherwise (a Word file is one cached page; pages
+  moved by hand) the title is searched as a line of its own in the PDF's text, in order, a
+  table-of-contents page skipped, and a section not found stays with the one before:
+  approximate, accepted. No original (plain text, the raw file gone, no LibreOffice, no
+  PDFium) answers `original: null` and the reader shows the text alone, never an error.
+  A deck needs `libreoffice-impress` installed; a document LibreOffice refuses is not asked
+  for again until a restart.
 - `tutor.message_max_chars` (12 000) is a hidden safety cap, never shown as a counter.
 - **A daily limit per account** (`tutor.daily_messages`, empty = none): counted in the
   database (`tutor_usage`, by UTC day) across every workspace, because the queue is the
@@ -1005,7 +1025,15 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   a map the app wrote has no source to show — the concept in `--attention-fill`,
   or the prerequisite to review; what is known settled, what comes later dashed; on a narrow
   screen the learning order alone, stacked, the other relations written under it) and its
-  references under it, each opening the notes reader (`NotesReader`, one section at a time);
+  references under it, each opening the notes reader (`NotesReader`: ONE window size
+  whatever it shows, two views switched in the dialog's header and held for the visit —
+  «Original», every page of the document one under another in a `.well`, opened on the
+  section's page and scrolled freely, each page an image asked for only when near the
+  screen, in the place its shape reserves; «Texto», one section at a time; a bar that stays
+  in sight, whose arrows and list move by SECTION in both views, with «Página N de M» under
+  it in the original; the section and the page move together (`tutor/notes.ts`), a jump's
+  own scroll never read as the student's; a document with no original has the text and no
+  switch);
   a new turn scrolls the panel to its START, since a reply with a map is taller than the panel; the reply on its way is `Thinking`: a question mark written square by square
   (opacity only, so it stays on under reduced motion) beside one line of what happens and one
   of why the reply arrives whole — hollow and still, saying «En cola», while queued — with
@@ -1232,6 +1260,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Spanish survives only in string literals (UI copy, registry `doc=`, server/evaluation logs,
   error messages).
 - Built-in generics (`list[str]`, `str | None`), `Callable` from `collections.abc`; no
+- The notes open as the original document, scrolled freely from the section's page (a
+  section does not end where its page does), with the transcription as a second view in a
+  window of the same size (2026-10-04). A page is content, like a figure: it keeps its white in either
+  theme, inside a well. The page a Word section opens on is approximate.
   `typing` imports. No pandas in core. No multi-LLM validation frameworks or agent graphs.
   Heuristics first, LLM only on genuinely ambiguous input.
 - Incremental, surgical changes; no speculative abstractions.
