@@ -18,6 +18,10 @@ import { cn } from "@/lib/utils";
  * Every row is the same two lines — a name and one line of state — so the list reads as a
  * list on every tab, whatever it lists.
  * Below `lg` the list lies down and scrolls sideways over the section.
+ *
+ * A list of two kinds of section (the subject's own parts, then one per unit) names the
+ * second kind with a caption over its first row (`group`). A list taller than the window
+ * scrolls inside itself: pinned whole, its last rows were out of reach beside a long section.
  */
 export interface SectionEntry {
   key: string;
@@ -30,6 +34,8 @@ export interface SectionEntry {
   mark?: ReactNode;
   /** Changes made in the section and not saved yet. */
   pending?: number;
+  /** A caption over the row, where the rows from this one on are another kind of section. */
+  group?: string;
 }
 
 export function Sections({
@@ -59,12 +65,20 @@ export function Sections({
       {/* Cleared of the sticky header, which takes a second row of navigation below `xl`. */}
       <div className="min-w-0 space-y-3 lg:sticky lg:top-40 xl:top-24">
         {before}
-        <nav aria-label={label} className="surface p-2">
+        <nav
+          aria-label={label}
+          className="surface p-2 lg:max-h-[calc(100dvh-11.5rem)] lg:overflow-y-auto xl:max-h-[calc(100dvh-7.5rem)]"
+        >
           <ul className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:flex-col lg:overflow-visible [&::-webkit-scrollbar]:hidden">
             {items.map((item) => {
               const current = item.key === value;
               return (
                 <li key={item.key} className="shrink-0 lg:shrink">
+                  {item.group ? (
+                    <p className="hidden px-3 pb-1 pt-3 text-micro font-condensed uppercase text-muted-foreground lg:block">
+                      {item.group}
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     data-section={item.key}

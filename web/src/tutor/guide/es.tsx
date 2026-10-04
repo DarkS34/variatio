@@ -195,6 +195,14 @@ function Tutor() {
           aparecen al corregir. El método del tutor no se escribe aquí: vale en todas las
           asignaturas.
         </Paragraph>
+        <Paragraph>
+          Al corregir, una lista muestra los apartados y el apartado elegido se abre a su lado.
+          Primero están los tres de toda la asignatura: «{t("tutor.criteria.general")}», «
+          {t("tutor.criteria.terms")}» y «{t("tutor.criteria.admin.short")}». Después hay un
+          apartado por cada unidad. Cada fila de la lista dice cuántos criterios tiene el
+          apartado y cuántos cambios hay en él sin guardar. La barra de abajo guarda los cambios
+          de todos los apartados a la vez.
+        </Paragraph>
       </Block>
 
       <Block title={`Desde un ejercicio: «${t("tutor.fromExercise")}»`}>

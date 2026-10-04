@@ -189,6 +189,14 @@ function Tutor() {
           the sentences alone, each unit folded; each criterion's concepts and sources appear
           when correcting. The tutor's method is not written here: it holds in every subject.
         </Paragraph>
+        <Paragraph>
+          While correcting, a list shows the sections and the chosen one opens beside it. The
+          three that concern the whole subject come first: "{t("tutor.criteria.general")}", "
+          {t("tutor.criteria.terms")}" and "{t("tutor.criteria.admin.short")}". Then there is
+          one section per unit. Each row of the list says how many criteria the section holds
+          and how many changes in it are not saved. The bar at the foot saves the changes of
+          every section at once.
+        </Paragraph>
       </Block>
 
       <Block title={`From an exercise: "${t("tutor.fromExercise")}"`}>

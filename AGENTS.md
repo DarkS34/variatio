@@ -1078,8 +1078,15 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   as a numbered index, each row opening the picker on itself.
   A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: a review of plain
   sentences (the subject's open, each unit folded; concepts and sources only when
-  correcting), «Quiero corregir algo» with a sticky save bar, and a rebuild that asks first
-  when there is a correction. «Trabajar con el tutor» on a saved exercise — in «Mis
+  correcting), «Quiero corregir algo», and a rebuild that asks first when there is a
+  correction. The correction is the admin panel's list (`features/admin/Sections`) beside the
+  part open (user's request, 2026-10-04: stacked down one page the parts could not be told
+  apart): the three parts of the subject whole lead — «Para toda la asignatura», «Lo que el
+  tutor nunca sugiere», «Consultas administrativas» — and one per unit follows under a
+  caption (`SectionEntry.group`), numbered; a row counts what its part holds and its rows
+  changed and not saved (`tutor/criteria.changes`, counted as sets); a criterion is a ruled
+  row with no caption per control; the bar is the stage screens' (state, «Dejar de corregir»
+  asking first when dirty, the save) and saves every part at once. «Trabajar con el tutor» on a saved exercise — in «Mis
   asignaturas y ejercicios» and Generate's «Mis ejercicios», and on a result card once its
   file exists, only with the tutor open — stashes the statement and the generation id
   (`lib/tutorDraft.ts`, in core because those screens are). The admin reads conversations
