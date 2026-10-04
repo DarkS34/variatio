@@ -12,11 +12,20 @@
 // again. The migration is over, and the three entries left are not leftovers: each is a
 // file that must NOT go through the catalogue, and says why in its own comment.
 //
-// It also checks the two things the guide puts beyond a text scan: that its two prose trees
+// It also checks where each key may be read. The strings only an optional function reads
+// live in that function's folder (`src/<function>/i18n/`) and arrive with its code, but the
+// `Key` type is every catalogue's keys together, so `tsc` cannot see a tutor key read from
+// core — where it renders as its own name until the tutor is loaded, whether written whole
+// or built from a prefix. Nor can it see a key in a table typed `string`, which exists in no
+// catalogue at all, or a module of a function loaded from core without registering that
+// function's catalogue first.
+//
+// And the two things the guide puts beyond a text scan: that its two prose trees
 // answer for the same set of sections, and that every section the registry ANNOUNCES has a
-// body somewhere. The second is not a refinement of the first — two trees that agree on not
-// having a section satisfy it perfectly, which is how a blank page shipped green.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+// body, in the file the registry reads it from. The second is not a refinement of the
+// first — two trees that agree on not having a section satisfy it perfectly, which is how a
+// blank page shipped green.
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, relative, sep } from "node:path";
 
@@ -144,14 +153,22 @@ const EXEMPT = new Set([
 // `features/guide/sections.tsx` for why. So `guide/es/` really is written in Spanish and
 // `guide/en/` really is written in English, and both are correct: what makes that checkable
 // is not this script but that `useGuideBody` picks one by the reader's language, and that
-// `BODIES` in the two files has to hold the same slugs.
+// `BODIES` in the two languages has to hold the same slugs. The sections of an optional
+// function live in that function's folder (`evaluation/guide/`, `tutor/guide/`), one file
+// per language, so the guide fetches them only for an account the function is open to.
 const EXEMPT_TREES = [
   "features/guide/es/",
   "features/guide/en/",
+  "evaluation/guide/",
+  "tutor/guide/",
 ];
 
 const exempt = (path) =>
   EXEMPT.has(path) || EXEMPT_TREES.some((prefix) => path.startsWith(prefix));
+
+// The core's catalogue and each optional function's: `lib/i18n/`, `evaluation/i18n/`,
+// `tutor/i18n/`. Every file in them is the catalogue's own machinery or its strings.
+const inCatalogue = (path) => /^(?:lib|[\w-]+)\/i18n\//.test(path);
 
 const findings = [];
 
@@ -159,7 +176,7 @@ for (const full of walk(SRC)) {
   const path = relative(SRC, full).split(sep).join("/");
   if (path.endsWith(".test.ts") || path.endsWith(".test.tsx")) continue;
   // The catalogue is where the Spanish lives, by definition.
-  if (path.startsWith("lib/i18n/")) continue;
+  if (inCatalogue(path)) continue;
   if (exempt(path)) continue;
 
   const text = readFileSync(full, "utf8");
@@ -241,36 +258,216 @@ for (const full of walk(SRC)) {
 
 const migrated = walk(SRC)
   .map((full) => relative(SRC, full).split(sep).join("/"))
-  .filter((path) => !exempt(path) && !path.startsWith("lib/i18n/")).length;
+  .filter((path) => !exempt(path) && !inCatalogue(path)).length;
 
 if (findings.length) {
   console.error(`✗ ${findings.length} texto(s) de interfaz fuera del catálogo:\n`);
   for (const finding of findings) console.error(`  ${finding}`);
   console.error(
     `\nCada uno es una cadena que se pintará en español haga lo que haga la cuenta.\n` +
-      `Muévela a src/lib/i18n/es.ts y tradúcela en en.ts.`,
+      `Muévela a src/lib/i18n/es.ts (o, si solo la lee una función opcional, a\n` +
+      `src/<función>/i18n/es.ts) y tradúcela en el en.ts de al lado.`,
+  );
+  process.exit(1);
+}
+
+// WHERE EACH KEY MAY BE READ ---------------------------------------------------------------
+//
+// A catalogue is every `i18n/es.ts` under `src/`: `lib/i18n/` is the core's, and
+// `<function>/i18n/` belongs to the function whose folder holds it. Its keys are read off
+// the source the same way the catalogue writes them, one `"key":` per line.
+const catalogues = walk(SRC)
+  .map((full) => relative(SRC, full).split(sep).join("/"))
+  .filter((path) => /(?:^|\/)i18n\/es\.ts$/.test(path))
+  .map((path) => {
+    const home = path.split("/")[0];
+    return {
+      path,
+      feature: home === "lib" ? null : home,
+      keys: [...readFileSync(resolve(SRC, path), "utf8").matchAll(/^ {2}"([^"]+)":/gm)].map(
+        (match) => match[1],
+      ),
+    };
+  });
+const catalogueOf = new Map();
+const twiceDeclared = [];
+for (const catalogue of catalogues) {
+  for (const key of catalogue.keys) {
+    if (!catalogueOf.has(key)) catalogueOf.set(key, catalogue);
+    else twiceDeclared.push(`${key} — en ${catalogueOf.get(key).path} y en ${catalogue.path}`);
+  }
+}
+// The first segment of every key: `tutor`, `eval`, `admin`…
+const namespaces = new Set([...catalogueOf.keys()].map((key) => key.split(".")[0]));
+
+// Comments blanked first, newlines kept, so a comment quoting a key is not a read of it.
+// The `[^:]` keeps a URL's `//` from blanking the rest of its line.
+const blankComments = (text) =>
+  text
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/.*$/gm, (m, lead) => lead + m.slice(lead.length).replace(/./g, " "));
+
+// A function's key is a quoted string equal to it, wherever it sits: a `t()` call, a table
+// of keys, a prop. The lookahead lets two quoted strings share a quote.
+const QUOTED = /(?=(["'`])([\w.-]+)\1)/g;
+// A family of keys built at run time — `step.${id}`, or `"step." + id` — named by the
+// namespaced head it starts with. `QUOTED` cannot see one, and neither can `tsc`, since the
+// `as Key` that a built key needs accepts every catalogue's keys alike.
+const FAMILY = /`([\w-]+\.[\w.-]*)\$\{|(["'])([\w-]+\.[\w.-]*)\2\s*\+/g;
+// What can only be a key: the argument of `t()` or `plural()`, or a property named `…Key`.
+const ASKED = /(?:\b(?:t|plural)\(\s*|\b\w*(Key)\s*:\s*)(["'`])([\w.-]+)\2/g;
+
+const misread = [];
+const unknown = [];
+const unregistered = [];
+const sources = walk(SRC)
+  .map((full) => ({ full, path: relative(SRC, full).split(sep).join("/") }))
+  .filter(({ path }) => !inCatalogue(path) && !/\.test\.tsx?$/.test(path));
+// The function whose folder holds a path, among those with a catalogue; null for core.
+const featureOf = (path) =>
+  catalogues.find(({ feature }) => feature && path.startsWith(`${feature}/`))?.feature ?? null;
+// Where an import specifier lands, relative to `src/`, or null for a package.
+const landing = (file, specifier) => {
+  if (specifier.startsWith("@/")) return specifier.slice(2);
+  if (!specifier.startsWith(".")) return null;
+  return relative(SRC, resolve(dirname(file), specifier)).split(sep).join("/");
+};
+
+for (const { full, path } of sources) {
+  const code = blankComments(readFileSync(full, "utf8"));
+  const line = (index) => code.slice(0, index).split("\n").length;
+  const own = featureOf(path);
+
+  for (const match of code.matchAll(QUOTED)) {
+    const home = catalogueOf.get(match[2]);
+    if (home?.feature && home.feature !== own) {
+      misread.push(`${path}:${line(match.index)}  ${match[2]} — es de src/${home.feature}/`);
+    }
+  }
+  for (const match of code.matchAll(FAMILY)) {
+    const head = match[1] ?? match[3];
+    const home = [...catalogueOf].find(
+      ([key, catalogue]) => key.startsWith(head) && catalogue.feature && catalogue.feature !== own,
+    )?.[1];
+    if (home) {
+      misread.push(`${path}:${line(match.index)}  ${head}… — construye claves de src/${home.feature}/`);
+    }
+  }
+  for (const match of code.matchAll(ASKED)) {
+    const [, property, , key] = match;
+    // A `…Key` property outside every namespace a catalogue has is some other kind of key —
+    // a storage slot, a setting — and not a misspelt one.
+    if (property && !namespaces.has(key.split(".")[0])) continue;
+    if (!catalogueOf.has(key)) unknown.push(`${path}:${line(match.index)}  ${key}`);
+  }
+
+  // A module of a function that core loads on demand registers the function's catalogue
+  // before anything of it renders: its FIRST import is `import "./i18n"` (or `"../i18n"`).
+  // An `import type` does not count, since it is gone before anything runs.
+  if (own !== null) continue;
+  for (const match of code.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g)) {
+    const into = landing(full, match[1]);
+    const feature = into === null ? null : featureOf(into);
+    if (feature === null) continue;
+    const target = [".ts", ".tsx", "/index.ts", "/index.tsx"]
+      .map((extension) => resolve(SRC, into + extension))
+      .find((file) => existsSync(file));
+    if (target === undefined) continue;
+    const imports = blankComments(readFileSync(target, "utf8"));
+    const first = /^[ \t]*import\b(?!\s*\()(?!\s+type\b)[^\n]*/m.exec(imports);
+    const bare = first && /^\s*import\s*["']([^"']+)["']/.exec(first[0]);
+    if (!bare || landing(target, bare[1]) !== `${feature}/i18n`) {
+      unregistered.push(`${path}:${line(match.index)}  import("${match[1]}")`);
+    }
+  }
+}
+
+if (twiceDeclared.length) {
+  console.error("✗ Una clave está declarada en dos catálogos:\n");
+  for (const entry of twiceDeclared) console.error(`  ${entry}`);
+  console.error("\nAl registrarse se mezclan en la misma tabla, y gana la que llegue la última.");
+  process.exit(1);
+}
+
+if (misread.length) {
+  console.error(
+    `✗ ${misread.length} clave(s) de una función opcional leídas fuera de su carpeta:\n`,
+  );
+  for (const entry of misread) console.error(`  ${entry}`);
+  console.error(
+    `\nFuera de su carpeta, el catálogo de la función no está cargado y se pinta el nombre de la\n` +
+      `clave. Si la lee también el núcleo, devuélvela a src/lib/i18n/es.ts y en.ts.`,
+  );
+  process.exit(1);
+}
+
+if (unknown.length) {
+  console.error(`✗ ${unknown.length} clave(s) que no están en ningún catálogo:\n`);
+  for (const entry of unknown) console.error(`  ${entry}`);
+  console.error(
+    `\nSe leen en t(), en plural() o en una propiedad …Key, y se pintarían como su nombre.`,
+  );
+  process.exit(1);
+}
+
+if (unregistered.length) {
+  console.error(
+    `✗ ${unregistered.length} módulo(s) de una función cargados sin registrar antes su catálogo:\n`,
+  );
+  for (const entry of unregistered) console.error(`  ${entry}`);
+  console.error(
+    `\nAñade import "./i18n" (o "../i18n") como primer import del módulo que se carga,\n` +
+      `para que sus cadenas estén antes de que se pinte.`,
   );
   process.exit(1);
 }
 
 // The guide is prose per language rather than keys, so nothing above can see it. What can
-// be checked is that the two trees answer for the same sections: a section written in one
-// and not the other renders nothing at all for half the readers.
-const slugsOf = (file) =>
-  new Set(
-    [...readFileSync(resolve(SRC, file), "utf8").matchAll(/^\s{2}(\w+):\s*\w+,$/gm)].map(
-      (match) => match[1],
-    ),
-  );
-const esSlugs = slugsOf("features/guide/es/sections.tsx");
-const enSlugs = slugsOf("features/guide/en/sections.tsx");
+// be checked is that the two languages answer for the same sections: a section written in
+// one and not the other renders nothing at all for half the readers.
+//
+// A language's bodies are the `BODIES` maps of every home it has: the guide's own tree
+// (`features/guide/<lang>/sections.tsx`) and one file per optional function
+// (`<function>/guide/<lang>.tsx`). Found by walking, so a new home is read without being
+// listed here; a slug answered by two homes of one language is a failure of its own, since
+// the registry would only ever read one of them.
+const GUIDE_HOME = /(?:^|\/)guide\/(es|en)(?:\/sections)?\.tsx$/;
+const homes = walk(SRC)
+  .map((full) => relative(SRC, full).split(sep).join("/"))
+  .filter((path) => GUIDE_HOME.test(path));
+const twice = [];
+// The body of a file's `BODIES` map and nothing else: a two-space `name: Value,` line
+// elsewhere in the file — a destructured prop such as `icon: Icon,` — is not a section.
+const BODIES_MAP = /^export const BODIES\b[\s\S]*?=\s*\{\n([\s\S]*?)^\};/m;
+// Slug → the file of this language whose `BODIES` answers for it.
+const bodiesOf = (language) => {
+  const slugs = new Map();
+  for (const file of homes.filter((path) => GUIDE_HOME.exec(path)[1] === language)) {
+    const map = BODIES_MAP.exec(readFileSync(resolve(SRC, file), "utf8"))?.[1] ?? "";
+    for (const match of map.matchAll(/^\s{2}(\w+):\s*\w+,$/gm)) {
+      if (slugs.has(match[1])) twice.push(`${match[1]} — en ${slugs.get(match[1])} y en ${file}`);
+      else slugs.set(match[1], file);
+    }
+  }
+  return slugs;
+};
+const esBodies = bodiesOf("es");
+const enBodies = bodiesOf("en");
+const esSlugs = new Set(esBodies.keys());
+const enSlugs = new Set(enBodies.keys());
 const onlyEs = [...esSlugs].filter((slug) => !enSlugs.has(slug));
 const onlyEn = [...enSlugs].filter((slug) => !esSlugs.has(slug));
 
+if (twice.length) {
+  console.error("✗ Una sección de la guía tiene cuerpo en dos sitios del mismo idioma:\n");
+  for (const line of twice) console.error(`  ${line}`);
+  process.exit(1);
+}
+
 if (onlyEs.length || onlyEn.length) {
   console.error("✗ Las dos versiones de la guía no cubren las mismas secciones:\n");
-  for (const slug of onlyEs) console.error(`  ${slug} — solo en es/`);
-  for (const slug of onlyEn) console.error(`  ${slug} — solo en en/`);
+  for (const slug of onlyEs) console.error(`  ${slug} — solo en español`);
+  for (const slug of onlyEn) console.error(`  ${slug} — solo en inglés`);
   process.exit(1);
 }
 
@@ -282,12 +479,16 @@ if (onlyEs.length || onlyEn.length) {
 // ella, y una ruta que renderiza `null` — que es exactamente lo que este proyecto se niega a
 // hacer en cualquier otra pantalla.
 //
-// El registro es la fuente: el cuerpo se busca a partir de él y no al revés.
-const registrySlugs = [
-  ...readFileSync(resolve(SRC, "features/guide/sections.tsx"), "utf8").matchAll(
-    /\bslug:\s*"([\w-]+)"/g,
-  ),
-].map((match) => match[1]);
+// El registro es la fuente: el cuerpo se busca a partir de él y no al revés. Una sección
+// sin cuerpo en uno solo de los dos idiomas ya la ha parado la comprobación de arriba.
+const REGISTRY = readFileSync(resolve(SRC, "features/guide/sections.tsx"), "utf8");
+// Each entry of `GUIDE_SECTIONS` with the function it names, if any: one object literal,
+// none of whose fields holds a brace.
+const registry = [...REGISTRY.matchAll(/\{[^{}]*?\bslug:\s*"([\w-]+)"[^{}]*\}/g)].map((match) => ({
+  slug: match[1],
+  feature: /\bfeature:\s*"(\w+)"/.exec(match[0])?.[1] ?? null,
+}));
+const registrySlugs = registry.map((entry) => entry.slug);
 const bodyless = registrySlugs.filter((slug) => !esSlugs.has(slug) && !enSlugs.has(slug));
 
 if (bodyless.length) {
@@ -295,14 +496,55 @@ if (bodyless.length) {
   for (const slug of bodyless) console.error(`  ${slug} — está en GUIDE_SECTIONS, no en BODIES`);
   console.error(
     `\nCada una es una entrada del índice que abre una página en blanco.\n` +
-      `Escribe su componente en src/features/guide/es/sections.tsx y en en/sections.tsx,\n` +
+      `Escribe su componente en src/features/guide/es/sections.tsx y en en/sections.tsx\n` +
+      `(o, si explica una función opcional, en src/<función>/guide/es.tsx y en.tsx),\n` +
       `y añádelo al mapa BODIES de los dos.`,
+  );
+  process.exit(1);
+}
+
+// HAVING A BODY IS NOT ENOUGH: IT HAS TO BE WHERE THE REGISTRY LOOKS. `useGuideBody` reads a
+// section from ONE place, `TREES[section.feature ?? "guide"]`: the guide's own tree, or the
+// file of the function the section names. A body moved back into the common guide while
+// the registry still says `feature`, or a section given a `feature` whose body stayed where
+// it was, passes the three checks above and opens a blank page.
+//
+// A function's home is `<function>/guide/<lang>.tsx`, and the registry must import it under
+// that name: checked too, so the convention does not live in this file alone.
+const homeOf = (feature, language) =>
+  feature === null ? `features/guide/${language}/sections.tsx` : `${feature}/guide/${language}.tsx`;
+const misplaced = [];
+for (const feature of new Set(registry.map((entry) => entry.feature).filter(Boolean))) {
+  for (const language of ["es", "en"]) {
+    if (!REGISTRY.includes(`import("@/${feature}/guide/${language}")`)) {
+      misplaced.push(`${feature} — TREES no importa @/${feature}/guide/${language}`);
+    }
+  }
+}
+for (const { slug, feature } of registry) {
+  for (const [language, bodies] of [["es", esBodies], ["en", enBodies]]) {
+    const file = bodies.get(slug);
+    const home = homeOf(feature, language);
+    if (file !== undefined && file !== home) {
+      misplaced.push(`${slug} — su cuerpo está en ${file}, y el registro lo lee de ${home}`);
+    }
+  }
+}
+
+if (misplaced.length) {
+  console.error("✗ La guía tiene cuerpos donde el registro no los busca:\n");
+  for (const line of misplaced) console.error(`  ${line}`);
+  console.error(
+    `\nCada una es una página en blanco. Una sección sin \`feature\` va en\n` +
+      `src/features/guide/<idioma>/sections.tsx; una con \`feature: "x"\`, en src/x/guide/<idioma>.tsx.`,
   );
   process.exit(1);
 }
 
 console.log(
   `✓ ${migrated} fichero(s) sin texto de interfaz fuera del catálogo; ` +
+    `${catalogueOf.size} claves en ${catalogues.length} catálogos, ` +
+    `cada una leída donde se carga; ` +
     `${esSlugs.size} secciones de guía en los dos idiomas, ` +
     `las ${registrySlugs.length} del registro con cuerpo; ` +
     `${EXEMPT.size + EXEMPT_TREES.length} exclusión(es) deliberada(s).`,

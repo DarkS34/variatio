@@ -1,24 +1,25 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { useT, type Key } from "@/lib/i18n";
+import { useT, withCatalogues, type Key } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
 import { STEPS, stepNumber } from "@/lib/steps";
 import { cn } from "@/lib/utils";
-import { useHasWorkspace } from "@/state/auth";
+import { useFeatures, useHasWorkspace } from "@/state/auth";
 
+import { AskFigure, FlowFigure, PROSE, SourcesFigure } from "./figures";
 import {
-  AskFigure,
-  BlindFigure,
-  CloseFigure,
-  FlowFigure,
-  PROSE,
-  SourcesFigure,
-} from "./figures";
-import { SLIDE_COUNT, slidePath } from "./slides";
+  deckFor,
+  slidePath,
+  type CoreSlideId,
+  type Point,
+  type Slide,
+  type SlideId,
+  type SlideIdOf,
+} from "./slides";
 
 /**
- * Six screens, and they are the manual.
+ * Six screens — four with the evaluation closed to the account — and they are the manual.
  *
  * Somebody who has just redeemed an invitation does not know what the thing is called, so
  * the first sentence is a definition and every negation comes after it. Leaving here they
@@ -45,25 +46,17 @@ import { SLIDE_COUNT, slidePath } from "./slides";
  * instead of cutting a heading in half.
  */
 
-interface Slide {
-  title: Key;
-  /** The lead: the sentence of the slide. */
-  body: Key;
-  figure?: ReactNode;
-  /** Short paragraphs under the figure, each its own point. */
-  points?: Point[];
-  /** One aside, set apart: the thing that is true but is not an instruction. */
-  aside?: Key;
-  /** Only the index slide: the four steps of the construction, as a numbered list. */
-  steps?: boolean;
-  /**
-   * Only the last slide: the door, drawn under a rule. Two sentences, because the reader
-   * either has a subject to pick or has none and must create one.
-   */
-  outro?: { create: Key; choose: Key };
-}
-
 /**
+ * The door, drawn under a rule on the LAST slide drawn, whichever that is for the account.
+ * Two sentences, because the reader either has a subject to pick or has none and must
+ * create one.
+ */
+const OUTRO: { create: Key; choose: Key } = {
+  create: "tutorial.outro.create",
+  choose: "tutorial.outro.choose",
+};
+
+/*
  * A point, and the one that is MARKED.
  *
  * The deck is ink on paper throughout, and exactly ONE sentence is marked: "a couple of
@@ -74,8 +67,6 @@ interface Slide {
  * background's chroma is ~0 at hue 265, so mixing round the hue circle lands on a blue.
  * The ink is not repainted — what is marked is the sentence, not a warning label.
  */
-type Point = Key | { key: Key; mark: true };
-
 const keyOf = (point: Point) => (typeof point === "string" ? point : point.key);
 const marked = (point: Point) => typeof point !== "string";
 
@@ -86,42 +77,53 @@ const STEP_BODIES: Key[] = [
   "tutorial.s3.step4",
 ];
 
-const SLIDES: Slide[] = [
-  { title: "tutorial.s1.title", body: "tutorial.s1.body", figure: <FlowFigure /> },
-  {
+// One slide per id of the product's in `slides.DECK`, which decides which of them an account
+// is shown; the study's two arrive with the evaluation's code (`useStudySlides`).
+const SLIDES: Record<CoreSlideId, Slide> = {
+  s1: { title: "tutorial.s1.title", body: "tutorial.s1.body", figure: <FlowFigure /> },
+  s2: {
     title: "tutorial.s2.title",
     body: "tutorial.s2.body",
     figure: <SourcesFigure />,
     points: [{ key: "tutorial.s2.b1", mark: true }, "tutorial.s2.b2"],
   },
   // No figure: the bar this slide is about is the real one, lit up above it.
-  { title: "tutorial.s3.title", body: "tutorial.s3.body", steps: true },
-  {
+  s3: {
+    title: "tutorial.s3.title",
+    body: "tutorial.s3.body",
+    steps: true,
+    points: ["tutorial.s3.b1"],
+  },
+  s4: {
     title: "tutorial.s4.title",
     body: "tutorial.s4.body",
     figure: <AskFigure />,
     points: ["tutorial.s4.b1", "tutorial.s4.b2", "tutorial.s4.b3"],
   },
-  {
-    title: "tutorial.s5.title",
-    body: "tutorial.s5.body",
-    figure: <BlindFigure />,
-    points: ["tutorial.s5.b1", "tutorial.s5.b3"],
-    aside: "tutorial.s5.aside",
-  },
-  {
-    title: "tutorial.s6.title",
-    body: "tutorial.s6.body",
-    figure: <CloseFigure />,
-    points: ["tutorial.s6.b1"],
-    outro: { create: "tutorial.s6.outro.create", choose: "tutorial.s6.outro.choose" },
-  },
-];
+};
 
-// `slides.ts` owns the count, because the routes are one per slide: a deck that grew
-// without telling it would leave its last slide unreachable by URL, in silence.
-if (SLIDES.length !== SLIDE_COUNT) {
-  throw new Error(`tutorial: ${SLIDES.length} slides against SLIDE_COUNT = ${SLIDE_COUNT}`);
+/**
+ * The study's two slides, fetched with the evaluation's code and only when it is open.
+ *
+ * Their figures and their prose are the evaluation's, so an account it is closed to downloads
+ * neither, as with the guide's section on it. Until they arrive the slide draws nothing below
+ * the counter, and the index dot has no title; a fetch that fails leaves it so.
+ */
+function useStudySlides(open: boolean): Partial<Record<SlideIdOf<"evaluation">, Slide>> {
+  const [slides, setSlides] = useState<Partial<Record<SlideIdOf<"evaluation">, Slide>>>({});
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    withCatalogues(import("@/evaluation/tutorial"))
+      .then((module) => {
+        if (live) setSlides(module.SLIDES);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [open]);
+  return slides;
 }
 
 /**
@@ -266,12 +268,20 @@ export function TutorialScreen({ at }: { at: number }) {
   const hasWorkspace = useHasWorkspace();
   const column = useRef<HTMLDivElement>(null);
 
-  const slide = SLIDES[at];
+  // The slides this account is shown: `App` clamped `at` against the same count.
+  const features = useFeatures();
+  const deck = deckFor(features);
+  const count = deck.length;
+  const slides: Partial<Record<SlideId, Slide>> = {
+    ...SLIDES,
+    ...useStudySlides(features.evaluation),
+  };
+  const slide = slides[deck[Math.min(at, count - 1)]];
   const first = at === 0;
-  const last = at === SLIDE_COUNT - 1;
+  const last = at >= count - 1;
   // Paging REPLACES the history entry rather than pushing one, so the back button leaves
   // the deck instead of stepping through six slides already turned.
-  const go = (index: number) => navigate(slidePath(index), { replace: true });
+  const go = (index: number) => navigate(slidePath(index, count), { replace: true });
   // Step 1 is the only one of the four that needs nothing built, and with no subject yet
   // the same screen is the form that creates one.
   const leave = () => navigate("/raw");
@@ -319,7 +329,7 @@ export function TutorialScreen({ at }: { at: number }) {
           <div className="shrink-0 px-4 pt-5 sm:px-6 sm:pt-7">
             <div className={cn(COLUMN, "flex items-baseline justify-between gap-4")}>
               <p className="text-small text-muted-foreground">
-                {t("tutorial.of", { n: at + 1, total: SLIDE_COUNT })}
+                {t("tutorial.of", { n: at + 1, total: count })}
               </p>
               <button
                 onClick={leave}
@@ -335,62 +345,63 @@ export function TutorialScreen({ at }: { at: number }) {
                 fits and give way to the top when it does not, where a centred flex container
                 clips the head of anything taller than it. */}
             <div ref={column} className="flex h-full flex-col overflow-y-auto px-4 sm:px-6">
-              <div className={cn(COLUMN, "m-auto flex flex-col gap-2 py-6")}>
-                <h1 className="flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
-                  {t(slide.title)}
-                </h1>
-                <div className="flex flex-col gap-8">
-                  {/* The lead is in the ink and the aside is not: greying the sentence of
-                      the slide under points drawn in full ink inverts the emphasis, and on a
-                      slide that is a lead and a figure it greys every word on it. */}
-                  <p className={READING}>{t(slide.body)}</p>
+              {/* Empty only while the study's slides are on their way (`useStudySlides`). */}
+              {slide ? (
+                <div className={cn(COLUMN, "m-auto flex flex-col gap-2 py-6")}>
+                  <h1 className="flex min-h-[2.3em] font-reading text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[2.25rem]">
+                    {t(slide.title)}
+                  </h1>
+                  <div className="flex flex-col gap-8">
+                    {/* The lead is in the ink and the aside is not: greying the sentence of
+                        the slide under points drawn in full ink inverts the emphasis, and on a
+                        slide that is a lead and a figure it greys every word on it. */}
+                    <p className={READING}>{t(slide.body)}</p>
 
-                  {slide.figure}
+                    {slide.figure}
 
-                  {slide.steps ? <Steps /> : null}
+                    {slide.steps ? <Steps /> : null}
 
-                  {/* The points are a ruled column and not a bulleted list: they are
-                      sentences, and a dot in front of a sentence makes it look like an item
-                      in an inventory rather than a thing that is true. The rule on the left
-                      is the same device the rest of the app uses to say "these belong
-                      together". */}
-                  {slide.points ? (
-                    <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
-                      {slide.points.map((point) => (
-                        <p
-                          key={keyOf(point)}
-                          // `box-decoration-clone` makes the ground a highlight and not a
-                          // rectangle: without it a wrapped sentence paints one box across
-                          // every line, over the gaps. The negative side padding keeps the
-                          // ink starting on the column's own left edge.
-                          className={cn(
-                            READING,
-                            marked(point) &&
-                              "box-decoration-clone -mx-1.5 rounded-sm bg-[color-mix(in_oklab,var(--destructive)_12%,var(--background))] px-1.5 py-0.5",
-                          )}
-                        >
-                          {t(keyOf(point))}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
+                    {/* The points are a ruled column and not a bulleted list: they are
+                        sentences, and a dot in front of a sentence makes it look like an item
+                        in an inventory rather than a thing that is true. The rule on the left
+                        is the same device the rest of the app uses to say "these belong
+                        together". */}
+                    {slide.points ? (
+                      <div className="flex flex-col gap-6 border-l-2 border-border pl-6 sm:pl-7">
+                        {slide.points.map((point) => (
+                          <p
+                            key={keyOf(point)}
+                            // `box-decoration-clone` makes the ground a highlight and not a
+                            // rectangle: without it a wrapped sentence paints one box across
+                            // every line, over the gaps. The negative side padding keeps the
+                            // ink starting on the column's own left edge.
+                            className={cn(
+                              READING,
+                              marked(point) &&
+                                "box-decoration-clone -mx-1.5 rounded-sm bg-[color-mix(in_oklab,var(--destructive)_12%,var(--background))] px-1.5 py-0.5",
+                            )}
+                          >
+                            {t(keyOf(point))}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
 
-                  {/* No box: what sets an aside apart is that it is not an instruction, and
-                      muted ink says so without drawing a container around one paragraph of a
-                      page made of paragraphs. */}
-                  {slide.aside ? (
-                    <p className={cn(READING, "text-muted-foreground")}>{t(slide.aside)}</p>
-                  ) : null}
+                    {/* No box: what sets an aside apart is that it is not an instruction, and
+                        muted ink says so without drawing a container around one paragraph of a
+                        page made of paragraphs. */}
+                    {slide.aside ? (
+                      <p className={cn(READING, "text-muted-foreground")}>{t(slide.aside)}</p>
+                    ) : null}
 
-                  {slide.outro ? (
-                    <div className="border-t border-border pt-9">
-                      <p className={READING}>
-                        {t(hasWorkspace ? slide.outro.choose : slide.outro.create)}
-                      </p>
-                    </div>
-                  ) : null}
+                    {last ? (
+                      <div className="border-t border-border pt-9">
+                        <p className={READING}>{t(hasWorkspace ? OUTRO.choose : OUTRO.create)}</p>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
             {/* The foot of the column fades into the page. On a slide that fits it covers
                 nothing but the column's own bottom padding, so it is invisible; on one
@@ -427,11 +438,11 @@ export function TutorialScreen({ at }: { at: number }) {
           aria-label={t("tutorial.slides")}
           className="flex items-center justify-center gap-1"
         >
-          {SLIDES.map((entry, index) => (
+          {deck.map((id, index) => (
             <button
-              key={entry.title}
+              key={id}
               onClick={() => go(index)}
-              title={t(entry.title)}
+              title={slides[id] ? t(slides[id].title) : undefined}
               aria-label={t("tutorial.goTo", { n: index + 1 })}
               aria-current={index === at ? "step" : undefined}
               className="group px-1 py-2.5"

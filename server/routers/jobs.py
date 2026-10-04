@@ -34,7 +34,9 @@ GATES: dict[str, str | None] = {
 }
 
 # The job kinds that belong to an optional function (`server/features.py`): queued here only
-# by an account the function is open to. The tutor's kinds are not in `JOB_LABELS` at all.
+# by an account the function is open to, and named as a lane's holder only to such an account
+# (`routers/pipeline.py`). The tutor's kinds are not in `JOB_LABELS` at all, so this route
+# never queues them; `tutor.api.install` adds them here for the second use.
 FEATURE_OF: dict[str, str] = {"evaluate": features.EVALUATION}
 
 # `GATES` answers "are the UPSTREAM of X approved?", which is the question for building X.

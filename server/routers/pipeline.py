@@ -8,8 +8,11 @@ ROUTE ORDER IS LOAD-BEARING. `/phases` and `/scope` are declared ABOVE the
 wildcard reads "phases" as an artifact and answers "Artefacto desconocido". Do not reorder.
 """
 
+from collections.abc import Callable
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 
 from variatio.runtime import screening
 from variatio.instance import locale
@@ -17,10 +20,11 @@ from variatio.instance.exemplars_profile import ExemplarsProfile
 from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
 from variatio.entrypoints import build_phases as phases_of
 
-from .. import approvals, auth, deps, singletons, storage
+from .. import approvals, auth, deps, features, singletons, storage
+from ..db.session import session_scope
 from ..editors import kg_edit
 from ..jobs import lanes as jobs_lanes
-from .jobs import transcribing_slot
+from .jobs import FEATURE_OF, transcribing_slot
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -49,7 +53,8 @@ def pipeline_payload(access: auth.Access) -> dict:
 
     The two halves are scoped differently on purpose: whether a lane is held, and by which
     job, is said to everyone — the machine is shared, so "somebody is building something"
-    is true for everyone and hiding it leaves a queued job looking stuck — while
+    is true for everyone and hiding it leaves a queued job looking stuck; only the name of a
+    job of a function closed to the account stays back — while
     `current_job`, the waiting counts and the artifacts marked as building are statements
     about this instance and never leave it.
     """
@@ -67,7 +72,10 @@ def pipeline_payload(access: auth.Access) -> dict:
     # your own run for as long as somebody else's older one holds the other lane.
     ours = [j for j in running if j.workspace == slug]
     current = ours[0] if ours else None
-    lanes = {backend: _lane_payload(backend, slug) for backend in jobs_lanes.BACKENDS}
+    nameable = _nameable_for(access)
+    lanes = {
+        backend: _lane_payload(backend, slug, nameable) for backend in jobs_lanes.BACKENDS
+    }
     ahead = _queue_ahead(waiting, running)
     return {
         "stages": chain,
@@ -87,13 +95,42 @@ def pipeline_payload(access: auth.Access) -> dict:
     }
 
 
-def _lane_payload(backend: str, slug: str) -> dict:
+def _nameable_for(access: auth.Access) -> Callable[[str], bool]:
+    """Build the test of whether a lane's holder may be named to this account.
+
+    A job of an optional function (`jobs.FEATURE_OF`: a comparison, a tutor's turn) is named
+    only to an account that function is open to: to anybody else the lane is busy with
+    something, which is the whole of what their wait needs. The database is read at most
+    once per function and per payload, and only when such a job holds a lane; a read that
+    fails names nothing, because this payload also answers writes that already happened.
+    """
+    known: dict[str, bool] = {}
+
+    def nameable(kind: str) -> bool:
+        """Say whether a job of `kind` may be named to the account asking."""
+        feature = FEATURE_OF.get(kind)
+        if feature is None:
+            return True
+        if feature not in known:
+            try:
+                with session_scope() as session:
+                    known[feature] = features.enabled(session, access.user, feature)
+            except SQLAlchemyError:
+                known[feature] = False
+        return known[feature]
+
+    return nameable
+
+
+def _lane_payload(backend: str, slug: str, nameable: Callable[[str], bool]) -> dict:
     """Report one lane globally, and this workspace's own place in its queue.
 
-    The machine and the quota belong to the installation, so `busy` and the label of what
-    is holding the lane are said to everyone: a queued job of yours that looks stuck has
-    an honest reason, and no per-workspace number can express it. `mine`, `queued` and
-    `ahead` are the scoped half.
+    The machine and the quota belong to the installation, so `busy` and what is holding the
+    lane are said to everyone: a queued job of yours that looks stuck has an honest reason,
+    and no per-workspace number can express it. `mine`, `queued` and `ahead` are the scoped
+    half. The holder travels as its `kind`, which the client names in the reader's language,
+    and as the server's `label` beside it for an older client; both are left out when the
+    holder belongs to a function closed to the account (`_nameable_for`).
 
     `busy` means "this lane is FULL" and not "something is running on it" — it is what
     every reader uses to predict a wait, and on a lane of capacity 4 a third job waits for
@@ -111,12 +148,14 @@ def _lane_payload(backend: str, slug: str) -> dict:
         # 1 this is exactly the old "those in front, plus one if the lane is held".
         first = [j.id for j in waiting].index(mine[0].id)
         ahead = max(0, len(holders) + first + 1 - room)
+    named = holders[0] if holders and nameable(holders[0].kind) else None
     return {
         "busy": len(holders) >= room,
         "running": len(holders),
         "capacity": room,
         "mine": any(j.workspace == slug for j in holders),
-        "label": holders[0].label if holders else None,
+        "kind": named.kind if named is not None else None,
+        "label": named.label if named is not None else None,
         "queued": len(mine),
         "ahead": ahead,
     }

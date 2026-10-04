@@ -2,6 +2,7 @@ import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
   AdminEngine,
+  AdminFeaturesPayload,
   AdminGenerationListing,
   AdminJobQueue,
   AdminOverview,
@@ -14,6 +15,8 @@ import type {
   ConfigPayload,
   ExemplarsProfile,
   Coverage,
+  FeatureMode,
+  FeatureName,
   CurriculumState,
   EvaluatorProfile,
   GenerationDetail,
@@ -66,10 +69,32 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The server's stable name for the refusal (`X-Error-Code`), or null. What a screen
+     *  matches on, never the sentence in `message`. */
+    readonly code: string | null = null,
+    /** How many seconds the server asks to wait before trying again (`Retry-After`), or
+     *  null. What a refusal with a code builds its own sentence's wait from. */
+    readonly retryAfter: number | null = null,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/**
+ * `Retry-After` in seconds, or null when absent or unreadable.
+ *
+ * The server sends seconds; the header may also be an HTTP date, read as the seconds left
+ * until it. Only a value with a letter in it is read as a date: `Date.parse` takes "1.5" and
+ * "-5" for dates long past, and a wait of zero is not what either says.
+ */
+export function retryAfterSeconds(header: string | null, now: number = Date.now()): number | null {
+  const value = header?.trim() ?? "";
+  if (value === "") return null;
+  if (/^\d+$/.test(value)) return Number(value);
+  if (!/[a-z]/i.test(value)) return null;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : Math.max(0, Math.round((at - now) / 1000));
 }
 
 export interface RequestOptions extends RequestInit {
@@ -114,7 +139,12 @@ export async function request<T>(path: string, init?: RequestOptions): Promise<T
     } catch {
       /* keep the status line */
     }
-    throw new ApiError(detail, response.status);
+    throw new ApiError(
+      detail,
+      response.status,
+      response.headers.get("X-Error-Code"),
+      retryAfterSeconds(response.headers.get("Retry-After")),
+    );
   }
 
   if (response.status === 204) return undefined as T;
@@ -153,7 +183,15 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
         /* fall through to the status line */
       }
       if (xhr.status >= 200 && xhr.status < 300) resolve(body as RawUpload);
-      else reject(new ApiError(body?.detail ?? `${xhr.status} ${xhr.statusText}`, xhr.status));
+      else
+        reject(
+          new ApiError(
+            body?.detail ?? `${xhr.status} ${xhr.statusText}`,
+            xhr.status,
+            xhr.getResponseHeader("X-Error-Code"),
+            retryAfterSeconds(xhr.getResponseHeader("Retry-After")),
+          ),
+        );
     };
     // A key, not a sentence: this rejects into a screen, and the screen knows the
     // language. `ApiError.message` is rendered through `t()` wherever it is shown.
@@ -202,13 +240,14 @@ export const api = {
   invitePreview: (token: string) =>
     request<InvitePreview>(`/api/auth/invites/${encodeURIComponent(token)}`),
   // The profile is answered here and nowhere earlier: the link binds nothing beyond the
-  // access, and this is the one moment the person is in front of a form.
+  // access, and this is the one moment the person is in front of a form. Null when the form
+  // did not ask (`InvitePreview.asks_profile`).
   acceptInvite: (body: {
     token: string;
     username: string;
     name: string;
     password: string;
-    evaluator_profile: EvaluatorProfile;
+    evaluator_profile: EvaluatorProfile | null;
     ui_language: string;
   }) => post<Session>("/api/auth/accept", body),
 
@@ -503,6 +542,11 @@ export const api = {
       `/api/admin/accounts/${userId}/memberships/${encodeURIComponent(workspace)}`,
       { method: "DELETE" },
     ),
+
+  // Who each optional function is for. A write without `accounts` leaves the list as it is.
+  adminFeatures: () => request<AdminFeaturesPayload>("/api/admin/features"),
+  adminSetFeature: (feature: FeatureName, body: { mode: FeatureMode; accounts?: number[] }) =>
+    put<AdminFeaturesPayload>(`/api/admin/features/${feature}`, body),
 
   adminMaintenance: () => request<MaintenanceState>("/api/admin/maintenance"),
   setMaintenance: (active: boolean, message: string | null) =>

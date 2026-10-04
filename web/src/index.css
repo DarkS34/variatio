@@ -27,7 +27,7 @@
    than decoration.
 
    It also buys measurable room. Taking the structural role out of the colour budget frees
-   a whole family, and the five semantic colours end up further apart than in any previous
+   a whole family, and the semantic colours end up further apart than in any previous
    material: the tightest pair is destructive/evaluation under deuteranopia at ΔE 17.2 in light
    and 19.8 in dark, against a floor of 15.
 
@@ -103,19 +103,38 @@
      is the one family left that survives beside the signal red: an ochre first draft at
      oklch(0.50 0.12 95) measured ΔE 5.8 from --destructive under deuteranopia.
 
-     THE LIGHTNESS IS THE MEASURED PART, AND IT WAS FOUND BY A CHECK `check:color` DOES NOT
-     MAKE. The script compares --evaluation against the other four semantic colours and compares
-     --primary against the arms, but it never compares --evaluation against the arms — and
-     --arm-rag is also a green (0.57 0.125 158). A first draft at oklch(0.48 0.14 150)
-     passed the whole gate while sitting ΔE 15.0 from it, so on the evaluation screen the
-     «Evaluar» pill would have been very nearly the colour of the rag arm's own bars: not a
-     contrast failure, but exactly the claim this token exists to avoid — that the
-     destination belongs to an arm. Dropping the lightness to 0.40 is what fixes it, at
-     27.6 in light and 28.5 in dark against the nearest arm in the worst of the three
-     visions. Chroma 0.13 rather than more keeps it inside sRGB; the greens that measured
-     best were all outside it, which makes their measurement fiction. */
+     THE LIGHTNESS IS THE MEASURED PART, AND IT WAS FOUND BY A CHECK `check:color` DID NOT
+     MAKE THEN. The script compared --evaluation against the other semantic colours and
+     --primary against the arms, but never --evaluation against the arms — and --arm-rag is
+     also a green (0.57 0.125 158). It makes that check now, every destination colour
+     against every arm at a floor of 16 — one above the categorical 15, which the draft
+     below met with nothing to spare. A first draft at
+     oklch(0.48 0.14 150) passed the whole gate while sitting ΔE 15.0 from it, so on the
+     evaluation screen the «Evaluar» pill would have been very nearly the colour of the rag
+     arm's own bars: not a contrast failure, but exactly the claim this token exists to
+     avoid — that the destination belongs to an arm. Dropping the lightness to 0.40 is what
+     fixes it, at 27.6 in light and 28.5 in dark against the nearest arm in the worst of the
+     three visions. Chroma 0.13 rather than more keeps it inside sRGB; the greens that
+     measured best were all outside it, which makes their measurement fiction. */
   --evaluation: oklch(0.40 0.13 140);
   --evaluation-foreground: oklch(0.99 0.004 140);
+
+  /* The tutor is the second destination outside the frontier story: the evaluation is
+     where the frontier is measured, the tutor is where one student walks it. It is spent the
+     way --evaluation is, only where the tutor is named from OUTSIDE its own screen — its
+     door, «Trabajar con el tutor» — and never inside it, where --attention goes on meaning
+     "act here".
+
+     A blue, and a quieter one than the attention's: hue 240 against 262, so it is set apart
+     by lightness and chroma and the ultramarine stays the one saturated blue on screen.
+     Measured by `check:color`, worst of normal / deutan / protan: ΔE 45.5 from --attention,
+     25.3 from the nearest semantic colour (--settled, protan), 16.6 from the nearest arm
+     (--arm-naive, protan) and 17.1 from --arm-system, the arm nearest it in hue. As text
+     8.72 on the surfaces, 7.97 on its own 8 % tint and 6.69 on the door's strongest, 18 %.
+     Inside sRGB. Never a fill — its door is a tint and a ring — so, like --settled, it has
+     no foreground: a label token nothing draws would be measured for a pairing no screen
+     shows. */
+  --tutor: oklch(0.40 0.09 240);
 
   --border: oklch(0.87 0.004 265);
   /* --input is not the same value as --border, and the reason has not changed with the
@@ -226,6 +245,12 @@
      the checker compares every --X-foreground against its --X. */
   --evaluation-foreground: oklch(0.16 0.004 140);
 
+  /* Light in dark mode, as --evaluation is, and for the arms' reason: their band sits in
+     the middle, so the gap opens at the top. ΔE 32.9 from --attention, 30.7 from the
+     nearest semantic colour (--primary, protan), 25.6 from the nearest arm (--arm-naive,
+     deutan); as text 10.51, on its tint 9.03 at 8 % and 7.09 at the door's 18 %. */
+  --tutor: oklch(0.82 0.10 240);
+
   --border: oklch(0.30 0.005 265);
   --input: oklch(0.50 0.008 265);
   --ring: oklch(0.95 0.004 265);
@@ -309,6 +334,7 @@
   --color-attention-foreground: var(--attention-foreground);
   --color-evaluation: var(--evaluation);
   --color-evaluation-foreground: var(--evaluation-foreground);
+  --color-tutor: var(--tutor);
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
   --color-border: var(--border);

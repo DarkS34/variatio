@@ -3,12 +3,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Alert, LoadError, Skeleton } from "@/components/ui/misc";
+import { ApiError } from "@/lib/api";
 import { when } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 
 import { Composer, type Picking } from "./Composer";
 import { ConceptMap } from "./ConceptMap";
-import type { TutorDraft } from "./draft";
+import type { TutorDraft } from "@/lib/tutorDraft";
+import { DAILY_LIMIT, limitSentence } from "./limit";
 import { NotesReader } from "./NotesReader";
 import { Reply } from "./Reply";
 import {
@@ -92,11 +94,19 @@ export function ConversationView({
   const sending = open.isPending || send.isPending;
   const error = open.error ?? send.error ?? retry.error;
   const canSend = ready && !sending && !pending && message.trim().length > 0;
+  // A refusal belongs to the attempt it answered: the next send or retry takes it off, or
+  // one that failed would stay over every message that went after it.
+  const clearError = () => {
+    open.reset();
+    send.reset();
+    retry.reset();
+  };
 
   const submit = () => {
     if (!canSend) return;
     const text = message.trim();
     setPicking(null);
+    clearError();
     if (id === null) {
       open.mutate(
         { message: text, generationId: draft?.generationId ?? null, concept: chosen },
@@ -154,7 +164,10 @@ export function ConversationView({
               variant="outline"
               size="sm"
               disabled={!ready || retry.isPending}
-              onClick={() => retry.mutate()}
+              onClick={() => {
+                clearError();
+                retry.mutate();
+              }}
             >
               <RotateCcw />
               {t("tutor.retry")}
@@ -164,11 +177,7 @@ export function ConversationView({
       </div>
 
       <div className="space-y-2 border-t border-border p-3">
-        {error ? (
-          <Alert tone="danger" title={t("tutor.sendFailed")}>
-            <p>{error.message}</p>
-          </Alert>
-        ) : null}
+        {error ? <SendError error={error} /> : null}
         <Composer
           value={message}
           onChange={setMessage}
@@ -186,6 +195,26 @@ export function ConversationView({
       </div>
       <NotesReader place={reading} onClose={() => setReading(null)} />
     </section>
+  );
+}
+
+/**
+ * Why a message, or a reply asked again, did not go.
+ *
+ * The daily limit is not a failure: its sentence says when the next message can go, so it is
+ * shown alone and not under «No se pudo enviar». Built here from the refusal's code and its
+ * `Retry-After`, in the reader's language; the server's own sentence only without the header.
+ */
+function SendError({ error }: { error: Error }) {
+  const tr = useT();
+  const { t } = tr;
+  if (error instanceof ApiError && error.code === DAILY_LIMIT) {
+    return <Alert tone="info" title={limitSentence(error.retryAfter, error.message, tr)} />;
+  }
+  return (
+    <Alert tone="danger" title={t("tutor.sendFailed")}>
+      <p>{error.message}</p>
+    </Alert>
   );
 }
 

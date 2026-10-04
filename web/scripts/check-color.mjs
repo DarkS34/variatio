@@ -122,12 +122,21 @@ const TEXT = [
   "--code-string",
   "--code-number",
   "--evaluation",
+  "--tutor",
 ];
 const SURFACES = ["--background", "--card"];
 // A separator carries no information, so WCAG asks nothing of it; a control outline does.
 const OUTLINE = { "--input": 3, "--border": 1.3 };
-const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--evaluation"];
+const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--evaluation", "--tutor"];
 const ARMS = ["--arm-naive", "--arm-rag", "--arm-system"];
+// The colours of a DESTINATION — a function with a door of its own — rather than of a state.
+// Each is checked against every arm as well as against the semantic colours, because a
+// destination drawn in an arm's colour claims to belong to that arm. --evaluation's first
+// draft sat ΔE 15.0 from --arm-rag and no line here read that distance. It is printed now;
+// the margin each token keeps above the floor is recorded in `index.css`.
+const DESTINATIONS = ["--evaluation", "--tutor"];
+// One above the categorical floor, because the very green draft met 15 with nothing to spare.
+const DESTINATION_ARM_MIN = 16;
 
 // Text on a tint of ITS OWN hue. This is the case the plain contrast table cannot see and
 // that it missed: a badge paints its colour behind its own label, so the tint eats the
@@ -139,6 +148,12 @@ const TINTED = [
   ["--settled", 0.08],
   ["--destructive", 0.08],
   ["--evaluation", 0.08],
+  ["--tutor", 0.08],
+  // A door (`components/ui/tone.ts`) paints its label on 9 %, 16 % on hover and 18 % when it
+  // is the screen in use; the label only loses contrast as the tint rises, so the strongest
+  // step stands for the three.
+  ["--evaluation", 0.18],
+  ["--tutor", 0.18],
 ];
 
 // EVERY `--X-foreground` AGAINST ITS `--X`. This is the pair the tables above cannot see:
@@ -165,7 +180,7 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
   }
 
   for (const [name, alpha] of TINTED) {
-    if (!tokens[name]) continue;
+    if (!tokens[name]) { fail(`${name} no existe`); continue; }
     const ratio = contrast(tokens[name], over(tokens[name], alpha, tokens["--card"]));
     const line = `${name.padEnd(20)} sobre su tinte al ${(alpha * 100).toFixed(0)}%  ${ratio.toFixed(2)}`;
     ratio >= TEXT_MIN ? ok(line) : fail(`${line}  < ${TEXT_MIN}`);
@@ -215,6 +230,22 @@ for (const [mode, tokens] of [["claro", light], ["oscuro", dark]]) {
       const d = deltaE(tokens["--primary"], tokens[arm], kind);
       const line = `ΔE ${kind.padEnd(6)} primary vs ${arm.slice(2)}: ${d.toFixed(1)} (mín ${floor})`;
       d >= floor ? ok(line) : fail(`${line}`);
+    }
+    // A destination against every arm, above the full floor: no arm is exempt here, since
+    // the arms are drawn on the evaluation's own screen and a door is read beside them.
+    // A token missing here is a failure, never a skip: a renamed destination would
+    // otherwise pass by not being measured at all.
+    for (const destination of DESTINATIONS) {
+      for (const arm of ARMS) {
+        const absent = [destination, arm].filter((name) => !tokens[name]);
+        if (absent.length) {
+          fail(`ΔE ${kind.padEnd(6)} ${destination.slice(2)} vs ${arm.slice(2)}: ${absent.join(", ")} no existe`);
+          continue;
+        }
+        const d = deltaE(tokens[destination], tokens[arm], kind);
+        const line = `ΔE ${kind.padEnd(6)} ${destination.slice(2)} vs ${arm.slice(2)}: ${d.toFixed(1)}`;
+        d >= DESTINATION_ARM_MIN ? ok(line) : fail(`${line} < ${DESTINATION_ARM_MIN}`);
+      }
     }
     // And that the three arcs stay apart between ADJACENT pairs in the declared order.
     for (let i = 0; i + 1 < ARMS.length; i++) {

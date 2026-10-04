@@ -141,10 +141,16 @@ def _mount_web(app: FastAPI) -> None:
 
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
-        """Serve a file of the bundle, or `index.html` so the client router owns the URL."""
+        """Serve a file of the bundle, or `index.html` so the client router owns the URL.
+
+        A path through a dot-directory is never a file of the app: `dist/.vite/` holds the
+        build's own bookkeeping (the chunk graph `pnpm check:lazy` reads), not something to
+        publish.
+        """
         candidate = (root / path).resolve()
         if path and candidate.is_relative_to(root) and candidate.is_file():
-            return FileResponse(candidate, headers={"cache-control": REVALIDATE})
+            if not any(part.startswith(".") for part in candidate.relative_to(root).parts):
+                return FileResponse(candidate, headers={"cache-control": REVALIDATE})
         return FileResponse(index, headers={"cache-control": REVALIDATE})
 
 

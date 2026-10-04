@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
+import type { FormState } from "@/features/generate/commission";
 import { fromGeneration, stashDraft } from "@/features/generate/draft";
-import { stashTutorDraft } from "@/tutor/draft";
+import { stashTutorDraft } from "@/lib/tutorDraft";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/features/generate/ResultCard";
 import { fieldText } from "@/lib/fields";
 import { useRouter } from "@/lib/router";
@@ -19,7 +20,25 @@ import {
   useProfile,
   useSwitchWorkspace,
 } from "@/state/queries";
+import { useFeatures } from "@/state/auth";
 import { useT } from "@/lib/i18n";
+
+/** How many of the newest exercises the list draws before a search is needed. */
+const PAGE = 60;
+
+/**
+ * How many exercises this account has in `slug`, or undefined while that is not known.
+ *
+ * Read off a page of ONE row of the list's own endpoint: the count is on screen at every
+ * visit and refreshed at every saved item, and a full page each time moved sixty rows
+ * nobody had asked to see. It shares the `["generations"]` key, so whatever refreshes the
+ * list refreshes it. The placeholder a key change keeps is another subject's total, never
+ * this one.
+ */
+export function useExerciseTotal(slug: string | null): number | undefined {
+  const listing = useGenerations({ limit: 1 }, slug);
+  return listing.isPlaceholderData ? undefined : listing.data?.total;
+}
 
 /**
  * Everything this account has generated in one subject, kept.
@@ -31,21 +50,35 @@ import { useT } from "@/lib/i18n";
  * YOURS AND NOBODY ELSE'S: the endpoint answers your own rows and only those, so there is
  * no scope to flip and no author to print on a row.
  *
- * It unfolds under its subject on "Mis asignaturas y ejercicios", which already names the
- * subject, so it carries no title. Every read carries `slug` as its own `X-Workspace`: the
- * list is read where it lives, without switching the tab into that subject. «Generar más
- * como este» does switch, because "Generar" works on the subject in use.
+ * It unfolds under its subject on "Mis asignaturas y ejercicios", and it is the «Mis
+ * ejercicios» tab of "Generar" for the subject in use; both name the subject already, so it
+ * carries no title. Every read carries `slug` as its own `X-Workspace`: the list is read
+ * where it lives, without switching the tab into that subject. «Generar más como este» does
+ * switch, because "Generar" works on the subject in use.
  */
-export function SubjectExercises({ slug, inUse }: { slug: string; inUse: boolean }) {
+export function SubjectExercises({
+  slug,
+  inUse,
+  onGenerateMore,
+}: {
+  slug: string;
+  inUse: boolean;
+  /** Takes the commission of «Generar más como este» on the screen that holds the form,
+   *  instead of stashing it and opening "Generar"; read only for the subject in use. `null`
+   *  is that screen busy with a batch of its own: the rows offer no «Generar más como
+   *  este» then, as the screen offers no other way to a new commission until it ends. */
+  onGenerateMore?: ((form: FormState) => void) | null;
+}) {
   const { t } = useT();
   const { navigate } = useRouter();
+  const tutorOpen = useFeatures().tutor;
   const profileQuery = useProfile(slug);
   const switching = useSwitchWorkspace();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<string | null>(null);
 
-  const listing = useGenerations({ q: search || undefined, limit: 60 }, slug);
+  const listing = useGenerations({ q: search || undefined, limit: PAGE }, slug);
   const remove = useDeleteGeneration(slug);
 
   const profile = profileQuery.data?.profile ?? null;
@@ -84,6 +117,10 @@ export function SubjectExercises({ slug, inUse }: { slug: string; inUse: boolean
   };
   const again = (row: GenerationRow) => {
     const draft = fromGeneration(row);
+    if (onGenerateMore && inUse) {
+      onGenerateMore(draft);
+      return;
+    }
     goTo("/generate", () => stashDraft(draft));
   };
   // The statement goes into the tutor's box and the exercise is named, so the conversation
@@ -193,8 +230,12 @@ export function SubjectExercises({ slug, inUse }: { slug: string; inUse: boolean
               profile={profile}
               expanded={open === row.id}
               onToggle={() => setOpen(open === row.id ? null : row.id)}
-              onAgain={switching.isPending ? undefined : () => again(row)}
-              onTutor={switching.isPending ? undefined : () => withTutor(row)}
+              onAgain={
+                switching.isPending || onGenerateMore === null ? undefined : () => again(row)
+              }
+              // Only for an account the tutor is open to: for anybody else there is no
+              // conversation to land in.
+              onTutor={switching.isPending || !tutorOpen ? undefined : () => withTutor(row)}
               onDelete={() => remove.mutate(row.id)}
             />
           ))}
@@ -263,7 +304,8 @@ export function GenerationCard({
             </span>
           ) : null}
 
-          <div className="ml-auto flex gap-1">
+          {/* Wraps inside too: on a phone the controls alone are wider than the card. */}
+          <div className="ml-auto flex flex-wrap justify-end gap-1">
             {/* A promoted row keeps saying so: that is data about the bank and not a
                 control. Promotion itself has no screen; the endpoint stays. */}
             {row.promoted_item_id ? (
@@ -284,7 +326,7 @@ export function GenerationCard({
               </Button>
             ) : null}
             {onTutor ? (
-              <Button variant="ghost" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+              <Button variant="tutor" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
                 <MessagesSquare />
                 {t("tutor.fromExercise")}
               </Button>

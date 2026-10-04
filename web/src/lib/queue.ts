@@ -1,5 +1,6 @@
 import type { Job, JobStatus, LaneName, LaneState, Lanes, Pipeline } from "./types";
 import type { Key, Translate } from "@/lib/i18n";
+import { jobName } from "@/lib/names";
 
 /**
  * Who is waiting for what, derived once from the payload and nowhere else.
@@ -49,6 +50,7 @@ function readLane(value: unknown): LaneState | null {
     running: typeof raw.running === "number" ? raw.running : busy ? 1 : 0,
     capacity: typeof raw.capacity === "number" && raw.capacity > 0 ? raw.capacity : 1,
     mine: raw.mine === true,
+    kind: typeof raw.kind === "string" && raw.kind ? raw.kind : null,
     label: typeof raw.label === "string" && raw.label ? raw.label : null,
     queued: typeof raw.queued === "number" ? raw.queued : 0,
     ahead: typeof raw.ahead === "number" ? raw.ahead : null,
@@ -83,7 +85,9 @@ export interface Wait {
   lane: LaneName | null;
   /** Jobs it goes behind, the one already running included. */
   ahead: number;
-  /** What holds that lane right now, whoever launched it. */
+  /** The kind of job that holds that lane right now, whoever launched it. */
+  kind: string | null;
+  /** The server's name for it, the fallback for a kind this bundle cannot name. */
   label: string | null;
 }
 
@@ -126,7 +130,7 @@ export function waitFor(
     if (!lane) continue;
     const ahead = aheadIn(lane, position);
     if (ahead > 0 && (worst === null || ahead > worst.ahead)) {
-      worst = { lane: name, ahead, label: lane.label };
+      worst = { lane: name, ahead, kind: lane.kind, label: lane.label };
     }
   }
   return worst;
@@ -181,7 +185,7 @@ export function waitOf(job: Job | null | undefined, lanes: Lanes | null): Wait |
   const wait = waitFor(lanes, backendsOf(job), position);
   if (wait) return wait;
   const ahead = position !== null ? Math.max(0, position - 1) : 0;
-  return ahead > 0 ? { lane: null, ahead, label: null } : null;
+  return ahead > 0 ? { lane: null, ahead, kind: null, label: null } : null;
 }
 
 export function aheadLabel(ahead: number, tr: Translate): string {
@@ -195,9 +199,22 @@ export function queuedLabel(wait: Wait | null, tr: Translate): string {
     : tr.t("queue.queued");
 }
 
+/**
+ * The clause naming what holds a lane, in the reader's language, or "" when nothing is named.
+ *
+ * The server sends the holder's KIND and its own label beside it; the label is in the API's
+ * language, and for the tutor's kinds it is the bare identifier (`tutor_turn`), so the kind
+ * is what is named (`lib/names.ts`) and the label only stands in for one this bundle does not
+ * know, or for an API that sends no kind.
+ */
+function holderClause(holder: { kind: string | null; label: string | null }, tr: Translate) {
+  const name = holder.kind ? jobName(holder.kind, tr.t, holder.label ?? undefined) : holder.label;
+  return name ? tr.t("queue.withHolder", { label: name }) : "";
+}
+
 /** Why it is waiting: which half of the engine, holding what, with how many in front. */
 export function waitReason(wait: Wait, split: boolean, tr: Translate): string {
-  const holder = wait.label ? tr.t("queue.withHolder", { label: wait.label }) : "";
+  const holder = holderClause(wait, tr);
   return tr.t("queue.busyReason", {
     where: laneName(wait.lane, split, tr),
     holder,
@@ -216,7 +233,7 @@ export function queuedNotice(
   const wait = waitOf(job, lanes);
   if (!wait) return null;
   return {
-    title: tr.t("queue.noticeTitle", { label: job!.label }),
+    title: tr.t("queue.noticeTitle", { label: jobName(job!.kind, tr.t, job!.label) }),
     description: waitReason(wait, split, tr),
   };
 }
@@ -224,7 +241,7 @@ export function queuedNotice(
 // `queued` is this workspace's own share of the lane, which is why it is said as "tienes".
 function busyPhrase(lane: LaneState, name: LaneName, split: boolean, tr: Translate): string {
   const where = laneName(name, split, tr);
-  const holder = lane.label ? tr.t("queue.withHolder", { label: lane.label }) : "";
+  const holder = holderClause(lane, tr);
   // Not full is not "free", it is "there is still room": on a remote lane holding two of
   // four, saying it is busy would announce a wait that is not going to happen, and saying
   // nothing is running there would be false. Only the full case names what holds it.

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +29,10 @@ import { questionCount, type StageInstrument, type StageScale } from "./types";
  * once in a header row aligned to the five columns every row of buttons uses, and each
  * button carries its rung as its accessible name. The number IS the score, 5 being best.
  *
- * `--attention` is spent once and on the last thing: the button while there is something to
- * save, then the step that follows. A form whose every row shouts is one nobody finishes.
+ * `--attention` is not spent here at all: the screen's one is «Continuar», at the foot of the
+ * stage, and it is on screen beside this form. Saving is filled with the ink while there is
+ * something to save and quiet once there is not. A form whose every row shouts is one nobody
+ * finishes.
  *
  * No ground of its own — `--evaluation` is on the BUTTON that opens this panel, which is
  * where it does the work: a coloured ground under a form is fought by every control inside
@@ -212,9 +215,9 @@ export function StageReview({
 
           <div className="space-y-1.5">
             <Button
-              // The colour goes where the next move is: on the button while there is
-              // something to save, and on the step that follows once there is not.
-              variant={dirty ? "attention" : "outline"}
+              // Filled while there is something to save, in the ink and not the attention:
+              // «Continuar» below holds the screen's one `--attention`.
+              variant={dirty ? "default" : "outline"}
               className="w-full"
               disabled={save.isPending || (!dirty && answered)}
               onClick={() =>
@@ -298,17 +301,24 @@ function Statement({
   onPick: (value: number) => void;
 }) {
   const { t } = useT();
+  const radios = useRadioGroup(rungs(scale), value, onPick);
   return (
     <fieldset className="space-y-2">
       <legend className="text-body font-medium">{statement}</legend>
       {hint ? <p className="-mt-1 text-small text-muted-foreground">{hint}</p> : null}
-      <div role="radiogroup" aria-label={statement} className="grid grid-cols-5 gap-1.5">
+      <div
+        role="radiogroup"
+        aria-label={statement}
+        className="grid grid-cols-5 gap-1.5"
+        {...radios.group}
+      >
         {rungs(scale).map((rung, i) => {
           const on = value === rung;
           const name = t("stageReview.rung", { n: rung, label: scale.labels[i] ?? "" });
           return (
             <button
               key={rung}
+              {...radios.radio(rung)}
               type="button"
               role="radio"
               aria-checked={on}

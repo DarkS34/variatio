@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { useRouter } from "@/lib/router";
 import { useT, type Key } from "@/lib/i18n";
 import { ROLE_LABEL_KEYS, useLogout, useSession } from "@/state/auth";
@@ -178,6 +179,11 @@ function ThemeRow() {
     themeStore.subscribe,
     themeStore.getSnapshot,
   );
+  const radios = useRadioGroup(
+    THEMES.map((theme) => theme.value),
+    preference,
+    (value) => themeStore.set(value),
+  );
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-2">
       <span className="text-small text-muted-foreground">
@@ -187,12 +193,14 @@ function ThemeRow() {
         role="radiogroup"
         aria-label={t("theme.label")}
         className="flex rounded-md border border-border p-0.5"
+        {...radios.group}
       >
         {THEMES.map((theme) => {
           const on = theme.value === preference;
           return (
             <button
               key={theme.value}
+              {...radios.radio(theme.value)}
               type="button"
               role="radio"
               aria-checked={on}

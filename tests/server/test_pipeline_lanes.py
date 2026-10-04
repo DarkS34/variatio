@@ -14,14 +14,16 @@ coincide and every rule below is the one the single-engine installation already 
 
 import threading
 import time
+from contextlib import nullcontext
 from types import SimpleNamespace
 
 import pytest
 
-from server import singletons
+from server import features, singletons
 from server.jobs import lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
+from server.routers import pipeline as pipeline_routes
 from server.routers.pipeline import pipeline_payload
 from variatio import config
 
@@ -64,8 +66,8 @@ def stand(monkeypatch):
     runner.shutdown(timeout=1.0)
 
 
-def _access(slug: str):
-    return SimpleNamespace(ws=SimpleNamespace(slug=slug))
+def _access(slug: str, user_id: int = 1):
+    return SimpleNamespace(ws=SimpleNamespace(slug=slug), user=SimpleNamespace(id=user_id))
 
 
 def _wait(event: threading.Event) -> None:
@@ -86,7 +88,15 @@ def test_an_idle_installation_reports_both_lanes_free(stand):
         "engine_busy_elsewhere",
         "lanes",
     }
-    free = {"busy": False, "running": 0, "mine": False, "label": None, "queued": 0, "ahead": None}
+    free = {
+        "busy": False,
+        "running": 0,
+        "mine": False,
+        "kind": None,
+        "label": None,
+        "queued": 0,
+        "ahead": None,
+    }
     assert payload["lanes"] == {
         LOCAL: {**free, "capacity": 1},
         REMOTE: {**free, "capacity": 1},
@@ -103,6 +113,7 @@ def test_a_busy_lane_is_reported_to_everyone_and_owned_by_one(stand):
     theirs = pipeline_payload(_access("taller"))
 
     assert mine["lanes"][LOCAL]["busy"] is True
+    assert mine["lanes"][LOCAL]["kind"] == "local"
     assert mine["lanes"][LOCAL]["label"] == "local"
     assert mine["lanes"][LOCAL]["mine"] is False
     assert mine["current_job"] is None
@@ -114,6 +125,28 @@ def test_a_busy_lane_is_reported_to_everyone_and_owned_by_one(stand):
 
     # The other lane is free and says so, which is the whole reason the block exists.
     assert mine["lanes"][REMOTE]["busy"] is False
+
+
+def test_a_holder_of_a_closed_function_is_busy_and_unnamed(stand, monkeypatch):
+    # The tutor's turns are jobs of the workspace like any other, and they hold the GPU. To
+    # an account the tutor is closed to, the lane is busy with something, and that is all.
+    monkeypatch.setitem(pipeline_routes.FEATURE_OF, "local", features.TUTOR)
+    monkeypatch.setattr(pipeline_routes, "session_scope", lambda: nullcontext(None))
+    open_to = {1}
+    monkeypatch.setattr(
+        features, "enabled", lambda session, user, feature: user.id in open_to
+    )
+    stand.runner.submit("local", {}, workspace="taller")
+    _wait(stand.started["local"])
+
+    closed = pipeline_payload(_access("aula", user_id=2))["lanes"][LOCAL]
+    assert closed["busy"] is True
+    assert closed["kind"] is None
+    assert closed["label"] is None
+
+    opened = pipeline_payload(_access("aula", user_id=1))["lanes"][LOCAL]
+    assert opened["kind"] == "local"
+    assert opened["label"] == "local"
 
 
 def test_what_is_waiting_is_counted_per_lane_and_only_mine(stand):

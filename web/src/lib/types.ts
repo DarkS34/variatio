@@ -41,7 +41,13 @@ export interface LaneState {
   capacity: number;
   /** Whether any of what occupies the lane belongs to this workspace. */
   mine: boolean;
-  /** What holds it, whoever launched it: the machine is the installation's. */
+  /**
+   * The kind of job that holds it, whoever launched it: the machine is the installation's.
+   * Null when nothing does, when the API is older than the field, or when the holder belongs
+   * to a function closed to this account.
+   */
+  kind: string | null;
+  /** The server's own name for that job, in the API's language: the fallback for `kind`. */
   label: string | null;
   queued: number;
   /** Jobs before this workspace's first queued one, or null when it has none waiting. */
@@ -488,6 +494,71 @@ export interface Session {
    *  account. False means the reset link is only ever logged and handed back in the
    *  response, so nothing can be delivered to an address. */
   mail_configured: boolean;
+  /** Which optional functions are open to this account. Absent from an API older than the
+   *  bundle, so it is never read directly: `featuresOf` is the one reader. */
+  features?: Partial<Features>;
+}
+
+/** The two optional functions (`server/features.py`), as the session reports them. */
+export interface Features {
+  evaluation: boolean;
+  tutor: boolean;
+}
+
+/**
+ * The account's functions, read defensively.
+ *
+ * Anything but a literal `true` is closed: an API that does not send the field, or sends it
+ * malformed, degrades to the product without the two functions rather than to a bar drawing
+ * doors that answer 403.
+ */
+export function featuresOf(session: Pick<Session, "features"> | null | undefined): Features {
+  const raw: unknown = session?.features;
+  const field = (name: keyof Features) =>
+    typeof raw === "object" && raw !== null && (raw as Record<string, unknown>)[name] === true;
+  return { evaluation: field("evaluation"), tutor: field("tutor") };
+}
+
+/** One optional function, by the name the server keys it with. */
+export type FeatureName = keyof Features;
+
+/** The two functions, in the order of their doors. */
+export const FEATURE_NAMES: readonly FeatureName[] = ["evaluation", "tutor"];
+
+/** Who a function is for: nobody, every account, or the accounts on its list. */
+export type FeatureMode = "off" | "all" | "selected";
+
+const FEATURE_MODES: readonly FeatureMode[] = ["off", "all", "selected"];
+
+/** One function as the administrator sets it. The list is kept whatever the mode. */
+export interface FeatureAccessState {
+  mode: FeatureMode;
+  /** Account ids, in id order. */
+  accounts: number[];
+}
+
+/** What `/api/admin/features` answers, and what a write to one function answers too. */
+export interface AdminFeaturesPayload {
+  features?: Partial<Record<FeatureName, Partial<FeatureAccessState>>>;
+}
+
+/**
+ * One function's mode and list, read defensively.
+ *
+ * Anything unreadable is the server's own default — off, with an empty list — so an older
+ * API, or a malformed answer, draws the function as closed rather than blanking the tab.
+ */
+export function featureAccessOf(
+  payload: AdminFeaturesPayload | null | undefined,
+  feature: FeatureName,
+): FeatureAccessState {
+  const raw: unknown = payload?.features?.[feature];
+  const record = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const mode = FEATURE_MODES.find((known) => known === record.mode) ?? "off";
+  const accounts = Array.isArray(record.accounts)
+    ? record.accounts.filter((id): id is number => Number.isInteger(id))
+    : [];
+  return { mode, accounts };
 }
 
 /* Workspaces ----------------------------------------------------------------------- */
@@ -785,6 +856,12 @@ export interface InvitePreview {
   role: Role;
   workspace: string | null;
   expires_at: string;
+  /**
+   * Whether the form asks «docente o alumno»: only while the evaluation, the one function
+   * that reads the answer, will be open to the account. Absent from an older API, which
+   * always asked.
+   */
+  asks_profile?: boolean;
 }
 
 /** Unused and still working, or unused and past its date — which can be moved. */
@@ -803,6 +880,9 @@ export interface InviteRow {
   state?: InviteState;
   /** Whether the panel can show its link again. False on every one minted before it could. */
   link_stored?: boolean;
+  /** The functions whose list the holder joins on registering. Absent from an older API, so
+   *  it is read through `lib/invites.inviteFeatures`. */
+  features?: unknown;
 }
 
 /** What an invitation grants and until when, as the panel sends it. */
@@ -811,6 +891,7 @@ export interface InviteTerms {
   role: Role;
   expires_at: string;
   label: string | null;
+  features: FeatureName[];
 }
 
 /** An invitation just handed over: its row, its link, and whether that link was kept. */

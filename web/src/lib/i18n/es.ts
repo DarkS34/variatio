@@ -1,5 +1,5 @@
 /**
- * The catalogue, and the source of truth for what a key even is.
+ * The core catalogue, and the source of truth for what a key even is.
  *
  * `en.ts` is typed against this object, so a key added here and not there fails
  * `pnpm exec tsc --noEmit` — which is already a gate. That is the whole mechanism: there
@@ -9,6 +9,12 @@
  * writes "N ejercicio(s)" and English cannot: the parenthesised plural is a Spanish habit this
  * app uses everywhere, and it is exactly the kind of thing that does not survive a
  * word-for-word translation.
+ *
+ * Core means read outside the optional functions. A string that only the evaluation or only
+ * the tutor reads lives in that function's folder (`evaluation/i18n/`, `tutor/i18n/`), with
+ * the same shape and the same `en` beside it, and arrives with the function's code: an
+ * account the function is closed to never downloads it. `Key` in `./index.ts` is every
+ * catalogue's keys together.
  */
 
 export const es = {
@@ -287,7 +293,7 @@ export const es = {
   // under it: building a stage, or reading step 1's documents.
   "nav.state.building": "Construyendo",
   "nav.state.reading": "Leyendo",
-  // The two doors of the testing phase. Once the construction is closed they carry no word
+  // The doors of the testing phase. Once the construction is closed they carry no word
   // under the name; while it is open they are half off, say "después" and answer no click.
   "nav.create": "Generar ejercicios",
   "nav.compare": "Evaluar el sistema",
@@ -308,10 +314,12 @@ export const es = {
   // has never seen this and does not even know what the thing is called, so the first
   // sentence is a definition — name, category, what it is for — and every negation comes
   // after it. Leaving here they have to be able to use the whole thing without asking
-  // anybody: what it is, what it wants from them before they start, and then the three
-  // phases in the order they happen — preparing a subject in four steps, asking for
-  // exercises, comparing three versions blind — and what is being asked of them as an
-  // evaluator. The guide stays as the per-screen reference; this is the route end to end.
+  // anybody: what it is, what it wants from them before they start, and then the phases in
+  // the order they happen — preparing a subject in four steps, asking for exercises — and,
+  // only with the evaluation open to the account (`slides.DECK`), comparing two versions
+  // blind and what is asked of them as an evaluator. Slides 1–4 are true either way, so they
+  // ask for no part in a study. The guide stays as the per-screen reference; this is the
+  // route end to end.
   //
   // The keys are numbered BY SLIDE, `s1` to `s6`, and the four steps live in `s3.step*`
   // because the index is the only pass over them — a slide per step said the same thing
@@ -331,8 +339,8 @@ export const es = {
   // The figures' own labels, and whatever a figure says the prose beside it does not
   // repeat: a drawing that enumerates over a paragraph enumerating the same things is one
   // thing said twice. The flow's three are full sentences with a subject, because the
-  // question they answer is who is expected to do what. "Propuesta A" is not here: the
-  // blind figure reads `grid.proposal`, the comparison screen's own label.
+  // question they answer is who is expected to do what. The study's two slides keep their
+  // figures' labels in the evaluation's catalogue (`evaluation/i18n/`).
   "tutorial.fig.yours": "Tú aportas tus apuntes y tus ejercicios",
   "tutorial.fig.learns": "El sistema analiza tu asignatura y aprende",
   "tutorial.fig.new": "Le pides todos los ejercicios que quieras",
@@ -342,14 +350,10 @@ export const es = {
     "Exámenes y ejercicios resueltos. El sistema los utiliza para entender cómo son los problemas en esta área y cómo se evalúan los conceptos.",
   "tutorial.fig.youAsk": "Tú le dices",
   "tutorial.fig.written": "Y te escribe el ejercicio",
-  "tutorial.fig.build": "Se construye",
-  "tutorial.fig.review": "Lo lees",
-  "tutorial.fig.rate": "Lo valoras",
-  "tutorial.fig.next": "Corriges o continúas",
 
   "tutorial.s1.title": "Variatio es una aplicación que genera ejercicios para tu asignatura",
   "tutorial.s1.body":
-    "Funciona con inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los genera a partir de tus apuntes y de tus propios ejercicios, siguiendo el formato y el espíritu de los que tú planteas. A continuación te pedimos que lo pruebes con parte de una de tus asignaturas y nos des tus impresiones.",
+    "Funciona con inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los genera a partir de tus apuntes y de tus propios ejercicios, siguiendo el formato y el espíritu de los que tú planteas. A continuación verás cómo se prepara una de tus asignaturas y qué puedes hacer después con ella.",
 
   "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
   "tutorial.s2.body":
@@ -357,7 +361,7 @@ export const es = {
   // "Upload just a couple of units" and "this takes a while" belong here, right before
   // somebody goes looking for the files, which is where they are worth anything.
   "tutorial.s2.b1":
-    "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para probarlo: recuerda que estamos simplemente probándolo.",
+    "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para empezar: más adelante puedes subir el resto.",
   "tutorial.s2.b2":
     "El sistema lee cada documento entero, página a página, y eso lleva su tiempo, sobre todo si son PDF. No hace falta que te quedes mirando mientras procesa tus contenidos: puedes dejarlo trabajando y volver más tarde.",
 
@@ -372,48 +376,31 @@ export const es = {
     "Con los apuntes, internamente crea el grafo de conocimiento del temario: los conceptos que aborda, con sus dependencias y relaciones. Permite determinar, llegado el caso, qué se puede dar por sabido y qué no (por ejemplo, a la hora de crear un ejercicio nuevo).",
   "tutorial.s3.step4":
     "Con lo que sale de los dos pasos anteriores, se etiquetan los ejercicios con los conceptos del temario que se practican o evalúan en cada uno. Así tus ejemplos sirven de modelo al generar ejercicios nuevos.",
+  // What correcting a step means, on the slide every account is shown: it closed the
+  // study's last slide once, and an account the study is closed to never read it.
+  "tutorial.s3.b1":
+    "Siempre que el sistema genera algo —el temario, los tipos de ejercicio…— te da la opción de corregirlo o modificarlo. Es totalmente opcional y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
 
   // The hinge is the FIRST SENTENCE of the testing phase and not a slide of its own: "with
   // this it is ready" followed by "ask for exercises" is one turn told twice. The
   // commission's three questions are drawn by the figure, so they are not listed here.
   "tutorial.s4.title": "Fase de pruebas: generar ejercicios",
   "tutorial.s4.body":
-    "Con la construcción terminada, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. Empieza la fase de pruebas, formada por dos tareas (puedes hacerlas en el orden que quieras, y ninguna necesita a la otra): generar ejercicios y evaluar el sistema. La primera: en «Generar ejercicios» le pides tantos como quieras y te quedas con los que te sirvan.",
+    "Con la construcción terminada, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. Empieza la fase de pruebas, donde usas lo construido. Lo primero que puedes hacer es generar ejercicios: en «Generar ejercicios» le pides tantos como quieras y te quedas con los que te sirvan. Si la fase tiene más tareas, ninguna necesita a otra y puedes hacerlas en el orden que quieras.",
   "tutorial.s4.b1":
     "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
   "tutorial.s4.b2":
-    "Cada ejercicio queda guardado automáticamente dentro de su asignatura, en «Mis asignaturas y ejercicios» del menú de tu cuenta, junto con lo que pediste para obtenerlo. No hace falta copiarlo a ningún sitio.",
+    "Cada ejercicio queda guardado automáticamente dentro de su asignatura, junto con lo que pediste para obtenerlo: lo encuentras en la pestaña «Mis ejercicios» de «Generar ejercicios», y los de todas tus asignaturas en «Mis asignaturas y ejercicios», en el menú de tu cuenta. No hace falta copiarlo a ningún sitio.",
   "tutorial.s4.b3":
     "Puedes volver a cualquier paso de la construcción cuando quieras. Si cambias algo, se te avisa de qué pasos posteriores se han quedado desfasados.",
 
-  "tutorial.s5.title": "Fase de pruebas: evaluar el sistema",
-  "tutorial.s5.body":
-    "La segunda cosa que puedes hacer. En «Evaluar el sistema» se te dan dos versiones del mismo ejercicio: una generada con el sistema de Variatio y otra con un método distinto, sin decir cuál es cuál. Te pediremos que las leas y nos digas cuál te serviría mejor a tus propósitos. Solo al final se revela de dónde salía cada una.",
-  // The difference from generating is the FIRST point: both write exercises, so without
-  // saying it evaluating reads as "generating two instead of one". It also needs nothing
-  // generated beforehand.
-  "tutorial.s5.b1":
-    "Esta evaluación es independiente de si has generado ejercicios o no: eso no lo evaluaremos, y da igual que no hayas generado ninguno. En «Generar ejercicios» pides uno para usarlo en clase; aquí se escriben dos del mismo encargo, con dos métodos distintos, para que digas cuál te gusta más o consideras mejor, y lo que se guarda es tu juicio.",
-  "tutorial.s5.b3":
-    "«No tengo criterio para juzgar esto» es una respuesta válida y no cuenta como preferencia. Si el ejercicio no es de lo tuyo, decirlo vale más que elegir al azar.",
-  "tutorial.s5.aside":
-    "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
-
-  // From explaining the product to asking for the evaluation, and from there to the door.
-  // The figure draws the four beats of every step, so the prose does not walk them again:
-  // it says what the picture cannot — that correcting is optional and that a hand
-  // correction wins.
-  "tutorial.s6.title": "Y ahora, tu parte en el estudio",
-  "tutorial.s6.body":
-    "Hasta aquí, qué hace y cómo se usa. Lo que se te pide ahora es que lo prepares con una asignatura tuya y contestes en cada paso unas pocas preguntas sobre los resultados que el sistema te ha ido proporcionando: esas respuestas nos ayudarán a mejorar el sistema, por lo que te pedimos rigor. ¡Muchas gracias por tu tiempo!",
-  "tutorial.s6.b1":
-    "Siempre que el sistema genera algo —el temario, los tipos de ejercicio…— te da la opción de corregirlo o modificarlo. Es totalmente opcional y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
   // Two ways out, depending on whether the reader has a subject: somebody who has just
   // accepted an invitation cannot be told to "choose" one. Neither points at a place on the
-  // screen — the deck draws no header, so they say what to do and not where to press.
-  "tutorial.s6.outro.create":
+  // screen — the deck draws no header, so they say what to do and not where to press. Not
+  // numbered by slide: they close whichever slide is the account's last (`slides.deckFor`).
+  "tutorial.outro.create":
     "Todavía no tienes ninguna asignatura: lo primero es crear la tuya, y hasta que exista no hay nada que preparar. Al terminar esta explicación aparece la aplicación, con los cuatro pasos y la fase de pruebas a mano; en el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación por si quieres volver a verla.",
-  "tutorial.s6.outro.choose":
+  "tutorial.outro.choose":
     "Al terminar esta explicación aparece la aplicación: eliges ahí tu asignatura —o creas otra— y empiezas por el Paso 1. En el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación por si quieres volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
@@ -451,46 +438,6 @@ export const es = {
   "stage.continueGenerate": "Ya está: crear mi primer ejercicio",
   "stage.continueFailed":
     "No se ha podido cerrar este paso, así que no se ha avanzado. Vuelve a intentarlo.",
-  // Each step's questionnaire. What is ASKED travels from the server
-  // (`evaluation/api/stage_instruments.py`), because it is the instrument and not a label:
-  // what is here is the frame — the title, the state and the button.
-  "stageReview.title": "Tu valoración",
-  // The button that opens it, at the foot of the artifact: it says what to do, not what the
-  // block it opens is called.
-  "stageReview.openTitle": "Evalúa este paso",
-  "stageReview.close": "Cerrar la valoración",
-  // The number comes from the INSTRUMENT and not from here: written into the string, the
-  // button contradicts the form it opens as soon as an instrument changes.
-  // `evaluation/api/stage_instruments.count()` counts it and it arrives in the payload.
-  "stageReview.openPending": {
-    one: "1 afirmación corta sobre lo que acabas de revisar: di cuánto estás de acuerdo",
-    other: "{n} afirmaciones cortas sobre lo que acabas de revisar: di cuánto estás de acuerdo con cada una",
-  },
-  "stageReview.openAnswered": "Ya la contestaste. Ábrela si quieres cambiar algo",
-  "stageReview.saved": "Guardada",
-  "stageReview.save": "Guardar valoración",
-  "stageReview.saveAgain": "Guardar los cambios",
-  "stageReview.optional": "Opcional",
-  "stageReview.remaining": {
-    one: "Falta 1 afirmación por valorar",
-    other: "Faltan {n} afirmaciones por valorar",
-  },
-  "stageReview.notBuilt": {
-    one: "Cuando esté construido se te preguntará aquí qué tal ha salido. Es 1 afirmación corta, del 1 al 5.",
-    other:
-      "Cuando esté construido se te preguntará aquí qué tal ha salido. Son {n} afirmaciones cortas, del 1 al 5.",
-  },
-  // The scale is named ONCE, over every statement: each button carries its rung as its
-  // accessible name, but the visible text is the number — five labels per row would not fit
-  // and would not be read.
-  "stageReview.rung": "{n} · {label}",
-  "stageReview.failed": "No se ha podido guardar. Vuelve a intentarlo.",
-  "stageReview.done.title": "Valoración guardada. Gracias.",
-  // "Continuar" CLOSES the step. Navigating and nothing else leaves the next step refusing
-  // to build for want of an approval nobody was asked for. The copy says so: a button that
-  // signs something without saying it is worse than one that signs nothing.
-  "stageReview.done.body":
-    "Al continuar se da por bueno este paso, que es lo que hace falta para poder seguir. Tu valoración se queda guardada y puedes volver a este paso cuando quieras.",
   // What this step IS, in two sentences and without naming a single piece of the system.
   // Visible under the title and never behind an (i): what says what a screen is about
   // cannot be the one thing hidden on it.
@@ -510,12 +457,15 @@ export const es = {
   // the product's vocabulary, and "grafo" names only the structure — levels, cycles, the
   // drawing — never the step.
   "stage.what.graph":
-    "Este es el grafo de conocimiento del temario tal como se ha extraído de tus apuntes: sus conceptos, agrupados en unidades y relacionados por dependencias, si las hay. Repasa los conceptos, mira con qué otros se relaciona cada uno y pulsa en cualquiera para leer su descripción. Al final se te pide una valoración de este paso.",
+    "Este es el grafo de conocimiento del temario tal como se ha extraído de tus apuntes: sus conceptos, agrupados en unidades y relacionados por dependencias, si las hay. Repasa los conceptos, mira con qué otros se relaciona cada uno y pulsa en cualquiera para leer su descripción.",
   // Where the concepts come FROM: the step before. It is the one place a person sees why
   // the concepts come before the exercises. The rest is the same order as every other step:
-  // what you are looking at, what to do with it, and what is asked at the end.
+  // what you are looking at, and what to do with it.
   "stage.what.bank":
-    "Se han recogido uno a uno los ejercicios de tus documentos y a cada uno se le han puesto automáticamente uno o más conceptos del temario del paso anterior. Comprueba si los conceptos de cada ejercicio son los que de verdad practica: pulsa en uno para leerlo entero. Al final se te pide una valoración de este paso.",
+    "Se han recogido uno a uno los ejercicios de tus documentos y a cada uno se le han puesto automáticamente uno o más conceptos del temario del paso anterior. Comprueba si los conceptos de cada ejercicio son los que de verdad practica: pulsa en uno para leerlo entero.",
+  // What is asked at the end, drawn after the graph's or the bank's own description: only
+  // for an account the evaluation is open to, since nobody else has the questionnaire.
+  "stage.what.rated": "Al final se te pide una valoración de este paso.",
   "stage.approved": "Aprobado",
   "stage.stale": "Obsoleto",
   "stage.blocked": "Bloqueado",
@@ -811,19 +761,6 @@ export const es = {
     one: "Eliminar la unidad y su concepto",
     other: "Eliminar la unidad y sus {n} conceptos",
   },
-  "eval.pendingCount": { one: "1 pendiente", other: "{n} pendientes" },
-  "sets.assignedCount": { one: "1 comparación", other: "{n} comparaciones" },
-  "sets.workspaceCount": { one: "1 asignatura", other: "{n} asignaturas" },
-  "sets.accountsFailed": "No se pudieron leer las cuentas",
-  "sets.failedCount": { one: "; 1 falló", other: "; {n} fallaron" },
-  "sets.launchLabel": {
-    one: "Encargar 1 comparación",
-    other: "Encargar {n} comparaciones",
-  },
-  "adminEvaluation.pairs": { one: "1 par", other: "{n} pares" },
-  "adminEvaluation.comparisons": { one: "1 comparación", other: "{n} comparaciones" },
-  "adminEvaluation.sessionCount": { one: "1 sesión", other: "{n} sesiones" },
-  "adminEvaluation.ratedCount": { one: "1 valorada", other: "{n} valoradas" },
   "admin.warmContexts": { one: "1 contexto caliente", other: "{n} contextos calientes" },
   "acc.savedVariants": { one: "1 ejercicio generado", other: "{n} ejercicios generados" },
   "acc.comparisons": { one: "1 comparación", other: "{n} comparaciones" },
@@ -836,12 +773,6 @@ export const es = {
   "noWorkspace.createMine": "Crear mi asignatura",
   "noWorkspace.bodyA": "Una asignatura es todo lo suyo: sus documentos, su temario, sus tipos de ejercicio y sus ejercicios. Entraste como",
   "noWorkspace.bodyB": "; crea la tuya ahora o espera a que te den acceso a una existente.",
-  "sessions.selected": { one: "1 seleccionada", other: "{n} seleccionadas" },
-  "sessions.deletedCount": { one: "1 sesión", other: "{n} sesiones" },
-  "sessions.confirmHead": {
-    one: "¿Borrar 1 comparación?\n\n",
-    other: "¿Borrar {n} comparaciones?\n\n",
-  },
   "canvas.isolated": { one: "1 sin relaciones", other: "{n} sin relaciones" },
   "canvas.relations": { one: "1 relación", other: "{n} relaciones" },
   "canvas.conceptCount": { one: "1 concepto", other: "{n} conceptos" },
@@ -972,7 +903,7 @@ export const es = {
   "fewshot.title": "Ejercicios tuyos que se le enseñaron como ejemplo",
   "fewshot.none": "Ningún ejercicio del banco lleva estos conceptos: el modelo genera sin ejemplos.",
   "fewshot.neighbour": "concepto previo",
-  "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada ejercicio validado se guarda solo, dentro de esta asignatura, en «Mis asignaturas y ejercicios».",
+  "generate.howItWorks.body": "Eliges qué se debe practicar —para ti o para tu clase— y las decisiones que el perfil deja en tus manos; el resto lo redacta el modelo, guiado por el temario y por los ejemplos del banco. Cada ejercicio validado se guarda solo, dentro de esta asignatura, y aparece en la pestaña «Mis ejercicios».",
   "workspace.switcher.label": "Asignatura",
   "workspace.switcher.choose": "Elegir asignatura",
   "workspace.switcher.current": "Asignatura: {name}",
@@ -990,6 +921,27 @@ export const es = {
   "admin.tab.workspaces": "Asignaturas",
   "admin.tab.engine": "Motor",
   "admin.tab.config": "Configuración",
+  "admin.tab.tutor": "Tutor",
+  // Who an optional function is for: the top of its tab in «Administración».
+  "feature.heading": "Quién puede usar «{name}»",
+  "feature.unreadable": "No se pudo leer quién puede usar las funciones",
+  "feature.mode.off": "Nadie",
+  "feature.mode.all": "Todas las cuentas",
+  "feature.mode.selected": "Cuentas elegidas",
+  "feature.state.off": "Ahora no la puede usar ninguna cuenta.",
+  "feature.state.all": "Ahora la pueden usar todas las cuentas.",
+  "feature.state.selected": {
+    one: "Ahora la puede usar 1 cuenta: la de la lista.",
+    other: "Ahora la pueden usar {n} cuentas: las de la lista.",
+  },
+  "feature.state.empty": "Ahora no la puede usar ninguna cuenta: la lista está vacía.",
+  "feature.search": "Buscar una cuenta",
+  "feature.ticked": "Marcadas: {n} de {total}",
+  "feature.kept": "La lista se conserva, pero solo vale con «Cuentas elegidas».",
+  "feature.noMatch": "Ninguna cuenta se llama así.",
+  "feature.adminNote": "Administrar no da acceso a la función: con «Cuentas elegidas», marca también tu cuenta para usarla.",
+  "feature.save": "Guardar los cambios",
+  "feature.saved": "Acceso guardado",
   "admin.stat.accounts": "Cuentas",
   "admin.stat.workspaces": "Asignaturas",
   "admin.stat.generations": "Ejercicios generados",
@@ -1133,6 +1085,8 @@ export const es = {
   "acc.invite.alias": "Alias",
   "acc.invite.aliasPlaceholder": "Ej.: Profesora de Enfermería",
   "acc.invite.aliasHint": "El alias es solo para ti: quien abra el enlace verá la asignatura, el permiso y la fecha de caducidad, nunca el alias.",
+  "acc.invite.features": "Funciones",
+  "acc.invite.featuresHint": "Cada función marcada pone a la persona en su lista, que vale cuando la función está en «Cuentas elegidas».",
   "acc.invite.workspace": "Asignatura",
   "acc.invite.noWorkspace": "Ninguna (solo crear la cuenta)",
   "acc.invite.expiresAt": "Caduca el",
@@ -1266,303 +1220,9 @@ export const es = {
   "charts.peakPerDay": "máx. {n}/día",
   "charts.decidedOf": "{decided}/{sessions} decididas",
 
-  // THE STUDY -----------------------------------------------------------------------------
-  "arm.naive": "Modelo comercial",
-  "arm.naive.short": "Comercial",
-  "arm.naive.description": "Un modelo comercial generalista de gama gratuita, con el prompt que escribiría cualquiera con prisa: el concepto, el contexto docente y las claves de salida. Ni banco ni temario.",
-  "arm.rag": "Solo RAG sobre los documentos",
-  "arm.rag.short": "Solo RAG",
-  "arm.rag.description": "Búsqueda por similitud sobre los apuntes y los ejercicios subidos, leídos con un extractor de texto plano y troceados: los fragmentos más parecidos al encargo se le pasan tal cual. Mismo modelo local que el sistema, pero sin nada de lo que el sistema construye: sin banco, sin tipos de ejercicio, sin temario ni prerrequisitos.",
-  "arm.system": "Este sistema",
-  "arm.system.short": "Sistema",
-  "arm.system.description": "El pipeline completo: ejemplos elegidos por concepto principal, prerrequisitos como andamiaje, conceptos posteriores prohibidos y el currículo como restricción dura.",
-  "grid.noValidItem": "Esta propuesta no llegó a producir un ejercicio válido.",
-  "grid.triageOption": "{question} {option}",
-  "grid.proposal": "Propuesta {letter}",
-  "grid.youSaid": "dijiste",
-  "grid.forEach": "Para cada una: {question}",
-  "grid.answered": "{answered} de {total} respondidas",
-  "grid.whichWouldYouUse": "¿Cuál usarías en clase?",
-  "grid.answerMissingOne": "Responde a la que falta y podrás elegir.",
-  "grid.answerMissing": "Responde a las {n} que faltan y podrás elegir.",
-  "grid.chooseAria": "Elegir la propuesta {letter}",
-  "grid.choose": "Elegir {letter}",
-  "grid.noExercise": "Sin ejercicio",
-  "grid.whyAria": "Por qué, en una línea",
-  "grid.whyPlaceholder": "Por qué, en una línea (opcional)",
-  "grid.noneConvinces": "Ninguna me convence",
-  "commission.label": "Tipo de ejercicio",
-  "commission.topics": "Conceptos",
-  "commission.level": "Nivel",
-  "commission.scenario": "Escenario",
-  "focus.read": "Leer en grande la propuesta {letter}",
-  "focus.of": "{n} de {total}",
-  "reveal.choseLetter": "Elegiste la {letter}",
-  "reveal.read": "Ver completo",
-  "reveal.systemWrote": "El ejercicio que se valora",
-  "rubric.scoreOf": "{n} de 5",
-  "rubric.title": "Puntúalo",
-  "rubric.saved": "guardada",
-  "rubric.commentAria": "Qué le sobra o le falta",
-  "rubric.commentPlaceholder": "Qué le sobra o le falta (opcional)",
-  "rubric.skippable": "Puedes saltarte esto: la comparación ya está registrada.",
-  "rubric.skip": "Saltar",
-  "rubric.update": "Actualizar la valoración",
-  "rubric.save": "Guardar la valoración",
-  "fair.title": "Qué recibe cada propuesta",
-  "fair.col.commission": "Del encargo",
-  "fair.col.naive": "Comercial",
-  "fair.col.rag": "Solo RAG",
-  "fair.col.system": "Sistema",
-  "fair.yes": "sí",
-  "fair.no": "no",
-  "fair.row.concepts": "Conceptos objetivo (los nombres)",
-  "fair.row.descriptions": "Descripciones de esos conceptos",
-  "fair.row.instructions": "Instrucciones adicionales",
-  "fair.row.decisions": "Decisiones de campo",
-  "fair.row.context": "Contexto de la asignatura",
-  "fair.row.outputKeys": "Claves de salida",
-  "fair.row.noGreetings": "Prohibición de saludos y meta-texto",
-  "fair.row.modality": "Descripción de la modalidad",
-  "fair.row.rules": "Reglas de redacción de la modalidad",
-  "fair.row.rawDocs": "Fragmentos de tus apuntes y ejercicios",
-  "fair.row.examples": "Ejercicios del banco como ejemplo",
-  "fair.row.prerequisites": "Prerrequisitos y posteriores",
-  "fair.row.curriculum": "Currículo cubierto",
-  "fair.row.admissibility": "Instrucciones acotadas por el juez",
-  "fair.row.reasoning": "Razonamiento previo",
-  "fair.v.asText": "como texto",
-  "fair.v.oneLine": "una línea",
-  "fair.v.schema": "schema",
-  "fair.v.schemaGuide": "schema + guía",
-  "fair.v.fullProse": "la prosa entera",
-  "fair.v.flatCosine": "coseno plano",
-  "fair.v.byLabel": "por etiqueta",
-  "fair.v.providers": "el del proveedor",
-  "fair.v.drawn": "sorteado por sesión",
-  "fair.footnote": "Cada comparación enfrenta dos: la propuesta del sistema y una de las otras dos, sorteada al empezar la sesión. Las tres reciben el mismo encargo y devuelven un ejercicio. Las dos locales usan el mismo modelo, el que fija quien administra en «Configuración → Evaluación», así que lo que se compara son arquitecturas y no modelos; la comercial usa el suyo. Las tres reciben el contexto de la asignatura entero, para que ninguna tenga que adivinar de qué va. La de RAG busca sobre tus documentos leídos con un extractor corriente, nunca sobre la transcripción que hace el sistema: es lo que se consigue con tus PDF y nada de este trabajo. El texto libre lo revisan el guardarraíl y el juez una sola vez para toda la sesión, pero solo la propuesta del sistema recibe el resultado acotado por apartados; la otra lo recibe tal cual se escribió. Las propuestas que fallan se registran como tales: no se reintenta solo la que falla. El razonamiento previo se sortea al empezar cada sesión y se aplica igual a las dos locales, de modo que nunca separa a una de la otra: queda registrado con la sesión para poder medir aparte si aporta algo.",
-  "sessions.title": "Tus comparaciones",
-  "sessions.deleteSelection": "Borrar selección",
-  "sessions.confirmDecided": { one: "Una de ellas ya tiene elección y deja de contar en el estudio.\n", other: "{n} de ellas ya tienen elección y dejan de contar en el estudio.\n" },
-  "sessions.confirmTail": "\nNo se puede deshacer.",
-  "sessions.deleted": "Comparaciones borradas",
-  "sessions.deleteFailed": "No se ha podido borrar",
-  "sessions.empty": "Todavía no has comparado nada",
-  "sessions.emptyBody": "Lanza una comparación y aquí quedará el registro de lo que has evaluado.",
-  "sessions.deselectAll": "Deseleccionar todas las comparaciones",
-  "sessions.selectAll": "Seleccionar todas las comparaciones",
-  "sessions.selectOne": "Seleccionar la comparación {id}",
-  "sessions.col.when": "Cuándo",
-  "sessions.col.type": "Tipo",
-  "sessions.col.concepts": "Conceptos",
-  "sessions.col.choice": "Elección",
-  "sessions.col.reasoned": "Razonó",
-  "sessions.undecided": "sin decidir",
-  "sessions.none": "ninguna",
-  "sessions.open": "Abrir",
-  "eval.preparing": "Preparando las dos propuestas",
-  "eval.doneOf": "{n} de {total}",
-  "eval.blindNotice": "Durante una comparación se ocultan el registro y el detalle técnico: dirían de qué arquitectura sale cada propuesta antes de que la leas.",
-  "eval.tab.queue": "Asignadas",
-  "eval.tab.compose": "Encargar evaluación",
-  "eval.tab.history": "Mis evaluaciones",
-  "eval.title": "Evaluar el sistema",
-  "eval.whatFor": "Para qué sirve",
-  "eval.whatFor.body": "El mismo encargo se resuelve de dos formas: este sistema con el temario, y una alternativa que se sortea en cada sesión —un modelo comercial con un prompt corriente, o una búsqueda por similitud sobre tus documentos—. Eliges a ciegas y solo después se revela cuál era cuál.",
-  "eval.backToList": "Volver a la lista",
-  "eval.orderAnother": "Encargar otra evaluación",
+  // THE CHAIN -----------------------------------------------------------------------------
   "chain.pending": "Falta dar por bueno: {stages}",
   "chain.goFix": "Ir al Paso {n} · {label}",
-  "eval.blocked": "Evaluación bloqueada",
-  "eval.failed": "La comparación falló",
-  "eval.externalUnset": "La propuesta comercial no está configurada",
-  "eval.externalUnset.body": "La sesión seguirá adelante y esa propuesta quedará registrada como no disponible, que es un dato en sí mismo.",
-  "eval.waitingTurn": "Empezará en cuanto le toque el turno.",
-  "eval.nextInQueue": "Siguiente de la cola ({pending})",
-  "sets.change": "Cambiar",
-  "sets.noWorkspaces": "«{username}» no es miembro de ninguna asignatura todavía. Dale acceso en «Cuentas» antes de asignarle nada.",
-  "sets.assignAria": "Asignar la comparación de {concepts}",
-  "sets.noConcepts": "sin conceptos",
-  "sets.withReasoning": " · con razonamiento",
-  "sets.withoutReasoning": " · sin razonamiento",
-  "sets.deletedAccount": "cuenta borrada",
-  "sets.unassigned": "sin repartir",
-  "sets.alreadyHas": "ya la tiene",
-  "sets.assignedTo": "Asignadas a {username}",
-  "sets.assignFailed": "No se pudo asignar",
-  "sets.assignedNone": "Ninguna llegó a asignarse. Vuelve a intentarlo.",
-  "sets.commissioned": "Encargadas {n}",
-  "sets.commissioned.body": "Se preparan una detrás de otra en la cola; aparecerán aquí en cuanto terminen.",
-  "sets.commissionFailed": "No se pudo encargar",
-  "sets.noAccountData": "Sin datos de cuentas.",
-  "sets.noAccounts": "No hay cuentas activas a las que asignar. Crea alguna en «Cuentas».",
-  "sets.step1": "¿A quién se la asignas?",
-  "sets.step2": "¿En cuál de sus asignaturas?",
-  "sets.step3": "¿Cuáles?",
-  "sets.noneYet": "Esta asignatura todavía no tiene comparaciones. Encarga unas cuantas abajo y reparte las que quieras: las que no asignes se quedan guardadas.",
-  "sets.assignTo": "Asignar {n} a {username}",
-  "sets.commissionMore": "Encargar más comparaciones",
-  "sets.sameExercises": "Recibirá los mismos ejercicios con un orden propio.",
-  "sets.searchAccounts": "Buscar por nombre o usuario",
-  "sets.noAccountMatches": "Ninguna cuenta coincide con «{query}».",
-  "sets.notReady": "Falta aprobar {stages} para poder encargar aquí.",
-  "sets.notReadyUnknown": "Esta asignatura todavía no tiene la cadena aprobada.",
-  "sets.composeHint": "Cada comparación son dos propuestas del mismo encargo: la del sistema y la de una alternativa sorteada. Se preparan una detrás de otra en la cola, y las que no repartas se quedan guardadas para otra persona.",
-  "sets.howMany": "¿Cuántas comparaciones?",
-  "sets.oneSession": "una sesión, dos propuestas",
-  "sets.manySessions": "{n} sesiones del mismo encargo; cada una sortea su alternativa, su orden y su razonamiento por separado",
-  "rubricScale.prerequisites": "Solo lo anterior",
-  "rubricScale.complexity": "Exigencia",
-  "rubricScale.concept_fit": "Ajuste al concepto",
-  "rubricScale.soundness": "Planteamiento",
-  "adminEvaluation.handOut.eyebrow": "Reparto",
-  "adminEvaluation.handOut.title": "Repartir comparaciones",
-  "adminEvaluation.handOut.description": "La cuenta, la instancia y el conjunto se eligen aquí dentro. El filtro de abajo no afecta a este bloque.",
-  "adminEvaluation.filterByWorkspace": "Filtrar el estudio por asignatura",
-  "adminEvaluation.allWorkspaces": "Todas las asignaturas",
-  "adminEvaluation.wouldUse": "{pct} la usarían",
-  "adminEvaluation.asIs": "{pct} tal cual",
-  "adminEvaluation.onAverage": "{arm} · {time} de media",
-  "adminEvaluation.filteredEmpty": "Hay comparaciones registradas, pero ninguna encaja con este filtro. Quítalo para verlas todas.",
-  "adminEvaluation.empty": "Todavía no hay ninguna comparación evaluada. En cuanto alguien evalúe, aquí aparecerá el marcador y podrás descargarlo.",
-  "adminEvaluation.card.wins": "Cuántas veces ganó cada propuesta",
-  "adminEvaluation.card.triage": "¿Usarían cada propuesta? (a ciegas, por tarjeta)",
-  "adminEvaluation.card.measurement": "Calidad de la medición",
-  "adminEvaluation.card.rubric": "Rúbrica sobre el ejercicio del sistema",
-  "adminEvaluation.card.byAccount": "Por evaluador",
-  "adminEvaluation.card.sessions": "Sesiones ({n})",
-  "adminEvaluation.col.profile": "Perfil",
-  "adminEvaluation.col.evaluator": "Evaluador",
-  "adminEvaluation.col.workspace": "Asignatura",
-  "adminEvaluation.noTriage": "Todavía sin respuestas de triaje. Se recogen a ciegas, una por tarjeta, antes de elegir.",
-  "adminEvaluation.triageDetail": "{arm} · {yes} tal cual, {partly} con retoques, {no} no",
-  "adminEvaluation.agreement": "Acuerdo entre evaluadores",
-  "adminEvaluation.agreement.none": "Ninguna comparación la han juzgado dos personas todavía. Reparte alguna arriba a más de un evaluador y aquí aparecerá el acuerdo.",
-  "adminEvaluation.agreement.head": "{pairs} sobre {sets} repartidas a más de una persona. Coinciden en la elección el ",
-  "adminEvaluation.agreement.times": " de las veces",
-  "adminEvaluation.agreement.triage": "; en el triaje, {percent} sobre {pairs} pares.",
-  "adminEvaluation.position": "¿Decidió algo la posición de la tarjeta?",
-  "adminEvaluation.csvFiltered": " (filtrado)",
-  "adminEvaluation.ci95": "IC95 {low}–{high}",
-  "adminEvaluation.position.none": "Sin elecciones todavía.",
-  "adminEvaluation.position.vsUniform": " frente al reparto uniforme.",
-  "adminEvaluation.position.legacy": "Sesiones anteriores, de tres tarjetas ({n}):",
-  "adminEvaluation.duels": "El sistema frente a cada alternativa",
-  "adminEvaluation.duels.vs": "Frente a {arm}:",
-  "adminEvaluation.duels.score": "{system} – {rival}, ninguna {none}",
-  "adminEvaluation.duels.none": "todavía no le ha tocado.",
-  "adminEvaluation.duels.legacy": "{n} sesiones anteriores enfrentaban tres propuestas y no entran en ningún duelo.",
-  "adminEvaluation.duration": "Cuánto se tarda en juzgar",
-  "adminEvaluation.duration.none": "Sin medidas todavía.",
-  "adminEvaluation.duration.median": "Mediana ",
-  "adminEvaluation.duration.over": " sobre {n}",
-  "adminEvaluation.duration.under20": " por debajo de 20 s, que no da para leer dos enunciados",
-  "adminEvaluation.declined": "Sin criterio",
-  "adminEvaluation.declined.body": " las saltó quien no daba esa asignatura. No cuentan como preferencia, y son un dato sobre la composición del panel.",
-  "adminEvaluation.noneConvinced": "Ninguna convenció",
-  "adminEvaluation.decidedOf": "{decided} con elección, de {total}",
-  "adminEvaluation.chanceLine": "La línea vertical marca el 50 %: lo que saldría a cara o cruz.",
-  "adminEvaluation.noValidItem": "Propuestas sin ejercicio válido",
-  "adminEvaluation.ofTotal": "de {n}",
-  "adminEvaluation.noRated": "Ninguna sesión valorada todavía.",
-  "adminEvaluation.ratedScale": "{rated} · escala de 1 a 5",
-  "adminEvaluation.complexityNote": "En exigencia el objetivo es el 3, no el 5 — de ahí la marca central. La distancia media al 3 es ",
-  "adminEvaluation.nothingToGroup": "Nada que agrupar todavía.",
-  "adminEvaluation.col.sessions": "Sesiones",
-  "adminEvaluation.col.decided": "Decididas",
-  "adminEvaluation.col.systemWon": "Ganó el sistema",
-  "adminEvaluation.col.last": "Última",
-  "adminEvaluation.shareTitle": "{system} de {decided}; la marca es el 50 % del azar",
-  "adminEvaluation.confirmHeadOne": "¿Borrar 1 sesión de evaluación?\n\n",
-  "adminEvaluation.confirmHeadMany": "¿Borrar {n} sesiones de evaluación?\n\n",
-  "adminEvaluation.sessionsDeleted": "Sesiones borradas",
-  "adminEvaluation.selectToDelete": "Selecciona sesiones para borrarlas",
-  "adminEvaluation.deselectAllSessions": "Deseleccionar todas las sesiones",
-  "adminEvaluation.selectAllSessions": "Seleccionar todas las sesiones",
-  "adminEvaluation.selectSession": "Seleccionar la sesión {id}",
-  "adminEvaluation.col.chose": "Eligió",
-  "adminEvaluation.col.note": "Nota",
-  "adminEvaluation.unreadable": "No se ha podido leer el estudio",
-  "adminEvaluation.filter.profile": "Tipo de cuenta",
-  "adminEvaluation.filter.account": "Cuenta",
-  "adminEvaluation.filter.workspace": "Asignatura",
-  "adminEvaluation.allProfiles": "Todos",
-  "adminEvaluation.profile.teachers": "Docentes",
-  "adminEvaluation.profile.students": "Alumnos",
-  "adminEvaluation.allAccounts": "Todas las cuentas",
-  "adminEvaluation.records.selectHint": "Marca evaluadores para borrar todo lo suyo",
-  "adminEvaluation.records.selected": { one: "1 evaluador marcado", other: "{n} evaluadores marcados" },
-  "adminEvaluation.records.delete": "Borrar sus registros",
-  "adminEvaluation.records.select": "Marcar a {name}",
-  "adminEvaluation.records.selectAll": "Marcar a todos los evaluadores",
-  "adminEvaluation.records.deselectAll": "Desmarcar a todos los evaluadores",
-  "adminEvaluation.records.confirmHead": "¿Borrar todos los registros de {names}?\n\n",
-  "adminEvaluation.records.confirmBody": "Se eliminan {sessions} y {forms}, en todas las asignaturas. La cuenta sigue existiendo; solo se retira del estudio. No se puede deshacer.",
-  "adminEvaluation.records.deleted": "Registros borrados",
-  "adminEvaluation.records.deletedBody": "{sessions} y {forms}.",
-  "adminEvaluation.records.failed": "No se han podido borrar los registros",
-  "adminEvaluation.backToTotal": "Volver al total",
-  "adminEvaluation.backToAll": "Ver a todos los evaluadores",
-  "adminEvaluation.comparisonCount": { one: "1 comparación en el filtro", other: "{n} comparaciones en el filtro" },
-  "adminEvaluation.formCount": { one: "1 formulario", other: "{n} formularios" },
-  "adminEvaluation.tests.title": "Fase de pruebas",
-  "adminEvaluation.tests.description": "Las comparaciones a ciegas: dos propuestas por encargo —la del sistema y una alternativa sorteada—, juzgadas sin saber cuál es de quién. El filtro de arriba acota las tarjetas y el CSV.",
-  "adminEvaluation.build.title": "Fase de construcción",
-  "adminEvaluation.build.description": "Los formularios que cierran cada paso: lo que contestó cada persona sobre los tipos de ejercicio, el temario y el etiquetado que tenía delante. Mismo filtro, su propio CSV.",
-  "adminEvaluation.stages.empty": "Nadie ha contestado todavía el formulario de ningún paso. Aparece al pie de cada paso de la fase de construcción, y en cuanto alguien lo conteste se verá aquí.",
-  "adminEvaluation.stages.filteredEmpty": "Hay formularios contestados, pero ninguno encaja con este filtro. Quítalo para verlos todos.",
-  "adminEvaluation.stages.unreadable": "No se han podido leer los formularios",
-  "adminEvaluation.stages.stat.answered": "Formularios contestados",
-  "adminEvaluation.stages.stat.opened": "de {n} abiertos",
-  "adminEvaluation.stages.stat.mean": "Valoración media",
-  "adminEvaluation.stages.stat.outOf": "sobre 5, en todos los pasos",
-  "adminEvaluation.stages.stat.people": "Personas que han contestado",
-  "adminEvaluation.stages.stat.curated": "Contestados tras corregir",
-  "adminEvaluation.stages.stat.curatedHint": "{pct} de los contestados",
-  "adminEvaluation.stages.answers": { one: "1 respuesta", other: "{n} respuestas" },
-  "adminEvaluation.stages.openedOnly": { one: "1 abierto sin contestar", other: "{n} abiertos sin contestar" },
-  "adminEvaluation.stages.noAnswers": "Nadie ha contestado este paso todavía.",
-  "adminEvaluation.stages.usable": "{pct} están de acuerdo o totalmente de acuerdo en que lo usarían tal cual.",
-  "adminEvaluation.stages.curation": "Antes de contestar:",
-  "adminEvaluation.stages.curatedYes": "corrigieron",
-  "adminEvaluation.stages.curatedNo": "no corrigieron",
-  "adminEvaluation.stages.curatedUnknown": "sin decir",
-  "adminEvaluation.stages.meanShort": "media {mean}",
-  "adminEvaluation.stages.time": "Tiempo en contestar:",
-  "adminEvaluation.stages.median": "mediana de {time}, sobre {n}",
-  "adminEvaluation.stages.notes": "Con nota escrita:",
-  "adminEvaluation.stages.cardTitle": "{n} · {name}",
-  "adminEvaluation.stages.col.mean": "Media",
-  "adminEvaluation.stages.col.curated": "Corrigió",
-  "queue.progressLabel": "{decided} de {total} juzgadas",
-  "queue.noConcepts": "sin conceptos",
-  "queue.none": "No tienes comparaciones asignadas",
-  "rubric.target": "{target} = justo",
-  "queue.noneBody": "Cuando se te asigne alguna, aparecerá aquí.",
-  "queue.next": "La siguiente",
-  "queue.open": "Leer las dos propuestas",
-  "queue.declined": "sin criterio",
-  "queue.judged": "juzgada",
-  "queue.pendingMore": "Pendientes · {n} más",
-  "queue.allDone": "Has terminado todo lo que tenías asignado. Gracias.",
-  "reveal.chosen": "elegida",
-  "reveal.unavailable": "no disponible",
-  "reveal.noValidItem": "sin ejercicio válido",
-  "reveal.examplesFromBank": { one: "1 fragmento recuperado", other: "{n} fragmentos recuperados" },
-  "grid.missing": "te falta por evaluar",
-  "queue.alreadyJudged": "Ya juzgadas · {n}",
-  "reveal.choseNone": "No elegiste ninguna.",
-  "reveal.tagging.none": "no se le ha detectado ninguno",
-  "reveal.tagging.offLimits": "va después en el temario",
-  "reveal.tagging.clean": "No usa nada que vaya después en el temario",
-  "reveal.tagging.trespass": {
-    one: "Usa un concepto que va después en el temario: {list}",
-    other: "Usa {n} conceptos que van después en el temario: {list}",
-  },
-  "reveal.tagging.practised": "Practica un concepto que va después de lo pedido: {list}",
-  "reveal.tagging.cleanPractised": "Practica lo pedido",
-  "reveal.rubricSection.title": "Ahora, unas preguntas sobre el ejercicio del sistema",
-  "reveal.rubricSection.body": "Da igual cuál eligieras: lo que sigue describe únicamente ese ejercicio, no la comparación.",
 
   // THE GRAPH SCREEN ----------------------------------------------------------------------
   "kg.saveChanges": "Guardar cambios",
@@ -1866,6 +1526,10 @@ export const es = {
   "generate.startOver": "Empezar desde cero",
   "generate.ofRequested": " de {n}",
   "generate.title": "Generar ejercicios",
+  // The two tabs under the title: the commission, and what this account has generated in
+  // the subject in use.
+  "generate.tab.compose": "Generar",
+  "generate.tab.mine": "Mis ejercicios",
   "generate.export": "Exportar",
   "generate.downloadJson": "Descargar JSON",
   "generate.downloadMarkdown": "Descargar Markdown",
@@ -1878,8 +1542,6 @@ export const es = {
   "effort.high": "Alto",
   "effort.max": "Máximo",
   "effort.warn.qwen38": "Por encima de «Medio», qwen3.8 delibera durante miles de palabras en la GPU local: cada ejercicio puede tardar muchos minutos, y en el nivel alto se ha medido que llega a devolver una respuesta vacía.",
-  // COUNTS ------------------------------------------------------------------------------
-  "count.items": { one: "{n} ejercicio", other: "{n} ejercicios" },
 
   // THE ENGINE TAB ----------------------------------------------------------------------
   "eng.half.local": "Local",
@@ -2045,7 +1707,7 @@ export const es = {
   "cfg.effort.noModels": "Aquí aparece un interruptor por cada modelo de la lista de arriba.",
   "cfg.effort.hintLevel": "Con el interruptor apagado, el desplegable de al lado fija con qué nivel se llama a ese modelo. Sin elegir ninguno se llama con el que resuelva el motor.",
   "cfg.effort.hint": "Apágalo sólo si has medido que el modelo contesta igual en todos los niveles: misma llamada, temperatura 0 y semilla fija. Un deslizador que no cambia nada es una decisión falsa. El interruptor de razonamiento sigue estando en cualquier caso.",
-  "cfg.offered.hint": "Quien pide un ejercicio elige entre los marcados; con uno solo no se le pregunta nada y se usa ese. El primero es el de por defecto —«Poner primero» lo cambia— y es con el que escriben la CLI y las propuestas locales del estudio, salvo que «Evaluación» fije otro. Ofrecer un modelo no lo descarga, pero sí impide borrarlo del disco desde «Motor».",
+  "cfg.offered.hint": "Quien pide un ejercicio elige entre los marcados; con uno solo no se le pregunta nada y se usa ese. El primero es el de por defecto —«Poner primero» lo cambia— y es con el que escriben la CLI y las propuestas locales del estudio, salvo que se fije otro en «Administración → Evaluaciones». Ofrecer un modelo no lo descarga, pero sí impide borrarlo del disco desde «Motor».",
   "cfg.section.others": "Otros",
   "cfg.section.othersDesc": "Ajustes cuyo grupo no tiene sitio propio en el panel.",
   "cfg.stage.transcription": "Leer los documentos de las dos procedencias, página a página e imagen a imagen, antes de que ningún constructor los use: con qué modelo, cómo se renderiza cada página y cuándo una respuesta se da por fallida.",
@@ -2088,6 +1750,7 @@ export const es = {
   "cfg.unsaved": { one: "1 cambio sin guardar", other: "{n} cambios sin guardar" },
   "cfg.followMain": "Seguir al principal",
   "cfg.sameAsGeneration": "El mismo que genera ejercicios (el primero de los ofrecidos)",
+  "cfg.sameAsReply": "El mismo que escribe la respuesta",
   "cfg.notInstalled": "{model} — sin instalar",
   "cfg.other": "Otro…",
   "cfg.modelName": "{label}: nombre del modelo",
@@ -2148,6 +1811,7 @@ export const es = {
   "cfg.hint.evaluation.local_model": "El modelo que escribe las dos propuestas locales de una comparación: la de solo RAG y la del sistema.",
   "cfg.hint.evaluation.providers": "Proveedores comerciales en orden de preferencia: si uno no responde, se pasa al siguiente.",
   "cfg.hint.evaluation.timeout": "Segundos por intento: con tres proveedores en la cadena, en el peor caso se espera tres veces.",
+  "cfg.hint.tutor.daily_messages": "Cuántos mensajes puede enviar cada cuenta al tutor en un día (UTC), sumando todas sus asignaturas. Vacío: sin límite.",
   "cfg.hint.builders.transcribe_page_max_a4_areas": "Superficie máxima, en páginas A4, que se dibuja a la resolución elegida; una página mayor se dibuja a menos. Cambiarla deja desfasados los PDF ya transcritos.",
   "cfg.hint.builders.transcribe_page_png_max_bytes": "Bytes a partir de los cuales una página o imagen deja de enviarse como PNG y va como JPEG. Cambiarlo deja desfasado lo ya transcrito.",
   "cfg.hint.builders.transcribe_page_jpeg_quality": "Calidad de las páginas e imágenes que van como JPEG. Cambiarla deja desfasado lo ya transcrito.",
@@ -2194,134 +1858,15 @@ export const es = {
   "guide.sec.admin": "Administrar la instalación",
   "guide.sec.troubleshooting": "Cuando algo va mal",
   // THE TUTOR -----------------------------------------------------------------------------
-  "tutor.title": "Tutor socrático",
-  "tutor.whatIsThis": "Qué es esto",
-  "tutor.whatIsThis.body": "Un tutor socrático no te da la solución: te hace preguntas para que llegues tú a ella. Trabaja con los apuntes, el temario y los ejercicios de esta asignatura, y cada respuesta te dice dónde mirar en los apuntes.",
-  "tutor.unreadable": "No se pudo leer el tutor",
-  "tutor.blocked": "El tutor necesita la asignatura preparada",
-  "tutor.tab.conversation": "Conversaciones",
-  "tutor.tab.criteria": "Criterios de la asignatura",
-  "tutor.new": "Nueva conversación",
-  "tutor.untitled": "Sin título",
-  "tutor.delete": "Borrar la conversación",
-  "tutor.deleteConfirm": "La conversación se borra entera y no se puede recuperar.",
-  "tutor.list.unreadable": "No se pudieron leer tus conversaciones",
-  "tutor.list.empty": "Todavía no has hablado con el tutor en esta asignatura.",
-  "tutor.list.waiting": "Esperando respuesta",
-  "tutor.list.turns": { one: "1 mensaje", other: "{n} mensajes" },
-  "tutor.start.title": "¿En qué te ayudo?",
-  "tutor.start.body": "El tutor socrático no te da la solución: te hace preguntas para que la encuentres tú. Pregunta por un concepto de la asignatura, pega el enunciado de un ejercicio o enseña tu intento. Bajo cada respuesta están los apartados de los apuntes de los que sale, y desde ahí se abren.",
-  "tutor.start.fromExercise": "El enunciado del ejercicio ya está en el cuadro de abajo. Añade qué te cuesta y envíalo: el tutor empezará por los conceptos que ese ejercicio practica.",
-  "tutor.openedFrom": "Conversación sobre un ejercicio generado.",
-  "tutor.composer.label": "Tu mensaje",
-  "tutor.composer.placeholder": "Escribe tu pregunta, un enunciado o tu código",
-  "tutor.composer.suggestion": "Explícame «{name}»",
-  "tutor.composer.tab": "Tab",
-  "tutor.composer.useSuggestion": "Escribir «{text}»",
-  "tutor.composer.send": "Enviar",
-  "tutor.topic.label": "Sobre",
-  "tutor.topic.choose": "Elegir concepto",
-  "tutor.topic.change": "Cambiar",
-  "tutor.topic.optional": "Opcional: si no eliges, el tutor lo deduce de tu mensaje.",
-  "tutor.topic.remove": "Quitar «{name}»",
-  "tutor.topic.about": "sobre «{name}»",
-  "tutor.topic.picker": "Elegir el concepto del mensaje",
-  "tutor.topic.search": "Buscar un concepto o una unidad…",
-  "tutor.topic.units": "Unidades del temario",
-  "tutor.topic.count": { one: "1 concepto", other: "{n} conceptos" },
-  "tutor.topic.none": "Ningún concepto del temario se llama así.",
-  "tutor.topic.current": "La conversación trata de este concepto",
-  "tutor.topic.keys": "↑ ↓ cambian de unidad · ← → recorren los conceptos · Intro elige · Esc cierra",
-  "tutor.topic.keysSearch": "Intro elige el primero · ↑ ↓ recorren los resultados · Esc cierra",
-  "tutor.start.units": "O empieza por una unidad del temario",
-  "tutor.sendFailed": "No se pudo enviar",
-  "tutor.you": "Tú",
-  "tutor.tutor": "Tutor",
-  "tutor.student": "Alumno",
-  "tutor.references": "En los apuntes:",
-  "tutor.notes.title": "Apuntes",
-  "tutor.notes.open": "Abrir «{place}» en los apuntes",
-  "tutor.notes.section": "Apartado",
-  "tutor.notes.previous": "Apartado anterior",
-  "tutor.notes.next": "Apartado siguiente",
-  "tutor.notes.unreadable": "No se pudieron abrir los apuntes",
-  "tutor.notes.empty": "Este documento no tiene texto que mostrar.",
-  "tutor.map.title": "Mapa de «{name}»: dónde está en el temario",
-  "tutor.map.review": "Mapa de «{concept}»: lo que conviene repasar es «{name}»",
-  "tutor.map.before": "Se da por sabido",
-  "tutor.map.after": "Viene después",
-  "tutor.map.more": "y {n} más",
-  "tutor.pending.queued": "En cola",
-  "tutor.pending.queuedNext": "El tutor empezará en cuanto le toque.",
-  "tutor.pending.queuedAhead": "Hay {n} trabajo(s) por delante. El tutor empezará cuando le toque.",
-  "tutor.pending.running": "El tutor prepara su pregunta",
-  "tutor.pending.runningWhy": "Lee tu mensaje, busca en los apuntes y revisa lo que escribe antes de enviarlo. Por eso la respuesta llega entera.",
-  "tutor.pending.stop": "Detener",
-  "tutor.failed.failed": "Este mensaje no tiene respuesta: el tutor falló al contestar.",
-  "tutor.failed.cancelled": "Este mensaje no tiene respuesta: la detuviste.",
-  "tutor.failed.interrupted": "Este mensaje no tiene respuesta: el servidor se reinició mientras tanto.",
-  "tutor.retry": "Pedir la respuesta otra vez",
   "tutor.fromExercise": "Trabajar con el tutor",
   "tutor.fromExercise.hint": "Abre una conversación con el tutor sobre este ejercicio",
   "tutor.fromExercise.message": "Quiero trabajar este ejercicio:\n\n{statement}",
-  "tutor.criteria.title": "Criterios de la asignatura",
-  "tutor.criteria.body": "Lo propio de esta asignatura que el tutor tiene en cuenta: las convenciones que piden los apuntes, los errores que señalan y lo que no usan. Su método —preguntar en vez de resolver y remitir a los apuntes— ya vale en todas las asignaturas y no hace falta escribirlo aquí. El sistema redacta estos criterios y un docente los corrige.",
-  "tutor.criteria.unreadable": "No se pudieron leer los criterios",
-  "tutor.criteria.origin.draft": "Borrador del sistema",
-  "tutor.criteria.origin.curated": "Corregidos",
-  "tutor.criteria.builtBy": "Redactados el {date} con {model}.",
-  "tutor.criteria.missing": "Todavía no hay criterios",
-  "tutor.criteria.missing.body": "Sin criterios, el tutor sigue solo su método general. Genéralos y revísalos antes de que los alumnos empiecen a usarlo.",
-  "tutor.criteria.build": "Generar los criterios",
-  "tutor.criteria.buildFailed": "No se pudo pedir la redacción",
-  "tutor.criteria.rebuild": "Volver a generarlos",
-  "tutor.criteria.rebuildConfirm": "Se redactan de nuevo desde los apuntes. Tus correcciones pasan al historial y dejan de aplicarse.",
-  "tutor.criteria.queued": "En cola para redactar los criterios",
-  "tutor.criteria.building": "Redactando los criterios…",
-  "tutor.criteria.warnings": "Parte de los criterios ya no encaja con el temario y se ignora",
-  "tutor.criteria.correct": "Quiero corregir algo",
-  "tutor.criteria.general": "Para toda la asignatura",
-  "tutor.criteria.byUnit": "Por unidad",
-  "tutor.criteria.none": "Ninguno.",
-  "tutor.criteria.must": "Obligatorio",
-  "tutor.criteria.should": "Recomendado",
-  "tutor.criteria.sources": "Fuentes",
-  "tutor.criteria.text": "Criterio",
-  "tutor.criteria.strength": "Exigencia",
-  "tutor.criteria.concepts": "Conceptos",
-  "tutor.criteria.addConcept": "Añadir un concepto…",
-  "tutor.criteria.removeConcept": "Quitar «{name}»",
-  "tutor.criteria.add": "Añadir un criterio",
-  "tutor.criteria.remove": "Quitar",
-  "tutor.criteria.terms": "Lo que el tutor nunca sugiere",
-  "tutor.criteria.terms.body": "Instrucciones o funciones que el material no usa. Si el alumno las usa, el tutor puede preguntarle por ellas, pero nunca las propone.",
-  "tutor.criteria.term": "Término",
-  "tutor.criteria.reason": "Por qué",
-  "tutor.criteria.addTerm": "Añadir un término",
-  "tutor.criteria.admin": "Respuesta a las consultas administrativas",
-  "tutor.criteria.admin.body": "El texto exacto que recibe un alumno que pregunta por notas, fechas o entregas.",
-  "tutor.criteria.unsaved": "Cambios sin guardar",
-  "tutor.criteria.discard": "Descartar los cambios",
-  "tutor.criteria.save": "Guardar los cambios",
-  "tutor.criteria.saved": "Criterios guardados",
-  "tutor.kind.theory": "Teoría",
-  "tutor.kind.exercise": "Enunciado",
-  "tutor.kind.attempt": "Intento propio",
-  "tutor.kind.solution": "Pide la solución",
-  "tutor.kind.social": "Saludo",
-  "tutor.kind.administrative": "Administrativa",
-  "tutor.kind.off_topic": "Fuera de la asignatura",
-  "tutor.kind.blocked": "Rechazado",
   "tutor.admin.view": "Ver las conversaciones con el tutor en «{name}»",
-  "tutor.admin.title": "Conversaciones con el tutor en «{name}»",
-  "tutor.admin.readOnly": "De todas las cuentas, solo para leer: borrarlas o seguirlas es cosa de quien las tuvo.",
-  "tutor.admin.unreadable": "No se pudieron leer las conversaciones de esta asignatura",
-  "tutor.admin.empty": "Nadie ha hablado todavía con el tutor en esta asignatura.",
-  "tutor.admin.fallback": "Pregunta de reserva",
 } as const;
 
-export type Key = keyof typeof es;
-
-export type Catalogue = {
-  [K in Key]: (typeof es)[K] extends string ? string : { one: string; other: string };
+/** What a catalogue in another language must hold to answer for the Spanish entries `T`. */
+export type CatalogueOf<T> = {
+  [K in keyof T]: T[K] extends string ? string : { one: string; other: string };
 };
+
+export type Catalogue = CatalogueOf<typeof es>;

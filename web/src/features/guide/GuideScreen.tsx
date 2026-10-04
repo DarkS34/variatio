@@ -8,7 +8,7 @@ import { Link } from "@/lib/router";
 import { fold } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
-import { GUIDE_SECTIONS, useGuideBody, type GuideSection } from "./sections";
+import { useGuideBody, useGuideSections, type GuideSection } from "./sections";
 
 function grouped(sections: readonly GuideSection[]): { key: Key; sections: GuideSection[] }[] {
   const groups: { key: Key; sections: GuideSection[] }[] = [];
@@ -24,24 +24,27 @@ export function GuideScreen({ slug }: { slug: string }) {
   const { t } = useT();
   const [query, setQuery] = useState("");
   const [navOpen, setNavOpen] = useState(false);
+  // Only what this account may read: a function closed to it has no section here, so its
+  // slug falls back like any unknown one.
+  const sections = useGuideSections();
 
-  const position = GUIDE_SECTIONS.findIndex((section) => section.slug === slug);
-  const active = GUIDE_SECTIONS[position] ?? GUIDE_SECTIONS[0];
-  const next = GUIDE_SECTIONS[(position < 0 ? 0 : position) + 1] ?? null;
+  const position = sections.findIndex((section) => section.slug === slug);
+  const active = sections[position] ?? sections[0];
+  const next = sections[(position < 0 ? 0 : position) + 1] ?? null;
 
   const groups = useMemo(() => {
     const needle = fold(query.trim());
-    if (!needle) return grouped(GUIDE_SECTIONS);
+    if (!needle) return grouped(sections);
     return grouped(
-      GUIDE_SECTIONS.filter(
+      sections.filter(
         (section) =>
           fold(t(section.labelKey)).includes(needle) ||
           fold(t(section.groupKey)).includes(needle),
       ),
     );
-  }, [query, t]);
+  }, [query, t, sections]);
 
-  const Body = useGuideBody(active.slug);
+  const Body = useGuideBody(active);
 
   return (
     <div className="space-y-5">

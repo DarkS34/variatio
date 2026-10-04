@@ -1,9 +1,12 @@
+import "./i18n";
+
 import { ArrowLeft, Clock, EyeOff, Plus, Scale } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
 import { GuideLink } from "@/components/GuideLink";
+import { TabStrip, type TabStripItem } from "@/components/TabStrip";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { EMPTY_FORM, type FormState } from "@/features/generate/commission";
@@ -294,19 +297,12 @@ export function EvaluationScreen() {
   const headerWay = wayOn(tab === "compose" && canCompose ? "order" : "list");
   const footWay = wayOn(queue && queue.pending > 0 ? "queue" : canCompose ? "order" : "list");
 
-  const TABS: { id: Tab; label: string; count?: number; attention?: boolean }[] = [
+  const TABS: TabStripItem<Tab>[] = [
     ...(CROSS_EVALUATION
-      ? [
-          {
-            id: "queue" as Tab,
-            label: t("eval.tab.queue"),
-            count: queue?.pending ?? 0,
-            attention: true,
-          },
-        ]
+      ? [{ value: "queue" as Tab, label: t("eval.tab.queue"), count: queue?.pending ?? 0 }]
       : []),
-    ...(canCompose ? [{ id: "compose" as Tab, label: t("eval.tab.compose") }] : []),
-    { id: "history", label: t("eval.tab.history"), count: listing.data?.total ?? 0 },
+    ...(canCompose ? [{ value: "compose" as Tab, label: t("eval.tab.compose") }] : []),
+    { value: "history", label: t("eval.tab.history"), count: listing.data?.total ?? 0 },
   ];
 
   return (
@@ -342,37 +338,7 @@ export function EvaluationScreen() {
           is one task with one way out, and offering three destinations beside the cards
           invites leaving it half judged. */}
       {!showComparison && !running ? (
-        <div className="flex border-b border-border">
-          {TABS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === entry.id}
-              onClick={() => setTab(entry.id)}
-              className={cn(
-                "-mb-px flex items-center gap-2 border-b-2 px-4 pt-2.5 pb-3 text-body transition-colors",
-                tab === entry.id
-                  ? "border-primary font-semibold text-foreground"
-                  : "border-transparent font-medium text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {entry.label}
-              {entry.count ? (
-                <span
-                  className={cn(
-                    "inline-grid h-[18px] min-w-5 place-items-center px-1.5 text-[12px] font-semibold nums",
-                    // A count is a fact, not an action: it wears the ink. The one "act
-                    // here" colour is spent on the button that opens the next comparison.
-                    "bg-primary text-primary-foreground",
-                  )}
-                >
-                  {entry.count}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
+        <TabStrip label={t("eval.title")} items={TABS} value={tab} onChange={setTab} />
       ) : null}
 
       {!unlocked ? (

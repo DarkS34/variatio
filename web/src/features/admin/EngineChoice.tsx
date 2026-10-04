@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Skeleton } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import type { EngineSettings } from "@/features/admin/EngineSettings";
 import { ENGINE_KINDS } from "@/features/admin/engineState";
 import { settingHint } from "@/features/admin/hints";
@@ -21,15 +22,18 @@ import { cn } from "@/lib/utils";
 export function EngineChoice({ config }: { config: EngineSettings }) {
   const { t } = useT();
   const setting = config.engine[0];
+  const value = setting ? String(config.valueOf(setting) ?? "") : "";
+  const choices = setting?.choices ?? [value];
+  const radios = useRadioGroup(choices, value, (choice) => {
+    if (setting) config.change(setting.key, choice);
+  });
   if (config.loading) return <Skeleton className="h-36" />;
   if (!setting) return null;
 
-  const value = String(config.valueOf(setting) ?? "");
   const pending = setting.key in config.draft;
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   const hintKey = settingHint(setting.key);
-  const choices = setting.choices ?? [value];
 
   return (
     <Card className="border-l-2 border-l-primary">
@@ -47,6 +51,7 @@ export function EngineChoice({ config }: { config: EngineSettings }) {
           role="radiogroup"
           aria-labelledby="engine-choice-title"
           className="grid gap-3 sm:grid-cols-2"
+          {...radios.group}
         >
           {choices.map((choice) => {
             const kind = ENGINE_KINDS[choice];
@@ -54,6 +59,7 @@ export function EngineChoice({ config }: { config: EngineSettings }) {
             return (
               <button
                 key={choice}
+                {...radios.radio(choice)}
                 type="button"
                 role="radio"
                 aria-checked={chosen}

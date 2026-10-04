@@ -76,16 +76,20 @@ export function AcceptInvite({ token }: { token: string }) {
 
   const invite = preview.data!;
   const mismatch = repeat.length > 0 && password !== repeat;
+  // Only the evaluation reads the answer, so it is asked only of somebody it will be open to;
+  // an API that does not say asks, as it always did.
+  const asksProfile = invite.asks_profile !== false;
+  const unanswered = asksProfile && !profile;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (mismatch || !profile) return;
+    if (mismatch || unanswered) return;
     accept.mutate({
       token,
       username: username.trim(),
       name: name.trim(),
       password,
-      evaluator_profile: profile,
+      evaluator_profile: asksProfile ? profile : null,
       ui_language: language,
     });
   };
@@ -163,30 +167,32 @@ export function AcceptInvite({ token }: { token: string }) {
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label id="invite-profile-label">{t("invite.teachOrStudy")}</Label>
-          <div role="group" aria-labelledby="invite-profile-label" className="flex gap-1">
-            {PROFILES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setProfile(option)}
-                aria-pressed={profile === option}
-                className={cn(
-                  "h-9 flex-1 border text-small font-medium transition-colors",
-                  profile === option
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
-                )}
-              >
-                {t(PROFILE_SELF_LABEL_KEYS[option])}
-              </button>
-            ))}
+        {asksProfile ? (
+          <div className="flex flex-col gap-1.5">
+            <Label id="invite-profile-label">{t("invite.teachOrStudy")}</Label>
+            <div role="group" aria-labelledby="invite-profile-label" className="flex gap-1">
+              {PROFILES.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setProfile(option)}
+                  aria-pressed={profile === option}
+                  className={cn(
+                    "h-9 flex-1 border text-small font-medium transition-colors",
+                    profile === option
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
+                  )}
+                >
+                  {t(PROFILE_SELF_LABEL_KEYS[option])}
+                </button>
+              ))}
+            </div>
+            <p className="text-small text-muted-foreground">
+              {t("invite.profileHint")}
+            </p>
           </div>
-          <p className="text-small text-muted-foreground">
-            {t("invite.profileHint")}
-          </p>
-        </div>
+        ) : null}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-password">{t("auth.password")}</Label>
@@ -235,7 +241,7 @@ export function AcceptInvite({ token }: { token: string }) {
 
         <FormError error={accept.error} />
 
-        <Button type="submit" disabled={accept.isPending || mismatch || !profile}>
+        <Button type="submit" disabled={accept.isPending || mismatch || unanswered}>
           {accept.isPending ? <Spinner /> : null}
           {t("invite.createAccount")}
         </Button>

@@ -1,7 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 
 import { cn } from "@/lib/utils";
+
+import { DOOR_TONE } from "./tone";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
@@ -22,6 +24,13 @@ const buttonVariants = cva(
         attention:
           "bg-attention text-attention-foreground hover:bg-[color-mix(in_oklch,var(--attention)_88%,var(--attention-foreground))]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        // The tutor's own colour, for a control outside its screen that opens it — «Trabajar
+        // con el tutor». The quiet face of its door (`DOOR_TONE`): tutor text, ring and a light
+        // tint, never a fill. It sits on every saved exercise, and filled it was the loudest
+        // thing on the screen in dark (the fill lighter than --attention), competing with the
+        // one action the screen asks for. Never inside the tutor's screen, where "act here"
+        // stays the attention's.
+        tutor: `${DOOR_TONE.tutor.face} ${DOOR_TONE.tutor.hover}`,
         outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
@@ -44,7 +53,10 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  /** Reaches the `<button>` itself, as a radio group's keyboard needs (`ui/radio.ts`). */
+  ref?: Ref<HTMLButtonElement>;
+}
 
 export function Button({ className, variant, size, ...props }: ButtonProps) {
   return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />;

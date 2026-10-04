@@ -331,6 +331,8 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
         "expires_at": invite.expires_at.isoformat(),
+        # Whether the form asks "docente o alumno": only the evaluation reads the answer.
+        "asks_profile": _asks_profile(session, invite),
     }
 
 
@@ -354,7 +356,11 @@ def accept_invite(
     nowhere else — this is the one moment the person is in front of the form, and NULL
     ("nobody said") has to stay reachable for the accounts the command line creates and
     for every account older than the question. It is not a permission and never becomes
-    one. An unknown UI language, unlike an absent profile, is refused rather than ignored:
+    one. And it is required only when the evaluation will be open to the new account
+    (`_asks_profile`), the one function that reads it: asking everybody told every invitee
+    about a study most of them will never see. NULL is what the evaluation already reads as
+    "nobody said" if it is opened to them later, and the administrator can set it then.
+    An unknown UI language, unlike an absent profile, is refused rather than ignored:
     the account reads everything through it, so silently seating somebody in Spanish
     because they typed `fr` is worse than saying the installation does not speak it.
     """
@@ -384,7 +390,7 @@ def accept_invite(
     error = identity.profile_error(body.evaluator_profile)
     if error:
         raise HTTPException(422, error)
-    if body.evaluator_profile is None:
+    if body.evaluator_profile is None and _asks_profile(session, invite):
         raise HTTPException(422, "Di si das clase o si estudias: decide qué se te preguntará.")
 
     if body.ui_language is not None:
@@ -519,6 +525,18 @@ def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:
     if invite.workspace_id is None:
         return
     identity.grant(session, invite.workspace_id, user.id, invite.role)
+
+
+def _asks_profile(session: DbSession, invite: Invite) -> bool:
+    """Say whether the evaluation will be open to whoever redeems this invitation.
+
+    Open to every account, or to the chosen ones with this invitation listing its holder for
+    it (`_apply_features`): the two ways the account it creates can use it from the start.
+    """
+    mode = features.mode(session, features.EVALUATION)
+    if mode == features.ALL:
+        return True
+    return mode == features.SELECTED and features.EVALUATION in (invite.features or [])
 
 
 def _apply_features(session: DbSession, invite: Invite, user: User) -> None:

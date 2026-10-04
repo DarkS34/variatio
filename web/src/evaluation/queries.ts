@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { stageReviewKeys } from "@/state/queries";
 import { runStore } from "@/state/runStore";
 
 import { evaluationApi, type AdminGenerateParams } from "./api";
@@ -162,18 +163,15 @@ export function useAssignSet() {
 
 // WHAT A TEACHER ANSWERED ABOUT EACH ARTIFACT ---------------------------------------------
 
-/** Keyed by artifact AND by workspace: the same stage of two subjects is two forms. */
-export const stageReviewKey = (artifact: string) => ["stage-review", artifact] as const;
-
 /**
- * Every stage's form at once, which is what an artifact write has to invalidate.
+ * Keyed by artifact AND by workspace: the same stage of two subjects is two forms.
  *
- * The payload is not a constant: it says whether there is anything built to judge, and
- * under which hash the answer will be filed. So a build that finishes leaves it stale, and
- * `state/queries.useInvalidateChain` — the one home of what an artifact write invalidates —
- * reads this prefix rather than keeping a second copy of the key.
+ * Under `stageReviewKeys`, the prefix core keeps: the payload is not a constant — it says
+ * whether there is anything built to judge, and under which hash the answer will be filed —
+ * so a build that finishes leaves it stale, and `state/queries.useInvalidateChain`, the one
+ * home of what an artifact write invalidates, reads that prefix.
  */
-export const stageReviewKeys = ["stage-review"] as const;
+export const stageReviewKey = (artifact: string) => [...stageReviewKeys, artifact] as const;
 
 export function useStageReview(artifact: string | undefined) {
   return useQuery({

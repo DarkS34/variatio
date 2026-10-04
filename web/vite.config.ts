@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import { chunkGraph } from "./vite/chunk-graph";
 import { mermaidSubset } from "./vite/mermaid-subset";
 
 const API = process.env.VITE_API_TARGET ?? "http://127.0.0.1:8000";
@@ -11,7 +12,7 @@ const API = process.env.VITE_API_TARGET ?? "http://127.0.0.1:8000";
 // Proxying in dev means the app always talks to same-origin relative URLs, so the
 // exact same code works when FastAPI serves the built bundle. No CORS, no env juggling.
 export default defineConfig({
-  plugins: [react(), tailwindcss(), mermaidSubset()],
+  plugins: [react(), tailwindcss(), mermaidSubset(), chunkGraph()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -50,6 +51,21 @@ export default defineConfig({
           // It is off the critical path either way: `Markdown` is imported from nowhere
           // but the item cards, which live behind lazy routes.
           if (id.includes("katex")) return "katex";
+        },
+        // An optional function's catalogue (`src/<function>/i18n/`) is a chunk of its own,
+        // shared by the function's lazy modules, and Rollup would name it after its
+        // `index.ts` — as it names the entry, so `dist/assets/index-*.js` would stop meaning
+        // the entry chunk the catalogue split is measured by.
+        //
+        // Only a chunk made of that folder alone takes the name: were Rollup to inline the
+        // catalogue into the one screen that imports it, the chunk is the screen's.
+        chunkFileNames(chunk) {
+          const ids = chunk.moduleIds.filter((id) => !id.startsWith("\0"));
+          const home = ids
+            .map((id) => /[\\/]src[\\/](?!lib[\\/])(\w+)[\\/]i18n[\\/]index\.ts$/.exec(id)?.[1])
+            .find(Boolean);
+          const alone = ids.every((id) => id.split(/[\\/]/).slice(-3, -1).join("/") === `${home}/i18n`);
+          return home && alone ? `assets/${home}-i18n-[hash].js` : "assets/[name]-[hash].js";
         },
       },
     },

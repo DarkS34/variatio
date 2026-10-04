@@ -1,4 +1,4 @@
-import { ArrowRight, Check, FileText, Sparkles, User } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, User } from "lucide-react";
 import { Fragment } from "react";
 
 import { Logo } from "@/components/ui/logo";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 export const PROSE = "font-reading text-[1.1875rem] leading-[1.65] sm:text-[1.3125rem]";
 
 /** A sentence inside a figure: the reading face, set a little tighter because it wraps in a box. */
-const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text-[1.3125rem]";
+export const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text-[1.3125rem]";
 
 /**
  * THE PICTURES THE TUTORIAL EXPLAINS ITSELF WITH.
@@ -37,6 +37,9 @@ const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text-[1.312
  * something else. A drawing that enumerates and a paragraph that enumerates the same
  * things is one thing said twice, which is what the flow and the two document piles used
  * to be — so their labels are full sentences now and the prose beside them is shorter.
+ *
+ * The study's two figures are drawn out of these same parts in the evaluation's folder
+ * (`evaluation/tutorial.tsx`), which is why `Box`, `Chain` and `FIGURE_PROSE` are exported.
  */
 
 /**
@@ -49,7 +52,7 @@ const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text-[1.312
  * form. What still separates them there is the arrow, which is the only thing that was
  * ever doing the work.
  */
-function Box({
+export function Box({
   children,
   marked = false,
   bare = false,
@@ -88,7 +91,7 @@ function Box({
  * cells. Stacked, each sentence gets the whole width, and the arrow turns with the layout
  * so the chain still reads as a chain rather than as a list.
  */
-function Chain({ children }: { children: React.ReactNode[] }) {
+export function Chain({ children }: { children: React.ReactNode[] }) {
   return (
     <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:gap-3">
       {children.map((box, index) => (
@@ -212,59 +215,3 @@ export function AskFigure() {
     </Chain>
   );
 }
-
-/**
- * How every step goes, in four beats.
- *
- * The marked one is "lo valoras", the only beat the reader is being asked for; the other
- * three are what the step does around it. The prose beside it does NOT walk the four beats
- * again — it says what the picture cannot, that correcting is optional and that a hand
- * correction wins.
- */
-export function CloseFigure() {
-  const { t } = useT();
-  const beats: { key: Key; marked?: boolean }[] = [
-    { key: "tutorial.fig.build" },
-    { key: "tutorial.fig.review" },
-    { key: "tutorial.fig.rate", marked: true },
-    { key: "tutorial.fig.next" },
-  ];
-  return (
-    <Chain>
-      {beats.map(({ key, marked }) => (
-        <Box key={key} marked={marked} className="w-full px-3 py-5">
-          {marked ? <Check aria-hidden className="size-5 text-attention" /> : null}
-          <span className={cn(FIGURE_PROSE, marked && "font-semibold")}>{t(key)}</span>
-        </Box>
-      ))}
-    </Chain>
-  );
-}
-
-/**
- * The two proposals, neither of them named until you have chosen.
- *
- * Two and not three, because a session IS two cards: the system's proposal and the one
- * rival the seed draws. The label is `grid.proposal`, the comparison screen's own, so the
- * card the reader will see is headed with the very words drawn here.
- */
-export function BlindFigure() {
-  const { t } = useT();
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {["A", "B"].map((letter) => (
-        <Box key={letter} className="items-start gap-3 p-4 text-left">
-          <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
-            {t("grid.proposal", { letter })}
-          </span>
-          <span className="flex w-full flex-col gap-1.5" aria-hidden>
-            <span className="h-1.5 w-full bg-border" />
-            <span className="h-1.5 w-4/5 bg-border" />
-            <span className="h-1.5 w-2/3 bg-border" />
-          </span>
-        </Box>
-      ))}
-    </div>
-  );
-}
-

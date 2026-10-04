@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { STEPS, currentStepPath, nextStepOf, stepBusy, stepStates } from "./steps";
-import type { ArtifactStatus, Job, StageState } from "./types";
+import {
+  STEPS,
+  USES,
+  currentStepPath,
+  nextStepOf,
+  stepBusy,
+  stepStates,
+  usesFor,
+} from "./steps";
+import { featuresOf, type ArtifactStatus, type Job, type StageState } from "./types";
 
 const stage = (artifact: string, status: ArtifactStatus): StageState =>
   ({ artifact, status, stale_because: [] }) as unknown as StageState;
@@ -123,5 +131,31 @@ describe("stepBusy", () => {
     expect(stepBusy(chain("missing", "missing", "missing"), [reading])[0]).toBe(true);
     const queued = job({ kind: "transcribe", artifact: null, status: "queued", queue_position: 1 });
     expect(stepBusy(chain("missing", "missing", "missing"), [queued])[0]).toBe(false);
+  });
+});
+
+describe("usesFor", () => {
+  const keysOf = (evaluation: boolean, tutor: boolean) =>
+    usesFor({ evaluation, tutor }).map((door) => door.key);
+
+  it("always draws generating, the product's own door", () => {
+    expect(keysOf(false, false)).toEqual(["generate"]);
+  });
+
+  it("draws a function's door only when it is open to the account", () => {
+    expect(keysOf(true, false)).toEqual(["generate", "compare"]);
+    expect(keysOf(false, true)).toEqual(["generate", "tutor"]);
+  });
+
+  it("keeps the order of USES with everything open", () => {
+    expect(keysOf(true, true)).toEqual(USES.map((door) => door.key));
+  });
+
+  it("draws no optional door for a session that does not say", () => {
+    // An API older than the bundle sends no `features`: both read as closed.
+    expect(usesFor(featuresOf({})).map((door) => door.key)).toEqual(["generate"]);
+    expect(
+      usesFor(featuresOf({ features: { evaluation: "yes" } as never })).map((door) => door.key),
+    ).toEqual(["generate"]);
   });
 });

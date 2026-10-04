@@ -1,13 +1,24 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "./en";
 import { es } from "./es";
-import { ensureCatalogue, LANGUAGES, localeStore, normalise, pluralise, translate } from "./index";
+import {
+  ensureCatalogue,
+  LANGUAGES,
+  localeStore,
+  normalise,
+  pluralise,
+  registerCatalogue,
+  translate,
+  withCatalogues,
+  type Key,
+} from "./index";
+import { describeCatalogue } from "./testing";
 
 // `en` is fetched on demand now, so asking for an English string before it lands answers
 // in Spanish — the deliberate fallback. Without this the suite would go on passing while
 // testing the wrong catalogue, which is exactly what it did when the split was written:
-// `pluralise("en", "count.items", 1)` came back "1 ítem".
+// the English count of exercises came back "1 ítem".
 beforeAll(() => ensureCatalogue("en"));
 
 describe("normalise", () => {
@@ -26,38 +37,7 @@ describe("normalise", () => {
   });
 });
 
-describe("the catalogues", () => {
-  it("declare exactly the same keys", () => {
-    // TypeScript already refuses a missing one; this is what catches a key that exists in
-    // `en` and not in `es`, which the type cannot see because `es` is the source.
-    expect(Object.keys(en).sort()).toEqual(Object.keys(es).sort());
-  });
-
-  it("agree on which entries are plural", () => {
-    for (const key of Object.keys(es) as (keyof typeof es)[]) {
-      expect(typeof en[key]).toBe(typeof es[key]);
-    }
-  });
-
-  it("leave no value empty", () => {
-    for (const [key, value] of Object.entries({ ...es, ...en })) {
-      const text = typeof value === "string" ? value : `${value.one}${value.other}`;
-      expect(text.trim(), key).not.toBe("");
-    }
-  });
-
-  it("keep every interpolation the other one has", () => {
-    // A `{name}` dropped in translation renders a sentence with a hole in it, and nothing
-    // else would notice: the type is `string` either way.
-    const slots = (value: unknown): string[] => {
-      const text = typeof value === "string" ? value : Object.values(value as object).join(" ");
-      return [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
-    };
-    for (const key of Object.keys(es) as (keyof typeof es)[]) {
-      expect(slots(en[key]), key).toEqual(slots(es[key]));
-    }
-  });
-});
+describeCatalogue("the catalogues", es, en);
 
 describe("translate", () => {
   it("fills the named slots", () => {
@@ -73,14 +53,14 @@ describe("translate", () => {
 
 describe("pluralise", () => {
   it("picks the singular only at one", () => {
-    expect(pluralise("en", "count.items", 1)).toBe("1 exercise");
-    expect(pluralise("en", "count.items", 2)).toBe("2 exercises");
-    expect(pluralise("en", "count.items", 0)).toBe("0 exercises");
+    expect(pluralise("en", "form.items", 1)).toBe("1 exercise");
+    expect(pluralise("en", "form.items", 2)).toBe("2 exercises");
+    expect(pluralise("en", "form.items", 0)).toBe("0 exercises");
   });
 
   it("does the same in Spanish, where the app used to write «N ítem(s)»", () => {
-    expect(pluralise("es", "count.items", 1)).toBe("1 ejercicio");
-    expect(pluralise("es", "count.items", 3)).toBe("3 ejercicios");
+    expect(pluralise("es", "form.items", 1)).toBe("1 ejercicio");
+    expect(pluralise("es", "form.items", 3)).toBe("3 ejercicios");
   });
 });
 
@@ -110,5 +90,88 @@ describe("the store", () => {
 
   it("knows exactly two languages", () => {
     expect(LANGUAGES).toEqual(["es", "en"]);
+  });
+});
+
+describe("a function's catalogue", () => {
+  beforeEach(() => {
+    localeStore.set("es");
+  });
+
+  // Keys no catalogue of the app declares, so the cast: what is under test is the
+  // registration, not the app's own strings.
+  const key = (name: string) => name as Key;
+
+  it("answers in Spanish the moment it is registered", () => {
+    registerCatalogue("test-spanish", { "test.spanish.greeting": "Hola, {name}" }, {});
+    expect(translate("es", key("test.spanish.greeting"), { name: "Ana" })).toBe("Hola, Ana");
+  });
+
+  it("falls back to Spanish until its English arrives through the loader", async () => {
+    type Counted = { "test.english.count": { one: string; other: string } };
+    localeStore.set("en");
+    let deliver: (entries: Counted) => void = () => {};
+    const english = vi.fn(() => new Promise<Counted>((resolve) => (deliver = resolve)));
+    registerCatalogue(
+      "test-english",
+      { "test.english.count": { one: "1 vuelta", other: "{n} vueltas" } },
+      { en: english },
+    );
+
+    // Registered while the reader reads English: the entries are already on their way.
+    expect(english).toHaveBeenCalledTimes(1);
+    expect(pluralise("en", key("test.english.count"), 2)).toBe("2 vueltas");
+
+    deliver({ "test.english.count": { one: "1 lap", other: "{n} laps" } });
+    await ensureCatalogue("en");
+    expect(pluralise("en", key("test.english.count"), 1)).toBe("1 lap");
+    expect(pluralise("en", key("test.english.count"), 2)).toBe("2 laps");
+    expect(pluralise("es", key("test.english.count"), 2)).toBe("2 vueltas");
+    expect(english).toHaveBeenCalledTimes(1);
+  });
+
+  it("is fetched for a language chosen after it was registered", async () => {
+    const english = vi.fn(async () => ({ "test.later.title": "Later" }));
+    registerCatalogue("test-later", { "test.later.title": "Después" }, { en: english });
+    expect(english).not.toHaveBeenCalled();
+
+    await ensureCatalogue("en");
+    expect(english).toHaveBeenCalledTimes(1);
+    expect(translate("en", key("test.later.title"))).toBe("Later");
+  });
+
+  it("holds back the lazy module that registered it until its English is here", async () => {
+    localeStore.set("en");
+    let deliver: () => void = () => {};
+    // What `import()` of a function's screen does: evaluating the module registers.
+    const screen = Promise.resolve().then(() => {
+      registerCatalogue("test-lazy", { "test.lazy.title": "Pantalla" }, {
+        en: () =>
+          new Promise((resolve) => {
+            deliver = () => resolve({ "test.lazy.title": "Screen" });
+          }),
+      });
+      return { Screen: "screen" };
+    });
+
+    let handed = false;
+    const ready = withCatalogues(screen).then((module) => {
+      handed = true;
+      return module;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(handed).toBe(false);
+
+    deliver();
+    expect(await ready).toEqual({ Screen: "screen" });
+    expect(translate("en", key("test.lazy.title"))).toBe("Screen");
+  });
+
+  it("stays on Spanish when its English cannot be fetched", async () => {
+    const failing = vi.fn(() => Promise.reject(new Error("offline")));
+    registerCatalogue("test-failing", { "test.failing.title": "Sin red" }, { en: failing });
+
+    await expect(ensureCatalogue("en")).resolves.toBeUndefined();
+    expect(translate("en", key("test.failing.title"))).toBe("Sin red");
   });
 });

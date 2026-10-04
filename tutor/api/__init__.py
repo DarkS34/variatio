@@ -10,9 +10,11 @@ package: that is what keeps `import tutor` free of FastAPI and SQLAlchemy.
 
 
 def install(app) -> None:
-    """Register the tutor's two jobs and their lanes, and mount its two routers on the app."""
+    """Register the tutor's two jobs, their lanes and their function, and mount its routers."""
+    from server import features
     from server.jobs import lanes
     from server.jobs.handlers import HANDLERS
+    from server.routers.jobs import FEATURE_OF
     from variatio import config as pipeline_config
 
     from .. import config as tutor_config
@@ -24,6 +26,9 @@ def install(app) -> None:
     # The screens name both kinds from their own catalogue (`lib/names.ts`).
     HANDLERS[jobs.TURN] = jobs.handle_turn
     HANDLERS[jobs.CRITERIA] = jobs.handle_criteria
+    # Both are the tutor's: a lane they hold is named only to an account the tutor is open to.
+    FEATURE_OF[jobs.TURN] = features.TUTOR
+    FEATURE_OF[jobs.CRITERIA] = features.TUTOR
 
     # The models each job calls, read at queueing time like every other kind's: the reply and
     # the classification for a turn, the drafting for the criteria, and — for both — what

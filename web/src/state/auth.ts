@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError, api } from "@/lib/api";
 import { localeStore, type Key, type Language } from "@/lib/i18n";
-import type { Role, Session } from "@/lib/types";
+import { featuresOf, type Features, type Role, type Session } from "@/lib/types";
 import { runStore } from "./runStore";
 import { workspaceStore } from "./workspace";
 
@@ -174,6 +174,31 @@ export function useCanEdit() {
 
 export function useIsOwner() {
   return useSession().data?.role === "owner";
+}
+
+/**
+ * Which optional functions this account may open: the evaluation and the tutor.
+ *
+ * Both closed while the session loads, so no door is drawn and then withdrawn. The server
+ * decides for real (`auth.EVALUATION`, `auth.TUTOR`); this keeps the client from offering,
+ * or even fetching, what would only answer 403.
+ */
+export function useFeatures(): Features {
+  return featuresOf(useSession().data);
+}
+
+/**
+ * Whether the stage questionnaire is asked of this session: the evaluation open to the
+ * account AND a role that may correct the subject.
+ *
+ * Its statements are a builder's ("lo podría usar tal cual, sin apenas corregir nada") and
+ * the server records them for an editor or owner alone (`auth.EDIT` on
+ * `/api/stage-evaluations`), so a reader shown the form could fill it in and never save it.
+ */
+export function useAsksStageReview(): boolean {
+  const { evaluation } = useFeatures();
+  const canEdit = useCanEdit();
+  return evaluation && canEdit;
 }
 
 export const ROLE_LABEL_KEYS: Record<Role, Key> = {

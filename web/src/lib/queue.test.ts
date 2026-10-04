@@ -1,4 +1,4 @@
-import { translator } from "@/lib/i18n";
+import { ensureCatalogue, translator } from "@/lib/i18n";
 import { describe, expect, it } from "vitest";
 
 import type { Job, LaneName, LaneState, Lanes, Pipeline } from "./types";
@@ -30,6 +30,7 @@ function lane(partial: Partial<LaneState> = {}): LaneState {
     running: busy ? 1 : 0,
     capacity: 1,
     mine: false,
+    kind: null,
     label: null,
     queued: 0,
     ahead: null,
@@ -69,6 +70,14 @@ describe("readLanes", () => {
     expect(readLanes({ lanes: { local: lane() } } as unknown as Pipeline)).toBeNull();
   });
 
+  it("reads the holder's kind beside its label", () => {
+    const read = readLanes({
+      lanes: { local: { busy: true, kind: "tutor_turn", label: "tutor_turn" }, remote: {} },
+    } as unknown as Pipeline);
+    expect(read?.local.kind).toBe("tutor_turn");
+    expect(read?.remote.kind).toBeNull();
+  });
+
   it("fills in what a partial lane leaves out rather than trusting it", () => {
     const read = readLanes({
       lanes: { local: { busy: true }, remote: {} },
@@ -76,8 +85,8 @@ describe("readLanes", () => {
     expect(read).toEqual({
       // No `running` or `capacity` came in, so they degrade to the shape the payload had
       // before a lane could hold two: one slot, held or free.
-      local: { busy: true, running: 1, capacity: 1, mine: false, label: null, queued: 0, ahead: null },
-      remote: { busy: false, running: 0, capacity: 1, mine: false, label: null, queued: 0, ahead: null },
+      local: { busy: true, running: 1, capacity: 1, mine: false, kind: null, label: null, queued: 0, ahead: null },
+      remote: { busy: false, running: 0, capacity: 1, mine: false, kind: null, label: null, queued: 0, ahead: null },
     });
   });
 });
@@ -99,6 +108,7 @@ describe("waitFor", () => {
     expect(waitFor(lanes({ busy: true }), ["local"])).toEqual({
       lane: "local",
       ahead: 1,
+      kind: null,
       label: null,
     });
   });
@@ -107,6 +117,7 @@ describe("waitFor", () => {
     expect(waitFor(lanes({ busy: true, queued: 2, label: "Generar ítems" }), ["local"])).toEqual({
       lane: "local",
       ahead: 3,
+      kind: null,
       label: "Generar ítems",
     });
   });
@@ -118,7 +129,7 @@ describe("waitFor", () => {
 
   it("reports the slower lane of a job that reserves both", () => {
     const wait = waitFor(lanes({ busy: true }, { busy: true, queued: 2 }), ["local", "remote"]);
-    expect(wait).toEqual({ lane: "remote", ahead: 3, label: null });
+    expect(wait).toEqual({ lane: "remote", ahead: 3, kind: null, label: null });
   });
 
   it("is null with no lanes and null with no backends", () => {
@@ -131,6 +142,7 @@ describe("waitFor", () => {
     expect(waitFor(lanes({ busy: true, queued: 5 }), ["local"], 1)).toEqual({
       lane: "local",
       ahead: 1,
+      kind: null,
       label: null,
     });
   });
@@ -141,6 +153,7 @@ describe("waitFor", () => {
     expect(waitFor(lanes({ busy: true, queued: 1, ahead: 1 }), ["local"], 4)).toEqual({
       lane: "local",
       ahead: 1,
+      kind: null,
       label: null,
     });
   });
@@ -192,6 +205,7 @@ describe("waitOf", () => {
     expect(waitOf(job({ queue_position: 3 }), null)).toEqual({
       lane: null,
       ahead: 2,
+      kind: null,
       label: null,
     });
   });
@@ -199,19 +213,41 @@ describe("waitOf", () => {
 
 describe("what the button and the notice say", () => {
   it("labels the wait without ever naming a duration", () => {
-    expect(queuedLabel({ lane: "local", ahead: 2, label: null }, ES)).toBe("En cola (2 por delante)");
-    expect(queuedLabel({ lane: "local", ahead: 0, label: null }, ES)).toBe("En cola");
+    expect(queuedLabel({ lane: "local", ahead: 2, kind: null, label: null }, ES)).toBe("En cola (2 por delante)");
+    expect(queuedLabel({ lane: "local", ahead: 0, kind: null, label: null }, ES)).toBe("En cola");
     expect(queuedLabel(null, ES)).toBe("En cola");
   });
 
   it("names the half of the engine only when there are two", () => {
-    const wait = { lane: "remote" as const, ahead: 1, label: "Generar ítems" };
+    const wait = { lane: "remote" as const, ahead: 1, kind: null, label: "Generar ítems" };
     expect(waitReason(wait, true, ES)).toBe(
       "Está ocupado el motor remoto con «Generar ítems»: 1 trabajo por delante.",
     );
     expect(waitReason(wait, false, ES)).toBe(
       "Está ocupado el motor con «Generar ítems»: 1 trabajo por delante.",
     );
+  });
+
+  // The server's label is in ITS language, and for the tutor's kinds it is the identifier
+  // itself: «con «tutor_turn»» in either language was what a waiting teacher read.
+  it("names what holds the lane by its kind, in the reader's language", async () => {
+    const wait = { lane: "local" as const, ahead: 1, kind: "tutor_turn", label: "tutor_turn" };
+    expect(waitReason(wait, true, ES)).toBe(
+      "Está ocupado el motor local con «Turno del tutor»: 1 trabajo por delante.",
+    );
+    await ensureCatalogue("en");
+    const evaluate = { ...wait, kind: "evaluate", label: "Evaluación comparativa" };
+    expect(waitReason(evaluate, false, translator("en"))).toContain("«Blind comparison»");
+  });
+
+  it("falls back to the server's label for a kind this bundle does not know", () => {
+    const wait = { lane: "local" as const, ahead: 1, kind: "nuevo", label: "Algo nuevo" };
+    expect(waitReason(wait, false, ES)).toContain("«Algo nuevo»");
+  });
+
+  it("names nothing when the server named nothing", () => {
+    const wait = { lane: "local" as const, ahead: 1, kind: null, label: null };
+    expect(waitReason(wait, false, ES)).toBe("Está ocupado el motor: 1 trabajo por delante.");
   });
 
   it("says nothing at all when the job starts instead of waiting", () => {
@@ -334,6 +370,7 @@ describe("a lane with room", () => {
     expect(waitFor(full, ["remote"], 1)).toEqual({
       lane: "remote",
       ahead: 1,
+      kind: null,
       label: "Generar ítems",
     });
   });

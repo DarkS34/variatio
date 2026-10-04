@@ -1,3 +1,5 @@
+import "./i18n";
+
 import { useState } from "react";
 
 import { ChainGate } from "@/components/ChainGate";
@@ -11,7 +13,7 @@ import { useEngineOffline, usePipeline } from "@/state/queries";
 import { ConversationList } from "./ConversationList";
 import { ConversationView } from "./ConversationView";
 import { CriteriaPanel } from "./CriteriaPanel";
-import { takeTutorDraft, type TutorDraft } from "./draft";
+import { takeTutorDraft, type TutorDraft } from "@/lib/tutorDraft";
 import { useTutorStatus } from "./queries";
 
 /**

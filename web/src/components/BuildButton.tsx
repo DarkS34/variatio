@@ -17,7 +17,7 @@ import {
   useSubmitJob,
 } from "@/state/queries";
 import { useT } from "@/lib/i18n";
-import { artifactName } from "@/lib/names";
+import { artifactName, jobName } from "@/lib/names";
 import { InfoHint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 
@@ -89,7 +89,7 @@ export function BuildButton({ stage, className }: { stage: StageState; className
     // copy of the same build behind the first.
     if (waiting)
       return t("build.alreadyQueued", {
-        label: waiting.label,
+        label: jobName(waiting.kind, t, waiting.label),
         reason: wait ? ` ${waitReason(wait, split, tr)}` : "",
       });
     return null;

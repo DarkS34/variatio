@@ -13,7 +13,7 @@ import { useT } from "@/lib/i18n";
 /**
  * The door of the installation, on the panel that runs it.
  *
- * It is deliberately NOT a sixth tab. The five tabs are five subjects an administrator
+ * It is deliberately NOT a seventh tab. The six tabs are six subjects an administrator
  * works on; this is one switch that changes what everybody else sees, and burying a
  * switch of that reach one click deep is how it gets left on. It sits under the header,
  * silent while the door is open and unmissable while it is not.

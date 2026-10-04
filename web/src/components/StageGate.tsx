@@ -1,7 +1,5 @@
 import {
   ArrowRight,
-  ChevronRight,
-  ClipboardCheck,
   Eye,
   Hammer,
   Lock,
@@ -12,6 +10,8 @@ import {
 } from "lucide-react";
 import {
   createContext,
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -43,12 +43,19 @@ import {
   useRawMissingFor,
   useSplitEngine,
 } from "@/state/queries";
+import { useAsksStageReview } from "@/state/auth";
 import { useMutation } from "@tanstack/react-query";
-import { StageReview } from "@/evaluation/StageReview";
-import { useStageReview } from "@/evaluation/queries";
-import { questionCount } from "@/evaluation/types";
-import { useT, type Key } from "@/lib/i18n";
-import { artifactName, buildCall } from "@/lib/names";
+import { useT, withCatalogues, type Key } from "@/lib/i18n";
+import { artifactName, buildCall, jobName } from "@/lib/names";
+
+// The stage questionnaire is the evaluation's: its code reaches the browser only for an
+// account it is asked of (`useAsksStageReview`), and everything it needs is behind this one
+// component.
+const StageReviewSlot = lazy(() =>
+  withCatalogues(import("@/evaluation/StageReviewSlot")).then((m) => ({
+    default: m.StageReviewSlot,
+  })),
+);
 
 // What the stage IS, in two sentences and without naming a single piece of the system.
 // Visible under the title and not behind a glyph: the sentence that says what a screen is
@@ -58,6 +65,11 @@ const WHAT: Record<string, Key> = {
   knowledge_graph: "stage.what.graph",
   exemplars_bank: "stage.what.bank",
 };
+
+// The stages whose description goes on to say what the questionnaire at the foot asks
+// (`stage.what.rated`), when the questionnaire is asked of the account. The profile's never did: it
+// is the fallback the profile's own intro replaces as soon as it loads.
+const RATED_AFTER_WHAT = new Set(["knowledge_graph", "exemplars_bank"]);
 
 // Why correcting this particular stage is worth the time. One shared argument, and the
 // bank's own because the tutor hardened it there: past the bank, what is not corrected is
@@ -175,9 +187,6 @@ export function useRegisterPendingEdit({ dirty, blocked, save, discard }: Pendin
   }, [register, dirty, blocked]);
 }
 
-/** How long the questionnaire takes to unfold, and therefore when the page may scroll to it. */
-const REVIEW_UNFOLD_MS = 300;
-
 /**
  * A stage is visible before it is available, and says exactly why it is not.
  *
@@ -217,18 +226,13 @@ export function StageGate({
   const toast = useToast();
   const confirm = useConfirm();
   const { navigate } = useRouter();
-  // The questionnaire starts shut. Its button is at the FOOT of the artifact, which is the
-  // only place "what you have just reviewed" is true.
-  const [reviewOpen, setReviewOpen] = useState(false);
+  const asksReview = useAsksStageReview();
   // Correcting is an act and not the default state. It belongs to the visit and not to the
   // artifact: "estoy corrigiendo ahora" is nothing anything on disk records.
   const [curating, setCurating] = useState(false);
-  const reviewPanel = useRef<HTMLDivElement>(null);
-  // Whether this person corrected before judging, which is the evaluation's own contrast.
-  // A WRITE counts, not merely having opened the controls, and it states what THIS visit
-  // did: correcting, leaving without answering and coming back records a "no". The server
-  // only ever lets the mark climb.
-  const [curated, setCurated] = useState(false);
+  // Whether this visit has written to the artifact. A fact of the stage, and the one the
+  // stage questionnaire records as "corrected before judging" (`StageReviewSlot`).
+  const [wrote, setWrote] = useState(false);
   // Whether the bar's "Guardar" has written once this visit: what lets it say "Cambios
   // guardados" over a clean draft instead of "todavía no has cambiado nada".
   const [savedOnce, setSavedOnce] = useState(false);
@@ -236,33 +240,9 @@ export function StageGate({
   // Another artifact is another stage: what was open for correcting was the one you left.
   useEffect(() => {
     setCurating(false);
-    setCurated(false);
+    setWrote(false);
     setSavedOnce(false);
-    setReviewOpen(false);
   }, [stage?.artifact]);
-  // The WRAPPER — button and panel — is what is scrolled to, under the sticky header
-  // (`scroll-mt-20`): the panel alone is 0 px tall at the instant it is asked to open, so
-  // scrolling to it scrolls nowhere.
-  useEffect(() => {
-    if (!reviewOpen) return;
-    // `scrollIntoView` does not honour the media query on its own, unlike a CSS transition.
-    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const scroll = () =>
-      reviewPanel.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
-    // AFTER the unfold and not at the click: the page is only as tall as its content, so a
-    // scroll asked for before the panel has grown stops where the short page ends.
-    if (still) {
-      scroll();
-      return;
-    }
-    const timer = window.setTimeout(scroll, REVIEW_UNFOLD_MS);
-    return () => window.clearTimeout(timer);
-  }, [reviewOpen]);
-  const review = useStageReview(stage?.artifact);
-  const answeredReview = review.data?.mine?.answered ?? false;
-  // How many the form asks, from the form itself: a number written into the string promises
-  // one thing and opens another as soon as an instrument changes.
-  const reviewCount = review.data ? questionCount(review.data.instrument) : 0;
   // What the screen below is holding, if it holds anything. See `PendingEdit`.
   const [advanceFailed, setAdvanceFailed] = useState(false);
   const [curateFailed, setCurateFailed] = useState(false);
@@ -319,7 +299,7 @@ export function StageGate({
       // the approval on the server, so it has to be given again in the same breath.
       const writes = Boolean(pending?.dirty);
       if (writes || !approved) await approve.mutateAsync();
-      if (writes) setCurated(true);
+      if (writes) setWrote(true);
     },
   };
 
@@ -344,6 +324,9 @@ export function StageGate({
               WHAT[stage.artifact] ? (
                 <p className="max-w-[74ch] text-body text-muted-foreground">
                   {t(WHAT[stage.artifact])}
+                  {asksReview && RATED_AFTER_WHAT.has(stage.artifact)
+                    ? ` ${t("stage.what.rated")}`
+                    : null}
                 </p>
               ) : null
             )}
@@ -448,7 +431,7 @@ export function StageGate({
               <Alert tone="info" title={t("stage.queued")}>
                 <p>
                   {t("stage.queuedBody", {
-                    label: waitingJob.label,
+                    label: jobName(waitingJob.kind, t, waitingJob.label),
                     reason: wait ? ` ${waitReason(wait, split, tr)}` : "",
                   })}
                 </p>
@@ -479,89 +462,16 @@ export function StageGate({
           <div className="min-w-0 space-y-5">{children}</div>
         )}
 
-        {/* The button that opens the questionnaire, at the FOOT and never on entering:
-            "questions about what you have just reviewed" over something nobody has looked at
-            yet is a promise the screen cannot keep.
-
-            This is where `--evaluation` is spent — the same token the navbar's "Comparar"
-            pill carries. Filled while unanswered and quiet once answered, which is the only
-            difference that matters. Not drawn with the stage unbuilt, since there would be
-            nothing to judge, but DRAWN with the stage blocked: a built step whose
-            predecessor was reopened still has something to judge, and the questionnaire is
-            what is being measured.
-
-            It unfolds directly under its button, as an accordion and at the button's own
-            width. The reading order of a stage is view → verdict → correction, top to
-            bottom, so a panel opening at the other end of the screen breaks it.
-
-            It is always mounted and merely clipped: unmounting it would throw away whatever
-            the person has typed into the box every time they close it. Button and panel are
-            ONE block, or the container's `space-y` opens a gap under the button while the
-            panel is shut. */}
-        {!missing ? (
-          <div ref={reviewPanel} className="scroll-mt-20">
-            {review.data?.built ? (
-          <button
-            type="button"
-            onClick={() => setReviewOpen((was) => !was)}
-            aria-expanded={reviewOpen}
-            className={cn(
-              "group flex w-full items-center gap-3 border px-4 py-3.5 text-left transition-colors",
-              answeredReview
-                ? "border-[color-mix(in_oklch,var(--evaluation)_35%,transparent)] bg-[color-mix(in_oklab,var(--evaluation)_7%,var(--card))] text-foreground hover:bg-[color-mix(in_oklab,var(--evaluation)_12%,var(--card))]"
-                : "border-evaluation bg-evaluation text-evaluation-foreground hover:bg-[color-mix(in_oklab,var(--evaluation)_88%,var(--evaluation-foreground))]",
-            )}
-          >
-            <ClipboardCheck aria-hidden className="size-5 shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-heading font-semibold">{t("stageReview.openTitle")}</span>
-              <span
-                className={cn(
-                  "block text-small",
-                  answeredReview ? "text-muted-foreground" : "opacity-85",
-                )}
-              >
-                {answeredReview
-                  ? t("stageReview.openAnswered")
-                  : plural("stageReview.openPending", reviewCount)}
-              </span>
-            </span>
-            <ChevronRight
-              aria-hidden
-              className={cn(
-                "size-5 shrink-0 transition-transform duration-300",
-                reviewOpen && "rotate-90",
-              )}
-            />
-          </button>
-            ) : null}
-            <div
-              // `inert` and not only `aria-hidden`: clipped to zero height the panel is
-              // still in the tab order, so tabbing off the button walked into a form nobody
-              // can see. React 19 forwards it as the real attribute, which takes the
-              // subtree out of focus AND out of the accessibility tree, and unlike
-              // `visibility: hidden` it does not fight the closing transition.
-              inert={!reviewOpen}
-              className={cn(
-                "overflow-hidden transition-[max-height,opacity] duration-300 ease-out motion-reduce:transition-none",
-                reviewOpen ? "max-h-[400rem] opacity-100" : "max-h-0 opacity-0",
-              )}
-            >
-              <div
-                className={cn(
-                  "pt-4 transition-transform duration-300 ease-out motion-reduce:transition-none",
-                  reviewOpen ? "translate-y-0" : "-translate-y-3",
-                )}
-              >
-                <StageReview
-                  artifact={stage.artifact}
-                  curated={curated}
-                  visible={reviewOpen}
-                  onClose={() => setReviewOpen(false)}
-                />
-              </div>
-            </div>
-          </div>
+        {/* The stage questionnaire, at the FOOT of the artifact: its button and the form
+            that unfolds under it (`evaluation/StageReviewSlot`). Not drawn with the stage
+            unbuilt, since there would be nothing to judge, nor for an account it is not
+            asked of: the evaluation closed to it, or a role that cannot correct the subject
+            and that the server would refuse the answers of. Its own boundary, so the screen
+            never waits for it. */}
+        {!missing && asksReview ? (
+          <Suspense fallback={null}>
+            <StageReviewSlot artifact={stage.artifact} curated={wrote} />
+          </Suspense>
         ) : null}
 
         {/* The two ways out, together and at the foot: correcting is optional, and moving
@@ -685,7 +595,7 @@ export function StageGate({
                     setSaving(true);
                     try {
                       await pending.save();
-                      setCurated(true);
+                      setWrote(true);
                       setSavedOnce(true);
                     } catch {
                       setCurateFailed(true);

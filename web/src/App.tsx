@@ -4,15 +4,18 @@ import { AppShell } from "@/components/AppShell";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
-import { slideOf } from "@/features/tutorial/slides";
-import { useHasWorkspace } from "@/state/auth";
+import { slideCount, slideOf } from "@/features/tutorial/slides";
+import { useFeatures, useHasWorkspace } from "@/state/auth";
 import { currentStepPath } from "@/lib/steps";
+import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
-import { useT } from "@/lib/i18n";
+import { useT, withCatalogues } from "@/lib/i18n";
 
 // Every screen except the panel loads on demand: the router is ours, so the split
 // happens here rather than in a route table. The panel stays static because "/" is
 // where a session lands, and a fallback flash on the landing route helps nobody.
+// The evaluation's and the tutor's screens are more than a split: they are only ever
+// imported for an account the function is open to (`pnpm check:lazy`).
 const AccountScreen = lazy(() =>
   import("@/features/account/AccountScreen").then((m) => ({ default: m.AccountScreen })),
 );
@@ -26,7 +29,9 @@ const GuideScreen = lazy(() =>
   import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
 );
 const EvaluationScreen = lazy(() =>
-  import("@/evaluation/EvaluationScreen").then((m) => ({ default: m.EvaluationScreen })),
+  withCatalogues(import("@/evaluation/EvaluationScreen")).then((m) => ({
+    default: m.EvaluationScreen,
+  })),
 );
 const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
@@ -41,7 +46,7 @@ const RawScreen = lazy(() =>
   import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),
 );
 const TutorScreen = lazy(() =>
-  import("@/tutor/TutorScreen").then((m) => ({ default: m.TutorScreen })),
+  withCatalogues(import("@/tutor/TutorScreen")).then((m) => ({ default: m.TutorScreen })),
 );
 const TutorialScreen = lazy(() =>
   import("@/features/tutorial/TutorialScreen").then((m) => ({ default: m.TutorialScreen })),
@@ -63,22 +68,33 @@ const NEEDS_WORKSPACE = [
   "/tutor",
 ];
 
+// The destinations that are an optional function's. Closed to the account, one is not a
+// destination at all: the same "not found" as any route that does not exist, answered
+// before anything asks whether there is a workspace for it, and its code is never fetched.
+const FEATURE_OF: Partial<Record<string, keyof Features>> = {
+  "/evaluate": "evaluation",
+  "/tutor": "tutor",
+};
+
 export function App() {
-  const { t } = useT();
   const { path } = useRouter();
   const pipeline = usePipeline();
   const hasWorkspace = useHasWorkspace();
+  const features = useFeatures();
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
     // The tutorial runs inside the shell, and the shell reads its slide from the PATH,
-    // which is why there is one route per slide.
-    const slide = slideOf(path);
+    // which is why there is one route per slide. `AppShell` reads it with the same count.
+    const slide = slideOf(path, slideCount(features));
     if (slide !== null) return <TutorialScreen at={slide} />;
 
     if (path === "/guide" || path.startsWith("/guide/")) {
       return <GuideScreen slug={path.slice("/guide/".length)} />;
     }
+
+    const feature = FEATURE_OF[path];
+    if (feature && !features[feature]) return <NotFound />;
 
     // One message rather than six 403s. It is drawn as the panel whatever the route was,
     // because the panel is where the one thing to do here lives.
@@ -103,6 +119,7 @@ export function App() {
         return <BankScreen stage={stage("exemplars_bank")} />;
       case "/generate":
         return <GenerateScreen />;
+      // Reached only with the function open to the account (`FEATURE_OF`).
       case "/evaluate":
         return <EvaluationScreen />;
       case "/tutor":
@@ -131,13 +148,7 @@ export function App() {
       case "/admin":
         return <AdminScreen />;
       default:
-        return (
-          <EmptyState title={t("route.notFound")}>
-            <Link to="/" className="text-primary underline-offset-4 hover:underline">
-              {t("route.backToPanel")}
-            </Link>
-          </EmptyState>
-        );
+        return <NotFound />;
     }
   };
 
@@ -153,6 +164,18 @@ export function App() {
         {screen()}
       </Suspense>
     </AppShell>
+  );
+}
+
+/** What a path with no screen behind it draws, for this account. */
+function NotFound() {
+  const { t } = useT();
+  return (
+    <EmptyState title={t("route.notFound")}>
+      <Link to="/" className="text-primary underline-offset-4 hover:underline">
+        {t("route.backToPanel")}
+      </Link>
+    </EmptyState>
   );
 }
 

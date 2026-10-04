@@ -14,9 +14,11 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { lazy, type ComponentType, type ReactNode } from "react";
+import { lazy, useMemo, type ComponentType, type ReactNode } from "react";
 
-import { useT, type Key, type Language } from "@/lib/i18n";
+import { useT, withCatalogues, type Key, type Language } from "@/lib/i18n";
+import type { Features } from "@/lib/types";
+import { useFeatures } from "@/state/auth";
 
 /**
  * The guide's registry: what sections exist, in what order, and under which group.
@@ -37,6 +39,12 @@ export interface GuideSection {
   labelKey: Key;
   groupKey: Key;
   icon: LucideIcon;
+  /**
+   * The optional function the section explains, whose folder holds its body. Closed to the
+   * account, the section is not in the index, the search or the routing, and its body is
+   * never fetched.
+   */
+  feature?: keyof Features;
 }
 
 /**
@@ -58,7 +66,7 @@ export interface GuideSection {
  */
 function tree(load: () => Promise<{ BODIES: Record<string, () => ReactNode> }>) {
   return lazy(async () => {
-    const { BODIES } = await load();
+    const { BODIES } = await withCatalogues(load());
     const Body: ComponentType<{ slug: string }> = ({ slug }) => {
       const Section = BODIES[slug];
       return Section ? <Section /> : null;
@@ -67,9 +75,26 @@ function tree(load: () => Promise<{ BODIES: Record<string, () => ReactNode> }>) 
   });
 }
 
-const TREES: Record<Language, ComponentType<{ slug: string }>> = {
-  es: tree(() => import("./es/sections")),
-  en: tree(() => import("./en/sections")),
+/**
+ * Where a section's body lives: the guide's own trees, or the folder of the function the
+ * section explains. A function's sections are fetched with the function's code and never
+ * with the guide's, so an account it is closed to downloads none of them.
+ */
+type Home = "guide" | keyof Features;
+
+const TREES: Record<Home, Record<Language, ComponentType<{ slug: string }>>> = {
+  guide: {
+    es: tree(() => import("./es/sections")),
+    en: tree(() => import("./en/sections")),
+  },
+  evaluation: {
+    es: tree(() => import("@/evaluation/guide/es")),
+    en: tree(() => import("@/evaluation/guide/en")),
+  },
+  tutor: {
+    es: tree(() => import("@/tutor/guide/es")),
+    en: tree(() => import("@/tutor/guide/en")),
+  },
 };
 
 export const GUIDE_SECTIONS = [
@@ -85,10 +110,9 @@ export const GUIDE_SECTIONS = [
     groupKey: "guide.group.start",
     icon: Layers,
   },
-  // First of "Preparar", because it is genuinely the first thing a new workspace does and
-  // the one step that decides how long all three builds feel. It is not a stage — it
-  // produces no artifact and nobody approves it — which is why it is here and not on the
-  // rail.
+  // First of the construction, because it is genuinely the first thing a new workspace does
+  // and the one step that decides how long all three builds feel. Step 1 of the bar, though
+  // not a stage: it produces no artifact and nobody approves it.
   {
     slug: "raw",
     labelKey: "guide.sec.raw",
@@ -114,12 +138,19 @@ export const GUIDE_SECTIONS = [
     icon: Library,
   },
   { slug: "generate", labelKey: "guide.sec.generate", groupKey: "guide.group.use", icon: Play },
-  { slug: "evaluate", labelKey: "guide.sec.evaluate", groupKey: "guide.group.use", icon: Scale },
+  {
+    slug: "evaluate",
+    labelKey: "guide.sec.evaluate",
+    groupKey: "guide.group.use",
+    icon: Scale,
+    feature: "evaluation",
+  },
   {
     slug: "tutor",
     labelKey: "guide.sec.tutor",
     groupKey: "guide.group.use",
     icon: MessagesSquare,
+    feature: "tutor",
   },
   {
     slug: "runs",
@@ -133,9 +164,9 @@ export const GUIDE_SECTIONS = [
     groupKey: "guide.group.daily",
     icon: UserRound,
   },
-  // The other two administrator-only sections, and both sit in "Día a día" rather than
-  // "Fase de pruebas" because neither is something an evaluator ever does. This one first: it is the
-  // panel as a whole, and "repartir" is one of its five tabs read in detail.
+  // In "Día a día" rather than "Fase de pruebas": running the installation is not something
+  // done with a built subject. One section for the panel's six tabs, the two optional
+  // functions' tabs included.
   {
     slug: "admin",
     labelKey: "guide.sec.admin",
@@ -160,13 +191,32 @@ export const GUIDE_SECTIONS = [
  */
 export type GuideSlug = (typeof GUIDE_SECTIONS)[number]["slug"];
 
+/** The sections this account may read, in registry order: none of a function closed to it. */
+export function sectionsFor(features: Features): GuideSection[] {
+  return GUIDE_SECTIONS.filter(
+    (section: GuideSection) => section.feature === undefined || features[section.feature],
+  );
+}
+
+/**
+ * The index, the search and the routing of the guide for this account.
+ *
+ * A slug left out here is one the screen does not know, so a link to it falls back the way
+ * a URL somebody mistyped does.
+ */
+export function useGuideSections(): GuideSection[] {
+  const { evaluation, tutor } = useFeatures();
+  return useMemo(() => sectionsFor({ evaluation, tutor }), [evaluation, tutor]);
+}
+
 /**
  * The section's body in the reader's language, as a component that suspends while its
  * tree is on the way. `GuideScreen` puts the boundary around this and nothing else, so a
  * section change never blanks the nav beside it.
  */
-export function useGuideBody(slug: string): () => ReactNode {
+export function useGuideBody(section: GuideSection): () => ReactNode {
   const { language } = useT();
-  const Tree = TREES[language] ?? TREES.es;
-  return () => <Tree slug={slug} />;
+  const home = TREES[section.feature ?? "guide"];
+  const Tree = home[language] ?? home.es;
+  return () => <Tree slug={section.slug} />;
 }

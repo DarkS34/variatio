@@ -1,3 +1,4 @@
+import { isLive } from "@/lib/queue";
 import type { FewShotExemplar, ItemChecks, Job, VgEvent } from "@/lib/types";
 import { activeWorkspace } from "./workspace";
 
@@ -148,6 +149,33 @@ function emptyRun(jobId: string): RunView {
     finishedAt: null,
     cancelling: false,
   };
+}
+
+/**
+ * Keep at most `max` runs, letting go of the finished ones first and never of a live one.
+ *
+ * The socket carries every job of the workspace — each message a student sends the tutor is
+ * a job, and so is each comparison of the evaluation — whether or not those functions are
+ * open to the account reading it. Pruning by age alone let a dozen such jobs push out a run
+ * this browser had on screen: a batch being generated vanished half-written, and the form
+ * opened again under it. So a run still queued or running is kept whatever its age (the
+ * server's queue is what bounds those), the finished ones go oldest first, and a run whose
+ * job is not known yet goes after them.
+ */
+export function pruneRuns(runs: Record<string, RunView>, max: number): Record<string, RunView> {
+  const ids = Object.keys(runs);
+  if (ids.length <= max) return runs;
+  const age = (id: string) => runs[id].startedAt ?? 0;
+  const finished = (id: string) =>
+    runs[id].finishedAt !== null || (runs[id].job !== null && !isLive(runs[id].job));
+  const unknown = (id: string) => !finished(id) && runs[id].job === null;
+  const evictable = [
+    ...ids.filter(finished).sort((a, b) => age(a) - age(b)),
+    ...ids.filter(unknown).sort((a, b) => age(a) - age(b)),
+  ];
+  const next = { ...runs };
+  for (const id of evictable.slice(0, ids.length - max)) delete next[id];
+  return next;
 }
 
 function tail(text: string, limit: number) {
@@ -347,7 +375,7 @@ class RunStore {
       };
       if (job.status === "running" || job.status === "queued") currentJobId = job.id;
     }
-    this.commit({ runs: this.prune(runs), currentJobId });
+    this.commit({ runs: pruneRuns(runs, MAX_RUNS), currentJobId });
   }
 
   /* REDUCER ---------------------------------------------------------------------- */
@@ -368,19 +396,10 @@ class RunStore {
     }
 
     this.commit({
-      runs: this.prune(runs),
+      runs: pruneRuns(runs, MAX_RUNS),
       currentJobId,
       lastSeq: Math.max(this.state.lastSeq, event.seq ?? 0),
     });
-  }
-
-  private prune(runs: Record<string, RunView>) {
-    const ids = Object.keys(runs);
-    if (ids.length <= MAX_RUNS) return runs;
-    const ordered = ids.sort((a, b) => (runs[a].startedAt ?? 0) - (runs[b].startedAt ?? 0));
-    const next = { ...runs };
-    for (const id of ordered.slice(0, ids.length - MAX_RUNS)) delete next[id];
-    return next;
   }
 
   // The store keeps no copy of the event stream beside the reduced run: nothing narrates it

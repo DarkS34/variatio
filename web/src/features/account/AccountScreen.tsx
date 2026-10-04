@@ -19,6 +19,7 @@ import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
 import { SubjectExercises } from "@/features/generations/GenerationsPanel";
@@ -127,6 +128,8 @@ function LanguageCard() {
     });
   };
 
+  const radios = useRadioGroup(LANGUAGES, language, choose);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -142,10 +145,12 @@ function LanguageCard() {
           role="radiogroup"
           aria-label={t("language.title")}
           className="flex flex-wrap gap-2"
+          {...radios.group}
         >
           {LANGUAGES.map((code) => (
             <Button
               key={code}
+              {...radios.radio(code)}
               role="radio"
               aria-checked={code === language}
               variant={code === language ? "default" : "outline"}

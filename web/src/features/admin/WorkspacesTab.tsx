@@ -1,11 +1,11 @@
 import { Download, Eraser, MessagesSquare, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/misc";
+import { Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
@@ -21,11 +21,18 @@ import {
   useClearCache,
   useDeleteArtifact,
 } from "@/state/queries";
-import { useT } from "@/lib/i18n";
+import { useT, withCatalogues } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
 import { WorkspaceGenerations } from "./WorkspaceGenerations";
-import { AdminConversations } from "@/tutor/AdminConversations";
+
+// The tutor's code, fetched when the administrator opens a subject's conversations. Offered
+// whatever the tutor's mode: the administrator reads them read-only even with it closed.
+const AdminConversations = lazy(() =>
+  withCatalogues(import("@/tutor/AdminConversations")).then((m) => ({
+    default: m.AdminConversations,
+  })),
+);
 
 /**
  * The installation's instances, and what this panel writes about them: their name, their
@@ -67,7 +74,11 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
     return <WorkspaceGenerations workspace={viewing} onBack={() => setViewing(null)} />;
   }
   if (talks) {
-    return <AdminConversations workspace={talks} onBack={() => setTalksSlug(null)} />;
+    return (
+      <Suspense fallback={<Skeleton className="h-96" />}>
+        <AdminConversations workspace={talks} onBack={() => setTalksSlug(null)} />
+      </Suspense>
+    );
   }
 
   return (

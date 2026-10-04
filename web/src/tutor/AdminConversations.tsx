@@ -1,3 +1,5 @@
+import "./i18n";
+
 import { ArrowLeft, MessagesSquare } from "lucide-react";
 import { useState } from "react";
 

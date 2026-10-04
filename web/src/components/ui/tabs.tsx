@@ -2,15 +2,31 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+import type { FeatureTone } from "./tone";
+
 export interface TabItem {
   value: string;
   label: ReactNode;
   badge?: ReactNode;
-  /** Drawn in `--evaluation`, as the navbar draws the study's door. */
-  evaluation?: boolean;
+  /** Drawn in that function's own colour, as the navbar draws its door. */
+  tone?: FeatureTone;
   /** A vertical rule before the tab, setting it apart from the ones on its left. */
   separated?: boolean;
 }
+
+/** A tab in its function's colour, chosen and not: literal strings, so Tailwind finds them. */
+const TAB_TONE: Record<FeatureTone, { chosen: string; idle: string }> = {
+  evaluation: {
+    chosen:
+      "bg-[color-mix(in_oklab,var(--evaluation)_18%,var(--background))] text-evaluation shadow-raised ring-1 ring-inset ring-[color-mix(in_oklab,var(--evaluation)_30%,transparent)]",
+    idle: "text-evaluation hover:bg-[color-mix(in_oklab,var(--evaluation)_12%,transparent)]",
+  },
+  tutor: {
+    chosen:
+      "bg-[color-mix(in_oklab,var(--tutor)_18%,var(--background))] text-tutor shadow-raised ring-1 ring-inset ring-[color-mix(in_oklab,var(--tutor)_30%,transparent)]",
+    idle: "text-tutor hover:bg-[color-mix(in_oklab,var(--tutor)_12%,transparent)]",
+  },
+};
 
 export function Tabs({
   items,
@@ -34,7 +50,7 @@ export function Tabs({
   return (
     <div
       role="tablist"
-      // `max-w-full` plus the scroller is what keeps five tabs usable on a phone without
+      // `max-w-full` plus the scroller is what keeps six tabs usable on a phone without
       // making the pill span the width of a desktop: it still shrinks to its content, it
       // simply stops growing past the parent and scrolls sideways from there.
       className={cn(
@@ -74,16 +90,16 @@ export function Tabs({
           role="tab"
           aria-selected={value === item.value}
           // Only the active tab is in the tab order; the rest are reached with the arrows.
-          // That is the other half of the pattern, and without it a bar of five tabs is
-          // five stops before the content.
+          // That is the other half of the pattern, and without it a bar of six tabs is
+          // six stops before the content.
           tabIndex={value === item.value ? 0 : -1}
           onClick={() => onChange(item.value)}
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            item.evaluation
+            item.tone
               ? value === item.value
-                ? "bg-[color-mix(in_oklch,var(--evaluation)_18%,var(--background))] text-evaluation shadow-raised ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)]"
-                : "text-evaluation hover:bg-[color-mix(in_oklch,var(--evaluation)_12%,transparent)]"
+                ? TAB_TONE[item.tone].chosen
+                : TAB_TONE[item.tone].idle
               : value === item.value
                 ? "bg-background text-foreground shadow-raised"
                 : "text-muted-foreground hover:text-foreground",

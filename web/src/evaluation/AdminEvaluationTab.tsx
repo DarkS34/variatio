@@ -1,3 +1,5 @@
+import "./i18n";
+
 import { Download, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

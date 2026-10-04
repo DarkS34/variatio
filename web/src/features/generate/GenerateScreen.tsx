@@ -1,22 +1,25 @@
 import { Copy, Download, Eraser, Pencil } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
 import { GuideLink } from "@/components/GuideLink";
+import { TabStrip, tabIds } from "@/components/TabStrip";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton } from "@/components/ui/misc";
+import { SubjectExercises, useExerciseTotal } from "@/features/generations/GenerationsPanel";
 import { isLive, isQueued, waitOf, waitReason } from "@/lib/queue";
-import { Link, useRouter } from "@/lib/router";
+import { useRouter } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fieldText } from "@/lib/fields";
 import { itemTypeOf } from "@/lib/profile";
-import { stashTutorDraft } from "@/tutor/draft";
+import { stashTutorDraft } from "@/lib/tutorDraft";
 import type { RunView } from "@/state/runStore";
 import {
+  useActiveWorkspace,
   useEngineOffline,
   useOwnJobRun,
   useKg,
@@ -36,6 +39,7 @@ import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
 import { RunStrip, useRunDetail } from "./RunStrip";
 import { refusal, stillRefused } from "./screening";
+import { useFeatures } from "@/state/auth";
 import { useT } from "@/lib/i18n";
 
 interface Result {
@@ -45,6 +49,14 @@ interface Result {
   retried?: number;
   saved_id?: string | number | null;
 }
+
+/** The commission and what it produced, or this account's exercises in the subject in use. */
+type Tab = "generate" | "mine";
+
+// «Mis ejercicios» redrawn only when its own props change: once opened it stays mounted behind
+// «Generar», and up to sixty cards redrawn with every render of this screen is once a frame
+// while a batch streams.
+const StillSubjectExercises = memo(SubjectExercises);
 
 export function GenerateScreen() {
   const tr = useT();
@@ -62,7 +74,7 @@ export function GenerateScreen() {
   // AND ITS OWN VISIT. The stream outlives the screen, and a reload replays it whole, so
   // "mi última generación" opened this page on a batch finished an hour ago with the form
   // collapsed behind it: work already collected, in the one place one comes to ask for
-  // more. A finished batch belongs to the visit that ran it, and to "Mis variantes"
+  // more. A finished batch belongs to the visit that ran it, and to «Mis ejercicios»
   // afterwards; one still going is adopted whenever it started, because a made commission
   // has to stay on screen or the form would offer to queue a second copy of it — leaving
   // and coming back mid-generation must not lose it. Membership only ever grows, so what
@@ -81,13 +93,27 @@ export function GenerateScreen() {
   const split = useSplitEngine();
   const client = useQueryClient();
 
-  // A draft left by "generate more like this one" in the saved list is the form's start;
+  // A draft left by "generate more like this one" in «Mis asignaturas y ejercicios» is the
+  // form's start (the tab below hands its commission over directly, see `generateMore`);
   // it is read once and consumed, so a reload starts clean. It also opens the form: a run
   // from before is still in the store, and its collapsed bar would hide the very commission
   // one came here to launch.
   const [draft] = useState(takeDraft);
   const [form, setForm] = useState<FormState>(draft ?? EMPTY_FORM);
   const [editing, setEditing] = useState(Boolean(draft));
+  // Bumped when «Generar más como este» hands a commission over, so the form opens on it as
+  // it opens on a draft at mount: its own state (which step is unfolded) starts again.
+  const [formKey, setFormKey] = useState(0);
+
+  // «Generar» on every visit: the tab is this mount's. «Mis ejercicios» is drawn the first
+  // time it is opened and only hidden after, like «Generar» is while it is away, so leaving
+  // either tab loses nothing — not a search, not a run, not the batch the visit produced.
+  const [tab, setTab] = useState<Tab>("generate");
+  const [mineOpened, setMineOpened] = useState(false);
+  const tabs = useRef<HTMLDivElement>(null);
+  const strip = useId();
+  const slug = useActiveWorkspace();
+  const mineTotal = useExerciseTotal(slug);
 
   const profile = profileQuery.data?.profile ?? null;
   const conceptList = kg.data?.concepts ?? [];
@@ -137,8 +163,9 @@ export function GenerateScreen() {
   // screen with "Rendered more hooks than during the previous render".
   const [dismissed, setDismissed] = useState(false);
 
-  // Each item becomes a row of "Mis variantes" the moment it validates; the archive is
-  // told so that opening it during a run already lists what arrived.
+  // Each item becomes a row of «Mis ejercicios» the moment it validates (`item.saved`); the
+  // list is told so that its count, and the tab opened during a run, already hold what
+  // arrived.
   useEffect(() => {
     if (savedCount > 0) client.invalidateQueries({ queryKey: ["generations"] });
   }, [savedCount, client]);
@@ -159,6 +186,38 @@ export function GenerateScreen() {
   useEffect(() => {
     if (active) setEditing(false);
   }, [active]);
+
+  const select = useCallback((next: Tab) => {
+    setTab(next);
+    if (next === "mine") setMineOpened(true);
+  }, []);
+  // From the foot of a long panel the other one would open scrolled past its top, so the
+  // row of tabs comes back into view, and the focus goes to its tab: the button pressed is
+  // in the panel being hidden.
+  const cross = useCallback(
+    (next: Tab) => {
+      select(next);
+      tabs.current?.scrollIntoView({ block: "start" });
+      document.getElementById(tabIds(strip, next).tab)?.focus({ preventScroll: true });
+    },
+    [select, strip],
+  );
+
+  // «Generar más como este» from the tab: a new commission, like the two ways on below, so
+  // the batch on screen leaves it. Offered only while none is queued or running (see the
+  // tab below): over a running batch, the form would sit above results it did not ask for,
+  // with a second cancel button that stops them. Stable, so the hidden list it is handed to
+  // does not redraw with every render of this screen.
+  const generateMore = useCallback(
+    (next: FormState) => {
+      setForm(next);
+      setEditing(true);
+      setDismissed(true);
+      setFormKey((was) => was + 1);
+      cross("generate");
+    },
+    [cross],
+  );
 
   if (profileQuery.isLoading || kg.isLoading || pipeline.isLoading) {
     return <Skeleton className="h-96" />;
@@ -202,6 +261,7 @@ export function GenerateScreen() {
   const formPanel = (
     <div className="space-y-3">
       <GenerateForm
+        key={formKey}
         state={form}
         onChange={setForm}
         profile={profile}
@@ -257,7 +317,13 @@ export function GenerateScreen() {
       </RunStrip>
       {collapsed ? commissionBar : null}
       {results.length > 0 && profile ? (
-        <Results results={results} profile={profile} run={run} savedCount={savedCount} />
+        <Results
+          results={results}
+          profile={profile}
+          run={run}
+          savedCount={savedCount}
+          onShowMine={() => cross("mine")}
+        />
       ) : null}
     </div>
   ) : null;
@@ -274,33 +340,77 @@ export function GenerateScreen() {
         <GuideLink slug="generate" />
       </header>
 
-      {/* Without an engine nothing is generated: the server refuses with a 503 and the whole form
-          is disabled, instead of letting one press and getting a job error back. */}
-      {unlocked && offline ? (
-        <Alert tone="attention" title={t("generate.noEngine")}>
-          <p>{t("generate.noEngineBody", { reason: offline })}</p>
-        </Alert>
-      ) : null}
+      {/* Cleared of the sticky header, which takes a second row of navigation below `xl`. */}
+      <div ref={tabs} className="scroll-mt-44 xl:scroll-mt-24">
+        <TabStrip
+          id={strip}
+          label={t("generate.title")}
+          items={[
+            { value: "generate", label: t("generate.tab.compose") },
+            { value: "mine", label: t("generate.tab.mine"), count: mineTotal },
+          ]}
+          value={tab}
+          onChange={select}
+        />
+      </div>
 
-      {!unlocked ? (
-        <ChainGate title={t("generate.blocked")} stages={pipeline.data?.stages ?? []} />
-      ) : null}
+      {/* Hidden and never unmounted: the run goes on, and its strip, its items and the form
+          are where they were when the tab comes back. */}
+      <div
+        role="tabpanel"
+        id={tabIds(strip, "generate").panel}
+        aria-labelledby={tabIds(strip, "generate").tab}
+        hidden={tab !== "generate"}
+        className="space-y-5"
+      >
+        {/* Without an engine nothing is generated: the server refuses with a 503 and the whole
+            form is disabled, instead of letting one press and getting a job error back. */}
+        {unlocked && offline ? (
+          <Alert tone="attention" title={t("generate.noEngine")}>
+            <p>{t("generate.noEngineBody", { reason: offline })}</p>
+          </Alert>
+        ) : null}
 
-      {status === "failed" && !blocked ? (
-        <Alert tone="danger" title={t("generate.failed")}>
-          <p>{run?.job?.error}</p>
-        </Alert>
-      ) : null}
+        {!unlocked ? (
+          <ChainGate title={t("generate.blocked")} stages={pipeline.data?.stages ?? []} />
+        ) : null}
 
-      {/* ONE COLUMN, AT A READING WIDTH.
-          This screen used to split into two once anything had run — the five-step form on
-          the left, the run and the items on the right at 1.1fr — so the thing you came for
-          arrived at half the width of the window, beside a form you had already filled in.
-          The commission collapses to a line, the run to a strip, and what is left is the
-          items, at a width you can read a statement and a block of code in. */}
-      <div className="mx-auto w-full max-w-4xl space-y-4">
-        {collapsed ? null : formPanel}
-        {hasRun ? runPane : null}
+        {status === "failed" && !blocked ? (
+          <Alert tone="danger" title={t("generate.failed")}>
+            <p>{run?.job?.error}</p>
+          </Alert>
+        ) : null}
+
+        {/* ONE COLUMN, AT A READING WIDTH.
+            This screen used to split into two once anything had run — the five-step form on
+            the left, the run and the items on the right at 1.1fr — so the thing you came for
+            arrived at half the width of the window, beside a form you had already filled in.
+            The commission collapses to a line, the run to a strip, and what is left is the
+            items, at a width you can read a statement and a block of code in. */}
+        <div className="mx-auto w-full max-w-4xl space-y-4">
+          {collapsed ? null : formPanel}
+          {hasRun ? runPane : null}
+        </div>
+      </div>
+
+      {/* The subject in use only: every subject's are in «Mis asignaturas y ejercicios». The
+          panel is always there for its tab to name; the list, from its first opening. While
+          a batch is queued or running its rows offer no «Generar más como este». */}
+      <div
+        role="tabpanel"
+        id={tabIds(strip, "mine").panel}
+        aria-labelledby={tabIds(strip, "mine").tab}
+        hidden={tab !== "mine"}
+        className="mx-auto w-full max-w-4xl"
+      >
+        {mineOpened && slug ? (
+          <StillSubjectExercises
+            key={slug}
+            slug={slug}
+            inUse
+            onGenerateMore={active ? null : generateMore}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -386,14 +496,18 @@ function Results({
   profile,
   run,
   savedCount,
+  onShowMine,
 }: {
   results: Result[];
   profile: ExemplarsProfile;
   run: RunView | null;
   savedCount: number;
+  /** Opens «Mis ejercicios», where the saved ones already are. */
+  onShowMine: () => void;
 }) {
   const { t, plural } = useT();
   const { navigate } = useRouter();
+  const tutorOpen = useFeatures().tutor;
   const requested = run?.job?.result?.requested;
   const produced = run?.job?.result?.produced;
   const asJson = JSON.stringify(
@@ -438,8 +552,9 @@ function Results({
           retried={result.retried}
           profile={profile}
           saved={Boolean(result.saved_id)}
+          // Once the file exists, and only for an account the tutor is open to.
           onTutor={
-            result.saved_id
+            result.saved_id && tutorOpen
               ? () => {
                   const spec = itemTypeOf(profile, { item_type: result.item_type });
                   stashTutorDraft({
@@ -458,9 +573,13 @@ function Results({
       {savedCount > 0 ? (
         <p className="text-small text-muted-foreground">
           {plural("generate.savedNotice", savedCount)}{" "}
-          <Link to="/account/workspaces" className="text-primary underline-offset-4 hover:underline">
-            {t("nav.mySubjects")}
-          </Link>
+          <button
+            type="button"
+            onClick={onShowMine}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            {t("generate.tab.mine")}
+          </button>
           .
         </p>
       ) : null}

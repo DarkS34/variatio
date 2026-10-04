@@ -1,5 +1,13 @@
 import { fold } from "@/lib/text";
-import type { InviteRow, InviteState, InviteTerms, MintedInvite, Role } from "@/lib/types";
+import {
+  FEATURE_NAMES,
+  type FeatureName,
+  type InviteRow,
+  type InviteState,
+  type InviteTerms,
+  type MintedInvite,
+  type Role,
+} from "@/lib/types";
 
 /**
  * What the invitations panel decides without React: the dates its picker writes, the state
@@ -106,6 +114,17 @@ export function linkLines(minted: Pick<MintedInvite, "invite" | "link">[]): stri
 }
 
 /**
+ * The functions an invitation lists its holder for, known ones only and in door order.
+ *
+ * An API older than the field sends nothing, and a malformed answer is read as nothing:
+ * either way the row draws no badge rather than a name the panel cannot translate.
+ */
+export function inviteFeatures(row: Pick<InviteRow, "features">): FeatureName[] {
+  const raw = row.features;
+  return Array.isArray(raw) ? FEATURE_NAMES.filter((name) => raw.includes(name)) : [];
+}
+
+/**
  * An invitation's terms as the form holds them: text as typed, and the date as the
  * `datetime-local` control keeps it. `workspace` is a slug, and "" is «ninguna».
  */
@@ -114,6 +133,8 @@ export interface TermsDraft {
   workspace: string;
   role: Role;
   expires: string;
+  /** In door order, whatever order they were ticked in, so a comparison is by value. */
+  features: FeatureName[];
 }
 
 /** The form for a new invitation: no alias, the first asignatura, the default week. */
@@ -123,17 +144,29 @@ export function newDraft(firstWorkspace: string | undefined, now: Date = new Dat
     workspace: firstWorkspace ?? "",
     role: "editor",
     expires: toLocalInput(inDays(DEFAULT_EXPIRY_DAYS, now)),
+    features: [],
   };
 }
 
 /** The form for an existing invitation, holding exactly what it has now. */
-export function draftOf(row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at">): TermsDraft {
+export function draftOf(
+  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at" | "features">,
+): TermsDraft {
   return {
     label: row.label ?? "",
     workspace: row.workspace_slug ?? "",
     role: row.role,
     expires: toLocalInput(new Date(row.expires_at)),
+    features: inviteFeatures(row),
   };
+}
+
+/** The draft with one function ticked or not, kept in door order. */
+export function withFeature(draft: TermsDraft, feature: FeatureName, on: boolean): TermsDraft {
+  const chosen = new Set(draft.features);
+  if (on) chosen.add(feature);
+  else chosen.delete(feature);
+  return { ...draft, features: FEATURE_NAMES.filter((name) => chosen.has(name)) };
 }
 
 /** What a new invitation is asked for with; null while the date names no moment. */
@@ -145,6 +178,7 @@ export function termsOf(draft: TermsDraft): InviteTerms | null {
     role: draft.role,
     expires_at: expires.toISOString(),
     label: draft.label.trim() || null,
+    features: draft.features,
   };
 }
 
@@ -156,7 +190,7 @@ export function termsOf(draft: TermsDraft): InviteTerms | null {
  * reads as a change because the stored moment carried seconds.
  */
 export function changesOf(
-  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at">,
+  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at" | "features">,
   draft: TermsDraft,
 ): Partial<InviteTerms> {
   const before = draftOf(row);
@@ -168,5 +202,6 @@ export function changesOf(
     const expires = fromLocalInput(draft.expires);
     if (expires) changes.expires_at = expires.toISOString();
   }
+  if (draft.features.join() !== before.features.join()) changes.features = draft.features;
   return changes;
 }

@@ -16,6 +16,8 @@ import type {
   BuildPhase,
   CommissionScope,
   EvaluatorProfile,
+  FeatureMode,
+  FeatureName,
   InviteTerms,
   JobKind,
   Lanes,
@@ -23,7 +25,6 @@ import type {
   Role,
   WorkspaceRow,
 } from "@/lib/types";
-import { stageReviewKeys } from "@/evaluation/queries";
 import { authKeys, useHasWorkspace, useSession } from "./auth";
 import { runStore, type RunView } from "./runStore";
 import { activeWorkspace, workspaceStore } from "./workspace";
@@ -55,9 +56,20 @@ export const keys = {
   adminJobs: ["admin", "jobs"] as const,
   adminJobHistory: ["admin", "jobs", "history"] as const,
   adminEngine: ["admin", "engine"] as const,
+  adminFeatures: ["admin", "features"] as const,
   maintenance: ["maintenance"] as const,
   adminMaintenance: ["admin", "maintenance"] as const,
 };
+
+/**
+ * Every stage questionnaire's form at once: the prefix `evaluation/queries` keys each form
+ * under, and what an artifact write invalidates (`useInvalidateChain`).
+ *
+ * Here and not in `evaluation/`, because the chain's invalidation is core and core imports
+ * nothing of the evaluation. Invalidating a prefix nothing is cached under costs nothing,
+ * so it is the same call with the evaluation closed.
+ */
+export const stageReviewKeys = ["stage-review"] as const;
 
 /** The slug this tab is looking at, as a React value. */
 export function useActiveWorkspace() {
@@ -676,6 +688,39 @@ export function useSetAccountEnabled() {
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
       api.setAccountEnabled(id, enabled),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.adminOverview }),
+  });
+}
+
+/** Who each optional function is for: its mode and the accounts on its list. */
+export function useAdminFeatures() {
+  return useQuery({ queryKey: keys.adminFeatures, queryFn: api.adminFeatures });
+}
+
+/**
+ * Set who one optional function is for; `accounts` absent keeps its list as it is.
+ *
+ * The session is refreshed too: the administrator is not exempt from the rule, so the
+ * change may open or close a door in their own bar.
+ */
+export function useSetFeature() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      feature,
+      mode,
+      accounts,
+    }: {
+      feature: FeatureName;
+      mode: FeatureMode;
+      accounts?: number[];
+    }) => api.adminSetFeature(feature, accounts ? { mode, accounts } : { mode }),
+    onSuccess: (payload) => {
+      // The answer IS the new state, so the panel draws it at once rather than flashing the
+      // old one until the refetch lands.
+      client.setQueryData(keys.adminFeatures, payload);
+      client.invalidateQueries({ queryKey: keys.adminFeatures });
+      client.invalidateQueries({ queryKey: authKeys.me });
+    },
   });
 }
 

@@ -375,8 +375,13 @@ export function ProfileEditor() {
 
   // The real validator lives in the pipeline; asking it means the message here is
   // literally the error the run would raise, not a guess re-implemented in the browser.
+  // Asked only of a draft that differs from the file: its answer only ever blocks a pending
+  // write, and the route is an editor's, so asking on every visit answered a reader with 403.
   useEffect(() => {
-    if (!draft) return;
+    if (!draft || !dirty) {
+      setValidation(null);
+      return;
+    }
     const handle = window.setTimeout(() => {
       api
         .validateProfile(draft)
@@ -384,7 +389,7 @@ export function ProfileEditor() {
         .catch(() => setValidation(null));
     }, 400);
     return () => window.clearTimeout(handle);
-  }, [draft]);
+  }, [draft, dirty]);
 
   const save = useMutation({
     mutationFn: (profile: ExemplarsProfile) => api.saveProfile(profile),

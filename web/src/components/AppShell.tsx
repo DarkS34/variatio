@@ -9,17 +9,33 @@ import {
   Scale,
   Wrench,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 
 import { Lockup } from "@/components/ui/logo";
+import { DOOR_TONE } from "@/components/ui/tone";
 import { AccountMenu } from "@/features/auth/AccountMenu";
-import { slideOf } from "@/features/tutorial/slides";
+import { slideCount, slideOf } from "@/features/tutorial/slides";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
-import { STEPS, USES, stepBusy, stepNumber, stepStates, type StepState } from "@/lib/steps";
+import {
+  STEPS,
+  stepBusy,
+  stepNumber,
+  stepStates,
+  usesFor,
+  type Door,
+  type StepState,
+} from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useHasWorkspace } from "@/state/auth";
+import { useFeatures, useHasWorkspace } from "@/state/auth";
 import {
   keys,
   useHealth,
@@ -155,8 +171,10 @@ function StepPill({
 // The three pieces a step and a door share, so the two kinds of pill are one height and one
 // shape and differ only in the mark: a number for a stop, an icon for a door.
 // The paddings are measured: at 1280 the flanks leave the strip 874 px and at `px-1.5` the
-// six pills ask 857. Widening them overflows the row. The phase caption's `pl` is this
-// `px`, since the two are one alignment.
+// six pills ask 857. Widening them overflows the row. Seven — the third door — ask 1003 on
+// a step's screen, which the flanks leave only from about 1390: below that the bar takes the
+// line under the header (`AppShell`). The phase caption's `pl` is this `px`, since the two
+// are one alignment.
 const PILL =
   "flex shrink-0 flex-col gap-0.5 rounded-md px-1.5 py-1 transition-colors hover:bg-accent";
 const PILL_NAME = "flex items-center gap-1.5 whitespace-nowrap text-small";
@@ -171,8 +189,8 @@ const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
 /**
  * One door of the second phase: what you do with the construction once it is closed.
  *
- * An ICON where a step has its number, because the two doors have no order between them.
- * Both are gated on the whole construction being closed, which is why they sit under a
+ * An ICON where a step has its number, because the doors have no order between them.
+ * All are gated on the whole construction being closed, which is why they sit under a
  * caption of their own rather than among the steps.
  *
  * While the construction is open a door is half off and answers no click: a `span` and not
@@ -180,7 +198,8 @@ const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
  * names the stage in the way, so nothing is lost by the bar refusing. The name is centred
  * in a pill of the steps' own height, so nothing in the row moves when the doors open.
  *
- * "Evaluar el sistema" carries `--evaluation` locked or not: the tint says "this is a
+ * The door of an optional function carries that function's colour, locked or not —
+ * "Evaluar el sistema" `--evaluation`, "Tutor socrático" `--tutor`: the tint says "this is a
  * different kind of thing", which is true from wherever you look at it.
  */
 function DoorPill({
@@ -190,22 +209,16 @@ function DoorPill({
   open,
   disabledReason,
 }: {
-  door: (typeof USES)[number];
+  door: Door;
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   active: boolean;
-  /** Whether the whole construction is closed, which is what opens both doors at once. */
+  /** Whether the whole construction is closed, which is what opens every door at once. */
   open: boolean;
   disabledReason?: string | null;
 }) {
   const { t } = useT();
-  const evaluation = door.evaluation;
-  const face = cn(
-    PILL,
-    PILL_HEIGHT,
-    "justify-center",
-    evaluation &&
-      "text-evaluation ring-1 ring-inset ring-[color-mix(in_oklch,var(--evaluation)_30%,transparent)] bg-[color-mix(in_oklch,var(--evaluation)_9%,transparent)]",
-  );
+  const tone = door.feature ? DOOR_TONE[door.feature] : null;
+  const face = cn(PILL, PILL_HEIGHT, "justify-center", tone?.face);
   const body = (
     <>
       <span
@@ -213,7 +226,7 @@ function DoorPill({
           PILL_NAME,
           "font-medium",
           !open && "text-muted-foreground",
-          open && !evaluation && "text-foreground",
+          open && !tone && "text-foreground",
         )}
       >
         <span
@@ -250,9 +263,9 @@ function DoorPill({
       aria-current={active ? "page" : undefined}
       className={cn(
         face,
-        evaluation && "hover:bg-[color-mix(in_oklch,var(--evaluation)_16%,transparent)]",
-        evaluation && active && "bg-[color-mix(in_oklch,var(--evaluation)_18%,transparent)]",
-        !evaluation && active && "bg-accent",
+        tone?.hover,
+        tone && active && tone.active,
+        !tone && active && "bg-accent",
       )}
     >
       {body}
@@ -346,9 +359,12 @@ function FoldedPhase({ onUnfold }: { onUnfold: () => void }) {
   );
 }
 
+/** How wide the fade over a cut strip's right edge is, in px: a pill under it is not in sight. */
+const FADE_PX = 32;
+
 /** The icon each door of «Fase de pruebas» carries where a step carries its number. */
 const DOOR_ICONS: Record<
-  (typeof USES)[number]["key"],
+  Door["key"],
   ComponentType<{ className?: string; strokeWidth?: number }>
 > = {
   generate: Play,
@@ -359,12 +375,12 @@ const DOOR_ICONS: Record<
 /**
  * The path, once, rendered in one of two places.
  *
- * Above `xl` it sits on the header's centre line, between the two flanks. Below it, the
- * flanks alone fill the row — a workspace name plus an avatar is already most of a
- * phone's width — so the same navigation moves to a line of its own underneath and
- * scrolls sideways there. What it deliberately does NOT do is collapse into a menu: the
- * bar IS the state of the path, and hiding it behind a button hides the one thing it is
- * for.
+ * Above `xl` it sits on the header's centre line, between the two flanks, as long as it
+ * fits there. Below it, or when it does not fit — three doors with the four steps unfolded,
+ * or a long subject name in the switcher — the same navigation moves to a line of its own
+ * underneath, where it has the whole width and scrolls sideways if even that is short. What
+ * it deliberately does NOT do is collapse into a menu: the bar IS the state of the path,
+ * and hiding it behind a button hides the one thing it is for.
  */
 function MainNav({
   path,
@@ -375,6 +391,7 @@ function MainNav({
   rawWaiting,
   stepsOpen,
   onSteps,
+  onOverflow,
   className,
 }: {
   path: string;
@@ -391,27 +408,14 @@ function MainNav({
    *  would be two states over one `localStorage` key. */
   stepsOpen: boolean;
   onSteps: (open: boolean) => void;
+  /** Told whether the pills overflow the strip, scrolled or not: what the copy on the
+   *  header's centre line reports, so `AppShell` can hand the bar to the line underneath. */
+  onOverflow?: (overflows: boolean) => void;
   className?: string;
 }) {
   const { t } = useT();
-  // Whether the strip is cut off on the right, so the fade below can say so. Its scrollbar
-  // is hidden on purpose, so without this nothing suggests the row continues.
-  const strip = useRef<HTMLElement>(null);
-  const [cut, setCut] = useState(false);
-  useEffect(() => {
-    const el = strip.current;
-    if (!el) return;
-    const measure = () => setCut(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
-    measure();
-    el.addEventListener("scroll", measure, { passive: true });
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => {
-      el.removeEventListener("scroll", measure);
-      observer.disconnect();
-    };
-  }, [stages.length, locked, rawWaiting, rawStocked]);
-
+  // Only the doors this account may open: a function closed to it is not on the bar at all.
+  const doors = usesFor(useFeatures());
   const states = stepStates(stages, rawStocked);
 
   // Folded once everything is done, unless the person unfolded it or is standing on one of
@@ -419,6 +423,46 @@ function MainNav({
   const allDone = stages.length > 0 && states.every((state) => state === "done");
   const onStep = STEPS.some((step) => step.path === path);
   const folded = allDone && !stepsOpen && !onStep;
+
+  // Whether the strip is cut off on the right, so the fade below can say so. Its scrollbar
+  // is hidden on purpose, so without this nothing suggests the row continues. A layout
+  // effect, so a bar that does not fit is handed to the other line before the first paint;
+  // the two phase groups are observed too, since a font or a language changes their width
+  // and not the strip's.
+  const strip = useRef<HTMLElement>(null);
+  const [cut, setCut] = useState(false);
+  const report = useRef(onOverflow);
+  report.current = onOverflow;
+  useLayoutEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const measure = () => {
+      setCut(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+      report.current?.(el.scrollWidth - el.clientWidth > 4);
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    for (const group of el.children) observer.observe(group);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [stages.length, locked, rawWaiting, rawStocked, doors.length, folded]);
+
+  // The pill of the screen you are on is brought into the strip: on a phone the doors sit
+  // past its right edge, and a bar whose current stop is out of sight does not say where
+  // you are. Centred, so the fade never covers it; a pill already in clear sight stays put.
+  useLayoutEffect(() => {
+    const el = strip.current;
+    const current = el?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!el || !current) return;
+    const box = el.getBoundingClientRect();
+    const pill = current.getBoundingClientRect();
+    if (pill.left >= box.left && pill.right <= box.right - FADE_PX) return;
+    el.scrollLeft += pill.left + pill.width / 2 - (box.left + box.width / 2);
+  }, [path, folded, doors.length]);
 
   return (
     <nav
@@ -429,8 +473,8 @@ function MainNav({
       style={
         cut
           ? {
-              maskImage: "linear-gradient(to right, #000 calc(100% - 2rem), transparent)",
-              WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 2rem), transparent)",
+              maskImage: `linear-gradient(to right, #000 calc(100% - ${FADE_PX}px), transparent)`,
+              WebkitMaskImage: `linear-gradient(to right, #000 calc(100% - ${FADE_PX}px), transparent)`,
             }
           : undefined
       }
@@ -478,7 +522,7 @@ function MainNav({
       <NavRule />
 
       <PhaseGroup label={t("nav.phase.test")} gap="wide">
-        {USES.map((door) => (
+        {doors.map((door) => (
           <DoorPill
             key={door.key}
             door={door}
@@ -504,9 +548,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasWorkspace = useHasWorkspace();
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
+  const features = useFeatures();
+  // Whether the bar overflows the header's centre line. Measured on that copy, which stays
+  // laid out — only hidden — while the bar is drawn on the line underneath, so it is also
+  // what says when the bar fits there again.
+  const [navCut, setNavCut] = useState(false);
 
-  // The tutorial's slide, read from the path; null everywhere else.
-  const tutorialAt = slideOf(path);
+  // The tutorial's slide, read from the path with the count `App` routes by; null everywhere else.
+  const tutorialAt = slideOf(path, slideCount(features));
   const deck = tutorialAt !== null;
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
@@ -536,8 +585,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const offline = health.data && !health.data.available;
   const missingModels = health.data?.models.missing ?? [];
 
-  // Both doors are gated by the same condition — the whole chain approved — so the reason
-  // is derived once and handed to both pills.
+  // Every door is gated by the same condition — the whole chain approved — so the reason
+  // is derived once and handed to each pill.
   const locked = (pipeline.data?.generation_unlocked ?? false)
     ? null
     : t("nav.needsApproved");
@@ -607,7 +656,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               rawStocked={rawStocked}
               stepsOpen={stepsOpen}
               onSteps={setSteps}
-              className="hidden xl:flex"
+              onOverflow={setNavCut}
+              className={cn("hidden xl:flex", navCut && "invisible")}
             />
           ) : null}
 
@@ -616,7 +666,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* The same navigation, on its own line, for everything narrower than a laptop. */}
+        {/* The same navigation, on its own line, for everything narrower than a laptop and
+            for a laptop whose centre line is too short for it. */}
         {hasWorkspace ? (
           <MainNav
             path={path}
@@ -627,7 +678,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             rawStocked={rawStocked}
             stepsOpen={stepsOpen}
             onSteps={setSteps}
-            className="flex border-t border-border px-3 py-1.5 xl:hidden"
+            className={cn("flex border-t border-border px-3 py-1.5", !navCut && "xl:hidden")}
           />
         ) : null}
 

@@ -154,14 +154,22 @@ export function GroupCard({
 
 export function isModelSetting(setting: ConfigSetting): boolean {
   return (
-    (setting.key.startsWith("models.") || setting.key === EVALUATION_WRITER) &&
-    setting.kind === "str"
+    (setting.key.startsWith("models.") || setting.key in EMPTY_MEANS) && setting.kind === "str"
   );
 }
 
-/** The evaluation's own model setting: the writer of a comparison's two local proposals. Its
- *  null reads "the same model that writes a generation", not "follow the main". */
-const EVALUATION_WRITER = "evaluation.local_model";
+/**
+ * The model settings of the two optional functions, and what each one's null resolves to
+ * (`evaluation/config.derive`, `tutor/config.derive`): the evaluation's writer and the tutor's reply
+ * take the first offered generation model, and the tutor's two other calls take the reply's.
+ * A phase of the pipeline keeps "follow the main" (`cfg.followMain`).
+ */
+const EMPTY_MEANS: Record<string, Key> = {
+  "evaluation.local_model": "cfg.sameAsGeneration",
+  "tutor.models.reply": "cfg.sameAsGeneration",
+  "tutor.models.classify": "cfg.sameAsReply",
+  "tutor.models.criteria": "cfg.sameAsReply",
+};
 
 const OTHER = "__other__";
 
@@ -226,9 +234,7 @@ export function ModelSelect({
         }}
       >
         {setting.nullable ? (
-          <option value="">
-            {t(setting.key === EVALUATION_WRITER ? "cfg.sameAsGeneration" : "cfg.followMain")}
-          </option>
+          <option value="">{t(EMPTY_MEANS[setting.key] ?? "cfg.followMain")}</option>
         ) : null}
         {value && !known && !other ? (
           <option value={value}>{t("cfg.notInstalled", { model: value })}</option>
@@ -888,10 +894,11 @@ export function DiffSummary({
 }
 
 
-/* THE DRAFT IS PER SCREEN, NOT PER APPLICATION. Only one admin tab is mounted at a time,
-   so two drafts can never be open at once; what this buys is that the "Motor" tab saves
-   its sixteen settings without owning the other hundred and twenty-five. `sameValue` is
-   what keeps a value typed back to what was stored from ever counting as a change. */
+/* THE DRAFT IS PER SCREEN, NOT PER APPLICATION. This one is the "Motor" tab's; the stages'
+   (`ConfigTab.useStagesDraft`) never draws an engine setting, so no setting is ever in two
+   drafts. What this buys is that the "Motor" tab saves its sixteen settings without owning
+   the other hundred and twenty-five. `sameValue` is what keeps a value typed back to what
+   was stored from ever counting as a change. */
 export function useConfigDraft(stored: Map<string, unknown>) {
   const { t } = useT();
   const client = useQueryClient();

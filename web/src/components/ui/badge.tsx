@@ -35,6 +35,12 @@ const badgeVariants = cva(
         attention:
           "border-transparent bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] text-attention",
         danger: "border-transparent bg-destructive/8 text-destructive",
+        // An optional function named outside its own screen, in its own colour as its door
+        // is: a destination, not a state. The same 8 % as every tint above.
+        evaluation:
+          "border-transparent bg-[color-mix(in_oklab,var(--evaluation)_8%,transparent)] text-evaluation",
+        tutor:
+          "border-transparent bg-[color-mix(in_oklab,var(--tutor)_8%,transparent)] text-tutor",
       },
     },
     defaultVariants: { variant: "default" },

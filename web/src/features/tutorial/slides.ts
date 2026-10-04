@@ -1,25 +1,92 @@
+import type { ReactNode } from "react";
+
+import type { Key } from "@/lib/i18n";
+import type { Features } from "@/lib/types";
+
 /**
- * Which slide of the deck a path names.
+ * Which slide of the deck a path names, and which slides the deck has.
  *
  * The slide IS the URL — `/tutorial` is the first and `/tutorial/N` the Nth — so nothing
  * needs a store to know where the deck is: the screen pages by navigating and `App` routes
- * by asking here. Pure, and the only home of the deck's length.
+ * by asking here. Pure, and the only home of the deck's shape and so of its length.
  */
 
-/** How many slides the deck has. `TutorialScreen`'s `SLIDES` must be this long. */
-export const SLIDE_COUNT = 6;
+/**
+ * Every slide, in order, and the function it belongs to.
+ *
+ * The last two are the study's — what evaluating is, and the part a participant plays in
+ * it — so an account with the evaluation closed is shown the first four. `TutorialScreen`
+ * keeps one slide per id of the product's, and the study's two are the evaluation's code
+ * (`evaluation/tutorial.tsx`), fetched only for an account it is open to; the types check
+ * both halves.
+ */
+export const DECK = [
+  { id: "s1", feature: null },
+  { id: "s2", feature: null },
+  { id: "s3", feature: null },
+  { id: "s4", feature: null },
+  { id: "s5", feature: "evaluation" },
+  { id: "s6", feature: "evaluation" },
+] as const satisfies readonly { id: string; feature: null | keyof Features }[];
 
-/** The slide a path names, 0-based, or null when the path is not the tutorial's. */
-export function slideOf(path: string): number | null {
+export type SlideId = (typeof DECK)[number]["id"];
+
+/** The slides one function's folder hands the deck: the evaluation's, fetched with its code. */
+export type SlideIdOf<F extends keyof Features> = Extract<
+  (typeof DECK)[number],
+  { feature: F }
+>["id"];
+
+/** The product's own slides, drawn for every account. */
+export type CoreSlideId = Extract<(typeof DECK)[number], { feature: null }>["id"];
+
+/**
+ * A point of a slide, and the one that is MARKED (`TutorialScreen` says why only one is).
+ */
+export type Point = Key | { key: Key; mark: true };
+
+/** What one slide draws, top to bottom; `TutorialScreen` sets it. */
+export interface Slide {
+  title: Key;
+  /** The lead: the sentence of the slide. */
+  body: Key;
+  figure?: ReactNode;
+  /** Short paragraphs under the figure, each its own point. */
+  points?: Point[];
+  /** One aside, set apart: the thing that is true but is not an instruction. */
+  aside?: Key;
+  /** Only the index slide: the four steps of the construction, as a numbered list. */
+  steps?: boolean;
+}
+
+/** The slides this account is shown, in order. */
+export function deckFor(features: Features): SlideId[] {
+  return DECK.filter((slide) => slide.feature === null || features[slide.feature]).map(
+    (slide) => slide.id,
+  );
+}
+
+/** How many slides the deck has for this account: what every route and counter agrees on. */
+export function slideCount(features: Features): number {
+  return deckFor(features).length;
+}
+
+/**
+ * The slide a path names, 0-based, or null when the path is not the tutorial's.
+ *
+ * A number past the end opens the last slide: an old link to `/tutorial/6` from an account
+ * shown four lands where the deck ends, never on a 404.
+ */
+export function slideOf(path: string, count: number): number | null {
   if (path === "/tutorial") return 0;
   const match = /^\/tutorial\/(\d+)$/.exec(path);
   if (!match) return null;
   const n = Number(match[1]);
-  return Math.min(SLIDE_COUNT, Math.max(1, n)) - 1;
+  return Math.min(count, Math.max(1, n)) - 1;
 }
 
 /** The path of a slide, 0-based: the first is bare, the rest carry their number. */
-export function slidePath(index: number): string {
-  const n = Math.min(SLIDE_COUNT, Math.max(1, index + 1));
+export function slidePath(index: number, count: number): string {
+  const n = Math.min(count, Math.max(1, index + 1));
   return n === 1 ? "/tutorial" : `/tutorial/${n}`;
 }

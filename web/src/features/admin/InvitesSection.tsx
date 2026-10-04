@@ -16,7 +16,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
-import { Alert, LoadError, Spinner } from "@/components/ui/misc";
+import { Alert, Checkbox, LoadError, Spinner } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
@@ -30,6 +30,7 @@ import {
   draftOf,
   fromLocalInput,
   inDays,
+  inviteFeatures,
   inviteState,
   isAhead,
   linkLines,
@@ -37,16 +38,19 @@ import {
   newDraft,
   termsOf,
   toLocalInput,
+  withFeature,
   type ExpiryPreset,
   type TermsDraft,
 } from "@/lib/invites";
-import type {
-  AdminOverview,
-  InviteImportOutcome,
-  InviteRow,
-  InviteState,
-  MintedInvite,
-  Role,
+import { featureLabelKey } from "@/lib/steps";
+import {
+  FEATURE_NAMES,
+  type AdminOverview,
+  type InviteImportOutcome,
+  type InviteRow,
+  type InviteState,
+  type MintedInvite,
+  type Role,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS } from "@/state/auth";
@@ -315,6 +319,10 @@ function RecoverInvite({
  *
  * The date is a real picker and the four quick periods only write into it, so what will
  * be sent is always the moment on screen and never a hidden «+7 días».
+ *
+ * The functions put the holder on each one's list at registration (`server/features.py`).
+ * They grant nothing by themselves: the list counts only while the function is set to
+ * «Cuentas elegidas», which is decided in that function's own tab.
  */
 function TermsFields({
   draft,
@@ -431,6 +439,31 @@ function TermsFields({
               ? t("acc.invite.expiresIn", { when: relative(moment.toISOString()) })
               : t("acc.invite.expiryPast")}
       </p>
+
+      <fieldset className="space-y-1.5" aria-describedby={`${idPrefix}-features-hint`}>
+        <legend className="text-micro font-condensed uppercase text-muted-foreground">
+          {t("acc.invite.features")}
+        </legend>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+          {FEATURE_NAMES.map((feature) => {
+            const name = t(featureLabelKey(feature));
+            return (
+              // A label around the box: the function's name ticks it too.
+              <label key={feature} className="flex cursor-pointer items-center gap-2 text-body">
+                <Checkbox
+                  checked={draft.features.includes(feature)}
+                  onCheckedChange={(on) => onChange(withFeature(draft, feature, on))}
+                  label={name}
+                />
+                {name}
+              </label>
+            );
+          })}
+        </div>
+        <p id={`${idPrefix}-features-hint`} className="text-small text-muted-foreground">
+          {t("acc.invite.featuresHint")}
+        </p>
+      </fieldset>
     </div>
   );
 }
@@ -668,11 +701,20 @@ function InviteItem({
           group instead of squeezing it into a column one word wide. */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <div className="min-w-64 flex-1">
-          <p className="flex min-w-0 items-center gap-1.5">
-            <span className={cn("truncate", row.label ? "font-medium" : "text-muted-foreground")}>
+          {/* Wraps, so on a phone the badges drop under the alias instead of squeezing it to
+              nothing: the alias is what names the row. */}
+          <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span
+              className={cn("max-w-full truncate", row.label ? "font-medium" : "text-muted-foreground")}
+            >
               {name}
             </span>
             {expired ? <Badge variant="outline">{t("acc.invite.expiredBadge")}</Badge> : null}
+            {inviteFeatures(row).map((feature) => (
+              <Badge key={feature} variant={feature} className="shrink-0">
+                {t(featureLabelKey(feature))}
+              </Badge>
+            ))}
           </p>
           <p className="text-small text-muted-foreground">
             {row.workspace_slug

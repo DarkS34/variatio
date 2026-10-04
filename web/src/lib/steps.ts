@@ -1,4 +1,4 @@
-import type { Job, StageState } from "@/lib/types";
+import type { Features, Job, StageState } from "@/lib/types";
 import type { Key } from "@/lib/i18n";
 import { isQueued } from "@/lib/queue";
 
@@ -32,19 +32,33 @@ export const STEPS = [
  * carry an ICON where a step carries its number: an icon says "a door", a number "a stop".
  *
  * The tutorial names the same two phases on its own slides, so the deck cannot promise a
- * shape the navigation does not have. `USES` is one home for the bar and the guide.
+ * shape the navigation does not have. `USES` is one home for the bar and the guide, and
+ * both draw `usesFor` of the account's functions, never the whole list.
  */
 export const USES = [
-  { key: "generate", path: "/generate", labelKey: "nav.create", evaluation: false },
-  { key: "compare", path: "/evaluate", labelKey: "nav.compare", evaluation: true },
-  { key: "tutor", path: "/tutor", labelKey: "nav.tutor", evaluation: false },
+  { key: "generate", path: "/generate", labelKey: "nav.create", feature: null },
+  { key: "compare", path: "/evaluate", labelKey: "nav.compare", feature: "evaluation" },
+  { key: "tutor", path: "/tutor", labelKey: "nav.tutor", feature: "tutor" },
 ] as const satisfies readonly {
   key: string;
   path: string;
   labelKey: Key;
-  /** Whether the door belongs to the evaluation rather than to the product: drawn in `--evaluation`. */
-  evaluation: boolean;
+  /** The optional function the door belongs to (`server/features.py`), or null for the
+   *  product's own. The evaluation's is drawn in `--evaluation`, the tutor's in `--tutor`. */
+  feature: null | keyof Features;
 }[];
+
+export type Door = (typeof USES)[number];
+
+/** The name an optional function goes by on screen: its door's. */
+export function featureLabelKey(feature: keyof Features): Key {
+  return USES.find((door) => door.feature === feature)!.labelKey;
+}
+
+/** The doors this account sees, in `USES` order: a function closed to it has no door at all. */
+export function usesFor(features: Features): Door[] {
+  return USES.filter((door) => door.feature === null || features[door.feature]);
+}
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */
 export function stepNumber(index: number): string {

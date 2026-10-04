@@ -159,7 +159,8 @@ export function ResultCard({
   return (
     <Card className="animate-fade-in">
       <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
+        {/* Wraps: on a phone the title, the badge and the two controls do not fit one line. */}
+        <div className="flex flex-wrap items-center gap-2">
           <CardTitle>{t("result.itemHeading", { n: index })}</CardTitle>
           {manyTypes ? (
             <span className="text-small text-muted-foreground">
@@ -172,9 +173,9 @@ export function ResultCard({
               {t("result.saved")}
             </Badge>
           ) : null}
-          <div className="ml-auto flex gap-1">
+          <div className="ml-auto flex flex-wrap justify-end gap-1">
             {onTutor ? (
-              <Button variant="ghost" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+              <Button variant="tutor" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
                 <MessagesSquare />
                 {t("tutor.fromExercise")}
               </Button>

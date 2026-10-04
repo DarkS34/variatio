@@ -1,4 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -22,9 +27,26 @@ import { AuthGate } from "./features/auth/AuthGate";
 import { ApiError } from "./lib/api";
 import { ensureCatalogue, localeStore } from "./lib/i18n";
 import { RouterProvider } from "./lib/router";
+import { authKeys } from "./state/auth";
 import "./index.css";
 
+/**
+ * A function switched off while somebody is inside it: ask for the session again.
+ *
+ * The administrator closes the evaluation or the tutor from the panel, and the next request
+ * of a screen still open on it answers 403 `feature_off`. Refetching the session is what
+ * makes the door leave the bar and the route fall to "not found", instead of a screen that
+ * fails request by request.
+ */
+function onApiError(error: unknown) {
+  if (error instanceof ApiError && error.code === "feature_off") {
+    void queryClient.invalidateQueries({ queryKey: authKeys.me });
+  }
+}
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: onApiError }),
+  mutationCache: new MutationCache({ onError: onApiError }),
   defaultOptions: {
     queries: {
       // The pipeline is one user editing files on one machine: refetching on focus

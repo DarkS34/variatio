@@ -59,12 +59,13 @@ Every pipeline phase declares its own model, context window and reasoning level,
 A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** front end (Vite, pnpm):
 
 - **Its own accounts, by invitation.** No public sign-up, no OAuth, no JWT: Argon2id, opaque server-side sessions with a sliding and an absolute expiry, enumeration defences and rate limiting keyed by both address and account. Authorisation is a membership row checked on every route (`VIEW` / `EDIT` / `MANAGE`).
-- **A construction in four numbered steps** — the raw documents, the exercise types, the syllabus, the tagging — each with its build, its review, its approval and a restorable history, and each closed by a short questionnaire that is the study's own instrument. The syllabus viewer is a hand-rolled `<canvas>` with a force layout and a view by prerequisite level.
+- **A construction in four numbered steps** — the raw documents, the exercise types, the syllabus, the tagging — each with its build, its review, its approval and a restorable history; for an account the evaluation is open to, each also closes with a short questionnaire that is the study's own instrument. The syllabus viewer is a hand-rolled `<canvas>` with a force layout and a view by prerequisite level.
 - **Raw documents as a destination of their own**: per-origin import, transcription with per-document state (`done` / `pending` / `stale`, with the cause), and a page editor.
 - **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or its quota. Weighted phase-plan progress, an authenticated WebSocket, cancellation that stops a model call mid-token.
-- **Three doors once the construction is closed** — generating exercises, evaluating the system, and the Socratic tutor. A commission names concepts, modality, difficulty, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with the whole commission that produced it, and is private to whoever asked for it. A conversation with the tutor is private to its author too.
-- **Administration**: the engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the full settings registry, the evaluation's own panel, and a read-only view of the tutor's conversations.
-- **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation. A thirteen-section user guide lives at `/guide`, and a tutorial at `/tutorial`.
+- **Up to three doors once the construction is closed** — generating exercises, open to every account, and evaluating the system and the Socratic tutor, open to the accounts the administrator chooses. A commission names concepts, modality, difficulty, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with the whole commission that produced it, and is private to whoever asked for it — the generation screen lists the subject's own in a «My exercises» tab, the account menu every subject's. A conversation with the tutor is private to its author too.
+- **Two optional functions, switched from the administration panel.** The evaluation and the tutor are each open to nobody, to every account or to chosen accounts, from the function's own tab, which also holds its settings — the tutor's include a daily message limit per account, counted across every subject. The administrator is not exempt, and an invitation can put its holder on a function's list. A function's client code is loaded with `import()` only for the accounts it is open to and in the administrator's panel, whose tabs read it in any mode, so the rest never download it.
+- **Administration**: the engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the settings registry one screen per stage, one tab per optional function (who it is open to, the evaluation's reading, its settings), and a read-only view of the tutor's conversations.
+- **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation. A thirteen-section user guide lives at `/guide` (a function closed to the account takes its section with it), and a tutorial at `/tutorial`.
 
 ## Getting started
 
@@ -130,9 +131,11 @@ The suite is split by subject, one directory per subsystem. The `corpus` and `mo
 measure a real installation rather than the code, so they name the workspace they open
 (`VARIATIO_MODEL_WORKSPACE`) and skip when it is not there.
 
-In `web/`: `pnpm test` (vitest), `pnpm exec tsc --noEmit` and `pnpm build`, plus three gates
+In `web/`: `pnpm test` (vitest), `pnpm exec tsc --noEmit` and `pnpm build`, plus four gates
 of its own — `pnpm check:color` (palette contrasts and ΔE, re-derived rather than picked),
-`pnpm check:ui` (structural rules) and `pnpm check:i18n` (catalogue and guide coverage).
+`pnpm check:ui` (structural rules), `pnpm check:i18n` (catalogue and guide coverage) and
+`pnpm check:lazy` (the evaluation's and the tutor's code stays out of what every session
+loads; run it after `pnpm build`).
 
 ## Repository layout
 

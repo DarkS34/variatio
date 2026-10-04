@@ -5,6 +5,7 @@ import {
   draftOf,
   fromLocalInput,
   inDays,
+  inviteFeatures,
   inviteState,
   isAhead,
   linkLines,
@@ -12,6 +13,7 @@ import {
   newDraft,
   termsOf,
   toLocalInput,
+  withFeature,
 } from "./invites";
 
 describe("toLocalInput / fromLocalInput", () => {
@@ -144,19 +146,29 @@ describe("the form's terms", () => {
       workspace: "enfermeria",
       role: "editor",
       expires: "2026-09-23T18:05",
+      features: [],
     });
     expect(newDraft(undefined).workspace).toBe("");
   });
 
   it("sends what the form holds, trimmed, with «ninguna» as null", () => {
-    const terms = termsOf({ label: "  ", workspace: "", role: "viewer", expires: "2031-01-05T09:07" });
+    const terms = termsOf({
+      label: "  ",
+      workspace: "",
+      role: "viewer",
+      expires: "2031-01-05T09:07",
+      features: ["tutor"],
+    });
     expect(terms).toEqual({
       workspace: null,
       role: "viewer",
       expires_at: new Date(2031, 0, 5, 9, 7).toISOString(),
       label: null,
+      features: ["tutor"],
     });
-    expect(termsOf({ label: "", workspace: "", role: "viewer", expires: "" })).toBeNull();
+    expect(
+      termsOf({ label: "", workspace: "", role: "viewer", expires: "", features: [] }),
+    ).toBeNull();
   });
 
   it("changes nothing when nothing was touched, even with seconds on the stored date", () => {
@@ -170,7 +182,13 @@ describe("the form's terms", () => {
   });
 
   it("sends each changed term, and «ninguna» and an emptied alias as null", () => {
-    const draft = { label: "", workspace: "", role: "viewer" as const, expires: "2031-01-05T09:07" };
+    const draft = {
+      label: "",
+      workspace: "",
+      role: "viewer" as const,
+      expires: "2031-01-05T09:07",
+      features: [],
+    };
     expect(changesOf(row, draft)).toEqual({
       label: null,
       workspace: null,
@@ -181,5 +199,27 @@ describe("the form's terms", () => {
 
   it("leaves a half-typed date out rather than sending it", () => {
     expect(changesOf(row, { ...draftOf(row), expires: "2031-01" })).toEqual({});
+  });
+
+  it("sends the functions only when they change, whatever order they were ticked in", () => {
+    const listed = { ...row, features: ["tutor", "evaluation"] };
+    expect(changesOf(listed, draftOf(listed))).toEqual({});
+    const untouched = withFeature(withFeature(draftOf(listed), "tutor", false), "tutor", true);
+    expect(changesOf(listed, untouched)).toEqual({});
+    expect(changesOf(listed, withFeature(draftOf(listed), "evaluation", false))).toEqual({
+      features: ["tutor"],
+    });
+  });
+});
+
+describe("inviteFeatures", () => {
+  it("keeps the known functions, in door order", () => {
+    expect(inviteFeatures({ features: ["tutor", "evaluation"] })).toEqual(["evaluation", "tutor"]);
+    expect(inviteFeatures({ features: ["tutor", "nonsense"] })).toEqual(["tutor"]);
+  });
+
+  it("reads nothing from an older API or a malformed answer", () => {
+    expect(inviteFeatures({})).toEqual([]);
+    expect(inviteFeatures({ features: "tutor" })).toEqual([]);
   });
 });

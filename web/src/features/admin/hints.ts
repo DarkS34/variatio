@@ -53,6 +53,7 @@ const SETTING_HINTS: Record<string, Key> = {
   "evaluation.local_model": "cfg.hint.evaluation.local_model",
   "evaluation.providers": "cfg.hint.evaluation.providers",
   "evaluation.timeout": "cfg.hint.evaluation.timeout",
+  "tutor.daily_messages": "cfg.hint.tutor.daily_messages",
   "builders.transcribe_page_max_a4_areas": "cfg.hint.builders.transcribe_page_max_a4_areas",
   "builders.transcribe_page_png_max_bytes": "cfg.hint.builders.transcribe_page_png_max_bytes",
   "builders.transcribe_page_jpeg_quality": "cfg.hint.builders.transcribe_page_jpeg_quality",

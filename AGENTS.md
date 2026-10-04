@@ -95,7 +95,7 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   artefact, not the code.
 - `uv run pytest -m model` — the admissibility judge against a live Ollama (~17 calls).
 - Web: `pnpm test` (vitest), `pnpm exec tsc --noEmit`, `pnpm build`, `pnpm check:color`,
-  `pnpm check:ui`, `pnpm check:i18n`.
+  `pnpm check:ui`, `pnpm check:i18n`, `pnpm check:lazy` (after `pnpm build`).
 
 ### Running locally
 
@@ -216,7 +216,8 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
 - **Every setting names the stages that read it** (`stages`, the owner first; `types.STAGES`
   is the pipeline's, the registry appends the study's) and the model call it is drawn under
   (`phase`, a `PIPELINE` phase of its owner's lane). Engine, tunnel and logging have none.
-  `tests/settings/test_setting_stages.py` pins it; the panel has one screen per stage.
+  `tests/settings/test_setting_stages.py` pins it; the panel has one screen per stage (an
+  optional function's in that function's own admin tab).
   The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
   reads is `evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
@@ -273,7 +274,10 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 
 - **No registration endpoint, ever.** Accounts come from single-use invitations or
-  `create-user`. The person registering chooses their username, language and evaluator profile.
+  `create-user`. The person registering chooses their username and language, and their
+  evaluator profile only when the evaluation will be open to the new account (mode `all`, or
+  `selected` with the invitation listing its holder: `asks_profile` on the preview); otherwise
+  it stays NULL.
 - Argon2id; policy is length plus rejecting the obvious. No HIBP.
 - **Username enumeration is refused in three places at once** (`/login` uniform answer +
   decoy hash timing, `/forgot` always 202). Weakening one re-opens it.
@@ -323,7 +327,13 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   both). A `generate` job's writer lane comes from the commission's model; an `evaluate`
   job's from `evaluation.local_model`.
 - `GET /api/pipeline` reports lanes: `busy` means FULL; `current_job` is the oldest job of
-  YOUR workspace. The idle GPU clock counts every lane.
+  YOUR workspace. A lane's holder travels as `kind` (named by the client, `lib/names.ts`) plus
+  the server's `label`, both left out when the holder's function (`routers/jobs.FEATURE_OF`,
+  which the tutor's kinds join at install) is closed to the account. The idle GPU clock
+  counts every lane.
+- The client's run store keeps 12 runs and lets go of finished ones first, never of a live
+  one (`runStore.pruneRuns`): the socket carries every job of the workspace, tutor turns and
+  comparisons included.
 - **Cancellation is cooperative at token granularity**: `inference.generate()` streams
   internally and emits nothing, and closing the stream stops the engine. `request_cancel`
   returns at once; SIGKILL escalation runs on its own thread. Waits are sliced into one-second
@@ -626,9 +636,10 @@ A top-level package, always mounted. **`evaluation` imports `variatio`, never th
   (`precision`, `recall`, `function`, `effort`, `overall`), 1-5 agreement, 5 is best,
   `VERSION = "4"`; earlier wordings are never pooled. `curated` records whether the answerer
   corrected the stage (nullable, only climbs). «Opened» is stamped when the form unfolds.
-- The admin «Evaluaciones» tab filters by profile → account → workspace, one «Por evaluador»
-  table, then «Fase de construcción» and «Fase de pruebas» blocks with CSVs; an evaluator's
-  records can be withdrawn (`DELETE /api/admin/evaluations/records`).
+- The admin «Evaluaciones» tab, between who may use the evaluation and its settings, filters
+  by profile → account → workspace, one «Por evaluador» table, then «Fase de construcción» and
+  «Fase de pruebas» blocks with CSVs; an evaluator's records can be withdrawn
+  (`DELETE /api/admin/evaluations/records`).
 - **The memoria must record** which engine, prompt language, first offered model, instrument
   version and arm configuration produced each result; there is no version column, so change
   dates are boundaries.
@@ -746,7 +757,10 @@ admin's read.
   database (`tutor_usage`, by UTC day) across every workspace, because the queue is the
   installation's and a count of files could be reset by deleting a conversation. Only a turn
   that enters the queue counts, a reply asked again included. The refusal is a 429 with
-  `X-Error-Code: tutor_daily_limit`, `Retry-After` and the wait in words.
+  `X-Error-Code: tutor_daily_limit`, `Retry-After` and the wait in words. The client builds
+  its own sentence from the code and `Retry-After` (`tutor/limit.ts`; the server's only
+  without the header) and shows it alone where the conversation reports a failure, never
+  under «No se pudo enviar»; the next send or retry clears it.
 - **A turn's job carries no text**: params and result name the conversation and the turn
   only, because the event stream is the workspace's and a conversation is its author's. One
   reply on its way per conversation and per account in the workspace (409).
@@ -760,9 +774,17 @@ admin's read.
 white, `--radius: 0`, **`--primary` is the ink, not a hue**, so colour only appears where it
 means something. Semantics encode position relative to the knowledge frontier: `--settled`
 (behind you, grey), `--attention` (ultramarine, act here), dimmed/dashed (ahead),
-`--destructive` (damage), `--evaluation` (deep green, the study). `--success/--warning/--info`
-stay retired. Every value is measured: **`pnpm check:color`** is the gate (contrast, ΔE under
-dichromacy, every `--X-foreground` against `--X`). A colour literal outside `index.css` is
+`--destructive` (damage), `--evaluation` (deep green, the study), `--tutor` (deep blue, the
+tutor). The last two are destination colours: each marks its function where something
+OUTSIDE its own screen names it (its door, a tab, the stage questionnaire, «Trabajar con el
+tutor» = `Button variant="tutor"`; the tone is the feature's name, `components/ui/tone.ts`).
+The tutor's is the door's quiet face (`DOOR_TONE`: its text, ring and a light tint), never a
+fill: «Trabajar con el tutor» sits on every saved exercise and must not outshout the screen's
+one `--attention`. Inside the tutor's screen `--attention` stays «act here».
+`--success/--warning/--info` stay retired. Every value is measured: **`pnpm check:color`** is
+the gate (contrast, ΔE under dichromacy, every `--X-foreground` against `--X`, and each
+destination colour against every `--arm-*` at ΔE ≥ 16 in all three visions, a missing token
+failing). A colour literal outside `index.css` is
 invisible to it, so a foreground must be a token. Tint surfaces with `color-mix(in oklab, …)`,
 never `oklch` (hue interpolation turns greens blue).
 
@@ -783,10 +805,15 @@ never `oklch` (hue interpolation turns greens blue).
 - [lib/steps.ts](web/src/lib/steps.ts) is the single home of the path: `STEPS` (raw
   material, profile, graph, bank, numbered 1-4 as «Fase de construcción») and `USES` (the three
   unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» and
-  «Tutor socrático»). The
+  «Tutor socrático»). Each door names its `feature`; the bar and the guide draw
+  `usesFor(useFeatures())`, so a function closed to the account has no door, and its route
+  draws «not found». The
   first not-done step is `now`; done steps show a bare tick, no box. Doors are half-dimmed and
   unclickable until construction is complete. Once all four are done and you are not on one,
-  the phase folds into one pill. There is **no dashboard**: `/` redirects to the current step.
+  the phase folds into one pill. From `xl` the bar sits on the header's centre line while it
+  fits there; when it does not (three doors with the steps unfolded, at 1280–1390), it takes
+  the line under the header, measured, never a fixed breakpoint. The current pill is scrolled
+  into sight. There is **no dashboard**: `/` redirects to the current step.
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
 - Vocabulary seen by teachers: «Apuntes y ejercicios», «Tipos de ejercicio», «El temario»
   (the step; «concepto» for a node; «grafo» only for the structure), «Etiquetado», «leer»,
@@ -804,7 +831,11 @@ never `oklch` (hue interpolation turns greens blue).
   cambios»; «Continuar» (big, `--attention`) saves-and-approves and moves on. No «Aprobar» or
   «Reabrir». No tags or (i) beside a stage's title; the guide link sits under it.
 - The stage questionnaire unfolds under its button at the foot of the artifact, on every
-  built stage.
+  built stage, for an account the evaluation is open to AND whose role may correct the
+  subject (`useAsksStageReview`: editor or owner, because its routes that record are
+  `auth.EDIT`; a viewer could fill it in and never save it). All of it is
+  `evaluation/StageReviewSlot`, which `StageGate` loads lazily; the stage reports only whether
+  this visit wrote. Its save button is ink, never `--attention`: «Continuar» is on screen.
 - A rebuild hides the old artifact without deleting it. A queued job draws no progress bar.
   «Pasos» of a build start folded, and nothing remembers the fold.
 - `lib/queue.ts` is the single home of «is it waiting and behind what»; `isQueued` believes
@@ -823,8 +854,9 @@ never `oklch` (hue interpolation turns greens blue).
 - «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): one row
   per subject, each with a fold of the account's own exercises there (read with the row's
   slug as `X-Workspace`, no switch; the subject in use opens unfolded). «Generar más como
-  este» in another subject switches into it first. There is no exercises tab; the old
-  routes redirect here.
+  este» in another subject switches into it first. It keeps every subject; Generate's
+  «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
+  `/variants`) still redirect here.
 - `/raw`: one row per document; multi-select delete; a finished origin is tinted with a
   filled tick; the foot offers «Continuar» once both origins hold something.
 - Graph: three columns (list, concept card, fixed-size graph card) plus a full-width
@@ -842,7 +874,17 @@ never `oklch` (hue interpolation turns greens blue).
   defaults to «Solo conceptos con ejemplos» each opening; model cards above the reasoning
   block (hidden with one model); a refused instruction locks the button until the text
   changes; after a run, «Variar el encargo actual» / «Empezar desde cero», both clearing the
-  previous batch.
+  previous batch. Two tabs under the title (`components/TabStrip`, the evaluation's strip):
+  «Generar», where every visit opens, and «Mis ejercicios» with the count of the account's
+  exercises in the subject in use (`useExerciseTotal`, a one-row page of the list's
+  endpoint, refreshed as each item saves). The tab is `SubjectExercises` for that subject;
+  its «Generar más como este» goes through `onGenerateMore`, filling the form and returning
+  to «Generar», and is not offered while a batch is queued or running (`null`): the form
+  never opens over a batch it did not ask for. «Generar» is hidden, never unmounted, so a
+  run and the visit's results survive a tab switch; «Mis ejercicios» is mounted at its first
+  opening, then hidden the same way and memoised, so it does not redraw with every frame of a
+  run. The saved notice under the results opens the tab, and crossing tabs moves the focus
+  to the tab opened.
 - Evaluation: two blind cards at fixed height scrolling inside, «Ver completo» opens the
   reading dialog; after the reveal the same grid, collapsed, then the verdict band, then the
   rubric section. The screen reopens on the form, not the last session.
@@ -852,12 +894,37 @@ never `oklch` (hue interpolation turns greens blue).
   AND bundled (`web/vite/mermaid-subset.ts` fails the build if Mermaid's shape moves). One
   KaTeX version is forced via `pnpm-workspace.yaml`.
 - `Progress`: total zero reads empty, unknown total sweeps (`barFill`).
-- The tutorial is six full-window slides with no header, edge rails for navigation,
-  justified prose from `sm` up; it draws the app as it is.
+- The tutorial is six full-window slides — four with the evaluation closed;
+  `features/tutorial/slides.ts` (`deckFor`, `slideCount`) is the one count `App` and
+  `AppShell` read, and the outro closes the last slide drawn — with no header, edge rails
+  for navigation, justified prose from `sm` up; it draws the app as it is. Slides 1–4 hold
+  with the evaluation open or closed, so they never ask for a part in a study; that request
+  lives on 5–6, which are the evaluation's code (`evaluation/tutorial.tsx`, its figures and
+  strings with it), fetched only for an account the evaluation is open to. What correcting a
+  step means is said on slide 3, every account's.
+- The guide's sections on the evaluation and the tutor live in their folders
+  (`evaluation/guide/`, `tutor/guide/`, one file per language), and so does the
+  questionnaire's part of how a building step closes (`StageReviewGuide`); the registry
+  (`features/guide/sections.tsx`) leaves a closed function's section out of the index, the
+  search and the routing.
 - The in-app guide (`/guide`) is user-facing copy: a behaviour change is not finished until
   its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
-  «Motor» tab: **a board with one cell per part of the engine** — «General», «Local», and
+  Six tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off, one per
+  optional function in its own tone — «Evaluaciones» (`--evaluation`) and «Tutor»
+  (`--tutor`), drawn for the administrator whatever the function's mode. A function's tab is
+  `features/admin/FeatureAccess.tsx` on top (a radio group «Nadie» / «Todas las cuentas» /
+  «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
+  marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
+  under another mode because the server keeps the list; one sentence states the SAVED state,
+  one line says the administrator is not exempt), then the evaluation's reading (lazy,
+  «Evaluaciones» only), then the function's stage settings (`ConfigTab.StageSettings`, its
+  own save bar over the same values; `tutor.daily_messages` is there). A folded link to
+  another stage opens «Configuración» on it: `AdminScreen` owns the tab, the open stage and
+  the ONE draft of the stages' settings (`useStagesDraft`), so a change left pending follows
+  the link and any of the three save bars saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
+  holder joins at registration («Funciones»), and each row shows them as badges in the
+  functions' tones. «Motor» tab: **a board with one cell per part of the engine** — «General», «Local», and
   «Remoto» only when the engine has that half — each cell its state in a word and the door to
   its screen; the tab opens on the part that needs somebody, else on «General». The readings
   are `features/admin/engineState.ts`, shared by the cells and the cards' badges. «General»
@@ -876,7 +943,9 @@ never `oklch` (hue interpolation turns greens blue).
   numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
   down the page, each node with model, reasoning and sampling and its own settings under it;
   then «General de la etapa», «Común a todas las etapas», and folded what it reads of
-  another stage's — the same value, unfolded on its owner's screen.
+  another stage's — the same value, unfolded on its owner's screen. Its nav lists the
+  product's stages only: an optional function's stage (`ConfigStage.feature`) is drawn in
+  that function's tab, and «Configuración»'s search still finds and edits its settings.
 - A setting's measured `doc` stays in the registry and never leaves the API. A row carries at
   most one (i), and only where its name does not say what it controls or a change has a
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
@@ -917,10 +986,11 @@ never `oklch` (hue interpolation turns greens blue).
   A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: a review of plain
   sentences (the subject's open, each unit folded; concepts and sources only when
   correcting), «Quiero corregir algo» with a sticky save bar, and a rebuild that asks first
-  when there is a correction. «Trabajar con el tutor» on a saved
-  exercise — in «Mis asignaturas y ejercicios», and on a result card once its file exists —
-  stashes the statement and the generation id (`tutor/draft.ts`). The admin reads
-  conversations from «Asignaturas» (`AdminConversations`).
+  when there is a correction. «Trabajar con el tutor» on a saved exercise — in «Mis
+  asignaturas y ejercicios» and Generate's «Mis ejercicios», and on a result card once its
+  file exists, only with the tutor open — stashes the statement and the generation id
+  (`lib/tutorDraft.ts`, in core because those screens are). The admin reads conversations
+  from «Asignaturas» (`AdminConversations`).
 
 ### Client rules
 
@@ -928,11 +998,30 @@ never `oklch` (hue interpolation turns greens blue).
   eager and `en` lazy. `pnpm check:i18n` catches untranslated literals and missing guide
   sections. **Delete catalogue keys nobody reads** (prove it, delete from both, let `tsc`
   answer). Strings the server sends by stable key are translated client-side
-  (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`) with the server string as fallback.
+  (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`, `tutor/limit.ts`) with the server string
+  as fallback.
+- **A key read only inside `src/evaluation/` or only inside `src/tutor/` lives in that
+  folder's `i18n/{es,en}.ts`**, same shape and typing; `i18n/index.ts` registers it
+  (`registerCatalogue`: Spanish at once, the reader's language fetched), and every module
+  core loads lazily from the folder imports it FIRST. Core wraps those `import()`s in
+  `withCatalogues`, so an English reader never gets a first frame in Spanish. `Key` is the
+  union, the functions' keys through `import type` only. A key read anywhere in core stays
+  in `lib/i18n/`. `pnpm check:i18n` refuses a function's key read outside its folder, a key
+  in no catalogue, a key in two, and a lazy module that does not register first.
 - API payloads are read defensively: an older API must degrade the screen, never blank it.
   A panel that cannot load says so.
 - `index.html` revalidates, `/assets` is immutable; a stale-chunk error reloads once.
 - `pnpm check:ui`: no raw Tailwind scale sizes, no unlabelled control, no raw `<table>`.
+- A `role="radiogroup"` of buttons takes its keyboard from `components/ui/radio.ts`
+  (`useRadioGroup`: one tab stop, arrows choose and move the focus, Home/End).
+- **`src/evaluation/` and `src/tutor/` reach a browser only through `import()`**, behind
+  `useFeatures()` or inside the administrator's panel (whose reads ignore the mode): nothing
+  outside them imports them statically (`import type` aside).
+  `pnpm check:lazy` checks the sources and, after `pnpm build`, the chunk graph
+  `vite/chunk-graph.ts` writes to `dist/.vite/chunks.json`; its comment stripping is a
+  string-aware scanner with self-tests. `ApiError.code` is `X-Error-Code` and
+  `ApiError.retryAfter` is `Retry-After` in seconds; a `feature_off` refetches the session
+  (`main.tsx`).
 - A vocabulary sweep is verified in the browser, not by a green suite.
 
 ## Closed decisions (do not revert without explicit user request)
@@ -1029,28 +1118,33 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 **Interface**
 - The palette is measured; `--primary` is ink; `--radius: 0`; arm colours fixed; theme
   three-state.
-- The bar is the path: four numbered steps and three unnumbered doors; no dashboard; the rail
+- The bar is the path: four numbered steps and the unnumbered doors open to the account (up
+  to three); no dashboard; the rail
   is gone.
 - View and correct are two moments; «Continuar» closes a stage; no «Aprobar»/«Reabrir»; no
   rebuild except for document drift.
 - A queued job is not a running one. No time estimates. No «loading model» signal. No log on
   screen. No run drawer.
-- Generate screen belongs to the visit. Live feed window of ten admitting one row at a time
-  (`features/bank/window.ts`). Zero total ≠ unknown total. KaTeX for formulas.
+- Generate screen belongs to the visit; its «Mis ejercicios» tab lists the subject in use
+  and switching tabs never clears the run or its results. Live feed window of ten admitting
+  one row at a time (`features/bank/window.ts`). Zero total ≠ unknown total. KaTeX for
+  formulas.
 - The raw material is its own screen; one row per document; nothing announces completeness
   except the finished-origin tint and the closing block.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
 - Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
 - «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
-  drawn on every stage that reads it and unfolded only on its owner's.
+  drawn on every stage that reads it and unfolded only on its owner's. An optional function's
+  stage lives in that function's own admin tab, under who may use it, not in «Configuración».
 - The mark is three equal squares (settled, attention, outline).
 - Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - The exemplars profile is edited through the form alone.
 
 **Tutor (decided 2026-10-03)**
-- Three doors after the construction: «Generar ejercicios», «Evaluar el sistema» and «Tutor
-  socrático» (the two-door rule ended with the single branch, 2026-10-03); no fourth door.
+- Three doors at most after the construction: «Generar ejercicios» for everybody, «Evaluar el
+  sistema» and «Tutor socrático» where the administrator opens them (the two-door rule ended
+  with the single branch, 2026-10-03); no fourth door.
 - The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
   after the checks, never streamed.
 - Conversations are private to their author; the administrator reads them read-only.
