@@ -94,10 +94,40 @@ export function splitCriterion(
   return {
     lead: text.slice(0, found[0].from).trim().replace(TRAILING, ""),
     // The LADDER's order and not the text's: what a screen draws is the scale, and a
-    // criterion that happened to name "avanzado" first must not reorder the options.
-    rungs: levels.filter((level) => byLevel.has(level)).map((level) => ({
+    // criterion that happened to name "avanzado" first must not reorder the options. A rung
+    // that is opened and left empty says nothing, so it is not one of the rungs found.
+    rungs: levels.filter((level) => byLevel.get(level)).map((level) => ({
       level,
       text: byLevel.get(level)!,
     })),
   };
+}
+
+const CLOSED = /[.!?…:;]$/u;
+
+/** A clause as it is written into the criterion: trimmed, and closed by a full stop. */
+function sentence(text: string): string {
+  const value = text.trim();
+  return !value || CLOSED.test(value) ? value : `${value}.`;
+}
+
+/**
+ * The criterion written back as ONE string, in the shape the prompt legislates.
+ *
+ * It is what lets step 2 correct the criterion one rung at a time while the artifact keeps
+ * its single `description`: the axis, then every rung opened by its value between « » and a
+ * colon. EVERY rung is opened as soon as one is written, an empty one included —
+ * `splitCriterion` needs two marks, and a criterion with one rung filled in would come back
+ * whole, under the axis, the next time it is read. With no rung written the axis goes alone.
+ */
+export function joinCriterion(
+  lead: string,
+  clauses: Readonly<Record<string, string>>,
+  levels: readonly string[],
+): string {
+  const written = levels.some((level) => (clauses[level] ?? "").trim());
+  // The « » and the colon are the artifact's own marks, in whatever language the screen is.
+  const open = (level: string) => `«${level}»: ${sentence(clauses[level] ?? "")}`; // i18n-exempt
+  const rungs = written ? levels.map((level) => open(level).trim()) : [];
+  return [sentence(lead), ...rungs].filter(Boolean).join(" ");
 }

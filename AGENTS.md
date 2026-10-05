@@ -529,7 +529,10 @@ modality's own**. The artifact shape is an ordinary field (`schema.enum`, `descr
 (`nivel_dificultad` / `difficulty_level`); writers resolve it via `locale.difficulty(ws)`,
 readers via `ItemType.difficulty_field`. Rank = position in the modality's own enum;
 unranked sorts last. The criterion has a shape the client splits (`«rung»:` markers,
-`web/src/lib/difficulty.ts`, needs ≥2 marks else shown whole). `guarantee_difficulty` is a
+`web/src/lib/difficulty.ts`, needs ≥2 marks else shown whole) and writes back: step 2
+corrects it one rung at a time, each in a box beside its name under the sentence that says
+what the scale measures (`DifficultyEdit`), and `joinCriterion` joins them into the ONE
+string the artifact keeps, every rung opened as soon as one is written. `guarantee_difficulty` is a
 floor, never a rewrite; it keeps the field out of `embed_fields` and writes it last. It is
 not a row in «Campos de …»; the generate form asks «¿De qué nivel?» regardless of
 `decided_by`, and admissibility owners include it regardless too.
@@ -1186,13 +1189,13 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - `guidance.generation` is hand-written only; modality rules carry generation.
 - Prerequisite lists are transitive closures bounded by the curriculum, with opposite set
   operations; without a curriculum, later concepts may be used but not practised.
-- The hierarchy is one relation (`se_engloba_en`); `relacionado` stays in embeddings; don't
-  wholesale-regenerate descriptions without benchmarking retrieval.
-- No anchoring beats a false one. Descriptions are impersonal and grammar-constrained.
 - The units of the syllabus are written in the order they are taught: the documents are read
   in the natural order of their names, and the prompt that finds the units orders them
   (numbering first, then the logic of the subject); code keeps that order and never sorts it
   back by chunk or by median position (2026-10-05).
+- The hierarchy is one relation (`se_engloba_en`); `relacionado` stays in embeddings; don't
+  wholesale-regenerate descriptions without benchmarking retrieval.
+- No anchoring beats a false one. Descriptions are impersonal and grammar-constrained.
 - The free-text field is a four-slot catalogue, judged after the guardrail, failing open,
   verified against derived owners.
 - Diagrams are transcribed as Mermaid; the merge prompt treats grammatical variants as one
@@ -1262,6 +1265,15 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The raw material is its own screen; one row per document; nothing announces completeness
   except the finished origin's filled tick and the line over «Continuar» beside the title.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
+  «Quién lo decide» (`decided_by`) is the exception the user asked back (2026-10-05): it
+  is the second row of a field in «Campos de …» with «Obligatoriedad» — one grid, so the two
+  start at one height under the name and the type — and is not drawn for a field with no
+  choice to offer (the statement, a list, a free object); a field that becomes one loses
+  the mark. Its two options read «El modelo» / «El usuario», and the chosen one is the type
+  picker's ink border over the ink tint (`--muted` and `--sunk` are one value, so a sunk
+  pill on a muted ground told nothing). «Campos que se indexan» (`embed_fields`)
+  stays out: it came back the same day and the user removed it again on reading why the
+  default is the statement alone (measured, a solution in the index tags worse).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
 - Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
 - Every tab of «Administración» is one list of its sections beside the section open, the

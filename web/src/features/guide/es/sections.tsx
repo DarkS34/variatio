@@ -774,8 +774,9 @@ function Profile() {
           Todos los tipos de ejercicio llevan un <strong>nivel de dificultad</strong>, y no es
           una parte más: no se añade, no se quita y no se le cambia el nombre. Vive arriba, en
           «{t("modality.identity")}», justo debajo de la descripción del tipo — al mirar, los
-          tres peldaños se ven con lo que dice el criterio de cada uno debajo; al corregir, se
-          convierte en una caja de texto.
+          tres peldaños se ven con lo que dice el criterio de cada uno al lado; al corregir,
+          cada peldaño tiene su propia caja junto a su nombre, bajo la frase que dice qué mide
+          la escala en ese tipo.
         </Paragraph>
         <Paragraph>
           Los <strong>tres niveles son los mismos en todos los tipos</strong>. Eso es lo que
@@ -840,6 +841,11 @@ function Profile() {
               body: t("field.description.hint"),
             },
             {
+              key: "quien-lo-decide",
+              head: t("field.decidedBy.label"),
+              body: `${t("field.decidedBy.hint")} No se pregunta por el enunciado, ni por una lista o un objeto: ahí no hay nada que elegir de antemano.`,
+            },
+            {
               key: "primario",
               head: t("field.primary.badge"),
               body: "El que lleva el enunciado. Es el texto con el que se empareja el ejercicio con los conceptos del temario, y solo puede serlo una parte de tipo texto.",
@@ -901,16 +907,16 @@ function Graph() {
       <Block title="Una lista, y el grafo al lado">
         <Paragraph>
           Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
+          Ese orden lo pone la construcción: sigue la numeración de tus documentos y de sus
+          títulos («Tema 1», «Tema 2»…) y, donde no hay numeración, pone antes lo que hace
+          falta saber para lo que viene después. Si una unidad queda fuera de su sitio, su
+          menú la sube o la baja mientras corriges.
           Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el concepto
           y si <strong>{t("kg.taggable").toLowerCase()}</strong> —«{t("common.yes")}» o «
           {t("common.no")}»—; al pulsarla se abre su ficha <em>al lado de la lista</em>, con su
           unidad, su descripción y sus relaciones. Mientras solo estás mirando eso es una
           lectura, que es justo lo que se pide aquí: abrir un concepto y ver si lo que dice de él
           es tu asignatura.
-          Ese orden lo pone la construcción: sigue la numeración de tus documentos y de sus
-          títulos («Tema 1», «Tema 2»…) y, donde no hay numeración, pone antes lo que hace
-          falta saber para lo que viene después. Si una unidad queda fuera de su sitio, su
-          menú la sube o la baja mientras corriges.
         </Paragraph>
         <Paragraph>
           Al pulsar «{t("stage.curate.start")}», junto al título, esa misma ficha se

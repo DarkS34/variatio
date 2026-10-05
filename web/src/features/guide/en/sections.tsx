@@ -785,8 +785,9 @@ function Profile() {
           Every exercise type carries a <strong>difficulty level</strong>, and it is not one more
           part: it is not added, not removed and not renamed. It lives at the top, in "
           {t("modality.identity")}", right below the type's description — while you are looking,
-          the three rungs are shown with what the criterion says about each one underneath; while
-          you are correcting, it becomes a text box.
+          the three rungs are shown with what the criterion says about each one beside it; while
+          you are correcting, every rung has a box of its own beside its name, under the sentence
+          that says what the scale measures in that type.
         </Paragraph>
         <Paragraph>
           The <strong>three levels are the same in every type</strong>. That is what makes
@@ -849,6 +850,11 @@ function Profile() {
               key: "descripcion",
               head: t("field.description.label"),
               body: t("field.description.hint"),
+            },
+            {
+              key: "quien-lo-decide",
+              head: t("field.decidedBy.label"),
+              body: `${t("field.decidedBy.hint")} It is not asked about the statement, nor about a list or an object: there is nothing to choose beforehand there.`,
             },
             {
               key: "primario",

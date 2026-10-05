@@ -6,7 +6,7 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
 import {
   StageGate,
@@ -23,7 +23,7 @@ import { Alert, LoadError, Skeleton } from "@/components/ui/misc";
 import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { splitCriterion } from "@/lib/difficulty";
+import { joinCriterion, splitCriterion } from "@/lib/difficulty";
 import { difficultyFieldOf, difficultyLevelsOf } from "@/lib/profile";
 import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
@@ -272,6 +272,93 @@ function DifficultyRead({
   );
 }
 
+/** The criterion as the editor holds it: the axis, and one clause per rung of the ladder. */
+interface CriterionDraft {
+  lead: string;
+  clauses: Record<string, string>;
+}
+
+function readCriterion(description: string | null | undefined, levels: string[]): CriterionDraft {
+  const { lead, rungs } = splitCriterion(description, levels);
+  return { lead, clauses: Object.fromEntries(rungs.map((rung) => [rung.level, rung.text])) };
+}
+
+/**
+ * The criterion, corrected one rung at a time.
+ *
+ * It was one box holding the whole paragraph under the three badges, so correcting what
+ * makes an exercise «intermedio» meant finding that clause inside a run of text and keeping
+ * the « » and the colons right by hand. Each rung is now its own box beside its name, in
+ * the ladder's order, under the sentence that says what the scale measures — the same
+ * layout the static view reads it in. The artifact still holds ONE string:
+ * `joinCriterion` writes it in the shape `splitCriterion` reads.
+ *
+ * The boxes hold what was TYPED and not what the string reads back as: reading back trims
+ * every clause, so a space typed at the end of one would vanish under the cursor. The
+ * string is read again only when somebody else wrote it — leaving the correction, another
+ * type — which is what `source` tells apart. A criterion nobody could split lands whole in
+ * the first box, and stays as it is until a rung is written.
+ */
+function DifficultyEdit({
+  levels,
+  description,
+  onChange,
+}: {
+  levels: string[];
+  description?: string | null;
+  onChange: (description: string) => void;
+}) {
+  const { t } = useT();
+  const id = useId();
+  const incoming = description ?? "";
+  const [source, setSource] = useState(incoming);
+  const [draft, setDraft] = useState(() => readCriterion(incoming, levels));
+  if (incoming !== source) {
+    setSource(incoming);
+    setDraft(readCriterion(incoming, levels));
+  }
+
+  const write = (next: CriterionDraft) => {
+    const joined = joinCriterion(next.lead, next.clauses, levels);
+    setDraft(next);
+    setSource(joined);
+    onChange(joined);
+  };
+
+  return (
+    <div role="group" aria-labelledby={`${id}-title`} className="space-y-2">
+      <p id={`${id}-title`} className="text-micro font-condensed uppercase text-muted-foreground">
+        {t("modality.difficulty")}
+      </p>
+      <Textarea
+        autoGrow
+        aria-label={t("modality.difficulty.axis")}
+        value={draft.lead}
+        placeholder={t("modality.difficulty.axis")}
+        className="min-h-10"
+        onChange={(event) => write({ ...draft, lead: event.target.value })}
+      />
+      {levels.map((level) => (
+        <div key={level} className="grid gap-1.5 sm:grid-cols-[7rem_1fr] sm:gap-3">
+          <label htmlFor={`${id}-${level}`} className="sm:pt-2">
+            <Badge variant="outline">{level}</Badge>
+          </label>
+          <Textarea
+            id={`${id}-${level}`}
+            autoGrow
+            value={draft.clauses[level] ?? ""}
+            placeholder={t("modality.difficulty.rung", { level })}
+            className="min-h-16"
+            onChange={(event) =>
+              write({ ...draft, clauses: { ...draft.clauses, [level]: event.target.value } })
+            }
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * The parts an exercise of this type is made of, as they are READ.
  *
@@ -326,6 +413,9 @@ function FieldsRead({
                   <Badge variant={optional ? "outline" : "secondary"}>
                     {optional ? t("field.optional") : t("field.obligatory")}
                   </Badge>
+                  {field?.decided_by === "user" ? (
+                    <Badge variant="outline">{t("field.decidedBy.badge")}</Badge>
+                  ) : null}
                 </div>
                 <Written text={field?.description ?? ""} className="max-w-[80ch]" />
                 {values.length ? (
@@ -624,30 +714,14 @@ export function ProfileEditor() {
 
               {/* The ladder is shared and the criterion is the type's own: the rungs are
                   shown and NOT offered, which is what lets one level mean one thing across
-                  the whole list. The render-prop form is not decoration — the label has to
-                  reach the textarea, and `Field` only injects into a single element child. */}
+                  the whole list. What is written is what puts an exercise on each. */}
               {editing ? (
-                <Field label={t("modality.difficulty")}>
-                  {(props) => (
-                    <div>
-                      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                        {difficultyLevels.map((level) => (
-                          <Badge key={level} variant="outline">
-                            {level}
-                          </Badge>
-                        ))}
-                      </div>
-                      <Textarea
-                        {...props}
-                        autoGrow
-                        value={difficulty?.description ?? ""}
-                        placeholder={t("modality.difficulty.placeholder")}
-                        className="min-h-20"
-                        onChange={(event) => setDifficultyCriterion(event.target.value)}
-                      />
-                    </div>
-                  )}
-                </Field>
+                <DifficultyEdit
+                  key={activeKey}
+                  levels={difficultyLevels}
+                  description={difficulty?.description}
+                  onChange={setDifficultyCriterion}
+                />
               ) : (
                 <div className="space-y-1.5">
                   <Caption>{t("modality.difficulty")}</Caption>
@@ -764,8 +838,10 @@ export function ProfileEditor() {
 
           {/* Which fields enter the index is a decision about retrieval and not about the
               subject, and whoever prepares an instance has nothing to decide it with, so it
-              is not offered: what the profile brings is what the builder inferred.
-              `embed_fields` stays in the artifact and `toggleIndexed` still exists. */}
+              is not offered: what the profile brings is what the builder inferred, and
+              `embed_fields` stays in the artifact. The block came back for an hour on
+              2026-10-05 and the user took it out again on reading why the default is the
+              statement alone — measured, a solution in the index tags worse. */}
           {baseType(spec.fields[spec.primary_field]?.schema ?? {}) !== "string" ? (
             <Alert tone="attention" title={t("modality.primaryNotText")}>
               <p>
@@ -802,6 +878,8 @@ export function ProfileEditor() {
                     embed_fields: names.filter(
                       (field) => field === name || indexed.includes(field),
                     ),
+                    // The statement is the exercise itself and nobody chooses it beforehand.
+                    fields: { ...spec.fields, [name]: { ...spec.fields[name], decided_by: undefined } },
                   })
                 }
                 onMove={(direction) => moveField(name, direction)}

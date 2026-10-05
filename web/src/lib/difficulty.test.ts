@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { splitCriterion } from "./difficulty";
+import { joinCriterion, splitCriterion } from "./difficulty";
 
 const ES = ["basico", "intermedio", "avanzado"];
 
@@ -70,5 +70,42 @@ describe("splitCriterion", () => {
       "advanced",
     ]);
     expect(rungs.map((r) => r.level)).toEqual(["basic", "advanced"]);
+  });
+});
+
+describe("joinCriterion", () => {
+  it("writes the shape the prompt legislates, and reads it back", () => {
+    const text = joinCriterion("Cuánto pide", { basico: "uno", intermedio: "dos", avanzado: "tres" }, ES);
+    expect(text).toBe("Cuánto pide. «basico»: uno. «intermedio»: dos. «avanzado»: tres.");
+    const { lead, rungs } = splitCriterion(text, ES);
+    expect(lead).toBe("Cuánto pide");
+    expect(rungs.map((r) => r.text)).toEqual(["uno", "dos", "tres"]);
+  });
+
+  it("does not close twice a clause that is already closed", () => {
+    expect(joinCriterion("¿Cuánto pide?", { basico: "uno.", intermedio: "dos" }, ES)).toBe(
+      "¿Cuánto pide? «basico»: uno. «intermedio»: dos. «avanzado»:",
+    );
+  });
+
+  // One rung written is one mark, and `splitCriterion` needs two: every rung is opened so
+  // the one written comes back under its own name and not as part of the axis.
+  it("opens every rung as soon as one is written", () => {
+    const text = joinCriterion("Eje", { intermedio: "el caso corriente" }, ES);
+    const { lead, rungs } = splitCriterion(text, ES);
+    expect(lead).toBe("Eje");
+    expect(rungs).toEqual([{ level: "intermedio", text: "el caso corriente" }]);
+  });
+
+  it("leaves a criterion nobody split as it was while no rung is written", () => {
+    const text = "Grado de complejidad: basico (secuencial), intermedio (bucles).";
+    expect(joinCriterion(text, {}, ES)).toBe(text);
+    expect(joinCriterion("", { basico: "  " }, ES)).toBe("");
+  });
+
+  it("survives a round trip of the real criterion", () => {
+    const { lead, rungs } = splitCriterion(REAL, ES);
+    const clauses = Object.fromEntries(rungs.map((r) => [r.level, r.text]));
+    expect(splitCriterion(joinCriterion(lead, clauses, ES), ES)).toEqual({ lead, rungs });
   });
 });

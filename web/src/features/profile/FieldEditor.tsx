@@ -110,6 +110,18 @@ export function isNullable(schema: Record<string, any>): boolean {
   return typeAllowsNull(schema) || enumAllowsNull(schema);
 }
 
+/**
+ * Whether a field may be put in front of whoever commissions an exercise.
+ *
+ * Mirrors ExemplarsProfile._validate_decided_by: the primary field IS the item, and a list
+ * or a free object has no choice to offer.
+ */
+export function isDecidable(schema: Record<string, any>, isPrimary: boolean): boolean {
+  if (isPrimary) return false;
+  const type = baseType(schema);
+  return type !== "array" && type !== "object";
+}
+
 export function enumValues(schema: Record<string, any>): string[] {
   return (Array.isArray(schema.enum) ? schema.enum : [])
     .filter((value: unknown) => value !== null)
@@ -191,6 +203,15 @@ function TypePicker({
   );
 }
 
+/**
+ * A choice between two, drawn as the type picker draws its own.
+ *
+ * The chosen option is the ink border over the ink tint, as in `TypePicker`: the two
+ * controls stand in one block and say "this one" the same way. It was the sunk tint on a
+ * muted ground, and the two tokens are one value — the choice was told by the colour of
+ * its letters alone (user's request, 2026-10-05). `flex-1`, so the two options share the
+ * width of the column rather than bunching to the left of it.
+ */
 function Segmented({
   value,
   options,
@@ -205,16 +226,7 @@ function Segmented({
   title?: string;
 }) {
   return (
-    <div
-      title={title}
-      className={cn(
-        // `flex w-full` and not `inline-flex`: the ground already fills the container, so
-        // with the buttons bunched to the left the right half is grey and means nothing.
-        // With `flex-1` each option takes exactly its share.
-        "flex w-full items-center gap-1 rounded-lg bg-muted p-1",
-        disabled && "opacity-60",
-      )}
-    >
+    <div title={title} className="flex w-full items-center gap-1.5">
       {options.map((option) => (
         <button
           key={option.value}
@@ -223,11 +235,11 @@ function Segmented({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "flex-1 rounded-md px-3 py-1 text-small font-medium transition-colors",
+            "flex-1 rounded-lg border px-2.5 py-1.5 text-small font-medium transition-colors",
             value === option.value
-              ? "bg-sunk text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-            disabled && "cursor-not-allowed hover:text-muted-foreground",
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+            disabled && "cursor-default opacity-60 hover:bg-transparent hover:text-muted-foreground",
           )}
         >
           {option.label}
@@ -327,10 +339,21 @@ export function FieldEditor({
   const Icon = META[type].icon;
   const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, tr, name);
   const canBePrimary = type === "string";
+  const decidable = isDecidable(schema, isPrimary);
+  const decidedBy = spec.decided_by === "user" ? "user" : "model";
 
   const setSchema = (patch: Record<string, any>) =>
     onChange({ ...spec, schema: { ...schema, ...patch } });
-  const setType = (next: FieldType) => onChange({ ...spec, schema: rebuild(schema, next, nullable) });
+  // A type with no choice to offer takes the field back from whoever generates: the
+  // validator refuses the pair, and the control that would undo it is not drawn for it.
+  const setType = (next: FieldType) => {
+    const rebuilt = rebuild(schema, next, nullable);
+    onChange({
+      ...spec,
+      schema: rebuilt,
+      decided_by: isDecidable(rebuilt, isPrimary) ? spec.decided_by : undefined,
+    });
+  };
   const setNullable = (next: boolean) => onChange({ ...spec, schema: rebuild(schema, type, next) });
 
   const commitName = () => {
@@ -381,6 +404,11 @@ export function FieldEditor({
           <Badge variant={nullable ? "outline" : "secondary"} className="shrink-0">
             {nullable ? t("field.optional") : t("field.obligatory")}
           </Badge>
+          {decidedBy === "user" ? (
+            <Badge variant="outline" className="shrink-0">
+              {t("field.decidedBy.badge")}
+            </Badge>
+          ) : null}
           {!open && spec.description ? (
             <span className="min-w-0 truncate text-small text-muted-foreground">
               {spec.description}
@@ -445,55 +473,79 @@ export function FieldEditor({
 
       {open ? (
         <div className="animate-fade-in space-y-4 border-t border-border p-4">
-          {/* What it is called and what it is, in two columns and in that order, with
-              "Obligatoriedad" under the name: the type picker is seven buttons in two rows
-              plus its explanation, so the column beside it would be a text field over a
-              hand's width of nothing. The three questions about the FORM of a field are
-              together and the two columns end level.
+          {/* Four questions about the FORM of a field, in two rows of two: what it is called
+              beside what it is, and under them the two choices of one kind — whether it is
+              obligatory, and who gives it its value. They are ONE grid and not two columns,
+              so the second row starts at one height on both sides whatever the type picker
+              and its caption take (user's request, 2026-10-05: stacked in two columns,
+              "Quién lo decide" sat a line lower than "Obligatoriedad").
 
-              Neither "Longitud" nor "Rango" nor "Quién lo decide" is asked: all three are
-              the shape of the schema and not of the subject — a minimum and a maximum of
-              characters are a constraint nobody can set without measuring, and who decides a
-              field is a decision about the generate form. What the profile brings is kept in
-              the artifact and simply not asked about; the two notices below stay, because an
+              "Quién lo decide" is back (2026-10-05, explicit user request, after a month out
+              of the screen). It is the same control as "Obligatoriedad" at the same width,
+              and it is not drawn for a field with no choice to offer — the statement, a
+              list, a free object.
+
+              Neither "Longitud" nor "Rango" is asked: both are the shape of the schema and
+              not of the subject — a minimum and a maximum of characters are a constraint
+              nobody can set without measuring. What the profile brings is kept in the
+              artifact and simply not asked about; the two notices below stay, because an
               imported profile can carry an impossible range and it has to be visible. */}
-          <div className="grid gap-4 md:grid-cols-[16rem_1fr]">
-            <div className="space-y-4">
-              <Row
-                label={t("field.name.label")}
-                hint={t("field.name.hint")}
-                error={nameError}
-              >
-                <Input
-                  value={nameDraft}
-                  readOnly={locked}
-                  onChange={(event) => setNameDraft(event.target.value)}
-                  onBlur={commitName}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.currentTarget.blur();
-                    if (event.key === "Escape") setNameDraft(name);
-                  }}
-                  className={cn("font-mono", nameError && "border-destructive")}
-                />
-              </Row>
-
-              <Row label={t("field.required.label")} hint={t("field.required.hint")}>
-                <Segmented
-                  value={nullable ? "optional" : "required"}
-                  disabled={locked}
-                  title={locked ? t(lockedHint) : undefined}
-                  onChange={(next) => setNullable(next === "optional")}
-                  options={[
-                    { value: "required", label: t("field.required.required") },
-                    { value: "optional", label: t("field.required.optional") },
-                  ]}
-                />
-              </Row>
-            </div>
+          <div className="grid items-start gap-4 md:grid-cols-[16rem_1fr]">
+            <Row
+              label={t("field.name.label")}
+              hint={t("field.name.hint")}
+              error={nameError}
+            >
+              <Input
+                value={nameDraft}
+                readOnly={locked}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onBlur={commitName}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                  if (event.key === "Escape") setNameDraft(name);
+                }}
+                className={cn("font-mono", nameError && "border-destructive")}
+              />
+            </Row>
 
             <Row label={t("field.type.label")} description={t(META[type].captionKey)}>
               <TypePicker value={type} onChange={setType} disabled={locked} />
             </Row>
+
+            <Row label={t("field.required.label")} hint={t("field.required.hint")}>
+              <Segmented
+                value={nullable ? "optional" : "required"}
+                disabled={locked}
+                title={locked ? t(lockedHint) : undefined}
+                onChange={(next) => setNullable(next === "optional")}
+                options={[
+                  { value: "required", label: t("field.required.required") },
+                  { value: "optional", label: t("field.required.optional") },
+                ]}
+              />
+            </Row>
+
+            {decidable ? (
+              <Row
+                label={t("field.decidedBy.label")}
+                hint={t("field.decidedBy.hint")}
+                className="md:max-w-[16rem]"
+              >
+                <Segmented
+                  value={decidedBy}
+                  disabled={locked}
+                  title={locked ? t(lockedHint) : undefined}
+                  onChange={(next) =>
+                    onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
+                  }
+                  options={[
+                    { value: "model", label: t("field.decidedBy.model") },
+                    { value: "user", label: t("field.decidedBy.user") },
+                  ]}
+                />
+              </Row>
+            ) : null}
           </div>
 
           {lengthInvalid ? (
@@ -587,7 +639,6 @@ export function FieldEditor({
               className="min-h-16"
             />
           </Row>
-
         </div>
       ) : null}
     </div>
