@@ -59,7 +59,7 @@ export function BuildButton({ stage, className }: { stage: StageState; className
   const waiting = isQueued(own?.job) ? own!.job! : null;
   const wait = waitOf(waiting, lanes);
   const queueNote = prospectNote(lanes, split, pipeline.data?.queue_length ?? 0, tr) ?? "";
-  const stageName = artifactName(stage.artifact, t, stage.label).toLowerCase();
+  const stageName = artifactName(stage.artifact, t, stage.label);
 
   // Stale for its documents, and only for them: a stage stale because the step above
   // changed is closed again by continuing, and nothing here rebuilds it.

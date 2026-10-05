@@ -289,7 +289,7 @@ export const en: Catalogue = {
   "adminEvaluation.tests.title": "Testing phase",
   "adminEvaluation.tests.description": "The blind comparisons: two proposals per commission — the system's and a drawn alternative's — judged without knowing which is whose. The filter above narrows the cards and the CSV.",
   "adminEvaluation.build.title": "Construction phase",
-  "adminEvaluation.build.description": "The forms that close each step: what each person answered about the exercise types, the syllabus and the tagging in front of them. Same filter, its own CSV.",
+  "adminEvaluation.build.description": "The forms that close each step: what each person answered about the exercise types, the syllabus and the exercise bank in front of them. Same filter, its own CSV.",
   "adminEvaluation.stages.empty": "Nobody has answered any step's form yet. It appears at the foot of every step of the construction phase, and as soon as somebody answers it will show here.",
   "adminEvaluation.stages.filteredEmpty": "There are answered forms, but none matches this filter. Clear it to see them all.",
   "adminEvaluation.stages.unreadable": "The forms could not be read",

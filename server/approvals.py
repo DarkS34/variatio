@@ -76,8 +76,8 @@ _RAW_WORDS = {"corpus": "los apuntes", "exemplars": "los ejercicios"}
 # one place the server names a stage says what every screen says.
 LABELS = {
     EXEMPLARS_PROFILE: "Tipos de ejercicio",
-    KNOWLEDGE_GRAPH: "El temario",
-    EXEMPLARS_BANK: "Etiquetado",
+    KNOWLEDGE_GRAPH: "Temario",
+    EXEMPLARS_BANK: "Banco de ejercicios",
 }
 
 STALE_ACTION = {
@@ -446,7 +446,7 @@ class Approvals:
                         "artifact": upstream,
                         "label": LABELS[upstream],
                         "reason": STALE_ACTION.get(
-                            (artifact, upstream), f"{LABELS[upstream]} cambió."
+                            (artifact, upstream), f"«{LABELS[upstream]}» cambió."
                         ),
                     }
                 )

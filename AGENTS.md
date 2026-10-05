@@ -876,9 +876,12 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the line under the header, measured, never a fixed breakpoint. The current pill is scrolled
   into sight. There is **no dashboard**: `/` redirects to the current step.
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
-- Vocabulary seen by teachers: «Apuntes y ejercicios», «Tipos de ejercicio», «El temario»
-  (the step; «concepto» for a node; «grafo» only for the structure), «Etiquetado», «leer»,
-  «sirve de etiqueta», «asignatura» for a workspace, «ejercicio(s) generado(s)» for output.
+- Vocabulary seen by teachers: «Apuntes y ejercicios», «Tipos de ejercicio», «Temario»
+  (the step, with no article; «concepto» for a node; «grafo» only for the structure), «Banco
+  de ejercicios» (the step), «leer», «sirve de etiqueta», «asignatura» for a workspace,
+  «ejercicio(s) generado(s)» for output. Steps 3 and 4 were «El temario» and «Etiquetado»
+  until 2026-10-05 (user's request). A sentence that takes a step's name quotes it («…»)
+  and never lowercases it: the names carry no article to lean on.
   Identifiers, routes and keys keep their names. The app never narrates itself in the first
   person; the reader's own answers may be first person.
 - Every URL path and guide slug is English.

@@ -311,7 +311,7 @@ export const es = {
   "adminEvaluation.tests.title": "Fase de pruebas",
   "adminEvaluation.tests.description": "Las comparaciones a ciegas: dos propuestas por encargo —la del sistema y una alternativa sorteada—, juzgadas sin saber cuál es de quién. El filtro de arriba acota las tarjetas y el CSV.",
   "adminEvaluation.build.title": "Fase de construcción",
-  "adminEvaluation.build.description": "Los formularios que cierran cada paso: lo que contestó cada persona sobre los tipos de ejercicio, el temario y el etiquetado que tenía delante. Mismo filtro, su propio CSV.",
+  "adminEvaluation.build.description": "Los formularios que cierran cada paso: lo que contestó cada persona sobre los tipos de ejercicio, el temario y el banco de ejercicios que tenía delante. Mismo filtro, su propio CSV.",
   "adminEvaluation.stages.empty": "Nadie ha contestado todavía el formulario de ningún paso. Aparece al pie de cada paso de la fase de construcción, y en cuanto alguien lo conteste se verá aquí.",
   "adminEvaluation.stages.filteredEmpty": "Hay formularios contestados, pero ninguno encaja con este filtro. Quítalo para verlos todos.",
   "adminEvaluation.stages.unreadable": "No se han podido leer los formularios",

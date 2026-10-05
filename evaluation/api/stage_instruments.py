@@ -168,7 +168,7 @@ QUESTIONS: dict[str, tuple[dict, ...]] = {
             "statement": "Están todos los ejercicios de mis documentos.",
             "hint": "Que falte un documento entero pesa mucho más que que falte alguno suelto.",
         },
-        # FUNCTION. The step is called "Etiquetado": this is the statement it is named after.
+        # FUNCTION. The step tags every exercise of the bank: this is the statement about that.
         {
             "key": "function",
             "axis": "function",

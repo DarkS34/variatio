@@ -201,8 +201,8 @@ export const es = {
   // the architecture and says nothing to somebody opening this for the first time. One
   // table, so the vocabulary is the same on the bar, in the notices and on every screen.
   "artifact.profile": "Tipos de ejercicio",
-  "artifact.graph": "El temario",
-  "artifact.bank": "Etiquetado",
+  "artifact.graph": "Temario",
+  "artifact.bank": "Banco de ejercicios",
   "job.build_profile.label": "Detectar los tipos de ejercicio",
   "job.build_kg.label": "Construir el grafo de conocimiento",
   "job.build_bank.label": "Extraer el banco de ejemplos",
@@ -284,8 +284,8 @@ export const es = {
   // perfectly well what the types of exercise they set are.
   "nav.step.raw": "Apuntes y ejercicios",
   "nav.step.profile": "Tipos de ejercicio",
-  "nav.step.graph": "El temario",
-  "nav.step.bank": "Etiquetado",
+  "nav.step.graph": "Temario",
+  "nav.step.bank": "Banco de ejercicios",
   // Under the name, in one line: where you are. It is what turns four destinations into a
   // path with one obvious next step.
   "nav.state.done": "Hecho",
@@ -454,7 +454,7 @@ export const es = {
   "stage.what.profile.more": { one: "1 más", other: "{n} más" },
   "stage.what.profile.why":
     "Aquí abajo tienes la descripción y las reglas de redacción de cada uno: revísalas y, si lo crees necesario, corrige lo que consideres.",
-  // Step 3 is "el temario" and what comes out of it are "conceptos": what is analysed is
+  // Step 3 is "Temario" and what comes out of it are "conceptos": what is analysed is
   // the syllabus, what is extracted and shown row by row are its concepts. "Tema" is out of
   // the product's vocabulary, and "grafo" names only the structure — levels, cycles, the
   // drawing — never the step.
@@ -473,15 +473,15 @@ export const es = {
   "stage.blocked": "Bloqueado",
   "stage.rawMissing": "Faltan los datos de partida",
   "stage.import": "Importar",
-  "stage.rawMissingBody": "«{slot}» no tiene ningún documento, y es la materia prima de {stage}. Súbelos en «Apuntes y ejercicios» y vuelve aquí.",
+  "stage.rawMissingBody": "«{slot}» no tiene ningún documento, y es la materia prima de «{stage}». Súbelos en «Apuntes y ejercicios» y vuelve aquí.",
   "stage.queued": "En cola",
-  "stage.queuedBody": "{label} está esperando su turno; todavía no ha empezado.{reason} Puedes cancelarlo desde el registro de ejecución sin que nada se haya tocado.",
+  "stage.queuedBody": "«{label}» está esperando su turno; todavía no ha empezado.{reason} Puedes cancelarlo desde el registro de ejecución sin que nada se haya tocado.",
   "stage.buildingFirst": "Construyendo por primera vez",
-  "stage.buildingFirstBody": "{label} no existe todavía: no hay nada que reemplazar ni nada que perder. Si cancelas, la etapa se queda sin construir y puedes volver a lanzarla.",
+  "stage.buildingFirstBody": "«{label}» no existe todavía: no hay nada que reemplazar ni nada que perder. Si cancelas, la etapa se queda sin construir y puedes volver a lanzarla.",
   "stage.rebuilding": "Construyendo una versión nueva",
-  "stage.rebuildingBody": "{label} deja de mostrarse mientras dura la construcción. El que hay ahora sigue guardado: si cancelas, vuelve tal cual. Solo se reemplaza cuando el nuevo termina.",
+  "stage.rebuildingBody": "«{label}» deja de mostrarse mientras dura la construcción. El que hay ahora sigue guardado: si cancelas, vuelve tal cual. Solo se reemplaza cuando el nuevo termina.",
   "stage.patching": "Trabajando sobre lo que ya hay",
-  "stage.patchingBody": "{label} deja de mostrarse mientras dura el trabajo, porque el fichero se está reescribiendo. Nada se descarta: lo ya decidido queda guardado sobre la marcha, así que cancelar detiene lo que falta y no deshace lo hecho.",
+  "stage.patchingBody": "«{label}» deja de mostrarse mientras dura el trabajo, porque el fichero se está reescribiendo. Nada se descarta: lo ya decidido queda guardado sobre la marcha, así que cancelar detiene lo que falta y no deshace lo hecho.",
   "stage.loading": "Cargando estado de la cadena…",
   "route.notFound": "Esa página no existe",
   "route.backToPanel": "Volver al panel",
@@ -490,8 +490,8 @@ export const es = {
   "build.rawMissing": "Faltan documentos en «{slot}»: súbelos en «Apuntes y ejercicios» antes de construir.",
   "build.transcribing": "Se están leyendo los documentos de «{slot}»: espera a que termine para construir.",
   "build.sending": "Enviando…",
-  "build.alreadyQueued": "{label} ya está en cola.{reason}",
-  "build.create": "Construye {stage} a partir de tus apuntes y ejercicios.{note}",
+  "build.alreadyQueued": "«{label}» ya está en cola.{reason}",
+  "build.create": "Construye «{stage}» a partir de tus apuntes y ejercicios.{note}",
   // The build button, big and in the middle of the empty screen: it is the only thing to do
   // on an unbuilt step. One name for the four steps, and no rebuild is offered — a second
   // pass over the same documents gives nothing different.
@@ -500,7 +500,7 @@ export const es = {
   // reads to make it, since the four do not read the same one. The closing sentence about
   // how long it takes is shared, which is why this is two keys.
   "build.callTitle": "Este paso todavía no está construido",
-  "build.callBody": "Se construye {label} leyendo tus apuntes y ejercicios. Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
+  "build.callBody": "Se construye «{label}» leyendo tus apuntes y ejercicios. Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
   "build.call.profile.title": "Todavía no hay una clasificación de tus tipos de ejercicio",
   "build.call.profile.body": "Al construir, el sistema lee los ejercicios que has subido y los agrupa por tipo, con la descripción y las reglas de redacción de cada uno.",
   "build.call.graph.title": "Todavía no hay un temario extraído de tus apuntes",
@@ -509,8 +509,8 @@ export const es = {
   "build.call.bank.body": "Al construir, el sistema recoge uno a uno los ejercicios de tus documentos y le pone a cada uno los conceptos del temario que practica.",
   "build.callTakesTime": "Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
   "build.rebuild": "Volver a construir",
-  "build.rebuildTip": "Vuelve a construir {stage} con los documentos que hay ahora.{note}",
-  "build.rebuildTitle": "¿Volver a construir {stage}?",
+  "build.rebuildTip": "Vuelve a construir «{stage}» con los documentos que hay ahora.{note}",
+  "build.rebuildTitle": "¿Volver a construir «{stage}»?",
   "build.rebuildBody": "Se lee otra vez todo lo que hay en «{slot}» y el resultado sustituye al actual. Las correcciones hechas a mano en este paso se pierden; la versión actual queda en el historial.",
   "build.failed": "No se ha podido lanzar: {error}",
   "stage.staleRaw": "Desde que se construyó han cambiado los documentos de «{slot}»:",
@@ -1259,7 +1259,7 @@ export const es = {
   "kg.newConcept": "Nuevo concepto",
   "kg.newConcept.description": "Se añadirá al temario y podrá usarse ya para clasificar y para pedir ejercicios.",
   "kg.editError": "Error al editar el temario",
-  // No prefix: the count already says "conceptos" and the title above says "El temario", so
+  // No prefix: the count already says "conceptos" and the title above says "Temario", so
   // "Conceptos · 162 conceptos" is the same word twice on one line.
   "kg.outlineHeader": "{concepts} · {taggable} se usan para etiquetar los ejercicios que has subido",
   "kg.outlineCovered": "{covered} con ejemplo",
@@ -1867,8 +1867,8 @@ export const es = {
   // something else is a guide about another program.
   "guide.sec.raw": "Paso 1 · Apuntes y ejercicios",
   "guide.sec.profile": "Paso 2 · Tipos de ejercicio",
-  "guide.sec.graph": "Paso 3 · El temario",
-  "guide.sec.bank": "Paso 4 · Etiquetado",
+  "guide.sec.graph": "Paso 3 · Temario",
+  "guide.sec.bank": "Paso 4 · Banco de ejercicios",
   "guide.sec.generate": "Generar ejercicios",
   "guide.sec.evaluate": "Evaluar el sistema",
   "guide.sec.tutor": "Tutor socrático",

@@ -458,7 +458,7 @@ export function StageGate({
           >
             {t("stage.rawMissingBody", {
               slot: slotLabelOf(rawMissing, t)!,
-              stage: artifactName(stage.artifact, t, stage.label).toLowerCase(),
+              stage: artifactName(stage.artifact, t, stage.label),
             })}
           </EmptyState>
         ) : null}
