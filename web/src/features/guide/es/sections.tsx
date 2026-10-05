@@ -911,6 +911,10 @@ function Graph() {
           títulos («Tema 1», «Tema 2»…) y, donde no hay numeración, pone antes lo que hace
           falta saber para lo que viene después. Si una unidad queda fuera de su sitio, su
           menú la sube o la baja mientras corriges.
+          Sobre la lista se lee cuántos conceptos hay y cuántos sirven de etiqueta. Cuando tus
+          ejercicios ya están recogidos, la misma línea dice cuántos de esos conceptos tienen
+          algún ejercicio de ejemplo: un ejercicio nuevo sobre un concepto sin ejemplo se
+          escribe sin nada que imitar.
           Ábrelas, o busca y se abren solas las que tengan resultados. Cada fila lleva el concepto
           y si <strong>{t("kg.taggable").toLowerCase()}</strong> —«{t("common.yes")}» o «
           {t("common.no")}»—; al pulsarla se abre su ficha <em>al lado de la lista</em>, con su
@@ -1096,7 +1100,7 @@ function Bank() {
         </p>
       </Alert>
 
-      <Block title="La tira de medidores dice dos cosas distintas">
+      <Block title="El medidor cuenta ejercicios sin concepto">
         <Rows
           items={[
             {
@@ -1104,17 +1108,13 @@ function Bank() {
               head: t("bank.taggedItems"),
               body: "Cuántos de tus ejercicios llevan al menos un concepto. Es el trabajo de corrección que queda por delante. Sólo aparece mientras falte alguno: con todos etiquetados no hay nada que mirar ahí.",
             },
-            {
-              key: "cobertura",
-              head: t("bank.conceptsWithExample"),
-              body: t("bank.coverageBody"),
-            },
           ]}
         />
         <Paragraph>
-          Los dos miran en direcciones opuestas y conviene no confundirlos: uno cuenta{" "}
-          <em>ejercicios sin concepto</em>, el otro <em>conceptos sin ejercicio</em>. Se puede tenerlo
-          todo etiquetado y medio temario sin un solo ejemplo que imitar.
+          La cuenta contraria, los <em>conceptos sin ejercicio</em>, es un dato del temario y se
+          lee en el Paso {stepNumberOf("knowledge_graph")}, sobre la lista de conceptos. Conviene
+          no confundir las dos: se puede tenerlo todo etiquetado y medio temario sin un solo
+          ejemplo que imitar.
         </Paragraph>
       </Block>
 
@@ -1122,7 +1122,7 @@ function Bank() {
         <Steps
           items={[
             <>
-              Primero, los que <strong>se quedaron sin concepto</strong>. La tira de medidores de
+              Primero, los que <strong>se quedaron sin concepto</strong>. El medidor de
               arriba los cuenta y «{t("bank.seeUntagged", { n: "N" })}» los filtra.
             </>,
             <>
@@ -1152,7 +1152,7 @@ function Bank() {
             {
               key: "pendientes",
               head: <>«{t("bank.retagUntagged", { n: "N" })}»</>,
-              body: "Se lanza sobre exactamente los ejercicios que se quedaron sin concepto, nunca sobre todos. Está en la tira de medidores, al lado del número sobre el que actúa.",
+              body: "Se lanza sobre exactamente los ejercicios que se quedaron sin concepto, nunca sobre todos. Está al lado del medidor, junto al número sobre el que actúa.",
             },
             {
               key: "todo",

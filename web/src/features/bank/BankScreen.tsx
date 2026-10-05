@@ -38,14 +38,12 @@ import type {
   BankItem,
   BankItemType,
   BankListing,
-  Coverage,
   KgConcept,
   StageState,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   useActiveWorkspace,
-  useCoverage,
   useEngineOffline,
   useInvalidateChain,
   useJobRun,
@@ -568,14 +566,12 @@ function Pager({
 
 function BankMeters({
   listing,
-  coverage,
   offline,
   submitting,
   onRetag,
   onShowUntagged,
 }: {
   listing: BankListing | undefined;
-  coverage: Coverage | undefined;
   offline: string | null;
   submitting: boolean;
   onRetag: (params: Record<string, unknown>) => void;
@@ -585,12 +581,34 @@ function BankMeters({
   const confirm = useConfirm();
   const locked = useStageLocked();
   const lockedHint = useStageLockedHint();
+  const reviewing = useStageLockReason() === "reviewing";
 
   if (!listing) return <Skeleton className="h-24" />;
 
   const { items, tagged, untagged } = listing.totals;
   const busy = locked || submitting || Boolean(offline);
   const why = locked ? t(lockedHint) : offline;
+
+  const retagAll = (variant: "ghost" | "outline") => (
+    <Button
+      size="sm"
+      variant={variant}
+      disabled={busy}
+      title={why ?? plural("bank.retagAllHint", items)}
+      onClick={async () => {
+        if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
+          onRetag({ all: true });
+      }}
+    >
+      {t("bank.retagAll")}
+    </Button>
+  );
+
+  // The meter is drawn only while an exercise lacks a concept. With every exercise tagged
+  // there is no card: nothing while the stage is looked at, and the one control left while
+  // it is corrected, which alone in a block read as a block with its content missing.
+  if (untagged === 0 && items > 0)
+    return reviewing ? null : <div className="flex justify-end">{retagAll("outline")}</div>;
 
   return (
     <Card className="flex flex-col divide-y divide-border lg:flex-row lg:divide-x lg:divide-y-0">
@@ -619,21 +637,6 @@ function BankMeters({
         </div>
       ) : null}
 
-      <div className="flex-[1.2] space-y-2 p-4">
-        <div className="flex items-baseline justify-between gap-2 text-body">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            {t("bank.conceptsWithExample")}
-            <InfoHint label={t("bank.coverageHint")}>{t("bank.coverageBody")}</InfoHint>
-          </span>
-          <span className="nums font-medium">
-            {coverage ? `${coverage.covered}/${coverage.total}` : "—"}
-          </span>
-        </div>
-        {/* The heading IS the line that used to sit under it: a title and a caption saying
-            the same thing twice, where the lower one said it better. */}
-        <Progress value={coverage?.covered ?? 0} max={coverage?.total ?? null} tone="settled" />
-      </div>
-
       {/* The two global re-tag controls are CORRECTION, and they disappear entirely while
           the stage is being looked at: they are the only two things on this strip that
           WRITE. Nothing they say is lost by hiding them — how many exercises have no concept
@@ -655,20 +658,7 @@ function BankMeters({
                 {plural("bank.retagUntagged", untagged)}
               </Button>
             ) : null}
-            {items > 0 ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                title={why ?? plural("bank.retagAllHint", items)}
-                onClick={async () => {
-                  if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
-                    onRetag({ all: true });
-                }}
-              >
-                {t("bank.retagAll")}
-              </Button>
-            ) : null}
+            {items > 0 ? retagAll("ghost") : null}
           </div>
           {/* The retrieval thresholds are not drawn: they are read here and changed in
               "Configuración", and whoever prepares a subject decides nothing with them. They
@@ -730,7 +720,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
   const confirm = useConfirm();
   const kg = useKg();
-  const coverage = useCoverage();
   const submit = useSubmitJob();
   const invalidate = useInvalidateChain();
   const offline = useEngineOffline();
@@ -861,7 +850,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
       <div className="space-y-4">
         <BankMeters
           listing={listing}
-          coverage={coverage.data}
           offline={offline}
           submitting={submit.isPending}
           onRetag={(params) => submit.mutate({ kind: "tag", params })}
@@ -1080,7 +1068,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
           onSaved={() => {
             invalidate();
             bank.refetch();
-            coverage.refetch();
           }}
         />
       ) : null}

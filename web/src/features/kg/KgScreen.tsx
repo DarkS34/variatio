@@ -25,6 +25,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog, PromptDialog } from "@/components/ui/prompt";
 import { Field } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/hint";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, LoadError, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
@@ -33,6 +34,7 @@ import { relationColour } from "@/lib/format";
 import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
+  useCoverage,
   useEngineOffline,
   useInvalidateChain,
   useJobPhases,
@@ -434,6 +436,9 @@ function GraphExplorer() {
   const locked = useStageLocked();
   const kg = useKg();
   const graph = useKgGraph();
+  // How many concepts the bank's tags reach. A subject with no bank yet answers 404, and
+  // then the header says nothing about examples.
+  const coverage = useCoverage();
   // The workspace's own curriculum, read only to be drawn. `undefined` while it is loading
   // and when the workspace has none, because an empty set means "covered nothing yet",
   // which is a different statement and would dim the whole graph.
@@ -532,6 +537,7 @@ function GraphExplorer() {
   if (!kg.data || !graph.data) return null;
 
   const totals = kg.data.totals;
+  const covered = typeof coverage.data?.covered === "number" ? coverage.data.covered : null;
 
   const canvas = (compact: boolean) => (
     <GraphCanvas
@@ -582,13 +588,23 @@ function GraphExplorer() {
       >
         <Card className="flex max-h-[clamp(32rem,74vh,60rem)] min-h-0 min-w-0 flex-col overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 px-5 pb-3 pt-4">
-            <span className="text-micro font-condensed uppercase text-muted-foreground">
+            {/* The line takes the width the controls leave and breaks inside itself: at its
+                full length it sent the search to a line of its own. */}
+            <span className="min-w-64 flex-1 basis-0 text-micro font-condensed uppercase text-muted-foreground">
               {t("kg.outlineHeader", {
                 concepts: plural("outline.conceptCount", totals.concepts),
                 taggable: totals.taggable,
               })}
+              {covered === null ? null : (
+                <>
+                  {" · "}
+                  {t("kg.outlineCovered", { covered })}{" "}
+                  <InfoHint label={t("kg.coverageHint")} className="align-text-bottom">
+                    {t("kg.coverageBody")}
+                  </InfoHint>
+                </>
+              )}
             </span>
-            <span className="flex-1" />
             <div className="relative min-w-56 flex-1 sm:flex-none">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input

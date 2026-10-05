@@ -921,7 +921,10 @@ function Graph() {
           sets that order: it follows the numbering of your documents and of their headings
           ("Topic 1", "Topic 2"…) and, where there is none, puts first what has to be known for
           what comes later; when a unit is out of place, its menu moves it up or down while
-          you are correcting. Open them, or
+          you are correcting. The line over the list says how many concepts there are and how
+          many work as a label. Once your exercises are collected, the same line says how many
+          of those concepts have an example exercise: a new exercise on a concept with no
+          example is written with nothing to imitate. Open them, or
           search and the ones with results open on their own. Every row carries the concept and
           whether it <strong>{t("kg.taggable").toLowerCase()}</strong> — "{t("common.yes")}" or "
           {t("common.no")}"; clicking it opens its card <em>beside the list</em>, with its unit,
@@ -1109,7 +1112,7 @@ function Bank() {
         </p>
       </Alert>
 
-      <Block title="The strip of meters says two different things">
+      <Block title="The meter counts exercises with no concept">
         <Rows
           items={[
             {
@@ -1117,17 +1120,13 @@ function Bank() {
               head: t("bank.taggedItems"),
               body: "How many of your exercises carry at least one concept. It is the correcting still ahead of you. It is only drawn while some are missing: with everything tagged there is nothing to look at there.",
             },
-            {
-              key: "cobertura",
-              head: t("bank.conceptsWithExample"),
-              body: t("bank.coverageBody"),
-            },
           ]}
         />
         <Paragraph>
-          The two look in opposite directions and are worth keeping apart: one counts{" "}
-          <em>exercises with no concept</em>, the other <em>concepts with no exercise</em>.
-          Everything can be tagged while half the syllabus has not a single example to imitate.
+          The opposite count, <em>concepts with no exercise</em>, is a fact about the syllabus
+          and is read on Step {stepNumberOf("knowledge_graph")}, over the list of concepts. The
+          two are worth keeping apart: everything can be tagged while half the syllabus has not
+          a single example to imitate.
         </Paragraph>
       </Block>
 
@@ -1135,7 +1134,7 @@ function Bank() {
         <Steps
           items={[
             <>
-              First, the ones <strong>left with no concept</strong>. The strip of meters at the
+              First, the ones <strong>left with no concept</strong>. The meter at the
               top counts them and "{t("bank.seeUntagged", { n: "N" })}" filters them.
             </>,
             <>
@@ -1166,7 +1165,7 @@ function Bank() {
             {
               key: "pendientes",
               head: <>"{t("bank.retagUntagged", { n: "N" })}"</>,
-              body: "It runs over exactly the exercises left with no concept, never over all of them. It sits in the strip of meters, next to the number it acts on.",
+              body: "It runs over exactly the exercises left with no concept, never over all of them. It sits beside the meter, next to the number it acts on.",
             },
             {
               key: "todo",

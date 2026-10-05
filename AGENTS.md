@@ -945,6 +945,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   out as syllabus-ordered regions, relaxes concepts in a worker (Barnes-Hut, deterministic),
   caches layouts per structure, and picks detail by on-screen distance. Units open collapsed;
   the per-row «sirve de etiqueta» switch is the only place it is set and never moves the row.
+  The line over the list counts the concepts, the ones that work as a label and, once a bank
+  exists, the ones with an exemplar (`/api/bank/coverage`, «N con ejemplo» with its (i)): it
+  is a fact about the graph, so the bank's screen draws no coverage (user's request,
+  2026-10-05).
 - Bank: seven rows a page, every collapsed row the same height, bounded cells, `table-fixed`,
   filters (search, modality, source, level, «Sin concepto»), no ordering control, no
   similarity scores, primary concept as a filled badge placed first. `ConceptBadge`/

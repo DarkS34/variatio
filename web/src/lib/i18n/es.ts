@@ -829,9 +829,6 @@ export const es = {
   "bank.retagAll": "Re-etiquetar todo",
   "bank.retagAllHint": { one: "Vuelve a etiquetar el único ejercicio del banco desde cero", other: "Vuelve a etiquetar los {n} ejercicios del banco desde cero" },
   "bank.confirmRetagAll": { one: "Re-etiquetar todo vuelve a pasar el etiquetador por el único ejercicio del banco y sobrescribe sus etiquetas actuales, incluidas las corregidas a mano. ¿Continuar?", other: "Re-etiquetar todo vuelve a pasar el etiquetador por los {n} ejercicios del banco y sobrescribe las etiquetas actuales, incluidas las corregidas a mano. ¿Continuar?" },
-  "bank.coverageHint": "Qué mide la cobertura",
-  "bank.coverageBody": "Cuántos conceptos que sirven de etiqueta tienen al menos un ejercicio tuyo. Los que no lo tienen se escriben sin ningún ejemplo que imitar, y se nota.",
-  "bank.conceptsWithExample": "Conceptos con ejemplo",
   "bank.emptyBank": "El banco no tiene ningún ejercicio",
   "bank.search": "Buscar en el enunciado o por id…",
   "bank.filterByModality": "Filtrar por tipo",
@@ -1265,6 +1262,9 @@ export const es = {
   // No prefix: the count already says "conceptos" and the title above says "El temario", so
   // "Conceptos · 162 conceptos" is the same word twice on one line.
   "kg.outlineHeader": "{concepts} · {taggable} se usan para etiquetar los ejercicios que has subido",
+  "kg.outlineCovered": "{covered} con ejemplo",
+  "kg.coverageHint": "Qué cuenta «con ejemplo»",
+  "kg.coverageBody": "Cuenta los conceptos que sirven de etiqueta y tienen al menos un ejercicio tuyo. Un ejercicio nuevo sobre un concepto sin ejemplo se escribe sin nada que imitar, y se nota.",
   "kg.search": "Buscar concepto",
   "kg.searchPlaceholder": "Buscar concepto",
   "kg.newUnitTitle": "Nueva unidad",
