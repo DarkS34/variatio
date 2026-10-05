@@ -394,8 +394,13 @@ def segment_syllabus_prompt(outline_block: str) -> str:
     The answer is `units`, each with a `name` and the `opens_at` line number of the heading
     that opens it — between 3 and 12 of them, since more than that is splitting by section
     rather than by unit. Everything from one opening heading to the next belongs to that
-    unit, which is why only the start is asked for. The outline arrives in the material's own
-    order and the result is sorted by `opens_at`, so any reordering attempted is discarded.
+    unit, which is why only the start is asked for.
+
+    The ORDER of the list is asked for too, between finding the units and naming them: the
+    order they are taught in. The outline arrives in the order the documents were read, which
+    is their names' — and «Copia de Tema 4» sorts before «Tema 1», so on one real corpus the
+    syllabus opened on arrays and closed on the basic elements. The numbering leads, the
+    logic of the subject follows, and in doubt the outline's own order stays.
     """
     return f"""\
 Se te da el ÍNDICE de un corpus de material docente de una sola asignatura: todos sus encabezados, en el orden exacto en que aparecen en el material y numerados desde 1.
@@ -408,9 +413,17 @@ Tu tarea: decir qué encabezados ABREN una UNIDAD DIDÁCTICA — un tema, un mó
 - POCAS: entre 3 y 12 en total. Si estás nombrando más de una docena, estás partiendo por apartados y no por temas.
 - La portada, el índice, la bibliografía, los agradecimientos, los anexos y las notas de la asignatura NO abren unidad.
 
-# EL ORDEN ES EL QUE SE TE DA
-- El índice ya viene en el orden del material, que es el orden en que se imparte. NO lo reordenes, no lo reorganices por dificultad y no lo agrupes por afinidad temática. Tu salida se ordena por `opens_at`, así que cualquier reordenación que intentes se descarta.
-- Todo lo que va desde el encabezado que abre una unidad hasta el que abre la siguiente PERTENECE a esa unidad. Por eso solo hace falta decir dónde empieza cada una.
+# DÓNDE EMPIEZA CADA UNA
+- Todo lo que va desde el encabezado que abre una unidad hasta el siguiente encabezado del índice que abre otra PERTENECE a esa unidad. Por eso solo hace falta decir dónde empieza cada una.
+
+# ORDENA LAS UNIDADES COMO SE IMPARTEN
+Cuando ya sepas qué unidades hay, ORDÉNALAS: escribe la lista `units` en el orden en que el temario se imparte, de la primera unidad a la última.
+- El índice viene en el orden en que se leyeron los documentos, que es el orden alfabético de sus nombres. Casi siempre coincide con el orden del temario, pero no siempre: un nombre con un prefijo («Copia de Tema 4»), sin número o numerado de otra forma deja su documento fuera de su sitio.
+- LA NUMERACIÓN MANDA. Si los encabezados o los nombres de los documentos (entre paréntesis al final de cada línea, cuando hay más de un documento) llevan un ordinal —«Tema 1», «Tema2», «Bloque 10», «Unidad III»—, ordena por él, aunque el índice traiga las unidades en otro orden.
+- SIN NUMERACIÓN, EL ORDEN LÓGICO DE LA MATERIA: va antes lo que hay que saber para entender lo que viene después. Los fundamentos y las introducciones abren el temario; lo que se apoya en ellos va detrás.
+- Una unidad que complementa, amplía o ejercita otra va justo detrás de ella.
+- ANTE LA DUDA, EL ORDEN DEL ÍNDICE. No reordenes por gusto, por dificultad ni por afinidad temática: dos unidades de un mismo documento conservan el orden en que el documento las trae, y solo una numeración o una dependencia clara justifican mover una unidad.
+- Reordenar la lista NO cambia `opens_at`: cada unidad conserva el número del encabezado que la abre en el índice.
 
 # NOMBRES
 - El nombre de la unidad puede ser el propio encabezado, limpio: sin el ordinal, sin dos puntos ni guiones sueltos al final. Si el encabezado no dice de qué trata, escribe tú un nombre corto y descriptivo, EN EL MISMO IDIOMA que el índice.
@@ -423,6 +436,7 @@ Un único objeto JSON exactamente con esta forma:
   "units": [{{"name": "<nombre de la unidad>", "opens_at": <número de línea del índice>}}, "..."]
 }}
 - `opens_at` es el NÚMERO que lleva delante el encabezado en el índice de abajo. No inventes números y no escribas el encabezado en su lugar.
+- El orden de la lista `units` es el orden en que se imparten las unidades.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
 
 # ÍNDICE DEL CORPUS
@@ -439,10 +453,12 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
     concept — a syllabus's units cannot be named from a sample — and answers `domains`, a
     handful of strings with no catch-all among them, that name being the leftovers pass's
     own sentinel. `documents_block` offers the corpus's document titles as a starting point,
-    because teaching material is already organised by topic.
+    because teaching material is already organised by topic. The order of `domains` is asked
+    for as well — the order the blocks are taught in — and it is the order the artifact keeps.
     """
     sources_block = ""
     sources_rule = ""
+    order_rule = ""
     if documents_block:
         sources_block = (
             "\n# LOS DOCUMENTOS DE LOS QUE SE COMPONE EL CORPUS\n"
@@ -461,6 +477,11 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
             "parte un documento que cubra varios bloques, reescribe un título que describa un "
             "documento en vez de un tema, e ignora cualquier título que no nombre tema alguno."
         )
+        order_rule = (
+            "\n- LA NUMERACIÓN MANDA: los documentos se listan arriba en el orden alfabético de "
+            "sus nombres, que casi siempre es el del temario. Si sus títulos llevan un ordinal "
+            "(«Tema 1», «Bloque 10», «Unidad III»), los dominios siguen ese ordinal."
+        )
 
     return f"""\
 Se te dan los CONCEPTOS ya limpios de un grafo de conocimiento. Proceden de un solo corpus de material docente de una asignatura.
@@ -473,6 +494,11 @@ Tu tarea: NOMBRA los DOMINIOS temáticos de los que se compone la materia. NO es
 - ENTRE TODOS DEBEN CUBRIR LA LISTA ENTERA: léela hasta el final y comprueba que cada concepto tendría un dominio evidente al que ir. Un concepto que ninguno de tus dominios recibiría significa que falta un bloque.
 - NADA DE CAJÓN DE SASTRE: está PROHIBIDO crear un dominio genérico de descarte del tipo «Otros», «Varios», «Miscelánea» o «Sin clasificar». Todo concepto tiene un tema, y un dominio que no nombra ningún tema no puede recibir ninguno.
 
+# ORDENA LOS DOMINIOS COMO SE IMPARTEN
+Cuando ya sepas qué dominios hay, ORDÉNALOS: escribe la lista `domains` en el orden en que el temario se imparte, del primer bloque al último.{order_rule}
+- SIN NUMERACIÓN, EL ORDEN LÓGICO DE LA MATERIA: va antes lo que hay que saber para entender lo que viene después. Los fundamentos y las introducciones abren el temario; lo que se apoya en ellos va detrás.
+- No ordenes por gusto, por tamaño ni por orden alfabético.
+
 # NOMBRES
 - Los NOMBRES DE LOS DOMINIOS los escribes tú: cortos y descriptivos, EN EL MISMO IDIOMA que los conceptos.
 - No repitas un nombre, y no escribas dos nombres para el mismo bloque.
@@ -482,7 +508,7 @@ Un único objeto JSON exactamente con esta forma:
 {{
   "domains": ["<Nombre de dominio>", "..."]
 }}
-- Solo los nombres de los dominios: un puñado de cadenas, nada más.
+- Solo los nombres de los dominios, en el orden en que se imparten: un puñado de cadenas, nada más.
 - NO listes los conceptos y NO escribas qué concepto va dónde. Esa es una pregunta posterior, y todo lo que escribas aquí sobre ella se descarta.
 - Nada de texto antes ni después, sin backticks, sin comentarios.
 

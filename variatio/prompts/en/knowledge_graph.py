@@ -394,8 +394,13 @@ def segment_syllabus_prompt(outline_block: str) -> str:
     The answer is `units`, each with a `name` and the `opens_at` line number of the heading
     that opens it — between 3 and 12 of them, since more than that is splitting by section
     rather than by unit. Everything from one opening heading to the next belongs to that
-    unit, which is why only the start is asked for. The outline arrives in the material's own
-    order and the result is sorted by `opens_at`, so any reordering attempted is discarded.
+    unit, which is why only the start is asked for.
+
+    The ORDER of the list is asked for too, between finding the units and naming them: the
+    order they are taught in. The outline arrives in the order the documents were read, which
+    is their names' — and «Copia de Tema 4» sorts before «Tema 1», so on one real corpus the
+    syllabus opened on arrays and closed on the basic elements. The numbering leads, the
+    logic of the subject follows, and in doubt the outline's own order stays.
     """
     return f"""\
 You are given the TABLE OF CONTENTS of a corpus of teaching material of a single course: all its headings, in the exact order in which they appear in the material and numbered from 1.
@@ -408,9 +413,17 @@ Your task: say which headings OPEN a TEACHING UNIT — a topic, a module, a larg
 - FEW: between 3 and 12 in total. If you are naming more than a dozen, you are splitting by subsection and not by topic.
 - The cover, the table of contents, the bibliography, the acknowledgements, the appendices and the course notes do NOT open a unit.
 
-# THE ORDER IS THE ONE YOU ARE GIVEN
-- The table of contents already comes in the order of the material, which is the order it is taught in. Do NOT reorder it, do not reorganise it by difficulty and do not group it by thematic affinity. Your output is sorted by `opens_at`, so any reordering you attempt is discarded.
-- Everything from the heading that opens a unit to the one that opens the next BELONGS to that unit. That is why it is enough to say where each one starts.
+# WHERE EACH ONE STARTS
+- Everything from the heading that opens a unit to the next heading of the table of contents that opens another BELONGS to that unit. That is why it is enough to say where each one starts.
+
+# ORDER THE UNITS AS THEY ARE TAUGHT
+Once you know which units there are, ORDER THEM: write the `units` list in the order the syllabus is taught in, from the first unit to the last.
+- The table of contents comes in the order the documents were read, which is the alphabetical order of their names. It nearly always matches the order of the syllabus, but not always: a name with a prefix («Copy of Topic 4»), with no number or numbered another way leaves its document out of place.
+- THE NUMBERING LEADS. If the headings or the document names (in brackets at the end of each line, when there is more than one document) carry an ordinal — «Topic 1», «Topic2», «Block 10», «Unit III» — order by it, even when the table of contents brings the units in another order.
+- WITH NO NUMBERING, THE LOGICAL ORDER OF THE SUBJECT: what has to be known to understand what comes later goes first. The foundations and the introductions open the syllabus; what builds on them goes after.
+- A unit that complements, extends or drills another goes right after it.
+- IN DOUBT, THE ORDER OF THE TABLE OF CONTENTS. Do not reorder by taste, by difficulty or by thematic affinity: two units of one document keep the order the document brings them in, and only a numbering or a clear dependency justifies moving a unit.
+- Reordering the list does NOT change `opens_at`: each unit keeps the number of the heading that opens it in the table of contents.
 
 # NAMES
 - The unit's name may be the heading itself, cleaned up: without the ordinal, without trailing colons or stray dashes. If the heading does not say what it is about, write a short descriptive name yourself, IN THE SAME LANGUAGE as the table of contents.
@@ -423,6 +436,7 @@ A single JSON object with exactly this shape:
   "units": [{{"name": "<name of the unit>", "opens_at": <line number in the table of contents>}}, "..."]
 }}
 - `opens_at` is the NUMBER in front of the heading in the table of contents below. Do not invent numbers and do not write the heading in its place.
+- The order of the `units` list is the order the units are taught in.
 - No text before or after, no backticks, no comments.
 
 # TABLE OF CONTENTS OF THE CORPUS
@@ -439,10 +453,12 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
     concept — a syllabus's units cannot be named from a sample — and answers `domains`, a
     handful of strings with no catch-all among them, that name being the leftovers pass's
     own sentinel. `documents_block` offers the corpus's document titles as a starting point,
-    because teaching material is already organised by topic.
+    because teaching material is already organised by topic. The order of `domains` is asked
+    for as well — the order the blocks are taught in — and it is the order the artifact keeps.
     """
     sources_block = ""
     sources_rule = ""
+    order_rule = ""
     if documents_block:
         sources_block = (
             "\n# THE DOCUMENTS THE CORPUS IS MADE OF\n"
@@ -461,6 +477,11 @@ def curate_graph_domains_prompt(nodes_block: str, documents_block: str = "") -> 
             "covering several blocks, rewrite a title that describes a document instead of a "
             "topic, and ignore any title that names no topic at all."
         )
+        order_rule = (
+            "\n- THE NUMBERING LEADS: the documents are listed above in the alphabetical order "
+            "of their names, which is nearly always the syllabus's. If their titles carry an "
+            "ordinal («Topic 1», «Block 10», «Unit III»), the domains follow that ordinal."
+        )
 
     return f"""\
 You are given the already-cleaned CONCEPTS of a knowledge graph. They come from a single corpus of teaching material of one course.
@@ -473,6 +494,11 @@ Your task: NAME the thematic DOMAINS the subject is made of. You are NOT placing
 - BETWEEN THEM THEY MUST COVER THE WHOLE LIST: read it to the end and check that every concept would have an obvious domain to go to. A concept none of your domains would receive means a block is missing.
 - NO CATCH-ALL: it is FORBIDDEN to create a generic catch-all domain such as «Other», «Various», «Miscellaneous» or «Unclassified». Every concept has a topic, and a domain that names no topic can receive none.
 
+# ORDER THE DOMAINS AS THEY ARE TAUGHT
+Once you know which domains there are, ORDER THEM: write the `domains` list in the order the syllabus is taught in, from the first block to the last.{order_rule}
+- WITH NO NUMBERING, THE LOGICAL ORDER OF THE SUBJECT: what has to be known to understand what comes later goes first. The foundations and the introductions open the syllabus; what builds on them goes after.
+- Do not order by taste, by size or alphabetically.
+
 # NAMES
 - The DOMAIN NAMES are yours to write: short and descriptive, IN THE SAME LANGUAGE as the concepts.
 - Do not repeat a name, and do not write two names for the same block.
@@ -482,7 +508,7 @@ A single JSON object with exactly this shape:
 {{
   "domains": ["<Domain name>", "..."]
 }}
-- Only the domain names: a handful of strings, nothing else.
+- Only the domain names, in the order they are taught in: a handful of strings, nothing else.
 - Do NOT list the concepts and do NOT write which concept goes where. That is a later question, and anything you write here about it is discarded.
 - No text before or after, no backticks, no comments.
 

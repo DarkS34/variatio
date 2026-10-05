@@ -1,6 +1,8 @@
 """Finding source documents, identifying them, and building a converter for them."""
 
 import hashlib
+import re
+import unicodedata
 from pathlib import Path
 
 SUPPORTED_EXTS = (".pdf", ".docx", ".pptx", ".md", ".txt")
@@ -91,7 +93,11 @@ def resolve_converter(converter):
 
 
 def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Path]:
-    """List the supported documents of a directory, in a stable order.
+    """List the supported documents of a directory, in the order of their names.
+
+    The order is the first evidence of the syllabus's own — every builder reads the
+    documents in it, and the graph records where each concept is first seen — so it is the
+    order a person reads the names in (`name_order`) and not the bytes'.
 
     A slot that is not there lists nothing rather than raising, whichever way it is walked.
     Every caller handles the empty case with a message naming the directory, and `rglob`
@@ -102,7 +108,28 @@ def list_source_files(input_dir: str | Path, recursive: bool = False) -> list[Pa
     if not root.is_dir():
         return []
     candidates = root.rglob("*") if recursive else root.iterdir()
-    return sorted(p for p in candidates if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS)
+    return sorted(
+        (p for p in candidates if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS),
+        key=lambda p: name_order(p.relative_to(root).as_posix()),
+    )
+
+
+def name_order(name: str) -> tuple:
+    """The sort key that puts document names in the order a person reads them in.
+
+    Case and accents are folded and a run of digits counts as its number. Sorted by bytes,
+    «Bloque 10» came before «Bloque 2» and «tema1» after every «Tema», and the graph took
+    its units in that order. The name itself closes the key, so two names that fold alike
+    keep one order between runs.
+    """
+    decomposed = unicodedata.normalize("NFD", name.casefold())
+    folded = "".join(c for c in decomposed if unicodedata.category(c) != "Mn")
+    parts = tuple(
+        (0, int(part), "") if part.isdecimal() else (1, 0, part)
+        for part in re.split(r"(\d+)", folded)
+        if part
+    )
+    return parts, name
 
 
 def required_cache_dir(cache_dir: str | Path | None, what: str) -> Path:

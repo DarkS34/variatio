@@ -432,6 +432,12 @@ function Raw() {
           lectura y los dos botones que actúan sobre él —abrirlo para corregir sus páginas, o
           quitarlo del origen—.
         </Paragraph>
+        <Paragraph>
+          Las filas van en el <strong>orden alfabético de los nombres</strong>, y un número
+          cuenta como número: «Tema 2» va antes que «Tema 10». Ese es también el orden en que
+          se leen los documentos al construir, y la primera pista del orden de tu temario: si
+          los nombres llevan el número de su tema, las unidades salen ya en su sitio.
+        </Paragraph>
       </Block>
 
       <Alert tone="info" title="Leerlos ahora adelanta trabajo; nunca es un requisito">
@@ -901,6 +907,10 @@ function Graph() {
           unidad, su descripción y sus relaciones. Mientras solo estás mirando eso es una
           lectura, que es justo lo que se pide aquí: abrir un concepto y ver si lo que dice de él
           es tu asignatura.
+          Ese orden lo pone la construcción: sigue la numeración de tus documentos y de sus
+          títulos («Tema 1», «Tema 2»…) y, donde no hay numeración, pone antes lo que hace
+          falta saber para lo que viene después. Si una unidad queda fuera de su sitio, su
+          menú la sube o la baja mientras corriges.
         </Paragraph>
         <Paragraph>
           Al pulsar «{t("stage.curate.start")}», junto al título, esa misma ficha se

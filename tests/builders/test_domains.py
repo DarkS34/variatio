@@ -68,3 +68,17 @@ def test_the_naming_prompt_asks_for_names_and_not_for_a_partition():
     prompt = curate_graph_domains_prompt("- Variable\n- Función")
     assert '"domains": ["<Nombre de dominio>", "..."]' in prompt
     assert "NO listes los conceptos" in prompt
+
+
+def test_the_naming_prompt_asks_for_the_order_the_domains_are_taught_in():
+    bare = curate_graph_domains_prompt("- Variable\n- Función")
+    assert bare.index("# DOMINIOS") < bare.index("# ORDENA LOS DOMINIOS COMO SE IMPARTEN") < bare.index("# NOMBRES")
+    assert "LA NUMERACIÓN MANDA" not in bare
+    assert "LA NUMERACIÓN MANDA" in curate_graph_domains_prompt("- Variable", "- D1: Tema 1")
+
+
+def test_the_unclassified_bucket_closes_the_named_domains(monkeypatch):
+    answer(monkeypatch, '{"domains": ["Segundo", "Primero"]}')
+    monkeypatch.setattr(curation, "assign_round", lambda pending, *_, **__: pending)
+    result = curation.curate_domains(CONCEPTS, RELATIONS, [], {}, max_attempts=1, prompts=ES)
+    assert list(result) == ["Segundo", "Primero", config.KG_BUILDER_UNCLASSIFIED_DOMAIN]

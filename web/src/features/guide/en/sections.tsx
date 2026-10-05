@@ -442,6 +442,12 @@ function Raw() {
           reading is going, and the two operations on it — open it to correct its pages, or take
           it out of the origin.
         </Paragraph>
+        <Paragraph>
+          The rows are in the <strong>alphabetical order of their names</strong>, and a number
+          counts as a number: "Topic 2" comes before "Topic 10". That is also the order the
+          documents are read in by a build, and the first hint of the order of your syllabus:
+          when the names carry the number of their topic, the units come out in place.
+        </Paragraph>
       </Block>
 
       <Alert tone="info" title="Reading them now brings work forward; it is never a requirement">
@@ -905,7 +911,11 @@ function Graph() {
 
       <Block title="A list, with the graph beside it">
         <Paragraph>
-          What you see first is the syllabus: the units in teaching order, folded. Open them, or
+          What you see first is the syllabus: the units in teaching order, folded. The build
+          sets that order: it follows the numbering of your documents and of their headings
+          ("Topic 1", "Topic 2"…) and, where there is none, puts first what has to be known for
+          what comes later; when a unit is out of place, its menu moves it up or down while
+          you are correcting. Open them, or
           search and the ones with results open on their own. Every row carries the concept and
           whether it <strong>{t("kg.taggable").toLowerCase()}</strong> — "{t("common.yes")}" or "
           {t("common.no")}"; clicking it opens its card <em>beside the list</em>, with its unit,

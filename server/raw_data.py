@@ -15,7 +15,7 @@ from fastapi import UploadFile
 from loguru import logger
 
 from variatio import config as vg_config
-from variatio.builders.source_docs import SUPPORTED_EXTS
+from variatio.builders.source_docs import SUPPORTED_EXTS, name_order
 from variatio.core.workspace import Workspace
 
 from . import approvals
@@ -316,11 +316,11 @@ def directory(ws: Workspace, kind: str) -> Path:
 
 
 def _files(path: Path) -> list[dict]:
-    """List the supported documents of a slot directory, by name."""
+    """List the supported documents of a slot directory, in the order the builders read them."""
     if not path.is_dir():
         return []
     out = []
-    for entry in sorted(path.iterdir(), key=lambda p: p.name.lower()):
+    for entry in sorted(path.iterdir(), key=lambda p: name_order(p.name)):
         if not entry.is_file() or entry.suffix.lower() not in SUPPORTED_EXTS:
             continue
         stat = entry.stat()

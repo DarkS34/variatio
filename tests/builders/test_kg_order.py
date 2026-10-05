@@ -279,17 +279,17 @@ def test_nodes_block_writes_the_definition_beside_the_name():
 # CURATION ----------------------------------------------------------------------------------
 
 
-def test_domains_are_ordered_by_the_median_position_of_their_members():
+def test_domains_keep_the_order_they_were_named_in_and_their_members_follow_the_material():
     unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
     by_domain = {
         "Tarde": ["T1", "T2"],
         "Pronto": ["P2", "P1"],
-        unclassified: ["X"],
         "Sin posiciones": ["S"],
+        unclassified: ["X"],
     }
     positions = {"T1": 10, "T2": 12, "P1": 1, "P2": 3}
-    ordered = curation.order_domains(by_domain, positions)
-    assert list(ordered) == ["Pronto", "Tarde", "Sin posiciones", unclassified]
+    ordered = curation.order_members(by_domain, positions)
+    assert list(ordered) == ["Tarde", "Pronto", "Sin posiciones", unclassified]
     assert ordered["Pronto"] == ["P1", "P2"]
 
 
@@ -301,7 +301,7 @@ def test_the_linking_prompt_lists_the_domain_in_the_order_of_the_material(monkey
         return SimpleNamespace(response='{"relations": []}')
 
     monkeypatch.setattr(curation.inference, "generate", fake_generate)
-    by_domain = curation.order_domains(
+    by_domain = curation.order_members(
         {"D": ["Recursividad", "Variable", "Función"]},
         {"Variable": 1, "Función": 5, "Recursividad": 9},
     )

@@ -66,8 +66,8 @@ def test_accept_units_anchors_each_unit_to_its_entry_of_the_outline():
         [{"name": "Introducción", "opens_at": 2}, {"name": "Bucles", "opens_at": 4}], OUTLINE
     )
     assert accepted == [
-        {"name": "Introducción", "heading": "Tema I", "chunk": 2},
-        {"name": "Bucles", "heading": "Tema II", "chunk": 5},
+        {"name": "Introducción", "heading": "Tema I", "chunk": 2, "order": 0},
+        {"name": "Bucles", "heading": "Tema II", "chunk": 5, "order": 1},
     ]
 
 
@@ -102,6 +102,7 @@ def test_units_come_back_in_the_order_of_the_corpus_whatever_order_they_were_wri
     )
     assert [u["name"] for u in accepted] == ["Pronto", "Medio", "Tarde"]
     assert [u["chunk"] for u in accepted] == [2, 5, 9]
+    assert [u["order"] for u in accepted] == [1, 2, 0]
 
 
 def test_the_catch_all_sentinel_is_refused_as_a_unit_name():
@@ -177,12 +178,23 @@ def test_segment_syllabus_returns_nothing_when_the_answer_is_unreadable(monkeypa
 # THE PROMPT ----------------------------------------------------------------------------
 
 
-def test_the_prompt_forbids_reordering_and_asks_for_the_two_keys():
+def test_the_prompt_asks_for_the_two_keys_and_for_the_order_the_units_are_taught_in():
     prompt = segment_syllabus_prompt("1. Tema I\n2. Tema II")
     assert '"opens_at"' in prompt
     assert '"units"' in prompt
     assert "1. Tema I" in prompt
-    assert "reordenes" in prompt.lower() or "reordenar" in prompt.lower()
+    assert "ORDÉNALAS" in prompt
+    assert "LA NUMERACIÓN MANDA" in prompt
+    assert "ANTE LA DUDA, EL ORDEN DEL ÍNDICE" in prompt
+
+
+def test_the_order_is_asked_for_between_finding_the_units_and_naming_them():
+    prompt = segment_syllabus_prompt("1. Tema I\n2. Tema II")
+    assert (
+        prompt.index("# QUÉ ES UNA UNIDAD")
+        < prompt.index("# ORDENA LAS UNIDADES COMO SE IMPARTEN")
+        < prompt.index("# NOMBRES")
+    )
 
 
 # ASSIGNMENT ----------------------------------------------------------------------------
@@ -234,9 +246,8 @@ def test_the_units_keep_the_order_of_the_corpus_in_the_result():
 # THE WHOLE PHASE -----------------------------------------------------------------------
 
 
-# The positions are deliberately the REVERSE of the corpus order, so that the median sort
-# `order_domains` applies would come back ["Tres", "Dos", "Uno"]. With equal positions the
-# test would pass without proving anything.
+# The positions are deliberately the REVERSE of the corpus order: a grouping ordered by
+# where its members are first seen would come back ["Tres", "Dos", "Uno"].
 def cleaned_corpus(**overrides) -> dict:
     base = {
         "entities": ["Variable", "Bucle", "Recursividad"],
@@ -252,7 +263,7 @@ def cleaned_corpus(**overrides) -> dict:
     return base
 
 
-def test_curate_units_places_by_the_corpus_and_never_reorders_by_median(monkeypatch):
+def test_curate_units_places_by_the_corpus_and_keeps_the_order_of_the_answer(monkeypatch):
     answer(monkeypatch, units(("Uno", 2), ("Dos", 4), ("Tres", 5)))
     cleaned = cleaned_corpus()
     by_domain, found = curation.curate_units(cleaned, max_attempts=1, prompts=ES)
@@ -263,12 +274,60 @@ def test_curate_units_places_by_the_corpus_and_never_reorders_by_median(monkeypa
     assert by_domain["Tres"] == ["Recursividad"]
     assert [u["name"] for u in found] == ["Uno", "Dos", "Tres"]
 
-    # The witness: the old rule, on this very result, reverses it.
-    assert list(curation.order_domains(by_domain, cleaned["positions"])) == [
-        "Tres",
-        "Dos",
-        "Uno",
-    ]
+
+# «Copia de Tema 3» sorts before «Tema 1»: the corpus opens on the third unit, and the answer
+# says which one is taught first. What a unit HOLDS still comes from where it opens.
+def test_curate_units_writes_the_units_in_the_order_they_are_taught(monkeypatch):
+    answer(monkeypatch, units(("Primero", 4), ("Segundo", 5), ("Tercero", 2)))
+    by_domain, found = curation.curate_units(cleaned_corpus(), max_attempts=1, prompts=ES)
+
+    assert list(by_domain) == ["Primero", "Segundo", "Tercero"]
+    assert by_domain["Tercero"] == ["Variable"]
+    assert by_domain["Primero"] == ["Bucle"]
+    assert by_domain["Segundo"] == ["Recursividad"]
+    assert [u["name"] for u in found] == ["Tercero", "Primero", "Segundo"]
+    assert [u["order"] for u in found] == [2, 0, 1]
+
+
+def test_the_unclassified_bucket_closes_the_units(monkeypatch):
+    answer(monkeypatch, units(("Primero", 4), ("Tercero", 2)))
+    monkeypatch.setattr(curation, "place_leftovers", lambda by_unit, *_, **__: by_unit)
+    by_domain, _ = curation.curate_units(
+        cleaned_corpus(occurrences={"Variable": [2], "Bucle": [5]}), max_attempts=1, prompts=ES
+    )
+
+    assert list(by_domain) == ["Primero", "Tercero", config.KG_BUILDER_UNCLASSIFIED_DOMAIN]
+
+
+# POSITIONS -----------------------------------------------------------------------------
+
+TAUGHT = [
+    {"name": "Tercero", "heading": "Tema III", "chunk": 2, "order": 2},
+    {"name": "Primero", "heading": "Tema I", "chunk": 5, "order": 0},
+    {"name": "Segundo", "heading": "Tema II", "chunk": 9, "order": 1},
+]
+
+
+def test_positions_stay_as_they_are_when_the_corpus_is_in_the_order_it_is_taught():
+    in_order = [{**unit, "order": index} for index, unit in enumerate(TAUGHT)]
+    positions = {"A": 1, "B": 7, "C": 12}
+    assert curation.taught_positions(positions, in_order) is positions
+    assert curation.taught_positions(positions, []) is positions
+
+
+def test_each_unit_moves_as_a_block_to_the_place_it_is_taught_in():
+    positions = {"Portada": 1, "T1": 2, "T2": 4, "P1": 5, "P2": 8, "S1": 9, "S2": 12}
+    moved = curation.taught_positions(positions, TAUGHT)
+
+    assert sorted(moved, key=moved.get) == ["Portada", "P1", "P2", "S1", "S2", "T1", "T2"]
+    assert sorted(moved.values()) == sorted(set(moved.values()))
+    assert moved["P2"] - moved["P1"] == 3
+    assert moved["T2"] - moved["T1"] == 2
+
+
+def test_a_last_unit_no_concept_was_first_seen_in_moves_nothing_backwards():
+    moved = curation.taught_positions({"T1": 2, "P1": 5}, TAUGHT)
+    assert moved["P1"] < moved["T1"]
 
 
 def test_curate_units_gives_up_without_an_outline(monkeypatch):

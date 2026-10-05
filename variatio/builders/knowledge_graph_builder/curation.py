@@ -4,6 +4,7 @@ The result is still a DRAFT. The final curation into `instance/knowledge_graph.j
 (draining the unclassified bucket, fixing dubious directions) is manual.
 """
 
+from bisect import bisect_right
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -39,8 +40,9 @@ def run(
     with progress.step("kg_domains", "Grouping the concepts into domains"):
         progress.checkpoint()
         concepts_by_domains, units = curate_units(cleaned, max_attempts=max_attempts, prompts=prompts)
+        positions = taught_positions(positions, units)
         if not concepts_by_domains:
-            concepts_by_domains = order_domains(
+            concepts_by_domains = order_members(
                 curate_domains(
                     concepts,
                     relations,
@@ -128,7 +130,11 @@ def write_sources(
 
 
 def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, list[dict]]:
-    """Group the concepts by the syllabus's own units; `({}, [])` if none can be found."""
+    """Group the concepts by the syllabus's own units; `({}, [])` if none can be found.
+
+    The units come back in the order of the corpus, which is what places a concept; the
+    grouping is written in the order they are TAUGHT (`order`), the unclassified bucket last.
+    """
     outline = cleaned.get("outline") or []
     units = segment_syllabus(
         outline, cleaned.get("documents") or [], max_attempts=max_attempts,
@@ -153,8 +159,37 @@ def curate_units(cleaned: dict, *, max_attempts: int, prompts) -> tuple[dict, li
         max_attempts=max_attempts,
             prompts=prompts,
     )
-    positions = cleaned.get("positions") or {}
-    return {d: blocks.ordered(m, positions) for d, m in placed.items()}, units
+    positions = taught_positions(cleaned.get("positions") or {}, units)
+    taught = [unit["name"] for unit in sorted(units, key=lambda unit: unit["order"])]
+    domains = taught + [d for d in placed if d not in taught]
+    return {d: blocks.ordered(placed[d], positions) for d in domains if d in placed}, units
+
+
+def taught_positions(positions: dict[str, int], units: list[dict]) -> dict[str, int]:
+    """Re-read each concept's position with the units laid out in the order they are taught.
+
+    A position is a chunk of the corpus, in the order the documents were read, and the
+    linking prompts and the cycle breaker both read "earlier" as "taught earlier". Where the
+    units are taught in another order each one's chunks move as a block to its place, and
+    what comes before the first unit stays first. The same positions come back when the two
+    orders agree, which is every corpus whose documents sort as they are taught.
+    """
+    if [unit["order"] for unit in units] == sorted(unit["order"] for unit in units):
+        return positions
+    starts = [unit["chunk"] for unit in units]
+    ends = starts[1:] + [max([starts[-1], *positions.values()]) + 1]
+    shift: dict[int, int] = {}
+    cursor = starts[0]
+    for index in sorted(range(len(units)), key=lambda index: units[index]["order"]):
+        shift[index] = cursor - starts[index]
+        cursor += ends[index] - starts[index]
+
+    def moved(position: int) -> int:
+        """The position once its unit's block has moved; unchanged before the first unit."""
+        index = bisect_right(starts, position) - 1
+        return position if index < 0 else position + shift[index]
+
+    return {name: moved(position) for name, position in positions.items()}
 
 
 def segment_syllabus(
@@ -163,7 +198,8 @@ def segment_syllabus(
     """Ask the model where each unit of the syllabus opens in the corpus's heading index.
 
     Returns `[]` — never an error — when there is no index or the answer is unusable: the
-    domains are then named without looking at the structure of the material.
+    domains are then named without looking at the structure of the material. The success
+    line names the units in the order they are taught.
     """
     if not outline:
         logger.info(
@@ -189,7 +225,7 @@ def segment_syllabus(
         return []
     logger.success(
         f"Syllabus: {len(units)} unit(s) over {len(outline)} heading(s) — "
-        + " · ".join(unit["name"] for unit in units)
+        + " · ".join(unit["name"] for unit in sorted(units, key=lambda unit: unit["order"]))
     )
     return units
 
@@ -199,6 +235,9 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
 
     A unit is refused when it repeats a name, a position or a chunk another already claims,
     and the whole segmentation is refused below `KG_MIN_UNITS`: one unit is not a syllabus.
+    Each unit keeps `order`, its place in the answer: the list comes back sorted by chunk
+    because a unit ends where the next one of the corpus opens (`unit_at`), and the answer's
+    own order is the one the syllabus is taught in.
     """
     unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
     units: list[dict] = []
@@ -226,7 +265,14 @@ def accept_units(proposed: list, outline: list[dict]) -> list[dict]:
         seen_positions.add(position)
         seen_names.add(name.casefold())
         seen_chunks.add(anchor["chunk"])
-        units.append({"name": name, "heading": anchor["heading"], "chunk": anchor["chunk"]})
+        units.append(
+            {
+                "name": name,
+                "heading": anchor["heading"],
+                "chunk": anchor["chunk"],
+                "order": len(units),
+            }
+        )
 
     units.sort(key=lambda unit: unit["chunk"])
     return units if len(units) >= config.KG_MIN_UNITS else []
@@ -284,6 +330,9 @@ def curate_domains(
     prompts,
 ) -> dict:
     """Name the blocks of the syllabus, then place every concept in them in batches.
+
+    The blocks keep the order the naming call wrote them in, which it is asked to make the
+    order they are taught in, and the unclassified bucket closes the list.
 
     The naming call is shown every concept — the units of a syllabus cannot be named from a
     sample — but NOT the relation evidence, which is what justifies WHERE a concept goes and
@@ -440,28 +489,14 @@ def assign_round(
 # LINKING -------------------------------------------------------------------------------------
 
 
-def order_domains(concepts_by_domains: dict, positions: dict[str, int]) -> dict:
-    """Order the domains by the median position of their members, and the members by theirs.
+def order_members(concepts_by_domains: dict, positions: dict[str, int]) -> dict:
+    """Order each domain's members by where the material introduces them.
 
-    The order the material introduces things in is the oldest signal in prerequisite learning
-    and it is free, since extraction recorded where each concept was first seen. It is what
-    makes the linking prompts' "the list follows the material" true.
+    The domains themselves keep the order they arrive in: the naming call writes them as
+    they are taught. Until that was asked of it they were sorted by the median position of
+    their members, which follows the order the documents were read in and no further.
     """
-
-    def median(members: list[str]) -> float:
-        """The median position of a domain's members, infinite when none is known."""
-        known = sorted(positions[m] for m in members if m in positions)
-        if not known:
-            return float("inf")
-        middle = len(known) // 2
-        return known[middle] if len(known) % 2 else (known[middle - 1] + known[middle]) / 2
-
-    unclassified = config.KG_BUILDER_UNCLASSIFIED_DOMAIN
-    domains = sorted(
-        concepts_by_domains,
-        key=lambda d: (d == unclassified, median(concepts_by_domains[d]), d),
-    )
-    return {d: blocks.ordered(concepts_by_domains[d], positions) for d in domains}
+    return {d: blocks.ordered(m, positions) for d, m in concepts_by_domains.items()}
 
 
 def link_relations(

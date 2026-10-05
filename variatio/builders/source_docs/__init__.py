@@ -22,6 +22,7 @@ from .files import (
     LazyConverter,
     default_converter,
     list_source_files,
+    name_order,
 )
 from .markdown import (
     headings_by_level,
@@ -91,6 +92,7 @@ __all__ = [
     "list_source_files",
     "markdown",
     "markdown_cache_path",
+    "name_order",
     "office",
     "page_count",
     "page_images",

@@ -495,6 +495,20 @@ extract → clean → curate, handing dicts in memory; only `curate()` writes.
   places concepts in batches; `place_leftovers` retries. `KG_BUILDER_UNCLASSIFIED_DOMAIN` is a
   sentinel, never a domain name. The naming call runs without reasoning — with it the model
   returned empty answers.
+- **The units are written in the order they are taught**, in two steps (user's request,
+  2026-10-05). The documents are read in the order of their NAMES as a person reads them
+  (`source_docs.name_order`: case and accents folded, a run of digits counted as its number —
+  by bytes «Bloque 10» came before «Bloque 2»), which `/raw` lists them in too. Then the call
+  that finds the units (`segment_syllabus_prompt`, and the naming call when the corpus has no
+  heading index) is asked, between finding them and naming them, to ORDER them: the numbering
+  of headings and document names leads, the logic of the subject follows, and in doubt the
+  outline's order stays. `accept_units` keeps the answer's place as `order` and still returns
+  the units by chunk, because a unit ends where the next one of the corpus opens;
+  `curate_units` writes the grouping by `order`, and `taught_positions` moves each unit's
+  chunks as a block so «earlier» still means «taught earlier» for the linking prompts and the
+  cycle breaker. Measured on eight real outlines: a corpus whose files were «Copia de Tema 4…»
+  and «Tema 1…» opened on arrays and now opens on its first topic; a corpus already in order
+  kept it.
 - `KG_BUILDER_MERGE_QUALIFIER_PATTERN` and the unclassified name fail silently if removed.
 - Progress is a weighted phase plan (`BUILD_PHASES`); the client reads it over REST.
   `_StepHandle.start()` reports the in-flight unit as not done; `tick` means done.
@@ -1175,6 +1189,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The hierarchy is one relation (`se_engloba_en`); `relacionado` stays in embeddings; don't
   wholesale-regenerate descriptions without benchmarking retrieval.
 - No anchoring beats a false one. Descriptions are impersonal and grammar-constrained.
+- The units of the syllabus are written in the order they are taught: the documents are read
+  in the natural order of their names, and the prompt that finds the units orders them
+  (numbering first, then the logic of the subject); code keeps that order and never sorts it
+  back by chunk or by median position (2026-10-05).
 - The free-text field is a four-slot catalogue, judged after the guardrail, failing open,
   verified against derived owners.
 - Diagrams are transcribed as Mermaid; the merge prompt treats grammatical variants as one
