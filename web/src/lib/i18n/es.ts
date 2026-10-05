@@ -410,9 +410,9 @@ export const es = {
   // While it is being looked at, this is a VIEW. Seeing and correcting are two tasks and
   // therefore two moments: a stage opens read-only, and correcting is what unlocks it.
   "stage.viewHint":
-    "Ahora mismo esto es una vista. Para poder editarlo, pulsa «Quiero corregir algo» al final de la página.",
-  // LAS DOS SALIDAS DEL PASO, al final y juntas: corregir es opcional, y avanzar no exige
-  // entender la palabra "aprobar".
+    "Ahora mismo esto es una vista. Para poder editarlo, pulsa «Quiero corregir algo», arriba, a la derecha del título.",
+  // LAS DOS SALIDAS DEL PASO, juntas y a la derecha del título: corregir es opcional, y
+  // avanzar no exige entender la palabra "aprobar".
   "stage.curate.title": "¿Quieres corregir algo?",
   "stage.curate.body":
     "Esto es una primera versión. Si corriges lo que no encaje, los ejercicios que se generen después se parecerán más a los tuyos. Si lo dejas como está, también puedes seguir.",
@@ -596,15 +596,13 @@ export const es = {
   "raw.screenIntro":
     "Sube lo que ya tienes: los apuntes de la asignatura y los ejercicios. Es el único paso en el que hace falta que busques archivos, porque todo lo demás sale de aquí. Con un par de temas basta: cada documento se lee entero, y cuanto más subas, más se tarda.",
   "raw.dropHere": "Arrastra los documentos aquí",
-  // The block that leads to the next step, at the foot, once both origins hold something
-  // and everything is read. The same exit every step closes with, and never a notice.
+  // The line over "Continuar", beside the title, once both origins hold something and
+  // everything is read. The same exit every step closes with, and never a notice.
   "raw.done.title": "Apuntes y ejercicios listos",
-  "raw.done.body": "Todos tus documentos están subidos y leídos. Ya puedes pasar al paso siguiente, «{next}».",
-  // The same block with documents still unread: the exit is offered all the same, because
+  // The same line with documents still unread: the exit is offered all the same, because
   // reading them is not a gate — every step reads its own — and the foot of a stage offers
   // "Continuar" whatever its state.
   "raw.next.title": "Puedes pasar al paso siguiente",
-  "raw.next.body": "Quedan documentos por leer, pero no hace falta esperar: cada paso los lee por su cuenta cuando le hacen falta. Si prefieres adelantarlo, léelos desde el bloque de arriba.",
   "raw.orPick": "o haz clic para elegirlos en tu equipo",
   "raw.dropInto": "Importar documentos en {slot}",
   // The two slots the server declares, named here rather than read from `slot.label`: the

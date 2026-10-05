@@ -56,10 +56,10 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
     return <Badge variant="danger">{plural("transcribe.retryCount", data.retry ?? 0)}</Badge>;
   // A filled tick and not the words "al día": the state with nothing left to do is the one
   // a person scans past, and a mark reads faster than a word in a row of words. Solid,
-  // because the 8 % tint is the whole card's (`SlotCard`) and a tinted mark on it would
-  // vanish — `--attention` under its own foreground, the pair `check:color` measures. The
-  // word survives as the accessible name: colour and shape are not a channel for a screen
-  // reader.
+  // because it is the only thing that tells a finished origin from the others, and a
+  // tinted mark would vanish — `--attention` under its own foreground, the pair
+  // `check:color` measures. The word survives as the accessible name: colour and shape are
+  // not a channel for a screen reader.
   return (
     <span
       className="flex size-7 shrink-0 items-center justify-center rounded-full bg-attention-fill text-attention-fill-foreground"

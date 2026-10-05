@@ -872,8 +872,16 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   (`BuildButton` decides every reason not to offer it; there is no rebuild except a
   document-stale stage). A stage opens in a read-only **review** state; «Quiero corregir algo»
   unlocks correction, with a sticky bottom bar carrying the save state and «Guardar los
-  cambios»; «Continuar» (big, `--attention`) saves-and-approves and moves on. No «Aprobar» or
-  «Reabrir». No tags or (i) beside a stage's title; the guide link sits under it.
+  cambios»; «Continuar» (big, `--attention`) saves-and-approves and moves on. **Both stand
+  to the right of the title** (under it below `lg`), under one line of state and with no
+  block around them (`StageGate.WayOn`, the four steps' one way out; user's request,
+  2026-10-05: at the foot they sat below the whole artifact); the group hangs from
+  the TOP of that line, so «Continuar» is at one height on the four steps whatever the
+  length of the explanation (centred, it moved with it), takes half the line at most, and
+  wraps in reverse so «Continuar» keeps the first line; the sentence the foot block carried
+  is the `title` of the button it explains.
+  No «Aprobar» or «Reabrir». No tags or (i) beside a stage's title; the guide link sits
+  under it.
 - The stage questionnaire unfolds under its button at the foot of the artifact, on every
   built stage, for an account the evaluation is open to AND whose role may correct the
   subject (`useAsksStageReview`: editor or owner, because its routes that record are
@@ -911,8 +919,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   read from «Administración → Asignaturas». Generate's
   «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
   `/variants`) still redirect here.
-- `/raw`: one row per document; multi-select delete; a finished origin is tinted with a
-  filled tick; the foot offers «Continuar» once both origins hold something.
+- `/raw`: one row per document; multi-select delete; a finished origin carries a
+  filled coral tick and no tint on its card (user's request, 2026-10-05); once both origins hold something, «Continuar» stands to the right of the
+  title as on a stage (`WayOn`) — coral when everything is read, an outline while the
+  reading block under the header holds the coral.
 - Graph: three columns (list, concept card, fixed-size graph card) plus a full-width
   relations block for the chosen concept. The canvas viewer (`features/kg/graph/`) lays units
   out as syllabus-ordered regions, relaxes concepts in a worker (Barnes-Hut, deterministic),
@@ -1222,8 +1232,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The bar is the path: four numbered steps and the unnumbered doors open to the account (up
   to three), the two groups set apart by a rule and with no phase captions (2026-10-04); no
   dashboard; the rail is gone.
-- View and correct are two moments; «Continuar» closes a stage; no «Aprobar»/«Reabrir»; no
-  rebuild except for document drift.
+- View and correct are two moments; «Continuar» closes a stage and stands with «Quiero
+  corregir algo» beside the title on the four steps, never in a block at the foot
+  (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift.
 - A queued job is not a running one. No time estimates. No «loading model» signal. No log on
   screen. No run drawer.
 - Generate screen belongs to the visit; its «Mis ejercicios» tab lists the subject in use
@@ -1231,7 +1242,7 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   one row at a time (`features/bank/window.ts`). Zero total ≠ unknown total. KaTeX for
   formulas.
 - The raw material is its own screen; one row per document; nothing announces completeness
-  except the finished-origin tint and the closing block.
+  except the finished origin's filled tick and the line over «Continuar» beside the title.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.
 - Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.

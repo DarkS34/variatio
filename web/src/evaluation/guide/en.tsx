@@ -252,7 +252,7 @@ export function StageReviewGuide() {
   return (
     <>
       <Paragraph>
-        Before the offer to correct, at the foot of what is built, there is "
+        At the foot of what is built there is "
         {t("stageReview.openTitle")}". It unfolds a short questionnaire beneath it: five
         statements, and for each you say how far you agree, from 1 ("strongly disagree") to 5
         ("strongly agree"). They are the same five ideas on all three steps. You can leave it

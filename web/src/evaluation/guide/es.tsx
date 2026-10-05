@@ -252,7 +252,7 @@ export function StageReviewGuide() {
   return (
     <>
       <Paragraph>
-        Antes de la oferta de corregir, al pie de lo construido, está «
+        Al pie de lo construido está «
         {t("stageReview.openTitle")}». Despliega debajo un cuestionario corto: cinco
         afirmaciones, y para cada una dices cuánto estás de acuerdo, del 1 («totalmente en
         desacuerdo») al 5 («totalmente de acuerdo»). Son las mismas cinco ideas en los tres

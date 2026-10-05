@@ -90,7 +90,7 @@ const GUIDE: Record<string, GuideSlug> = {
  * Why the screen below may not be written to right now.
  *
  * Read-only does not mean "approved": viewing and correcting are two tasks, so a stage
- * opens as a STATIC VIEW — closed or not — and one button at the foot unlocks it. What
+ * opens as a STATIC VIEW — closed or not — and one button beside the title unlocks it. What
  * closing means lives on the server: what is approved is the file's hash, and every hand
  * edit withdraws the approval by itself, so a corrected stage reads as open again.
  *
@@ -306,12 +306,17 @@ export function StageGate({
   return (
     <StageScope locked={locked} register={register}>
       <div className="space-y-7">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          {/* The guide link goes UNDER the title, on a line of its own: beside it, it is one
-              more chip in a row of chips and the only one there not about the stage's state.
-              It replaces an (i) — a paragraph behind a glyph can be neither read at length
-              nor searched. */}
-          <div className="min-w-0 space-y-1.5">
+        {/* The header and the two ways out, on one line: the title on the left, and on the
+            right "Quiero corregir algo" and "Continuar", under the eye on arrival and not
+            below the whole artifact. They stand on the ground like the title beside them,
+            with no block of their own. Below `lg` they go under the title, still above the
+            artifact. */}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+          <header className="min-w-0 space-y-1.5">
+            {/* The guide link goes UNDER the title, on a line of its own: beside it, it is
+                one more chip in a row of chips and the only one there not about the stage's
+                state. It replaces an (i) — a paragraph behind a glyph can be neither read at
+                length nor searched. */}
             {stepNumberOf(stage.artifact) ? (
               <p className="text-micro text-muted-foreground">
                 {t("nav.stepNumber", { n: stepNumberOf(stage.artifact)! })}
@@ -331,15 +336,71 @@ export function StageGate({
               ) : null
             )}
             {GUIDE[stage.artifact] ? <GuideLink slug={GUIDE[stage.artifact]} /> : null}
-          </div>
+          </header>
 
-          {/* The header carries no control at all: the build button is the one thing to do
-              on an unbuilt stage, so it is drawn in the middle of the emptiness at a size
-              that says so, and correcting is one button at the foot. Nothing offers a
-              rebuild over the SAME documents — a second pass gives no different result and
-              would throw the corrections away; the one rebuild offered is the stale
-              notice's, over documents the last build never read. */}
-        </header>
+          {/* Correcting is optional, and moving on asks nobody to understand the word
+              "aprobar". The build button is never here: it is the one thing to do on an
+              unbuilt stage, so it is drawn in the middle of the emptiness at a size that
+              says so. Nothing offers a rebuild over the SAME documents — a second pass gives
+              no different result and would throw the corrections away; the one rebuild
+              offered is the stale notice's, over documents the last build never read.
+
+              Moving on CLOSES the stage, because the next step cannot be built without that.
+              Saving and closing are one operation: the pending write first, and no approval
+              at all if the write is refused.
+
+              "Continuar" is the big coral button — it is the only control here that leads
+              anywhere. A CLOSED step offers both the same: correcting it reopens it with the
+              first saved change. What correcting changes is said where the pointer rests on
+              its button, and while correcting, what "Continuar" does with the draft. */}
+          {ready && !blocked ? (
+            <WayOn
+              caption={t(
+                curating
+                  ? "stage.curate.editingTitle"
+                  : approved
+                    ? "stage.curate.closedTitle"
+                    : "stage.curate.title",
+              )}
+              error={advanceFailed ? t("stage.continueFailed") : null}
+            >
+              {curating ? null : (
+                <Button
+                  variant="outline"
+                  title={
+                    approved
+                      ? t("stage.curate.closed")
+                      : t(CURATE_WHY[stage.artifact] ?? "stage.curate.body")
+                  }
+                  onClick={() => setCurating(true)}
+                >
+                  <Pencil />
+                  {t("stage.curate.start")}
+                </Button>
+              )}
+              <Button
+                variant="attention"
+                size="xl"
+                disabled={advance.running || Boolean(advance.blocked)}
+                title={advance.blocked ?? (curating ? t("stage.curate.editing") : undefined)}
+                onClick={async () => {
+                  setAdvanceFailed(false);
+                  try {
+                    await advance.run();
+                  } catch {
+                    setAdvanceFailed(true);
+                    return;
+                  }
+                  navigate(next.path);
+                }}
+              >
+                {advance.running ? <Spinner /> : null}
+                {continueLabel(next, t)}
+                {advance.running ? null : <ArrowRight />}
+              </Button>
+            </WayOn>
+          ) : null}
+        </div>
 
         {/* `attention` and not `danger`: stale is "the step above changed, close this one",
             a move to make — the same tone the badge, the status mark and a re-read document
@@ -474,64 +535,6 @@ export function StageGate({
           </Suspense>
         ) : null}
 
-        {/* The two ways out, together and at the foot: correcting is optional, and moving
-            on asks nobody to understand the word "aprobar". The whole screen reads view →
-            verdict → do you want to correct anything? → correction.
-
-            Moving on CLOSES the stage, because the next step cannot be built without that.
-            Saving and closing are one operation: the pending write first, and no approval
-            at all if the write is refused.
-
-            "Continuar" is the big blue button — it is the only control here that leads
-            anywhere. A CLOSED step offers both the same: correcting it reopens it with the
-            first saved change. */}
-        {ready && !blocked ? (
-          <ClosingSection
-            title={t(
-              curating
-                ? "stage.curate.editingTitle"
-                : approved
-                  ? "stage.curate.closedTitle"
-                  : "stage.curate.title",
-            )}
-            body={
-              curating
-                ? t("stage.curate.editing")
-                : approved
-                  ? t("stage.curate.closed")
-                  : t(CURATE_WHY[stage.artifact] ?? "stage.curate.body")
-            }
-            error={advanceFailed ? t("stage.continueFailed") : null}
-          >
-            {curating ? null : (
-              <Button variant="outline" onClick={() => setCurating(true)}>
-                <Pencil />
-                {t("stage.curate.start")}
-              </Button>
-            )}
-            <Button
-              variant="attention"
-              size="xl"
-              disabled={advance.running || Boolean(advance.blocked)}
-              title={advance.blocked ?? undefined}
-              onClick={async () => {
-                setAdvanceFailed(false);
-                try {
-                  await advance.run();
-                } catch {
-                  setAdvanceFailed(true);
-                  return;
-                }
-                navigate(next.path);
-              }}
-            >
-              {advance.running ? <Spinner /> : null}
-              {continueLabel(next, t)}
-              {advance.running ? null : <ArrowRight />}
-            </Button>
-          </ClosingSection>
-        ) : null}
-
         {/* The correction bar, pinned to the foot of the WINDOW while correcting: a
             syllabus is 131 rows, so the foot of the page is far from the row just touched.
             It carries three things and no more — the state of the changes, the way out, and
@@ -617,30 +620,37 @@ export function StageGate({
 }
 
 /**
- * The block every step ends with, and the only shape it may have: a title, one sentence,
- * the failure if the move failed, and the controls.
+ * The way out of a step, beside its title: one line of state, the controls under it, and
+ * the failure if the move failed.
  *
- * Shared by the three stages and `/raw`, which is what keeps the foot of the four steps of
- * the construction one block instead of four that drift.
+ * Shared by the three stages and `/raw`, which is what keeps the way out of the four steps
+ * of the construction one shape instead of four that drift. It has no block around it: it
+ * stands on the ground like the header it shares a line with, to the right from `lg` and
+ * under the title below it. It never takes more than half the line: two controls too wide
+ * for that go one under the other, so the explanation beside them keeps its measure.
+ *
+ * It hangs from the TOP of that line, so "Continuar" is at one height on the four steps
+ * whatever the length of the explanation beside it; centred, it moved with every sentence.
+ * The row wraps in reverse for the same reason: the last control — "Continuar" — keeps the
+ * first line, and the one before it goes under.
  */
-export function ClosingSection({
-  title,
-  body,
+export function WayOn({
+  caption,
   error,
   children,
 }: {
-  title: ReactNode;
-  body: ReactNode;
+  caption: ReactNode;
   error?: ReactNode | null;
   children: ReactNode;
 }) {
   return (
-    <section className="surface p-5 sm:p-6">
-      <h2 className="text-heading font-semibold">{title}</h2>
-      <p className="mt-1 max-w-[74ch] text-body text-muted-foreground">{body}</p>
-      {error ? <p className="mt-2 text-body text-destructive">{error}</p> : null}
-      <div className="mt-4 flex flex-wrap items-center gap-3">{children}</div>
-    </section>
+    <div className="flex shrink-0 flex-col items-start gap-2 lg:max-w-[50%] lg:items-end">
+      <p className="text-small text-muted-foreground">{caption}</p>
+      <div className="flex flex-wrap-reverse items-center gap-3 lg:justify-end">{children}</div>
+      {error ? (
+        <p className="max-w-[44ch] text-small text-destructive lg:text-right">{error}</p>
+      ) : null}
+    </div>
   );
 }
 

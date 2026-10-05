@@ -237,7 +237,7 @@ function Start() {
         <p>
           There is no button called "approve". A step is closed{" "}
           <strong>by moving on to the next one</strong>: the "
-          {t("stage.continue", { n: stepNumber(2) })}" button at the foot of the screen first
+          {t("stage.continue", { n: stepNumber(2) })}" button beside the title first
           saves whatever you have unsaved and takes what is there as good. If that write is
           refused, nothing is closed and nothing moves on.
         </p>
@@ -460,7 +460,7 @@ function Raw() {
 
       <Block title="One button, and it launches everything">
         <Paragraph>
-          "{t("transcribe.startAll")}" is in the block at the top of the screen — the same
+          "{t("transcribe.startAll")}" is in the block above the two cards — the same
           block, with the same big button, every step starts from — and it is the only one
           there is: it launches in one go whichever origins have something to do.
           Underneath it is <strong>two jobs</strong>, one per origin, so two show up in the queue
@@ -520,9 +520,9 @@ function Raw() {
           was about to redo in silence.
         </Paragraph>
         <Paragraph>
-          Once an origin is up to date, its card is lit with the coral of its mark and the tick
-          becomes a filled circle. And once both are, the same block that closes every step
-          appears at the foot of the screen: "{t("stage.continue", { n: stepNumber(1) })}".
+          Once an origin is up to date, the tick on its card becomes a filled coral circle.
+          And once both are, the same button that closes every step
+          appears to the right of the title: "{t("stage.continue", { n: stepNumber(1) })}".
         </Paragraph>
       </Block>
 
@@ -654,17 +654,17 @@ function Verdict({ artifact }: { artifact: string }) {
       <Paragraph>
         A step opens <strong>read-only</strong>: it is there to be looked at, not touched.
         Looking and correcting are two different things, and that is why they are two
-        different moments. At the foot of the screen, not on the way in, are the offer to
+        different moments. Beside the title are the two ways out of the step: the offer to
         correct and the next step.
       </Paragraph>
       <Steps
         items={[
           <>
-            <strong>Look at what is above.</strong> You do not have to read all of it: it is
+            <strong>Look at what is on the screen.</strong> You do not have to read all of it: it is
             enough to see whether it sounds like your subject.
           </>,
           <>
-            <strong>"{t("stage.curate.start")}"</strong> unlocks the editing of what is above.
+            <strong>"{t("stage.curate.start")}"</strong> unlocks the editing of what you see.
             While you are correcting, a bar pinned to the bottom edge says how the changes
             stand and carries "{t("stage.curate.save")}" and "{t("stage.curate.stop")}".
           </>,
@@ -746,7 +746,7 @@ function Profile() {
               told about the <em>shape</em> of an exercise.
             </>,
             <>
-              If something does not fit, "{t("stage.curate.start")}" at the foot of the screen
+              If something does not fit, "{t("stage.curate.start")}", beside the title,
               unlocks the editing. Only then do "{t("modality.add")}" and each type's parts show
               up — that is the most technical question on the whole route, and not the one asked
               on the way in.
@@ -914,7 +914,7 @@ function Graph() {
           subject.
         </Paragraph>
         <Paragraph>
-          Press "{t("stage.curate.start")}" at the foot of the screen and that same card becomes
+          Press "{t("stage.curate.start")}", beside the title, and that same card becomes
           editable — the name, the unit and the relations — and the list grows the buttons for
           adding a unit and adding a concept, and each row's "{t("kg.taggable").toLowerCase()}"
           turns from a "{t("common.yes")}" into a switch.
@@ -1129,8 +1129,8 @@ function Bank() {
               exercise.
             </>,
             <>
-              If there is correcting to do, "{t("stage.curate.start")}" at the foot of the
-              screen: then each exercise can be edited and its <strong>primary concept</strong>{" "}
+              If there is correcting to do, "{t("stage.curate.start")}", beside the
+              title: then each exercise can be edited and its <strong>primary concept</strong>{" "}
               changed by hand, which is the one that decides what it is compared against
               afterwards.
             </>,
@@ -2234,12 +2234,12 @@ const problems = (
         <p>
           These are two different situations and they are left by different doors. If the step is{" "}
           <strong>open</strong>, what is happening is that you are <em>looking</em> at it: every
-          step opens read-only, and the editing is unlocked with "{t("stage.curate.start")}", at
-          the foot of the screen. Nothing is wrong — you simply have not asked to correct yet.
+          step opens read-only, and the editing is unlocked with "{t("stage.curate.start")}", beside
+          the title. Nothing is wrong — you simply have not asked to correct yet.
         </p>
         <p>
           If the step is <strong>closed</strong>, the door is the same: "
-          {t("stage.curate.start")}" at the foot of the screen. What was taken as good is the
+          {t("stage.curate.start")}", beside the title. What was taken as good is the
           file exactly as it stands, so the first change you save opens it again — deleting and
           rebuilding nothing — and closing it again is carrying on to the next step once more.
         </p>

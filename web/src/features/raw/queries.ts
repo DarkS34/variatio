@@ -87,7 +87,7 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
   // again is what tries those pages, so it counts toward the button that does it.
   const retry = states.reduce((sum, entry) => sum + (entry.retry ?? 0), 0);
 
-  // `known` guards `done`: the foot of the screen reads it, and during the first second of
+  // `known` guards `done`: the header reads it, and during the first second of
   // a load — before a slot's reading has landed — "nada pendiente" is true by ABSENCE.
   const known = (["corpus", "exemplars"] as const).every(
     (kind) => !stocked(kind) || (kind === "corpus" ? corpus.data : exemplars.data) !== undefined,
@@ -100,8 +100,8 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
     pending,
     retry,
     todo: stale + pending + retry,
-    // Both origins hold something and both readings have landed: what the foot of the
-    // screen needs before it may say anything at all about the way on.
+    // Both origins hold something and both readings have landed: what the header needs
+    // before it may say anything at all about the way on.
     stocked: stockedAll && known,
     empty: slots.length > 0 && slots.every((slot) => slot.files.length === 0),
     // Both origins hold something, every document is read and nothing is running: what the

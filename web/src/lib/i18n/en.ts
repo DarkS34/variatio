@@ -334,7 +334,7 @@ export const en: Catalogue = {
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
   "stage.viewHint":
-    "Right now this is a view. To be able to edit it, press «I want to correct something» at the foot of the page.",
+    "Right now this is a view. To be able to edit it, press «I want to correct something», at the top, to the right of the title.",
   "stage.curate.title": "Do you want to correct anything?",
   "stage.curate.body":
     "This is a first version. If you correct whatever does not fit, the exercises generated afterwards will look more like yours. If you leave it as it is, you can carry on too.",
@@ -490,9 +490,7 @@ export const en: Catalogue = {
     "Upload what you already have: the subject's notes and its exercises. This is the only step where you have to go looking for files, because everything else comes from here. A couple of topics is enough: every document is read in full, so the more you upload, the longer it takes.",
   "raw.dropHere": "Drag the documents here",
   "raw.done.title": "Notes and exercises ready",
-  "raw.done.body": "All your documents are uploaded and read. You can move on to the next step, «{next}».",
   "raw.next.title": "You can move on to the next step",
-  "raw.next.body": "Some documents are still unread, but there is no need to wait: every step reads what it needs on its own. To get it out of the way now, read them from the block above.",
   "raw.orPick": "or click to pick them from your computer",
   "raw.dropInto": "Import documents into {slot}",
   // The two slots the server declares, named here rather than read from `slot.label`: the

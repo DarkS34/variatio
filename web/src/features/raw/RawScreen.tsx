@@ -1,7 +1,7 @@
 import { ArrowRight, ScanText } from "lucide-react";
 
 import { GuideLink } from "@/components/GuideLink";
-import { ClosingSection, continueLabel } from "@/components/StageGate";
+import { continueLabel, WayOn } from "@/components/StageGate";
 import { Button } from "@/components/ui/button";
 import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
@@ -20,14 +20,14 @@ import { SlotCard } from "./SlotCard";
  *
  * It is drawn like the other three steps of the construction — the work starts from the
  * same `EmptyState` with the same `xl` button, the running state is the same progress card
- * with the stop inside it, and the foot is `ClosingSection`. What has no equivalent on a
- * stage is not invented for it: the empty subject says so through the two dropzones, which
- * are the only "Importar" this screen has.
+ * with the stop inside it, and the way on is the same `WayOn` beside the title. What has
+ * no equivalent on a stage is not invented for it: the empty subject says so through the
+ * two dropzones, which are the only "Importar" this screen has.
  *
  * What it must NOT become is a GATE. Transcribing is an accelerator — every builder keeps
  * its own conversion phase — and the copy says so where a person reads it before pressing.
- * That is also why the foot offers "Continuar" with documents still unread: withholding it
- * makes the foot behave like the gate the copy above it denies.
+ * That is also why the header offers "Continuar" with documents still unread: withholding
+ * it makes the button behave like the gate the copy under it denies.
  */
 export function RawScreen() {
   const { t, plural } = useT();
@@ -70,17 +70,30 @@ export function RawScreen() {
 
   return (
     <div className="space-y-7">
-      <header className="space-y-2">
-        {/* The same header as the other three: ordinal, title, explanation, guide link.
-            This screen does not go through `StageGate` — it writes no artifact and nobody
-            approves it — so it repeats the shape by hand, and the ORDINAL is what puts it on
-            the path: it is step 1 even though it is not a stage. The title is deliberately
-            not `text-display`, or one of the four steps would be the only one shouting. */}
-        <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: stepNumber(0) })}</p>
-        <h1 className="text-title">{t("nav.step.raw")}</h1>
-        <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
-        <GuideLink slug="raw" />
-      </header>
+      {/* The header and the way on, on one line: the title on the left, and on the right —
+          where the header left half the screen empty — the button that leaves the step,
+          under the eye on arrival and not below every document. It stands on the ground
+          like the title beside it, with no block of its own. Below `lg` it goes under the
+          title, still above the origins. */}
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+        <header className="min-w-0 space-y-2">
+          {/* The same header as the other three: ordinal, title, explanation, guide link.
+              This screen does not go through `StageGate` — it writes no artifact and nobody
+              approves it — so it repeats the shape by hand, and the ORDINAL is what puts it
+              on the path: it is step 1 even though it is not a stage. The title is
+              deliberately not `text-display`, or one of the four steps would be the only one
+              shouting. */}
+          <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: stepNumber(0) })}</p>
+          <h1 className="text-title">{t("nav.step.raw")}</h1>
+          <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
+          <GuideLink slug="raw" />
+        </header>
+
+        {/* `stocked` holds back until both readings have landed, so this does not flash
+            during the first second of a load and then change its mind. Not while something
+            runs: a building stage offers no way on either. */}
+        {summary.stocked && !summary.running ? <RawClosing done={summary.done} /> : null}
+      </div>
 
       {/* THE ONE THING TO DO, IN THE SAME BLOCK A STAGE STARTS FROM. A notice with no
           control while it runs — the stop button is in each origin's progress card, as a
@@ -135,39 +148,33 @@ export function RawScreen() {
           <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
         ))}
       </div>
-
-      {/* `stocked` holds back until both readings have landed, so this does not flash during
-          the first second of a load and then change its mind. Not while something runs: a
-          building stage has no closing block either. */}
-      {summary.stocked && !summary.running ? <RawClosing done={summary.done} /> : null}
     </div>
   );
 }
 
 /**
- * The way on, in the block every step closes with.
+ * The way on: one line of state and "Continuar", beside the title.
  *
- * Two sentences for two states — everything read, or something still unread — and the same
- * "Continuar" under both, because reading is not a gate. There is no "Quiero corregir algo"
- * here: a document is corrected on its own row, and the step as a whole has nothing to
- * unlock.
+ * Two lines for two states — everything read, or something still unread — and the same
+ * "Continuar" under both, because reading is not a gate. It is the coral only once
+ * everything is read: with documents unread the block under the header holds the screen's
+ * one coral button, a hand's width away, and two of them asked for two things at once.
+ * No sentence of explanation: the origins' ticks say the documents are read, and the block
+ * with the reading button says a step reads on its own what it lacks. There is no "Quiero
+ * corregir algo" here: a document is corrected on its own row, and the step as a whole has
+ * nothing to unlock.
  */
 function RawClosing({ done }: { done: boolean }) {
   const { t } = useT();
   const next = nextStepOf(null);
   return (
-    <ClosingSection
-      title={t(done ? "raw.done.title" : "raw.next.title")}
-      body={
-        done ? t("raw.done.body", { next: t(next.labelKey) }) : t("raw.next.body")
-      }
-    >
+    <WayOn caption={t(done ? "raw.done.title" : "raw.next.title")}>
       <Link to={next.path}>
-        <Button variant="attention" size="xl">
+        <Button variant={done ? "attention" : "outline"} size="xl">
           {continueLabel(next, t)}
           <ArrowRight />
         </Button>
       </Link>
-    </ClosingSection>
+    </WayOn>
   );
 }

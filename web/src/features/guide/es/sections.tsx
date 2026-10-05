@@ -233,7 +233,7 @@ function Start() {
         <p>
           No hay ningún botón que se llame «aprobar». Un paso se cierra{" "}
           <strong>al continuar al siguiente</strong>: el botón «
-          {t("stage.continue", { n: stepNumber(2) })}» del final de la pantalla guarda primero
+          {t("stage.continue", { n: stepNumber(2) })}», junto al título, guarda primero
           lo que tengas sin guardar y da por bueno lo que hay. Si esa escritura se rechaza, no
           se cierra nada y no se avanza.
         </p>
@@ -451,7 +451,7 @@ function Raw() {
 
       <Block title="Un solo botón, y lo lanza todo">
         <Paragraph>
-          «{t("transcribe.startAll")}» está en el bloque de arriba de la pantalla —el mismo
+          «{t("transcribe.startAll")}» está en el bloque que va sobre las dos tarjetas —el mismo
           bloque, con el mismo botón grande, con el que arranca cada paso— y es el único que
           hay: lanza de una vez los orígenes que tengan algo que hacer. Por dentro son{" "}
           <strong>dos trabajos</strong>, uno por origen, así que en la cola se ven dos y hay que
@@ -511,9 +511,9 @@ function Raw() {
           iba a rehacer en silencio.
         </Paragraph>
         <Paragraph>
-          Cuando un origen queda al día, su tarjeta se ilumina con el coral de su marca y el
-          tick pasa a ser un círculo relleno. Y cuando los dos lo están, al final de la
-          pantalla aparece el mismo bloque con el que se cierra cada paso: «
+          Cuando un origen queda al día, el tick de su tarjeta pasa a ser un círculo relleno
+          de color coral. Y cuando los dos lo están, a la derecha del título aparece el mismo
+          botón con el que se cierra cada paso: «
           {t("stage.continue", { n: stepNumber(1) })}».
         </Paragraph>
       </Block>
@@ -646,18 +646,18 @@ function Verdict({ artifact }: { artifact: string }) {
     <Block title="Cómo se cierra este paso">
       <Paragraph>
         El paso se abre <strong>en modo lectura</strong>: se mira, no se toca. Ver y corregir
-        son dos cosas distintas, y por eso están en dos momentos distintos. Al final de la
-        pantalla, y no al entrar, están la oferta de corregir y el paso siguiente.
+        son dos cosas distintas, y por eso están en dos momentos distintos. Junto al título
+        están las dos salidas del paso: la oferta de corregir y el paso siguiente.
       </Paragraph>
       <Steps
         items={[
           <>
-            <strong>Mira lo que hay arriba.</strong> No hace falta leerlo entero: basta con ver
+            <strong>Mira lo que hay en la pantalla.</strong> No hace falta leerlo entero: basta con ver
             si te suena a tu asignatura.
           </>,
           <>
-            <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que hay
-            arriba. Mientras corriges, una barra fija al borde de abajo dice cómo van los
+            <strong>«{t("stage.curate.start")}»</strong> desbloquea la edición de lo que
+            ves. Mientras corriges, una barra fija al borde de abajo dice cómo van los
             cambios y lleva «{t("stage.curate.save")}» y «{t("stage.curate.stop")}».
           </>,
           <>
@@ -734,7 +734,7 @@ function Profile() {
               modelo sobre la <em>forma</em> del ejercicio.
             </>,
             <>
-              Si algo no encaja, «{t("stage.curate.start")}» al final de la pantalla desbloquea
+              Si algo no encaja, «{t("stage.curate.start")}», junto al título, desbloquea
               la edición. Solo entonces aparecen «{t("modality.add")}» y las partes de cada
               tipo, que es la pregunta más técnica de todo el recorrido y no la que se hace al
               entrar.
@@ -903,7 +903,7 @@ function Graph() {
           es tu asignatura.
         </Paragraph>
         <Paragraph>
-          Al pulsar «{t("stage.curate.start")}», al final de la pantalla, esa misma ficha se
+          Al pulsar «{t("stage.curate.start")}», junto al título, esa misma ficha se
           vuelve editable —el nombre, la unidad y las relaciones— y en la lista aparecen los
           botones de añadir unidad y añadir concepto, y el «{t("kg.taggable").toLowerCase()}» de
           cada fila pasa de ser un «{t("common.yes")}» a ser un interruptor.
@@ -1116,7 +1116,7 @@ function Bank() {
               entero.
             </>,
             <>
-              Si hay que corregir, «{t("stage.curate.start")}» al final de la pantalla: entonces
+              Si hay que corregir, «{t("stage.curate.start")}», junto al título: entonces
               cada ejercicio se puede editar y se puede cambiar a mano su <strong>concepto
               principal</strong>, que es el que decide con qué se compara después.
             </>,
@@ -2217,12 +2217,12 @@ const problems = (
         <p>
           Son dos situaciones distintas y se salen por sitios distintos. Si el paso está{" "}
           <strong>abierto</strong>, lo que pasa es que estás <em>mirándolo</em>: cada paso se
-          abre en modo lectura, y la edición se desbloquea con «{t("stage.curate.start")}», al
-          final de la pantalla. Nada está mal — simplemente todavía no has pedido corregir.
+          abre en modo lectura, y la edición se desbloquea con «{t("stage.curate.start")}», junto
+          al título. Nada está mal — simplemente todavía no has pedido corregir.
         </p>
         <p>
           Si el paso está <strong>cerrado</strong>, la puerta es la misma: «
-          {t("stage.curate.start")}» al final de la pantalla. Lo que se dio por bueno es el
+          {t("stage.curate.start")}», junto al título. Lo que se dio por bueno es el
           fichero tal cual está, así que el primer cambio que guardes lo vuelve a abrir —sin
           borrar ni reconstruir nada— y volver a cerrarlo es continuar otra vez al paso
           siguiente.
