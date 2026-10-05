@@ -33,11 +33,14 @@ def _public_fields(item: dict) -> dict:
     return {name: value for name, value in item.items() if not name.startswith("_")}
 
 
-def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
-    """Drop blank pins.
+def clean_fixed(
+    fixed: dict[str, object] | None, item_type: ItemType | None = None
+) -> dict[str, object]:
+    """Drop blank pins, and the pins on fields the commission left out.
 
     Pinning a field to `""` makes the prompt demand an empty value and then overwrites
-    whatever the model wrote with it. An empty box in the UI means "not pinned".
+    whatever the model wrote with it. An empty box in the UI means "not pinned". A field the
+    commission leaves out is not written, so a value pinned on it has nowhere to go.
     """
     kept = {
         name: value
@@ -47,6 +50,10 @@ def clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
     dropped = sorted(set(fixed or {}) - set(kept))
     if dropped:
         logger.warning(f"Pinned fields with no value, ignored: {', '.join(dropped)}")
+    left_out = sorted(set(kept).intersection(item_type.left_out)) if item_type else []
+    if left_out:
+        logger.warning(f"Pinned fields the commission leaves out, ignored: {', '.join(left_out)}")
+        kept = {name: value for name, value in kept.items() if name not in left_out}
     return kept
 
 
@@ -307,6 +314,7 @@ class VariantGenerator:
         avoid: list[str] | None = None,
         on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
         scenario: str | None = None,
+        omit: list[str] | None = None,
     ) -> list[GeneratedVariant]:
         """Produce up to `n` items for `concepts`, checking and retrying each one.
 
@@ -320,10 +328,13 @@ class VariantGenerator:
         sentence to every arm, and a plain commission leaves it to the prompt's own choice.
         Every accepted item carries its own `prompt` and the run's `provenance`, so a
         caller can keep how it was made without listening to the event stream.
+        `omit` names the fields this commission leaves out of the item, among the ones the
+        profile marks `omittable` (`ItemType.without`); everything below reads the modality
+        without them.
         """
         writer = model or self.generator_model
-        target_type = self.exemplars_profile.item_type(item_type)
-        fixed = self._clean_fixed(fixed)
+        target_type = self.exemplars_profile.item_type(item_type).without(omit)
+        fixed = self._clean_fixed(fixed, target_type)
         instructions = (instructions or "").strip()
         self._validate_input(target_type, concepts, fixed, n, curriculum, instructions)
         if ruling is None:
@@ -353,6 +364,7 @@ class VariantGenerator:
         provenance = {
             "targets": list(concepts),
             "item_type": target_type.key,
+            "omitted": list(target_type.left_out),
             "curriculum": list(curriculum) if curriculum is not None else None,
             "assumed_known": prerequisites,
             "forbidden": posteriors,
@@ -444,9 +456,11 @@ class VariantGenerator:
         return accepted
 
     @staticmethod
-    def _clean_fixed(fixed: dict[str, object] | None) -> dict[str, object]:
-        """Drop the pins with no value."""
-        return clean_fixed(fixed)
+    def _clean_fixed(
+        fixed: dict[str, object] | None, item_type: ItemType | None = None
+    ) -> dict[str, object]:
+        """Drop the pins with no value and the pins on fields the commission left out."""
+        return clean_fixed(fixed, item_type)
 
     def _validate_input(
         self,

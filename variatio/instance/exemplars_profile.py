@@ -14,6 +14,7 @@ from functools import reduce
 from pathlib import Path
 from typing import ClassVar, Literal
 
+from loguru import logger
 from pydantic import BaseModel, Field, create_model
 
 ITEM_TYPE_KEY = "item_type"
@@ -116,6 +117,10 @@ class ItemType:
         self.general_generation_rules: list[str] = list(raw.get("general_generation_rules") or [])
         self.field_specs: dict[str, dict] = raw["fields"]
         self.content_item: type[BaseModel] = self._build_content_item()
+        # The fields `without` left out of this reading; empty on the modality itself.
+        self.left_out: tuple[str, ...] = ()
+        self._raw = raw
+        self._readings: dict[frozenset[str], ItemType] = {}
 
     def _build_content_item(self) -> type[BaseModel]:
         """Build the runtime Pydantic model for this modality's fields."""
@@ -126,6 +131,42 @@ class ItemType:
         model.PRIMARY_FIELD = self.primary_field
         model.ITEM_TYPE = self.key
         return model
+
+    def without(self, names: list[str] | None) -> "ItemType":
+        """Return this modality as one commission writes it: without the fields it left out.
+
+        Only a field the profile marks `omittable` can be left out; any other name is
+        ignored with a warning, which is what keeps a commission saved under an earlier
+        profile repeatable. The field stays in the profile — the bank is still read with
+        it — and is gone from everything the new item is made of: the fields asked of the
+        model, the exemplars shown to it, the schema the answer validates against and the
+        item kept. The modality itself comes back when nothing is left out.
+        """
+        asked = list(dict.fromkeys(names or []))
+        left_out = frozenset(name for name in asked if name in self.omittable_fields)
+        ignored = [name for name in asked if name not in left_out]
+        if ignored:
+            logger.warning(
+                f"Fields that cannot be left out of «{self.key}», generated anyway: {', '.join(ignored)}"
+            )
+        if not left_out:
+            return self
+        if left_out not in self._readings:
+            kept = {name: spec for name, spec in self.field_specs.items() if name not in left_out}
+            raw = {
+                **self._raw,
+                "fields": kept,
+                "embed_fields": [name for name in self.embed_fields if name in kept],
+            }
+            reading = ItemType(self.key, raw)
+            reading.left_out = tuple(name for name in self.field_specs if name in left_out)
+            self._readings[left_out] = reading
+        return self._readings[left_out]
+
+    @property
+    def omittable_fields(self) -> list[str]:
+        """The fields a commission may leave out of a new item, in declaration order."""
+        return [name for name, spec in self.field_specs.items() if spec.get("omittable") is True]
 
     def difficulty_rank(self, item: dict) -> int:
         """Where an item sits on its own modality's ladder, unrankable values last.
@@ -572,6 +613,7 @@ class ExemplarsProfile:
         if "type" not in schema and "enum" not in schema:
             raise ValueError(f"Field '{name}' schema must declare 'type' or 'enum'")
         cls._validate_decided_by(name, spec, schema, is_primary)
+        cls._validate_omittable(name, spec, is_primary)
         # `label` is optional and nothing generates it: no accent is recoverable from a key
         # like `solucion`, so what a person reads stays a person's to write.
         if "label" in spec and not isinstance(spec["label"], str):
@@ -611,6 +653,29 @@ class ExemplarsProfile:
         if "enum" not in schema and schema.get("type") in cls._UNDECIDABLE_TYPES:
             raise ValueError(
                 f"Field '{name}' is of type '{schema['type']}': there is no choice to offer, so it cannot be 'decided_by': 'user'"
+            )
+
+    @classmethod
+    def _validate_omittable(cls, name: str, spec: dict, is_primary: bool) -> None:
+        """Raise unless `omittable` is a boolean on a field a new item can go without.
+
+        The primary field is the item, and the difficulty is the one field every modality
+        carries and every commission may pin: neither can be left out.
+        """
+        omittable = spec.get("omittable")
+        if omittable is None:
+            return
+        if not isinstance(omittable, bool):
+            raise ValueError(f"Field '{name}' 'omittable' must be true or false, got {omittable!r}")
+        if not omittable:
+            return
+        if is_primary:
+            raise ValueError(
+                f"Field '{name}' is the primary field: it carries the item itself, so it cannot be 'omittable'"
+            )
+        if name in DIFFICULTY_FIELDS:
+            raise ValueError(
+                f"Field '{name}' is the difficulty: every modality carries it, so it cannot be 'omittable'"
             )
 
     @classmethod

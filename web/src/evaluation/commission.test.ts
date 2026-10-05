@@ -27,6 +27,11 @@ describe("what an evaluation commission carries", () => {
     expect(toEvaluationParams({ ...EMPTY_FORM, think: false })).not.toHaveProperty("think");
   });
 
+  it("never carries parts left out, because a comparison is of whole exercises", () => {
+    const params = toEvaluationParams({ ...EMPTY_FORM, omit: ["solucion"] });
+    expect("omit" in params).toBe(false);
+  });
+
   it("still carries the commission itself", () => {
     const params = toEvaluationParams({ ...EMPTY_FORM, concepts: ["Recursividad"] });
     expect(params.concepts).toEqual(["Recursividad"]);

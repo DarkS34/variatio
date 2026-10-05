@@ -28,6 +28,8 @@ import {
   defaultTypeKey,
   difficultyFieldOf,
   difficultyLevelsOf,
+  fieldLabel,
+  omittableFields,
   otherDecidedFields,
   typeKeys,
 } from "@/lib/profile";
@@ -124,6 +126,13 @@ export function summarize(
   for (const field of difficulty ? [difficulty, ...otherDecidedFields(spec)] : otherDecidedFields(spec)) {
     const value = state.decisions[field];
     if (value !== undefined && value !== null && value !== "") parts.push(String(value));
+  }
+  const omitted = omittableFields(spec).filter((field) => state.omit.includes(field));
+  if (omitted.length > 0) {
+    const without = t("form.parts.without", {
+      fields: omitted.map((field) => fieldLabel(field, spec)).join(", "),
+    });
+    parts.push(without.charAt(0).toLowerCase() + without.slice(1));
   }
   const label = curriculumLabel(state, null, tr);
   parts.push(label.charAt(0).toLowerCase() + label.slice(1));
@@ -311,7 +320,14 @@ export function GenerateForm({
   const types = typeKeys(profile);
   const typeKey = activeTypeKey(state, profile);
   const typeSpec = activeTypeSpec(state, profile);
-  const decided = otherDecidedFields(typeSpec);
+  // The parts the profile lets a commission leave out, and the ones this one does. Read
+  // through the profile, so a name restored from an older commission that the profile no
+  // longer marks is not drawn as left out. A comparison is of whole exercises: its form
+  // never asks.
+  const omittable = variant === "generate" ? omittableFields(typeSpec) : [];
+  const omitted = omittable.filter((field) => state.omit.includes(field));
+  // A part that is not written is not asked about either.
+  const decided = otherDecidedFields(typeSpec).filter((field) => !omitted.includes(field));
   // The one field every modality carries, and the only one whose options come with a
   // written criterion. It is asked in a step of its own — see `DifficultyChoice`.
   const difficultyField = difficultyFieldOf(typeSpec);
@@ -444,6 +460,7 @@ export function GenerateForm({
     types.length > 1 ? "itemType" : null,
     "concepts",
     chosen && asksDifficulty ? "difficulty" : null,
+    chosen && omittable.length > 0 ? "parts" : null,
     chosen && decided.length > 0 ? "decisions" : null,
   ].filter((id): id is string => id !== null);
 
@@ -465,7 +482,7 @@ export function GenerateForm({
       const concept = byName.get(name);
       return Boolean(concept && hasExemplars(concept, key));
     });
-    patch({ itemType: key, decisions: {}, concepts: kept });
+    patch({ itemType: key, decisions: {}, omit: [], concepts: kept });
     advance("itemType");
   };
 
@@ -767,6 +784,54 @@ export function GenerateForm({
               if (next !== undefined) advance("difficulty");
             }}
           />
+        </FormStep>
+      ) : null}
+
+      {/* Asked right after the difficulty and before the other decisions (user's request,
+          2026-10-05): a part switched off here is not written, so the step below does not
+          ask what it should be like. Every part starts on. */}
+      {chosen && omittable.length > 0 ? (
+        <FormStep
+          index={++index}
+          title={t("form.parts.title")}
+          hint={t("form.parts.hint")}
+          answered={omitted.length > 0}
+          summary={
+            omitted.length > 0
+              ? t("form.parts.without", {
+                  fields: omitted.map((field) => fieldLabel(field, typeSpec)).join(", "),
+                })
+              : t("form.parts.all")
+          }
+          {...step("parts")}
+        >
+          <ul className="rows">
+            {omittable.map((field) => {
+              const about = typeSpec!.fields[field]?.description?.split(/[.:]/)[0]?.trim();
+              return (
+                <li key={field} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <Switch
+                    checked={!omitted.includes(field)}
+                    onCheckedChange={(on) => {
+                      const omit = on
+                        ? state.omit.filter((name) => name !== field)
+                        : [...state.omit, field];
+                      // A value pinned on a part that is no longer written has nowhere to go.
+                      const { [field]: _dropped, ...decisions } = state.decisions;
+                      patch(on ? { omit } : { omit, decisions });
+                    }}
+                  >
+                    <span className="text-body font-medium">{fieldLabel(field, typeSpec)}</span>
+                  </Switch>
+                  {about ? (
+                    <span className="min-w-0 truncate text-small text-muted-foreground">
+                      {about}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
         </FormStep>
       ) : null}
 

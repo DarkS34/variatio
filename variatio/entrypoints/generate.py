@@ -23,6 +23,7 @@ def generate(
     model: str | None = None,
     avoid: list[str] | None = None,
     on_accepted: Callable[[GeneratedVariant, int], None] | None = None,
+    omit: list[str] | None = None,
 ) -> list[GeneratedVariant]:
     """Generate `n` variants, defaulting to the bank's most frequent concepts.
 
@@ -48,6 +49,7 @@ def generate(
         model=writer,
         avoid=avoid,
         on_accepted=on_accepted,
+        omit=omit,
     )
 
 

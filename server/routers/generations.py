@@ -150,6 +150,7 @@ def row_view(record: dict, user) -> dict:
         "targets": store.concepts_of(record),
         "curriculum": list(curriculum if isinstance(curriculum, list) else []),
         "fixed": dict(commission.get("fixed") or {}),
+        "omit": list(commission.get("omit") or []),
         "instructions": commission.get("instructions") or "",
         "think": commission.get("think", True),
         "effort": resolved.get("effort"),

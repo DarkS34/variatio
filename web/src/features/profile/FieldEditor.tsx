@@ -21,6 +21,7 @@ import { ChipInput } from "@/components/ui/chips";
 import { Field } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Textarea } from "@/components/ui/input";
+import { canBeOmittable } from "@/lib/profile";
 import type { FieldSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT, type Key, type Translate } from "@/lib/i18n";
@@ -114,9 +115,11 @@ export function isNullable(schema: Record<string, any>): boolean {
  * Whether a field may be put in front of whoever commissions an exercise.
  *
  * Mirrors ExemplarsProfile._validate_decided_by: the primary field IS the item, and a list
- * or a free object has no choice to offer.
+ * or a free object has no choice to offer. No control asks it any more; it is what lets a
+ * change of type drop a `decided_by: "user"` a build wrote, which the validator would
+ * refuse on the new type.
  */
-export function isDecidable(schema: Record<string, any>, isPrimary: boolean): boolean {
+function isDecidable(schema: Record<string, any>, isPrimary: boolean): boolean {
   if (isPrimary) return false;
   const type = baseType(schema);
   return type !== "array" && type !== "object";
@@ -339,13 +342,13 @@ export function FieldEditor({
   const Icon = META[type].icon;
   const nameError = nameDraft.trim() === name ? null : fieldNameError(nameDraft, taken, tr, name);
   const canBePrimary = type === "string";
-  const decidable = isDecidable(schema, isPrimary);
-  const decidedBy = spec.decided_by === "user" ? "user" : "model";
+  const canOmit = canBeOmittable(name, isPrimary);
+  const omittable = canOmit && spec.omittable === true;
 
   const setSchema = (patch: Record<string, any>) =>
     onChange({ ...spec, schema: { ...schema, ...patch } });
   // A type with no choice to offer takes the field back from whoever generates: the
-  // validator refuses the pair, and the control that would undo it is not drawn for it.
+  // validator refuses the pair, and no control here would undo it.
   const setType = (next: FieldType) => {
     const rebuilt = rebuild(schema, next, nullable);
     onChange({
@@ -404,9 +407,9 @@ export function FieldEditor({
           <Badge variant={nullable ? "outline" : "secondary"} className="shrink-0">
             {nullable ? t("field.optional") : t("field.obligatory")}
           </Badge>
-          {decidedBy === "user" ? (
+          {omittable ? (
             <Badge variant="outline" className="shrink-0">
-              {t("field.decidedBy.badge")}
+              {t("field.omittable.badge")}
             </Badge>
           ) : null}
           {!open && spec.description ? (
@@ -475,15 +478,18 @@ export function FieldEditor({
         <div className="animate-fade-in space-y-4 border-t border-border p-4">
           {/* Four questions about the FORM of a field, in two rows of two: what it is called
               beside what it is, and under them the two choices of one kind — whether it is
-              obligatory, and who gives it its value. They are ONE grid and not two columns,
-              so the second row starts at one height on both sides whatever the type picker
-              and its caption take (user's request, 2026-10-05: stacked in two columns,
-              "Quién lo decide" sat a line lower than "Obligatoriedad").
+              obligatory, and whether whoever generates chooses to have it. They are ONE
+              grid and not two columns, so the second row starts at one height on both sides
+              whatever the type picker and its caption take (user's request, 2026-10-05:
+              stacked in two columns, the second control sat a line lower than
+              "Obligatoriedad").
 
-              "Quién lo decide" is back (2026-10-05, explicit user request, after a month out
-              of the screen). It is the same control as "Obligatoriedad" at the same width,
-              and it is not drawn for a field with no choice to offer — the statement, a
-              list, a free object.
+              The second control marks the field `omittable`: switched on, "Generar
+              ejercicios" asks after the difficulty whether the new exercise carries it. It
+              took the place of "Quién lo decide" the day that one came back (2026-10-05,
+              explicit user request). It is the same control as "Obligatoriedad" at the
+              same width, and it is not drawn for the statement, which is the exercise
+              itself.
 
               Neither "Longitud" nor "Rango" is asked: both are the shape of the schema and
               not of the subject — a minimum and a maximum of characters are a constraint
@@ -526,22 +532,22 @@ export function FieldEditor({
               />
             </Row>
 
-            {decidable ? (
+            {canOmit ? (
               <Row
-                label={t("field.decidedBy.label")}
-                hint={t("field.decidedBy.hint")}
+                label={t("field.omittable.label")}
+                hint={t("field.omittable.hint")}
                 className="md:max-w-[16rem]"
               >
                 <Segmented
-                  value={decidedBy}
+                  value={omittable ? "on" : "off"}
                   disabled={locked}
                   title={locked ? t(lockedHint) : undefined}
                   onChange={(next) =>
-                    onChange({ ...spec, decided_by: next === "user" ? "user" : undefined })
+                    onChange({ ...spec, omittable: next === "on" ? true : undefined })
                   }
                   options={[
-                    { value: "model", label: t("field.decidedBy.model") },
-                    { value: "user", label: t("field.decidedBy.user") },
+                    { value: "on", label: t("field.omittable.on") },
+                    { value: "off", label: t("field.omittable.off") },
                   ]}
                 />
               </Row>

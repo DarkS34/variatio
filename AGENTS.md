@@ -76,8 +76,8 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   ([cli.py](variatio/cli.py)). `--workspace` is **required**; there is no default instance.
   `transcribe` reads raw documents into pages (`--slot corpus|exemplars|all`) and is never
   chained by anything; `build` creates missing artifacts; `init` loads, tags, warms indices;
-  `generate` (`-n`, `--concepts`, `--item-type`, `--fixed FIELD=VALUE`, `--curriculum`,
-  `--instructions`); `all` = build missing + init + generate.
+  `generate` (`-n`, `--concepts`, `--item-type`, `--fixed FIELD=VALUE`, `--omit FIELD`,
+  `--curriculum`, `--instructions`); `all` = build missing + init + generate.
 - `uv run system [serve|import-instance|export-instance|export-generations|workspaces|create-workspace|db-check|create-user|users|grant|invite]`
   — API and admin ([server/cli/](server/cli/)). No subcommand means `serve`. `guarded()` wraps
   every command except `db-check` and `serve`. `PROG = "system"` matches `pyproject.toml`.
@@ -540,6 +540,22 @@ not a row in «Campos de …»; the generate form asks «¿De qué nivel?» rega
 A modality may also declare **one variant decision field** (e.g. diagram kind) when its
 exemplars split along a discrete form of the deliverable.
 
+### Fields a commission may leave out
+
+A field marked `omittable: true` is one whoever commissions chooses to have or not (user's
+request, 2026-10-05). The mark is set by hand in step 2 («Se elige al generar»); no builder
+writes it, and absent means the field is always written. The validator refuses it on the
+primary field and on the difficulty. A commission names what it leaves out (`omit`, a job
+parameter and `--omit` on the CLI); `ItemType.without(names)` returns a second reading of
+the same modality without those fields, and the generator reads that one everywhere: the
+fields asked of the model, the few-shot block, the schema of the repair, the parse, the
+checks and the admissibility owners. A name the profile does not mark is ignored with a
+warning, never refused, so a commission saved under an earlier profile can be repeated; a
+value pinned on a field left out is dropped the same way (`clean_fixed`). The field stays in
+the profile and in the bank. The record keeps `commission.omit` as asked and
+`resolved.omitted` as run. The evaluation never leaves a field out: a comparison is of
+whole exercises (`toEvaluationParams` strips `omit`, and its form does not ask).
+
 ### Taggability
 
 Not part of the builder: a job (`review_taggability`) judged per domain against the
@@ -956,7 +972,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   filters (search, modality, source, level, «Sin concepto»), no ordering control, no
   similarity scores, primary concept as a filled badge placed first. `ConceptBadge`/
   `ConceptChip` are the two ways to draw a concept; badges truncate with a `title`.
-- Generate: numbered steps; the curriculum box inside «¿Qué hay que practicar?» (no switch;
+- Generate: numbered steps; after «¿De qué nivel?» and before the other decisions, «¿Qué
+  partes lleva?» — one switch per `omittable` field of the type, all on at the start, drawn
+  only when the type has one and never in the evaluation's form; a part switched off is
+  not asked about in the step below and loses its pinned value; the curriculum box inside
+  «¿Qué hay que practicar?» (no switch;
   in force when non-empty; marking a concept marks its prerequisites, and the closed list is
   what runs); prerequisites of targets are marked, never locked; exemplar-scope switch
   defaults to «Solo conceptos con ejemplos» each opening; model cards above the reasoning
@@ -1272,13 +1292,15 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The raw material is its own screen; one row per document; nothing announces completeness
   except the finished origin's filled tick and the line over «Continuar» beside the title.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
-  «Quién lo decide» (`decided_by`) is the exception the user asked back (2026-10-05): it
-  is the second row of a field in «Campos de …» with «Obligatoriedad» — one grid, so the two
-  start at one height under the name and the type — and is not drawn for a field with no
-  choice to offer (the statement, a list, a free object); a field that becomes one loses
-  the mark. Its two options read «El modelo» / «El usuario», and the chosen one is the type
-  picker's ink border over the ink tint (`--muted` and `--sunk` are one value, so a sunk
-  pill on a muted ground told nothing). «Campos que se indexan» (`embed_fields`)
+  «Quién lo decide» (`decided_by`) came back on 2026-10-05 and left again the same day, at
+  the user's request: a build still writes it and the generate form still asks about a
+  `decided_by: "user"` field, but no screen edits it (a field that becomes the statement, a
+  list or an object still loses the mark). In its place stands «Se elige al generar»
+  (`omittable`): the second row of a field in «Campos de …» with «Obligatoriedad» — one
+  grid, so the two start at one height under the name and the type — with «Activado» /
+  «Desactivado», not drawn for the statement; a field with it on carries a badge. The
+  chosen option is the type picker's ink border over the ink tint (`--muted` and `--sunk`
+  are one value, so a sunk pill on a muted ground told nothing). «Campos que se indexan» (`embed_fields`)
   stays out: it came back the same day and the user removed it again on reading why the
   default is the statement alone (measured, a solution in the index tags worse).
 - No (i) beside a stage title; an (i) and visible text never say the same thing.

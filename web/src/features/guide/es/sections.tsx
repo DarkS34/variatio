@@ -841,9 +841,9 @@ function Profile() {
               body: t("field.description.hint"),
             },
             {
-              key: "quien-lo-decide",
-              head: t("field.decidedBy.label"),
-              body: `${t("field.decidedBy.hint")} No se pregunta por el enunciado, ni por una lista o un objeto: ahí no hay nada que elegir de antemano.`,
+              key: "se-elige-al-generar",
+              head: t("field.omittable.label"),
+              body: `${t("field.omittable.hint")} Un campo con la opción activada lleva la marca «${t("field.omittable.badge")}». El enunciado no lleva este control: es el propio ejercicio.`,
             },
             {
               key: "primario",
@@ -1222,7 +1222,7 @@ function Generate() {
           contestarla, así que volver a cambiar los conceptos cuesta un clic y ningún scroll.
         </p>
         <p>
-          Lo <strong>numerado es el encargo</strong>: como mucho cuatro preguntas, y dos de
+          Lo <strong>numerado es el encargo</strong>: como mucho cinco preguntas, y tres de
           ellas solo aparecen si tu asignatura las necesita. El texto libre no lleva número y
           vive plegado en «{t("form.instructions.title")}», debajo.
         </p>
@@ -1256,6 +1256,19 @@ function Generate() {
                 {t("decision.any")}» para no fijarlo. Es la misma escala en todos los tipos, así
                 que pedir «avanzado» quiere decir lo mismo aquí que en la lista de tus
                 ejercicios.
+              </p>
+            </>,
+            <>
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                {t("form.parts.title")}
+                <Badge variant="outline">solo si el tipo tiene partes que se eligen al generar</Badge>
+              </p>
+              <p className="text-small text-muted-foreground">
+                Un interruptor por cada parte que en el Paso {stepNumberOf("exemplars_profile")}{" "}
+                lleva «{t("field.omittable.label")}» activado. Todas empiezan encendidas. Una
+                parte apagada no se genera en este encargo, y la pregunta siguiente tampoco
+                pregunta por ella. El enunciado y el nivel de dificultad no están aquí: se
+                generan siempre.
               </p>
             </>,
             <>

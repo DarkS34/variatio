@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { ItemTypeSpec } from "@/lib/types";
 
-import { difficultyFieldOf, difficultyLevelsOf, otherDecidedFields } from "./profile";
+import {
+  canBeOmittable,
+  difficultyFieldOf,
+  difficultyLevelsOf,
+  omittableFields,
+  otherDecidedFields,
+} from "./profile";
 
 function modality(fields: Record<string, unknown>): ItemTypeSpec {
   return {
@@ -54,5 +60,31 @@ describe("the field every modality carries", () => {
       nivel_dificultad: { schema: { enum: ["suave", "medio", "duro"] } },
     });
     expect(difficultyLevelsOf(renamed)).toEqual(["suave", "medio", "duro"]);
+  });
+});
+
+describe("a field a commission may leave out", () => {
+  it("is asked about only when the profile says so", () => {
+    const spec = modality({
+      enunciado: STATEMENT,
+      solucion: { schema: { type: "string" }, omittable: true },
+      pistas: { schema: { type: "array" }, omittable: false },
+      formato: { schema: { enum: ["a", "b"] } },
+    });
+    expect(omittableFields(spec)).toEqual(["solucion"]);
+    expect(omittableFields(null)).toEqual([]);
+  });
+
+  it("is never the statement nor the difficulty, under either of its names", () => {
+    expect(canBeOmittable("solucion", false)).toBe(true);
+    expect(canBeOmittable("enunciado", true)).toBe(false);
+    expect(canBeOmittable("nivel_dificultad", false)).toBe(false);
+    expect(canBeOmittable("difficulty_level", false)).toBe(false);
+    // A profile edited by hand may carry the mark where the validator would refuse it.
+    const wrong = modality({
+      enunciado: { ...STATEMENT, omittable: true },
+      nivel_dificultad: { ...LADDER, omittable: true },
+    });
+    expect(omittableFields(wrong)).toEqual([]);
   });
 });

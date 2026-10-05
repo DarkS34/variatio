@@ -64,6 +64,29 @@ export function embedFields(spec: ItemTypeSpec | null | undefined): string[] {
   return declared.length ? declared : [spec.primary_field];
 }
 
+/**
+ * Whether a field may be marked as one a commission can leave out.
+ *
+ * Mirrors ExemplarsProfile._validate_omittable: the primary field IS the exercise, and the
+ * difficulty is the one field every modality carries.
+ */
+export function canBeOmittable(name: string, isPrimary: boolean): boolean {
+  return !isPrimary && !(DIFFICULTY_FIELDS as readonly string[]).includes(name);
+}
+
+/**
+ * The fields a commission may leave out of a new exercise, in declaration order.
+ *
+ * Mirrors ItemType.omittable_fields: only an explicit `true` counts, so a profile that
+ * says nothing asks nothing.
+ */
+export function omittableFields(spec: ItemTypeSpec | null | undefined): string[] {
+  if (!spec) return [];
+  return Object.entries(spec.fields)
+    .filter(([name, field]) => field.omittable === true && canBeOmittable(name, name === spec.primary_field))
+    .map(([name]) => name);
+}
+
 export function userDecidedFields(spec: ItemTypeSpec | null | undefined): string[] {
   if (!spec) return [];
   return Object.entries(spec.fields)

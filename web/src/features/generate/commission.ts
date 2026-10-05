@@ -30,6 +30,11 @@ export interface FormState {
    */
   curriculum: string[];
   decisions: Record<string, unknown>;
+  /**
+   * The parts this commission leaves out, among the ones the profile marks `omittable`.
+   * Empty is "all of them", which is how every commission starts.
+   */
+  omit: string[];
   instructions: string;
   /** Only the "generate" variant reads it: an evaluation draws its own, at random. */
   think: boolean;
@@ -60,6 +65,7 @@ export const EMPTY_FORM: FormState = {
   usePresetCurriculum: false,
   curriculum: [],
   decisions: {},
+  omit: [],
   instructions: "",
   think: true,
   effort: "low",
@@ -85,6 +91,7 @@ export function toParams(state: FormState): GenerateParams {
     fixed[field] = value;
   }
   if (Object.keys(fixed).length > 0) params.fixed = fixed;
+  if (state.omit.length > 0) params.omit = [...state.omit];
   // Absent and `[]` are NOT the same request: `server/curriculum.resolve` returns the
   // parameter unchanged whenever it is given — the empty list included, which is how one
   // says "no restriction" — and only falls back to the workspace's stored curriculum when
@@ -115,6 +122,7 @@ export function fromParams(params: Record<string, unknown>): FormState {
     usePresetCurriculum: curriculum === undefined,
     curriculum: curriculum ? [...curriculum] : [],
     decisions: { ...((params.fixed as Record<string, unknown>) ?? {}) },
+    omit: Array.isArray(params.omit) ? (params.omit as unknown[]).map(String) : [],
     instructions: (params.instructions as string) ?? "",
     think: params.think !== false,
     model: typeof params.model === "string" && params.model ? params.model : null,

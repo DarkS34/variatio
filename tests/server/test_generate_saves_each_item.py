@@ -290,3 +290,29 @@ def test_an_absent_count_still_means_one(stubbed, monkeypatch):
     assert seen["n"] == 1
     assert result["requested"] == 1
     assert _records()[0]["job"]["requested"] == 1
+
+
+def test_the_parts_a_commission_leaves_out_reach_the_generator_and_the_file(stubbed, monkeypatch):
+    seen: dict = {}
+
+    def fake_generate(context, **kwargs):
+        seen.update(kwargs)
+        return _accepting("uno")(context, **kwargs)
+
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
+    _run(_job(omit=["solucion"]))
+    assert seen["omit"] == ["solucion"]
+    assert _records()[0]["commission"]["omit"] == ["solucion"]
+
+
+def test_a_commission_that_leaves_nothing_out_says_so(stubbed, monkeypatch):
+    seen: dict = {}
+
+    def fake_generate(context, **kwargs):
+        seen.update(kwargs)
+        return _accepting("uno")(context, **kwargs)
+
+    monkeypatch.setattr(handlers.entrypoints, "generate", fake_generate)
+    _run(_job())
+    assert seen["omit"] is None
+    assert _records()[0]["commission"]["omit"] == []

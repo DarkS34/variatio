@@ -852,9 +852,9 @@ function Profile() {
               body: t("field.description.hint"),
             },
             {
-              key: "quien-lo-decide",
-              head: t("field.decidedBy.label"),
-              body: `${t("field.decidedBy.hint")} It is not asked about the statement, nor about a list or an object: there is nothing to choose beforehand there.`,
+              key: "se-elige-al-generar",
+              head: t("field.omittable.label"),
+              body: `${t("field.omittable.hint")} A field with the option on carries the mark «${t("field.omittable.badge")}». The statement has no such control: it is the exercise itself.`,
             },
             {
               key: "primario",
@@ -1235,7 +1235,7 @@ function Generate() {
           the concepts again costs one click and no scrolling.
         </p>
         <p>
-          What is <strong>numbered is the commission</strong>: four questions at most, and two of
+          What is <strong>numbered is the commission</strong>: five questions at most, and three of
           them appear only if your subject needs them. The free text carries no number and sits
           folded in "{t("form.instructions.title")}", underneath.
         </p>
@@ -1268,6 +1268,19 @@ function Generate() {
                 {stepNumberOf("exemplars_profile")} underneath, plus "{t("decision.any")}" to
                 leave it unpinned. It is the same ladder in every type, so asking for "advanced"
                 means the same thing here as it does in the list of your exercises.
+              </p>
+            </>,
+            <>
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                {t("form.parts.title")}
+                <Badge variant="outline">only if the type has parts chosen when generating</Badge>
+              </p>
+              <p className="text-small text-muted-foreground">
+                One switch for each part that carries "{t("field.omittable.label")}" switched on
+                in Step {stepNumberOf("exemplars_profile")}. They all start on. A part switched
+                off is not generated in this commission, and the next question does not ask
+                about it either. The statement and the difficulty level are not here: they are
+                always generated.
               </p>
             </>,
             <>

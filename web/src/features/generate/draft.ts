@@ -28,6 +28,8 @@ export function fromGeneration(row: GenerationRow): FormState {
     usePresetCurriculum: false,
     curriculum: [...row.curriculum],
     decisions: { ...row.fixed },
+    // Absent on an exercise saved before a commission could leave a part out.
+    omit: Array.isArray(row.omit) ? [...row.omit] : [],
     instructions: row.instructions ?? "",
     // The level it was asked at, which a row before the files could not keep: it said only
     // whether the model reasoned, and that still reopens at the default level.

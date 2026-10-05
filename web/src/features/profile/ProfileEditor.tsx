@@ -24,7 +24,7 @@ import { api } from "@/lib/api";
 import type { ExemplarsProfile, FieldSpec, ItemTypeSpec, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { joinCriterion, splitCriterion } from "@/lib/difficulty";
-import { difficultyFieldOf, difficultyLevelsOf } from "@/lib/profile";
+import { difficultyFieldOf, difficultyLevelsOf, omittableFields } from "@/lib/profile";
 import { embedFields } from "@/lib/profile";
 import { useInvalidateChain, useProfile } from "@/state/queries";
 
@@ -384,6 +384,7 @@ function FieldsRead({
 }) {
   const tr = useT();
   const { t } = tr;
+  const omittable = omittableFields(spec);
   return (
     <div className="space-y-2 pt-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -413,8 +414,8 @@ function FieldsRead({
                   <Badge variant={optional ? "outline" : "secondary"}>
                     {optional ? t("field.optional") : t("field.obligatory")}
                   </Badge>
-                  {field?.decided_by === "user" ? (
-                    <Badge variant="outline">{t("field.decidedBy.badge")}</Badge>
+                  {omittable.includes(name) ? (
+                    <Badge variant="outline">{t("field.omittable.badge")}</Badge>
                   ) : null}
                 </div>
                 <Written text={field?.description ?? ""} className="max-w-[80ch]" />
@@ -878,8 +879,12 @@ export function ProfileEditor() {
                     embed_fields: names.filter(
                       (field) => field === name || indexed.includes(field),
                     ),
-                    // The statement is the exercise itself and nobody chooses it beforehand.
-                    fields: { ...spec.fields, [name]: { ...spec.fields[name], decided_by: undefined } },
+                    // The statement is the exercise itself: nobody chooses it beforehand,
+                    // and no new exercise goes without it.
+                    fields: {
+                      ...spec.fields,
+                      [name]: { ...spec.fields[name], decided_by: undefined, omittable: undefined },
+                    },
                   })
                 }
                 onMove={(direction) => moveField(name, direction)}

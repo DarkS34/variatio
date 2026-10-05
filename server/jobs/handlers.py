@@ -226,6 +226,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     concepts = params.get("concepts") or None
     item_type = params.get("item_type") or None
     fixed = params.get("fixed") or None
+    omit = [str(name) for name in params.get("omit") or []] or None
     curriculum = curriculum_store.resolve(
         context.workspace, context.knowledge_graph, params.get("curriculum")
     )
@@ -245,7 +246,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     think = entrypoints.resolve_generation_effort(model, asked_think)
 
     resolved_type = context.exemplars_profile.item_type(item_type)
-    detail = _commission_detail(fixed, curriculum, instructions, think)
+    detail = _commission_detail(fixed, omit, curriculum, instructions, think)
     logger.info(
         f"Generando {n} ítem(s) de tipo «{resolved_type.label}» con "
         f"'{model}' sobre "
@@ -286,6 +287,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         model=model,
         avoid=avoid,
         on_accepted=remember,
+        omit=omit,
     )
     if len(results) < n:
         logger.warning(f"{len(results)}/{n} ítem(s) validados; el resto no pasó el esquema")
@@ -313,11 +315,13 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     }
 
 
-def _commission_detail(fixed, curriculum, instructions, think) -> list[str]:
+def _commission_detail(fixed, omit, curriculum, instructions, think) -> list[str]:
     """Spell out the parts of a commission that are not the concepts, for the log line."""
     detail = []
     if fixed:
         detail.append("campos fijados " + ", ".join(f"{k}={v}" for k, v in fixed.items()))
+    if omit:
+        detail.append("sin los campos " + ", ".join(omit))
     if curriculum:
         detail.append(f"currículo de {len(curriculum)} concepto(s)")
     if instructions:
@@ -396,6 +400,7 @@ def _run_record(job: Job, ws: Workspace, n: int, asked_think, model: str) -> dic
             "concepts": list(params.get("concepts") or []),
             "item_type": params.get("item_type") or None,
             "fixed": dict(params.get("fixed") or {}),
+            "omit": [str(name) for name in params.get("omit") or []],
             "curriculum": params.get("curriculum"),
             "instructions": params.get("instructions") or None,
             "think": asked_think,

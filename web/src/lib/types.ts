@@ -255,8 +255,13 @@ export interface FieldSpec {
   label?: string;
   description?: string;
   guidance?: { extraction?: string; generation?: string };
-  /** Who chooses the value. Absent means "model": only "user" fields are asked for. */
+  /** Who chooses the value. Absent means "model": only "user" fields are asked for. A build
+   *  writes it; no screen edits it. */
   decided_by?: "user" | "model";
+  /** Whether a commission may leave this field out of a new exercise. Absent means no:
+   *  the field is always written. `true` makes the generate form ask, after the
+   *  difficulty, whether this commission's exercises carry it. */
+  omittable?: boolean;
 }
 
 /** One modality of exercise: its own fields, its own primary and its own rules. */
@@ -281,6 +286,8 @@ export interface GenerateParams {
   concepts: string[];
   item_type?: string;
   fixed?: Record<string, unknown>;
+  /** The fields this commission leaves out, among the ones the profile marks `omittable`. */
+  omit?: string[];
   curriculum?: string[];
   instructions?: string;
   /** Whether the model deliberates before writing: `false` is off, a string names the
@@ -626,6 +633,8 @@ export interface GenerationRow {
   targets?: string[];
   curriculum: string[];
   fixed: Record<string, unknown>;
+  /** The parts the commission left out; absent on an exercise saved before it could. */
+  omit?: string[];
   instructions: string;
   /** As asked: off, on, or the level it was asked at. */
   think: boolean | string;

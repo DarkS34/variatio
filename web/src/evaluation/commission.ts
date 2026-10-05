@@ -11,10 +11,11 @@ import type { EvaluationParams } from "./types";
  * evaluator control of the very condition being measured. The server ignores both fields
  * too — this is the second lock, not the only one. `model` goes for the same reason: the
  * writer of the two local proposals is the installation's (`evaluation.local_model`), so
- * a value the form happened to hold must not reach the request.
+ * a value the form happened to hold must not reach the request. `omit` goes too: a
+ * comparison is always of whole exercises, and its form never asks which parts to leave out.
  */
 export function toEvaluationParams(form: FormState): EvaluationParams {
-  const { n: _n, think: _think, model: _model, ...rest } = toParams(form);
+  const { n: _n, think: _think, model: _model, omit: _omit, ...rest } = toParams(form);
   return rest;
 }
 

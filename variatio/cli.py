@@ -135,6 +135,12 @@ def _add_generation_args(parser: argparse.ArgumentParser) -> None:
         help="fix a schema field to a value; repeatable",
     )
     parser.add_argument(
+        "--omit",
+        nargs="+",
+        metavar="FIELD",
+        help="leave these fields out of the items, among the ones the profile marks omittable",
+    )
+    parser.add_argument(
         "--curriculum",
         nargs="+",
         metavar="CONCEPT",
@@ -195,6 +201,7 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
         fixed=_parse_fixed(args.fixed),
         curriculum=args.curriculum,
         instructions=args.instructions,
+        omit=args.omit,
     )
     
     # Print each generated item, and its reasoning when the model produced any

@@ -36,3 +36,18 @@ describe("fromParams", () => {
     );
   });
 });
+
+/* The parts a commission leaves out travel as a list, and absence is "all of them": a run
+   recorded before the question existed reads back as a commission that left nothing out. */
+describe("the parts a commission leaves out", () => {
+  it("travel only when there are any", () => {
+    expect("omit" in toParams({ ...EMPTY_FORM, concepts: ["Función"] })).toBe(false);
+    expect(toParams({ ...EMPTY_FORM, omit: ["solucion"] }).omit).toEqual(["solucion"]);
+  });
+
+  it("read back off a run, and as none off a run that named none", () => {
+    expect(fromParams({ omit: ["solucion"] }).omit).toEqual(["solucion"]);
+    expect(fromParams({}).omit).toEqual([]);
+    expect(fromParams({ omit: "solucion" }).omit).toEqual([]);
+  });
+});
