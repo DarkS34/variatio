@@ -207,10 +207,10 @@
           "kg_units": "low"
         },
         "phases": {
-          "ep_scan": true,
+          "ep_scan": false,
           "kg_units": false,
-          "kg_domains_leftovers": true,
-          "kg_extract": true
+          "kg_domains_leftovers": false,
+          "kg_extract": false
         }
       },
       "evaluation": {
@@ -275,11 +275,11 @@
           "eb_extract": false,
           "kg_extract": false,
           "kg_clean_merge": true,
-          "kg_clean_drop": false,
-          "kg_domains": true,
+          "kg_clean_drop": true,
+          "kg_domains": false,
           "kg_domains_leftovers": false,
           "kg_link_domain": true,
-          "kg_link_cross_domain": false,
+          "kg_link_cross_domain": true,
           "kg_taggable": true,
           "kg_context": false,
           "description_generation": false,
