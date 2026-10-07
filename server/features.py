@@ -13,16 +13,29 @@ recorded stays readable while it is off.
 
 The list of a function is kept whatever its mode: switching to everybody and back to the list
 finds the list as it was, and an invitation can list its holder before the mode is `selected`.
+
+WHAT A SUBJECT LETS ITS STUDENTS USE (2026-10-06). Inside a subject its teachers decide two
+more things for its students alone: whether they generate exercises and whether they use the
+tutor (`workspaces.student_generate`, `student_tutor`; «Clase → Qué usan los alumnos»).
+`refusal` is the one reading of all of it — the administrator's mode, the role and the
+subject's switch — and `for_user` answers it for the subject an account is in.
 """
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .db.models import FeatureAccess, FeatureGrant, User
+from .db.models import VIEWER, FeatureAccess, FeatureGrant, Membership, User, Workspace
 
 EVALUATION = "evaluation"
 TUTOR = "tutor"
 FEATURES: tuple[str, ...] = (EVALUATION, TUTOR)
+
+# Generating is everybody's, but a subject's teachers may close it to its students. It is not
+# an optional function: it has no mode and no row in `feature_access`.
+GENERATE = "generate"
+
+# What a subject's teachers may close to its students, and the column that says it is open.
+SUBJECT_SWITCHES: dict[str, str] = {GENERATE: "student_generate", TUTOR: "student_tutor"}
 
 OFF = "off"
 ALL = "all"
@@ -38,10 +51,85 @@ REFUSALS = {
     TUTOR: "El tutor socrático no está activado para tu cuenta.",
 }
 
+# What a student hears when the subject's teachers closed the function to its students.
+CLOSED_HERE = {
+    GENERATE: "Tu docente ha cerrado la generación de ejercicios en esta asignatura.",
+    TUTOR: "Tu docente ha cerrado el tutor en esta asignatura.",
+}
 
-def for_user(session: Session, user: User) -> dict[str, bool]:
-    """Answer, for every function, whether it is open to this account."""
-    return {feature: enabled(session, user, feature) for feature in FEATURES}
+
+def for_user(
+    session: Session, user: User, workspace: Workspace | None = None, role: str | None = None
+) -> dict[str, bool]:
+    """Answer, for generating and every function, whether it is open to this account here.
+
+    `workspace` and `role` are the subject the account is in and its role there; without
+    them only the administrator's modes are read, which is what an account in no subject has.
+    """
+    return {
+        feature: refusal(session, user, feature, workspace, role) is None
+        for feature in (GENERATE, *FEATURES)
+    }
+
+
+def refusal(
+    session: Session,
+    user: User,
+    feature: str,
+    workspace: Workspace | None = None,
+    role: str | None = None,
+) -> str | None:
+    """Return why `feature` is closed to this account in this subject, or None when it is open.
+
+    The administrator's mode first, for the optional functions; then, for a student of the
+    subject, the switch its teachers set. A teacher, and an administrator entering through the
+    bypass (who holds the owner's role), never meets a subject's switch.
+    """
+    if feature in FEATURES and not enabled(session, user, feature):
+        return REFUSALS[feature]
+    column = SUBJECT_SWITCHES.get(feature)
+    if column and workspace is not None and role == VIEWER and not getattr(workspace, column, True):
+        return CLOSED_HERE[feature]
+    return None
+
+
+def subject_uses(workspace: Workspace) -> dict[str, bool]:
+    """Answer what a subject's teachers let its students use."""
+    return {feature: bool(getattr(workspace, column)) for feature, column in SUBJECT_SWITCHES.items()}
+
+
+def set_subject_uses(session: Session, workspace: Workspace, changes: dict[str, bool]) -> None:
+    """Open or close to a subject's students the functions named in `changes`."""
+    for feature, value in changes.items():
+        setattr(workspace, SUBJECT_SWITCHES[feature], bool(value))
+    session.flush()
+
+
+def offered_to_students(session: Session, workspace: Workspace) -> bool:
+    """Say whether the administrator opened the tutor to anybody studying in this subject.
+
+    The subject's switch for the tutor means something only then: with the tutor open to
+    none of its students, «Qué usan los alumnos» does not draw it.
+    """
+    current = mode(session, TUTOR)
+    if current == ALL:
+        return True
+    if current != SELECTED:
+        return False
+    return (
+        session.scalar(
+            select(Membership.id)
+            .join(FeatureGrant, FeatureGrant.user_id == Membership.user_id)
+            .where(
+                FeatureGrant.feature == TUTOR,
+                Membership.workspace_id == workspace.id,
+                Membership.role == VIEWER,
+                Membership.disabled_at.is_(None),
+            )
+            .limit(1)
+        )
+        is not None
+    )
 
 
 def enabled(session: Session, user: User, feature: str) -> bool:

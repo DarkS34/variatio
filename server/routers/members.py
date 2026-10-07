@@ -23,6 +23,11 @@ this subject: one per name, a student's — a teacher's only when an owner mints
 optional function on them, which stay the administrator's to give. Both are kept sealed like
 the administrator's and read again on a request of its own that leaves a line in the log. An
 invitation of another subject is a 404 here.
+
+WHAT THE STUDENTS USE is the teachers' too: whether the subject's students generate exercises
+and use the tutor (`/uses`, the two switches `server/features.py` reads), closed during an
+exam, say. The tutor's switch matters only where the administrator opened the tutor to one of
+them, and the answer says whether that is so.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -32,7 +37,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import auth, installation, members
+from .. import auth, features, installation, members
 from ..auth import links
 from ..auth.rate_limit import throttle
 from ..db import identity
@@ -94,6 +99,13 @@ class ClassLinkEditBody(BaseModel):
     paused: bool | None = None
     max_uses: int | None = None
     expires_at: datetime | None = None
+
+
+class UsesBody(BaseModel):
+    """What the subject's students may use; only the fields sent change."""
+
+    generate: bool | None = None
+    tutor: bool | None = None
 
 
 class InvitesBody(BaseModel):
@@ -205,6 +217,38 @@ def end_course(
         "desactivado(s)" if body.action == DISABLE else "quitado(s)",
     )
     return {"action": body.action, "students": done, "class_link_paused": paused}
+
+
+@router.get("/uses")
+def uses(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
+    """Answer what the subject's students may use, and whether the tutor is theirs to use at all."""
+    return _uses_view(db, access)
+
+
+@router.patch("/uses")
+def change_uses(
+    body: UsesBody, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Open or close generating and the tutor to the subject's students; teachers keep both."""
+    changes = body.model_dump(exclude_none=True)
+    features.set_subject_uses(db, access.workspace, changes)
+    for feature, value in changes.items():
+        logger.info(
+            "[asignatura] «{}» {} {} a los alumnos de «{}»",
+            access.user.username,
+            "abrió" if value else "cerró",
+            "la generación" if feature == features.GENERATE else "el tutor",
+            access.ws.slug,
+        )
+    return _uses_view(db, access)
+
+
+def _uses_view(db: DbSession, access: auth.Access) -> dict:
+    """Render the two switches, and whether the administrator opened the tutor to a student here."""
+    return {
+        **features.subject_uses(access.workspace),
+        "tutor_offered": features.offered_to_students(db, access.workspace),
+    }
 
 
 @router.get("/class-link")

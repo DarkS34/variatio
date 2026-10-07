@@ -7,6 +7,7 @@ bypass — the membership check has one, this has none.
 """
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -79,7 +80,7 @@ def test_a_function_nobody_has_set_is_off_for_everybody(db):
     ana = _user(db, "ana")
 
     assert features.mode(db, features.TUTOR) == features.OFF
-    assert features.for_user(db, ana) == {"evaluation": False, "tutor": False}
+    assert features.for_user(db, ana) == {"generate": True, "evaluation": False, "tutor": False}
 
 
 def test_all_opens_a_function_to_every_account_and_only_that_function(db):
@@ -87,7 +88,7 @@ def test_all_opens_a_function_to_every_account_and_only_that_function(db):
 
     features.set_mode(db, features.TUTOR, features.ALL)
 
-    assert features.for_user(db, ana) == {"evaluation": False, "tutor": True}
+    assert features.for_user(db, ana) == {"generate": True, "evaluation": False, "tutor": True}
 
 
 def test_selected_opens_a_function_to_the_listed_accounts_alone(db):
@@ -115,12 +116,16 @@ def test_the_list_survives_a_change_of_mode_and_is_replaced_whole(db):
 # THE DEPENDENCY ----------------------------------------------------------------------------------
 
 
+def _here(user, role="viewer", workspace=None):
+    return SimpleNamespace(user=user, workspace=workspace, role=role)
+
+
 def test_a_route_refuses_an_account_the_function_is_not_open_to_with_a_stable_code(db):
     ana = _user(db, "ana")
     check = require_feature(features.TUTOR)
 
     with pytest.raises(HTTPException) as refused:
-        check(user=ana, session=db)
+        check(access=_here(ana), session=db)
 
     assert refused.value.status_code == 403
     assert refused.value.headers == {"X-Error-Code": features.OFF_CODE}
@@ -131,10 +136,10 @@ def test_the_administrator_gets_no_bypass(db):
     features.set_mode(db, features.TUTOR, features.SELECTED)
 
     with pytest.raises(HTTPException):
-        require_feature(features.TUTOR)(user=admin, session=db)
+        require_feature(features.TUTOR)(access=_here(admin, "owner"), session=db)
 
     features.list_account(db, features.TUTOR, admin.id)
-    assert require_feature(features.TUTOR)(user=admin, session=db) is None
+    assert require_feature(features.TUTOR)(access=_here(admin, "owner"), session=db) is None
 
 
 def test_the_routers_of_both_functions_declare_their_dependency():
@@ -151,12 +156,10 @@ def test_the_routers_of_both_functions_declare_their_dependency():
 
 
 def test_the_generic_jobs_route_is_no_way_round_the_evaluation_s_switch(db):
-    from types import SimpleNamespace
-
     from server.routers import jobs as jobs_router
 
     ana = _user(db, "ana")
-    access = SimpleNamespace(user=ana, ws=None, role="viewer")
+    access = SimpleNamespace(user=ana, ws=None, workspace=None, role="viewer")
 
     with pytest.raises(HTTPException) as refused:
         jobs_router.submit(jobs_router.JobBody(kind="evaluate"), access=access, db=db)
@@ -169,7 +172,7 @@ def test_the_session_says_which_functions_are_open_to_the_account(db):
     ana = _user(db, "ana")
     features.set_mode(db, features.EVALUATION, features.ALL)
 
-    assert _me(db, ana)["features"] == {"evaluation": True, "tutor": False}
+    assert _me(db, ana)["features"] == {"generate": True, "evaluation": True, "tutor": False}
 
 
 # THE PANEL'S ROUTES ------------------------------------------------------------------------------
@@ -246,7 +249,7 @@ def test_an_invitation_lists_the_new_account_for_the_functions_it_names(db):
     assert minted["invite"]["features"] == ["tutor"]
     ana = _redeem(db, minted["link"], "ana")
 
-    assert features.for_user(db, ana) == {"evaluation": False, "tutor": True}
+    assert features.for_user(db, ana) == {"generate": True, "evaluation": False, "tutor": True}
 
 
 def test_an_invitation_that_names_nothing_lists_nobody(db):

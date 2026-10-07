@@ -2529,6 +2529,16 @@ function StudentStart() {
         />
       </Block>
 
+      <Block title={t("form.taught.classTitle")}>
+        <Paragraph>
+          Your teacher may mark how far the class has got. Then, when you generate, the form
+          shows it as «{t("form.taught.classTitle")}» and offers you only those concepts. They
+          may also close generating or the tutor for a while, during an exam for example: its
+          door leaves the bar until they open it, and your exercises stay in «
+          {t("nav.mySubjects")}».
+        </Paragraph>
+      </Block>
+
       <Block title="While your teacher prepares the subject">
         <Paragraph>
           Until the construction is finished, the subject says that your teacher is still
@@ -2596,6 +2606,28 @@ function Class() {
         <Paragraph>
           Either way, their exercises and their conversations with the tutor stay, and whatever
           they had running in the subject stops.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.progress")}>
+        <Paragraph>
+          Mark what has already been covered in class with «{t("class.progress.mark")}». On
+          saving, what the marked concepts rest on counts as covered: marking «Recursion» also
+          marks what comes before it. From then on your students generate only on those
+          concepts: their form shows it as «{t("form.taught.classTitle")}», with no way to
+          change it, and does not offer what comes later. The syllabus highlights it. The
+          section counts it unit by unit, and «{t("class.progress.lift")}» lets your students
+          practise any concept again. Your own commissions have no such limit.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.uses")}>
+        <Paragraph>
+          Two switches for your students in this subject: «{t("class.uses.generate")}» and,
+          when the administrator has opened the tutor to any of them, «{t("class.uses.tutor")}».
+          They act at once; close them during an exam, for example, and open them after. With
+          generating closed, your students still see their exercises in «{t("nav.mySubjects")}».
+          None of this affects teachers.
         </Paragraph>
       </Block>
 

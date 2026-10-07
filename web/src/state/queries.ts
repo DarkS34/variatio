@@ -7,7 +7,7 @@ import {
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { useToast } from "@/components/ui/toast";
-import { api, getScope } from "@/lib/api";
+import { api, getCurriculum, getScope, putCurriculum } from "@/lib/api";
 import { localeStore, translator, useT, type Key, type Language } from "@/lib/i18n";
 import { phaseName } from "@/lib/names";
 import { isLive, isSplitEngine, ownedBy, queuedNotice, readLanes } from "@/lib/queue";
@@ -31,6 +31,9 @@ import { activeWorkspace, workspaceStore } from "./workspace";
 
 export const keys = {
   health: ["health"] as const,
+  // Not scoped: the tab's subject, the one `X-Workspace` names.
+  curriculum: ["kg", "curriculum"] as const,
+  studentUses: ["members", "uses"] as const,
   pipeline: ["pipeline"] as const,
   profile: ["profile"] as const,
   context: ["context"] as const,
@@ -449,6 +452,37 @@ export function useEndCourse() {
       client.invalidateQueries({ queryKey: keys.members });
       client.invalidateQueries({ queryKey: keys.workspaces });
     },
+  });
+}
+
+/**
+ * What the course has covered («Avance del curso»): a teacher sets it in «Clase», the
+ * syllabus tints it, and a student's commission runs inside it.
+ */
+export function useCurriculum(enabled = true) {
+  return useQuery({ queryKey: keys.curriculum, queryFn: () => getCurriculum(), enabled });
+}
+
+/** Save the course's progress, closed under its prerequisites, as the server stores it. */
+export function useSaveCurriculum() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (concepts: string[]) => putCurriculum(concepts, true),
+    onSuccess: (state) => client.setQueryData(keys.curriculum, state),
+  });
+}
+
+/** What the subject's students may use, as its teachers set it. */
+export function useStudentUses() {
+  return useQuery({ queryKey: keys.studentUses, queryFn: api.studentUses });
+}
+
+/** Open or close generating or the tutor to the subject's students. */
+export function useSetStudentUses() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.setStudentUses,
+    onSuccess: (uses) => client.setQueryData(keys.studentUses, uses),
   });
 }
 

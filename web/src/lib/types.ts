@@ -391,6 +391,15 @@ export interface CurriculumState {
   dropped: string[];
 }
 
+/** What a subject's teachers let its students use (`GET /api/members/uses`). */
+export interface StudentUses {
+  generate: boolean;
+  tutor: boolean;
+  /** Whether the administrator opened the tutor to anybody studying here: without it the
+   *  subject's own switch for the tutor means nothing, and is not drawn. */
+  tutor_offered: boolean;
+}
+
 /* Exemplars bank ------------------------------------------------------------------- */
 
 export interface TaggingTrace {
@@ -506,9 +515,10 @@ export interface Session {
    *  account. False means the reset link is only ever logged and handed back in the
    *  response, so nothing can be delivered to an address. */
   mail_configured: boolean;
-  /** Which optional functions are open to this account. Absent from an API older than the
-   *  bundle, so it is never read directly: `featuresOf` is the one reader. */
-  features?: Partial<Features>;
+  /** What is open to this account where it is: generating and the optional functions.
+   *  Absent from an API older than the bundle, so it is never read directly: `featuresOf`
+   *  is the one reader. */
+  features?: Partial<Openings>;
 }
 
 /** The two optional functions (`server/features.py`), as the session reports them. */
@@ -518,17 +528,31 @@ export interface Features {
 }
 
 /**
+ * What is open to the account where it is: the two functions, and generating — everybody's,
+ * but a subject's teachers may close it to its students («Clase → Qué usan los alumnos»).
+ * Not an optional function: it has no mode, no tone and no admin tab.
+ */
+export interface Openings extends Features {
+  generate: boolean;
+}
+
+/**
  * The account's functions, read defensively.
  *
  * Anything but a literal `true` is closed: an API that does not send the field, or sends it
  * malformed, degrades to the product without the two functions rather than to a bar drawing
- * doors that answer 403.
+ * doors that answer 403. Generating is the other way round: only a literal `false` closes
+ * it, because an older API never sends it and generating was always open.
  */
-export function featuresOf(session: Pick<Session, "features"> | null | undefined): Features {
+export function featuresOf(session: Pick<Session, "features"> | null | undefined): Openings {
   const raw: unknown = session?.features;
-  const field = (name: keyof Features) =>
-    typeof raw === "object" && raw !== null && (raw as Record<string, unknown>)[name] === true;
-  return { evaluation: field("evaluation"), tutor: field("tutor") };
+  const value = (name: keyof Openings) =>
+    typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>)[name] : undefined;
+  return {
+    evaluation: value("evaluation") === true,
+    tutor: value("tutor") === true,
+    generate: value("generate") !== false,
+  };
 }
 
 /** One optional function, by the name the server keys it with. */

@@ -27,6 +27,7 @@ from .deps import (
     require_feature,
     require_member,
     require_open,
+    require_viewer,
     requested_slug,
     resolve_workspace,
 )
@@ -38,7 +39,7 @@ from .tokens import digest, new_token
 # at import and NOT rebuilt per use: FastAPI caches a dependency by the callable it wraps,
 # so `Depends(require_member(VIEWER))` written inline would be a different callable each
 # time and would run the membership query twice.
-VIEW = Depends(require_member(VIEWER))
+VIEW = Depends(require_viewer)
 EDIT = Depends(require_member(EDITOR))
 MANAGE = Depends(require_member(OWNER))
 

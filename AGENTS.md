@@ -366,6 +366,20 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its
   holder (`invites.features`), applied at registration. `GET /api/health` leaves out the
   models only a switched-off function names.
+- **What a subject lets its students use** (decided 2026-10-06; migration 0019): two switches
+  of the subject, `workspaces.student_generate` and `student_tutor` (open by default), that
+  its teachers set in «Clase → Qué usan los alumnos» (`GET`/`PATCH /api/members/uses`,
+  `auth.EDIT`; the answer says `tutor_offered`, whether the administrator opened the tutor to
+  one of its students, and the tutor's switch is drawn only then). They bind students alone.
+  `features.refusal(session, user, feature, workspace, role)` is the one reading — the
+  administrator's mode first, then a student's switch — used by `require_feature` (which
+  reads the request's `Access` through `deps.require_viewer`, the callable `auth.VIEW` wraps,
+  so the membership is resolved once), by `POST /api/jobs` (`generate` included) and by
+  `features.for_user`, which `/api/auth/me` answers for the subject the account lands in:
+  `features` carries `generate` beside the two functions. Generating is not an optional
+  function (no mode, no tone, no admin tab): the client reads it with `featuresOf` (only a
+  literal `false` closes it), `usesFor` drops its door and `/generate` draws «not found»; a
+  student's exercises stay in «Mis asignaturas y ejercicios».
 - **A teacher's links** (decided 2026-10-06; `/api/members`): a subject has at most ONE live
   class link (`class_links`, revoked = dead; the rule is code, not an index) — seats (40 by
   default, `CLASS_LINK_MAX_SEATS` 300), a required expiry (30 days by default, at most
@@ -573,9 +587,17 @@ Both raw slots use the same VLM page route (quality over speed).
 
 Host state (`instance/.curriculum.json`), validated against the graph on read. **Absent
 falls back to the file, `[]` means no restriction.** `resolve()` closes the list in force
-downward (prerequisites included) and the row records what ran. No screen edits the file
-any more; a commission picks its own covered concepts. `GenerateForm`'s `assumedKnown`/
-`notYetTaught` mirror `variatio.assumed_known`/`forbidden` — edit the Python first.
+downward (prerequisites included) and the row records what ran. The file is the subject's
+«Avance del curso» (decided 2026-10-06), set by its teachers in «Clase» (`PUT
+/api/kg/curriculum`, closed under prerequisites as it is saved) and tinted on the syllabus. For a
+teacher it is a default a commission replaces. **A student's commission runs inside it**
+(`resolve(student=True)`, read from `Job.redacted`): their own list is cut by it, and neither
+`[]` nor a wider list lifts it; `routers/jobs._refuse_outside_progress` refuses a target
+outside it with a 422 before the queue (the generator would fail it after, in English); a
+subject with no progress bounds nobody. A student's form draws it read-only, «Lo visto en
+clase» (`GenerateForm.classProgress`), and offers no target outside it. `GenerateForm`'s
+`assumedKnown`/`notYetTaught` mirror `variatio.assumed_known`/`forbidden` — edit the Python
+first.
 
 ### Which model writes a variant
 
@@ -1135,7 +1157,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the row; «Borrar», asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
   route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
   confirmed in a dialog by typing the subject's name as written, as deleting a subject is;
-  destructive, never `--attention`.
+  destructive, never `--attention`. Between «Invitar» and «Fin de curso»: «Avance del curso»
+  (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
+  `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
+  its confirm, and «Quitar el límite», asked first) and «Qué usan los alumnos»
+  (`UsesSection`: two switches that act at once).
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
   2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
   «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,
@@ -1463,6 +1489,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - `guidance.generation` is hand-written only; modality rules carry generation.
 - Prerequisite lists are transitive closures bounded by the curriculum, with opposite set
   operations; without a curriculum, later concepts may be used but not practised.
+- The subject's curriculum is its course's progress, set by its teachers in «Clase», and it
+  bounds a student's commission, which cannot lift or widen it (2026-10-06; until then no
+  screen edited it and every commission chose its own).
 - The units of the syllabus are written in the order they are taught: the documents are read
   in the natural order of their names, and the prompt that finds the units orders them
   (numbering first, then the logic of the subject); code keeps that order and never sorts it
@@ -1515,6 +1544,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Membership checked on every route; admin bypass in one place.
 - The per-address limit on attempts has one exception, the networks the administrator lists
   as a school's: from them only the account is counted (2026-10-06; it had none).
+- A subject's teachers decide whether its students generate exercises and use the tutor (two
+  switches of the subject, after the administrator's mode); teachers are never bound by them
+  (2026-10-06).
 - `viewer` is «Alumno» (2026-10-06; it was «Lector», who saw everything and changed
   nothing): a student sees the syllabus without editing it and generates, evaluates or uses
   the tutor by their permissions; the rest of the construction — the bank, the raw material,

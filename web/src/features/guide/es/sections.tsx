@@ -2517,6 +2517,16 @@ function StudentStart() {
         />
       </Block>
 
+      <Block title={t("form.taught.classTitle")}>
+        <Paragraph>
+          Tu docente puede marcar hasta dónde ha llegado la clase. Entonces, al generar, el
+          formulario lo enseña como «{t("form.taught.classTitle")}» y solo te ofrece esos
+          conceptos. También puede cerrar la generación o el tutor un tiempo, por ejemplo
+          durante un examen: su puerta desaparece de la barra hasta que lo abra, y tus
+          ejercicios siguen en «{t("nav.mySubjects")}».
+        </Paragraph>
+      </Block>
+
       <Block title="Mientras tu docente prepara la asignatura">
         <Paragraph>
           Hasta que la construcción está terminada, la asignatura dice que tu docente todavía la
@@ -2583,6 +2593,28 @@ function Class() {
         <Paragraph>
           En los dos casos, sus ejercicios y sus conversaciones con el tutor se quedan, y si
           tenía algo en marcha en la asignatura, se detiene.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.progress")}>
+        <Paragraph>
+          Marca lo que ya se ha visto en clase con «{t("class.progress.mark")}». Al guardar,
+          lo que se apoya en lo marcado cuenta como visto: marcar «Recursividad» marca también
+          lo que va antes. Desde entonces tus alumnos generan solo sobre esos conceptos: su
+          formulario lo enseña como «{t("form.taught.classTitle")}», sin poder cambiarlo, y no
+          les ofrece lo de más adelante. El temario lo resalta. La sección lo cuenta unidad
+          por unidad, y «{t("class.progress.lift")}» deja a tus alumnos practicar cualquier
+          concepto otra vez. Tus propios encargos no tienen ese límite.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.uses")}>
+        <Paragraph>
+          Dos interruptores para tus alumnos de esta asignatura: «{t("class.uses.generate")}»
+          y, cuando el administrador ha abierto el tutor a alguno de ellos, «
+          {t("class.uses.tutor")}». Actúan al momento; por ejemplo, ciérralos durante un examen
+          y ábrelos después. Con la generación cerrada, tus alumnos siguen viendo sus
+          ejercicios en «{t("nav.mySubjects")}». A los docentes no les afecta nada de esto.
         </Paragraph>
       </Block>
 

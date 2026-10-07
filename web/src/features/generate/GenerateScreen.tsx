@@ -24,6 +24,7 @@ import {
   useEngineOffline,
   useOwnJobRun,
   useKg,
+  useCurriculum,
   useKgGraph,
   useLanes,
   usePipeline,
@@ -40,7 +41,7 @@ import { ResultCard, download, toMarkdown } from "./ResultCard";
 import { RunPanel } from "./RunPanel";
 import { RunStrip, useRunDetail } from "./RunStrip";
 import { refusal, stillRefused } from "./screening";
-import { useFeatures } from "@/state/auth";
+import { useFeatures, useIsStudent } from "@/state/auth";
 import { useT } from "@/lib/i18n";
 
 interface Result {
@@ -66,6 +67,9 @@ export function GenerateScreen() {
   const profileQuery = useProfile();
   const kg = useKg();
   const kgGraph = useKgGraph();
+  // A student generates inside what the class has covered, as its teachers set it in «Clase».
+  const student = useIsStudent();
+  const classProgress = useCurriculum(student);
   const submit = useSubmitJob();
   const offline = useEngineOffline();
   // ITS OWN run, by kind, and never "whatever the machine is doing": two lanes mean a build
@@ -275,6 +279,7 @@ export function GenerateScreen() {
         blockedInstructions={stillRefused(run?.job, form.instructions)}
         onLaunch={launch}
         run={run ?? null}
+        classProgress={student ? (classProgress.data?.concepts ?? null) : null}
       />
     </div>
   );

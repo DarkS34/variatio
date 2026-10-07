@@ -161,6 +161,16 @@ describe("usesFor", () => {
       usesFor(featuresOf({ features: { evaluation: "yes" } as never })).map((door) => door.key),
     ).toEqual(["generate"]);
   });
+
+  it("drops generating only where the session says it is closed", () => {
+    // Generating was always open: only a literal `false` (a subject's teachers closed it to
+    // its students) takes its door away.
+    expect(featuresOf({}).generate).toBe(true);
+    expect(featuresOf({ features: { generate: false } }).generate).toBe(false);
+    expect(
+      usesFor(featuresOf({ features: { generate: false, tutor: true } })).map((door) => door.key),
+    ).toEqual(["tutor"]);
+  });
 });
 
 describe("a student's bar", () => {
@@ -182,5 +192,12 @@ describe("studentLandingPath", () => {
   it("lands on generating while it is open", () => {
     expect(studentLandingPath({ evaluation: true, tutor: true })).toBe("/generate");
     expect(studentLandingPath({ evaluation: false, tutor: false })).toBe("/generate");
+  });
+
+  it("goes on to the tutor, then the syllabus, where the teachers closed generating", () => {
+    expect(studentLandingPath({ evaluation: true, tutor: true, generate: false })).toBe("/tutor");
+    expect(studentLandingPath({ evaluation: false, tutor: false, generate: false })).toBe(
+      "/prepare/graph",
+    );
   });
 });

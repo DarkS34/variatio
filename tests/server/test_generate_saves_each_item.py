@@ -61,7 +61,9 @@ def stubbed(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
     monkeypatch.setattr(handlers, "context_for", lambda job: context)
-    monkeypatch.setattr(handlers.curriculum_store, "resolve", lambda ws, kg, given: given or [])
+    monkeypatch.setattr(
+        handlers.curriculum_store, "resolve", lambda ws, kg, given, student=False: given or []
+    )
 
 
 def _run(job: Job) -> tuple[dict | None, _Emitter, BaseException | None]:
@@ -172,7 +174,9 @@ def test_the_effort_asked_and_the_effort_that_ran_are_both_kept(stubbed, monkeyp
 
 def test_the_commission_curriculum_is_kept_as_it_was_asked(stubbed, monkeypatch):
     monkeypatch.setattr(
-        handlers.curriculum_store, "resolve", lambda ws, kg, given: ["Bucles", "Variables"]
+        handlers.curriculum_store,
+        "resolve",
+        lambda ws, kg, given, student=False: ["Bucles", "Variables"],
     )
     monkeypatch.setattr(handlers.entrypoints, "generate", _accepting("uno"))
     _run(_job())

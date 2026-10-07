@@ -1,4 +1,14 @@
-import { CalendarX, GraduationCap, Link2, Search, UserCheck, UserMinus, UserX } from "lucide-react";
+import {
+  CalendarX,
+  GraduationCap,
+  Link2,
+  Search,
+  SlidersHorizontal,
+  Spline,
+  UserCheck,
+  UserMinus,
+  UserX,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,20 +32,30 @@ import {
 import type { Member, MemberAction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useIsOwner, useSession } from "@/state/auth";
-import { useActiveWorkspace, useClassLink, useMemberActions, useMembers } from "@/state/queries";
+import {
+  useActiveWorkspace,
+  useClassLink,
+  useCurriculum,
+  useMemberActions,
+  useMembers,
+  useStudentUses,
+} from "@/state/queries";
 
 import { EndCourseSection } from "./EndCourseSection";
 import { InviteSection, classLinkDetail } from "./InviteSection";
+import { ProgressSection, progressDetail } from "./ProgressSection";
+import { UsesSection, usesDetail } from "./UsesSection";
 
-type ClassSection = "students" | "invite" | "end";
+type ClassSection = "students" | "invite" | "progress" | "uses" | "end";
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
  *
  * Drawn as the administrator's panel draws a tab (`admin/Sections`): the list of its sections
  * beside the section open, one column of blocks under the section's header, rows parted by
- * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet; the
- * others of the plan join the list as they arrive. A student never reaches it: the route is
+ * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet. Then
+ * what the class has covered («Avance del curso») and what its students may use, and,
+ * ruled off, the owner's «Fin de curso». A student never reaches it: the route is
  * a teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
  */
 export function ClassScreen() {
@@ -43,6 +63,8 @@ export function ClassScreen() {
   const session = useSession();
   const members = useMembers();
   const classLink = useClassLink();
+  const progress = useCurriculum();
+  const uses = useStudentUses();
   const owner = useIsOwner();
   // Null until somebody picks: the section to open on depends on the list, which arrives later.
   const [picked, setPicked] = useState<ClassSection | null>(null);
@@ -68,6 +90,18 @@ export function ClassScreen() {
       label: t("class.invite"),
       mark: <Link2 className="size-4" />,
       detail: classLink.isSuccess ? classLinkDetail(classLink.data.class_link, t) : null,
+    },
+    {
+      key: "progress",
+      label: t("class.progress"),
+      mark: <Spline className="size-4" />,
+      detail: progressDetail(progress.data, t),
+    },
+    {
+      key: "uses",
+      label: t("class.uses"),
+      mark: <SlidersHorizontal className="size-4" />,
+      detail: usesDetail(uses.data, t),
     },
     // The owner's alone: ending a course takes every student out at once.
     ...(owner
@@ -101,6 +135,10 @@ export function ClassScreen() {
         >
           {section === "invite" ? (
             <InviteSection subject={subject} slug={slug} />
+          ) : section === "progress" ? (
+            <ProgressSection />
+          ) : section === "uses" ? (
+            <UsesSection />
           ) : section === "end" && owner ? (
             <EndCourseSection subject={subject} />
           ) : (

@@ -78,6 +78,9 @@ class Workspace(Base):
     It is a MIRROR of `instance/locale.json` and never the truth: the pipeline runs from
     the command line with no database, so a build reads the file, and the column is here
     so the panel can list the instances without touching disk.
+
+    `student_generate` and `student_tutor` are what its teachers let its students use
+    (`features.refusal`); they bind students alone.
     """
 
     __tablename__ = "workspaces"
@@ -88,6 +91,10 @@ class Workspace(Base):
     prompt_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    student_generate: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true")
+    )
+    student_tutor: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
 
     artifacts: Mapped[list["Artifact"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"

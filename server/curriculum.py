@@ -4,6 +4,11 @@ Host state rather than an artifact (`instance/.curriculum.json`, gitignored), be
 courses over one graph disagree about it. It is validated against the graph on every read,
 not on write alone, so a rename or a deletion surfaces as a named casualty instead of a
 silent shrink.
+
+It is the subject's «Avance del curso», which its teachers set in «Clase» (2026-10-06). For a
+teacher it is the default a commission may replace; for a STUDENT it is a bound: their
+commission runs inside it, cut by their own list when they send one, and an empty list does
+not lift it (`resolve(student=True)`). A subject with no progress set bounds nobody.
 """
 
 import json
@@ -27,7 +32,9 @@ def save(ws: Workspace, concepts: list[str], graph: KnowledgeGraph) -> dict:
     return load(ws, graph)
 
 
-def resolve(ws: Workspace, graph: KnowledgeGraph, param: list[str] | None) -> list[str] | None:
+def resolve(
+    ws: Workspace, graph: KnowledgeGraph, param: list[str] | None, student: bool = False
+) -> list[str] | None:
     """Choose between a commission's own curriculum and the workspace's, closed downwards.
 
     Absent and `[]` are different requests and only absent falls back: an empty list is how
@@ -35,11 +42,21 @@ def resolve(ws: Workspace, graph: KnowledgeGraph, param: list[str] | None) -> li
     prerequisite relation — what the class has covered includes what that rests on, which is
     what the selector marks on screen and what the row must record as having run. Closing an
     already-closed list changes nothing.
+
+    A `student`'s commission runs inside the stored progress: their own list is cut by it,
+    and neither `[]` nor a wider list lifts it. With no progress stored they are read as
+    anybody is.
     """
-    if param is not None:
-        return closure(param, graph, locale.prerequisite_relation(ws)) if param else param
+    relation = locale.prerequisite_relation(ws)
     stored = load(ws, graph)["concepts"]
-    return closure(stored, graph, locale.prerequisite_relation(ws)) if stored else None
+    if student and stored:
+        bound = closure(stored, graph, relation)
+        if not param:
+            return bound
+        return sorted(set(closure(param, graph, relation)) & set(bound))
+    if param is not None:
+        return closure(param, graph, relation) if param else param
+    return closure(stored, graph, relation) if stored else None
 
 
 def load(ws: Workspace, graph: KnowledgeGraph) -> dict:

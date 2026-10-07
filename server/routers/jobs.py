@@ -27,8 +27,10 @@ from variatio import config, entrypoints
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from .. import approvals, auth, features, generation_usage, raw_data, singletons
+from .. import approvals, auth, curriculum, features, generation_usage, raw_data, singletons
 from ..db.models import EDITOR, VIEWER
+from ..editors import kg_edit
+from ..editors.kg_edit import KGError
 from ..jobs import lanes
 from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, STUDENT_KINDS, SUBPROCESS_KINDS
 
@@ -213,6 +215,33 @@ def max_items(student: bool) -> int:
     return min(config.GENERATION_STUDENT_MAX_ITEMS, config.GENERATION_MAX_ITEMS)
 
 
+def _refuse_outside_progress(access: auth.Access, params: dict) -> None:
+    """Refuse a student's targets that lie outside what the course has covered.
+
+    The handler runs a student's commission inside the course's progress
+    (`curriculum.resolve(student=True)`), and the generator refuses a target outside its
+    curriculum — after the queue, in English. This says it first, in the student's words. A
+    subject with no graph or no progress refuses nothing here.
+    """
+    targets = [str(name) for name in params.get("concepts") or []]
+    if not targets:
+        return
+    try:
+        graph = kg_edit.load_graph(access.ws)
+    except KGError:
+        return
+    bound = curriculum.resolve(access.ws, graph, params.get("curriculum"), student=True)
+    if not bound:
+        return
+    outside = [name for name in targets if name not in set(bound)]
+    if outside:
+        raise HTTPException(
+            422,
+            "Eso todavía no se ha visto en clase: " + ", ".join(f"«{name}»" for name in outside)
+            + ". Elige conceptos de lo visto en clase.",
+        )
+
+
 def _refuse_second_batch(access: auth.Access) -> None:
     """Refuse a commission while this account has another batch queued or running here."""
     live = [*singletons.runner.running(access.ws.slug), *singletons.runner.pending(access.ws.slug)]
@@ -269,12 +298,12 @@ def submit(
         )
 
     # A kind that belongs to an optional function is that function's: this route must not be
-    # a way round the dependency its own router declares.
-    feature = FEATURE_OF.get(body.kind)
-    if feature and not features.enabled(db, access.user, feature):
-        raise HTTPException(
-            403, features.REFUSALS[feature], headers={"X-Error-Code": features.OFF_CODE}
-        )
+    # a way round the dependency its own router declares. Generating is everybody's, but a
+    # subject's teachers may close it to its students.
+    feature = FEATURE_OF.get(body.kind) or (features.GENERATE if body.kind == "generate" else None)
+    refused = feature and features.refusal(db, access.user, feature, access.workspace, access.role)
+    if refused:
+        raise HTTPException(403, refused, headers={"X-Error-Code": features.OFF_CODE})
 
     # Without an engine no job can succeed: every kind calls a model. `force` skips the
     # chain's gates, which are a teacher's decision, and never this, which is impossible.
@@ -298,6 +327,8 @@ def submit(
 
     student = access.role == VIEWER
     count = _check_params(body.kind, body.params, student)
+    if body.kind == "generate" and student:
+        _refuse_outside_progress(access, body.params)
 
     with _COMMISSIONING:
         if body.kind == "generate":

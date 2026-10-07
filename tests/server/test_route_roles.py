@@ -58,6 +58,8 @@ LEVELS = {
     ("DELETE", "/api/members/{user_id:int}"): "editor",
     # A teacher's links: the class link and the subject's personal invitations.
     ("POST", "/api/members/end-course"): "owner",
+    ("GET", "/api/members/uses"): "editor",
+    ("PATCH", "/api/members/uses"): "editor",
     ("GET", "/api/members/class-link"): "editor",
     ("GET", "/api/members/class-link/link"): "editor",
     ("POST", "/api/members/class-link"): "editor",

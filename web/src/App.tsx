@@ -104,6 +104,9 @@ export function App() {
 
     const feature = FEATURE_OF[path];
     if (feature && !features[feature]) return <NotFound />;
+    // Generating closed to the subject's students: their exercises are still read from «Mis
+    // asignaturas y ejercicios».
+    if (path === "/generate" && !features.generate) return <NotFound />;
 
     // One message rather than six 403s. It is drawn as the panel whatever the route was,
     // because the panel is where the one thing to do here lives.

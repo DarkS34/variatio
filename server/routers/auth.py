@@ -651,9 +651,10 @@ def _me(session: DbSession, user: User) -> dict:
         # included: a `null` here is what makes the panel offer "crea tu workspace", so it
         # must not say that to somebody every route is about to let through.
         "role": _role_here(user, current, mine),
-        # Which optional functions are open to this account: the bar draws a door, and the
-        # browser fetches that function's code, only for a true here.
-        "features": features.for_user(session, user),
+        # What is open to this account where it lands — generating and each optional
+        # function, a student meeting the switches of the subject: the bar draws a door,
+        # and the browser fetches that function's code, only for a true here.
+        "features": features.for_user(session, user, current, _role_here(user, current, mine)),
     }
 
 

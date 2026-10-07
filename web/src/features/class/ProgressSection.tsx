@@ -1,0 +1,198 @@
+import { ListChecks, Undo2 } from "lucide-react";
+import { useMemo, useState } from "react";
+
+import { ConceptSelector } from "@/components/ConceptSelector";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { useToast } from "@/components/ui/toast";
+import { SectionHeader } from "@/features/admin/Sections";
+import { adjacency, priors } from "@/features/generate/prerequisites";
+import { domainColours } from "@/lib/domains";
+import { when } from "@/lib/format";
+import { useT } from "@/lib/i18n";
+import { progressByUnit } from "@/lib/courseProgress";
+import type { CurriculumState } from "@/lib/types";
+import { useCurriculum, useKg, useKgGraph, useSaveCurriculum } from "@/state/queries";
+
+/** The line under «Avance del curso» in the section list: how much of the syllabus is covered. */
+export function progressDetail(
+  state: CurriculumState | undefined,
+  t: ReturnType<typeof useT>["t"],
+): string | null {
+  if (!state) return null;
+  return state.concepts.length > 0
+    ? t("class.progress.detail", { n: state.concepts.length })
+    : t("class.progress.none");
+}
+
+/**
+ * «Avance del curso»: what the class has covered, which bounds what its students practise.
+ *
+ * The same selector the generate form uses to declare a coverage, closed under the graph's
+ * prerequisites as it is saved (`PUT /api/kg/curriculum`): ticking «Recursividad» covers
+ * what it rests on. A student's commission then runs inside it (`curriculum.resolve`), the
+ * syllabus tints it, and «Quitar el límite» saves the empty list, which bounds nobody.
+ * Read unit by unit, in the syllabus' order, because «Tema 3 · 2 de 7» is the reading a
+ * teacher has of a course.
+ */
+export function ProgressSection() {
+  const { t } = useT();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const state = useCurriculum();
+  const kg = useKg();
+  const graph = useKgGraph();
+  const save = useSaveCurriculum();
+  const [draft, setDraft] = useState<string[] | null>(null);
+
+  const adj = useMemo(() => adjacency(graph.data), [graph.data]);
+  const implied = useMemo(
+    () => new Set(adj && draft ? priors(adj, draft) : []),
+    [adj, draft],
+  );
+  const covered = state.data?.concepts ?? [];
+  const units = useMemo(
+    () => progressByUnit(kg.data?.domains ?? [], covered),
+    [kg.data, covered],
+  );
+  const colours = useMemo(() => domainColours(kg.data?.concepts ?? []), [kg.data]);
+
+  const failed = (error: Error) =>
+    toast({ title: t("class.failed"), description: error.message, tone: "danger" });
+
+  const store = (concepts: string[]) =>
+    save.mutate(concepts, {
+      onSuccess: (saved) =>
+        toast({
+          title: saved.concepts.length > 0 ? t("class.progress.saved") : t("class.progress.lifted"),
+        }),
+      onError: failed,
+    });
+
+  const lift = async () => {
+    const asked = await confirm({
+      title: t("class.progress.liftConfirm"),
+      body: t("class.progress.liftConfirmBody"),
+      confirmLabel: t("class.progress.lift"),
+    });
+    if (asked) store([]);
+  };
+
+  const header = (
+    <SectionHeader title={t("class.progress")} description={t("class.progress.lead")} />
+  );
+
+  if (state.isError || kg.isError) {
+    return (
+      <>
+        {header}
+        <LoadError
+          title={t("class.progress.unreadable")}
+          error={state.error ?? kg.error}
+          onRetry={() => {
+            state.refetch();
+            kg.refetch();
+          }}
+        />
+      </>
+    );
+  }
+  if (state.isLoading || kg.isLoading) {
+    return (
+      <>
+        {header}
+        <Skeleton className="h-48" />
+      </>
+    );
+  }
+
+  const total = kg.data?.concepts.length ?? 0;
+  const set = covered.length > 0;
+
+  return (
+    <>
+      {header}
+      <section className="surface space-y-4 p-5" aria-labelledby="class-progress-state">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 space-y-0.5">
+            <h3 id="class-progress-state" className="text-heading">
+              {set
+                ? t("class.progress.covered", { n: covered.length, total })
+                : t("class.progress.noLimit")}
+            </h3>
+            <p className="max-w-3xl text-small text-muted-foreground">
+              {set
+                ? t("class.progress.savedOn", { date: when(state.data?.updated_at ?? null) })
+                : t("class.progress.noLimitBody")}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {save.isPending ? <Spinner /> : null}
+            <Button
+              variant="outline"
+              disabled={save.isPending || total === 0}
+              onClick={() => setDraft([...covered])}
+            >
+              <ListChecks />
+              {t(set ? "class.progress.change" : "class.progress.mark")}
+            </Button>
+            {set ? (
+              <Button variant="ghost" disabled={save.isPending} onClick={lift}>
+                <Undo2 />
+                {t("class.progress.lift")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        {set ? (
+          <ul className="rows" aria-label={t("class.progress.byUnit")}>
+            {units.map((unit) => (
+              <li key={unit.name} className="flex items-center gap-3 py-2">
+                <span
+                  aria-hidden
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ background: colours.get(unit.name) }}
+                />
+                <span className="min-w-0 flex-1 truncate">{unit.name}</span>
+                <span className="well hidden h-2 w-40 overflow-hidden rounded-full sm:block">
+                  <span
+                    className="block h-full rounded-full bg-ink"
+                    style={{ width: `${unit.total ? (100 * unit.covered) / unit.total : 0}%` }}
+                  />
+                </span>
+                <span className="nums w-16 shrink-0 text-right text-small text-muted-foreground">
+                  {t("class.progress.ofUnit", { n: unit.covered, total: unit.total })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {state.data && state.data.dropped.length > 0 ? (
+          <p className="text-small text-attention">
+            {t("class.progress.dropped", { names: state.data.dropped.join(", ") })}
+          </p>
+        ) : null}
+      </section>
+
+      <ConceptSelector
+        title={t("class.progress.pickTitle")}
+        concepts={kg.data?.concepts ?? []}
+        graph={graph.data}
+        selected={draft ?? []}
+        onChange={setDraft}
+        implied={implied}
+        allowNonTaggable
+        open={draft !== null}
+        onClose={() => setDraft(null)}
+        onConfirm={() => {
+          if (draft !== null) store(draft);
+          setDraft(null);
+        }}
+        confirmLabel={t("class.progress.save")}
+      />
+    </>
+  );
+}

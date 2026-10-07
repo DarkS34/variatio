@@ -282,6 +282,7 @@ export function GenerateForm({
   footnote,
   launchLabel,
   workspace,
+  classProgress = null,
 }: {
   state: FormState;
   onChange: (next: FormState) => void;
@@ -309,6 +310,10 @@ export function GenerateForm({
    *  for itself — the preset curriculum and the free text's scope — would otherwise come
    *  from the tab's workspace and describe a syllabus the run will never see. */
   workspace?: string | null;
+  /** A student's bound: what the class has covered, as its teachers set it in «Clase». Given,
+   *  the curriculum box is read-only («Lo visto en clase») and the targets stay inside it,
+   *  because the server runs a student's commission inside it whatever the form sends. */
+  classProgress?: string[] | null;
 }) {
   const tr = useT();
   const { t, plural } = tr;
@@ -409,13 +414,19 @@ export function GenerateForm({
     () => covered(graphAdjacency, state.curriculum),
     [graphAdjacency, state.curriculum],
   );
+  // A student's bound, closed downwards as `server/curriculum.resolve(student=True)` closes it.
+  const bound = useMemo(
+    () => (classProgress && classProgress.length > 0 ? covered(graphAdjacency, classProgress) : null),
+    [graphAdjacency, classProgress],
+  );
   const activeCurriculum = useMemo(() => {
+    if (bound) return bound;
     const list = state.usePresetCurriculum ? [] : coveredCurriculum;
     return list.length > 0 ? list : null;
-  }, [state.usePresetCurriculum, coveredCurriculum]);
+  }, [bound, state.usePresetCurriculum, coveredCurriculum]);
   // Whether anything bounds this commission: the list holds something, or an older run
   // is being described that ran against the workspace's own.
-  const restricting = state.usePresetCurriculum || state.curriculum.length > 0;
+  const restricting = Boolean(bound) || state.usePresetCurriculum || state.curriculum.length > 0;
 
   const priorClosure = useMemo(
     () => (graphAdjacency && chosen ? priors(graphAdjacency, state.concepts) : []),
@@ -536,8 +547,9 @@ export function GenerateForm({
 
   // The box counts what is COVERED — the picks closed downwards — because that is what the
   // button beside it counts and what will run.
-  const curriculumSummary =
-    restricting && !state.usePresetCurriculum
+  const curriculumSummary = bound
+    ? t("form.curriculum.ofN", { n: bound.length })
+    : restricting && !state.usePresetCurriculum
       ? t("form.curriculum.ofN", { n: coveredCurriculum.length })
       : curriculumLabel(state, null, tr);
 
@@ -642,6 +654,17 @@ export function GenerateForm({
             allows two states that say nothing ("restricted" with nothing ticked, and a
             ticked list turned off) and both send `[]`. Removing the last pill is what lifts
             the restriction. */}
+        {bound ? (
+          // A student's: what the class has covered, set by its teachers, and nothing to
+          // change here — the server runs the commission inside it whatever is sent.
+          <div className="space-y-1 rounded-lg border border-border bg-muted/40 p-3">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="text-body font-medium">{t("form.taught.classTitle")}</span>
+              <span className="ml-auto text-small font-medium text-primary">{curriculumSummary}</span>
+            </div>
+            <p className="text-small text-muted-foreground">{t("form.taught.classHint")}</p>
+          </div>
+        ) : (
         <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-micro font-condensed uppercase text-muted-foreground">
@@ -684,6 +707,7 @@ export function GenerateForm({
             />
           ) : null}
         </div>
+        )}
 
         {/* The correction and not the wall: the launch button already refuses, and this is
             the way to put it right without going back to the selector. It sits beside the two
@@ -702,13 +726,15 @@ export function GenerateForm({
               >
                 {plural("form.outside.drop", outsideCurriculum.length)}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => patch({ curriculum: [], usePresetCurriculum: false })}
-              >
-                {t("form.outside.lift")}
-              </Button>
+              {bound ? null : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => patch({ curriculum: [], usePresetCurriculum: false })}
+                >
+                  {t("form.outside.lift")}
+                </Button>
+              )}
             </div>
           </Alert>
         ) : null}

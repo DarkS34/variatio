@@ -227,8 +227,10 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     item_type = params.get("item_type") or None
     fixed = params.get("fixed") or None
     omit = [str(name) for name in params.get("omit") or []] or None
+    # A student's commission runs inside the course's progress (`Job.redacted` is the route's
+    # statement that the author is a student of the subject).
     curriculum = curriculum_store.resolve(
-        context.workspace, context.knowledge_graph, params.get("curriculum")
+        context.workspace, context.knowledge_graph, params.get("curriculum"), student=job.redacted
     )
     instructions = params.get("instructions") or None
     # Absent means "as it always was": a caller predating the switch reasons at the default

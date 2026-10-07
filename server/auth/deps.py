@@ -219,20 +219,22 @@ def require_open(user: User = Depends(current_user)) -> User:
 
 
 def require_feature(feature: str):
-    """Build the dependency refusing an account `feature` is not open to.
+    """Build the dependency refusing an account `feature` is not open to, here.
 
     Beside the membership check and never instead of it, and with no administrator bypass:
-    the function is open to an account or it is not (`server/features.py`).
+    the function is open to an account or it is not (`server/features.py`). It reads the
+    request's `Access` through `require_viewer`, the very callable `auth.VIEW` wraps, so
+    FastAPI resolves the membership once: a student meets the switch the subject's teachers
+    set (`features.refusal`).
     """
 
     def dependency(
-        user: User = Depends(current_user), session: DbSession = Depends(db)
+        access: Access = Depends(require_viewer), session: DbSession = Depends(db)
     ) -> None:
-        """Raise 403 with the stable code unless the function is open to this account."""
-        if not features.enabled(session, user, feature):
-            raise HTTPException(
-                403, features.REFUSALS[feature], headers={"X-Error-Code": features.OFF_CODE}
-            )
+        """Raise 403 with the stable code unless the function is open to this account here."""
+        refused = features.refusal(session, access.user, feature, access.workspace, access.role)
+        if refused is not None:
+            raise HTTPException(403, refused, headers={"X-Error-Code": features.OFF_CODE})
 
     return dependency
 
@@ -274,6 +276,11 @@ def require_member(minimum: str = VIEWER):
         return access_for(session, user, workspace, minimum)
 
     return dependency
+
+
+# The lowest level, built once and here: `auth.VIEW` wraps it and `require_feature` depends on
+# it, and FastAPI caches a dependency by its callable, so a request resolves its membership once.
+require_viewer = require_member(VIEWER)
 
 
 def resolve_workspace(session: DbSession, user: User, slug: str | None) -> Workspace:

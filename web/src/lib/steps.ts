@@ -78,7 +78,7 @@ const LANDING_ORDER: readonly Door["key"][] = ["generate", "tutor", "compare"];
  * syllabus when none is open. Before the subject is ready there is nowhere to land
  * (`SubjectNotReady`), which is the caller's to decide.
  */
-export function studentLandingPath(features: Features): string {
+export function studentLandingPath(features: Features & { generate?: boolean }): string {
   const open = usesFor(features);
   const first = LANDING_ORDER.map((key) => open.find((door) => door.key === key)).find(Boolean);
   return first?.path ?? SYLLABUS.path;
@@ -89,9 +89,14 @@ export function featureLabelKey(feature: keyof Features): Key {
   return USES.find((door) => door.feature === feature)!.labelKey;
 }
 
-/** The doors this account sees, in `USES` order: a function closed to it has no door at all. */
-export function usesFor(features: Features): Door[] {
-  return USES.filter((door) => door.feature === null || features[door.feature]);
+/**
+ * The doors this account sees, in `USES` order: a function closed to it has no door at all,
+ * and neither has generating where a subject's teachers closed it to its students.
+ */
+export function usesFor(features: Features & { generate?: boolean }): Door[] {
+  return USES.filter((door) =>
+    door.feature === null ? door.key !== "generate" || features.generate !== false : features[door.feature],
+  );
 }
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */

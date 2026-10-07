@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError, api } from "@/lib/api";
 import { localeStore, type Key, type Language } from "@/lib/i18n";
-import { featuresOf, type Features, type Role, type Session } from "@/lib/types";
+import { featuresOf, type Openings, type Role, type Session } from "@/lib/types";
 import { runStore } from "./runStore";
 import { workspaceStore } from "./workspace";
 
@@ -248,7 +248,7 @@ export function useCanCreate() {
  * decides for real (`auth.EVALUATION`, `auth.TUTOR`); this keeps the client from offering,
  * or even fetching, what would only answer 403.
  */
-export function useFeatures(): Features {
+export function useFeatures(): Openings {
   return featuresOf(useSession().data);
 }
 
