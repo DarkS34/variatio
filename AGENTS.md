@@ -318,6 +318,24 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   declares against a table: a route with no row fails.
 - CSRF is an origin check (`middleware.py`); CORS off by default. Rate limiting is in memory,
   keyed by IP and account.
+- **The people of a subject** (decided 2026-10-06): `server/members.py` holds the gestures —
+  pause (`disable_member`), open again (`enable_member`), remove (`remove_member`), change a
+  role (`change_role`) — and every door goes through them: `/api/members` (its router), the
+  panel's membership routes, leaving a subject. Closing a membership refuses taking the last
+  active owner from people still active (`identity.would_orphan`, 409 `last_owner`; a
+  subject with no owner to lose, or emptying, is not refused), moves the account's active
+  subject elsewhere, cancels its jobs there, writes the row, COMMITS, then publishes
+  `membership.closed` with `bus.publish_internal` (private with no author: no browser sees
+  it) and logs `[asignatura] «a» desactivó/quitó a «b» en «slug»`. An open socket of that
+  account closes with 4403 on it (`ws._closes`); a handshake refused for its subject is 4403
+  too (`deps.authenticate_socket` returns the close code), a missing session 4401. A paused
+  membership (`memberships.disabled_at`) keeps role, `via` and date, grants nothing (403
+  `membership_disabled` in `access_for`), and counts in no reading but the roster:
+  `memberships_for`/`members_of` leave it out unless `include_disabled`; the delete-the-tree
+  decisions count it (its files are there). An owner is never paused (409
+  `owner_disabled`); nobody pauses or removes themselves there (409 `self`; leaving is
+  `DELETE /api/workspaces/{slug}/membership`); a teacher acts on students and the owner on
+  teachers (`role_too_low`). Leaving with others inside is `remove_member`.
 - The username is the identity; `users.email` is an optional delivery detail, shown only when
   mail is configured (`mail_configured` on `/api/auth/me`). No «forgot password» link on the
   login screen; admins hand out reset links. No password generator anywhere.
@@ -1340,6 +1358,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   the tutor by their permissions; the rest of the construction — the bank, the raw material,
   the types of exercise as a step — is not theirs to see. No fourth role.
 - Invitations and membership managed by the admin alone; links sealed, not stored in clear.
+  Since 2026-10-06 a teacher also pauses, opens and removes the students of their subjects,
+  and the owner its teachers too; the administrator keeps everything it had. A subject with
+  people keeps an active owner at every door; pausing is reversible and removing is not;
+  neither moves what the person produced.
 - No «forgot password» on the login screen; no password generator; no session list.
 - The evaluator never sees the evaluation's score; blind instruments come before the reveal.
 - A session shows the system's proposal and one seed-drawn rival.

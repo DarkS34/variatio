@@ -14,7 +14,9 @@ only within what it may see.
 
 Which workspace a socket subscribes to arrives as `?workspace=`, because a browser cannot
 set a header on a WebSocket handshake. It goes through the same membership check as the
-`X-Workspace` header does over HTTP.
+`X-Workspace` header does over HTTP, and an open socket does not outlive the membership it
+was opened on: when a teacher removes or pauses its account (`membership.closed`, an event
+no browser receives), it closes with 4403.
 """
 
 import asyncio
@@ -23,7 +25,9 @@ import contextlib
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .. import middleware, singletons
-from ..auth import authenticate_socket
+from ..auth import Access, authenticate_socket
+from ..auth.deps import FORBIDDEN, UNAUTHORISED
+from ..members import CLOSED_EVENT
 
 router = APIRouter()
 
@@ -47,23 +51,18 @@ def trim_cold_replay(events: list[dict]) -> list[dict]:
     return kept[-COLD_REPLAY_LIMIT:]
 
 
-# The WebSocket convention for "unauthorised". A browser cannot read an HTTP status here,
-# so the close code is the only way to tell the client to go and log in rather than
-# reconnect for ever.
-UNAUTHORISED = 4401
-
-
-async def refuse(websocket: WebSocket) -> None:
-    """Accept the upgrade only to close it with 4401, which is how the code arrives.
+async def refuse(websocket: WebSocket, code: int = UNAUTHORISED) -> None:
+    """Accept the upgrade only to close it with its code, which is how the code arrives.
 
     A close code only travels on an ESTABLISHED connection: closing before `accept()`
     makes uvicorn answer the handshake with HTTP 403 and the browser synthesises a bare
     1006, which it cannot tell from a network hiccup — so it reconnects for ever against a
     cookie already rejected. Accepting first costs an upgrade for somebody who is then
-    told nothing: no subscription, no replay, not a single event.
+    told nothing: no subscription, no replay, not a single event. 4401 sends the client to
+    log in; 4403 (`FORBIDDEN`) to read the session again and land where it may.
     """
     await websocket.accept()
-    await websocket.close(code=UNAUTHORISED)
+    await websocket.close(code=code)
 
 
 def _since(websocket: WebSocket) -> int:
@@ -106,8 +105,8 @@ async def stream(websocket: WebSocket) -> None:
         return
 
     access = await asyncio.to_thread(authenticate_socket, websocket)
-    if access is None:
-        await refuse(websocket)
+    if not isinstance(access, Access):
+        await refuse(websocket, access)
         return
 
     await websocket.accept()
@@ -144,6 +143,9 @@ async def stream(websocket: WebSocket) -> None:
                         {"kind": "stream.heartbeat", "last_seq": singletons.bus.last_seq}
                     )
                     continue
+                if _closes(event, slug, user_id):
+                    await websocket.close(code=FORBIDDEN)
+                    return
                 # The replay and the live queue overlap by design; drop the duplicates
                 # rather than risk a hole between them.
                 if event.seq <= delivered:
@@ -159,3 +161,12 @@ async def stream(websocket: WebSocket) -> None:
         finally:
             with contextlib.suppress(Exception):
                 await websocket.close()
+
+
+def _closes(event, slug: str, user_id: int) -> bool:
+    """Say whether this event closes the membership the socket was opened on."""
+    return (
+        event.kind == CLOSED_EVENT
+        and event.workspace == slug
+        and event.payload.get("user_id") == user_id
+    )

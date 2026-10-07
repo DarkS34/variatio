@@ -75,7 +75,7 @@ def app(monkeypatch):
     monkeypatch.setattr(installation, "public_base_url", lambda: None)
     monkeypatch.setattr(installation, "trust_proxy", lambda: False)
     monkeypatch.setattr(installation, "dev_cors_origins", lambda: [])
-    monkeypatch.setattr(ws_module, "authenticate_socket", lambda socket: None)
+    monkeypatch.setattr(ws_module, "authenticate_socket", lambda socket: ws_module.UNAUTHORISED)
     application = FastAPI()
     application.include_router(ws_module.router)
     return application

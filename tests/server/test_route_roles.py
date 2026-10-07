@@ -46,6 +46,14 @@ LEVELS = {
     ("DELETE", "/api/workspaces/{slug}"): "owner",
     ("DELETE", "/api/workspaces/{slug}/membership"): "session",
     ("GET", "/api/workspaces/{slug}/summary"): "session",
+    # The people of a subject: the list is a teacher's, and what a teacher may do to whom is
+    # decided inside by the person's role; changing a role is the owner's.
+    ("GET", "/api/members"): "editor",
+    ("POST", "/api/members/bulk"): "editor",
+    ("PATCH", "/api/members/{user_id:int}"): "owner",
+    ("POST", "/api/members/{user_id:int}/disable"): "editor",
+    ("POST", "/api/members/{user_id:int}/enable"): "editor",
+    ("DELETE", "/api/members/{user_id:int}"): "editor",
     # The chain: its state is everybody's, its history and its writes the teachers'.
     ("GET", "/api/health"): "viewer",
     ("GET", "/api/pipeline"): "viewer",

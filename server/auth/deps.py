@@ -50,10 +50,14 @@ NO_WORKSPACE = (
 # What a refused request carries in `X-Error-Code`, so the client tells the cases apart by
 # code and never by sentence. `not_member`: the account has no membership of the workspace
 # the request names — removed while a tab was open, say — and the client reads the session
-# again to land somewhere it belongs. `role_too_low`: it is a member, below the level the
-# action needs.
+# again to land somewhere it belongs. `membership_disabled`: it has one, and a teacher paused
+# it; the client does the same. `role_too_low`: it is a member, below the level the action
+# needs.
 NOT_MEMBER = "not_member"
+MEMBERSHIP_DISABLED = "membership_disabled"
 ROLE_TOO_LOW = "role_too_low"
+
+DISABLED_HERE = "Tu docente ha desactivado tu acceso a esta asignatura."
 
 # How a refusal names a role: the membership's words for the people in a subject.
 ROLE_NAMES = {VIEWER: "alumno", EDITOR: "docente", OWNER: "propietario"}
@@ -302,11 +306,11 @@ def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
     """
     if user.active_workspace_id is not None:
         workspace = session.get(Workspace, user.active_workspace_id)
-        # The preference only counts while the access behind it does: the administrator
-        # can revoke a membership, and landing on a revoked one is a 403 on every route
-        # with no way back, even for someone who is a member of two others.
+        # The preference only counts while the access behind it does: a membership can be
+        # revoked or paused, and landing on one is a 403 on every route with no way back,
+        # even for someone who is a member of two others.
         if workspace is not None and workspace.deleted_at is None:
-            if user.is_admin or identity.membership(session, workspace.id, user.id):
+            if user.is_admin or identity.active_membership(session, workspace.id, user.id):
                 return workspace
     return first_membership(session, user)
 
@@ -334,7 +338,9 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
     gets through that too, since a door that shuts on them has nothing left to reopen it
     from.
 
-    Raises 403 without a membership and without the flag, and 503 while it is closed.
+    A paused membership grants nothing (`membership_disabled`), and the administrator
+    passes it as any other. Raises 403 without a membership and without the flag, and 503
+    while it is closed.
     """
     if not user.is_admin and maintenance.active():
         raise HTTPException(503, maintenance.CLOSED)
@@ -348,6 +354,12 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
                 403,
                 f"No tienes acceso a la asignatura '{workspace.slug}'.",
                 headers={"X-Error-Code": NOT_MEMBER},
+            )
+        as_admin, role = True, OWNER
+    elif not row.active:
+        if not user.is_admin:
+            raise HTTPException(
+                403, DISABLED_HERE, headers={"X-Error-Code": MEMBERSHIP_DISABLED}
             )
         as_admin, role = True, OWNER
     else:
@@ -387,18 +399,29 @@ def at_least(access: Access, minimum: str) -> bool:
 # WEBSOCKET -----------------------------------------------------------------------------
 
 
-def authenticate_socket(websocket: WebSocket) -> Access | None:
-    """Resolve a socket's access before `accept()`, returning None to refuse it.
+# The two ways a socket is refused, as WebSocket close codes, since a browser reads no HTTP
+# status there. 4401: no session, and the client goes to log in. 4403: a session with no
+# access to the subject the socket names — removed or paused from it, or never let in — and
+# the client reads the session again to land where it may (`ws.py` closes a live one with it
+# too, the moment its membership closes).
+UNAUTHORISED = 4401
+FORBIDDEN = 4403
+
+
+def authenticate_socket(websocket: WebSocket) -> Access | int:
+    """Resolve a socket's access before `accept()`, or the close code to refuse it with.
 
     This cannot reuse the HTTP dependency: a socket that has been accepted has already
     been told it is welcome. No database means no way to prove the socket belongs to
-    anyone, and the only safe answer to that is the same as an invalid cookie.
+    anyone, and the only safe answer to that is the same as an invalid cookie. A subject
+    that does not exist, or refuses this account, is `FORBIDDEN`; anything else that stops
+    it — the maintenance door — is answered as before, `UNAUTHORISED`.
     """
     try:
         with session_scope() as session:
             found = resolve(session, session_token(websocket))
             if found is None:
-                return None
+                return UNAUTHORISED
             _, user = found
             slug = requested_slug(websocket)
             workspace = (
@@ -407,10 +430,10 @@ def authenticate_socket(websocket: WebSocket) -> Access | None:
                 else current_workspace_for(session, user)
             )
             if workspace is None:
-                return None
+                return FORBIDDEN
             try:
                 return access_for(session, user, workspace, VIEWER)
-            except HTTPException:
-                return None
+            except HTTPException as refused:
+                return FORBIDDEN if refused.status_code == 403 else UNAUTHORISED
     except (OperationalError, InterfaceError):
-        return None
+        return UNAUTHORISED

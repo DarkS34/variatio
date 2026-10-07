@@ -79,6 +79,15 @@ class EventBus:
         """Number one event that every member of its workspace may see, and send it."""
         return self._publish(workspace, job_id, kind, payload or {})
 
+    def publish_internal(self, workspace: str, kind: str, payload: dict) -> Event:
+        """Number one event for the server's own subscribers, which no browser receives.
+
+        Private with no author, so `visible` hands it to nobody; what reads it is the code of
+        a subscription itself — a socket closing on `membership.closed`. Never filed: it
+        belongs to no job.
+        """
+        return self._publish(workspace, None, kind, payload, private=True, user_id=None)
+
     def publish_job(self, job: Job, kind: str, payload: dict | None = None) -> Event:
         """Number one event of `job`, stamped private to its author when the job is.
 

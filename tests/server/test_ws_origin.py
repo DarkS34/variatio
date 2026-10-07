@@ -14,7 +14,11 @@ from server.routers import ws as ws_module
 def attempts(monkeypatch):
     """Every socket that got as far as being asked for a session."""
     seen: list = []
-    monkeypatch.setattr(ws_module, "authenticate_socket", lambda socket: seen.append(socket))
+    def no_session(socket):
+        seen.append(socket)
+        return ws_module.UNAUTHORISED
+
+    monkeypatch.setattr(ws_module, "authenticate_socket", no_session)
     return seen
 
 

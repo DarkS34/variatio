@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from evaluation.api import store as evaluation_store
 
-from .. import approvals, auth, deps, features, installation, maintenance, singletons, storage
+from .. import approvals, auth, deps, features, installation, maintenance, members, singletons, storage
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import links
@@ -154,8 +154,8 @@ def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) 
         "disabled": not user.active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "workspaces": [
-            {"slug": w.slug, "role": m.role}
-            for m, w in identity.memberships_for(db, user.id)
+            {"slug": w.slug, "role": m.role, "disabled": not m.active}
+            for m, w in identity.memberships_for(db, user.id, include_disabled=True)
         ],
         "generations": generated.get(user.id, 0),
         "evaluations": by_account.get(user.id, {}).get("sessions", 0),
@@ -443,7 +443,13 @@ def grant_membership(
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
 
-    identity.grant(db, workspace.id, user.id, body.role, via=VIA_ADMIN)
+    if identity.membership(db, workspace.id, user.id) is None:
+        identity.grant(db, workspace.id, user.id, body.role, via=VIA_ADMIN)
+    else:
+        try:
+            members.change_role(db, workspace, user, body.role)
+        except members.Refusal as refusal:
+            raise _refused(refusal) from None
     return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
 
 
@@ -473,12 +479,27 @@ def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db
 
 
 @router.delete("/accounts/{user_id}/memberships/{slug}")
-def revoke_membership(user_id: int, slug: str, db: DbSession = Depends(auth.db)) -> dict:
-    """Take one account's access to one instance away."""
+def revoke_membership(
+    user_id: int,
+    slug: str,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Take one account's access to one instance away, as a teacher's removal does.
+
+    The same gesture (`members.remove_member`): the account leaves the subject, its jobs there
+    stop and an open socket closes; the subject's last active owner is refused (`last_owner`).
+    A membership that does not exist is nothing to take away, and not an error.
+    """
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    identity.revoke_membership(db, workspace.id, user_id)
+    user = identity.get_user_by_id(db, user_id)
+    if user is not None and identity.membership(db, workspace.id, user.id) is not None:
+        try:
+            members.remove_member(db, workspace, user, admin)
+        except members.Refusal as refusal:
+            raise _refused(refusal) from None
     return {"user_id": user_id, "workspace": slug}
 
 
@@ -939,6 +960,11 @@ def _role(role: str | None) -> str:
     if role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{role}'. Usa uno de {', '.join(ROLES)}.")
     return role
+
+
+def _refused(refusal: members.Refusal) -> HTTPException:
+    """Turn a refused membership gesture into the answer the panel reads by its code."""
+    return HTTPException(refusal.status, refusal.message, headers={"X-Error-Code": refusal.code})
 
 
 def _profile(profile: str | None) -> str:

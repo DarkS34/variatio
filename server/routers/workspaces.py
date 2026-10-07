@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.core import languages
 from variatio.instance import locale
 
-from .. import auth, deps, installation, singletons
+from .. import auth, deps, installation, members, singletons
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..db import identity, repository
@@ -159,7 +159,15 @@ def activate(
 
     membership = identity.membership(db, workspace.id, user.id)
     if membership is None and not user.is_admin:
-        raise HTTPException(403, f"No tienes acceso a la asignatura '{slug}'.")
+        raise HTTPException(
+            403,
+            f"No tienes acceso a la asignatura '{slug}'.",
+            headers={"X-Error-Code": auth.NOT_MEMBER},
+        )
+    if membership is not None and not membership.active and not user.is_admin:
+        raise HTTPException(
+            403, auth_deps.DISABLED_HERE, headers={"X-Error-Code": auth.MEMBERSHIP_DISABLED}
+        )
 
     user.active_workspace_id = workspace.id
     return {
@@ -198,10 +206,10 @@ def remove(
     ws = access.ws
     # Read before the cascade takes the rows away. An administrator reaching this through
     # the bypass holds no membership of their own, so the question is "is anybody else in
-    # it" and not "does it have members".
+    # it" and not "does it have members" — a paused member included, whose files are there.
     others = [
         m
-        for m, _ in identity.members_of(db, access.workspace.id)
+        for m, _ in identity.members_of(db, access.workspace.id, include_disabled=True)
         if m.user_id != access.user.id
     ]
     removed = False
@@ -249,6 +257,9 @@ def leave(
     to, so the row and the tree go with them. That holds even when the leaver is not the
     owner — the case exists (an owner's account was deleted and `memberships` went with
     it), and refusing there would strand an instance only an administrator could reopen.
+    A paused member is still somebody linked to it — their files are in the tree — so the
+    subject stays while one remains. Leaving with others inside is `members.remove_member`,
+    which refuses the last owner of people still active (`last_owner`).
 
     There is deliberately no "last workspace of the installation" guard: an installation
     holding zero workspaces and an account belonging to none are both normal states the
@@ -269,14 +280,20 @@ def leave(
             "Un administrador lo borra desde «Administración».",
         )
 
-    others = [m for m, _ in identity.members_of(db, workspace.id) if m.user_id != user.id]
+    others = [
+        m
+        for m, _ in identity.members_of(db, workspace.id, include_disabled=True)
+        if m.user_id != user.id
+    ]
     ws = installation.workspace_for(slug)
 
     if others:
-        db.delete(membership)
-        db.flush()
-        if user.active_workspace_id == workspace.id:
-            user.active_workspace_id = None
+        try:
+            members.remove_member(db, workspace, user, user)
+        except members.Refusal as refusal:
+            raise HTTPException(
+                refusal.status, refusal.message, headers={"X-Error-Code": refusal.code}
+            ) from None
         logger.info(f"[workspace] «{user.username}» salió de «{slug}»")
         return {"left": slug, "deleted": False, "members_left": len(others)}
 

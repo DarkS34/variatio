@@ -18,6 +18,7 @@ from .models import (
     EDITOR,
     EVALUATOR_PROFILES,
     INVITE_LABEL_MAX,
+    OWNER,
     STUDENT,
     Invite,
     Membership,
@@ -201,12 +202,18 @@ def delete_user(session: Session, user: User) -> None:
 
 
 def membership(session: Session, workspace_id: int, user_id: int) -> Membership | None:
-    """Return this account's membership of this workspace, or None."""
+    """Return this account's membership of this workspace, active or paused, or None."""
     return session.scalar(
         select(Membership).where(
             Membership.workspace_id == workspace_id, Membership.user_id == user_id
         )
     )
+
+
+def active_membership(session: Session, workspace_id: int, user_id: int) -> Membership | None:
+    """Return this account's membership of this workspace while no teacher has paused it."""
+    row = membership(session, workspace_id, user_id)
+    return row if row is not None and row.active else None
 
 
 def grant(
@@ -241,26 +248,61 @@ def revoke_membership(session: Session, workspace_id: int, user_id: int) -> None
         session.flush()
 
 
-def memberships_for(session: Session, user_id: int) -> list[tuple[Membership, Workspace]]:
-    """Return every live workspace this account belongs to, with its membership."""
-    rows = session.execute(
+def memberships_for(
+    session: Session, user_id: int, include_disabled: bool = False
+) -> list[tuple[Membership, Workspace]]:
+    """Return every live workspace this account belongs to, with its membership.
+
+    A paused membership opens nothing, so it is left out unless `include_disabled` asks for
+    it — the account's own list of subjects, and the administrator's panel.
+    """
+    query = (
         select(Membership, Workspace)
         .join(Workspace, Workspace.id == Membership.workspace_id)
         .where(Membership.user_id == user_id, Workspace.deleted_at.is_(None))
-        .order_by(Workspace.slug)
     )
-    return [(m, w) for m, w in rows]
+    if not include_disabled:
+        query = query.where(Membership.disabled_at.is_(None))
+    return [(m, w) for m, w in session.execute(query.order_by(Workspace.slug))]
 
 
-def members_of(session: Session, workspace_id: int) -> list[tuple[Membership, User]]:
-    """Return every account that belongs to this workspace, with its membership."""
-    rows = session.execute(
+def members_of(
+    session: Session, workspace_id: int, include_disabled: bool = False
+) -> list[tuple[Membership, User]]:
+    """Return every account that belongs to this workspace, with its membership.
+
+    The paused ones only when `include_disabled` asks: they are still on the roster — the
+    class list shows them, and their files are in the tree — but they count for nothing else.
+    """
+    query = (
         select(Membership, User)
         .join(User, User.id == Membership.user_id)
         .where(Membership.workspace_id == workspace_id)
-        .order_by(User.username)
     )
-    return [(m, u) for m, u in rows]
+    if not include_disabled:
+        query = query.where(Membership.disabled_at.is_(None))
+    return [(m, u) for m, u in session.execute(query.order_by(User.username))]
+
+
+def would_orphan(
+    session: Session, workspace_id: int, user_id: int, new_role: str | None
+) -> bool:
+    """Say whether giving this account `new_role` here takes the last owner from its people.
+
+    `None` is taking the account out — removed or paused. Only active memberships count:
+    the invariant is that a subject with people in it has an active owner, and a paused
+    membership is nobody in it. Taking out the last person of all orphans nothing — that is
+    the subject emptying, which its own routes decide about — and neither does a change in a
+    subject that had no owner to lose (its owner's account was deleted): the panel marks it.
+    """
+    before = [(member.user_id, member.role) for member, _ in members_of(session, workspace_id)]
+    after = [
+        new_role if member == user_id else role
+        for member, role in before
+        if not (member == user_id and new_role is None)
+    ]
+    had_owner = any(role == OWNER for _, role in before)
+    return had_owner and bool(after) and OWNER not in after
 
 
 # SESSIONS ------------------------------------------------------------------------------

@@ -459,7 +459,7 @@ def assign_set(
             raise HTTPException(404, f"La cuenta {account_id} no existe.")
         # Membership and not just an account: handing somebody a set of a workspace they
         # cannot open would produce a queue entry that 404s when they click it.
-        if identity.membership(db, source.workspace_id, user.id) is None and not user.is_admin:
+        if identity.active_membership(db, source.workspace_id, user.id) is None and not user.is_admin:
             raise HTTPException(
                 409,
                 f"«{user.username}» no es miembro de esa asignatura: dale acceso antes de asignarle nada.",
