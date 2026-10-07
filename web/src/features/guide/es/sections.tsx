@@ -2552,40 +2552,14 @@ function Class() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.class")}>
         <p>
-          En «{t("class.title")}» gestionas quién estudia en tu asignatura. Se abre desde el menú
-          de tu cuenta, con «{t("menu.class")}», o desde «{t("nav.mySubjects")}», con el botón
-          que cuenta los alumnos de cada asignatura donde das clase.
+          En «{t("class.title")}» gestionas quién estudia en tu asignatura y ves qué hace. Se
+          abre desde el menú de tu cuenta, con «{t("menu.class")}», o desde «
+          {t("nav.mySubjects")}», con el botón que cuenta los alumnos de cada asignatura donde
+          das clase. A la izquierda está la lista de sus partes, en tres grupos: «
+          {t("class.group.members")}», «{t("class.group.activity")}» y «
+          {t("class.group.course")}». Debajo, aparte, está «{t("class.end")}».
         </p>
       </SectionHead>
-
-      <Block title={t("class.invite")}>
-        <Paragraph>
-          Dos maneras de traer a tus alumnos, y con las dos entran como alumnos. El{" "}
-          <strong>enlace de clase</strong> es uno para toda la clase: tiene plazas, una fecha de
-          caducidad y una pausa, y se muestra como código QR para proyectarlo. Renovarlo deja el
-          enlace viejo sin efecto y crea otro; borrarlo lo deja sin efecto y no crea ninguno. En
-          los dos casos, quien ya entró se queda. Las{" "}
-          <strong>invitaciones personales</strong> son una por nombre y sirven una sola vez: se
-          copian una a una, todas juntas o en un CSV con el nombre, el enlace y la fecha.
-        </Paragraph>
-        <Paragraph>
-          Si la instalación envía correo, cada línea puede ser «Nombre &lt;correo&gt;»: el enlace
-          sale por correo, y la dirección no se guarda en ningún sitio. Si un envío falla, la
-          lista lo dice y el enlace se copia a mano. Quien es propietario elige además para quién
-          son: «{t("class.invites.role.viewer")}» o «{t("class.invites.role.editor")}»; una
-          invitación de docente da una cuenta de docente.
-        </Paragraph>
-      </Block>
-
-      <Block title={t("class.teachers")}>
-        <Paragraph>
-          Quién da clase en la asignatura, con su papel. Quien es propietario puede «
-          {t("class.teachers.promote")}» a otro docente, «{t("class.teachers.demote")}» a otro
-          propietario, quitar a un docente y «{t("class.teachers.handOver")}»: el otro pasa a
-          propietario y tú, a docente. La asignatura siempre conserva un propietario. Los demás
-          docentes ven la lista y no cambian nada.
-        </Paragraph>
-      </Block>
 
       <Block title={t("class.students")}>
         <Paragraph>
@@ -2613,28 +2587,64 @@ function Class() {
         </Paragraph>
       </Block>
 
-      <Block title={t("class.activity")}>
+      <Block title={t("class.teachers")}>
         <Paragraph>
-          Qué hacen tus alumnos, semana a semana: qué preguntan al tutor y qué ejercicios
-          generan. Arriba eliges de quién: toda la clase o un alumno, también desde «
+          Quién da clase en la asignatura, con su papel. Quien es propietario puede «
+          {t("class.teachers.promote")}» a otro docente, «{t("class.teachers.demote")}» a otro
+          propietario, quitar a un docente y «{t("class.teachers.handOver")}»: el otro pasa a
+          propietario y tú, a docente. La asignatura siempre conserva un propietario. Los demás
+          docentes ven la lista y no cambian nada.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.invite")}>
+        <Paragraph>
+          Dos maneras de traer a tus alumnos, en la misma página. La «{t("class.link.title")}»
+          es un solo enlace para toda la clase: tiene plazas, una fecha de caducidad y una pausa.
+          Su bloque enseña el código QR, que se abre en grande para proyectarlo, una barra con
+          las plazas usadas y libres, y el enlace para copiarlo. Renovarla deja el enlace viejo
+          sin efecto y crea otro; borrarla lo deja sin efecto y no crea ninguno. En los dos
+          casos, quien ya entró se queda.
+        </Paragraph>
+        <Paragraph>
+          Las «{t("class.invites.title")}» son una por nombre y sirven una sola vez. Su bloque
+          es la lista de las que nadie ha usado todavía: copia el enlace de una otra vez o
+          bórrala. «{t("class.invites.new")}» abre una ventana: escribe un nombre por línea y
+          elige la fecha de caducidad. Después, la ventana enseña los enlaces nuevos, para
+          copiarlos uno a uno, todos juntos o en un CSV con el nombre, el enlace y la fecha.
+        </Paragraph>
+        <Paragraph>
+          Si la instalación envía correo, cada línea puede ser «Nombre &lt;correo&gt;»: el enlace
+          sale por correo, y la dirección no se guarda en ningún sitio. Si un envío falla, la
+          lista lo dice y el enlace se copia a mano. Quien es propietario elige además para quién
+          son: «{t("class.invites.role.viewer")}» o «{t("class.invites.role.editor")}»; una
+          invitación de docente da una cuenta de docente.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.group.activity")}>
+        <Paragraph>
+          Qué hacen tus alumnos, semana a semana, en una página para cada cosa que usan: «
+          {t("class.activity.exercises")}» y «{t("class.activity.tutor")}» (esta, solo donde
+          hay tutor). Arriba eliges de quién: toda la clase o un alumno, también desde «
           {t("class.students")}», con el icono de su fila. Debajo, la tira de semanas es el
-          historial del curso: cada semana con sus mensajes y sus ejercicios, y un punto cuando
-          tiene síntesis. Una semana sin nada se queda en la tira, atenuada.
+          historial del curso, con la cifra de la página en cada semana. En el tutor, un punto
+          marca la semana que tiene síntesis. El alumno y la semana que eliges se mantienen al
+          pasar de una página a otra.
         </Paragraph>
         <Paragraph>
-          Cada semana empieza por «{t("activity.important")}»: unas pocas frases, cada una con
-          la cifra que la apoya, como un concepto por el que pregunta media clase y el
-          prerrequisito al que el tutor los manda, o quién no ha hecho nada. Después, «
-          {t("activity.tutor")}», «{t("activity.exercises")}» (por tipo, nivel y unidad del
-          temario) y, para toda la clase, «{t("activity.who")}». Lo de un alumno sale al lado
-          de la mediana de la clase.
+          Las dos páginas siguen el mismo orden. Primero, «{t("activity.important")}»: tres
+          cifras de la semana y unas pocas frases, cada una con la cifra que la apoya. Después,
+          de qué trata: «{t("activity.practise")}» (por unidad del temario, tipo y nivel), o «
+          {t("activity.ask")}» y «{t("activity.ways")}». Al final, quién lo hace, con quien
+          menos ha hecho primero. Para un alumno, una de las cifras es la mediana de la clase.
         </Paragraph>
         <Paragraph>
-          La síntesis la pides tú, con «{t("activity.digest.write")}» o «
-          {t("activity.digest.update")}»: el modelo resume los temas que se repiten, con otras
-          palabras y sin nombres, y espera en la cola detrás de los mensajes de tus alumnos.
-          Hacen falta 10 mensajes sobre la asignatura en la semana. Nunca ves una conversación
-          ni un ejercicio: solo cifras y la síntesis.
+          En «{t("class.activity.tutor")}», la síntesis la pides tú, con «
+          {t("activity.digest.write")}» o «{t("activity.digest.update")}»: el modelo resume los
+          temas que se repiten, con otras palabras y sin nombres, y espera en la cola detrás de
+          los mensajes de tus alumnos. Hacen falta 10 mensajes sobre la asignatura en la semana.
+          Nunca ves una conversación ni un ejercicio: solo cifras y la síntesis.
         </Paragraph>
       </Block>
 
@@ -2653,8 +2663,9 @@ function Class() {
       <Block title={t("class.uses")}>
         <Paragraph>
           Dos interruptores para tus alumnos de esta asignatura: «{t("class.uses.generate")}»
-          y, cuando el administrador ha abierto el tutor a alguno de ellos, «
-          {t("class.uses.tutor")}». Actúan al momento; por ejemplo, ciérralos durante un examen
+          y, donde hay tutor, «{t("class.uses.tutor")}». El del tutor solo funciona cuando el
+          administrador lo ha abierto a alguno de tus alumnos; hasta entonces sale apagado y
+          dice por qué. Actúan al momento; por ejemplo, ciérralos durante un examen
           y ábrelos después. Con la generación cerrada, tus alumnos siguen viendo sus
           ejercicios en «{t("nav.mySubjects")}». A los docentes no les afecta nada de esto.
         </Paragraph>
@@ -2663,7 +2674,7 @@ function Class() {
       <Block title={t("class.end")}>
         <Paragraph>
           Solo para quien es propietario de la asignatura. Saca a todos los alumnos de una vez:
-          desactivados, y el curso se reabre activándolos, o quitados. El enlace de clase queda
+          desactivados, y el curso se reabre activándolos, o quitados. La invitación general queda
           en pausa y los docentes se quedan. Para confirmarlo, una ventana te pide escribir el
           nombre de la asignatura.
         </Paragraph>

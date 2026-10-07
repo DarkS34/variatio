@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
 import { Segments } from "@/features/admin/charts";
 import { kindShares } from "@/lib/activity";
-import { dateTime, number } from "@/lib/format";
+import { dateTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { isLive, isQueued } from "@/lib/queue";
 import type { ActivityDigest, ActivityTutor, ActivityWeek } from "@/lib/types";
@@ -16,17 +16,15 @@ import type { RunView } from "@/state/runStore";
 export const DIGEST_MIN_MESSAGES = 10;
 
 /**
- * «Qué preguntan al tutor»: the week's digest first — the themes the class keeps asking about,
- * unit by unit in the syllabus' order — then what they ask for and where the tutor sent them
- * back to.
+ * «Qué preguntan»: the week's digest — the themes the class keeps asking about, unit by unit in
+ * the syllabus' order — or, before there is one, the concepts most asked about, counted by code.
  *
  * The digest is the teacher's to ask for and never written on its own: one button that says
  * what it will do («Escribir», «Actualizar» on the open week, a quiet «Escribir otra vez» on a
  * closed one), the state of the job while it runs (queued behind the class's own turns, then
  * writing, with «Detener»), and the date it was written with how many messages arrived since.
- * Before there is one, the concepts most asked about stand in its place, counted by code.
  */
-export function TutorBlock({
+export function TutorAsks({
   week,
   colours,
   run,
@@ -41,79 +39,69 @@ export function TutorBlock({
   onWrite: () => void;
   onStop: () => void;
 }) {
-  const tr = useT();
-  const { t, plural } = tr;
+  const { t } = useT();
   const id = useId();
   const tutor = week.tutor as ActivityTutor;
-  const student = week.scope === "student";
-  const summary = t("activity.of", {
-    what: plural("activity.messages", tutor.messages),
-    who: plural("activity.students", tutor.students),
-  });
-  const median = student && week.median ? t("activity.median", { value: number(week.median.messages) }) : null;
-
   return (
-    <section aria-labelledby={id} className="surface space-y-5 p-5">
-      <div className="space-y-0.5">
-        <h3 id={id} className="text-heading">
-          {t("activity.tutor")}
-        </h3>
-        <p className="text-small text-muted-foreground">
-          {student ? plural("activity.messages", tutor.messages) : summary}
-          {median ? ` · ${median}` : ""}
-        </p>
-      </div>
-
+    <section aria-labelledby={id} className="surface space-y-4 p-5">
+      <h3 id={id} className="text-heading">
+        {t("activity.ask")}
+      </h3>
       {tutor.messages === 0 ? (
         <p className="text-body text-muted-foreground">{t("activity.tutor.none")}</p>
       ) : (
-        <>
-          <DigestPanel
-            week={week}
-            colours={colours}
-            run={run}
-            writing={writing}
-            onWrite={onWrite}
-            onStop={onStop}
-          />
-          <div className={cn("grid gap-4", tutor.sent_back.length > 0 && "md:grid-cols-2")}>
-            <div className="well space-y-3 p-4">
-              <h4 className="text-micro font-condensed uppercase text-muted-foreground">
-                {t("activity.kinds")}
-              </h4>
-              <Segments
-                segments={kindShares(tutor.by_kind).map((share) => ({
-                  key: share.key,
-                  label: t(share.label),
-                  value: share.value,
-                }))}
-              />
-            </div>
-            {tutor.sent_back.length > 0 ? (
-              <div className="well space-y-2 p-4">
-                <h4 className="text-micro font-condensed uppercase text-muted-foreground">
-                  {t("activity.sentBack")}
-                </h4>
-                <ul className="rows">
-                  {tutor.sent_back.map((row) => (
-                    <li key={`${row.concept}-${row.prerequisite}`} className="flex items-baseline gap-2 py-1.5">
-                      <span className="min-w-0 flex-1 text-small">
-                        <span className="font-medium">«{row.prerequisite}»</span>{" "}
-                        <span className="text-muted-foreground">
-                          {t("activity.sentBack.from", { concept: row.concept })}
-                        </span>
-                      </span>
-                      <span className="nums shrink-0 text-small text-muted-foreground">
-                        {student ? plural("activity.messages", row.times) : plural("activity.students", row.students)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </>
+        <DigestPanel week={week} colours={colours} run={run} writing={writing} onWrite={onWrite} onStop={onStop} />
       )}
+    </section>
+  );
+}
+
+/**
+ * «Cómo preguntan»: what the week's messages ask for — theory, help, a review, the solution —
+ * and the prerequisites the tutor sent them back to. Drawn only on a week with messages.
+ */
+export function TutorWays({ week }: { week: ActivityWeek }) {
+  const { t, plural } = useT();
+  const id = useId();
+  const tutor = week.tutor as ActivityTutor;
+  const student = week.scope === "student";
+  return (
+    <section aria-labelledby={id} className="surface space-y-4 p-5">
+      <h3 id={id} className="text-heading">
+        {t("activity.ways")}
+      </h3>
+      <div className={cn("grid gap-6", tutor.sent_back.length > 0 && "md:grid-cols-2")}>
+        <div className="space-y-3">
+          <h4 className="text-micro font-condensed uppercase text-muted-foreground">{t("activity.kinds")}</h4>
+          <Segments
+            segments={kindShares(tutor.by_kind).map((share) => ({
+              key: share.key,
+              label: t(share.label),
+              value: share.value,
+            }))}
+          />
+        </div>
+        {tutor.sent_back.length > 0 ? (
+          <div className="space-y-2">
+            <h4 className="text-micro font-condensed uppercase text-muted-foreground">{t("activity.sentBack")}</h4>
+            <ul className="rows">
+              {tutor.sent_back.map((row) => (
+                <li key={`${row.concept}-${row.prerequisite}`} className="flex items-baseline gap-2 py-1.5">
+                  <span className="min-w-0 flex-1 text-small">
+                    <span className="font-medium">«{row.prerequisite}»</span>{" "}
+                    <span className="text-muted-foreground">
+                      {t("activity.sentBack.from", { concept: row.concept })}
+                    </span>
+                  </span>
+                  <span className="nums shrink-0 text-small text-muted-foreground">
+                    {student ? plural("activity.messages", row.times) : plural("activity.students", row.students)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }

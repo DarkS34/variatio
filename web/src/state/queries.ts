@@ -473,7 +473,7 @@ export function useEndCourse() {
 }
 
 /**
- * What the course has covered («Avance del curso»): a teacher sets it in «Clase», the
+ * What the course has covered («Avance de la asignatura»): a teacher sets it in «Clase», the
  * syllabus tints it, and a student's commission runs inside it.
  */
 export function useCurriculum(enabled = true) {

@@ -2,11 +2,13 @@ import {
   Activity,
   CalendarX,
   GraduationCap,
-  Link2,
+  MessagesSquare,
+  Play,
   Search,
   SlidersHorizontal,
   Spline,
   UserCheck,
+  UserPlus,
   UserRoundCog,
   UserMinus,
   UserX,
@@ -28,11 +30,9 @@ import {
   inFilter,
   matchesMember,
   studentsOf,
-  viaKey,
   type MemberFilter,
 } from "@/lib/members";
 import type { Member, MemberAction } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { useIsOwner, useSession } from "@/state/auth";
 import {
   useActiveWorkspace,
@@ -40,29 +40,36 @@ import {
   useClassLink,
   useCurriculum,
   useMemberActions,
+  useMemberInvites,
   useMembers,
   useStudentUses,
 } from "@/state/queries";
 
-import { ActivitySection, activityDetail } from "./ActivitySection";
+import { ActivitySection, activityDetail, type ActivityView } from "./ActivitySection";
 import { EndCourseSection } from "./EndCourseSection";
-import { InviteSection, classLinkDetail } from "./InviteSection";
+import { InviteSection, inviteDetail } from "./InviteSection";
+import { PeopleList, PersonRow, RowAction } from "./PersonRow";
 import { ProgressSection, progressDetail } from "./ProgressSection";
 import { TeachersSection, teachersOf } from "./TeachersSection";
 import { UsesSection, usesDetail } from "./UsesSection";
 
-type ClassSection = "students" | "activity" | "invite" | "teachers" | "progress" | "uses" | "end";
+type ClassSection = ActivityView | "students" | "teachers" | "invite" | "progress" | "uses" | "end";
+
+const ACTIVITY_VIEWS: readonly string[] = ["exercises", "tutor"] satisfies ActivityView[];
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
  *
  * Drawn as the administrator's panel draws a tab (`admin/Sections`): the list of its sections
- * beside the section open, one column of blocks under the section's header, rows parted by
- * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet. «Actividad»
- * follows the class list (a row's icon opens it on that student); «Invitar», then «Docentes»
- * (who teaches it, an owner's gestures on them); then what the class has covered («Avance del
- * curso») and what its students may use, and, ruled off, the owner's «Fin de curso». A student never reaches it: the route is
- * a teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
+ * beside the section open, each section one subject of its own so a page is read without
+ * scrolling past another (user's requests, 2026-10-07). The list goes in three groups, each
+ * named by a caption: «Miembros» (students, teachers, and «Invitar», the two ways in), then
+ * «Actividad» (one page for each thing a student uses: the exercises, and the tutor where it
+ * is installed), then «Curso» (the subject's progress, what its students may use); the
+ * owner's «Fin de curso» stands apart under the list, tinted as damage is. The two pages of
+ * the activity share the scope and the week chosen, held here. It opens on «Alumnos», or on
+ * «Invitar» while there is nobody to list yet. A student never reaches it: the route is a
+ * teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
  */
 export function ClassScreen() {
   const tr = useT();
@@ -70,11 +77,14 @@ export function ClassScreen() {
   const session = useSession();
   const members = useMembers();
   const classLink = useClassLink();
+  const invites = useMemberInvites();
   const progress = useCurriculum();
   const uses = useStudentUses();
   const activity = useActivityWeeks(null);
-  // The student «Actividad» reads, or the whole class: kept here so «Alumnos» can open it.
+  // The student the activity reads, or the whole class, and the week open: kept here so the
+  // activity's two pages share them and «Alumnos» can open them on one student.
   const [activityOf, setActivityOf] = useState<number | null>(null);
+  const [activityWeek, setActivityWeek] = useState<string | null>(null);
   const owner = useIsOwner();
   // Null until somebody picks: the section to open on depends on the list, which arrives later.
   const [picked, setPicked] = useState<ClassSection | null>(null);
@@ -85,28 +95,19 @@ export function ClassScreen() {
   const students = studentsOf(members.data?.members ?? []);
   const teachers = teachersOf(members.data?.members ?? []);
   const paused = students.filter((member) => member.disabled_at !== null).length;
-  const section: ClassSection = picked ?? (students.length === 0 ? "invite" : "students");
+  const tutorInstalled = activity.data?.tutor === true;
+  const fallback: ClassSection = students.length === 0 ? "invite" : "students";
+  const section: ClassSection = picked === "tutor" && !tutorInstalled ? fallback : (picked ?? fallback);
 
   const items: SectionEntry[] = [
     {
       key: "students",
+      group: t("class.group.members"),
       label: t("class.students"),
       mark: <GraduationCap className="size-4" />,
       detail: paused
         ? `${plural("class.studentCount", students.length - paused)} · ${plural("class.pausedCount", paused)}`
         : plural("class.studentCount", students.length),
-    },
-    {
-      key: "activity",
-      label: t("class.activity"),
-      mark: <Activity className="size-4" />,
-      detail: activityDetail(activity.data, tr),
-    },
-    {
-      key: "invite",
-      label: t("class.invite"),
-      mark: <Link2 className="size-4" />,
-      detail: classLink.isSuccess ? classLinkDetail(classLink.data.class_link, t) : null,
     },
     {
       key: "teachers",
@@ -115,7 +116,35 @@ export function ClassScreen() {
       detail: plural("class.teachers.count", teachers.length),
     },
     {
+      key: "invite",
+      label: t("class.invite"),
+      mark: <UserPlus className="size-4" />,
+      detail:
+        classLink.isSuccess && invites.isSuccess
+          ? inviteDetail(classLink.data.class_link, invites.data.invites, tr)
+          : null,
+    },
+    {
+      key: "exercises",
+      group: t("class.group.activity"),
+      label: t("class.activity.exercises"),
+      mark: <Play className="size-4" />,
+      detail: activityDetail(activity.data, "exercises", tr),
+    },
+    // Where the tutor is not installed there is nothing of it to count.
+    ...(tutorInstalled
+      ? [
+          {
+            key: "tutor",
+            label: t("class.activity.tutor"),
+            mark: <MessagesSquare className="size-4" />,
+            detail: activityDetail(activity.data, "tutor", tr),
+          },
+        ]
+      : []),
+    {
       key: "progress",
+      group: t("class.group.course"),
       label: t("class.progress"),
       mark: <Spline className="size-4" />,
       detail: progressDetail(progress.data, t),
@@ -126,9 +155,17 @@ export function ClassScreen() {
       mark: <SlidersHorizontal className="size-4" />,
       detail: usesDetail(uses.data, t),
     },
-    // The owner's alone: ending a course takes every student out at once.
+    // The owner's alone: ending a course takes every student out at once, so it stands apart.
     ...(owner
-      ? [{ key: "end", label: t("class.end"), mark: <CalendarX className="size-4" />, separated: true }]
+      ? [
+          {
+            key: "end",
+            label: t("class.end"),
+            mark: <CalendarX className="size-4" />,
+            apart: true,
+            tone: "danger" as const,
+          },
+        ]
       : []),
   ];
 
@@ -156,8 +193,14 @@ export function ClassScreen() {
           value={section}
           onChange={(key) => setPicked(key as ClassSection)}
         >
-          {section === "activity" ? (
-            <ActivitySection student={activityOf} onStudent={setActivityOf} />
+          {ACTIVITY_VIEWS.includes(section) ? (
+            <ActivitySection
+              view={section as ActivityView}
+              student={activityOf}
+              onStudent={setActivityOf}
+              week={activityWeek}
+              onWeek={setActivityWeek}
+            />
           ) : section === "invite" ? (
             <InviteSection subject={subject} slug={slug} />
           ) : section === "teachers" ? (
@@ -173,7 +216,7 @@ export function ClassScreen() {
               students={students}
               onActivity={(id) => {
                 setActivityOf(id);
-                setPicked("activity");
+                setPicked("exercises");
               }}
             />
           )}
@@ -315,60 +358,91 @@ function StudentsSection({
             {query.trim() ? t("class.students.noMatch") : t(EMPTY_KEYS[filter])}
           </p>
         ) : (
-          <ul className="well px-1 py-1.5">
-            {/* The strip carries the box that ticks the whole list, in the column of the
-                rows' boxes, and the gestures over what is ticked. */}
-            <li className="mx-2 flex min-h-9 flex-wrap items-center gap-2 px-2 py-1.5 text-small">
-              <Checkbox
-                checked={allTicked}
-                indeterminate={chosen.length > 0 && !allTicked}
-                label={t("class.tickAll")}
-                onCheckedChange={(on) =>
-                  setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set())
-                }
-              />
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                {chosen.length > 0 ? plural("class.ticked", chosen.length) : t("class.tickAll")}
-              </span>
-              {chosen.length > 0 ? (
-                <span className="flex items-center gap-1">
-                  {many.isPending ? <Spinner /> : null}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="-my-1 h-7"
-                    disabled={many.isPending}
-                    onClick={() => change(chosen)}
-                  >
-                    {filter === "active" ? <UserX /> : <UserCheck />}
-                    {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="-my-1 h-7 text-destructive hover:text-destructive"
-                    disabled={many.isPending}
-                    onClick={() => setRemoving(chosen)}
-                  >
-                    <UserMinus />
-                    {t("class.removeN", { n: chosen.length })}
-                  </Button>
+          <PeopleList
+            strip={
+              <>
+                <Checkbox
+                  checked={allTicked}
+                  indeterminate={chosen.length > 0 && !allTicked}
+                  label={t("class.tickAll")}
+                  onCheckedChange={(on) =>
+                    setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set())
+                  }
+                />
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {chosen.length > 0 ? plural("class.ticked", chosen.length) : t("class.tickAll")}
                 </span>
-              ) : null}
-            </li>
-            {shown.map((member) => (
-              <StudentRow
-                key={member.user_id}
-                member={member}
-                ticked={ticked.has(member.user_id)}
-                busy={many.isPending}
-                onTick={(on) => tick(member, on)}
-                onChange={() => change([member])}
-                onRemove={() => setRemoving([member])}
-                onActivity={() => onActivity(member.user_id)}
-              />
-            ))}
-          </ul>
+                {chosen.length > 0 ? (
+                  <span className="flex items-center gap-1">
+                    {many.isPending ? <Spinner /> : null}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="-my-1 h-7"
+                      disabled={many.isPending}
+                      onClick={() => change(chosen)}
+                    >
+                      {filter === "active" ? <UserX /> : <UserCheck />}
+                      {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="-my-1 h-7 text-destructive hover:text-destructive"
+                      disabled={many.isPending}
+                      onClick={() => setRemoving(chosen)}
+                    >
+                      <UserMinus />
+                      {t("class.removeN", { n: chosen.length })}
+                    </Button>
+                  </span>
+                ) : null}
+              </>
+            }
+          >
+            {shown.map((member) => {
+              const paused = member.disabled_at !== null;
+              return (
+                <PersonRow
+                  key={member.user_id}
+                  member={member}
+                  tick={{ checked: ticked.has(member.user_id), onChange: (on) => tick(member, on) }}
+                  badges={
+                    paused ? (
+                      <Badge variant="outline" className="shrink-0">
+                        {t("class.pausedSince", { date: when(member.disabled_at) })}
+                      </Badge>
+                    ) : null
+                  }
+                  actions={
+                    <>
+                      <RowAction
+                        label={t("class.viewActivity", { name: member.name })}
+                        title={t("class.viewActivityShort")}
+                        icon={<Activity />}
+                        onClick={() => onActivity(member.user_id)}
+                      />
+                      <RowAction
+                        label={t(paused ? "class.openOne" : "class.pauseOne", { name: member.name })}
+                        title={t(paused ? "class.open" : "class.pause")}
+                        icon={paused ? <UserCheck /> : <UserX />}
+                        disabled={many.isPending}
+                        onClick={() => change([member])}
+                      />
+                      <RowAction
+                        label={t("class.removeOne", { name: member.name })}
+                        title={t("class.remove")}
+                        icon={<UserMinus />}
+                        disabled={many.isPending}
+                        onClick={() => setRemoving([member])}
+                        danger
+                      />
+                    </>
+                  }
+                />
+              );
+            })}
+          </PeopleList>
         )}
       </section>
 
@@ -402,99 +476,6 @@ const EMPTY_KEYS = {
 
 function Count({ n }: { n: number }) {
   return <span className="nums text-small text-muted-foreground">{n}</span>;
-}
-
-/**
- * One student on one line: who, whether a teacher paused them, how and when they came in,
- * and the two gestures over them alone.
- */
-function StudentRow({
-  member,
-  ticked,
-  busy,
-  onTick,
-  onChange,
-  onRemove,
-  onActivity,
-}: {
-  member: Member;
-  ticked: boolean;
-  busy: boolean;
-  onTick: (on: boolean) => void;
-  onChange: () => void;
-  onRemove: () => void;
-  onActivity: () => void;
-}) {
-  const { t } = useT();
-  const via = viaKey(member.via);
-  const paused = member.disabled_at !== null;
-  const how = [via ? t(via) : null, member.invited_by ? t("class.invitedBy", { name: member.invited_by }) : null]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <li className="mx-2 border-t border-border">
-      <div className="group flex items-center gap-2 px-2 py-1.5 text-small">
-        <Checkbox checked={ticked} label={t("class.tick", { name: member.name })} onCheckedChange={onTick} />
-        <span className="flex min-w-0 flex-1 items-baseline gap-2">
-          <span
-            className={cn(
-              "truncate text-body font-medium",
-              paused ? "text-muted-foreground" : "text-foreground",
-            )}
-            title={member.name}
-          >
-            {member.name}
-          </span>
-          <span className="hidden truncate font-mono text-muted-foreground sm:inline">
-            {member.username}
-          </span>
-        </span>
-        {paused ? (
-          <Badge variant="outline" className="shrink-0">
-            {t("class.pausedSince", { date: when(member.disabled_at) })}
-          </Badge>
-        ) : null}
-        <span className="hidden w-52 shrink-0 truncate text-muted-foreground md:block" title={how || undefined}>
-          {how || "—"}
-        </span>
-        <span className="nums hidden w-40 shrink-0 text-muted-foreground sm:block">
-          {t("class.joinedOn", { date: when(member.joined_at) })}
-        </span>
-        <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("class.viewActivity", { name: member.name })}
-            title={t("class.viewActivityShort")}
-            onClick={onActivity}
-          >
-            <Activity />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t(paused ? "class.openOne" : "class.pauseOne", { name: member.name })}
-            title={t(paused ? "class.open" : "class.pause")}
-            disabled={busy}
-            onClick={onChange}
-          >
-            {paused ? <UserCheck /> : <UserX />}
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("class.removeOne", { name: member.name })}
-            title={t("class.remove")}
-            disabled={busy}
-            onClick={onRemove}
-            className="hover:text-destructive"
-          >
-            <UserMinus />
-          </Button>
-        </span>
-      </div>
-    </li>
-  );
 }
 
 /**

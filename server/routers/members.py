@@ -38,7 +38,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import auth, features, installation, members
+from .. import activity, auth, features, installation, members
 from ..auth import links, mail
 from ..auth.rate_limit import throttle
 from ..db import identity
@@ -250,9 +250,14 @@ def change_uses(
 
 
 def _uses_view(db: DbSession, access: auth.Access) -> dict:
-    """Render the two switches, and whether the administrator opened the tutor to a student here."""
+    """Render the two switches, whether the tutor is installed, and whether it is offered here.
+
+    A teacher reads the tutor's switch wherever the tutor is installed; it switches something
+    only once the administrator opened the tutor to one of the subject's students.
+    """
     return {
         **features.subject_uses(access.workspace),
+        "tutor_installed": activity.tutor_installed(),
         "tutor_offered": features.offered_to_students(db, access.workspace),
     }
 

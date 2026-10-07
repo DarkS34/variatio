@@ -202,6 +202,11 @@ def _exercise(record: dict, user_id: int, level_field: str) -> Exercise | None:
     )
 
 
+def tutor_installed() -> bool:
+    """Say whether the tutor is installed: without it there is nothing of it to count or switch."""
+    return TUTOR_READER is not None
+
+
 def tutor_reading(ws: Workspace, user_ids: list[int]) -> TutorReading | None:
     """Return the students' messages to the tutor, or None where the tutor is not installed."""
     if TUTOR_READER is None:
@@ -358,7 +363,7 @@ def week(
     }
     if scope.student:
         answer["median"] = _medians(scope, week_key)
-        answer["findings"] = _student_findings(messages, made, week_key < present, unit_of)
+        answer["findings"] = _student_findings(messages, made, week_key < present, unit_of, scope.tutor)
     else:
         answer["students"] = _students_rows(scope, week_key, start)
         answer["findings"] = _class_findings(
@@ -464,13 +469,27 @@ def _exercises_block(
 
 
 def _students_rows(scope: _Scope, week_key: str, start: date) -> list[dict]:
-    """One row per student of the class: what they did this week, day by day, least first."""
+    """One row per student of the class: what they did this week, day by day, least first.
+
+    Each row carries its days twice over, the messages and the exercises apart, because the
+    screen reads them on two pages; `days` is their sum, for an older client.
+    """
     rows = []
     for student in scope.students:
         sent = [m for m in scope.messages if m.user_id == student.id and week_of(m.at) == week_key]
         made = [e for e in scope.exercises if e.user_id == student.id and week_of(e.at) == week_key]
-        days = [a + b for a, b in zip(_per_day((m.at for m in sent), start), _per_day((e.at for e in made), start))]
-        rows.append({**_student_view(student), "messages": len(sent), "exercises": len(made), "days": days})
+        message_days = _per_day((m.at for m in sent), start)
+        exercise_days = _per_day((e.at for e in made), start)
+        rows.append(
+            {
+                **_student_view(student),
+                "messages": len(sent),
+                "exercises": len(made),
+                "message_days": message_days,
+                "exercise_days": exercise_days,
+                "days": [a + b for a, b in zip(message_days, exercise_days)],
+            }
+        )
     rows.sort(key=lambda row: (row["messages"] + row["exercises"], row["name"].lower()))
     return rows
 
@@ -501,89 +520,111 @@ def _class_findings(
     week_key: str,
     closed: bool,
 ) -> list[dict]:
-    """Turn a week of the class into what a teacher should read first, at most five.
+    """Turn a week of the class into what a teacher should read first, each finding of an area.
 
-    In this order: where the class gets stuck (a concept many ask about, and the prerequisite
-    the tutor sends them back to), where they ask for the solution, a unit already covered
-    that nobody practised, who did nothing, and how many were active against the week before.
+    The screen reads the tutor and the exercises on two pages, so every finding says which
+    (`area`) and each area keeps at most `MAX_FINDINGS`. The tutor's, in this order: where the
+    class gets stuck (a concept many ask about, and the prerequisite the tutor sends them back
+    to), where they ask for the solution, who did not write to it, and how many wrote against
+    the week before. The exercises': a unit already covered that nobody practised, who
+    generated nothing, and how many generated against the week before.
     """
-    found: list[dict] = []
-    askers: dict[str, set[int]] = defaultdict(set)
-    for m in messages:
-        if m.on_subject and m.concept:
-            askers[m.concept].add(m.user_id)
     active = [s for s in scope.students if not s.disabled]
-    for concept, people in sorted(askers.items(), key=lambda pair: -len(pair[1]))[:2]:
-        if len(people) < MIN_ASKERS:
-            break
-        sent = Counter(m.sent_back for m in messages if m.concept == concept and m.sent_back)
-        prerequisite, _ = sent.most_common(1)[0] if sent else (None, 0)
-        found.append(
-            {
-                "kind": "asked",
-                "concept": concept,
-                "students": len(people),
-                "of": len(active),
-                "prerequisite": prerequisite,
-                "sent_back": len(
-                    {m.user_id for m in messages if m.concept == concept and m.sent_back == prerequisite}
+    class_ids = {s.id for s in scope.students}
+    before = previous_week(week_key)
+    tutor: list[dict] = []
+    if scope.tutor:
+        askers: dict[str, set[int]] = defaultdict(set)
+        for m in messages:
+            if m.on_subject and m.concept:
+                askers[m.concept].add(m.user_id)
+        for concept, people in sorted(askers.items(), key=lambda pair: -len(pair[1]))[:2]:
+            if len(people) < MIN_ASKERS:
+                break
+            sent = Counter(m.sent_back for m in messages if m.concept == concept and m.sent_back)
+            prerequisite, _ = sent.most_common(1)[0] if sent else (None, 0)
+            tutor.append(
+                {
+                    "kind": "asked",
+                    "concept": concept,
+                    "students": len(people),
+                    "of": len(active),
+                    "prerequisite": prerequisite,
+                    "sent_back": len(
+                        {m.user_id for m in messages if m.concept == concept and m.sent_back == prerequisite}
+                    )
+                    if prerequisite
+                    else 0,
+                }
+            )
+        by_concept: dict[str, list[Message]] = defaultdict(list)
+        for m in messages:
+            if m.on_subject and m.concept:
+                by_concept[m.concept].append(m)
+        for concept, group in sorted(by_concept.items(), key=lambda pair: -len(pair[1])):
+            solutions = sum(1 for m in group if m.kind == "solution")
+            if len(group) >= MIN_SOLUTION_MESSAGES and solutions / len(group) >= SOLUTION_SHARE:
+                tutor.append(
+                    {"kind": "solutions", "concept": concept, "solution": solutions, "messages": len(group)}
                 )
-                if prerequisite
-                else 0,
-            }
-        )
-    by_concept: dict[str, list[Message]] = defaultdict(list)
-    for m in messages:
-        if m.on_subject and m.concept:
-            by_concept[m.concept].append(m)
-    for concept, group in sorted(by_concept.items(), key=lambda pair: -len(pair[1])):
-        solutions = sum(1 for m in group if m.kind == "solution")
-        if len(group) >= MIN_SOLUTION_MESSAGES and solutions / len(group) >= SOLUTION_SHARE:
-            found.append({"kind": "solutions", "concept": concept, "solution": solutions, "messages": len(group)})
-            break
+                break
+        previously = {m.user_id for m in scope.messages if week_of(m.at) == before}
+        tutor += _attendance({m.user_id for m in messages}, previously, active, class_ids, closed)
+    exercises: list[dict] = []
     if progress:
         untouched = [row["unit"] for row in exercises_block["by_unit"] if row["covered"] and row["count"] == 0]
         if untouched:
-            found.append({"kind": "unpractised", "units": untouched[:3], "more": max(0, len(untouched) - 3)})
-    doing = {m.user_id for m in messages} | {e.user_id for e in made}
+            exercises.append({"kind": "unpractised", "units": untouched[:3], "more": max(0, len(untouched) - 3)})
+    previously = {e.user_id for e in scope.exercises if week_of(e.at) == before}
+    exercises += _attendance({e.user_id for e in made}, previously, active, class_ids, closed)
+    return [{**f, "area": "tutor"} for f in tutor[:MAX_FINDINGS]] + [
+        {**f, "area": "exercises"} for f in exercises[:MAX_FINDINGS]
+    ]
+
+
+def _attendance(
+    doing: set[int], previously: set[int], active: list[Student], class_ids: set[int], closed: bool
+) -> list[dict]:
+    """Say who of the active did nothing in one area, and how many did against the week before."""
+    found: list[dict] = []
     idle = [s for s in active if s.id not in doing]
     if active and idle:
         found.append({"kind": "idle", "students": len(idle), "of": len(active), "open": not closed})
-    before = previous_week(week_key)
-    previously = {m.user_id for m in scope.messages if week_of(m.at) == before} | {
-        e.user_id for e in scope.exercises if week_of(e.at) == before
-    }
-    previously &= {s.id for s in scope.students}
-    now_active = len(doing & {s.id for s in scope.students})
+    previously &= class_ids
+    now_active = len(doing & class_ids)
     if previously and now_active != len(previously):
         found.append({"kind": "trend", "active": now_active, "previous": len(previously), "open": not closed})
-    return found[:MAX_FINDINGS]
+    return found
 
 
 def _student_findings(
-    messages: list[Message], made: list[Exercise], closed: bool, unit_of: dict
+    messages: list[Message], made: list[Exercise], closed: bool, unit_of: dict, tutor: bool = True
 ) -> list[dict]:
-    """Turn a week of one student into what a teacher should read first about them.
+    """Turn a week of one student into what a teacher should read first about them, by area.
 
-    What they asked most, where the tutor sent them back to, what they practised most. The
+    Of the tutor, what they asked most and where the tutor sent them back to; of the
+    exercises, what they practised most; in an area where they did nothing, that alone. The
     class's median is no finding: every figure of their week already stands beside it.
     """
-    if not messages and not made:
-        return [{"kind": "quiet", "open": not closed}]
     found: list[dict] = []
-    topics = Counter(m.concept for m in messages if m.on_subject and m.concept)
-    if topics:
-        concept, count = topics.most_common(1)[0]
-        found.append({"kind": "topic", "concept": concept, "messages": count})
-    sent = Counter(m.sent_back for m in messages if m.sent_back)
-    if sent:
-        prerequisite, times = sent.most_common(1)[0]
-        found.append({"kind": "reviewed", "prerequisite": prerequisite, "times": times})
+    if tutor:
+        if not messages:
+            found.append({"kind": "quiet", "open": not closed, "area": "tutor"})
+        topics = Counter(m.concept for m in messages if m.on_subject and m.concept)
+        if topics:
+            concept, count = topics.most_common(1)[0]
+            found.append({"kind": "topic", "concept": concept, "messages": count, "area": "tutor"})
+        sent = Counter(m.sent_back for m in messages if m.sent_back)
+        if sent:
+            prerequisite, times = sent.most_common(1)[0]
+            found.append({"kind": "reviewed", "prerequisite": prerequisite, "times": times, "area": "tutor"})
+    if not made:
+        found.append({"kind": "quiet", "open": not closed, "area": "exercises"})
     units = Counter(unit_of.get(c) for e in made for c in e.concepts if unit_of.get(c))
     if units:
         unit, count = units.most_common(1)[0]
-        found.append({"kind": "practised", "unit": unit, "exercises": count})
-    return found[:MAX_FINDINGS]
+        found.append({"kind": "practised", "unit": unit, "exercises": count, "area": "exercises"})
+    return found
 
 
 # THE DIGEST ----------------------------------------------------------------------------

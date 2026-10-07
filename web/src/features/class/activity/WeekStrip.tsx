@@ -6,13 +6,15 @@ import { useT } from "@/lib/i18n";
 import type { ActivityWeekSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import type { Measure } from "./WhoWorks";
+
 /**
  * THE HISTORY OF THE CLASS, ONE WEEK PER STOP: the newest on the left, back to the first
  * week anybody did something.
  *
- * Each week carries its two figures — messages to the tutor and exercises — so the course
- * reads at a glance without opening anything, a dot where its digest is written, and an empty
- * week dimmed but kept: a holiday is a gap, not a week that never was. The one open is the
+ * Each week carries the figure of the page it is drawn on — exercises, or messages to the
+ * tutor — so the course reads at a glance without opening anything, on the tutor's page a dot
+ * where its digest is written, and a week with none of it dimmed but kept: a holiday is a gap, not a week that never was. The one open is the
  * sunk tint, never a relief. One tab stop: the arrows move from week to week (Home and End to
  * the ends), and the week moved to is scrolled into sight.
  */
@@ -20,15 +22,19 @@ export function WeekStrip({
   weeks,
   current,
   value,
+  measure,
   onChange,
 }: {
   weeks: ActivityWeekSummary[];
   current: string;
   value: string;
+  measure: Measure;
   onChange: (week: string) => void;
 }) {
   const tr = useT();
-  const { t } = tr;
+  const { t, plural } = tr;
+  const Icon = measure === "messages" ? MessageSquare : FileText;
+  const countKey = measure === "messages" ? "activity.messages" : "activity.exercisesN";
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const present = weeks.find((week) => week.week === current) ?? null;
 
@@ -58,7 +64,9 @@ export function WeekStrip({
       <ul className="thin-scroll flex gap-1 overflow-x-auto">
         {weeks.map((week, index) => {
           const chosen = week.week === value;
-          const empty = week.messages === 0 && week.exercises === 0;
+          const count = week[measure];
+          const empty = count === 0;
+          const digest = measure === "messages" && week.digest;
           return (
             <li key={week.week} className="shrink-0">
               <button
@@ -69,7 +77,7 @@ export function WeekStrip({
                 type="button"
                 tabIndex={chosen ? 0 : -1}
                 aria-current={chosen ? "true" : undefined}
-                title={t("activity.week.title", { messages: week.messages, exercises: week.exercises })}
+                title={plural(countKey, count)}
                 onClick={() => onChange(week.week)}
                 onKeyDown={(event) => move(event, index)}
                 className={cn(
@@ -85,7 +93,7 @@ export function WeekStrip({
                   )}
                 >
                   <span className="truncate">{weekLabel(week, present, t)}</span>
-                  {week.digest ? (
+                  {digest ? (
                     <span className="ml-auto size-1.5 shrink-0 rounded-full bg-ink" title={t("activity.week.digest")}>
                       <span className="sr-only">{t("activity.week.digest")}</span>
                     </span>
@@ -99,12 +107,8 @@ export function WeekStrip({
                   aria-hidden
                 >
                   <span className="flex items-center gap-0.5">
-                    <MessageSquare className="size-3" />
-                    {week.messages}
-                  </span>
-                  <span className="flex items-center gap-0.5">
-                    <FileText className="size-3" />
-                    {week.exercises}
+                    <Icon className="size-3" />
+                    {count}
                   </span>
                 </span>
               </button>

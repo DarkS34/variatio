@@ -1,18 +1,15 @@
-import { Crown, UserCheck, UserMinus, UserRoundCog } from "lucide-react";
-import { useId } from "react";
+import { ArrowRightLeft, Crown, UserCheck, UserMinus, UserRoundCog } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader } from "@/features/admin/Sections";
-import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";
-import { viaKey } from "@/lib/members";
 import type { Member, Role } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { ROLE_LABEL_KEYS, useIsOwner, useSession } from "@/state/auth";
 import { useChangeRole, useMemberActions } from "@/state/queries";
+
+import { PeopleList, PersonRow, RowAction } from "./PersonRow";
 
 /** A subject's teachers — its owners first, then by name — active and paused. */
 export function teachersOf(members: Member[]): Member[] {
@@ -34,11 +31,11 @@ export function teachersOf(members: Member[]): Member[] {
  * two role changes in that order, so the subject has an owner at every moment and the server's
  * guard (`last_owner`) never has to refuse. Every gesture is asked first. A teacher reads the
  * list and changes nothing; nobody acts on their own row here. Teachers come in through an
- * owner's personal invitation, in «Invitar».
+ * owner's personal invitation, in «Invitar». Drawn as the students are (`PersonRow`), the
+ * gestures as icons on the row.
  */
 export function TeachersSection({ teachers }: { teachers: Member[] }) {
   const { t } = useT();
-  const id = useId();
   const owner = useIsOwner();
   const me = useSession().data?.user.id;
   const confirm = useConfirm();
@@ -119,77 +116,90 @@ export function TeachersSection({ teachers }: { teachers: Member[] }) {
   return (
     <>
       <SectionHeader title={t("class.teachers")} description={t("class.teachers.lead")} />
-      <section aria-labelledby={id} className="surface space-y-4 p-5">
-        <h3 id={id} className="sr-only">
-          {t("class.teachers")}
-        </h3>
-        <ul className="rows">
+      <section aria-label={t("class.teachers")} className="surface space-y-4 p-5">
+        <PeopleList
+          strip={
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">
+              {t(owner ? "class.teachers.inviteHint" : "class.teachers.readOnly")}
+            </span>
+          }
+        >
           {teachers.map((member) => {
             const self = member.user_id === me;
             const paused = member.disabled_at !== null;
-            const via = viaKey(member.via);
             return (
-              <li key={member.user_id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-1.5">
-                    <span className={cn("truncate font-medium", paused && "text-muted-foreground")}>
-                      {member.name}
-                    </span>
-                    <Badge variant={member.role === "owner" ? "settled" : "outline"}>
+              <PersonRow
+                key={member.user_id}
+                member={member}
+                badges={
+                  <>
+                    <Badge variant={member.role === "owner" ? "settled" : "outline"} className="shrink-0">
                       {t(ROLE_LABEL_KEYS[member.role])}
                     </Badge>
-                    {self ? <Badge variant="outline">{t("acc.badge.you")}</Badge> : null}
-                    {paused ? <Badge variant="outline">{t("activity.paused")}</Badge> : null}
-                  </p>
-                  <p className="truncate text-small text-muted-foreground">
-                    <span className="font-mono">{member.username}</span>
-                    {member.joined_at ? ` · ${t("class.joinedOn", { date: when(member.joined_at) })}` : ""}
-                    {via ? ` · ${t(via)}` : ""}
-                  </p>
-                </div>
-                {owner && !self ? (
-                  <div className="flex flex-wrap items-center gap-1">
+                    {self ? (
+                      <Badge variant="outline" className="shrink-0">
+                        {t("acc.badge.you")}
+                      </Badge>
+                    ) : null}
                     {paused ? (
-                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => open(member)}>
-                        <UserCheck />
-                        {t("class.open")}
-                      </Button>
-                    ) : member.role === "editor" ? (
-                      <>
-                        <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRole(member, "owner")}>
-                          <Crown />
-                          {t("class.teachers.promote")}
-                        </Button>
-                        <Button size="sm" variant="ghost" disabled={busy} onClick={() => handOver(member)}>
-                          <UserRoundCog />
-                          {t("class.teachers.handOver")}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRole(member, "editor")}>
-                        <UserRoundCog />
-                        {t("class.teachers.demote")}
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      disabled={busy}
-                      onClick={() => remove(member)}
-                    >
-                      <UserMinus />
-                      {t("class.remove")}
-                    </Button>
-                  </div>
-                ) : null}
-              </li>
+                      <Badge variant="outline" className="shrink-0">
+                        {t("activity.paused")}
+                      </Badge>
+                    ) : null}
+                  </>
+                }
+                actions={
+                  owner && !self ? (
+                    <>
+                      {paused ? (
+                        <RowAction
+                          label={t("class.teachers.openOne", { name: member.name })}
+                          title={t("class.open")}
+                          icon={<UserCheck />}
+                          disabled={busy}
+                          onClick={() => open(member)}
+                        />
+                      ) : member.role === "editor" ? (
+                        <>
+                          <RowAction
+                            label={t("class.teachers.promoteOne", { name: member.name })}
+                            title={t("class.teachers.promote")}
+                            icon={<Crown />}
+                            disabled={busy}
+                            onClick={() => setRole(member, "owner")}
+                          />
+                          <RowAction
+                            label={t("class.teachers.handOverOne", { name: member.name })}
+                            title={t("class.teachers.handOver")}
+                            icon={<ArrowRightLeft />}
+                            disabled={busy}
+                            onClick={() => handOver(member)}
+                          />
+                        </>
+                      ) : (
+                        <RowAction
+                          label={t("class.teachers.demoteOne", { name: member.name })}
+                          title={t("class.teachers.demote")}
+                          icon={<UserRoundCog />}
+                          disabled={busy}
+                          onClick={() => setRole(member, "editor")}
+                        />
+                      )}
+                      <RowAction
+                        label={t("class.teachers.removeOne", { name: member.name })}
+                        title={t("class.remove")}
+                        icon={<UserMinus />}
+                        disabled={busy}
+                        onClick={() => remove(member)}
+                        danger
+                      />
+                    </>
+                  ) : null
+                }
+              />
             );
           })}
-        </ul>
-        <p className="text-small text-muted-foreground">
-          {t(owner ? "class.teachers.inviteHint" : "class.teachers.readOnly")}
-        </p>
+        </PeopleList>
       </section>
     </>
   );

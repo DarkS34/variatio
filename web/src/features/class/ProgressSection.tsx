@@ -15,7 +15,7 @@ import { progressByUnit } from "@/lib/courseProgress";
 import type { CurriculumState } from "@/lib/types";
 import { useCurriculum, useKg, useKgGraph, useSaveCurriculum } from "@/state/queries";
 
-/** The line under «Avance del curso» in the section list: how much of the syllabus is covered. */
+/** The line under «Avance de la asignatura» in the section list: how much of the syllabus is covered. */
 export function progressDetail(
   state: CurriculumState | undefined,
   t: ReturnType<typeof useT>["t"],
@@ -27,7 +27,7 @@ export function progressDetail(
 }
 
 /**
- * «Avance del curso»: what the class has covered, which bounds what its students practise.
+ * «Avance de la asignatura»: what the class has covered, which bounds what its students practise.
  *
  * The same selector the generate form uses to declare a coverage, closed under the graph's
  * prerequisites as it is saved (`PUT /api/kg/curriculum`): ticking «Recursividad» covers

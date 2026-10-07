@@ -24,6 +24,9 @@ import { cn } from "@/lib/utils";
  * that ends a course among the ones that run it — is ruled off from those above (`separated`),
  * across the list when it stands and down it when it lies. A list taller than the window
  * scrolls inside itself: pinned whole, its last rows were out of reach beside a long section.
+ * A row that is not part of the work the list orders — ending a course — stands apart under
+ * the list, on the ground and out of its block (`apart`), and a row whose gesture does damage
+ * is tinted as damage is (`tone`), softly: it is there to be found, not to call.
  */
 export interface SectionEntry {
   key: string;
@@ -40,6 +43,10 @@ export interface SectionEntry {
   group?: string;
   /** A rule before the row, setting it apart from the rows above it (as `Tabs` does). */
   separated?: boolean;
+  /** Drawn under the list, out of its block: a row set apart from the work the list orders. */
+  apart?: boolean;
+  /** Tinted as damage is, for a section whose gesture cannot be undone. */
+  tone?: "danger";
 }
 
 export function Sections({
@@ -63,7 +70,7 @@ export function Sections({
   after?: ReactNode;
   children: ReactNode;
 }) {
-  const { plural } = useT();
+  const apart = items.filter((item) => item.apart);
   return (
     <div className="grid items-start gap-7 lg:grid-cols-[17rem_minmax(0,1fr)]">
       {/* Cleared of the sticky header, which takes a second row of navigation below `xl`. */}
@@ -74,9 +81,9 @@ export function Sections({
           className="surface p-2 lg:max-h-[calc(100dvh-11.5rem)] lg:overflow-y-auto xl:max-h-[calc(100dvh-7.5rem)]"
         >
           <ul className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:flex-col lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-            {items.map((item) => {
-              const current = item.key === value;
-              return (
+            {items
+              .filter((item) => !item.apart)
+              .map((item) => (
                 <li key={item.key} className="flex shrink-0 lg:block lg:shrink">
                   {item.separated ? (
                     <span
@@ -89,67 +96,90 @@ export function Sections({
                       {item.group}
                     </p>
                   ) : null}
-                  <button
-                    type="button"
-                    data-section={item.key}
-                    title={item.title}
-                    aria-current={current ? "true" : undefined}
-                    onClick={() => onChange(item.key)}
-                    className={cn(
-                      "flex w-full items-start gap-2.5 rounded-inner px-3 py-2.5 text-left transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                      current ? "bg-sunk" : "hover:bg-accent",
-                    )}
-                  >
-                    {item.mark ? (
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "flex h-6 w-5 shrink-0 items-center justify-center",
-                          current ? "text-foreground" : "text-muted-foreground",
-                        )}
-                      >
-                        {item.mark}
-                      </span>
-                    ) : null}
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={cn(
-                          "block whitespace-nowrap text-body font-medium lg:truncate",
-                          current ? "text-foreground" : "text-muted-foreground",
-                        )}
-                      >
-                        {item.label}
-                      </span>
-                      {item.detail ? (
-                        <span className="block whitespace-nowrap text-small text-muted-foreground lg:truncate">
-                          {item.detail}
-                        </span>
-                      ) : null}
-                    </span>
-                    {item.pending ? (
-                      <Badge
-                        variant="attention"
-                        className="mt-0.5 shrink-0"
-                        title={plural("admin.sections.unsaved", item.pending)}
-                      >
-                        {item.pending}
-                        <span className="sr-only">
-                          {plural("admin.sections.unsaved", item.pending)}
-                        </span>
-                      </Badge>
-                    ) : null}
-                  </button>
+                  <SectionRow item={item} current={item.key === value} onChange={onChange} />
                 </li>
-              );
-            })}
+              ))}
           </ul>
         </nav>
+        {apart.length > 0 ? (
+          <ul aria-label={label} className="flex gap-1 lg:flex-col">
+            {apart.map((item) => (
+              <li key={item.key} className="min-w-0 flex-1 lg:flex-none">
+                <SectionRow item={item} current={item.key === value} onChange={onChange} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {after}
       </div>
 
       <div className="min-w-0 space-y-7">{children}</div>
     </div>
+  );
+}
+
+/** One row of the list: its mark, its name, its line of state, and what is left unsaved. */
+function SectionRow({
+  item,
+  current,
+  onChange,
+}: {
+  item: SectionEntry;
+  current: boolean;
+  onChange: (key: string) => void;
+}) {
+  const { plural } = useT();
+  const danger = item.tone === "danger";
+  return (
+    <button
+      type="button"
+      data-section={item.key}
+      title={item.title}
+      aria-current={current ? "true" : undefined}
+      onClick={() => onChange(item.key)}
+      className={cn(
+        "flex w-full items-start gap-2.5 rounded-inner px-3 py-2.5 text-left transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        danger
+          ? current
+            ? "bg-[color-mix(in_oklab,var(--destructive)_16%,transparent)]"
+            : "bg-[color-mix(in_oklab,var(--destructive)_7%,transparent)] hover:bg-[color-mix(in_oklab,var(--destructive)_12%,transparent)]"
+          : current
+            ? "bg-sunk"
+            : "hover:bg-accent",
+      )}
+    >
+      {item.mark ? (
+        <span
+          aria-hidden
+          className={cn(
+            "flex h-6 w-5 shrink-0 items-center justify-center",
+            danger ? "text-destructive" : current ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {item.mark}
+        </span>
+      ) : null}
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block whitespace-nowrap text-body font-medium lg:truncate",
+            danger ? "text-destructive" : current ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {item.label}
+        </span>
+        {item.detail ? (
+          <span className="block whitespace-nowrap text-small text-muted-foreground lg:truncate">{item.detail}</span>
+        ) : null}
+      </span>
+      {item.pending ? (
+        <Badge variant="attention" className="mt-0.5 shrink-0" title={plural("admin.sections.unsaved", item.pending)}>
+          {item.pending}
+          <span className="sr-only">{plural("admin.sections.unsaved", item.pending)}</span>
+        </Badge>
+      ) : null}
+    </button>
   );
 }
 

@@ -285,8 +285,9 @@ def test_a_concept_many_ask_about_leads_with_its_prerequisite(ws):
         "of": 5,
         "prerequisite": "Función",
         "sent_back": 4,
+        "area": "tutor",
     }
-    assert {"kind": "idle", "students": 1, "of": 5, "open": True} in findings
+    assert {"kind": "idle", "students": 1, "of": 5, "open": True, "area": "tutor"} in findings
 
 
 def test_two_students_asking_are_no_pattern(ws):
@@ -302,7 +303,13 @@ def test_a_concept_where_they_ask_for_the_solution_is_said(ws):
 
     findings = activity.week(activity.read_scope(ws, students), WEEK, _graph(ws), now=NOW)["findings"]
 
-    assert {"kind": "solutions", "concept": "Recursividad", "solution": 5, "messages": 5} in findings
+    assert {
+        "kind": "solutions",
+        "concept": "Recursividad",
+        "solution": 5,
+        "messages": 5,
+        "area": "tutor",
+    } in findings
 
 
 def test_a_unit_covered_in_class_and_not_practised_is_said(ws):
@@ -313,7 +320,7 @@ def test_a_unit_covered_in_class_and_not_practised_is_said(ws):
         scope, WEEK, _graph(ws), progress=["Variable", "Función", "Recursividad"], now=NOW
     )["findings"]
 
-    assert {"kind": "unpractised", "units": ["Avanzado"], "more": 0} in findings
+    assert {"kind": "unpractised", "units": ["Avanzado"], "more": 0, "area": "exercises"} in findings
 
 
 def test_fewer_active_students_than_the_week_before_is_said(ws):
@@ -323,13 +330,41 @@ def test_fewer_active_students_than_the_week_before_is_said(ws):
 
     findings = activity.week(activity.read_scope(ws, CLASS), WEEK, _graph(ws), now=NOW)["findings"]
 
-    assert {"kind": "trend", "active": 1, "previous": 2, "open": True} in findings
+    assert {"kind": "trend", "active": 1, "previous": 2, "open": True, "area": "exercises"} in findings
 
 
-def test_a_student_who_did_nothing_has_one_finding(ws):
+def test_each_area_counts_who_did_nothing_in_it_alone(ws):
+    # Ana wrote to the tutor and generated nothing; Luis generated and never wrote. Each page
+    # of the screen says who did nothing there, not who did nothing at all.
+    _conversation(ws, ANA.id, "20261006T100000Z-0000aa", [(at(6), "duda", "theory", "Recursividad", None, None)])
+    _exercise(ws, LUIS.id, at(6), ["Variable"])
+
+    findings = activity.week(activity.read_scope(ws, CLASS), WEEK, _graph(ws), now=NOW)["findings"]
+
+    idle = {f["area"]: f for f in findings if f["kind"] == "idle"}
+    # Marta is paused: the active are Ana and Luis, and one of them did nothing in each area.
+    assert (idle["tutor"]["students"], idle["tutor"]["of"]) == (1, 2)
+    assert (idle["exercises"]["students"], idle["exercises"]["of"]) == (1, 2)
+
+
+def test_a_student_who_did_nothing_has_one_finding_per_area(ws):
     findings = activity.week(activity.read_scope(ws, CLASS, LUIS), WEEK, _graph(ws), now=NOW)["findings"]
 
-    assert findings == [{"kind": "quiet", "open": True}]
+    assert findings == [
+        {"kind": "quiet", "open": True, "area": "tutor"},
+        {"kind": "quiet", "open": True, "area": "exercises"},
+    ]
+
+
+def test_a_row_counts_its_days_apart_for_each_page(ws):
+    _conversation(ws, ANA.id, "20261006T100000Z-0000aa", [(at(6), "duda", "theory", "Recursividad", None, None)])
+    _exercise(ws, ANA.id, at(7), ["Variable"])
+
+    rows = activity.week(activity.read_scope(ws, CLASS), WEEK, _graph(ws), now=NOW)["students"]
+
+    ana = next(row for row in rows if row["id"] == ANA.id)
+    assert sum(ana["message_days"]) == 1 and sum(ana["exercise_days"]) == 1
+    assert ana["days"] == [a + b for a, b in zip(ana["message_days"], ana["exercise_days"])]
 
 
 # THE DIGEST -------------------------------------------------------------------------------

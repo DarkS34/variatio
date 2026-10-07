@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import curriculum, features
+from server import activity, curriculum, features
 from server.auth.deps import require_feature
 from server.db import identity, repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
@@ -192,5 +192,15 @@ def test_the_tutor_switch_is_offered_only_where_a_student_may_use_the_tutor(db, 
     assert member_routes.uses(access=teacher, db=db) == {
         "generate": True,
         "tutor": True,
+        "tutor_installed": activity.tutor_installed(),
         "tutor_offered": True,
     }
+
+
+def test_the_answer_says_whether_the_tutor_is_installed(db, aula, monkeypatch):
+    # The screen draws the tutor's switch wherever the tutor is installed, offered or not.
+    teacher = _access(aula, aula.ana, OWNER)
+    monkeypatch.setattr(activity, "TUTOR_READER", None)
+    assert member_routes.uses(access=teacher, db=db)["tutor_installed"] is False
+    monkeypatch.setattr(activity, "TUTOR_READER", lambda ws, ids: None)
+    assert member_routes.uses(access=teacher, db=db)["tutor_installed"] is True

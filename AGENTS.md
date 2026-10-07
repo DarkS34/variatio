@@ -375,9 +375,10 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   above «Cuentas elegidas», its state sentence naming the three things.
 - **What a subject lets its students use** (decided 2026-10-06; migration 0019): two switches
   of the subject, `workspaces.student_generate` and `student_tutor` (open by default), that
-  its teachers set in «Clase → Qué usan los alumnos» (`GET`/`PATCH /api/members/uses`,
-  `auth.EDIT`; the answer says `tutor_offered`, whether the administrator opened the tutor to
-  one of its students, and the tutor's switch is drawn only then). They bind students alone.
+  its teachers set in «Clase → Funcionalidades permitidas» (`GET`/`PATCH /api/members/uses`,
+  `auth.EDIT`; the answer says `tutor_installed` and `tutor_offered`, whether the
+  administrator opened the tutor to one of its students: the tutor's switch is drawn wherever
+  the tutor is installed, and off and still, with the reason, until it is offered). They bind students alone.
   `features.refusal(session, user, feature, workspace, role)` is the one reading — the
   administrator's mode first, then a student's switch — used by `require_feature` (which
   reads the request's `Access` through `deps.require_viewer`, the callable `auth.VIEW` wraps,
@@ -601,7 +602,7 @@ Both raw slots use the same VLM page route (quality over speed).
 Host state (`instance/.curriculum.json`), validated against the graph on read. **Absent
 falls back to the file, `[]` means no restriction.** `resolve()` closes the list in force
 downward (prerequisites included) and the row records what ran. The file is the subject's
-«Avance del curso» (decided 2026-10-06), set by its teachers in «Clase» (`PUT
+«Avance de la asignatura» (decided 2026-10-06), set by its teachers in «Clase» (`PUT
 /api/kg/curriculum`, closed under prerequisites as it is saved) and tinted on the syllabus. For a
 teacher it is a default a commission replaces. **A student's commission runs inside it**
 (`resolve(student=True)`, read from `Job.redacted`): their own list is cut by it, and neither
@@ -629,9 +630,13 @@ student counts for nothing, a teacher's own files are not the class's.
   it. The tutor's half comes through `activity.TUTOR_READER`, which `tutor.api.install` sets
   (the server never opens the tutor's files); every file goes through `activity.cached`, keyed
   by modification time and size.
-- **Findings** are typed by the server (`asked`, `solutions`, `unpractised` — with the course's
-  progress only —, `idle`, `trend`; for one student `quiet`, `topic`, `reviewed`, `practised`)
-  and worded by the client (`lib/activity.sayFindings`); the first a teacher can act on is the
+- **Findings** are typed by the server, each of one page (`area`: `tutor` — `asked`,
+  `solutions`, and for one student `topic`, `reviewed` — or `exercises` — `unpractised`, with
+  the course's progress only, and for one student `practised`; `idle`, `trend` and, for one
+  student, `quiet` are counted in each area apart, at most `MAX_FINDINGS` per area), and
+  worded by the client (`lib/activity.sayFindings`, `findingsIn`; a finding with no area is
+  placed by its kind). A student row carries `message_days` and `exercise_days` beside their
+  sum `days`; the first a teacher can act on is the
   screen's one `--attention`. Thresholds (`MIN_ASKERS` 3, `SOLUTION_SHARE` 0.4 over
   `MIN_SOLUTION_MESSAGES` 5) are placeholders until the pilot measures them.
 - **The digest is the teacher's to ask for**, never written on its own:
@@ -652,16 +657,23 @@ student counts for nothing, a teacher's own files are not the class's.
   figures are counted from its references over who is of the class now, and a student's
   reading is the class's digest cut to the themes their messages fall under, with how many
   are theirs.
-- **The screen** (`features/class/ActivitySection.tsx`, `activity/*`): the scope in the
-  header, the strip of weeks (`WeekStrip`: two figures per week, a dot when it has a digest, an
-  empty week dimmed, arrows from week to week), then three questions in order — where the
-  class gets stuck («Lo importante», then «Qué preguntan al tutor»: the digest by unit and
-  concept, or the most asked concepts until it exists, what they ask for, where the tutor sent
-  them back), what it practises («Qué ejercicios generan»: by type and level in the type's
-  own scale, by unit of the syllabus, a unit not covered yet dashed) and who stopped working
-  («Quién trabaja», the least active first, seven day squares). One student's week is the
-  same blocks with the class's median beside each figure. The design was the user's to choose
-  in rounds; a change to it starts with screenshots.
+- **The screen** (`features/class/ActivitySection.tsx`, `activity/*`): two pages of «Clase»,
+  one for each thing a student uses (`ActivityView`; user's requests, 2026-10-07: one page
+  stacked five blocks, then a page of the week in general read as neither): «Ejercicios
+  generados» and «Tutor socrático» (only where the tutor is installed). Both carry the scope
+  in the header and the strip of weeks (`WeekStrip`, counting the page's own figure; a dot
+  for a digest on the tutor's page; an empty week dimmed; arrows from week to week), both
+  held by `ClassScreen` so they survive a move between the pages, and answer three questions
+  in one order: how the week went («Lo importante»: three key figures — how many, with the
+  week before; how many students of the class, or for one student the class's median; the
+  exercises taken to the tutor, or the messages asking for the solution — then the page's
+  findings), what it was about («Qué practican»: by unit of the syllabus, a unit not covered
+  yet dashed, then by type and level in the type's own scale; «Qué preguntan»: the digest by
+  unit and concept, or the most asked concepts until it exists, and «Cómo preguntan»: what
+  they ask for, where the tutor sent them back), and who did it («Quién genera», «Quién usa
+  el tutor»: the least first, seven day squares of that page's measure; the class's scope
+  only). The design was the user's to choose in rounds; a change to it starts with
+  screenshots.
 
 ### Which model writes a variant
 
@@ -1190,10 +1202,17 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   ejercicios», where the session's role is a teacher's, and from each subject of «Mis
   asignaturas» the account teaches, as «Clase · N alumnos» (`GET /api/workspaces` counts
   `people` — students, paused, teachers — on those rows), switching into it first. Drawn as a
-  panel tab (`admin/Sections`): the list of its sections beside the one open, «Alumnos» first
-  — the other sections of the plan join it — the subject's name read off the TAB's slug,
-  never the session's `active` flag. «Fin de curso» is ruled off from the
-  others (`SectionEntry.separated`). «Alumnos» (`lib/members.ts`): a filter «Activos» /
+  panel tab (`admin/Sections`): the list of its sections beside the one open, each section
+  one subject of its own so a page is read without scrolling past another (user's requests,
+  2026-10-07), the subject's name read off the TAB's slug, never the session's `active` flag.
+  The list goes in three groups captioned with `SectionEntry.group`, in this order:
+  «Miembros» («Alumnos», «Docentes», «Invitar»), «Actividad» («Ejercicios generados»,
+  «Tutor socrático» — the last only where the tutor is installed) and «Curso» («Avance de la
+  asignatura», «Funcionalidades permitidas»). «Fin de curso» stands apart under the list, out
+  of its block and softly tinted in `--destructive` (`SectionEntry.apart`, `tone`). It opens
+  on «Alumnos», or on «Invitar» while there is no student. «Alumnos» and «Docentes» draw a
+  person the same way (`PersonRow.tsx`: a well of compact rows under a strip, the gestures
+  as icons on hover or focus; user's request, 2026-10-07). «Alumnos» (`lib/members.ts`): a filter «Activos» /
   «Desactivados» (no «Todos», user's request 2026-10-07), a search over name and username,
   and the students drawn as `/raw` draws its documents — one compact row each in a `.well`,
   a strip over them with the box that ticks the list and, over the ticked ones, the
@@ -1204,40 +1223,45 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   goes through `POST /api/members/bulk`, refusals toasted person by person. A tab whose
   subject closes on its account (`not_member`, `membership_disabled`, or the stream closed
   with 4403: `runStore.lost`) leaves it through `queries.leaveLostWorkspace`. «Invitar»
-  (`features/class/InviteSection.tsx`) is where the screen opens while there is no student;
-  its row reads «Enlace activo · N de M», «Enlace en pausa · …», «Enlace caducado» or «Sin
-  enlace». Three blocks. «Enlace de clase»: without one, seats and a date and «Crear el
-  enlace»; with one, the state line («N de M plazas · caduca el … · Activo»), the link (read
-  once per visit, a logged read; a mint's answer seeds it), «Copiar», «Mostrar el código QR»
-  (a big dialog to project: `lib/qr.ts` draws ONE SVG path with `qrcode-generator` — MIT, no
+  (`features/class/InviteSection.tsx`; its row reads the general invitation's state and how
+  many personal ones are unused) is one page of two blocks, drawn anew on 2026-10-07 at the
+  user's request. «Invitación general» is the class link, its state a badge on the title's
+  line: without one, seats and a date and «Crear el enlace» in a well; with one, its QR code
+  small on the left — pressed, «Proyectar» opens it big —, a bar of the seats used and free,
+  the expiry, the link (read once per visit, a logged read; a mint's answer seeds it) with
+  «Copiar», and under a rule a quiet row of its gestures; the big dialog to project: `lib/qr.ts` draws ONE SVG path with `qrcode-generator` — MIT, no
   dependencies, in the class screen's chunk alone — medium correction and a quiet zone of
   four, in `--qr`), «Pausar»/«Reanudar», «Renovar el enlace» (asked first: the current link
   stops, whoever came in stays; same seats, same date unless gone), «Cambiar plazas o
   caducidad» (only what moved is sent) and «Borrar el enlace» (asked first;
-  `DELETE /api/members/class-link`, no link after it, whoever came in stays). «Invitaciones personales»: one name per line
+  `DELETE /api/members/class-link`, no link after it, whoever came in stays). «Invitaciones
+  personales» is the list of the ones nobody has used yet, drawn as the people are, with
+  «Nuevas invitaciones» on the title's line, which opens the form in a dialog: one name per
+  line
   (`invites.namesOf`, twins kept), a date, «Crear N invitaciones» — validated on press, at
   most 50, 180 days ahead at most (the server's constants mirrored in `lib/invites.ts`) — and
-  what was minted stays until put away: a link per name, «Copiar todo» (alias TAB link) and
+  the dialog then shows what was minted until it is closed: a link per name, «Copiar todo»
+  (alias TAB link) and
   «Descargar CSV» (`nombre,enlace,caduca`, `lib/csv.ts`: a cell opening `= + - @` or a control
   character gets the apostrophe of `server/csv_safe.py`, numbers exempt, RFC quoting, a BOM).
   An owner chooses «Alumnos» or «Docentes» over the names (a teacher's invitation, `editor`,
   gives a teacher's account), and a teacher's invitation wears a «Docente» badge.
-  «Invitaciones sin usar»: «Copiar» reads the link and copies it in the SAME press (a
+  On an unused one, the copy icon reads the link and copies it in the SAME press (a
   `ClipboardItem` holding the promise), and where the browser refuses, the link opens under
-  the row; «Borrar», asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
+  the row; the bin deletes it, asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
   route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
   confirmed in a dialog by typing the subject's name as written, as deleting a subject is;
-  destructive, never `--attention`. «Actividad» follows «Alumnos» (`ActivitySection`, see
-  *Class activity*; a student row's icon opens it on that student). After «Invitar»,
-  «Docentes» (`TeachersSection`: who teaches it, owners first, every account's to read; an
-  owner's gestures, each asked first — «Hacer propietario», «Pasar a docente», «Activar» a
+  destructive, never `--attention`. «Actividad» is `ActivitySection`, see *Class
+  activity*; a student row's icon opens «Ejercicios generados» on that student. «Docentes» (`TeachersSection`: who teaches it, owners first, every account's to read; an
+  owner's gestures, as icons on the row and each asked first — «Hacer propietario», «Pasar a docente», «Activar» a
   paused teacher, «Quitar», and «Ceder la propiedad»: the other made owner FIRST, then the
   owner's own role lowered, two `PATCH /api/members/{id}`, so the subject has an owner at
-  every moment; the session is read again after). Then «Avance del curso»
+  every moment; the session is read again after). «Avance de la asignatura»
   (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
   `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
-  its confirm, and «Quitar el límite», asked first) and «Qué usan los alumnos»
-  (`UsesSection`: two switches that act at once).
+  its confirm, and «Quitar el límite», asked first) and «Funcionalidades permitidas»
+  (`UsesSection`: two switches that act at once; the tutor's drawn wherever the tutor is
+  installed, off and still with the reason until the administrator offers it).
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
   2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
   «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,

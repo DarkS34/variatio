@@ -1,6 +1,6 @@
 import { dayMonth, number } from "@/lib/format";
 import type { Key, Translate } from "@/lib/i18n";
-import type { ActivityFinding, ActivityWeekSummary } from "@/lib/types";
+import type { ActivityArea, ActivityFinding, ActivityWeekSummary } from "@/lib/types";
 
 /**
  * What the class activity screen decides without React: how a week is named on the strip,
@@ -56,6 +56,42 @@ export function kindShares(byKind: Record<string, number>): { key: string; label
     .filter((share) => share.value > 0);
 }
 
+// The kinds that speak of the tutor, for a finding an older API sent without its area.
+const TUTOR_KINDS = new Set<ActivityFinding["kind"]>(["asked", "solutions", "topic", "reviewed"]);
+
+/** The page a finding belongs to: the server's word, else its kind's. */
+export function areaOf(finding: ActivityFinding): ActivityArea {
+  return finding.area ?? (TUTOR_KINDS.has(finding.kind) ? "tutor" : "exercises");
+}
+
+/** The findings of one page, in the server's order. */
+export function findingsIn(findings: ActivityFinding[], area: ActivityArea): ActivityFinding[] {
+  return findings.filter((finding) => areaOf(finding) === area);
+}
+
+/** The week before one, as the strip holds it, or null on the first week of the history. */
+export function weekBefore(weeks: ActivityWeekSummary[], week: string): ActivityWeekSummary | null {
+  const at = weeks.findIndex((row) => row.week === week);
+  if (at < 0) return null;
+  const before = weeks[at + 1];
+  return before && before.start === addDays(weeks[at].start, -7) ? before : null;
+}
+
+const IDLE_KEYS = {
+  exercises: { open: "activity.finding.idle.exercisesOpen", closed: "activity.finding.idle.exercises" },
+  tutor: { open: "activity.finding.idle.tutorOpen", closed: "activity.finding.idle.tutor" },
+} as const;
+
+const TREND_KEYS = {
+  exercises: { down: "activity.finding.trend.exercisesDown", up: "activity.finding.trend.exercisesUp" },
+  tutor: { down: "activity.finding.trend.tutorDown", up: "activity.finding.trend.tutorUp" },
+} as const;
+
+const QUIET_KEYS = {
+  exercises: { open: "activity.finding.quiet.exercisesOpen", closed: "activity.finding.quiet.exercises" },
+  tutor: { open: "activity.finding.quiet.tutorOpen", closed: "activity.finding.quiet.tutor" },
+} as const;
+
 /** A finding as the screen says it: the figure it leads with, its sentence, and whether to act. */
 export interface FindingView {
   figure: string;
@@ -110,7 +146,7 @@ function sayFinding(finding: ActivityFinding, { t, plural }: Translate): Omit<Fi
     case "idle":
       return {
         figure: n(finding.students),
-        text: plural(finding.open ? "activity.finding.idleOpen" : "activity.finding.idle", finding.students, {
+        text: plural(IDLE_KEYS[areaOf(finding)][finding.open ? "open" : "closed"], finding.students, {
           of: finding.of,
         }),
       };
@@ -118,7 +154,7 @@ function sayFinding(finding: ActivityFinding, { t, plural }: Translate): Omit<Fi
       const diff = finding.active - finding.previous;
       return {
         figure: n(finding.active),
-        text: plural(diff < 0 ? "activity.finding.trendDown" : "activity.finding.trendUp", finding.active, {
+        text: plural(TREND_KEYS[areaOf(finding)][diff < 0 ? "down" : "up"], finding.active, {
           diff: Math.abs(diff),
         }),
       };
@@ -126,7 +162,7 @@ function sayFinding(finding: ActivityFinding, { t, plural }: Translate): Omit<Fi
     case "quiet":
       return {
         figure: "0",
-        text: t(finding.open ? "activity.finding.quietOpen" : "activity.finding.quiet"),
+        text: t(QUIET_KEYS[areaOf(finding)][finding.open ? "open" : "closed"]),
       };
     case "topic":
       return {

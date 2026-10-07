@@ -2565,39 +2565,14 @@ function Class() {
     <div className="space-y-6">
       <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.class")}>
         <p>
-          In «{t("class.title")}» you manage who studies in your subject. It opens from your
-          account's menu, with «{t("menu.class")}», or from «{t("nav.mySubjects")}», with the
-          button that counts the students of each subject you teach.
+          In «{t("class.title")}» you manage who studies in your subject and see what they do.
+          It opens from your account's menu, with «{t("menu.class")}», or from «
+          {t("nav.mySubjects")}», with the button that counts the students of each subject you
+          teach. On the left is the list of its parts, in three groups: «
+          {t("class.group.members")}», «{t("class.group.activity")}» and «
+          {t("class.group.course")}». Below it, apart, is «{t("class.end")}».
         </p>
       </SectionHead>
-
-      <Block title={t("class.invite")}>
-        <Paragraph>
-          Two ways to bring your students in, and with both they come in as students. The{" "}
-          <strong>class link</strong> is one for the whole class: it has seats, an expiry date
-          and a pause, and it shows as a QR code to project. Renewing it stops the old link
-          and makes another; deleting it stops it and makes none. Either way, whoever came in
-          stays. The <strong>personal invitations</strong> are one per name and
-          serve once: they are copied one by one, all together, or as a CSV with the name, the
-          link and the date.
-        </Paragraph>
-        <Paragraph>
-          If the installation sends mail, each line may be «Name &lt;address&gt;»: the link goes by
-          mail, and the address is kept nowhere. If a mail fails, the list says so and the link is
-          copied by hand. An owner also chooses whom they are for: «
-          {t("class.invites.role.viewer")}» or «{t("class.invites.role.editor")}»; a teacher's
-          invitation gives a teacher's account.
-        </Paragraph>
-      </Block>
-
-      <Block title={t("class.teachers")}>
-        <Paragraph>
-          Who teaches the subject, with their role. An owner may «{t("class.teachers.promote")}»
-          another teacher, «{t("class.teachers.demote")}» another owner, remove a teacher and «
-          {t("class.teachers.handOver")}»: the other becomes the owner and you a teacher. The
-          subject always keeps an owner. The other teachers read the list and change nothing.
-        </Paragraph>
-      </Block>
 
       <Block title={t("class.students")}>
         <Paragraph>
@@ -2625,28 +2600,62 @@ function Class() {
         </Paragraph>
       </Block>
 
-      <Block title={t("class.activity")}>
+      <Block title={t("class.teachers")}>
         <Paragraph>
-          What your students do, week by week: what they ask the tutor and which exercises
-          they generate. At the top you choose whose: the whole class or one student, also from
-          «{t("class.students")}», with the icon of their row. Below, the strip of weeks is the
-          course's history: each week with its messages and its exercises, and a dot when it
-          has a digest. A week with nothing stays on the strip, dimmed.
+          Who teaches the subject, with their role. An owner may «{t("class.teachers.promote")}»
+          another teacher, «{t("class.teachers.demote")}» another owner, remove a teacher and «
+          {t("class.teachers.handOver")}»: the other becomes the owner and you a teacher. The
+          subject always keeps an owner. The other teachers read the list and change nothing.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.invite")}>
+        <Paragraph>
+          Two ways to bring your students in, on one page. The «{t("class.link.title")}» is one
+          link for the whole class: it has seats, an expiry date and a pause. Its block shows the
+          QR code, which opens big to project it, a bar of the seats used and free, and the link
+          to copy. Renewing it stops the old link and makes another; deleting it stops it and
+          makes none. Either way, whoever came in stays.
         </Paragraph>
         <Paragraph>
-          Each week opens on «{t("activity.important")}»: a few sentences, each with the figure
-          behind it, such as a concept half the class asks about and the prerequisite the tutor
-          sends them back to, or who has done nothing. Then «{t("activity.tutor")}», «
-          {t("activity.exercises")}» (by type, level and unit of the syllabus) and, for the
-          whole class, «{t("activity.who")}». A student's figures stand beside the class's
-          median.
+          The «{t("class.invites.title")}» are one per name and serve once. Their block is the
+          list of the ones nobody has used yet: copy one's link again or delete it. «
+          {t("class.invites.new")}» opens a window: write one name per line and choose the
+          expiry date. Then the window shows the new links, to copy one by one, all together, or
+          as a CSV with the name, the link and the date.
         </Paragraph>
         <Paragraph>
-          You ask for the digest, with «{t("activity.digest.write")}» or «
-          {t("activity.digest.update")}»: the model sums up the recurring themes, in other words
-          and with no names, and waits in the queue behind your students' messages. The week
-          needs 10 messages about the subject. You never see a conversation or an exercise:
-          only figures and the digest.
+          If the installation sends mail, each line may be «Name &lt;address&gt;»: the link goes by
+          mail, and the address is kept nowhere. If a mail fails, the list says so and the link is
+          copied by hand. An owner also chooses whom they are for: «
+          {t("class.invites.role.viewer")}» or «{t("class.invites.role.editor")}»; a teacher's
+          invitation gives a teacher's account.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.group.activity")}>
+        <Paragraph>
+          What your students do, week by week, on one page for each thing they use: «
+          {t("class.activity.exercises")}» and «{t("class.activity.tutor")}» (the last only where
+          there is a tutor). At the top you choose whose: the whole class or one student, also
+          from «{t("class.students")}», with the icon of their row. Below, the strip of weeks is
+          the course's history, with the page's figure on each week. On the tutor's, a dot marks
+          a week with a digest. The student and the week you choose stay as you move between
+          pages.
+        </Paragraph>
+        <Paragraph>
+          Both pages keep one order. First, «{t("activity.important")}»: three figures of the
+          week and a few sentences, each with the figure behind it. Then what it was about: «
+          {t("activity.practise")}» (by unit of the syllabus, type and level), or «
+          {t("activity.ask")}» and «{t("activity.ways")}». Last, who did it, whoever did least
+          first. For one student, one of the figures is the class's median.
+        </Paragraph>
+        <Paragraph>
+          In «{t("class.activity.tutor")}» you ask for the digest, with «
+          {t("activity.digest.write")}» or «{t("activity.digest.update")}»: the model sums up the
+          recurring themes, in other words and with no names, and waits in the queue behind your
+          students' messages. The week needs 10 messages about the subject. You never see a
+          conversation or an exercise: only figures and the digest.
         </Paragraph>
       </Block>
 
@@ -2665,8 +2674,9 @@ function Class() {
       <Block title={t("class.uses")}>
         <Paragraph>
           Two switches for your students in this subject: «{t("class.uses.generate")}» and,
-          when the administrator has opened the tutor to any of them, «{t("class.uses.tutor")}».
-          They act at once; close them during an exam, for example, and open them after. With
+          where there is a tutor, «{t("class.uses.tutor")}». The tutor's works only once the
+          administrator has opened it to any of your students; until then it shows off and says
+          why. They act at once; close them during an exam, for example, and open them after. With
           generating closed, your students still see their exercises in «{t("nav.mySubjects")}».
           None of this affects teachers.
         </Paragraph>
@@ -2675,7 +2685,7 @@ function Class() {
       <Block title={t("class.end")}>
         <Paragraph>
           For the subject's owner alone. It takes every student out at once: paused, and the
-          course reopens by opening them, or removed. The class link is paused and the teachers
+          course reopens by opening them, or removed. The general invitation is paused and the teachers
           stay. To confirm it, a dialog asks you to type the subject's name.
         </Paragraph>
       </Block>

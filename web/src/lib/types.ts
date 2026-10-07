@@ -422,8 +422,11 @@ export interface ActivityHistory {
   tutor: boolean;
 }
 
+/** The page of «Actividad» a finding belongs to; an older API sends none. */
+export type ActivityArea = "tutor" | "exercises";
+
 /** What a teacher should read first about a week, typed: the screen words it. */
-export type ActivityFinding =
+export type ActivityFinding = { area?: ActivityArea } & (
   | { kind: "asked"; concept: string; students: number; of: number; prerequisite: string | null; sent_back: number }
   | { kind: "solutions"; concept: string; solution: number; messages: number }
   | { kind: "unpractised"; units: string[]; more: number }
@@ -432,7 +435,8 @@ export type ActivityFinding =
   | { kind: "quiet"; open: boolean }
   | { kind: "topic"; concept: string; messages: number }
   | { kind: "reviewed"; prerequisite: string; times: number }
-  | { kind: "practised"; unit: string; exercises: number };
+  | { kind: "practised"; unit: string; exercises: number }
+);
 
 export interface ActivityTutor {
   messages: number;
@@ -477,6 +481,9 @@ export interface ActivityStudentRow extends ActivityStudent {
   exercises: number;
   /** Messages and exercises per day, Monday first. */
   days: number[];
+  /** The same days, the messages and the exercises apart; an older API sends neither. */
+  message_days?: number[];
+  exercise_days?: number[];
 }
 
 /** `GET /api/activity/weeks/{week}`: one week of the class, or of one student. */
@@ -504,8 +511,11 @@ export interface ActivityWeek {
 export interface StudentUses {
   generate: boolean;
   tutor: boolean;
+  /** Whether the tutor is installed: without it there is no switch of it to draw. An older
+   *  API sends none, and then the switch is drawn only where the tutor is offered. */
+  tutor_installed?: boolean;
   /** Whether the administrator opened the tutor to anybody studying here: without it the
-   *  subject's own switch for the tutor means nothing, and is not drawn. */
+   *  subject's own switch for the tutor is drawn switched off, and says why. */
   tutor_offered: boolean;
 }
 
@@ -638,7 +648,7 @@ export interface Features {
 
 /**
  * What is open to the account where it is: the two functions, and generating — everybody's,
- * but a subject's teachers may close it to its students («Clase → Qué usan los alumnos»).
+ * but a subject's teachers may close it to its students («Clase → Funcionalidades permitidas»).
  * Not an optional function: it has no mode, no tone and no admin tab.
  */
 export interface Openings extends Features {

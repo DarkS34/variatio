@@ -26,7 +26,7 @@ const USES: { key: Use; label: Key; open: Key; closed: Key; opened: Key; shut: K
   },
 ];
 
-/** The line under «Qué usan los alumnos» in the section list: what is closed to them, if anything. */
+/** The line under «Funcionalidades permitidas» in the section list: what is closed to them, if anything. */
 export function usesDetail(
   uses: StudentUses | undefined,
   t: ReturnType<typeof useT>["t"],
@@ -39,12 +39,14 @@ export function usesDetail(
 }
 
 /**
- * «Qué usan los alumnos»: whether the subject's students generate exercises and use the tutor.
+ * «Funcionalidades permitidas»: whether the subject's students generate exercises and use the tutor.
  *
  * Two switches that act at once — during an exam a teacher closes generating and opens it
  * again after — and bind the students alone (`server/features.refusal`): the teachers keep
- * both. The tutor's switch is drawn only where the administrator opened the tutor to one of
- * the students (`tutor_offered`): elsewhere it would switch nothing.
+ * both. The tutor's switch is drawn wherever the tutor is installed (`tutor_installed`; user's
+ * request, 2026-10-07: a teacher looked for it and did not find it); where the administrator
+ * has not opened the tutor to any of the students (`tutor_offered`) it is drawn off and still,
+ * with the reason, since it would switch nothing.
  */
 export function UsesSection() {
   const { t } = useT();
@@ -71,7 +73,9 @@ export function UsesSection() {
     );
   }
 
-  const shown = USES.filter((use) => use.key !== "tutor" || uses.data.tutor_offered);
+  // An older API says nothing of the install: then the tutor is drawn where it is offered.
+  const installed = uses.data.tutor_installed ?? uses.data.tutor_offered;
+  const shown = USES.filter((use) => use.key !== "tutor" || installed);
   const flip = (use: (typeof USES)[number], on: boolean) =>
     change.mutate(
       { [use.key]: on },
@@ -88,17 +92,21 @@ export function UsesSection() {
       <section className="surface p-5">
         <ul className="rows">
           {shown.map((use) => {
-            const on = uses.data[use.key];
+            // The tutor's switch is still where the administrator has not opened the tutor here.
+            const still = use.key === "tutor" && !uses.data.tutor_offered;
+            const on = still ? false : uses.data[use.key];
             return (
               <li key={use.key} className="flex items-start justify-between gap-4 py-3">
                 <div className="min-w-0 space-y-0.5">
                   <p className="font-medium">{t(use.label)}</p>
-                  <p className="text-small text-muted-foreground">{t(on ? use.open : use.closed)}</p>
+                  <p className="text-small text-muted-foreground">
+                    {t(still ? "class.uses.tutor.notOffered" : on ? use.open : use.closed)}
+                  </p>
                 </div>
                 <Switch
                   checked={on}
                   label={t(use.label)}
-                  disabled={change.isPending}
+                  disabled={still || change.isPending}
                   onCheckedChange={(next) => flip(use, next)}
                 />
               </li>
