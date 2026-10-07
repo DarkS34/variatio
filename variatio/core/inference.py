@@ -651,14 +651,23 @@ def generate_stream(
     on_token: TokenSink | None = None,
     sampling: Sampling | None = None,
 ) -> GenerationResponse:
-    """Ask the configured engine for one answer, token by token."""
-    return engine().generate_stream(
-        model=model,
-        prompt=prompt,
-        think=think,
-        on_token=on_token,
-        sampling=sampling,
-    )
+    """Ask the configured engine for one answer, token by token.
+
+    The sink may gather tokens before it sends them (`progress.TokenBatch`); whatever it
+    still holds is sent when the answer ends, cut short or not.
+    """
+    try:
+        return engine().generate_stream(
+            model=model,
+            prompt=prompt,
+            think=think,
+            on_token=on_token,
+            sampling=sampling,
+        )
+    finally:
+        flush = getattr(on_token, "flush", None)
+        if flush is not None:
+            flush()
 
 
 def embed(model: str, text: str) -> list[float]:

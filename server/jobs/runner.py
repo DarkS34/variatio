@@ -48,8 +48,8 @@ class JobControl:
 
     # progress.Emitter protocol
     def emit(self, kind: str, payload: dict) -> None:
-        """Publish one event of this job, stamped with its workspace."""
-        self._bus.publish(self.job.workspace, self.job.id, kind, payload)
+        """Publish one event of this job, stamped with its workspace and, if private, its author."""
+        self._bus.publish_job(self.job, kind, payload)
 
     def should_cancel(self) -> bool:
         """Whether somebody has asked this job to stop."""
@@ -146,8 +146,13 @@ class JobRunner:
         workspace: str = "",
         user_id: int | None = None,
         user_name: str | None = None,
+        redacted: bool = False,
     ) -> Job:
-        """Queue one job and announce it. Raises ValueError for a kind nobody handles."""
+        """Queue one job and announce it. Raises ValueError for a kind nobody handles.
+
+        `redacted` is the caller's statement that the author is a student of the workspace
+        (`Job.redacted`); only a route that has resolved the membership may make it.
+        """
         if kind not in self.handlers:
             raise ValueError(f"Unknown job kind '{kind}'")
         job = Job(
@@ -156,6 +161,7 @@ class JobRunner:
             workspace=workspace,
             user_id=user_id,
             user_name=user_name,
+            redacted=redacted,
         )
         # Resolved on submit rather than on dispatch: the engine can be switched from the
         # panel mid-queue, and a job waits for the lanes it was accepted against.
@@ -166,7 +172,7 @@ class JobRunner:
             self._order.append(job.id)
             self._last_activity = time.time()
             self._restamp()
-        self.bus.publish(job.workspace, job.id, "job.queued", {"job": job.to_dict()})
+        self.bus.publish_job(job, "job.queued", {"job": job.to_dict()})
         self._wake.set()
         return job
 
@@ -182,15 +188,13 @@ class JobRunner:
                 job.queue_position = 0
                 job.finished_at = time.time()
                 self._restamp()
-                self.bus.publish(
-                    job.workspace, job_id, "job.cancelled", {"job": job.to_dict()}
-                )
+                self.bus.publish_job(job, "job.cancelled", {"job": job.to_dict()})
                 self._wake.set()
                 return True
             if job.status != "running" or control is None:
                 return False
         control.request_cancel()
-        self.bus.publish(job.workspace, job_id, "job.cancelling", {})
+        self.bus.publish_job(job, "job.cancelling", {})
         return True
 
     def get(self, job_id: str) -> Job | None:
@@ -198,17 +202,23 @@ class JobRunner:
         with self._lock:
             return self._jobs.get(job_id)
 
-    def all(self, limit: int = 50, workspace: str | None = None) -> list[Job]:
+    def all(
+        self, limit: int = 50, workspace: str | None = None, for_user: int | None = None
+    ) -> list[Job]:
         """Return the last `limit` jobs, newest first.
 
         As in every listing here, `workspace=None` means the whole queue and is for callers
         that have already established the right to see it. The machine is shared, so "is
-        something running" is legitimately global; *what* is running is not.
+        something running" is legitimately global; *what* is running is not. `for_user`
+        narrows it to what one account may see (`Job.seen_by`) BEFORE the limit is taken, so
+        a page of other people's commissions never stands in for one's own.
         """
         with self._lock:
             jobs = [self._jobs[i] for i in self._order]
         if workspace is not None:
             jobs = [j for j in jobs if j.workspace == workspace]
+        if for_user is not None:
+            jobs = [j for j in jobs if j.seen_by(for_user)]
         return jobs[-limit:][::-1]
 
     def current(self) -> Job | None:
@@ -378,7 +388,7 @@ class JobRunner:
 
     def _execute(self, job: Job, control: JobControl) -> None:
         """Run one job to its end on its own thread, releasing its lanes whatever happens."""
-        self.bus.publish(job.workspace, job.id, "job.started", {"job": job.to_dict()})
+        self.bus.publish_job(job, "job.started", {"job": job.to_dict()})
         joblog.attach(job.workspace)
         token = progress.set_emitter(control)
         try:
@@ -426,7 +436,7 @@ class JobRunner:
             "failed": "job.failed",
             "cancelled": "job.cancelled",
         }[status]
-        self.bus.publish(job.workspace, job.id, kind, {"job": job.to_dict()})
+        self.bus.publish_job(job, kind, {"job": job.to_dict()})
 
     def _chain(self, job: Job) -> None:
         """Queue whatever follows this job, if anything.

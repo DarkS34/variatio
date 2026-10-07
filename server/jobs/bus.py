@@ -17,13 +17,23 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from .. import installation
-from .catalogue import Event
+from .catalogue import Event, Job
+
+# What a redacted job (`Job.redacted`: its author is a student of the subject) keeps of the
+# two events that carry the bank. The prompt holds the chosen exemplars with their solutions
+# and `few_shot` their bodies; the student reads neither. The prompt still travels, without
+# its text, because the screen reads it as the start of a new item and empties its panes.
+_REDACTED_KEEP: dict[str, tuple[str, ...]] = {
+    "prompt": ("index",),
+    "few_shot": ("ids", "concepts", "item_type"),
+}
 
 
 class EventBus:
     """One bus for the process, with the publisher's `workspace` stamped on every event.
 
-    `visible()` is what keeps a subscriber from ever seeing another instance's tokens. An
+    `visible()` is what keeps a subscriber from ever seeing another instance's tokens, and a
+    private job's events (`catalogue.PRIVATE_KINDS`) out of every screen but its author's. An
     event with no workspace is infrastructure — a job the runner settled before it knew
     whose it was — and reaches everyone; no publisher on the pipeline's own paths is one.
     """
@@ -66,6 +76,37 @@ class EventBus:
         kind: str,
         payload: dict | None = None,
     ) -> Event:
+        """Number one event that every member of its workspace may see, and send it."""
+        return self._publish(workspace, job_id, kind, payload or {})
+
+    def publish_job(self, job: Job, kind: str, payload: dict | None = None) -> Event:
+        """Number one event of `job`, stamped private to its author when the job is.
+
+        A redacted job's event loses the bank's text BEFORE it is buffered or filed: the
+        on-disk record is read back by the author too (`GET /api/jobs/{id}/events`), and the
+        exercise's own file is what keeps the prompt whole.
+        """
+        payload = payload or {}
+        if job.redacted:
+            payload = redact(kind, payload)
+        return self._publish(
+            job.workspace,
+            job.id,
+            kind,
+            payload,
+            private=job.private,
+            user_id=job.user_id if job.private else None,
+        )
+
+    def _publish(
+        self,
+        workspace: str | None,
+        job_id: str | None,
+        kind: str,
+        payload: dict,
+        private: bool = False,
+        user_id: int | None = None,
+    ) -> Event:
         """Number one event, buffer it, file it under its workspace and fan it out."""
         with self._lock:
             self._seq += 1
@@ -74,8 +115,10 @@ class EventBus:
                 ts=time.time(),
                 job_id=job_id,
                 kind=kind,
-                payload=payload or {},
+                payload=payload,
                 workspace=workspace,
+                private=private,
+                user_id=user_id,
             )
             self._buffer.append(event)
 
@@ -122,7 +165,9 @@ class EventBus:
 
     # REPLAY --------------------------------------------------------------------------------
 
-    def replay(self, since: int = 0, workspace: str | None = None) -> tuple[list[dict], bool]:
+    def replay(
+        self, since: int = 0, workspace: str | None = None, user_id: int | None = None
+    ) -> tuple[list[dict], bool]:
         """Return the buffered events after `since`, and whether the buffer lost any of them."""
         with self._lock:
             buffered = list(self._buffer)
@@ -130,17 +175,25 @@ class EventBus:
             return [], False
         gap = since > 0 and buffered[0].seq > since + 1
         return [
-            e.to_dict() for e in buffered if e.seq > since and self.visible(e, workspace)
+            e.to_dict()
+            for e in buffered
+            if e.seq > since and self.visible(e, workspace, user_id)
         ], gap
 
     @staticmethod
-    def visible(event: Event, workspace: str | None) -> bool:
+    def visible(event: Event, workspace: str | None, user_id: int | None = None) -> bool:
         """Whether this subscriber may see this event — the one rule the socket enforces.
 
         `workspace=None` means the caller has already established the right to see
-        everything (the CLI, a test), never that the browser asked nicely.
+        everything (the CLI, a test), never that the browser asked nicely. Otherwise a
+        private job's event reaches its author alone: a subscriber who names no account, or
+        an event with no author, sees nothing of it.
         """
-        return workspace is None or event.workspace is None or event.workspace == workspace
+        if workspace is None:
+            return True
+        if event.private and (user_id is None or event.user_id != user_id):
+            return False
+        return event.workspace is None or event.workspace == workspace
 
     def job_events(
         self, workspace: str | None, job_id: str, since: int = 0, limit: int = 5000
@@ -175,3 +228,11 @@ class EventBus:
             yield queue
         finally:
             self._subscribers.discard(queue)
+
+
+def redact(kind: str, payload: dict) -> dict:
+    """Return what a redacted job may say of one event: the bank's text removed, the rest kept."""
+    keep = _REDACTED_KEEP.get(kind)
+    if keep is None:
+        return payload
+    return {key: payload[key] for key in keep if key in payload}

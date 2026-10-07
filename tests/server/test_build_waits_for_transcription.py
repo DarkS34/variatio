@@ -48,7 +48,7 @@ def _ws(slug: str):
 
 
 def _stages(slug: str) -> dict[str, str | None]:
-    payload = pipeline_payload(SimpleNamespace(ws=_ws(slug)))
+    payload = pipeline_payload(SimpleNamespace(ws=_ws(slug), user=SimpleNamespace(id=1)))
     return {s["artifact"]: s["transcribing_slot"] for s in payload["stages"]}
 
 

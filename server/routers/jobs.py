@@ -4,7 +4,9 @@ Declares `auth.VIEW` for the whole router; submitting and cancelling add `auth.E
 
 The chain's gates are enforced here and not merely drawn in the UI, so a stale artifact
 cannot be silently consumed. A job is only ever visible to the workspace it was submitted
-for: without that the id is a twelve-hex guess away from another instance's event log.
+for: without that the id is a twelve-hex guess away from another instance's event log. A
+private job (`catalogue.PRIVATE_KINDS`) is visible to its author alone, and answers anybody
+else the same 404 as a job that does not exist, as a generated exercise does.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,6 +18,7 @@ from variatio.core import inference
 from variatio.core.workspace import Workspace
 
 from .. import approvals, auth, features, raw_data, singletons
+from ..db.models import VIEWER
 from ..jobs import lanes
 from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS
 
@@ -172,9 +175,13 @@ def _check_params(kind: str, params: dict) -> None:
 
 
 def _mine(job_id: str, access: auth.Access):
-    """Load a job of this workspace, or 404 — one of another instance does not exist here."""
+    """Load a job this account may see here, or 404.
+
+    One of another instance does not exist here, and neither does another account's private
+    job: the same sentence for both, because a 403 would confirm that the id names one.
+    """
     job = singletons.runner.get(job_id)
-    if job is None or job.workspace != access.ws.slug:
+    if job is None or job.workspace != access.ws.slug or not job.seen_by(access.user.id):
         raise HTTPException(404, f"No existe el trabajo '{job_id}'")
     return job
 
@@ -223,6 +230,7 @@ def submit(
         workspace=access.ws.slug,
         user_id=access.user.id,
         user_name=access.user.name,
+        redacted=access.role == VIEWER,
     )
     return {
         "job": job.to_dict(),
@@ -233,10 +241,9 @@ def submit(
 
 @router.get("/jobs")
 def listing(limit: int = Query(50, ge=1, le=200), access: auth.Access = auth.VIEW) -> dict:
-    """Answer the most recent jobs of this workspace."""
-    return {
-        "jobs": [j.to_dict() for j in singletons.runner.all(limit, workspace=access.ws.slug)]
-    }
+    """Answer the most recent jobs of this workspace that this account may see."""
+    jobs = singletons.runner.all(limit, workspace=access.ws.slug, for_user=access.user.id)
+    return {"jobs": [j.to_dict() for j in jobs]}
 
 
 # Declared above `/jobs/{job_id}`: FastAPI matches in declaration order, so the other way
@@ -248,10 +255,12 @@ def current(access: auth.Access = auth.VIEW) -> dict:
     `job` is the oldest run of YOUR workspace and not of the installation: with one job
     per lane there can be two at once, and blanking yours because somebody else's started
     first on the other lane would report "nada en ejecución" while your build runs.
-    Whether a lane is held at all, and by what, stays global — the machine is shared.
+    Whether a lane is held at all stays global — the machine is shared. Another account's
+    private job is neither `job` nor in `queued`: what it is doing is its author's.
     """
+    me = access.user.id
     running = singletons.runner.running()
-    ours = [j for j in running if j.workspace == access.ws.slug]
+    ours = [j for j in running if j.workspace == access.ws.slug and j.seen_by(me)]
     holders = [singletons.runner.current_in(backend) for backend in lanes.BACKENDS]
     held = [job for job in holders if job is not None]
     return {
@@ -259,6 +268,7 @@ def current(access: auth.Access = auth.VIEW) -> dict:
         "queued": [
             {**j.to_dict(), "queue_position": singletons.runner.queue_position(j.id)}
             for j in singletons.runner.pending(access.ws.slug)
+            if j.seen_by(me)
         ],
         "engine_busy": bool(held),
         "engine_busy_elsewhere": any(j.workspace != access.ws.slug for j in held),
@@ -304,5 +314,7 @@ def events(since: int = 0, access: auth.Access = auth.VIEW) -> dict:
     explicitly anyway so "you may only replay your own events" is visible where the
     replay happens rather than inferred two files away.
     """
-    replayed, gap = singletons.bus.replay(since, workspace=access.ws.slug)
+    replayed, gap = singletons.bus.replay(
+        since, workspace=access.ws.slug, user_id=access.user.id
+    )
     return {"events": replayed, "gap": gap, "last_seq": singletons.bus.last_seq}

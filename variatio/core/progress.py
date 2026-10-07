@@ -18,6 +18,7 @@ from typing import Protocol
 __all__ = [
     "Cancelled",
     "Emitter",
+    "TokenBatch",
     "advance",
     "checkpoint",
     "current_activity",
@@ -277,17 +278,55 @@ def current_activity() -> str | None:
     return _step.get()
 
 
-def token_sink(stream: str) -> Callable[[str, str], None] | None:
+# How often a stream's tokens leave as one event at most. A model writes tens of tokens a
+# second and each one was an event of its own — on the bus, in the job's record on disk and
+# down every socket — while the screen only ever concatenates them.
+TOKEN_BATCH_SECONDS = 0.1
+
+
+def token_sink(stream: str) -> "TokenBatch | None":
     """A per-token callback, or None when nobody is listening.
 
     Returning None lets callers fall back to the plain non-streaming request, which
-    is what the CLI wants: no emitter, no streaming overhead, identical behaviour.
+    is what the CLI wants: no emitter, no streaming overhead, identical behaviour. The
+    callback gathers tokens (`TokenBatch`); whoever streams into it calls `flush()` at the
+    end, which `inference.generate_stream` does.
     """
     if _emitter.get() is None:
         return None
+    return TokenBatch(stream)
 
-    def sink(text: str, channel: str) -> None:
-        """Forward one token of `stream` to the host."""
-        emit("token", stream=stream, text=text, channel=channel)
 
-    return sink
+class TokenBatch:
+    """Gather one stream's tokens and send them as one event at most every `TOKEN_BATCH_SECONDS`.
+
+    The first token leaves at once, so the screen starts writing as soon as the model does.
+    A change of channel sends what was gathered first: reasoning and answer never share an
+    event. What is still held when the stream ends leaves with `flush()`.
+    """
+
+    __slots__ = ("_channel", "_last", "_parts", "stream")
+
+    def __init__(self, stream: str):
+        """Start an empty batch of `stream`, due to send at its first token."""
+        self.stream = stream
+        self._parts: list[str] = []
+        self._channel: str | None = None
+        self._last: float | None = None
+
+    def __call__(self, text: str, channel: str) -> None:
+        """Take one token, sending the batch when its time has come."""
+        if self._parts and channel != self._channel:
+            self.flush()
+        self._channel = channel
+        self._parts.append(text)
+        if self._last is None or time.monotonic() - self._last >= TOKEN_BATCH_SECONDS:
+            self.flush()
+
+    def flush(self) -> None:
+        """Send whatever is gathered as one event; nothing when nothing is."""
+        if not self._parts:
+            return
+        emit("token", stream=self.stream, text="".join(self._parts), channel=self._channel)
+        self._parts.clear()
+        self._last = time.monotonic()

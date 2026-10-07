@@ -9,6 +9,10 @@ What this router deliberately does NOT serve is the evaluation's aggregates and 
 are `/api/admin/evaluations`': handing an evaluator the running score of the thing they are
 judging invites them to even it out, and a per-session export of everybody's judgements is
 research data rather than a feature of the screen where you compare two cards.
+
+Nor does it hand a STUDENT of the subject the trace of a revealed card: the prompt quotes the
+bank's exemplars with their solutions, and the raw answer is what was written before the
+item was parsed out of it. The cards themselves are read whole.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -18,7 +22,7 @@ from sqlalchemy.orm import Session as DbSession
 from server import auth
 from server import curriculum as curriculum_store
 from server import singletons
-from server.db.models import EvalSession
+from server.db.models import VIEWER, EvalSession
 from server.editors import kg_edit
 from server.routers.jobs import gate_error
 
@@ -113,6 +117,7 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         workspace=access.ws.slug,
         user_id=access.user.id,
         user_name=access.user.name,
+        redacted=access.role == VIEWER,
     )
     return {"job": job.to_dict(), "since": singletons.bus.last_seq}
 
@@ -221,7 +226,7 @@ def detail(
     if row.user_id == access.user.id and row.chosen_at is None and row.declined_at is None:
         evaluation_store.mark_opened(db, row)
         db.refresh(row)
-    return _payload(EvaluationSession.from_dict(row.trace))
+    return _payload(EvaluationSession.from_dict(row.trace), access)
 
 
 @router.post("/{session_id}/triage", dependencies=[auth.EDIT])
@@ -243,7 +248,7 @@ def triage(
         if str(e) == "already-chosen":
             raise HTTPException(409, "Esta sesión ya está cerrada.") from None
         raise HTTPException(422, str(e)) from None
-    return _payload(session)
+    return _payload(session, access)
 
 
 @router.post("/{session_id}/decline", dependencies=[auth.EDIT])
@@ -265,7 +270,7 @@ def decline(
         if str(e) == "already-chosen":
             raise HTTPException(409, "Esta sesión ya está cerrada.") from None
         raise HTTPException(422, str(e)) from None
-    return _payload(session)
+    return _payload(session, access)
 
 
 @router.post("/{session_id}/choice", dependencies=[auth.EDIT])
@@ -287,7 +292,7 @@ def choose(
         if str(e) == "already-chosen":
             raise HTTPException(409, "Esta sesión ya tenía una elección registrada.") from None
         raise HTTPException(422, str(e)) from None
-    return _payload(session)
+    return _payload(session, access)
 
 
 @router.post("/{session_id}/rating", dependencies=[auth.EDIT])
@@ -309,7 +314,7 @@ def rate(
                 409, "La rúbrica se rellena después de elegir, no antes."
             ) from None
         raise HTTPException(422, str(e)) from None
-    return _payload(session)
+    return _payload(session, access)
 
 
 # SHAPING ---------------------------------------------------------------------------------------
@@ -358,13 +363,14 @@ def _summary(header: dict) -> dict:
     }
 
 
-def _payload(session: EvaluationSession) -> dict:
+def _payload(session: EvaluationSession, access: auth.Access | None = None) -> dict:
     """Render one session, revealing the mapping only once it is finished.
 
     A declined session reveals too: it is over, nobody will judge it, and withholding the
     answer from someone who just said they could not judge it punishes them for saying so.
     """
     revealed = session.finished
+    student = access is not None and access.role == VIEWER
     return {
         "session": {
             "id": session.id,
@@ -394,16 +400,21 @@ def _payload(session: EvaluationSession) -> dict:
         },
         # As many cards as the session HOLDS: two since 2026-09-08, three on a session
         # recorded before. The count is the session's own `shuffle`, never a constant.
-        "positions": [_position(session, index + 1, revealed) for index in range(session.cards)],
+        "positions": [
+            _position(session, index + 1, revealed, student) for index in range(session.cards)
+        ],
     }
 
 
-def _position(session: EvaluationSession, position: int, revealed: bool) -> dict:
+def _position(
+    session: EvaluationSession, position: int, revealed: bool, student: bool = False
+) -> dict:
     """Render one card: the item alone while blind, the whole trace once revealed.
 
     `failed` and `unavailable` collapse into one neutral status before the reveal, because
     saying a proposal is unavailable for a spent quota identifies the commercial arm before
-    a single card has been read.
+    a single card has been read. A student's revealed card has no `prompt` and no
+    `raw_response`: they carry the bank, which a student of the subject does not read.
     """
     result = session.arms[session.arm_at(position)]
 
@@ -422,8 +433,8 @@ def _position(session: EvaluationSession, position: int, revealed: bool) -> dict
         "arm_label": ARM_LABELS[result.arm],
         "model": result.model,
         "provider": result.provider,
-        "prompt": result.prompt,
-        "raw_response": result.raw_response,
+        "prompt": None if student else result.prompt,
+        "raw_response": None if student else result.raw_response,
         "exemplar_ids": result.exemplar_ids,
         "elapsed_ms": result.elapsed_ms,
         "error": result.error,

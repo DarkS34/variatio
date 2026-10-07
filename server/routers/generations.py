@@ -15,12 +15,18 @@ nor the administrator is an exception HERE — `_require` answers 404 for an exe
 not yours, because "it exists but is not yours" is itself something this refuses to say. The
 installation administrator reads every account's, read-only, through its own panel
 (`GET /api/admin/workspaces/{slug}/generations`), never through these routes.
+
+A STUDENT READS THEIR EXERCISE WHOLE, AND NOT THE BANK IT WAS MADE FROM: the accepted
+attempt's prompt quotes the chosen exemplars with their solutions, and `resolved.few_shot`
+their bodies, so neither reaches an account whose role in the subject is `viewer`. The file
+keeps both, and the administrator reads them from the panel.
 """
 
 from fastapi import APIRouter, HTTPException, Query
 
 from .. import auth
 from .. import generations as store
+from ..db.models import VIEWER
 from ..editors import bank_edit
 from ..editors.bank_edit import BankError
 from .pipeline import pipeline_payload
@@ -67,13 +73,14 @@ def detail(generation_id: str, access: auth.Access = auth.VIEW) -> dict:
     """Answer one stored exercise, with the model's deliberation and how it was made."""
     record = _require(generation_id, access)
     output = record.get("output") or {}
+    provenance = {key: record.get(key) for key in _PROVENANCE_KEYS}
     return {
         "generation": {
             **row_view(record, access.user),
             "thinking": output.get("thinking"),
             "retried": output.get("retried"),
             "format": record.get("format"),
-            "provenance": {key: record.get(key) for key in _PROVENANCE_KEYS},
+            "provenance": without_bank(provenance) if access.role == VIEWER else provenance,
         },
     }
 
@@ -166,3 +173,21 @@ def row_view(record: dict, user) -> dict:
         "item": store.item_of(record),
         "checks": (record.get("output") or {}).get("checks"),
     }
+
+
+def without_bank(provenance: dict) -> dict:
+    """Return how an exercise was made, without the prompt and the exemplars' bodies.
+
+    The exemplars stay listed by id and origin — which ones, never what they say.
+    """
+    resolved = provenance.get("resolved")
+    if isinstance(resolved, dict) and isinstance(resolved.get("few_shot"), list):
+        resolved = {
+            **resolved,
+            "few_shot": [
+                {key: value for key, value in entry.items() if key != "item"}
+                for entry in resolved["few_shot"]
+                if isinstance(entry, dict)
+            ],
+        }
+    return {**provenance, "resolved": resolved, "prompt": None}

@@ -24,6 +24,7 @@ from .. import approvals, auth, deps, features, singletons, storage
 from ..db.session import session_scope
 from ..editors import kg_edit
 from ..jobs import lanes as jobs_lanes
+from ..jobs.catalogue import Job
 from .jobs import FEATURE_OF, transcribing_slot
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
@@ -54,27 +55,30 @@ def pipeline_payload(access: auth.Access) -> dict:
     The two halves are scoped differently on purpose: whether a lane is held, and by which
     job, is said to everyone — the machine is shared, so "somebody is building something"
     is true for everyone and hiding it leaves a queued job looking stuck; only the name of a
-    job of a function closed to the account stays back — while
-    `current_job`, the waiting counts and the artifacts marked as building are statements
-    about this instance and never leave it.
+    job of a function closed to the account, or of another account's private job, stays
+    back — while `current_job`, the waiting counts and the artifacts marked as building are
+    statements about this instance and never leave it. Inside the instance they count what
+    the account may see (`Job.seen_by`): another student's commission is neither the
+    `current_job` nor the one a wait is measured against.
     """
     chain = singletons.pipeline_snapshot(access.ws)
     slug = access.ws.slug
+    me = access.user.id
     for stage in chain:
         stage["build_job"] = NEXT_JOB[stage["artifact"]]
         # The slot this stage's build reads, while a transcription of it is live: what
         # the build button turns into "espera a que termine". A key, not a sentence, so
         # the client names the slot in its own language.
         stage["transcribing_slot"] = transcribing_slot(slug, stage["build_job"])
-    waiting = singletons.runner.pending(slug)
+    waiting = [j for j in singletons.runner.pending(slug) if j.seen_by(me)]
     running = singletons.runner.running()
     # The oldest running job of THIS workspace: the oldest of the installation would blank
     # your own run for as long as somebody else's older one holds the other lane.
-    ours = [j for j in running if j.workspace == slug]
+    ours = [j for j in running if j.workspace == slug and j.seen_by(me)]
     current = ours[0] if ours else None
     nameable = _nameable_for(access)
     lanes = {
-        backend: _lane_payload(backend, slug, nameable) for backend in jobs_lanes.BACKENDS
+        backend: _lane_payload(backend, slug, me, nameable) for backend in jobs_lanes.BACKENDS
     }
     ahead = _queue_ahead(waiting, running)
     return {
@@ -95,20 +99,23 @@ def pipeline_payload(access: auth.Access) -> dict:
     }
 
 
-def _nameable_for(access: auth.Access) -> Callable[[str], bool]:
+def _nameable_for(access: auth.Access) -> Callable[[Job], bool]:
     """Build the test of whether a lane's holder may be named to this account.
 
-    A job of an optional function (`jobs.FEATURE_OF`: a comparison, a tutor's turn) is named
-    only to an account that function is open to: to anybody else the lane is busy with
-    something, which is the whole of what their wait needs. The database is read at most
-    once per function and per payload, and only when such a job holds a lane; a read that
-    fails names nothing, because this payload also answers writes that already happened.
+    Another account's private job is never named (`Job.seen_by`). A job of an optional
+    function (`jobs.FEATURE_OF`: a comparison, a tutor's turn) is named only to an account
+    that function is open to: to anybody else the lane is busy with something, which is the
+    whole of what their wait needs. The database is read at most once per function and per
+    payload, and only when such a job holds a lane; a read that fails names nothing, because
+    this payload also answers writes that already happened.
     """
     known: dict[str, bool] = {}
 
-    def nameable(kind: str) -> bool:
-        """Say whether a job of `kind` may be named to the account asking."""
-        feature = FEATURE_OF.get(kind)
+    def nameable(job: Job) -> bool:
+        """Say whether this job may be named to the account asking."""
+        if not job.seen_by(access.user.id):
+            return False
+        feature = FEATURE_OF.get(job.kind)
         if feature is None:
             return True
         if feature not in known:
@@ -122,7 +129,9 @@ def _nameable_for(access: auth.Access) -> Callable[[str], bool]:
     return nameable
 
 
-def _lane_payload(backend: str, slug: str, nameable: Callable[[str], bool]) -> dict:
+def _lane_payload(
+    backend: str, slug: str, me: int, nameable: Callable[[Job], bool]
+) -> dict:
     """Report one lane globally, and this workspace's own place in its queue.
 
     The machine and the quota belong to the installation, so `busy` and what is holding the
@@ -140,7 +149,7 @@ def _lane_payload(backend: str, slug: str, nameable: Callable[[str], bool]) -> d
     holders = singletons.runner.holders_in(backend)
     room = jobs_lanes.capacity(backend)
     waiting = [j for j in singletons.runner.pending() if backend in j.backends]
-    mine = [j for j in waiting if j.workspace == slug]
+    mine = [j for j in waiting if j.workspace == slug and j.seen_by(me)]
     ahead = None
     if mine:
         # How many jobs have to finish before mine starts: everything already holding a
@@ -148,12 +157,12 @@ def _lane_payload(backend: str, slug: str, nameable: Callable[[str], bool]) -> d
         # 1 this is exactly the old "those in front, plus one if the lane is held".
         first = [j.id for j in waiting].index(mine[0].id)
         ahead = max(0, len(holders) + first + 1 - room)
-    named = holders[0] if holders and nameable(holders[0].kind) else None
+    named = holders[0] if holders and nameable(holders[0]) else None
     return {
         "busy": len(holders) >= room,
         "running": len(holders),
         "capacity": room,
-        "mine": any(j.workspace == slug for j in holders),
+        "mine": any(j.workspace == slug and j.seen_by(me) for j in holders),
         "kind": named.kind if named is not None else None,
         "label": named.label if named is not None else None,
         "queued": len(mine),

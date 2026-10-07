@@ -8,8 +8,9 @@ AUTHENTICATION IS DECIDED BEFORE `accept()`. The cookie travels in the handshake
 nothing is subscribed or replayed for a connection that has not earned it — this endpoint
 used to take any connection and replay the whole bus, logs, prompts and token stream
 included, which with two users put one person's generated statements in the other's
-browser. Every event carries the workspace the bus stamped on it and `bus.visible()` is
-the filter; the client still narrows by `job_id`, but only within what it may see.
+browser. Every event carries the workspace the bus stamped on it — and, for a private job,
+its author — and `bus.visible()` is the filter; the client still narrows by `job_id`, but
+only within what it may see.
 
 Which workspace a socket subscribes to arrives as `?workspace=`, because a browser cannot
 set a header on a WebSocket handshake. It goes through the same membership check as the
@@ -73,14 +74,14 @@ def _since(websocket: WebSocket) -> int:
         return 0
 
 
-def _backlog(since: int, slug: str) -> tuple[list[dict], bool, int]:
-    """Replay this workspace's missed events, and say how far delivery has got.
+def _backlog(since: int, slug: str, user_id: int) -> tuple[list[dict], bool, int]:
+    """Replay the missed events this account may see here, and say how far delivery has got.
 
     Called inside the subscription so nothing emitted between the two is lost.
     `delivered` is computed BEFORE the cold trim: a trimmed event must not come back from
     the live queue as if it were new.
     """
-    replayed, gap = singletons.bus.replay(since, workspace=slug)
+    replayed, gap = singletons.bus.replay(since, workspace=slug, user_id=user_id)
     delivered = replayed[-1]["seq"] if replayed else since
     if since <= 0:
         replayed = trim_cold_replay(replayed)
@@ -111,13 +112,16 @@ async def stream(websocket: WebSocket) -> None:
 
     await websocket.accept()
     slug = access.workspace.slug
+    user_id = access.user.id
     since = _since(websocket)
 
     async with singletons.bus.subscribe() as queue:
-        replayed, gap, delivered = _backlog(since, slug)
+        replayed, gap, delivered = _backlog(since, slug, user_id)
         jobs = [
             job.to_dict()
-            for job in singletons.runner.all(limit=JOBS_SNAPSHOT_LIMIT, workspace=slug)
+            for job in singletons.runner.all(
+                limit=JOBS_SNAPSHOT_LIMIT, workspace=slug, for_user=user_id
+            )
         ]
 
         try:
@@ -145,7 +149,7 @@ async def stream(websocket: WebSocket) -> None:
                 if event.seq <= delivered:
                     continue
                 delivered = event.seq
-                if not singletons.bus.visible(event, slug):
+                if not singletons.bus.visible(event, slug, user_id):
                     continue
                 await websocket.send_json(event.to_dict())
         except WebSocketDisconnect:

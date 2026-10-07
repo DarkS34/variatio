@@ -286,7 +286,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   password change, password change revokes other sessions.
 - **Authorisation is a membership row, checked on every route** (`auth.VIEW`/`EDIT`/`MANAGE`).
   The admin bypass exists only in `auth.deps.access_for`. The WebSocket authenticates before
-  `accept()` (close 4401) and filters events by workspace.
+  `accept()` (close 4401) and filters events by workspace and, for a private job, by author.
 - CSRF is an origin check (`middleware.py`); CORS off by default. Rate limiting is in memory,
   keyed by IP and account.
 - The username is the identity; `users.email` is an optional delivery detail, shown only when
@@ -321,6 +321,24 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   may share a context).
 - A `Job` carries workspace and author; events are stamped by the bus; `/api/jobs/{id}` 404s
   across workspaces.
+- **A private job is its author's alone** (decided 2026-10-06): `catalogue.PRIVATE_KINDS` is
+  `generate` and `evaluate`, and `tutor_turn` joins at the tutor's install. The bus stamps a
+  private job's events with its author (`publish_job`; `Event.private`/`user_id`, never in
+  `to_dict()`) and `bus.visible` lets them reach that account's socket only; a subscriber
+  naming no account, or an event with no author, sees nothing of it. Every job route of the
+  workspace answers another account the same 404 as a missing job (`Job.seen_by`), the
+  admin's bypass included — the admin cancels from the panel's queue. `/api/jobs/current`,
+  the socket's `jobs` snapshot and `/api/pipeline` (`current_job`, `queued`, `ahead`, `mine`,
+  a lane's named holder) count and name only what the account may see. A build, a
+  transcription or the tutor's criteria are the subject's: every member watches them.
+- **A job whose author is a student of the subject is `redacted`** (set by the route from
+  `access.role == viewer`, never by the client): the bus strips the `prompt` event's text —
+  the event still travels, the screen's marker of a new item — and keeps only `ids`,
+  `concepts` and `item_type` of `few_shot`, in the buffer AND in the job's record on disk
+  (the author reads it back). The exercise's file keeps everything.
+- **Tokens travel in batches**: `progress.token_sink` returns a `TokenBatch` that sends at
+  most one `token` event every 100 ms (the first at once; a change of channel flushes), and
+  `inference.generate_stream` flushes it when the answer ends, cut short or not.
 - **The queue serialises per backend lane**: `local` (Ollama, capacity 1, not a setting) and
   `remote` (Cerebras, `CEREBRAS_MAX_CONCURRENT_JOBS`, default 4 — safe only because the
   ledger books claims). Only generative models reserve a lane (never the embedder/guardrail).
@@ -333,8 +351,8 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   which the tutor's kinds join at install) is closed to the account. The idle GPU clock
   counts every lane.
 - The client's run store keeps 12 runs and lets go of finished ones first, never of a live
-  one (`runStore.pruneRuns`): the socket carries every job of the workspace, tutor turns and
-  comparisons included.
+  one (`runStore.pruneRuns`): the socket carries every job of the workspace the account may
+  see — the subject's builds and its own commissions, comparisons and tutor turns.
 - **Cancellation is cooperative at token granularity**: `inference.generate()` streams
   internally and emits nothing, and closing the stream stops the engine. `request_cancel`
   returns at once; SIGKILL escalation runs on its own thread. Waits are sliced into one-second
@@ -353,7 +371,11 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   installation administrator, read-only and only from the panel
   (`GET /api/admin/workspaces/{slug}/generations`, `generations.list_all`, opened from the
   «Asignaturas» tab's «Ver N ejercicios» button); the author's own routes refuse the admin as anyone. Format 0 is a row exported
-  from the retired table: what it never kept is null, never reconstructed.
+  from the retired table: what it never kept is null, never reconstructed. A student (role
+  `viewer`) reads their own exercise whole, solution included, but not the bank it was made
+  from: `GET /api/generations/{id}` answers them with `provenance.prompt` null and
+  `resolved.few_shot` as ids and origins (`routers/generations.without_bank`), and a revealed
+  comparison card answers them without `prompt` and `raw_response`.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
   tree goes before the row. **A workspace deletion that leaves no other member takes its tree
@@ -815,8 +837,10 @@ admin's read.
   without the header) and shows it alone where the conversation reports a failure, never
   under «No se pudo enviar»; the next send or retry clears it.
 - **A turn's job carries no text**: params and result name the conversation and the turn
-  only, because the event stream is the workspace's and a conversation is its author's. One
-  reply on its way per conversation and per account in the workspace (409).
+  only, because a job is read where its conversation is not (the panel's queue, the job's
+  record on disk) and a conversation is its author's; its events reach its author alone
+  (`PRIVATE_KINDS`). One reply on its way per conversation and per account in the workspace
+  (409).
 - Logs in Spanish with `[tutor]`; never the message text.
 
 ## The web interface (`web/`)
@@ -1265,6 +1289,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   takes the tree; `.history/` is never emptied by it. CORS off.
 - Exercises are private to their author; the installation administrator alone reads every
   account's, read-only, from the panel (never through `/api/generations`).
+- A private job's events and job routes are its author's alone (`PRIVATE_KINDS`: commissions,
+  comparisons, tutor turns); a build's are the subject's. A student's job says nothing of the
+  bank while it runs, and a student reads no prompt or exemplar body afterwards (2026-10-06).
 - The evaluation and the tutor are switched by the administrator for nobody, everybody or a
   list of accounts; both start off; the administrator follows the same rule as any account;
   an invitation may list its holder; the tutor's daily limit is the account's across the

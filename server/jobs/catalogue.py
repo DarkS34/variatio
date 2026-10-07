@@ -1,4 +1,4 @@
-"""What a job and an event are, and the three tables that classify a job kind.
+"""What a job and an event are, and the four tables that classify a job kind.
 
 Deliberately not called `models`: under `server/` that already means the ML model
 (`model_pulls.py`, `required_models`) and the ORM row (`db/models.py`).
@@ -52,6 +52,13 @@ JOB_ARTIFACT: dict[str, str] = {
     "tag": "exemplars_bank",
 }
 
+# The kinds whose run is its author's alone: a commission and the exercises it writes, a blind
+# comparison, and — added by `tutor.api.install` — a tutor's turn. Their events reach the
+# author's socket and nobody else's, and the workspace's job routes answer another account
+# 404 for them (`Job.seen_by`). Everything else — a build, a transcription, an indexing — is
+# the subject's, and every member watches it.
+PRIVATE_KINDS: set[str] = {"generate", "evaluate"}
+
 
 @dataclass
 class Job:
@@ -63,6 +70,10 @@ class Job:
 
     `backends` and `queue_position` are the runner's: stamped at submission, restamped
     whenever the queue moves, and carried by every event through `to_dict()`.
+
+    `redacted` is the route's, set when the author is a student of the workspace: what the
+    job says while it runs then leaves the bank out (`bus.redact`). Never the client's to
+    choose, and never read by the library, which knows nothing of roles.
     """
 
     kind: str
@@ -82,6 +93,7 @@ class Job:
     result: dict | None = None
     backends: list[str] = field(default_factory=list)
     queue_position: int = 0
+    redacted: bool = False
 
     @property
     def label(self) -> str:
@@ -92,6 +104,18 @@ class Job:
     def artifact(self) -> str | None:
         """The artifact this job rewrites, or `None` when it writes none."""
         return JOB_ARTIFACT.get(self.kind)
+
+    @property
+    def private(self) -> bool:
+        """Whether this job is its author's alone (`PRIVATE_KINDS`)."""
+        return self.kind in PRIVATE_KINDS
+
+    def seen_by(self, user_id: int | None) -> bool:
+        """Say whether this account may see the job on the routes of its workspace.
+
+        A private job with no author is nobody's: it fails closed rather than open.
+        """
+        return not self.private or (user_id is not None and user_id == self.user_id)
 
     def to_dict(self) -> dict:
         """Serialise for the event stream, with the two derived fields and the elapsed time."""
@@ -109,7 +133,10 @@ class Event:
     """One line of the run stream, stamped with the workspace the socket filters on.
 
     The stamp is the bus's, never the subscriber's: it is what a browser cannot choose for
-    itself, and therefore what keeps one instance's tokens out of another's screen.
+    itself, and therefore what keeps one instance's tokens out of another's screen. `private`
+    and `user_id` are stamped the same way on a private job's events, and keep one person's
+    statements out of the screens of the rest of the subject. Neither travels in `to_dict()`:
+    they are the filter, not the message.
     """
 
     seq: int
@@ -118,6 +145,8 @@ class Event:
     kind: str
     payload: dict
     workspace: str | None = None
+    private: bool = False
+    user_id: int | None = None
 
     def to_dict(self) -> dict:
         """Flatten to the shape the socket sends, the payload spread over the envelope."""
