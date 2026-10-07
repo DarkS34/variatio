@@ -584,6 +584,40 @@ export interface WorkspaceRow {
   as_admin: boolean;
   /** This account's own exercises there. Only the listing sends it, and an older API not even that. */
   exercises?: number;
+  /** Who is in it, counted — only where this account teaches, and only from an API that counts. */
+  people?: SubjectPeople;
+}
+
+/** A subject's people, counted: active students, paused members, active teachers. */
+export interface SubjectPeople {
+  students: number;
+  disabled: number;
+  teachers: number;
+}
+
+/** How somebody entered a subject; null when it was never recorded. */
+export type MemberVia = "owner" | "admin" | "invite" | "class_link" | "cli";
+
+/** One person of a subject, as its teachers read the class list: who, as what, since when, how. */
+export interface Member {
+  user_id: number;
+  name: string;
+  username: string;
+  role: Role;
+  joined_at: string | null;
+  via: MemberVia | null;
+  invited_by: string | null;
+  /** When a teacher paused their access; null while it is open. */
+  disabled_at: string | null;
+}
+
+/** One gesture over several people. */
+export type MemberAction = "disable" | "enable" | "remove";
+
+/** What a gesture over several people did, and what it refused and why. */
+export interface MembersBulkResult {
+  done: number[];
+  refused: { user_id: number; code: string; reason: string }[];
 }
 
 export interface WorkspaceListing {

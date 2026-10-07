@@ -386,3 +386,22 @@ def test_a_socket_closes_when_its_membership_does_and_no_other_does(monkeypatch)
         tasks[2].cancel()
 
     asyncio.run(scenario())
+
+
+# THE COUNT «MIS ASIGNATURAS» SHOWS ---------------------------------------------------------
+
+
+def test_the_listing_counts_the_people_where_the_account_teaches(db, aula, stage):
+    members.disable_member(db, aula.workspace, aula.dani, aula.ana)
+
+    teachers_row = next(
+        row for row in workspace_routes.listing(user=aula.bruno, db=db)["workspaces"]
+        if row["slug"] == "aula"
+    )
+    students_row = next(
+        row for row in workspace_routes.listing(user=aula.carla, db=db)["workspaces"]
+        if row["slug"] == "aula"
+    )
+
+    assert teachers_row["people"] == {"students": 1, "disabled": 1, "teachers": 2}
+    assert "people" not in students_row

@@ -30,6 +30,9 @@ import type {
   Job,
   KgSummary,
   MaintenanceState,
+  Member,
+  MemberAction,
+  MembersBulkResult,
   MintedInvite,
   Pipeline,
   TunnelStatus,
@@ -259,6 +262,15 @@ export const api = {
   }) => post<Session>("/api/auth/accept", body),
 
   workspaces: () => request<WorkspaceListing>("/api/workspaces"),
+
+  // The people of the subject in use, for its teachers (`server/routers/members.py`).
+  members: () => request<{ members: Member[] }>("/api/members"),
+  memberAction: (userId: number, action: MemberAction) =>
+    action === "remove"
+      ? request<{ members: Member[] }>(`/api/members/${userId}`, { method: "DELETE" })
+      : post<{ members: Member[] }>(`/api/members/${userId}/${action}`),
+  membersBulk: (action: MemberAction, userIds: number[]) =>
+    post<MembersBulkResult>("/api/members/bulk", { action, user_ids: userIds }),
   // The prompt language travels with the creation and only with it: the relation labels a
   // build writes into the graph are what the loader indexes by, so once anything is built
   // the choice is baked into the artifacts and there is nothing to change it to.

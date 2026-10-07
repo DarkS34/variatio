@@ -116,11 +116,16 @@ const MAX_TAGGED = 24;
 
 /** The close code `server/routers/ws.py` uses when the handshake carries no session. */
 const UNAUTHORISED = 4401;
+/** The close code for a session with no access to the subject: removed or paused from it. */
+const FORBIDDEN = 4403;
 
 export interface StreamState {
   connected: boolean;
   /** The server refused the handshake: the cookie is gone, revoked or expired. */
   unauthorised: boolean;
+  /** The server closed the stream on a membership that is over: the tab has to leave the
+   *  subject (`queries.leaveLostWorkspace`), not reconnect to it. */
+  lost: boolean;
   lastSeq: number;
   currentJobId: string | null;
   runs: Record<string, RunView>;
@@ -186,6 +191,7 @@ class RunStore {
   private state: StreamState = {
     connected: false,
     unauthorised: false,
+    lost: false,
     lastSeq: 0,
     currentJobId: null,
     runs: {},
@@ -231,7 +237,7 @@ class RunStore {
       // deliver from here on belongs to somebody else's screen.
       this.disconnect();
     }
-    if (this.state.unauthorised) this.commit({ unauthorised: false });
+    if (this.state.unauthorised || this.state.lost) this.commit({ unauthorised: false, lost: false });
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const query = new URLSearchParams({ since: String(this.state.lastSeq) });
@@ -273,12 +279,18 @@ class RunStore {
     };
 
     // 4401 is not a network hiccup: reconnecting on a loop would hammer the server with
-    // a cookie it has already rejected. Stop, and let the gate re-ask who we are.
+    // a cookie it has already rejected. Stop, and let the gate re-ask who we are. 4403 is the
+    // subject refusing this account — a teacher removed or paused it: stop too, and let the
+    // gate take the tab out of the subject.
     socket.onclose = (event) => {
-      if (event.code === UNAUTHORISED) {
+      if (event.code === UNAUTHORISED || event.code === FORBIDDEN) {
         this.socket = null;
         this.subscribedTo = null;
-        this.commit({ connected: false, unauthorised: true });
+        this.commit(
+          event.code === UNAUTHORISED
+            ? { connected: false, unauthorised: true }
+            : { connected: false, lost: true },
+        );
         return;
       }
       this.commit({ connected: false });
@@ -331,6 +343,7 @@ class RunStore {
     this.state = {
       connected: false,
       unauthorised: false,
+      lost: false,
       lastSeq: 0,
       currentJobId: null,
       runs: {},

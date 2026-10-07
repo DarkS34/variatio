@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Sun,
   UserRound,
+  Users,
 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -16,7 +17,7 @@ import { Separator } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useRouter } from "@/lib/router";
 import { useT, type Key } from "@/lib/i18n";
-import { ROLE_LABEL_KEYS, useLogout, useSession } from "@/state/auth";
+import { ROLE_LABEL_KEYS, useCanEdit, useLogout, useSession } from "@/state/auth";
 import { runStore } from "@/state/runStore";
 import { themeStore, type ThemePreference } from "@/state/theme";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,8 @@ export function AccountMenu() {
   const { t } = useT();
   const session = useSession();
   const logout = useLogout();
+  // The class of the subject in use is its teachers' own page: offered where the account teaches.
+  const teaches = useCanEdit();
   const { navigate } = useRouter();
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
@@ -106,6 +109,13 @@ export function AccountMenu() {
               label={t("menu.profile")}
               onClick={() => go("/account")}
             />
+            {teaches ? (
+              <MenuItem
+                icon={<Users className="size-4" />}
+                label={t("menu.class")}
+                onClick={() => go("/class")}
+              />
+            ) : null}
             <MenuItem
               icon={<Archive className="size-4" />}
               label={t("nav.mySubjects")}

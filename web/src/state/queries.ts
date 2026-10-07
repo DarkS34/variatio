@@ -20,6 +20,7 @@ import type {
   InviteTerms,
   JobKind,
   Lanes,
+  MemberAction,
   RawKind,
   Role,
   WorkspaceRow,
@@ -48,6 +49,8 @@ export const keys = {
   generations: (params: Record<string, unknown>) => ["generations", params] as const,
   generation: (id: string) => ["generations", "one", id] as const,
   workspaces: ["workspaces"] as const,
+  // The class of the subject in use: instance data, dropped with the rest on a switch.
+  members: ["members"] as const,
   adminOverview: ["admin", "overview"] as const,
   adminGenerations: (slug: string, params: Record<string, unknown>) =>
     ["admin", "generations", slug, params] as const,
@@ -403,6 +406,35 @@ export function useWorkspaces() {
   return useQuery({ queryKey: keys.workspaces, queryFn: api.workspaces });
 }
 
+/** The people of the subject in use, for its teachers. Asked only where the list is drawn. */
+export function useMembers() {
+  return useQuery({ queryKey: keys.members, queryFn: api.members });
+}
+
+/**
+ * Pausing, opening and removing people, one or several at once. Each answer moves the
+ * counts «Mis asignaturas» shows, so the listing is asked again with the class.
+ */
+export function useMemberActions() {
+  const client = useQueryClient();
+  const refresh = () => {
+    client.invalidateQueries({ queryKey: keys.members });
+    client.invalidateQueries({ queryKey: keys.workspaces });
+  };
+  return {
+    one: useMutation({
+      mutationFn: ({ userId, action }: { userId: number; action: MemberAction }) =>
+        api.memberAction(userId, action),
+      onSettled: refresh,
+    }),
+    many: useMutation({
+      mutationFn: ({ userIds, action }: { userIds: number[]; action: MemberAction }) =>
+        api.membersBulk(action, userIds),
+      onSettled: refresh,
+    }),
+  };
+}
+
 /**
  * What survives leaving an instance: the session, and the state of the installation's door.
  *
@@ -440,17 +472,27 @@ function relandStream(client: QueryClient) {
 
 /**
  * Move the tab out of an instance this account has just lost: a teacher removed or paused
- * its membership while the tab was open on it (`not_member`, `membership_disabled`).
+ * its membership while the tab was open on it (`not_member`, `membership_disabled`, or the
+ * stream closed with 4403).
  *
  * The tab forgets its own choice — the header it sends is what the server refuses — and
- * lands wherever `me` says the account is now. Called once per refusal of every query that
- * was in flight, so only the first does anything: by the second the tab has no choice left.
+ * lands wherever `me` says the account is now. Every query in flight is refused at once and
+ * each one calls this, so only the first does anything until the session has answered.
  */
+let leaving = false;
+
 export function leaveLostWorkspace(client: QueryClient) {
-  if (activeWorkspace() === null) return;
+  if (leaving) return;
+  leaving = true;
   workspaceStore.set(null);
   dropInstanceQueries(client);
-  relandStream(client);
+  runStore.forget();
+  void client
+    .refetchQueries({ queryKey: authKeys.me })
+    .finally(() => {
+      leaving = false;
+      if (activeWorkspace()) runStore.connect();
+    });
 }
 
 /**

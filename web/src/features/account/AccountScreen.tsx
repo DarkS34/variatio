@@ -9,6 +9,7 @@ import {
   Library,
   Trash2,
   UserRound,
+  Users,
   X,
 } from "lucide-react";
 
@@ -455,6 +456,7 @@ function MyWorkspacesTab() {
   const listing = useWorkspaces();
   const active = useActiveWorkspace();
   const switching = useSwitchWorkspace();
+  const { navigate } = useRouter();
   const [target, setTarget] = useState<WorkspaceRow | null>(null);
   const { chosen, shown, moving, choose } = useSplit();
   const mine = (listing.data?.workspaces ?? []).filter((workspace) => !workspace.as_admin);
@@ -462,6 +464,18 @@ function MyWorkspacesTab() {
   // A subject that left the list (deleted, access withdrawn) takes its column with it.
   const open = mine.find((workspace) => workspace.slug === shown) ?? null;
   const split = open !== null && chosen !== null;
+  // The class is the subject in use's: from another subject it switches into it first, with
+  // `mutateAsync` because the switch drops the listing this list is drawn from.
+  const toClass = (workspace: WorkspaceRow) => {
+    if (workspace.slug === current) {
+      navigate("/class");
+      return;
+    }
+    void switching
+      .mutateAsync(workspace.slug)
+      .then(() => navigate("/class"))
+      .catch(() => undefined);
+  };
 
   return (
     <div className="space-y-4">
@@ -507,6 +521,7 @@ function MyWorkspacesTab() {
                   entering={switching.isPending}
                   onExercises={() => choose(workspace.slug)}
                   onEnter={() => switching.mutate(workspace.slug)}
+                  onClass={() => toClass(workspace)}
                   onDelete={() => setTarget(workspace)}
                 />
               ))}
@@ -592,6 +607,7 @@ function SubjectRow({
   entering,
   onExercises,
   onEnter,
+  onClass,
   onDelete,
 }: {
   workspace: WorkspaceRow;
@@ -601,6 +617,8 @@ function SubjectRow({
   entering: boolean;
   onExercises: () => void;
   onEnter: () => void;
+  /** Open the subject's class: where the account teaches, and the listing counts its people. */
+  onClass: () => void;
   onDelete: () => void;
 }) {
   const { plural, t } = useT();
@@ -666,6 +684,12 @@ function SubjectRow({
             {count ?? t("generations.title")}
             <ChevronRight />
           </Button>
+          {workspace.people && (workspace.role === "editor" || workspace.role === "owner") ? (
+            <Button size="sm" variant="ghost" disabled={entering} onClick={onClass}>
+              <Users />
+              {plural("class.link", workspace.people.students)}
+            </Button>
+          ) : null}
           {inUse ? null : (
             <Button size="sm" variant="ghost" disabled={entering} onClick={onEnter}>
               {t("ws.enter")}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
 import { useRouter } from "@/lib/router";
 import { authKeys, useIsUnauthenticated, useSession } from "@/state/auth";
-import { useMaintenance, useStream } from "@/state/queries";
+import { leaveLostWorkspace, useMaintenance, useStream } from "@/state/queries";
 import { MaintenanceScreen } from "@/features/maintenance/MaintenanceScreen";
 
 import { AcceptInvite } from "./AcceptInvite";
@@ -56,6 +56,11 @@ function Guarded({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (stream.unauthorised) client.invalidateQueries({ queryKey: authKeys.me });
   }, [stream.unauthorised, client]);
+
+  // Closed with 4403: a teacher removed or paused this account in the subject on screen.
+  useEffect(() => {
+    if (stream.lost) leaveLostWorkspace(client);
+  }, [stream.lost, client]);
 
   if (session.isLoading || maintenance.isLoading) {
     return (

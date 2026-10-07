@@ -1021,6 +1021,21 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 ### Specific screens
 
+- **«Clase»** (`/class`, `features/class/ClassScreen.tsx`; decided 2026-10-06): the class of
+  the subject in use, its teachers' alone (a student gets «not found», and `/api/members` is
+  `auth.EDIT`). Entered from the account menu's «Mi clase», above «Mis asignaturas y
+  ejercicios», where the session's role is a teacher's, and from each subject of «Mis
+  asignaturas» the account teaches, as «Clase · N alumnos» (`GET /api/workspaces` counts
+  `people` — students, paused, teachers — on those rows), switching into it first. Drawn as a
+  panel tab (`admin/Sections`): the list of its sections beside the one open, «Alumnos» first
+  — the other sections of the plan join it — the subject's name read off the TAB's slug,
+  never the session's `active` flag. «Alumnos» (`lib/members.ts`): a filter «Activos» /
+  «Desactivados» / «Todos», a search over name and username, one table, ticks, and over the
+  ticked ones «Desactivar (n)», «Activar (n)», «Quitar (n)», each confirmed naming how many;
+  removing is its own dialog — final, offering «Desactivar en su lugar» — and every gesture
+  goes through `POST /api/members/bulk`, refusals toasted person by person. A tab whose
+  subject closes on its account (`not_member`, `membership_disabled`, or the stream closed
+  with 4403: `runStore.lost`) leaves it through `queries.leaveLostWorkspace`.
 - «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): the
   subjects are the rows of ONE block and open alone, across the whole width; the button on a
   row that counts its exercises narrows the list into a column (its width animated,

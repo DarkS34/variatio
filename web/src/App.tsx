@@ -6,7 +6,7 @@ import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";
 import { slideCount, slideOf } from "@/features/tutorial/slides";
-import { useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
+import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
 import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
@@ -25,6 +25,9 @@ const AdminScreen = lazy(() =>
 );
 const BankScreen = lazy(() =>
   import("@/features/bank/BankScreen").then((m) => ({ default: m.BankScreen })),
+);
+const ClassScreen = lazy(() =>
+  import("@/features/class/ClassScreen").then((m) => ({ default: m.ClassScreen })),
 );
 const GuideScreen = lazy(() =>
   import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
@@ -67,6 +70,7 @@ const NEEDS_WORKSPACE = [
   "/generate",
   "/evaluate",
   "/tutor",
+  "/class",
 ];
 
 // The destinations that are an optional function's. Closed to the account, one is not a
@@ -83,6 +87,7 @@ export function App() {
   const hasWorkspace = useHasWorkspace();
   const features = useFeatures();
   const student = useIsStudent();
+  const teaches = useCanEdit();
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
@@ -136,6 +141,9 @@ export function App() {
         return <EvaluationScreen />;
       case "/tutor":
         return <TutorScreen />;
+      // The class of the subject in use: its teachers' alone, whatever its construction.
+      case "/class":
+        return teaches ? <ClassScreen /> : <NotFound />;
       // The account of whoever is looking: their data, and the subjects they can open with
       // the exercises they generated in each. Each tab is a route so that it stays a link
       // that can be bookmarked.
