@@ -38,6 +38,8 @@ LEVELS = {
     ("POST", "/api/auth/reset"): "public",
     ("GET", "/api/auth/invites/{token}"): "public",
     ("POST", "/api/auth/accept"): "public",
+    # An account that exists entering a subject with a link: the link decides where.
+    ("POST", "/api/auth/join"): "session",
     ("GET", "/api/maintenance"): "public",
     # The subjects an account belongs to; each one checks the membership inside.
     ("GET", "/api/workspaces"): "session",
@@ -54,6 +56,16 @@ LEVELS = {
     ("POST", "/api/members/{user_id:int}/disable"): "editor",
     ("POST", "/api/members/{user_id:int}/enable"): "editor",
     ("DELETE", "/api/members/{user_id:int}"): "editor",
+    # A teacher's links: the class link and the subject's personal invitations.
+    ("GET", "/api/members/class-link"): "editor",
+    ("GET", "/api/members/class-link/link"): "editor",
+    ("POST", "/api/members/class-link"): "editor",
+    ("PATCH", "/api/members/class-link"): "editor",
+    ("DELETE", "/api/members/class-link"): "editor",
+    ("GET", "/api/members/invites"): "editor",
+    ("POST", "/api/members/invites"): "editor",
+    ("GET", "/api/members/invites/{invite_id:int}/link"): "editor",
+    ("DELETE", "/api/members/invites/{invite_id:int}"): "editor",
     # The chain: its state is everybody's, its history and its writes the teachers'.
     ("GET", "/api/health"): "viewer",
     ("GET", "/api/pipeline"): "viewer",

@@ -31,7 +31,7 @@ from ..auth import deps as auth_deps
 from ..auth import links
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import identity, repository
-from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, Invite, User, Workspace
+from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassLink, Invite, User, Workspace
 from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
 from .generations import row_view
@@ -89,6 +89,12 @@ class InviteEditBody(BaseModel):
     label: str | None = None
     features: list[str] | None = None
     profile: str | None = None
+
+
+class ClassLinkEditBody(BaseModel):
+    """Whether a subject's class link is paused, from the panel."""
+
+    paused: bool
 
 
 class MembershipBody(BaseModel):
@@ -427,6 +433,51 @@ def revoke_invite(
     if revoked:
         logger.info("[invitaciones] {} ha anulado la invitación {}", admin.username, invite_id)
     return {"revoked": revoked}
+
+
+# CLASS LINKS -----------------------------------------------------------------------------
+#
+# Each subject's live class link, its teachers' to mint: the administrator sees how full each
+# is and can pause or retire one — a link that reached somewhere it should not have.
+
+
+@router.get("/class-links")
+def class_links(db: DbSession = Depends(auth.db)) -> dict:
+    """List every live class link: its subject, seats, expiry, pause and who minted it."""
+    moment = identity.now()
+    return {"class_links": [_class_link(db, link, moment) for link in identity.class_links(db)]}
+
+
+@router.patch("/class-links/{link_id}")
+def pause_class_link(
+    link_id: int,
+    body: ClassLinkEditBody,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Pause a subject's class link, or resume it."""
+    link = _live_class_link(db, link_id)
+    identity.edit_class_link(db, link, paused_at=identity.now() if body.paused else None)
+    logger.info(
+        "[invitaciones] {} ha {} el enlace de clase de «{}»",
+        admin.username,
+        "pausado" if body.paused else "reanudado",
+        link.workspace.slug,
+    )
+    return {"id": link.id, "paused": body.paused}
+
+
+@router.delete("/class-links/{link_id}")
+def revoke_class_link(
+    link_id: int,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Retire a subject's class link: it stops working, and whoever entered through it stays."""
+    link = _live_class_link(db, link_id)
+    identity.revoke_class_link(db, link)
+    logger.info("[invitaciones] {} ha retirado el enlace de clase de «{}»", admin.username, link.workspace.slug)
+    return {"revoked": link.id}
 
 
 @router.post("/accounts/{user_id}/memberships")
@@ -962,6 +1013,30 @@ def _role(role: str | None) -> str:
     return role
 
 
+def _class_link(db: DbSession, link: ClassLink, moment: datetime) -> dict:
+    """Render a class link for the panel: its subject, how full it is, and who minted it."""
+    author = identity.get_user_by_id(db, link.created_by) if link.created_by else None
+    return {
+        "id": link.id,
+        "workspace": link.workspace.slug,
+        "workspace_name": link.workspace.name,
+        "uses": link.uses,
+        "max_uses": link.max_uses,
+        "expires_at": link.expires_at.isoformat(),
+        "expired": link.expires_at <= moment,
+        "paused": link.paused_at is not None,
+        "created_by": author.username if author else None,
+    }
+
+
+def _live_class_link(db: DbSession, link_id: int) -> ClassLink:
+    """Return a class link that has not been retired, or 404."""
+    link = db.get(ClassLink, link_id)
+    if link is None or link.revoked_at is not None:
+        raise HTTPException(404, "Ese enlace de clase no existe.")
+    return link
+
+
 def _refused(refusal: members.Refusal) -> HTTPException:
     """Turn a refused membership gesture into the answer the panel reads by its code."""
     return HTTPException(refusal.status, refusal.message, headers={"X-Error-Code": refusal.code})
@@ -1035,7 +1110,7 @@ def _minted(db: DbSession, request: Request, invite: Invite, token: str) -> dict
 
 def _link(request: Request, token: str) -> str:
     """Build the link that IS an invitation."""
-    return f"{auth.base_url(request)}/invite?token={token}"
+    return links.url_for(auth.base_url(request), token)
 
 
 def _invite(db: DbSession, invite: Invite, moment: datetime | None = None) -> dict:

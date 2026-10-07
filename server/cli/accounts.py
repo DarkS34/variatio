@@ -1,4 +1,4 @@
-"""`create-user`, `users`, `grant` and `invite`."""
+"""`create-user`, `users`, `grant`, `invite` and `class-link`."""
 
 # What the two profiles are called when a command prints one. The web keeps its own copy
 # for the same reason every other label does: this one is read in a terminal.
@@ -203,4 +203,71 @@ def invite(args) -> int:
     )
     if not all(stored for _, stored in printed):
         print("No se ha podido guardar el enlace para volver a verlo en el panel: cópialo ahora.")
+    return 0
+
+
+def class_link(args) -> int:
+    """Print a subject's class link, minting one when it has none or `--renew` asks for another.
+
+    The link lets as many students in as it has seats, each choosing their own username, and
+    every account it creates is a student's. Renewing retires the live one at once: whoever
+    entered through it stays.
+    """
+    from datetime import timedelta
+
+    from ..auth import links
+    from ..db import session_scope
+    from ..db.identity import live_class_link, now, revoke_class_link
+    from ..db.repository import get_workspace
+    from ..installation import (
+        CLASS_LINK_DEFAULT_DAYS,
+        CLASS_LINK_DEFAULT_SEATS,
+        CLASS_LINK_MAX_SEATS,
+        TEACHER_LINK_MAX_DAYS,
+        public_base_url,
+    )
+
+    seats = CLASS_LINK_DEFAULT_SEATS if args.seats is None else args.seats
+    days = CLASS_LINK_DEFAULT_DAYS if args.days is None else args.days
+    if not 1 <= seats <= CLASS_LINK_MAX_SEATS:
+        print(f"--seats va de 1 a {CLASS_LINK_MAX_SEATS}.")
+        return 1
+    if not 1 <= days <= TEACHER_LINK_MAX_DAYS:
+        print(f"--days va de 1 a {TEACHER_LINK_MAX_DAYS}.")
+        return 1
+
+    base = public_base_url() or "http://localhost:8000"
+    with session_scope() as session:
+        workspace = get_workspace(session, args.workspace)
+        if workspace is None:
+            print(f"No existe la asignatura '{args.workspace}'.")
+            return 1
+        live = live_class_link(session, workspace.id)
+        if live is not None and not args.renew:
+            token = links.unseal(live.token_sealed, live.token_hash)
+            if token is None:
+                print("El enlace vivo no se puede abrir con la clave de esta instalación: usa --renew.")
+                return 1
+            state = "en pausa" if live.paused_at is not None else "activo"
+            print(links.url_for(base, token))
+            print(
+                f"{live.uses} de {live.max_uses} plazas ocupadas · caduca el "
+                f"{live.expires_at:%Y-%m-%d} · {state}. Para cambiarlo, usa --renew."
+            )
+            return 0
+        if live is not None:
+            revoke_class_link(session, live)
+        link, token = links.mint_class_link(
+            session,
+            workspace_id=workspace.id,
+            expires_at=now() + timedelta(days=days),
+            max_uses=seats,
+        )
+        print(links.url_for(base, token))
+        print(
+            f"{'Renovado' if live is not None else 'Creado'}: {seats} plazas, caduca en {days} día(s). "
+            "Cada cuenta que cree será de alumno."
+        )
+        if link.token_sealed is None:
+            print("No se ha podido guardar el enlace para volver a verlo: cópialo ahora.")
     return 0

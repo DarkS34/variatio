@@ -163,6 +163,17 @@ def build_parser():
     )
     inviter.set_defaults(func=guarded(accounts.invite))
 
+    linker = subparsers.add_parser(
+        "class-link", help="imprime el enlace de clase de una asignatura, o lo crea"
+    )
+    linker.add_argument("--workspace", required=True, help="asignatura del enlace")
+    linker.add_argument("--seats", type=int, default=None, help="plazas del enlace (40)")
+    linker.add_argument("--days", type=int, default=None, help="días hasta que caduca (30)")
+    linker.add_argument(
+        "--renew", action="store_true", help="retira el enlace vivo y crea otro con estos términos"
+    )
+    linker.set_defaults(func=guarded(accounts.class_link))
+
     check = subparsers.add_parser("db-check", help="comprueba la conexión con la base de datos")
     check.set_defaults(func=diagnostics.db_check)
 

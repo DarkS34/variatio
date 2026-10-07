@@ -20,6 +20,7 @@ from .models import (
     INVITE_LABEL_MAX,
     OWNER,
     STUDENT,
+    ClassLink,
     Invite,
     Membership,
     PasswordReset,
@@ -520,14 +521,16 @@ def attribute_invite(session: Session, invite: Invite, user_id: int) -> None:
     session.flush()
 
 
-def unused_invites(session: Session) -> list[Invite]:
-    """Return every invitation nobody has redeemed, live or expired.
+def unused_invites(session: Session, workspace_id: int | None = None) -> list[Invite]:
+    """Return every invitation nobody has redeemed, live or expired — of one subject, if named.
 
     Newest batch first and, inside one batch, in the order it was minted: the rows of a
     batch share `created_at` — Postgres' `now()` is the transaction's — so the id is what
     keeps «Alumno 1» ahead of «Alumno 2».
     """
     query = select(Invite).where(Invite.used_at.is_(None))
+    if workspace_id is not None:
+        query = query.where(Invite.workspace_id == workspace_id)
     return list(session.scalars(query.order_by(Invite.created_at.desc(), Invite.id)))
 
 
@@ -580,6 +583,107 @@ def revoke_invite(session: Session, invite_id: int) -> bool:
     session.delete(invite)
     session.flush()
     return True
+
+
+# CLASS LINKS ---------------------------------------------------------------------------
+
+# What may change on a class link after it is minted.
+_EDITABLE_CLASS_LINK_FIELDS = frozenset({"max_uses", "expires_at", "paused_at", "token_sealed"})
+
+
+def create_class_link(
+    session: Session,
+    workspace_id: int,
+    token_hash: str,
+    expires_at: datetime,
+    max_uses: int,
+    created_by: int | None = None,
+    token_sealed: str | None = None,
+) -> ClassLink:
+    """Insert a class link for this token digest. The caller has revoked any live one first."""
+    link = ClassLink(
+        workspace_id=workspace_id,
+        token_hash=token_hash,
+        token_sealed=token_sealed,
+        created_by=created_by,
+        expires_at=expires_at,
+        max_uses=max_uses,
+    )
+    session.add(link)
+    session.flush()
+    return link
+
+
+def live_class_link(session: Session, workspace_id: int) -> ClassLink | None:
+    """Return the subject's class link that has not been revoked, paused or not, expired or not.
+
+    A subject has one at most: the rule lives in the code and not in a partial index, so SQLite
+    and Postgres say the same.
+    """
+    return session.scalar(
+        select(ClassLink)
+        .where(ClassLink.workspace_id == workspace_id, ClassLink.revoked_at.is_(None))
+        .order_by(ClassLink.id.desc())
+    )
+
+
+def class_link_by_digest(session: Session, token_hash: str) -> ClassLink | None:
+    """Return the class link this digest names while it is not revoked, whatever else it is."""
+    link = session.scalar(select(ClassLink).where(ClassLink.token_hash == token_hash))
+    return link if link is not None and link.revoked_at is None else None
+
+
+def reserve_seat(session: Session, link: ClassLink) -> bool:
+    """Take one seat of a class link, True only for the caller that actually got it.
+
+    ONE conditional statement, so the database decides who gets the last seat: two people
+    registering at once both read a free seat a moment before, and the second UPDATE matches
+    no row once the first has written. The pause, the revocation and the expiry are in the
+    same condition, because the teacher can change any of them while somebody registers.
+    """
+    moment = now()
+    result = session.execute(
+        update(ClassLink)
+        .where(
+            ClassLink.id == link.id,
+            ClassLink.uses < ClassLink.max_uses,
+            ClassLink.paused_at.is_(None),
+            ClassLink.revoked_at.is_(None),
+            ClassLink.expires_at > moment,
+        )
+        .values(uses=ClassLink.uses + 1)
+        .execution_options(synchronize_session=False)
+    )
+    session.flush()
+    return result.rowcount == 1
+
+
+def edit_class_link(session: Session, link: ClassLink, **changes) -> ClassLink:
+    """Change the named terms of a class link and hand it back as the database now has it."""
+    unknown = set(changes) - _EDITABLE_CLASS_LINK_FIELDS
+    if unknown:
+        raise ValueError(f"Not an editable class link field: {', '.join(sorted(unknown))}")
+    for name, value in changes.items():
+        setattr(link, name, value)
+    session.flush()
+    session.refresh(link)
+    return link
+
+
+def revoke_class_link(session: Session, link: ClassLink) -> None:
+    """Retire a class link for good: its link stops working, and whoever entered stays."""
+    link.revoked_at = now()
+    link.token_sealed = None
+    session.flush()
+
+
+def class_links(session: Session) -> list[ClassLink]:
+    """Return every class link not revoked, one per subject at most, newest first."""
+    return list(
+        session.scalars(
+            select(ClassLink).where(ClassLink.revoked_at.is_(None)).order_by(ClassLink.id.desc())
+        )
+    )
 
 
 # PASSWORD RESETS -----------------------------------------------------------------------

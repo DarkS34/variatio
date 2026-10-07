@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 from variatio.core import paths
 
 from ..db import identity
-from ..db.models import EDITOR, STUDENT, Invite
+from ..db.models import EDITOR, STUDENT, ClassLink, Invite
 from . import tokens
 
 KEY_ENV = "VARIATIO_INVITE_LINK_KEY"
@@ -86,6 +86,37 @@ def mint(
         profile=profile,
     )
     return invite, token
+
+
+def mint_class_link(
+    session: Session,
+    *,
+    workspace_id: int,
+    expires_at: datetime,
+    max_uses: int,
+    created_by: int | None = None,
+) -> tuple[ClassLink, str]:
+    """Insert a class link with a fresh token, sealed like an invitation's, and return both.
+
+    The one writer of a class link. The subject's live one, if any, is the caller's to revoke
+    first: one live link per subject is the rule renewing keeps.
+    """
+    token = tokens.new_token()
+    link = identity.create_class_link(
+        session,
+        workspace_id=workspace_id,
+        token_hash=tokens.digest(token),
+        expires_at=expires_at,
+        max_uses=max_uses,
+        created_by=created_by,
+        token_sealed=seal(token),
+    )
+    return link, token
+
+
+def url_for(base: str, token: str) -> str:
+    """Build the link that IS an invitation or a class link: the two share one shape."""
+    return f"{base}/invite?token={token}"
 
 
 def token_from(text: str) -> str:

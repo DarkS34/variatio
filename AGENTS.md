@@ -78,7 +78,7 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   chained by anything; `build` creates missing artifacts; `init` loads, tags, warms indices;
   `generate` (`-n`, `--concepts`, `--item-type`, `--fixed FIELD=VALUE`, `--omit FIELD`,
   `--curriculum`, `--instructions`); `all` = build missing + init + generate.
-- `uv run system [serve|import-instance|export-instance|export-generations|workspaces|create-workspace|db-check|create-user|users|grant|invite]`
+- `uv run system [serve|import-instance|export-instance|export-generations|workspaces|create-workspace|db-check|create-user|users|grant|invite|class-link]`
   — API and admin ([server/cli/](server/cli/)). No subcommand means `serve`. `guarded()` wraps
   every command except `db-check` and `serve`. `PROG = "system"` matches `pyproject.toml`.
 - `uv run pytest` — default `-m 'not corpus and not model'`. Suite split by subsystem under
@@ -351,6 +351,26 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its
   holder (`invites.features`), applied at registration. `GET /api/health` leaves out the
   models only a switched-off function names.
+- **A teacher's links** (decided 2026-10-06; `/api/members`): a subject has at most ONE live
+  class link (`class_links`, revoked = dead; the rule is code, not an index) — seats (40 by
+  default, `CLASS_LINK_MAX_SEATS` 300), a required expiry (30 days by default, at most
+  `TEACHER_LINK_MAX_DAYS` 180), a pause — minted sealed like an invitation
+  (`links.mint_class_link`) and renewed by revoking it; its seats never drop below those
+  taken. A seat is taken by ONE conditional UPDATE (`identity.reserve_seat`: free seat, not
+  paused, not revoked, not expired) AFTER the checks and the password hash, so the row lock is
+  short; an account that cannot be created rolls the seat back with it. `/accept` takes both
+  kinds (a class link: bucket `accept_class`, keyed by the link, a student's account, a
+  `viewer` membership `via=class_link` with `invited_by` its minter), refusing a full link
+  `class_link_full` and a paused one `class_link_paused`; a dead link of either kind is one
+  404 sentence (`DEAD_LINK`). `/join` lets an existing account in with either kind (bucket
+  `join`): a paused membership is refused first and spends nothing; a personal invitation is
+  spent even when the account was in; the higher role wins; the profile never moves. The
+  preview says `kind`, `inviter` and the subject, never the seats left. A teacher mints the
+  subject's personal invitations (one per name, the name as alias; a teacher's — `editor`,
+  profile teacher — only by an owner; no `features`; bucket `teacher_invite` per link), reads
+  their links again (logged) and deletes them; another subject's are 404. The administrator
+  lists every live class link, pauses and retires one (`/api/admin/class-links`).
+  `system class-link --workspace S [--seats N] [--days D] [--renew]` prints or mints it.
 - Invitations are the admin's alone (`routers/admin.py`): chosen expiry (floor, no ceiling),
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
@@ -1362,7 +1382,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - gpt-oss is not used; no code names it.
 
 **Identity and access**
-- Invitation-only sign-up; own auth; no JWT; username identity, email optional.
+- Invitation-only sign-up — single-use invitations, the seats of a teacher's class link, or
+  `create-user`; never open registration — own auth; no JWT; username identity, email
+  optional. Nobody adds an account by its username: an account enters a subject with a link.
 - The account's profile («Docente» / «Alumno») is the invitation's, never the registrant's
   answer; only the administrator raises it, and nothing lowers it; it decides one thing,
   creating subjects, and authorises nothing inside one (2026-10-06; it was a variable of the
@@ -1373,6 +1395,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   the tutor by their permissions; the rest of the construction — the bank, the raw material,
   the types of exercise as a step — is not theirs to see. No fourth role.
 - Invitations and membership managed by the admin alone; links sealed, not stored in clear.
+  Since 2026-10-06 a teacher also brings their class in: a class link of many uses (seats,
+  expiry, pause, renewal) and personal invitations of their subject; an owner invites teachers.
   Since 2026-10-06 a teacher also pauses, opens and removes the students of their subjects,
   and the owner its teachers too; the administrator keeps everything it had. A subject with
   people keeps an active owner at every door; pausing is reversible and removing is not;

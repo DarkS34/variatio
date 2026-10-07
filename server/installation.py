@@ -180,6 +180,14 @@ SESSION_TOUCH_INTERVAL = timedelta(minutes=5)
 INVITE_TTL = timedelta(days=7)
 # How many invitations one request may mint — a class handed out at once.
 INVITE_BATCH_MAX = 50
+# A teacher's links: a class link (many students, one link) and the personal invitations of a
+# subject. Each expires, by default after a month or two weeks, never later than half a
+# year; a class link holds forty seats unless its teacher says otherwise, three hundred at most.
+CLASS_LINK_DEFAULT_DAYS = 30
+CLASS_LINK_DEFAULT_SEATS = 40
+CLASS_LINK_MAX_SEATS = 300
+TEACHER_INVITE_DEFAULT_DAYS = 14
+TEACHER_LINK_MAX_DAYS = 180
 RESET_TTL = timedelta(minutes=45)
 
 
@@ -236,6 +244,14 @@ RATE_LIMITS: dict[str, tuple[int, float]] = {
     "forgot": (5, 900.0),
     "reset": (10, 900.0),
     "password": (10, 900.0),
+    # A teacher's links, counted per link like `invite`, against the teacher's account.
+    "teacher_invite": (300, 3600.0),
+    # Registering through a class link, keyed by the link: a whole class registers through
+    # one, so it allows as many as the largest class has seats — `accept` would stop the
+    # eleventh student of the hour.
+    "accept_class": (CLASS_LINK_MAX_SEATS, 3600.0),
+    # An existing account entering a subject with a link, keyed by the account.
+    "join": (20, 3600.0),
 }
 
 # MAIL ----------------------------------------------------------------------------------

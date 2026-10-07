@@ -1,9 +1,11 @@
 """Login, your own account, and password recovery.
 
 THERE IS NO REGISTRATION ENDPOINT HERE AND THERE MUST NEVER BE ONE. An account exists
-because somebody redeemed a single-use invitation, or because the installation's first
-account was created from the command line. That is what removes the largest attack
-surface a web login has, and with it the captcha and the anti-spam quotas.
+because somebody redeemed a single-use invitation or a seat of a class link, or because it
+was created from the command line. That is what removes the largest attack surface a web
+login has, and with it the captcha and the anti-spam quotas. An account that exists enters
+another subject with a link through `/join`, never by being named: nobody adds an account by
+its username, which would say which names exist.
 
 "DOES THIS USERNAME HAVE AN ACCOUNT?" IS REFUSED IN THREE PLACES AT ONCE, and weakening
 any one of them re-opens enumeration on its own: `/login` answers the same sentence for a
@@ -22,19 +24,40 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from loguru import logger
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from .. import features, installation
 from ..auth import deps, mail, passwords, tokens
 from ..auth.rate_limit import forgive, throttle
 from ..db import identity
-from ..db.models import EVALUATOR_PROFILES, OWNER, STUDENT, VIA_INVITE, Invite, User, Workspace
+from ..db.models import (
+    EVALUATOR_PROFILES,
+    OWNER,
+    ROLE_RANK,
+    STUDENT,
+    VIA_CLASS_LINK,
+    VIA_INVITE,
+    VIEWER,
+    ClassLink,
+    Invite,
+    User,
+    Workspace,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # The same sentence for "no such account" and "wrong password". Either half alone still
 # answers "does this name have an account here?".
 BAD_CREDENTIALS = "Usuario o contraseña incorrectos."
+
+# The same sentence for every link that leads nowhere — unknown, expired, spent, revoked —
+# on every route that reads one, so none of them tells a link that existed from one that did not.
+DEAD_LINK = "Esa invitación no existe, ya se usó o ha caducado."
+
+# What a refused class link carries in `X-Error-Code`.
+CLASS_LINK_FULL = "class_link_full"
+CLASS_LINK_PAUSED = "class_link_paused"
 
 
 # Deliberately not `EmailStr`: an address here is a delivery detail, never an identity and
@@ -70,6 +93,12 @@ class AcceptBody(BaseModel):
     # Absent is allowed here and nowhere else: a browser that never asked can still register,
     # and the form seeds this from `navigator.language`. `create_user` resolves it.
     ui_language: str | None = None
+
+
+class JoinBody(BaseModel):
+    """A link an account that already exists enters a subject with."""
+
+    token: str
 
 
 class LanguageBody(BaseModel):
@@ -325,18 +354,38 @@ def reset(
 
 @router.get("/invites/{token}")
 def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
-    """Answer what an invitation grants, so its holder sees it before registering."""
-    invite = identity.live_invite(session, tokens.digest(token))
-    if invite is None:
-        raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
-    workspace = invite.workspace
-    return {
-        "role": invite.role,
-        "workspace": workspace.name if workspace else None,
-        "expires_at": invite.expires_at.isoformat(),
-        # What the account will be. Said, never asked: the invitation decided it.
-        "profile": _profile_of(invite),
-    }
+    """Answer what a link grants, so its holder sees it before registering or joining.
+
+    Two kinds share one shape of link: a personal invitation (`kind: personal`) and a class
+    link (`kind: class`, always a student's). It names the subject, who invites and what the
+    account will be; never how many seats a class link has left — that serves nobody but
+    whoever wants to spend them.
+    """
+    token_hash = tokens.digest(token)
+    invite = identity.live_invite(session, token_hash)
+    if invite is not None:
+        workspace = invite.workspace
+        return {
+            "kind": "personal",
+            "role": invite.role,
+            "workspace": workspace.name if workspace else None,
+            "expires_at": invite.expires_at.isoformat(),
+            # What the account will be. Said, never asked: the invitation decided it.
+            "profile": _profile_of(invite),
+            "inviter": _display_name(session, invite.created_by),
+        }
+    link = identity.class_link_by_digest(session, token_hash)
+    if link is not None and link.expires_at > identity.now():
+        return {
+            "kind": "class",
+            "role": VIEWER,
+            "workspace": link.workspace.name,
+            "expires_at": link.expires_at.isoformat(),
+            "profile": STUDENT,
+            "inviter": _display_name(session, link.created_by),
+            "paused": link.paused_at is not None,
+        }
+    raise HTTPException(404, DEAD_LINK)
 
 
 @router.post("/accept")
@@ -361,35 +410,26 @@ def accept_invite(
     An unknown UI language is refused rather than ignored: the account reads everything
     through it, so silently seating somebody in Spanish because they typed `fr` is worse
     than saying the installation does not speak it.
+
+    A class link is the other kind of link (`_accept_class`), throttled by its own bucket:
+    a whole class registers through one link, and `accept` would stop the eleventh.
     """
     token_hash = tokens.digest(body.token)
+    link = identity.class_link_by_digest(session, token_hash)
+    if link is not None:
+        throttle("accept_class", request, token_hash)
+        return _accept_class(body, link, request, response, session)
     throttle("accept", request, token_hash)
 
     invite = identity.live_invite(session, token_hash)
     if invite is None:
-        raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
+        raise HTTPException(404, DEAD_LINK)
 
     # Losing the claim is the same answer as a spent invitation.
     if not identity.claim_invite(session, invite):
-        raise HTTPException(404, "Esa invitación no existe, ya se usó o ha caducado.")
+        raise HTTPException(404, DEAD_LINK)
 
-    username = identity.normalise_username(body.username)
-    error = identity.username_error(username)
-    if error:
-        raise HTTPException(422, error)
-
-    if identity.get_user(session, username) is not None:
-        raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.")
-
-    error = passwords.policy_error(body.password, account=username, name=body.name)
-    if error:
-        raise HTTPException(422, error)
-
-    if body.ui_language is not None:
-        error = identity.language_error(body.ui_language)
-        if error:
-            raise HTTPException(422, error)
-
+    username = _checked_credentials(session, body)
     user = identity.create_user(
         session,
         username=username,
@@ -405,7 +445,161 @@ def accept_invite(
     return _me(session, user)
 
 
+@router.post("/join")
+def join(
+    body: JoinBody,
+    request: Request,
+    user: User = Depends(deps.current_user),
+    session: DbSession = Depends(deps.db),
+) -> dict:
+    """Let an account that already exists into the subject a link names, and land it there.
+
+    Both kinds of link, checked in this order. A membership a teacher paused is refused
+    before anything is spent (`membership_disabled`): a link brings nobody back, only a
+    teacher does. A personal invitation is claimed and attributed to the account — it was for
+    this person, so it is spent even when the account was in already. A class link takes a
+    seat unless the account is in already. The account keeps the HIGHER of its role and the
+    link's (a link never lowers anybody), the subject becomes its active one, and `already`
+    says whether it was in before. A dead link is the same 404 as `/accept`'s. The account's
+    profile is not touched: it is the invitation that created the account that set it, and
+    only the administrator raises it.
+    """
+    throttle("join", request, user.username)
+    token_hash = tokens.digest(body.token)
+    invite = identity.live_invite(session, token_hash)
+    link = None if invite is not None else identity.class_link_by_digest(session, token_hash)
+    if invite is None and (link is None or link.expires_at <= identity.now()):
+        raise HTTPException(404, DEAD_LINK)
+
+    workspace_id = invite.workspace_id if invite is not None else link.workspace_id
+    if workspace_id is None:
+        raise HTTPException(
+            409,
+            "Esa invitación no da acceso a ninguna asignatura: sirve para crear una cuenta nueva.",
+            headers={"X-Error-Code": "no_subject"},
+        )
+    row = identity.membership(session, workspace_id, user.id)
+    if row is not None and not row.active:
+        raise HTTPException(
+            409,
+            "Tu acceso a esta asignatura está desactivado. Pide a tu docente que lo active.",
+            headers={"X-Error-Code": deps.MEMBERSHIP_DISABLED},
+        )
+
+    if invite is not None:
+        if not identity.claim_invite(session, invite):
+            raise HTTPException(404, DEAD_LINK)
+        identity.attribute_invite(session, invite, user.id)
+        _apply_features(session, invite, user)
+        role, via, inviter = invite.role, VIA_INVITE, invite.created_by
+    else:
+        if row is None and not identity.reserve_seat(session, link):
+            raise _class_link_refusal(session, link)
+        role, via, inviter = VIEWER, VIA_CLASS_LINK, link.created_by
+
+    if row is None:
+        identity.grant(session, workspace_id, user.id, role, via=via, invited_by=inviter)
+    elif ROLE_RANK[role] > ROLE_RANK[row.role]:
+        row.role = role
+    user.active_workspace_id = workspace_id
+    session.flush()
+    logger.info(
+        "[asignatura] «{}» entró en la asignatura {} con un enlace{}",
+        user.username,
+        workspace_id,
+        " (ya estaba)" if row is not None else "",
+    )
+    return {**_me(session, user), "already": row is not None}
+
+
 # HELPERS ---------------------------------------------------------------------------
+
+
+def _accept_class(
+    body: AcceptBody, link: ClassLink, request: Request, response: Response, session: DbSession
+) -> dict:
+    """Register a student through a class link: check, take a seat, create the account.
+
+    The seat is taken AFTER the checks and the password's hash, so the row the statement locks
+    is held for the end of one short transaction and never across Argon2's fifth of a second
+    — a class registers through one link at once. An account that cannot be created after
+    all — its name taken in between — rolls back with it the seat it took. The profile is a
+    student's whatever the request says, and the membership the link's: a student of its
+    subject, let in by whoever minted it.
+    """
+    if link.expires_at <= identity.now():
+        raise HTTPException(404, DEAD_LINK)
+    username = _checked_credentials(session, body)
+    password_hash = passwords.hash_password(body.password)
+    if not identity.reserve_seat(session, link):
+        raise _class_link_refusal(session, link)
+    try:
+        user = identity.create_user(
+            session,
+            username=username,
+            name=body.name.strip() or username,
+            password_hash=password_hash,
+            evaluator_profile=STUDENT,
+            ui_language=body.ui_language,
+        )
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.") from None
+    identity.grant(
+        session,
+        link.workspace_id,
+        user.id,
+        VIEWER,
+        via=VIA_CLASS_LINK,
+        invited_by=link.created_by,
+    )
+    user.active_workspace_id = link.workspace_id
+    _issue_session(session, user, request, response)
+    return _me(session, user)
+
+
+def _checked_credentials(session: DbSession, body: AcceptBody) -> str:
+    """Refuse a username, password or language a new account may not have; return the username."""
+    username = identity.normalise_username(body.username)
+    error = identity.username_error(username)
+    if error:
+        raise HTTPException(422, error)
+    if identity.get_user(session, username) is not None:
+        raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.")
+    error = passwords.policy_error(body.password, account=username, name=body.name)
+    if error:
+        raise HTTPException(422, error)
+    if body.ui_language is not None:
+        error = identity.language_error(body.ui_language)
+        if error:
+            raise HTTPException(422, error)
+    return username
+
+
+def _class_link_refusal(session: DbSession, link: ClassLink) -> HTTPException:
+    """Say why a class link gave no seat: gone (the 404 of a dead link), paused, or full."""
+    session.refresh(link)
+    if link.revoked_at is not None or link.expires_at <= identity.now():
+        return HTTPException(404, DEAD_LINK)
+    if link.paused_at is not None:
+        return HTTPException(
+            409,
+            "Este enlace está en pausa: pide a tu docente que lo reanude.",
+            headers={"X-Error-Code": CLASS_LINK_PAUSED},
+        )
+    return HTTPException(
+        409,
+        "Este enlace ya no tiene plazas libres: pide otro a tu docente.",
+        headers={"X-Error-Code": CLASS_LINK_FULL},
+    )
+
+
+def _display_name(session: DbSession, user_id: int | None) -> str | None:
+    """Name who minted a link, by their display name; None when the account is gone."""
+    if user_id is None:
+        return None
+    user = identity.get_user_by_id(session, user_id)
+    return user.name if user is not None else None
 
 
 def _me(session: DbSession, user: User) -> dict:
