@@ -947,6 +947,14 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   subject sees `NoWorkspace`: a teacher, the form that starts one; a student, the sentence
   that sends them to their teacher's link. Creating — there and in the switcher — is offered
   to a teacher only (`useCanCreate`, the session's profile).
+- **A student's path** (role `viewer`, `useIsStudent`; decided 2026-10-06): the bar draws
+  `SYLLABUS` — «Temario», with an icon where a step has its number — as the whole
+  construction, then the rule and the doors open to them; all of it half off until the
+  construction is closed, the reason «Tu docente todavía está preparando esta asignatura».
+  `STUDENT_HIDDEN` (`/raw`, `/prepare/profile`, `/prepare/bank`) draw «not found»; every other
+  route of the subject draws `SubjectNotReady` (no button) until `generation_unlocked`; `/`
+  lands a student on `studentLandingPath` — generating, then the tutor, then the evaluation,
+  else the syllabus. `useRaw` and `useCoverage` are never asked for a student.
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
 - Vocabulary seen by teachers: «Apuntes y ejercicios», «Tipos de ejercicio», «Temario»
   (the step, with no article; «concepto» for a node; «grafo» only for the structure), «Banco
@@ -1023,7 +1031,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   The line over the list counts the concepts, the ones that work as a label and, once a bank
   exists, the ones with an exemplar (`/api/bank/coverage`, «N con ejemplo» with its (i)): it
   is a fact about the graph, so the bank's screen draws no coverage (user's request,
-  2026-10-05).
+  2026-10-05). A student reads it as `SyllabusReader`: the header without a number and
+  `GraphExplorer reading` under `StageGate.ReadingScope` (lock reason `"reading"`, which
+  nothing lifts) — list, concept card, map and relations; no build, progress, correction or
+  questionnaire, no column «sirve de etiqueta», no «sin descripción», and a line that counts
+  the concepts and nothing else.
 - Bank: seven rows a page, every collapsed row the same height, bounded cells, `table-fixed`,
   filters (search, modality, source, level, «Sin concepto»), no ordering control, no
   similarity scores, primary concept as a filled badge placed first. `ConceptBadge`/
@@ -1235,7 +1247,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   `vite/chunk-graph.ts` writes to `dist/.vite/chunks.json`; its comment stripping is a
   string-aware scanner with self-tests. `ApiError.code` is `X-Error-Code` and
   `ApiError.retryAfter` is `Retry-After` in seconds; a `feature_off` refetches the session
-  (`main.tsx`).
+  (`main.tsx`), and a `not_member` or `membership_disabled` makes the tab leave the subject
+  (`queries.leaveLostWorkspace`: forget the tab's slug, drop the instance's queries, land
+  where `me` says).
 - A vocabulary sweep is verified in the browser, not by a green suite.
 
 ## Closed decisions (do not revert without explicit user request)
@@ -1350,7 +1364,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   is measured; arm colours fixed; theme three-state.
 - The bar is the path: four numbered steps and the unnumbered doors open to the account (up
   to three), the two groups set apart by a rule and with no phase captions (2026-10-04); no
-  dashboard; the rail is gone.
+  dashboard; the rail is gone. For a student the bar draws «Temario» without a number as the
+  only stage, and `/` leads to the first open door or to `SubjectNotReady`; for a teacher
+  nothing changes (2026-10-06).
 - View and correct are two moments; «Continuar» closes a stage and stands with «Quiero
   corregir algo» beside the title on the four steps, never in a block at the foot
   (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift.

@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   STEPS,
+  STUDENT_HIDDEN,
+  SYLLABUS,
   USES,
   currentStepPath,
   nextStepOf,
   stepBusy,
   stepStates,
+  studentLandingPath,
   usesFor,
 } from "./steps";
 import { featuresOf, type ArtifactStatus, type Job, type StageState } from "./types";
@@ -157,5 +160,27 @@ describe("usesFor", () => {
     expect(
       usesFor(featuresOf({ features: { evaluation: "yes" } as never })).map((door) => door.key),
     ).toEqual(["generate"]);
+  });
+});
+
+describe("a student's bar", () => {
+  it("draws the syllabus alone of the construction, at the graph step's own path", () => {
+    const graph = STEPS.find((step) => step.artifact === "knowledge_graph")!;
+    expect(SYLLABUS.path).toBe(graph.path);
+    expect(SYLLABUS.labelKey).toBe(graph.labelKey);
+    // Not a door: the doors stay the three of USES.
+    expect(USES.map((door) => door.key)).not.toContain(SYLLABUS.key);
+  });
+
+  it("hides every other step of the construction, the raw material included", () => {
+    expect([...STUDENT_HIDDEN].sort()).toEqual(["/prepare/bank", "/prepare/profile", "/raw"]);
+    expect(STUDENT_HIDDEN).not.toContain(SYLLABUS.path);
+  });
+});
+
+describe("studentLandingPath", () => {
+  it("lands on generating while it is open", () => {
+    expect(studentLandingPath({ evaluation: true, tutor: true })).toBe("/generate");
+    expect(studentLandingPath({ evaluation: false, tutor: false })).toBe("/generate");
   });
 });

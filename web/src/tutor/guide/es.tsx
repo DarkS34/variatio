@@ -23,8 +23,8 @@ function Tutor() {
           Una de las puertas que se abren tras la construcción: una conversación con un tutor socrático, que
           guía con preguntas en vez de dar respuestas. Está en tu barra porque quien administra
           la instalación lo ha abierto a tu cuenta, y se abre con las mismas condiciones que
-          «{t("nav.create")}». Está pensada para los alumnos: un lector de la asignatura puede
-          usarla aunque no pueda construir ni generar nada.
+          «{t("nav.create")}». Está pensada para los alumnos: un alumno de la asignatura la usa
+          aunque no pueda construir ni corregir nada.
         </p>
         <p>
           El tutor <strong>no da soluciones</strong>: te hace preguntas para que llegues tú a

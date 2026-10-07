@@ -4,6 +4,7 @@ import { TokenStream } from "@/components/TokenStream";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/misc";
 import type { ExemplarsProfile } from "@/lib/types";
+import { useIsStudent } from "@/state/auth";
 import type { RunView } from "@/state/runStore";
 
 import { FewShotPanel } from "./FewShotPanel";
@@ -16,7 +17,8 @@ import { useT } from "@/lib/i18n";
  *
  * It is also the ONE place the model's reasoning is read — of the item being written, since
  * the store resets it at every prompt — along with the token stream, the timeline, the
- * exemplars the few-shot used and the prompt that went out.
+ * exemplars the few-shot used and the prompt that went out. A student reads neither of the
+ * last two: they are the bank, which the server already left out of the student's events.
  */
 export function RunPanel({
   run,
@@ -32,6 +34,7 @@ export function RunPanel({
   profile: ExemplarsProfile | null;
 }) {
   const { t } = useT();
+  const student = useIsStudent();
   return (
     <div className="space-y-3 p-3">
       {run.guardrail && !run.guardrail.checked ? (
@@ -41,7 +44,7 @@ export function RunPanel({
       <RunTimeline
         steps={run.steps}
         slots={{
-          generate: run.fewShot ? (
+          generate: run.fewShot && !student ? (
             <FewShotPanel exemplars={run.fewShot} profile={profile} />
           ) : null,
         }}

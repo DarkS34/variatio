@@ -23,8 +23,8 @@ function Tutor() {
           One of the doors that open after the construction: a conversation with a Socratic tutor, which
           guides with questions instead of giving answers. It is on your bar because whoever
           administers the installation has opened it to your account, and it opens on the same
-          conditions as "{t("nav.create")}". It is meant for students: a reader of the subject
-          can use it even without being able to build or generate anything.
+          conditions as "{t("nav.create")}". It is meant for students: a student of the subject
+          uses it without being able to build or correct anything.
         </p>
         <p>
           The tutor <strong>gives no solutions</strong>: it asks you questions so that you reach

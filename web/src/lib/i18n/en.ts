@@ -43,12 +43,12 @@ export const en: Catalogue = {
   "workspace.language.onlyAtCreation": "Chosen when the subject is created and not afterwards.",
 
   // ROLES -------------------------------------------------------------------------------
-  "role.viewer": "Viewer",
-  "role.editor": "Editor",
+  "role.viewer": "Student",
+  "role.editor": "Teacher",
   "role.owner": "Owner",
-  "role.viewer.hint": "Can see everything and changes nothing.",
-  "role.editor.hint": "All of the above, plus building, editing, approving and generating.",
-  "role.owner.hint": "All of the above, plus renaming or deleting the subject.",
+  "role.viewer.hint": "Sees the syllabus. Generates exercises, evaluates or uses the tutor as their permissions allow. Does not see the rest of the construction.",
+  "role.editor.hint": "All of the above, plus building, correcting and inviting students.",
+  "role.owner.hint": "All of the above, plus inviting teachers, handing over the ownership, ending the course and deleting the subject.",
   "role.undeclared": "No permission declared.",
 
   // ACCOUNT -----------------------------------------------------------------------------
@@ -250,6 +250,9 @@ export const en: Catalogue = {
   },
   "nav.mySubjects": "My subjects and exercises",
   "nav.needsApproved": "The construction phase — preparing the subject — has to be finished first",
+  "nav.subjectNotReady": "Your teacher is still preparing this subject",
+  "subject.notReady": "Your teacher is still preparing this subject",
+  "subject.notReady.body": "When they finish, you will see it here.",
   "nav.step.raw": "Notes and exercises",
   "nav.step.profile": "Exercise types",
   "nav.step.graph": "Syllabus",
@@ -1147,6 +1150,7 @@ export const en: Catalogue = {
   "kg.newConcept.description": "It will be added to the syllabus and can be used straight away to classify and to ask for exercises.",
   "kg.editError": "Error editing the syllabus",
   "kg.outlineHeader": "{concepts} · {taggable} used to tag the exercises you uploaded",
+  "kg.reading.title": "The subject's concepts and how they relate: what has to be known before each one, and what comes after.",
   "kg.outlineCovered": "{covered} with an example",
   "kg.coverageHint": "What “with an example” counts",
   "kg.coverageBody": "It counts the concepts that work as a label and have at least one exercise of yours. A new exercise on a concept with no example is written with nothing to imitate, and it shows.",

@@ -98,7 +98,7 @@ const GUIDE: Record<string, GuideSlug> = {
  * wrong, it is simply not this moment's task. What does not rewrite the artifact stays
  * live in both states — the concept descriptions and the curriculum are separate files.
  */
-export type StageLockReason = "reviewing" | null;
+export type StageLockReason = "reviewing" | "reading" | null;
 
 const StageLock = createContext<StageLockReason>(null);
 
@@ -163,6 +163,17 @@ function StageScope({
       <StagePending.Provider value={register}>{children}</StagePending.Provider>
     </StageLock.Provider>
   );
+}
+
+/**
+ * The static view with no way out of it: what a student reads a stage through.
+ *
+ * Every control that only corrects reads the lock and hides under it, exactly as while a
+ * teacher looks at a stage before correcting — but nothing above lifts it: there is no
+ * «Quiero corregir algo», since nothing a student could write would be accepted.
+ */
+export function ReadingScope({ children }: { children: ReactNode }) {
+  return <StageLock.Provider value="reading">{children}</StageLock.Provider>;
 }
 
 /**

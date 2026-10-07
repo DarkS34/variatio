@@ -185,9 +185,10 @@ function Start() {
         <Steps
           items={[
             <>
-              Get yourself into a <strong>subject</strong>. If you have none yet, you are
-              offered to create yours as soon as you come in; if you have several, you switch in
-              the selector at the top left. Everything else lives inside one.
+              Get yourself into a <strong>subject</strong>. If you have none yet and your
+              account is a teacher's, you are offered to create yours as soon as you come in; if
+              you have several, you switch in the selector at the top left. Everything else
+              lives inside one.
             </>,
             <>
               <strong>Step {stepNumber(0)}</strong> — in "{t("nav.step.raw")}" upload the

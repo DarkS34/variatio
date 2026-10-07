@@ -59,12 +59,12 @@ export const es = {
   "workspace.language.onlyAtCreation": "Se elige al crear la asignatura y no después.",
 
   // ROLES -------------------------------------------------------------------------------
-  "role.viewer": "Lector",
-  "role.editor": "Editor",
+  "role.viewer": "Alumno",
+  "role.editor": "Docente",
   "role.owner": "Propietario",
-  "role.viewer.hint": "Puede verlo todo y no cambia nada.",
-  "role.editor.hint": "Todo lo anterior, más construir, editar, aprobar y generar.",
-  "role.owner.hint": "Todo lo anterior, más renombrar o borrar la asignatura.",
+  "role.viewer.hint": "Ve el temario. Genera ejercicios, evalúa o usa el tutor según sus permisos. No ve el resto de la construcción.",
+  "role.editor.hint": "Todo lo anterior, más construir, corregir e invitar alumnos.",
+  "role.owner.hint": "Todo lo anterior, más invitar docentes, ceder la propiedad, terminar el curso y borrar la asignatura.",
   "role.undeclared": "Sin permiso declarado.",
 
   // ACCOUNT -----------------------------------------------------------------------------
@@ -279,6 +279,9 @@ export const es = {
   },
   "nav.mySubjects": "Mis asignaturas y ejercicios",
   "nav.needsApproved": "Antes hay que terminar la fase de construcción: preparar la asignatura",
+  "nav.subjectNotReady": "Tu docente todavía está preparando esta asignatura",
+  "subject.notReady": "Tu docente todavía está preparando esta asignatura",
+  "subject.notReady.body": "Cuando termine, la verás aquí.",
   // The path, in the words of whoever teaches. Not one of them names an artifact: a teacher
   // opening this for the first time does not know what an "exemplars profile" is, and knows
   // perfectly well what the types of exercise they set are.
@@ -1265,6 +1268,7 @@ export const es = {
   // No prefix: the count already says "conceptos" and the title above says "Temario", so
   // "Conceptos · 162 conceptos" is the same word twice on one line.
   "kg.outlineHeader": "{concepts} · {taggable} se usan para etiquetar los ejercicios que has subido",
+  "kg.reading.title": "Los conceptos de la asignatura y cómo se relacionan: qué hay que saber antes de cada uno y qué viene después.",
   "kg.outlineCovered": "{covered} con ejemplo",
   "kg.coverageHint": "Qué cuenta «con ejemplo»",
   "kg.coverageBody": "Cuenta los conceptos que sirven de etiqueta y tienen al menos un ejercicio tuyo. Un ejercicio nuevo sobre un concepto sin ejemplo se escribe sin nada que imitar, y se nota.",

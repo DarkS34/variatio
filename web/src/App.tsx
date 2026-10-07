@@ -4,9 +4,10 @@ import { AppShell } from "@/components/AppShell";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
+import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";
 import { slideCount, slideOf } from "@/features/tutorial/slides";
-import { useFeatures, useHasWorkspace } from "@/state/auth";
-import { currentStepPath } from "@/lib/steps";
+import { useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
+import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
 import { useT, withCatalogues } from "@/lib/i18n";
@@ -81,6 +82,7 @@ export function App() {
   const pipeline = usePipeline();
   const hasWorkspace = useHasWorkspace();
   const features = useFeatures();
+  const student = useIsStudent();
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
@@ -99,6 +101,16 @@ export function App() {
     // One message rather than six 403s. It is drawn as the panel whatever the route was,
     // because the panel is where the one thing to do here lives.
     if (!hasWorkspace && NEEDS_WORKSPACE.includes(path)) return <NoWorkspace />;
+
+    // A STUDENT sees the syllabus and the doors open to them, and of the subject nothing at
+    // all until its teacher has closed the construction: the rest of the steps are not
+    // destinations, and before it is closed every screen of the subject is the one sentence
+    // saying so — never a syllabus half corrected, never a way to a stage they cannot touch.
+    if (student && STUDENT_HIDDEN.includes(path)) return <NotFound />;
+    if (student && NEEDS_WORKSPACE.includes(path)) {
+      if (!pipeline.data) return <Waiting />;
+      if (!pipeline.data.generation_unlocked) return <SubjectNotReady />;
+    }
 
     switch (path) {
       // "/" is not a screen but an ANSWER. The bar IS the chain, so there is nothing left
@@ -187,26 +199,38 @@ function Redirect({ to }: { to: string }) {
 
 
 /**
- * Where a session lands: the step that is next.
+ * Where a session lands: the step that is next, or — for a student, whose subject is ready
+ * by the time this is drawn — their first open door.
  *
  * It waits for both readings before deciding — `currentStepPath` over an empty pipeline
  * answers "step 1" for every workspace in existence, and redirecting there and then
- * bouncing away is worse than a second of nothing.
+ * bouncing away is worse than a second of nothing. A student needs neither: the raw
+ * material is not theirs to read.
  */
 function Landing() {
   const { navigate } = useRouter();
   const pipeline = usePipeline();
   const raw = useRaw();
+  const student = useIsStudent();
+  const features = useFeatures();
   const slots = raw.data?.slots ?? [];
-  const ready = pipeline.data !== undefined && raw.data !== undefined;
+  const ready = student || (pipeline.data !== undefined && raw.data !== undefined);
 
   useEffect(() => {
     if (!ready) return;
+    if (student) {
+      navigate(studentLandingPath(features), { replace: true });
+      return;
+    }
     const stocked = slots.length > 0 && slots.every((slot) => slot.files.length > 0);
     navigate(currentStepPath(pipeline.data!.stages, stocked), { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
+  return <Waiting />;
+}
+
+function Waiting() {
   return (
     <div className="flex justify-center py-16">
       <Spinner className="size-5 text-muted-foreground" />

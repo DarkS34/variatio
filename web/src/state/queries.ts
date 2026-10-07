@@ -24,7 +24,7 @@ import type {
   Role,
   WorkspaceRow,
 } from "@/lib/types";
-import { authKeys, useHasWorkspace, useSession } from "./auth";
+import { authKeys, useHasWorkspace, useIsStudent, useSession } from "./auth";
 import { runStore, type RunView } from "./runStore";
 import { activeWorkspace, workspaceStore } from "./workspace";
 
@@ -289,14 +289,19 @@ export function useKgGraph(workspace?: string | null) {
   });
 }
 
+// Never asked for a student: the bank is the construction's (`auth.EDIT`), and its count is
+// not on a student's syllabus.
 export function useCoverage() {
-  return useQuery({ queryKey: keys.coverage, queryFn: api.coverage });
+  return useQuery({ queryKey: keys.coverage, queryFn: api.coverage, enabled: !useIsStudent() });
 }
 
 // Gated like `useHealth`: the shell reads it, and `/api/raw` resolves a membership like
-// every route, so an account in no workspace would only ever get a 403.
+// every route, so an account in no workspace would only ever get a 403 — and so would a
+// student, to whom the raw material is closed (`auth.EDIT`).
 export function useRaw() {
-  return useQuery({ queryKey: keys.raw, queryFn: api.raw, enabled: useHasWorkspace() });
+  const hasWorkspace = useHasWorkspace();
+  const student = useIsStudent();
+  return useQuery({ queryKey: keys.raw, queryFn: api.raw, enabled: hasWorkspace && !student });
 }
 
 /** The phase plan of every builder: what the segmented bar is a drawing of. */
@@ -431,6 +436,21 @@ function relandStream(client: QueryClient) {
   void client.refetchQueries({ queryKey: authKeys.me }).then(() => {
     if (activeWorkspace()) runStore.connect();
   });
+}
+
+/**
+ * Move the tab out of an instance this account has just lost: a teacher removed or paused
+ * its membership while the tab was open on it (`not_member`, `membership_disabled`).
+ *
+ * The tab forgets its own choice — the header it sends is what the server refuses — and
+ * lands wherever `me` says the account is now. Called once per refusal of every query that
+ * was in flight, so only the first does anything: by the second the tab has no choice left.
+ */
+export function leaveLostWorkspace(client: QueryClient) {
+  if (activeWorkspace() === null) return;
+  workspaceStore.set(null);
+  dropInstanceQueries(client);
+  relandStream(client);
 }
 
 /**

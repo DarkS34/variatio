@@ -14,7 +14,9 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { JobProgress } from "@/components/BuildProgress";
+import { GuideLink } from "@/components/GuideLink";
 import {
+  ReadingScope,
   StageGate,
   useStageLocked,
   useStageLockReason,
@@ -45,6 +47,7 @@ import {
   usePipeline,
   useSubmitJob,
 } from "@/state/queries";
+import { useIsStudent } from "@/state/auth";
 import { ConceptFlow } from "./ConceptFlow";
 import { ConceptOutline } from "./ConceptOutline";
 import { GraphCanvas } from "./GraphCanvas";
@@ -69,8 +72,10 @@ function ConceptDetail({
   // not revoke the approval, so sealing the stage has never stopped anybody fixing one —
   // and taking that away would mean withdrawing an approval to correct a sentence. What it
   // does follow is the other axis: while the stage is merely being LOOKED at, nothing
-  // writes.
-  const viewing = useStageLockReason() === "reviewing";
+  // writes — nor, for a student reading the syllabus, ever.
+  const reason = useStageLockReason();
+  const viewing = reason !== null;
+  const reading = reason === "reading";
   const [name, setName] = useState(concept.name);
   const [domain, setDomain] = useState(concept.domain);
   const [relation, setRelation] = useState(relations[0] ?? "");
@@ -180,7 +185,7 @@ function ConceptDetail({
           <h4 className="text-micro font-condensed uppercase text-muted-foreground">
             {t("kg.description")}
           </h4>
-          {!concept.description ? (
+          {!concept.description && !reading ? (
             <Badge variant="attention">{t("kg.noDescriptionBadge")}</Badge>
           ) : null}
         </div>
@@ -430,14 +435,17 @@ function AddConceptDialog({
  * does it have a description, has the course got here yet — and a force layout can show none
  * of them: it answers "what is near what", which is a question you ask once. So the outline
  * is the screen and the drawing is the reference, one click from filling the window.
+ *
+ * `reading` is a student's view: the line over the list counts the concepts and nothing
+ * else, because which ones work as labels and which have an example are the construction's.
  */
-function GraphExplorer() {
+function GraphExplorer({ reading = false }: { reading?: boolean }) {
   const { plural, t } = useT();
   const locked = useStageLocked();
   const kg = useKg();
   const graph = useKgGraph();
   // How many concepts the bank's tags reach. A subject with no bank yet answers 404, and
-  // then the header says nothing about examples.
+  // then the header says nothing about examples. Never asked for a student (`useCoverage`).
   const coverage = useCoverage();
   // The workspace's own curriculum, read only to be drawn. `undefined` while it is loading
   // and when the workspace has none, because an empty set means "covered nothing yet",
@@ -591,11 +599,13 @@ function GraphExplorer() {
             {/* The line takes the width the controls leave and breaks inside itself: at its
                 full length it sent the search to a line of its own. */}
             <span className="min-w-64 flex-1 basis-0 text-micro font-condensed uppercase text-muted-foreground">
-              {t("kg.outlineHeader", {
-                concepts: plural("outline.conceptCount", totals.concepts),
-                taggable: totals.taggable,
-              })}
-              {covered === null ? null : (
+              {reading
+                ? plural("outline.conceptCount", totals.concepts)
+                : t("kg.outlineHeader", {
+                    concepts: plural("outline.conceptCount", totals.concepts),
+                    taggable: totals.taggable,
+                  })}
+              {reading || covered === null ? null : (
                 <>
                   {" · "}
                   {t("kg.outlineCovered", { covered })}{" "}
@@ -650,6 +660,7 @@ function GraphExplorer() {
               onMoveUnit={moveDomain}
               onDeleteUnit={(name, count) => setDeletingUnit({ name, count })}
               onAddConcept={setAddingIn}
+              reading={reading}
               onSetTaggable={(name, next) =>
                 api
                   .updateConcept({ name, taggable: next })
@@ -945,7 +956,7 @@ function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
 
   const unreviewed =
     Boolean(totals) && !totals!.taggability_reviewed && totals!.taggable === totals!.concepts;
-  const curating = reason !== "reviewing";
+  const curating = reason === null;
 
   const button = curating ? (
     <Button
@@ -973,7 +984,38 @@ function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
   return <div className="mb-4 flex flex-wrap items-center justify-end gap-2">{button}</div>;
 }
 
+/**
+ * The syllabus: a teacher's stage to build and correct, a student's to read.
+ *
+ * A student reaches it only once the construction is closed (`App`), so it is the finished
+ * syllabus they read and never one half corrected.
+ */
 export function KgScreen({ stage }: { stage: StageState | undefined }) {
+  return useIsStudent() ? <SyllabusReader /> : <SyllabusStage stage={stage} />;
+}
+
+/**
+ * The syllabus as a student reads it: the stage's header with no number, and the outline,
+ * the concept's card, the map and the relations of the concept chosen — with no control that
+ * writes, nor the build, its progress, the questionnaire or the switch «sirve de etiqueta».
+ */
+function SyllabusReader() {
+  const { t } = useT();
+  return (
+    <div className="space-y-7">
+      <header className="min-w-0 space-y-1.5">
+        <h1 className="text-title">{t("nav.step.graph")}</h1>
+        <p className="max-w-[74ch] text-body text-muted-foreground">{t("kg.reading.title")}</p>
+        <GuideLink slug="graph" />
+      </header>
+      <ReadingScope>
+        <GraphExplorer reading />
+      </ReadingScope>
+    </div>
+  );
+}
+
+function SyllabusStage({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
   const reviewRun = useJobRun("review_taggability");
   const reviewing = useJobRunning("review_taggability");

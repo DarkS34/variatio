@@ -177,6 +177,15 @@ export function useIsOwner() {
 }
 
 /**
+ * Is this session a student of the subject it is in? A `viewer` is: they see the syllabus
+ * and use what their permissions open, and nothing else of the construction. False while
+ * the session loads, so nothing is hidden and then shown.
+ */
+export function useIsStudent() {
+  return useSession().data?.role === "viewer";
+}
+
+/**
  * May this account create subjects? Only a teacher's may: the account's profile, which its
  * invitation set (the server's own `can_create`, and a 403 `cannot_create` otherwise). False
  * while the session loads, and for a profile nobody recorded.

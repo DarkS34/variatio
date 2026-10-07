@@ -32,7 +32,7 @@ from variatio.core.workspace import Workspace as PathWorkspace
 
 from .. import features, installation, maintenance
 from ..db import identity, repository, session_scope
-from ..db.models import OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
+from ..db.models import EDITOR, OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
 from .tokens import digest
 
 DB_UNREACHABLE = (
@@ -54,6 +54,9 @@ NO_WORKSPACE = (
 # action needs.
 NOT_MEMBER = "not_member"
 ROLE_TOO_LOW = "role_too_low"
+
+# How a refusal names a role: the membership's words for the people in a subject.
+ROLE_NAMES = {VIEWER: "alumno", EDITOR: "docente", OWNER: "propietario"}
 
 
 @dataclass(frozen=True)
@@ -353,7 +356,8 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
             if not user.is_admin:
                 raise HTTPException(
                     403,
-                    f"Tu rol ({role}) no permite esta acción; hace falta {minimum}.",
+                    f"Como {ROLE_NAMES.get(role, role)} de esta asignatura no puedes hacer esto; "
+                    f"hace falta ser {ROLE_NAMES.get(minimum, minimum)}.",
                     headers={"X-Error-Code": ROLE_TOO_LOW},
                 )
             as_admin = True

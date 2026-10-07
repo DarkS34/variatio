@@ -50,6 +50,40 @@ export const USES = [
 
 export type Door = (typeof USES)[number];
 
+/**
+ * A STUDENT'S WHOLE CONSTRUCTION PHASE: the syllabus, read and never corrected.
+ *
+ * The bar draws it alone and WITHOUT a number — a number says "a stop you walk to after the
+ * one before", and a student walks no path: the subject's teacher builds it. The rest of the
+ * construction is not theirs to see (`STUDENT_HIDDEN`). It is not a door either: the doors
+ * stay three at most.
+ */
+export const SYLLABUS = {
+  key: "syllabus",
+  path: "/prepare/graph",
+  labelKey: "nav.step.graph",
+  feature: null,
+} as const satisfies { key: string; path: string; labelKey: Key; feature: null };
+
+/** The construction's screens a student does not see — every step but the syllabus. */
+export const STUDENT_HIDDEN: readonly string[] = STEPS.map((step) => step.path).filter(
+  (path) => path !== SYLLABUS.path,
+);
+
+// Where a student lands, door by door: generating first, then the tutor, then the evaluation.
+const LANDING_ORDER: readonly Door["key"][] = ["generate", "tutor", "compare"];
+
+/**
+ * Where "/" lands a student once the subject is ready: their first open door, or the
+ * syllabus when none is open. Before the subject is ready there is nowhere to land
+ * (`SubjectNotReady`), which is the caller's to decide.
+ */
+export function studentLandingPath(features: Features): string {
+  const open = usesFor(features);
+  const first = LANDING_ORDER.map((key) => open.find((door) => door.key === key)).find(Boolean);
+  return first?.path ?? SYLLABUS.path;
+}
+
 /** The name an optional function goes by on screen: its door's. */
 export function featureLabelKey(feature: keyof Features): Key {
   return USES.find((door) => door.feature === feature)!.labelKey;

@@ -48,6 +48,12 @@ const COLUMNS =
   "grid grid-cols-[1.25rem_minmax(0,1fr)_2.25rem_1rem] items-center gap-x-2 px-2 " +
   "md:grid-cols-[1.5rem_minmax(0,1fr)_11rem_1.25rem] md:px-3";
 
+// A student's reading of the list has no column «sirve de etiqueta»: whether a concept tags
+// the uploaded exercises is the construction's, and the student uploaded none.
+const READING_COLUMNS =
+  "grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-x-2 px-2 " +
+  "md:grid-cols-[1.5rem_minmax(0,1fr)_1.25rem] md:px-3";
+
 function UnitMenu({
   unit,
   count,
@@ -174,6 +180,7 @@ function ConceptRow({
   colour,
   selected,
   locked,
+  reading,
   onSelect,
   onSetTaggable,
 }: {
@@ -181,6 +188,7 @@ function ConceptRow({
   colour: string;
   selected: boolean;
   locked: boolean;
+  reading: boolean;
   onSelect: () => void;
   onSetTaggable: (next: boolean) => void;
 }) {
@@ -200,7 +208,7 @@ function ConceptRow({
         }
       }}
       className={cn(
-        COLUMNS,
+        reading ? READING_COLUMNS : COLUMNS,
         "mx-4 h-9 cursor-pointer border-t border-border/55 transition-colors hover:bg-accent",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         selected && "bg-primary/[0.09]",
@@ -248,7 +256,7 @@ function ConceptRow({
           what it is about. The mouse-down is stopped as well as the click — the row's own
           handler is on `onClick`, but a nested control that only stops the click still lets
           a drag out of the switch land as a selection. */}
-      {locked ? (
+      {reading ? null : locked ? (
         <span
           className={cn(
             "truncate pr-2 text-small",
@@ -290,6 +298,7 @@ export function ConceptOutline({
   onDeleteUnit,
   onAddConcept,
   onSetTaggable,
+  reading = false,
 }: {
   concepts: KgConcept[];
   /** Unit names in the order of the syllabus. */
@@ -313,6 +322,8 @@ export function ConceptOutline({
   /** Mark a concept as serving — or not serving — as a label. The row's switch is the only
    *  place it is set; the concept card carries none. */
   onSetTaggable: (name: string, next: boolean) => void;
+  /** A student's reading: the list without the column «sirve de etiqueta». */
+  reading?: boolean;
 }) {
   const { plural, t } = useT();
   const locked = useStageLocked();
@@ -382,23 +393,25 @@ export function ConceptOutline({
     <div>
       <div
         className={cn(
-          COLUMNS,
+          reading ? READING_COLUMNS : COLUMNS,
           "h-8 text-micro font-condensed uppercase text-muted-foreground",
         )}
       >
         <span />
         <span>{t("outline.column.unit")}</span>
-        <span className="flex items-center gap-1 pr-2">
-          <span className="hidden md:inline">
-            {t("outline.column.taggable")}
+        {reading ? null : (
+          <span className="flex items-center gap-1 pr-2">
+            <span className="hidden md:inline">
+              {t("outline.column.taggable")}
+            </span>
+            {/* The (i) moved here with the control it explains: it hung off the concept
+                card's switch, and that switch is gone. On a narrow screen the column has no
+                room for its own name and this is the only thing left to name it. */}
+            <InfoHint label={t("kg.taggable.hintLabel")}>
+              {t("kg.taggable.hint")}
+            </InfoHint>
           </span>
-          {/* The (i) moved here with the control it explains: it hung off the concept
-              card's switch, and that switch is gone. On a narrow screen the column has no
-              room for its own name and this is the only thing left to name it. */}
-          <InfoHint label={t("kg.taggable.hintLabel")}>
-            {t("kg.taggable.hint")}
-          </InfoHint>
-        </span>
+        )}
         <span />
       </div>
 
@@ -445,7 +458,7 @@ export function ConceptOutline({
                   {partial
                     ? t("outline.partialCount", { shown: items.length, total })
                     : plural("outline.conceptCount", total)}
-                  {undescribed > 0
+                  {undescribed > 0 && !reading
                     ? t("outline.undescribed", { n: undescribed })
                     : ""}
                 </span>
@@ -475,6 +488,7 @@ export function ConceptOutline({
                     colour={colour}
                     selected={selected === concept.name}
                     locked={locked}
+                    reading={reading}
                     onSelect={() => onSelect(concept.name)}
                     onSetTaggable={(next) => onSetTaggable(concept.name, next)}
                   />

@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Loader2,
   MessagesSquare,
+  Network,
   Play,
   Scale,
   Wrench,
@@ -26,6 +27,7 @@ import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import {
   STEPS,
+  SYLLABUS,
   stepBusy,
   stepNumber,
   stepStates,
@@ -35,7 +37,7 @@ import {
 } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useFeatures, useHasWorkspace } from "@/state/auth";
+import { useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
 import {
   keys,
   useHealth,
@@ -208,7 +210,8 @@ function DoorPill({
   open,
   disabledReason,
 }: {
-  door: Door;
+  /** A door of `USES`, or a student's syllabus, which is drawn the same way and is no door. */
+  door: Door | typeof SYLLABUS;
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   active: boolean;
   /** Whether the whole construction is closed, which is what opens every door at once. */
@@ -406,6 +409,7 @@ function MainNav({
   const { t } = useT();
   // Only the doors this account may open: a function closed to it is not on the bar at all.
   const doors = usesFor(useFeatures());
+  const student = useIsStudent();
   const states = stepStates(stages, rawStocked);
 
   // Folded once everything is done, unless the person unfolded it or is standing on one of
@@ -474,7 +478,17 @@ function MainNav({
       )}
     >
       <PhaseGroup>
-        {folded ? (
+        {student ? (
+          // A student's construction is the syllabus alone, read: no number, since they walk
+          // no path, and closed like the doors until the subject is ready.
+          <DoorPill
+            door={SYLLABUS}
+            icon={Network}
+            active={path === SYLLABUS.path}
+            open={locked === null}
+            disabledReason={locked === null ? null : t("nav.subjectNotReady")}
+          />
+        ) : folded ? (
           <FoldedPhase onUnfold={() => onSteps(true)} />
         ) : (
           <>
@@ -519,7 +533,7 @@ function MainNav({
             icon={DOOR_ICONS[door.key]}
             active={path === door.path}
             open={locked === null}
-            disabledReason={locked}
+            disabledReason={student && locked !== null ? t("nav.subjectNotReady") : locked}
           />
         ))}
       </PhaseGroup>

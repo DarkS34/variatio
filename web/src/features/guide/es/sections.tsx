@@ -181,9 +181,9 @@ function Start() {
         <Steps
           items={[
             <>
-              Ponte en una <strong>asignatura</strong>. Si aún no tienes ninguna, se te
-              ofrece crear la tuya nada más entrar; si tienes varias, se cambia en el selector
-              de arriba a la izquierda. Todo lo demás vive dentro de una.
+              Ponte en una <strong>asignatura</strong>. Si aún no tienes ninguna y tu cuenta es
+              de docente, se te ofrece crear la tuya nada más entrar; si tienes varias, se
+              cambia en el selector de arriba a la izquierda. Todo lo demás vive dentro de una.
             </>,
             <>
               <strong>Paso {stepNumber(0)}</strong> — en «{t("nav.step.raw")}» sube los apuntes

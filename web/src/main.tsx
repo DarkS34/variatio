@@ -28,19 +28,25 @@ import { ApiError } from "./lib/api";
 import { ensureCatalogue, localeStore } from "./lib/i18n";
 import { RouterProvider } from "./lib/router";
 import { authKeys } from "./state/auth";
+import { leaveLostWorkspace } from "./state/queries";
 import "./index.css";
 
 /**
- * A function switched off while somebody is inside it: ask for the session again.
+ * A door that closed while somebody was inside it: ask for the session again.
  *
  * The administrator closes the evaluation or the tutor from the panel, and the next request
  * of a screen still open on it answers 403 `feature_off`. Refetching the session is what
  * makes the door leave the bar and the route fall to "not found", instead of a screen that
- * fails request by request.
+ * fails request by request. A teacher removing or pausing this account's membership is the
+ * same thing one level up — `not_member` or `membership_disabled` — and the tab leaves the
+ * subject for wherever the session lands it.
  */
 function onApiError(error: unknown) {
-  if (error instanceof ApiError && error.code === "feature_off") {
+  if (!(error instanceof ApiError)) return;
+  if (error.code === "feature_off") {
     void queryClient.invalidateQueries({ queryKey: authKeys.me });
+  } else if (error.code === "not_member" || error.code === "membership_disabled") {
+    leaveLostWorkspace(queryClient);
   }
 }
 
