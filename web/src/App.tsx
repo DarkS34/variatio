@@ -6,7 +6,7 @@ import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";
 import { slideCount, slideOf } from "@/features/tutorial/slides";
-import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
+import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent, useSpeaksToStudent } from "@/state/auth";
 import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
@@ -87,13 +87,15 @@ export function App() {
   const hasWorkspace = useHasWorkspace();
   const features = useFeatures();
   const student = useIsStudent();
+  // Whose deck the tutorial is: `TutorialScreen` and `AppShell` count it the same way.
+  const studentDeck = useSpeaksToStudent();
   const teaches = useCanEdit();
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
     // The tutorial runs inside the shell, and the shell reads its slide from the PATH,
     // which is why there is one route per slide. `AppShell` reads it with the same count.
-    const slide = slideOf(path, slideCount(features));
+    const slide = slideOf(path, slideCount(features, studentDeck));
     if (slide !== null) return <TutorialScreen at={slide} />;
 
     if (path === "/guide" || path.startsWith("/guide/")) {

@@ -184,6 +184,13 @@ def _workspace_view(db: DbSession, workspace) -> dict:
         "name": workspace.name,
         "created_at": workspace.created_at.isoformat() if workspace.created_at else None,
         "members": len(identity.members_of(db, workspace.id)),
+        # Who owns it and how many study in it: a subject with nobody to own it is the one
+        # thing on this row that asks for the administrator («Elegir propietario»).
+        "owners": [
+            {"id": user.id, "username": user.username, "name": user.name}
+            for user in members.owners_of(db, workspace)
+        ],
+        "people": members.people_of(db, workspace),
         "generations": generations_store.count(installation.workspace_for(workspace.slug)),
         "warm": workspace.slug in deps.warm_slugs(),
         "stages": _chain(workspace.slug),
@@ -551,6 +558,27 @@ def revoke_membership(
             members.remove_member(db, workspace, user, admin)
         except members.Refusal as refusal:
             raise _refused(refusal) from None
+    return {"user_id": user_id, "workspace": slug}
+
+
+@router.post("/accounts/{user_id}/memberships/{slug}/enable")
+def enable_membership(
+    user_id: int,
+    slug: str,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Open again one account's access a teacher paused, as the teacher's own «Activar» does."""
+    workspace = repository.get_workspace(db, slug)
+    if workspace is None:
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
+    user = identity.get_user_by_id(db, user_id)
+    if user is None or identity.membership(db, workspace.id, user.id) is None:
+        raise HTTPException(404, "Esa cuenta no está en esa asignatura.")
+    try:
+        members.enable_member(db, workspace, user, admin)
+    except members.Refusal as refusal:
+        raise _refused(refusal) from None
     return {"user_id": user_id, "workspace": slug}
 
 

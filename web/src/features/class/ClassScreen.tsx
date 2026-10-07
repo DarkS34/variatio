@@ -1,4 +1,4 @@
-import { GraduationCap, Link2, Search, UserCheck, UserMinus, UserX } from "lucide-react";
+import { CalendarX, GraduationCap, Link2, Search, UserCheck, UserMinus, UserX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,12 +22,13 @@ import {
 } from "@/lib/members";
 import type { Member, MemberAction } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/state/auth";
+import { useIsOwner, useSession } from "@/state/auth";
 import { useActiveWorkspace, useClassLink, useMemberActions, useMembers } from "@/state/queries";
 
+import { EndCourseSection } from "./EndCourseSection";
 import { InviteSection, classLinkDetail } from "./InviteSection";
 
-type ClassSection = "students" | "invite";
+type ClassSection = "students" | "invite" | "end";
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
@@ -43,6 +44,7 @@ export function ClassScreen() {
   const session = useSession();
   const members = useMembers();
   const classLink = useClassLink();
+  const owner = useIsOwner();
   // Null until somebody picks: the section to open on depends on the list, which arrives later.
   const [picked, setPicked] = useState<ClassSection | null>(null);
   // The tab's subject, which is the one `/api/members` answered for, and not necessarily the
@@ -68,6 +70,10 @@ export function ClassScreen() {
       mark: <Link2 className="size-4" />,
       detail: classLink.isSuccess ? classLinkDetail(classLink.data.class_link, t) : null,
     },
+    // The owner's alone: ending a course takes every student out at once.
+    ...(owner
+      ? [{ key: "end", label: t("class.end"), mark: <CalendarX className="size-4" /> }]
+      : []),
   ];
 
   return (
@@ -96,6 +102,8 @@ export function ClassScreen() {
         >
           {section === "invite" ? (
             <InviteSection subject={subject} slug={slug} />
+          ) : section === "end" && owner ? (
+            <EndCourseSection subject={subject} />
           ) : (
             <StudentsSection students={students} />
           )}

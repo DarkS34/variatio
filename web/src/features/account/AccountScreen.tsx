@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,6 +27,7 @@ import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
 import { SubjectExercises } from "@/features/generations/GenerationsPanel";
+import { PeopleWhoLoseAccess } from "@/features/workspaces/PeopleWhoLoseAccess";
 import { LANGUAGES, LANGUAGE_NAMES, useT, type Key, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
 import { cn } from "@/lib/utils";
@@ -460,6 +461,9 @@ function MyWorkspacesTab() {
   const [target, setTarget] = useState<WorkspaceRow | null>(null);
   const { chosen, shown, moving, choose } = useSplit();
   const mine = (listing.data?.workspaces ?? []).filter((workspace) => !workspace.as_admin);
+  // Where the account teaches, then where it studies — a subject whose access a teacher
+  // paused among the second, closed. A group with no rows is not drawn.
+  const groups = subjectGroups(mine);
   const current = active ?? listing.data?.active ?? null;
   // A subject that left the list (deleted, access withdrawn) takes its column with it.
   const open = mine.find((workspace) => workspace.slug === shown) ?? null;
@@ -511,19 +515,32 @@ function MyWorkspacesTab() {
             )}
           >
             <ul className="space-y-1">
-              {mine.map((workspace) => (
-                <SubjectRow
-                  key={workspace.slug}
-                  workspace={workspace}
-                  inUse={workspace.slug === current}
-                  compact={split}
-                  chosen={split && workspace.slug === chosen}
-                  entering={switching.isPending}
-                  onExercises={() => choose(workspace.slug)}
-                  onEnter={() => switching.mutate(workspace.slug)}
-                  onClass={() => toClass(workspace)}
-                  onDelete={() => setTarget(workspace)}
-                />
+              {groups.map((group) => (
+                <Fragment key={group.key}>
+                  {/* Captioned only when both kinds have rows: one kind alone needs no name. */}
+                  {groups.length > 1 ? (
+                    <li
+                      aria-hidden
+                      className="px-3 pb-1 pt-3 text-micro font-condensed uppercase text-muted-foreground first:pt-1"
+                    >
+                      {t(group.label)}
+                    </li>
+                  ) : null}
+                  {group.rows.map((workspace) => (
+                    <SubjectRow
+                      key={workspace.slug}
+                      workspace={workspace}
+                      inUse={workspace.slug === current}
+                      compact={split}
+                      chosen={split && workspace.slug === chosen}
+                      entering={switching.isPending}
+                      onExercises={() => choose(workspace.slug)}
+                      onEnter={() => switching.mutate(workspace.slug)}
+                      onClass={() => toClass(workspace)}
+                      onDelete={() => setTarget(workspace)}
+                    />
+                  ))}
+                </Fragment>
               ))}
             </ul>
           </nav>
@@ -599,6 +616,18 @@ function useSplit() {
  * permission and the count, the whole row one button that moves the exercises to it. The
  * chosen row is the sunk tint, as in every list of the app that sits beside what it opens.
  */
+const TEACHES = new Set(["editor", "owner"]);
+
+/** The subjects split by what the account does there: teach, or study (paused ones included). */
+function subjectGroups(rows: WorkspaceRow[]): { key: string; label: Key; rows: WorkspaceRow[] }[] {
+  const teaching = rows.filter((row) => !row.disabled && row.role !== null && TEACHES.has(row.role));
+  const studying = rows.filter((row) => !teaching.includes(row));
+  return [
+    { key: "teaching", label: "acc.ws.teaching" as Key, rows: teaching },
+    { key: "studying", label: "acc.ws.studying" as Key, rows: studying },
+  ].filter((group) => group.rows.length > 0);
+}
+
 function SubjectRow({
   workspace,
   inUse,
@@ -625,6 +654,31 @@ function SubjectRow({
   const role = workspace.role ? t(ROLE_LABEL_KEYS[workspace.role]) : t("role.undeclared");
   const count =
     workspace.exercises === undefined ? null : plural("form.items", workspace.exercises);
+
+  // A subject whose access a teacher paused: named, dimmed and closed. Nothing opens from
+  // here — not the subject, not its exercises — until a teacher opens it again.
+  if (workspace.disabled)
+    return (
+      <li
+        className={cn(
+          "text-muted-foreground",
+          compact ? "flex items-center gap-3 px-3 py-2.5" : "mx-3 border-b border-border py-4 last:border-b-0",
+        )}
+      >
+        <span className="min-w-0 flex-1">
+          <span className={cn("block truncate", compact ? "text-body font-medium" : "text-heading")}>
+            {workspace.name}
+          </span>
+          <span className="flex flex-wrap items-center gap-1.5 text-small">
+            {compact ? null : <span className="font-mono">{workspace.slug}</span>}
+            <Badge variant="outline">{t("acc.ws.disabled")}</Badge>
+          </span>
+          {compact ? null : (
+            <span className="mt-1 block text-small">{t("acc.ws.disabledBody")}</span>
+          )}
+        </span>
+      </li>
+    );
 
   if (compact)
     return (
@@ -846,6 +900,7 @@ function DeleteMineDialog({
     >
       <div className="space-y-3 text-body">
         <p>{t("acc.ws.whatGoes")}</p>
+        <PeopleWhoLoseAccess people={workspace.people} />
         <p className="text-small text-muted-foreground">{t("acc.ws.filesStay")}</p>
         <div className="space-y-1">
           <Label htmlFor="confirm-slug">

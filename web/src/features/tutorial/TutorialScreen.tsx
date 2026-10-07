@@ -5,7 +5,7 @@ import { useT, withCatalogues, type Key } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
 import { STEPS, stepNumber } from "@/lib/steps";
 import { cn } from "@/lib/utils";
-import { useFeatures, useHasWorkspace } from "@/state/auth";
+import { useFeatures, useHasWorkspace, useSpeaksToStudent } from "@/state/auth";
 
 import { AskFigure, FlowFigure, PROSE, SourcesFigure } from "./figures";
 import {
@@ -48,12 +48,12 @@ import {
 
 /**
  * The door, drawn under a rule on the LAST slide drawn, whichever that is for the account.
- * Two sentences, because the reader either has a subject to pick or has none and must
- * create one.
+ * Two sentences for each deck, because the reader either has a subject or has none: a
+ * teacher picks one or creates one, a student finds theirs or brings the link that opens it.
  */
-const OUTRO: { create: Key; choose: Key } = {
-  create: "tutorial.outro.create",
-  choose: "tutorial.outro.choose",
+const OUTRO: Record<"teacher" | "student", { none: Key; some: Key }> = {
+  teacher: { none: "tutorial.outro.create", some: "tutorial.outro.choose" },
+  student: { none: "tutorial.outro.studentNone", some: "tutorial.outro.student" },
 };
 
 /*
@@ -100,6 +100,16 @@ const SLIDES: Record<CoreSlideId, Slide> = {
     figure: <AskFigure />,
     points: ["tutorial.s4.b1", "tutorial.s4.b2", "tutorial.s4.b3"],
   },
+  // A student's deck: what is to hand, never how it was built.
+  st1: { title: "tutorial.st1.title", body: "tutorial.st1.body" },
+  st2: { title: "tutorial.st2.title", body: "tutorial.st2.body", points: ["tutorial.st2.b1"] },
+  st3: {
+    title: "tutorial.st3.title",
+    body: "tutorial.st3.body",
+    figure: <AskFigure />,
+    points: ["tutorial.st3.b1", "tutorial.st3.b2"],
+  },
+  st4: { title: "tutorial.st4.title", body: "tutorial.st4.body", points: ["tutorial.st4.b1"] },
 };
 
 /**
@@ -270,7 +280,9 @@ export function TutorialScreen({ at }: { at: number }) {
 
   // The slides this account is shown: `App` clamped `at` against the same count.
   const features = useFeatures();
-  const deck = deckFor(features);
+  const student = useSpeaksToStudent();
+  const deck = deckFor(features, student);
+  const outro = OUTRO[student ? "student" : "teacher"];
   const count = deck.length;
   const slides: Partial<Record<SlideId, Slide>> = {
     ...SLIDES,
@@ -283,8 +295,8 @@ export function TutorialScreen({ at }: { at: number }) {
   // the deck instead of stepping through six slides already turned.
   const go = (index: number) => navigate(slidePath(index, count), { replace: true });
   // Step 1 is the only one of the four that needs nothing built, and with no subject yet
-  // the same screen is the form that creates one.
-  const leave = () => navigate("/raw");
+  // the same screen is the form that creates one. A student goes to their subject's landing.
+  const leave = () => navigate(student ? "/" : "/raw");
   const forward = () => (last ? leave() : go(at + 1));
   const back = () => {
     if (!first) go(at - 1);
@@ -396,7 +408,7 @@ export function TutorialScreen({ at }: { at: number }) {
 
                     {last ? (
                       <div className="border-t border-border pt-9">
-                        <p className={READING}>{t(hasWorkspace ? OUTRO.choose : OUTRO.create)}</p>
+                        <p className={READING}>{t(hasWorkspace ? outro.some : outro.none)}</p>
                       </div>
                     ) : null}
                   </div>
@@ -418,10 +430,20 @@ export function TutorialScreen({ at }: { at: number }) {
         <Rail
           side="right"
           label={t(
-            last ? (hasWorkspace ? "tutorial.railStart" : "tutorial.railCreate") : "tutorial.next",
+            !last
+              ? "tutorial.next"
+              : student || hasWorkspace
+                ? "tutorial.railStart"
+                : "tutorial.railCreate",
           )}
           name={t(
-            last ? (hasWorkspace ? "tutorial.start" : "noWorkspace.createMine") : "tutorial.next",
+            !last
+              ? "tutorial.next"
+              : student
+                ? "tutorial.studentStart"
+                : hasWorkspace
+                  ? "tutorial.start"
+                  : "noWorkspace.createMine",
           )}
           tone={last ? "attention" : "quiet"}
           onClick={forward}

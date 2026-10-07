@@ -270,8 +270,14 @@ function Workspace() {
       <Facts
         items={[
           { label: "Dónde se cambia", value: "El selector de arriba a la izquierda, junto a la marca." },
-          { label: "Quién puede crear una", value: "Cualquier cuenta, y queda como su propietaria." },
-          { label: "Si no tienes ninguna", value: "Se te ofrece crearla nada más entrar. No hay ninguna por defecto." },
+          {
+            label: "Quién puede crear una",
+            value: "Una cuenta de docente, que queda como su propietaria. Una de alumno no crea asignaturas.",
+          },
+          {
+            label: "Si no tienes ninguna",
+            value: "Un docente puede crearla nada más entrar; un alumno entra con el enlace de su clase. No hay ninguna por defecto.",
+          },
           { label: "Qué se lleva al cambiar", value: "Nada. Cada asignatura tiene lo suyo, incluida su caché." },
           {
             label: "Qué se decide al crearla",
@@ -283,16 +289,29 @@ function Workspace() {
       <Block title="Entrar sin ninguna es normal">
         <Paragraph>
           No hay una asignatura inicial en la que caiga quien no tiene otra: una cuenta recién
-          creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra la
-          oferta de crear la suya. Basta con su nombre. Las dos salidas son igual de válidas:
-          créala tú y serás su propietario, o espera a que quien administra te dé acceso a una
-          que ya existe.
+          creada, o a la que todavía no le han dado acceso a nada, entra y se encuentra lo que
+          le toca. Una cuenta de docente, la oferta de crear la suya: basta con su nombre, y
+          queda como su propietaria. Una de alumno, el campo para pegar el enlace de su clase:
+          la asignatura llega con ese enlace.
         </Paragraph>
         <Paragraph>
           Mientras tanto la aplicación no se queda bloqueada: esta guía, «{t("account.title")}» y
           —si administras la instalación— «{t("admin.title")}» funcionan sin ninguna
           asignatura. Lo que espera es todo lo que lee una instancia: los cuatro pasos y las
           puertas de la {t("nav.phase.test").toLowerCase()}.
+        </Paragraph>
+      </Block>
+
+      <Block title="Donde doy clase y donde estudio">
+        <Paragraph>
+          En «{t("nav.mySubjects")}» las asignaturas salen en dos grupos: «
+          {t("acc.ws.teaching")}» y «{t("acc.ws.studying")}». Donde das clase, un botón cuenta
+          tus alumnos y lleva a «{t("class.title")}». Una asignatura donde un docente desactivó
+          tu acceso sale atenuada, con «{t("acc.ws.disabled")}»: no se entra en ella ni se abren
+          sus ejercicios, que siguen guardados.
+        </Paragraph>
+        <Paragraph>
+          Borrar una asignatura dice antes cuántos alumnos y docentes pierden el acceso.
         </Paragraph>
       </Block>
 
@@ -904,6 +923,14 @@ function Graph() {
         ]}
       />
 
+      <Block title="Si eres alumno">
+        <Paragraph>
+          Ves el temario como tu docente lo dejó: sus unidades, sus conceptos y lo que hace falta
+          saber antes de cada uno. Se lee y no se cambia, y no salen las marcas de la
+          construcción, como qué concepto sirve de etiqueta o cuál falta por describir.
+        </Paragraph>
+      </Block>
+
       <Block title="Una lista, y el grafo al lado">
         <Paragraph>
           Lo primero que ves es el temario: las unidades en el orden en que se dan, plegadas.
@@ -1227,6 +1254,14 @@ function Generate() {
           vive plegado en «{t("form.instructions.title")}», debajo.
         </p>
       </SectionHead>
+
+      <Block title="Un lote cada vez">
+        <Paragraph>
+          Mientras tienes un lote en marcha en una asignatura, no puedes pedir otro en ella. Un
+          alumno pide pocos ejercicios de una vez, y puede tener un máximo al día que suma todas
+          sus asignaturas: el formulario lo dice junto al número.
+        </Paragraph>
+      </Block>
 
       <Block title="Las preguntas numeradas, en el orden en que se hacen">
         <Steps
@@ -1880,6 +1915,10 @@ function Admin() {
           ]}
         />
         <Paragraph>
+          Una membresía que un docente desactivó sale con «{t("acc.membershipPaused")}»: en lugar
+          del permiso ofrece «{t("class.open")}», y se puede quitar como cualquier otra.
+        </Paragraph>
+        <Paragraph>
           Y aparte de los accesos, «{t("acc.manage")}» ofrece cuatro cosas más:
         </Paragraph>
         <Rows
@@ -1952,6 +1991,11 @@ function Admin() {
           asignatura que tiene uno: las plazas ocupadas, la caducidad y quién lo creó. Desde aquí
           se pausa o se revoca; sus plazas y su fecha las cambian sus docentes, en «
           {t("class.title")}».
+        </Paragraph>
+        <Paragraph>
+          Cada fila nombra a su propietario y cuenta sus alumnos. Una asignatura sin propietario
+          lleva «{t("ws.noOwner")}» y «{t("ws.chooseOwner")}»: eliges a una de las personas que
+          ya están en ella, o a otra cuenta docente.
         </Paragraph>
         <Rows
           items={[
@@ -2401,8 +2445,146 @@ function Troubleshooting() {
   );
 }
 
+function StudentStart() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.studentStart")}>
+        <p>
+          Tu docente prepara la asignatura y tú la usas para practicar: ves su temario, pides
+          ejercicios sobre lo que quieres practicar y, si los tienes abiertos, evalúas el
+          sistema o trabajas con el tutor. Lo que se construye detrás —los documentos, los tipos
+          de ejercicio, el banco— es de tu docente y no sale en tu barra.
+        </p>
+      </SectionHead>
+
+      <Block title="Entrar con un enlace">
+        <Paragraph>
+          Tu docente te da un enlace: el de toda la clase, o uno solo para ti. Ábrelo y crea tu
+          cuenta: eliges tu usuario y tu contraseña, y nada más. Si ya tienes cuenta, elige «
+          {t("invite.tab.existing")}» y entra con ella, o ábrelo con tu sesión y pulsa «
+          {t("invite.join")}». Si todavía no estás en ninguna asignatura, también puedes pegar el
+          enlace en la pantalla de inicio.
+        </Paragraph>
+      </Block>
+
+      <Block title="Varias asignaturas">
+        <Paragraph>
+          Cada enlace añade una asignatura a tu cuenta. Cambias de una a otra con el selector de
+          arriba a la izquierda, y en «{t("nav.mySubjects")}» las ves todas, cada una con tus
+          ejercicios.
+        </Paragraph>
+      </Block>
+
+      <Block title="Lo que puedes hacer">
+        <Rows
+          items={[
+            {
+              key: "temario",
+              head: t("guide.sec.graph.student"),
+              body: "Los conceptos de la asignatura por unidades, y lo que hace falta saber antes de cada uno. Se lee y no se cambia.",
+            },
+            {
+              key: "generar",
+              head: t("nav.create"),
+              body: "Eliges qué practicar y cuántos ejercicios quieres; se escriben para ti y se guardan en «Mis ejercicios». Pides pocos de una vez, y puede haber un máximo al día: el formulario te dice cuántos te quedan.",
+            },
+            {
+              key: "evaluar",
+              head: t("nav.compare"),
+              body: "Si te lo han abierto: comparas a ciegas dos propuestas para el mismo encargo y dices cuál te sirve más.",
+            },
+            {
+              key: "tutor",
+              head: t("nav.tutor"),
+              body: "Si te lo han abierto: preguntas y el tutor responde con preguntas, para que llegues tú a la respuesta. Puede haber un número de mensajes al día.",
+            },
+          ]}
+        />
+      </Block>
+
+      <Block title="Mientras tu docente prepara la asignatura">
+        <Paragraph>
+          Hasta que la construcción está terminada, la asignatura dice que tu docente todavía la
+          está preparando, y no hay nada que pulsar. Cuando termine, la verás aquí.
+        </Paragraph>
+      </Block>
+
+      <Block title="«Acceso desactivado»">
+        <Paragraph>
+          Tu docente puede desactivar tu acceso a una asignatura, por ejemplo al terminar el
+          curso. Entonces no entras en ella, y en «{t("nav.mySubjects")}» sale atenuada con «
+          {t("acc.ws.disabled")}». Tus ejercicios se quedan: cuando tu docente lo active, vuelves
+          con todo lo que tenías. Un enlace no te devuelve el acceso; solo tu docente.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
+function Class() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.class")}>
+        <p>
+          En «{t("class.title")}» gestionas quién estudia en tu asignatura. Se abre desde el menú
+          de tu cuenta, con «{t("menu.class")}», o desde «{t("nav.mySubjects")}», con el botón
+          que cuenta los alumnos de cada asignatura donde das clase.
+        </p>
+      </SectionHead>
+
+      <Block title={t("class.invite")}>
+        <Paragraph>
+          Dos maneras de traer a tus alumnos, y con las dos entran como alumnos. El{" "}
+          <strong>enlace de clase</strong> es uno para toda la clase: tiene plazas, una fecha de
+          caducidad y una pausa, y se muestra como código QR para proyectarlo. Renovarlo deja el
+          enlace viejo sin efecto; quien ya entró se queda. Las{" "}
+          <strong>invitaciones personales</strong> son una por nombre y sirven una sola vez: se
+          copian una a una, todas juntas o en un CSV con el nombre, el enlace y la fecha.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.students")}>
+        <Paragraph>
+          La lista de tus alumnos, activos y desactivados, con cuándo y cómo entró cada uno.
+          Marcas a uno o a varios y eliges qué hacer:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "desactivar",
+              head: t("class.pause"),
+              body: "Se deshace. El alumno no entra hasta que lo actives, y entonces vuelve con todo lo que tenía. Un enlace no lo devuelve: solo tú.",
+            },
+            {
+              key: "quitar",
+              head: t("class.remove"),
+              body: "No se deshace. Sale de la asignatura y solo vuelve con un enlace nuevo, como alguien nuevo.",
+            },
+          ]}
+        />
+        <Paragraph>
+          En los dos casos, sus ejercicios y sus conversaciones con el tutor se quedan, y si
+          tenía algo en marcha en la asignatura, se detiene.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.end")}>
+        <Paragraph>
+          Solo para quien es propietario de la asignatura. Saca a todos los alumnos de una vez:
+          desactivados, y el curso se reabre activándolos, o quitados. El enlace de clase queda
+          en pausa y los docentes se quedan. Para confirmarlo hay que escribir el nombre de la
+          asignatura.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
 export const BODIES: Record<string, () => ReactNode> = {
   start: Start,
+  "student-start": StudentStart,
   workspace: Workspace,
   raw: Raw,
   profile: Profile,
@@ -2410,6 +2592,7 @@ export const BODIES: Record<string, () => ReactNode> = {
   bank: Bank,
   generate: Generate,
   runs: Runs,
+  class: Class,
   account: Account,
   admin: Admin,
   troubleshooting: Troubleshooting,

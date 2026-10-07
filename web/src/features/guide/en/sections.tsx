@@ -275,10 +275,13 @@ function Workspace() {
       <Facts
         items={[
           { label: "Where you switch", value: "The selector at the top left, next to the mark." },
-          { label: "Who can create one", value: "Any account, and it becomes its owner." },
+          {
+            label: "Who can create one",
+            value: "A teacher's account, which becomes its owner. A student's account creates no subjects.",
+          },
           {
             label: "If you have none",
-            value: "You are offered to create it as soon as you come in. There is no default one.",
+            value: "A teacher can create it as soon as they come in; a student comes in with their class's link. There is no default one.",
           },
           {
             label: "What travels with you",
@@ -294,16 +297,28 @@ function Workspace() {
       <Block title="Coming in with none is normal">
         <Paragraph>
           There is no initial subject for whoever has no other: a freshly created account, or
-          one that has not been given access to anything yet, comes in and finds the offer to
-          create its own. Its name is enough. Both ways out are equally valid: create it
-          yourself and be its owner, or wait for whoever administers to give you access to one
-          that already exists.
+          one that has not been given access to anything yet, comes in and finds what is its
+          to do. A teacher's account, the offer to create its own: its name is enough, and the
+          account becomes its owner. A student's, the field to paste their class's link: the
+          subject arrives with that link.
         </Paragraph>
         <Paragraph>
           Meanwhile the application is not blocked: this guide, "{t("account.title")}" and — if
           you administer the installation — "{t("admin.title")}" work with no subject at all.
           What waits is everything that reads an instance: the four steps and the doors of the{" "}
           {t("nav.phase.test").toLowerCase()}.
+        </Paragraph>
+      </Block>
+
+      <Block title="Where I teach and where I study">
+        <Paragraph>
+          In «{t("nav.mySubjects")}» the subjects come in two groups: «{t("acc.ws.teaching")}» and
+          «{t("acc.ws.studying")}». Where you teach, a button counts your students and leads to «
+          {t("class.title")}». A subject where a teacher paused your access shows dimmed, with «
+          {t("acc.ws.disabled")}»: you cannot enter it or open its exercises, which stay saved.
+        </Paragraph>
+        <Paragraph>
+          Deleting a subject says first how many students and teachers lose access.
         </Paragraph>
       </Block>
 
@@ -916,6 +931,15 @@ function Graph() {
         ]}
       />
 
+      <Block title="If you are a student">
+        <Paragraph>
+          You see the syllabus as your teacher left it: its units, its concepts and what you need
+          to know before each one. It is read and not changed, and the marks of the construction
+          — which concept works as a label, which one still lacks its description — are not
+          shown.
+        </Paragraph>
+      </Block>
+
       <Block title="A list, with the graph beside it">
         <Paragraph>
           What you see first is the syllabus: the units in teaching order, folded. The build
@@ -1241,6 +1265,14 @@ function Generate() {
           folded in "{t("form.instructions.title")}", underneath.
         </p>
       </SectionHead>
+
+      <Block title="One batch at a time">
+        <Paragraph>
+          While you have a batch running in a subject, you cannot ask for another there. A
+          student asks for a few exercises at a time, and may have a daily maximum that adds up
+          all their subjects: the form says so beside the number.
+        </Paragraph>
+      </Block>
 
       <Block title="The numbered questions, in the order they are asked">
         <Steps
@@ -1895,6 +1927,10 @@ function Admin() {
           ]}
         />
         <Paragraph>
+          A membership a teacher paused shows «{t("acc.membershipPaused")}»: instead of the role it
+          offers «{t("class.open")}», and it can be removed like any other.
+        </Paragraph>
+        <Paragraph>
           And beside the access, «{t("acc.manage")}» offers four more things:
         </Paragraph>
         <Rows
@@ -1966,6 +2002,11 @@ function Admin() {
           Under the table, «{t("ws.classLinks.title")}» lists the live link of each subject that
           has one: the seats taken, the expiry and who made it. From here it is paused or
           revoked; its seats and its date are changed by its teachers, in «{t("class.title")}».
+        </Paragraph>
+        <Paragraph>
+          Each row names its owner and counts its students. A subject with no owner shows «
+          {t("ws.noOwner")}» and «{t("ws.chooseOwner")}»: you choose one of the people already in
+          it, or another teacher's account.
         </Paragraph>
         <Rows
           items={[
@@ -2416,8 +2457,146 @@ function Troubleshooting() {
   );
 }
 
+function StudentStart() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.start")} title={t("guide.sec.studentStart")}>
+        <p>
+          Your teacher prepares the subject and you use it to practise: you read its syllabus,
+          ask for exercises on what you want to practise and, if they are open to you, evaluate
+          the system or work with the tutor. What is built behind it — the documents, the types
+          of exercise, the bank — is your teacher's and is not on your bar.
+        </p>
+      </SectionHead>
+
+      <Block title="Coming in with a link">
+        <Paragraph>
+          Your teacher gives you a link: the whole class's, or one for you alone. Open it and
+          create your account: you choose your username and your password, and nothing else. If
+          you already have an account, choose «{t("invite.tab.existing")}» and log in with it, or
+          open the link with your session and press «{t("invite.join")}». If you are in no subject
+          yet, you can also paste the link on the start screen.
+        </Paragraph>
+      </Block>
+
+      <Block title="Several subjects">
+        <Paragraph>
+          Each link adds a subject to your account. You switch between them with the selector
+          at the top left, and in «{t("nav.mySubjects")}» you see them all, each with your
+          exercises.
+        </Paragraph>
+      </Block>
+
+      <Block title="What you can do">
+        <Rows
+          items={[
+            {
+              key: "syllabus",
+              head: t("guide.sec.graph.student"),
+              body: "The subject's concepts by unit, and what you need to know before each one. It is read and not changed.",
+            },
+            {
+              key: "generate",
+              head: t("nav.create"),
+              body: "You choose what to practise and how many exercises you want; they are written for you and saved in «My exercises». You ask for a few at a time, and there may be a daily maximum: the form tells you how many are left.",
+            },
+            {
+              key: "evaluate",
+              head: t("nav.compare"),
+              body: "If it is open to you: you compare two proposals for the same commission, blind, and say which one serves you better.",
+            },
+            {
+              key: "tutor",
+              head: t("nav.tutor"),
+              body: "If it is open to you: you ask, and the tutor answers with questions, so that you reach the answer yourself. There may be a number of messages per day.",
+            },
+          ]}
+        />
+      </Block>
+
+      <Block title="While your teacher prepares the subject">
+        <Paragraph>
+          Until the construction is finished, the subject says that your teacher is still
+          preparing it, and there is nothing to press. When it is done, you will see it here.
+        </Paragraph>
+      </Block>
+
+      <Block title="«Access paused»">
+        <Paragraph>
+          Your teacher can pause your access to a subject, for example when the course ends.
+          Then you cannot enter it, and in «{t("nav.mySubjects")}» it shows dimmed with «
+          {t("acc.ws.disabled")}». Your exercises stay: when your teacher opens it again, you come
+          back with everything you had. A link does not give your access back; only your teacher
+          does.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
+function Class() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <SectionHead eyebrow={t("guide.group.daily")} title={t("guide.sec.class")}>
+        <p>
+          In «{t("class.title")}» you manage who studies in your subject. It opens from your
+          account's menu, with «{t("menu.class")}», or from «{t("nav.mySubjects")}», with the
+          button that counts the students of each subject you teach.
+        </p>
+      </SectionHead>
+
+      <Block title={t("class.invite")}>
+        <Paragraph>
+          Two ways to bring your students in, and with both they come in as students. The{" "}
+          <strong>class link</strong> is one for the whole class: it has seats, an expiry date
+          and a pause, and it shows as a QR code to project. Renewing it stops the old link;
+          whoever came in stays. The <strong>personal invitations</strong> are one per name and
+          serve once: they are copied one by one, all together, or as a CSV with the name, the
+          link and the date.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.students")}>
+        <Paragraph>
+          The list of your students, active and paused, with when and how each one came in. You
+          tick one or several and choose what to do:
+        </Paragraph>
+        <Rows
+          items={[
+            {
+              key: "pause",
+              head: t("class.pause"),
+              body: "It can be undone. The student cannot enter until you open them again, and then comes back with everything they had. A link does not bring them back: only you do.",
+            },
+            {
+              key: "remove",
+              head: t("class.remove"),
+              body: "It cannot be undone. They leave the subject and only come back with a new link, as somebody new.",
+            },
+          ]}
+        />
+        <Paragraph>
+          Either way, their exercises and their conversations with the tutor stay, and whatever
+          they had running in the subject stops.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.end")}>
+        <Paragraph>
+          For the subject's owner alone. It takes every student out at once: paused, and the
+          course reopens by opening them, or removed. The class link is paused and the teachers
+          stay. To confirm it, you type the subject's name.
+        </Paragraph>
+      </Block>
+    </div>
+  );
+}
+
 export const BODIES: Record<string, () => ReactNode> = {
   start: Start,
+  "student-start": StudentStart,
   workspace: Workspace,
   raw: Raw,
   profile: Profile,
@@ -2425,6 +2604,7 @@ export const BODIES: Record<string, () => ReactNode> = {
   bank: Bank,
   generate: Generate,
   runs: Runs,
+  class: Class,
   account: Account,
   admin: Admin,
   troubleshooting: Troubleshooting,

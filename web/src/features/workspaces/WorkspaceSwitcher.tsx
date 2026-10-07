@@ -40,7 +40,9 @@ export function WorkspaceSwitcher() {
     return () => document.removeEventListener("mousedown", away);
   }, [open]);
 
-  const workspaces = listing.data?.workspaces ?? [];
+  // A subject whose access a teacher paused is no place to switch to: «Mis asignaturas»
+  // lists it, closed, and this list leaves it out.
+  const workspaces = (listing.data?.workspaces ?? []).filter((w) => !w.disabled);
   const active = workspaces.find((w) => w.active) ?? null;
   const close = () => {
     setCreating(false);

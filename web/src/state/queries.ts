@@ -440,6 +440,18 @@ export function useMemberActions() {
   };
 }
 
+/** Ending the course moves the people, their counts and the class link at once. */
+export function useEndCourse() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.endCourse,
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: keys.members });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+    },
+  });
+}
+
 /** The subject's live class link, its terms only: how full and until when. */
 export function useClassLink() {
   return useQuery({ queryKey: keys.classLink, queryFn: api.classLink });
@@ -944,6 +956,11 @@ export function useMembershipActions() {
     revoke: useMutation({
       mutationFn: ({ id, workspace }: { id: number; workspace: string }) =>
         api.adminRevokeMembership(id, workspace),
+      onSuccess: refresh,
+    }),
+    enable: useMutation({
+      mutationFn: ({ id, workspace }: { id: number; workspace: string }) =>
+        api.adminEnableMembership(id, workspace),
       onSuccess: refresh,
     }),
   };

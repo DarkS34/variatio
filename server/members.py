@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from . import singletons
 from .auth.deps import first_membership
 from .db import identity
-from .db.models import OWNER, Membership, User, Workspace
+from .db.models import OWNER, VIEWER, Membership, User, Workspace
 
 CLOSED_EVENT = "membership.closed"
 DISABLED = "disabled"
@@ -44,6 +44,31 @@ class Refusal(Exception):
     def __str__(self) -> str:
         """Say the sentence, which is what a log line or a bulk answer shows."""
         return self.message
+
+
+def people_of(session: Session, workspace: Workspace) -> dict[str, int]:
+    """Count a subject's people: its active students, its paused members and its teachers.
+
+    Counts and nothing else — who they are is the class list's, behind a teacher's role.
+    """
+    counts = {"students": 0, "disabled": 0, "teachers": 0}
+    for row, _ in identity.members_of(session, workspace.id, include_disabled=True):
+        if not row.active:
+            counts["disabled"] += 1
+        elif row.role == VIEWER:
+            counts["students"] += 1
+        else:
+            counts["teachers"] += 1
+    return counts
+
+
+def owners_of(session: Session, workspace: Workspace) -> list[User]:
+    """Return the subject's active owners, by username."""
+    return [
+        user
+        for row, user in identity.members_of(session, workspace.id)
+        if row.role == OWNER
+    ]
 
 
 def disable_member(session: Session, workspace: Workspace, member: User, by: User | None) -> Membership:

@@ -6,17 +6,17 @@ import { fold } from "@/lib/text";
  *
  * A deactivated account is that before anything else, and an administrator before a
  * profile: the first is who cannot enter, the second who enters everywhere. The other
- * accounts are told apart by the profile they chose, which is what the installation calls
- * a teacher or a student; one that chose none is a kind of its own.
+ * accounts are told apart by their profile, which their invitation set. There is no kind
+ * for an account with none: migration 0017 left none, and an older API's NULL reads as a
+ * student's, as the server reads it.
  */
-export type GroupKey = "teachers" | "students" | "unset" | "admins" | "disabled";
+export type GroupKey = "teachers" | "students" | "admins" | "disabled";
 
 export function groupOf(account: Pick<AdminAccount, "disabled" | "is_admin" | "evaluator_profile">): GroupKey {
   if (account.disabled) return "disabled";
   if (account.is_admin) return "admins";
   if (account.evaluator_profile === "teacher") return "teachers";
-  if (account.evaluator_profile === "student") return "students";
-  return "unset";
+  return "students";
 }
 
 /** Whether what was typed is part of the account's name or of its username. */

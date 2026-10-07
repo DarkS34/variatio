@@ -8,7 +8,8 @@ import { Link } from "@/lib/router";
 import { fold } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
-import { useGuideBody, useGuideSections, type GuideSection } from "./sections";
+import { sectionLabel, useGuideBody, useGuideSections, type GuideSection } from "./sections";
+import { useSpeaksToStudent } from "@/state/auth";
 
 function grouped(sections: readonly GuideSection[]): { key: Key; sections: GuideSection[] }[] {
   const groups: { key: Key; sections: GuideSection[] }[] = [];
@@ -27,6 +28,7 @@ export function GuideScreen({ slug }: { slug: string }) {
   // Only what this account may read: a function closed to it has no section here, so its
   // slug falls back like any unknown one.
   const sections = useGuideSections();
+  const student = useSpeaksToStudent();
 
   const position = sections.findIndex((section) => section.slug === slug);
   const active = sections[position] ?? sections[0];
@@ -38,7 +40,7 @@ export function GuideScreen({ slug }: { slug: string }) {
     return grouped(
       sections.filter(
         (section) =>
-          fold(t(section.labelKey)).includes(needle) ||
+          fold(t(sectionLabel(section, student))).includes(needle) ||
           fold(t(section.groupKey)).includes(needle),
       ),
     );
@@ -83,7 +85,7 @@ export function GuideScreen({ slug }: { slug: string }) {
           onClick={() => setNavOpen((was) => !was)}
         >
           <span className="min-w-0 truncate">
-            {t("guide.sectionsOf", { label: t(active.labelKey) })}
+            {t("guide.sectionsOf", { label: t(sectionLabel(active, student)) })}
           </span>
           <ChevronDown className={cn("transition-transform", navOpen && "rotate-180")} />
         </Button>
@@ -115,7 +117,7 @@ export function GuideScreen({ slug }: { slug: string }) {
                     )}
                   >
                     <Icon className="size-4 shrink-0" />
-                    <span className="min-w-0 truncate">{t(section.labelKey)}</span>
+                    <span className="min-w-0 truncate">{t(sectionLabel(section, student))}</span>
                   </Link>
                 );
               })}
@@ -149,7 +151,7 @@ export function GuideScreen({ slug }: { slug: string }) {
                   <span className="block text-micro font-condensed uppercase text-muted-foreground">
                     {t("guide.next")}
                   </span>
-                  <span className="text-body font-medium">{t(next.labelKey)}</span>
+                  <span className="text-body font-medium">{t(sectionLabel(next, student))}</span>
                 </span>
                 <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
               </Link>

@@ -1,9 +1,10 @@
 import { BookOpen } from "lucide-react";
 
-import { GUIDE_SECTIONS, type GuideSlug } from "@/features/guide/sections";
+import { GUIDE_SECTIONS, sectionLabel, type GuideSlug } from "@/features/guide/sections";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
 import { cn } from "@/lib/utils";
+import { useSpeaksToStudent } from "@/state/auth";
 
 /**
  * THE WAY FROM A SCREEN TO THE PAGE THAT EXPLAINS IT.
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
  */
 export function GuideLink({ slug, className }: { slug: GuideSlug; className?: string }) {
   const { t } = useT();
+  const student = useSpeaksToStudent();
   const section = GUIDE_SECTIONS.find((entry) => entry.slug === slug);
   if (!section) return null;
 
@@ -37,7 +39,7 @@ export function GuideLink({ slug, className }: { slug: GuideSlug; className?: st
       )}
     >
       <BookOpen aria-hidden className="size-3.5 shrink-0" />
-      {t("guide.linkTo", { section: t(section.labelKey) })}
+      {t("guide.linkTo", { section: t(sectionLabel(section, student)) })}
     </Link>
   );
 }

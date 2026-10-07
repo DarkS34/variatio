@@ -3,6 +3,7 @@ import {
   Compass,
   FileText,
   Files,
+  GraduationCap,
   Layers,
   Library,
   LifeBuoy,
@@ -12,13 +13,14 @@ import {
   Scale,
   ShieldCheck,
   UserRound,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { lazy, useMemo, type ComponentType, type ReactNode } from "react";
 
 import { useT, withCatalogues, type Key, type Language } from "@/lib/i18n";
 import type { Features } from "@/lib/types";
-import { useFeatures } from "@/state/auth";
+import { useFeatures, useSpeaksToStudent } from "@/state/auth";
 
 /**
  * The guide's registry: what sections exist, in what order, and under which group.
@@ -34,11 +36,22 @@ import { useFeatures } from "@/state/auth";
  * group headings — because those are read by `GuideScreen`'s search and index, not by the
  * page itself.
  */
+/**
+ * Who a section is written for. A student of the subject in use (`useSpeaksToStudent`) reads
+ * «all» and «student»; a teacher reads every section, the student's included, since they are
+ * who explains it.
+ */
+export type Audience = "teacher" | "student" | "all";
+
 export interface GuideSection {
   slug: string;
   labelKey: Key;
   groupKey: Key;
   icon: LucideIcon;
+  /** «all» when absent. */
+  audience?: Audience;
+  /** The name a student reads the section by, where the teacher's would point at a step. */
+  studentLabelKey?: Key;
   /**
    * The optional function the section explains, whose folder holds its body. Closed to the
    * account, the section is not in the index, the search or the routing, and its body is
@@ -103,6 +116,16 @@ export const GUIDE_SECTIONS = [
     labelKey: "guide.sec.start",
     groupKey: "guide.group.start",
     icon: Compass,
+    audience: "teacher",
+  },
+  // After the teacher's start and not before it: the first section an account can read is
+  // where `/guide` opens, and for a student the teacher's is not there.
+  {
+    slug: "student-start",
+    labelKey: "guide.sec.studentStart",
+    groupKey: "guide.group.start",
+    icon: GraduationCap,
+    audience: "student",
   },
   {
     slug: "workspace",
@@ -117,17 +140,20 @@ export const GUIDE_SECTIONS = [
     slug: "raw",
     labelKey: "guide.sec.raw",
     groupKey: "guide.group.prepare",
+    audience: "teacher",
     icon: Files,
   },
   {
     slug: "profile",
     labelKey: "guide.sec.profile",
     groupKey: "guide.group.prepare",
+    audience: "teacher",
     icon: FileText,
   },
   {
     slug: "graph",
     labelKey: "guide.sec.graph",
+    studentLabelKey: "guide.sec.graph.student",
     groupKey: "guide.group.prepare",
     icon: Network,
   },
@@ -135,6 +161,7 @@ export const GUIDE_SECTIONS = [
     slug: "bank",
     labelKey: "guide.sec.bank",
     groupKey: "guide.group.prepare",
+    audience: "teacher",
     icon: Library,
   },
   { slug: "generate", labelKey: "guide.sec.generate", groupKey: "guide.group.use", icon: Play },
@@ -159,6 +186,13 @@ export const GUIDE_SECTIONS = [
     icon: Activity,
   },
   {
+    slug: "class",
+    labelKey: "guide.sec.class",
+    groupKey: "guide.group.daily",
+    icon: Users,
+    audience: "teacher",
+  },
+  {
     slug: "account",
     labelKey: "guide.sec.account",
     groupKey: "guide.group.daily",
@@ -172,6 +206,7 @@ export const GUIDE_SECTIONS = [
     labelKey: "guide.sec.admin",
     groupKey: "guide.group.daily",
     icon: ShieldCheck,
+    audience: "teacher",
   },
   {
     slug: "troubleshooting",
@@ -191,11 +226,21 @@ export const GUIDE_SECTIONS = [
  */
 export type GuideSlug = (typeof GUIDE_SECTIONS)[number]["slug"];
 
-/** The sections this account may read, in registry order: none of a function closed to it. */
-export function sectionsFor(features: Features): GuideSection[] {
+/**
+ * The sections this account may read, in registry order: none of a function closed to it,
+ * and for a student of the subject in use none written for a teacher.
+ */
+export function sectionsFor(features: Features, student = false): GuideSection[] {
   return GUIDE_SECTIONS.filter(
-    (section: GuideSection) => section.feature === undefined || features[section.feature],
+    (section: GuideSection) =>
+      (section.feature === undefined || features[section.feature]) &&
+      (!student || section.audience !== "teacher"),
   );
+}
+
+/** The name a section is read by: a student's own where it has one. */
+export function sectionLabel(section: GuideSection, student: boolean): Key {
+  return student && section.studentLabelKey ? section.studentLabelKey : section.labelKey;
 }
 
 /**
@@ -206,7 +251,8 @@ export function sectionsFor(features: Features): GuideSection[] {
  */
 export function useGuideSections(): GuideSection[] {
   const { evaluation, tutor } = useFeatures();
-  return useMemo(() => sectionsFor({ evaluation, tutor }), [evaluation, tutor]);
+  const student = useSpeaksToStudent();
+  return useMemo(() => sectionsFor({ evaluation, tutor }, student), [evaluation, tutor, student]);
 }
 
 /**

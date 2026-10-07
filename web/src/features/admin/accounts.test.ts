@@ -13,7 +13,7 @@ describe("groupOf", () => {
   it("lists an account under its profile", () => {
     expect(groupOf(account({ evaluator_profile: "teacher" }))).toBe("teachers");
     expect(groupOf(account({ evaluator_profile: "student" }))).toBe("students");
-    expect(groupOf(account())).toBe("unset");
+    expect(groupOf(account())).toBe("students");
   });
 
   it("puts an administrator before a profile, and a deactivated account before both", () => {

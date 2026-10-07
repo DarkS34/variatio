@@ -321,7 +321,11 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - **The people of a subject** (decided 2026-10-06): `server/members.py` holds the gestures —
   pause (`disable_member`), open again (`enable_member`), remove (`remove_member`), change a
   role (`change_role`) — and every door goes through them: `/api/members` (its router), the
-  panel's membership routes, leaving a subject. Closing a membership refuses taking the last
+  panel's membership routes (`POST /api/admin/accounts/{id}/memberships/{slug}/enable` opens a
+  paused one), leaving a subject, and ending a course (`POST /api/members/end-course`,
+  `MANAGE`: every active student paused — `disable`, the default — or removed, the teachers
+  stay, the class link is paused, the files stay). `members.people_of` counts a subject's
+  people and `owners_of` names its active owners, for the listing and the panel. Closing a membership refuses taking the last
   active owner from people still active (`identity.would_orphan`, 409 `last_owner`; a
   subject with no owner to lose, or emptying, is not refused), moves the account's active
   subject elsewhere, cancels its jobs there, writes the row, COMMITS, then publishes
@@ -1103,7 +1107,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   character gets the apostrophe of `server/csv_safe.py`, numbers exempt, RFC quoting, a BOM).
   «Invitaciones sin usar»: «Copiar» reads the link and copies it in the SAME press (a
   `ClipboardItem` holding the promise), and where the browser refuses, the link opens under
-  the row; «Borrar», asked first.
+  the row; «Borrar», asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
+  route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
+  confirmed by typing the subject's name as written; destructive, never `--attention`.
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
   2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
   «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,
@@ -1130,7 +1136,13 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   OWN — the ones a membership row gives it — for an administrator like for anybody (user's
   decision, 2026-10-04): a subject reached only through the admin bypass (`as_admin` on
   `/api/workspaces`) has no row here; it is entered from the switcher and its exercises are
-  read from «Administración → Asignaturas». Generate's
+  read from «Administración → Asignaturas». The rows go in two groups (2026-10-06),
+  «Donde doy clase» (editor, owner) and «Donde estudio» (viewer, and every paused
+  membership), captioned only when both have rows; `/api/workspaces` lists a paused
+  membership with `disabled: true`, and its row is named, dimmed, «Acceso desactivado», with
+  nothing to open — not the subject, not its exercises — and the switcher leaves it out.
+  Deleting a subject names who loses access (`PeopleWhoLoseAccess`: its active students and
+  the other teachers), here and in the panel. Generate's
   «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
   `/variants`) still redirect here.
 - `/raw`: one row per document; multi-select delete; a finished origin carries a
@@ -1184,9 +1196,14 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   AND bundled (`web/vite/mermaid-subset.ts` fails the build if Mermaid's shape moves). One
   KaTeX version is forced via `pnpm-workspace.yaml`.
 - `Progress`: total zero reads empty, unknown total sweeps (`barFill`).
-- The tutorial is six full-window slides — four with the evaluation closed;
-  `features/tutorial/slides.ts` (`deckFor`, `slideCount`) is the one count `App` and
-  `AppShell` read, and the outro closes the last slide drawn — with no header, edge rails
+- The tutorial is two decks of full-window slides (2026-10-06): a teacher's opens on the
+  construction (s1–s4), a student's on what is to hand (st1–st4: welcome, the syllabus,
+  generating, and the tutor only with it open), and both end on the study's two when the
+  evaluation is open. Whose deck it is is `useSpeaksToStudent` — a student of the subject in
+  use, or in no subject an account whose profile is not a teacher's — which the guide reads
+  too. `features/tutorial/slides.ts` (`deckFor`, `slideCount`, each taking that flag) is the
+  one count `App` and `AppShell` read, and the outro closes the last slide drawn — a
+  student's sends them to `/`, never `/raw` — with no header, edge rails
   for navigation, justified prose from `sm` up; it draws the app as it is. Slides 1–4 hold
   with the evaluation open or closed, so they never ask for a part in a study; that request
   lives on 5–6, which are the evaluation's code (`evaluation/tutorial.tsx`, its figures and
@@ -1196,7 +1213,12 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   (`evaluation/guide/`, `tutor/guide/`, one file per language), and so does the
   questionnaire's part of how a building step closes (`StageReviewGuide`); the registry
   (`features/guide/sections.tsx`) leaves a closed function's section out of the index, the
-  search and the routing.
+  search and the routing. Each section declares its `audience` (`teacher`, `student`,
+  `all`, absent is `all`; 2026-10-06): a student reads «all» and «student» and opens on «Empezar
+  como alumno» (`student-start`); a teacher reads every section, opening on their own start.
+  «Tu clase» (`class`) is a teacher's; a section may carry a `studentLabelKey` (the syllabus
+  is «El temario» to a student, never «Paso 3 · Temario»). A hyphenated slug is a quoted
+  key of `BODIES`, which `check:i18n` reads.
 - The in-app guide (`/guide`) is user-facing copy: a behaviour change is not finished until
   its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
@@ -1212,7 +1234,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   under `SectionHeader` (name, one sentence, the section's one action on the name's line) as
   ONE column of blocks, readings first and settings under them. A list inside a block is
   rows parted by rules, never a frame per row or around a table (`.rows` in `index.css`;
-  `SETTING_LIST`). A tab with one section («Asignaturas») has no list. Below `lg` the list
+  `SETTING_LIST`). A tab with one section («Asignaturas») has no list; its table names each
+  subject's owners and counts its students (2026-10-06), and a subject with no owner reads
+  «Sin propietario» with «Elegir propietario»: one of its people, or another teacher's
+  account, made owner through the panel's grant. Below `lg` the list
   lies down and scrolls sideways. The maintenance switch is in the header, beside the
   title: one line while the installation is open, a red block across the page while it is
   closed; it is no tab and no section. A function's tab has three sections — «Permisos de
@@ -1234,7 +1259,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   group with NEITHER marked, the button waiting until one is — and each row shows the profile
   as a badge. «Cuentas» has one section per kind of account, then «Invitaciones». The accounts are ONE TABLE PER
   KIND (user's request, 2026-10-04; `features/admin/accounts.ts`, `groupOf`): «Docentes» and «Alumnos» by
-  `evaluator_profile`, «Sin perfil», «Administradores», and
+  `evaluator_profile` (no «Sin perfil» since 2026-10-06: migration 0017 left none, and an older
+  API's NULL reads as a student's), «Administradores», and
   «Desactivadas» — a deactivated account is that first, an administrator before a profile.
   Each kind is a row of the list with its count, drawn only when such an account exists, and
   opens its table alone (same day: stacked down one page, the students sat under every
@@ -1242,7 +1268,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   draws the same tables with the matching rows alone, across every kind.
   Same columns and widths on each: the account, its subjects one per line (name, then the
   permission in a column of its own, the widest first), the date, and «Gestionar», which
-  opens the memberships and the account's controls under the row. The profile is a line
+  opens the memberships and the account's controls under the row; a membership a teacher
+  paused reads «Desactivada» with «Activar» in place of the role. The profile is a line
   there, «Perfil: …», with one button, «Hacer docente» (confirmed), on an account that is not
   a teacher; a teacher's has no control, since the profile only climbs. No count of exercises,
   no comparisons and no «ver sus sesiones» there: what an account evaluated is read in

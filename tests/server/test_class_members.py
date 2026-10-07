@@ -9,7 +9,7 @@ the person's jobs there stop, their tab lands elsewhere, an open socket of their
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -20,6 +20,7 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth, installation, members, singletons
 from server import generations as store
+from server.auth import links
 from server.auth.deps import FORBIDDEN, Access
 from server.db import identity, repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
@@ -405,3 +406,89 @@ def test_the_listing_counts_the_people_where_the_account_teaches(db, aula, stage
 
     assert teachers_row["people"] == {"students": 1, "disabled": 1, "teachers": 2}
     assert "people" not in students_row
+
+
+# THE END OF A COURSE ----------------------------------------------------------------------------
+
+
+def test_ending_the_course_pauses_every_student_and_the_link_and_keeps_the_teachers(db, aula, stage):
+    link, _ = links.mint_class_link(
+        db, workspace_id=aula.workspace.id, expires_at=identity.now() + timedelta(days=9), max_uses=9
+    )
+    access = _access(db, aula.ana, aula.workspace)
+
+    answer = member_routes.end_course(member_routes.EndCourseBody(), access=access, db=db)
+
+    assert answer == {"action": "disable", "students": 2, "class_link_paused": True}
+    rows = {user.username: row for row, user in identity.members_of(db, aula.workspace.id, include_disabled=True)}
+    assert not rows["carla"].active and not rows["dani"].active
+    assert rows["ana"].active and rows["bruno"].active
+    assert identity.live_class_link(db, aula.workspace.id).paused_at is not None
+
+
+def test_a_paused_course_reopens_by_opening_its_students(db, aula, stage):
+    access = _access(db, aula.ana, aula.workspace)
+    member_routes.end_course(member_routes.EndCourseBody(), access=access, db=db)
+
+    member_routes.enable(aula.carla.id, access=access, db=db)
+
+    assert auth.access_for(db, aula.carla, aula.workspace, VIEWER).role == VIEWER
+
+
+def test_ending_it_by_removing_takes_the_students_out_and_leaves_their_files(db, aula, stage):
+    ws = installation.workspace_for("aula")
+    saved = store.save(ws, aula.carla.id, "job9", 1, {"output": {"item": {"enunciado": "queda"}}})
+    access = _access(db, aula.ana, aula.workspace)
+
+    answer = member_routes.end_course(
+        member_routes.EndCourseBody(action="remove"), access=access, db=db
+    )
+
+    assert answer["students"] == 2 and answer["class_link_paused"] is False
+    assert identity.membership(db, aula.workspace.id, aula.carla.id) is None
+    assert identity.membership(db, aula.workspace.id, aula.bruno.id) is not None
+    assert store.get(ws, aula.carla.id, saved) is not None
+
+
+def test_ending_the_course_is_an_owners_and_names_a_known_end(db, aula, stage):
+    access = _access(db, aula.ana, aula.workspace)
+    refused = _refused(
+        lambda: member_routes.end_course(
+            member_routes.EndCourseBody(action="olvidar"), access=access, db=db
+        )
+    )
+    assert refused.status_code == 422
+    assert _refused(lambda: _access(db, aula.bruno, aula.workspace, OWNER)).status_code == 403
+
+
+# THE ACCOUNT'S OWN LIST AND THE PANEL -----------------------------------------------------------
+
+
+def test_a_paused_subject_is_listed_closed_and_never_active(db, aula, stage):
+    other = repository.ensure_workspace(db, "otra", "Otra")
+    identity.grant(db, other.id, aula.carla.id, VIEWER)
+    members.disable_member(db, aula.workspace, aula.carla, aula.bruno)
+
+    rows = {row["slug"]: row for row in workspace_routes.listing(user=aula.carla, db=db)["workspaces"]}
+
+    assert rows["aula"]["disabled"] is True and rows["aula"]["active"] is False
+    assert rows["otra"]["disabled"] is False and rows["otra"]["active"] is True
+
+
+def test_the_administrator_opens_a_paused_membership(db, aula, stage):
+    admin = identity.create_user(db, username="root", name="Root", password_hash="x")
+    admin.is_admin = True
+    members.disable_member(db, aula.workspace, aula.carla, aula.bruno)
+
+    admin_routes.enable_membership(aula.carla.id, "aula", admin=admin, db=db)
+
+    assert identity.membership(db, aula.workspace.id, aula.carla.id).active
+
+
+def test_the_panel_names_each_subjects_owners_and_counts_its_students(db, aula, stage):
+    members.disable_member(db, aula.workspace, aula.dani, aula.ana)
+
+    view = admin_routes._workspace_view(db, aula.workspace)
+
+    assert [owner["username"] for owner in view["owners"]] == ["ana"]
+    assert view["people"] == {"students": 1, "disabled": 1, "teachers": 2}

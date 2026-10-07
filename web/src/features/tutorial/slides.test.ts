@@ -34,9 +34,20 @@ describe("slideOf / slidePath", () => {
 });
 
 describe("deckFor", () => {
-  it("shows every slide with the evaluation open", () => {
-    expect(deckFor(ALL)).toEqual(DECK.map((slide) => slide.id));
+  it("shows a teacher the construction and, with the evaluation open, the study", () => {
+    expect(deckFor(ALL)).toEqual(["s1", "s2", "s3", "s4", "s5", "s6"]);
     expect(slideCount(ALL)).toBe(6);
+  });
+
+  it("shows a student their own deck, the tutor's slide only with the tutor open", () => {
+    expect(deckFor(ALL, true)).toEqual(["st1", "st2", "st3", "st4", "s5", "s6"]);
+    expect(deckFor(NONE, true)).toEqual(["st1", "st2", "st3"]);
+    expect(deckFor({ evaluation: false, tutor: true }, true)).toEqual(["st1", "st2", "st3", "st4"]);
+  });
+
+  it("gives every slide of the deck to somebody", () => {
+    const shown = new Set([...deckFor(ALL), ...deckFor(ALL, true)]);
+    expect([...shown].sort()).toEqual(DECK.map((slide) => slide.id).sort());
   });
 
   it("leaves the study's two slides out with the evaluation closed", () => {

@@ -221,6 +221,18 @@ export function useIsStudent() {
 }
 
 /**
+ * Whether the guide and the tutorial speak to this session as a student: a student of the
+ * subject in use, or — in no subject at all — an account whose profile is not a teacher's.
+ * False while the session loads, so nothing is taken away and then given.
+ */
+export function useSpeaksToStudent() {
+  const session = useSession().data;
+  if (!session) return false;
+  if (session.role != null) return session.role === "viewer";
+  return session.user.evaluator_profile !== "teacher";
+}
+
+/**
  * May this account create subjects? Only a teacher's may: the account's profile, which its
  * invitation set (the server's own `can_create`, and a 403 `cannot_create` otherwise). False
  * while the session loads, and for a profile nobody recorded.

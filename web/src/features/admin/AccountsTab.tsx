@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   ShieldOff,
   Trash2,
-  User,
   UserCheck,
   UserX,
   type LucideIcon,
@@ -57,7 +56,6 @@ const ROLE_ORDER: Role[] = ["owner", "editor", "viewer"];
 const GROUPS: { key: GroupKey; label: Key; note: Key; mark: LucideIcon; showProfile: boolean }[] = [
   { key: "teachers", label: "acc.group.teachers", note: "acc.group.teachers.note", mark: Presentation, showProfile: false },
   { key: "students", label: "acc.group.students", note: "acc.group.students.note", mark: GraduationCap, showProfile: false },
-  { key: "unset", label: "acc.group.unset", note: "acc.group.unset.note", mark: User, showProfile: false },
   { key: "admins", label: "acc.group.admins", note: "acc.group.admins.note", mark: ShieldCheck, showProfile: true },
   { key: "disabled", label: "acc.group.disabled", note: "acc.group.disabled.note", mark: UserX, showProfile: true },
 ];
@@ -640,7 +638,7 @@ function MembershipEditor({
   names: Map<string, string>;
 }) {
   const { t } = useT();
-  const { grant, revoke } = useMembershipActions();
+  const { grant, revoke, enable } = useMembershipActions();
   const missing = overview.workspaces.filter(
     (workspace) => !account.workspaces.some((w) => w.slug === workspace.slug),
   );
@@ -668,7 +666,7 @@ function MembershipEditor({
         <ul className="divide-y divide-border">
           {account.workspaces.map((membership) => (
             <li key={membership.slug} className="flex flex-wrap items-center gap-2 py-2">
-              <span className="min-w-0 flex-1">
+              <span className={cn("min-w-0 flex-1", membership.disabled && "text-muted-foreground")}>
                 <span className="block truncate text-small">
                   {names.get(membership.slug) ?? membership.slug}
                 </span>
@@ -676,28 +674,47 @@ function MembershipEditor({
                   {membership.slug}
                 </span>
               </span>
-              <Select
-                value={membership.role}
-                className="w-36"
-                disabled={grant.isPending}
-                onChange={(event) =>
-                  grant.mutate({
-                    id: account.id,
-                    workspace: membership.slug,
-                    role: event.target.value as Role,
-                  })
-                }
-              >
-                {ROLES.map((option) => (
-                  <option key={option} value={option}>
-                    {t(ROLE_LABEL_KEYS[option])}
-                  </option>
-                ))}
-              </Select>
+              {membership.disabled ? (
+                // Paused by a teacher: the role stays as it was, and what is offered is
+                // opening it again or taking it away, as the class screen offers.
+                <>
+                  <Badge variant="outline">{t("acc.membershipPaused")}</Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={enable.isPending}
+                    onClick={() => enable.mutate({ id: account.id, workspace: membership.slug })}
+                  >
+                    <UserCheck />
+                    {t("class.open")}
+                  </Button>
+                </>
+              ) : (
+                <Select
+                  value={membership.role}
+                  className="w-36"
+                  aria-label={t("acc.permission")}
+                  disabled={grant.isPending}
+                  onChange={(event) =>
+                    grant.mutate({
+                      id: account.id,
+                      workspace: membership.slug,
+                      role: event.target.value as Role,
+                    })
+                  }
+                >
+                  {ROLES.map((option) => (
+                    <option key={option} value={option}>
+                      {t(ROLE_LABEL_KEYS[option])}
+                    </option>
+                  ))}
+                </Select>
+              )}
               <Button
                 variant="ghost"
                 size="icon-sm"
                 title={t("acc.revokeWorkspace")}
+                aria-label={t("acc.revokeWorkspace")}
                 disabled={revoke.isPending}
                 onClick={() => revoke.mutate({ id: account.id, workspace: membership.slug })}
               >
@@ -749,7 +766,7 @@ function MembershipEditor({
         </div>
       ) : null}
 
-      <FormError error={grant.error ?? revoke.error} />
+      <FormError error={grant.error ?? revoke.error ?? enable.error} />
     </div>
   );
 }

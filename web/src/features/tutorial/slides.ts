@@ -12,22 +12,32 @@ import type { Features } from "@/lib/types";
  */
 
 /**
- * Every slide, in order, and the function it belongs to.
+ * Every slide, in order, the function it belongs to and who it speaks to.
  *
- * The last two are the study's — what evaluating is, and the part a participant plays in
- * it — so an account with the evaluation closed is shown the first four. `TutorialScreen`
- * keeps one slide per id of the product's, and the study's two are the evaluation's code
- * (`evaluation/tutorial.tsx`), fetched only for an account it is open to; the types check
- * both halves.
+ * Two decks share the end. A teacher's opens on the construction (s1–s4); a student's on
+ * what the student has to hand (st1–st4: welcome, the syllabus, generating and, when it is
+ * open to them, the tutor). The last two are the study's — what evaluating is, and the part
+ * a participant plays in it — shown to either when the evaluation is open to them.
+ * `TutorialScreen` keeps one slide per id of the product's, and the study's two are the
+ * evaluation's code (`evaluation/tutorial.tsx`), fetched only for an account it is open to;
+ * the types check both halves.
  */
 export const DECK = [
-  { id: "s1", feature: null },
-  { id: "s2", feature: null },
-  { id: "s3", feature: null },
-  { id: "s4", feature: null },
-  { id: "s5", feature: "evaluation" },
-  { id: "s6", feature: "evaluation" },
-] as const satisfies readonly { id: string; feature: null | keyof Features }[];
+  { id: "s1", feature: null, audience: "teacher" },
+  { id: "s2", feature: null, audience: "teacher" },
+  { id: "s3", feature: null, audience: "teacher" },
+  { id: "s4", feature: null, audience: "teacher" },
+  { id: "st1", feature: null, audience: "student" },
+  { id: "st2", feature: null, audience: "student" },
+  { id: "st3", feature: null, audience: "student" },
+  { id: "st4", feature: "tutor", audience: "student" },
+  { id: "s5", feature: "evaluation", audience: "all" },
+  { id: "s6", feature: "evaluation", audience: "all" },
+] as const satisfies readonly {
+  id: string;
+  feature: null | keyof Features;
+  audience: "teacher" | "student" | "all";
+}[];
 
 export type SlideId = (typeof DECK)[number]["id"];
 
@@ -37,8 +47,8 @@ export type SlideIdOf<F extends keyof Features> = Extract<
   { feature: F }
 >["id"];
 
-/** The product's own slides, drawn for every account. */
-export type CoreSlideId = Extract<(typeof DECK)[number], { feature: null }>["id"];
+/** The product's own slides: every slide the evaluation's folder does not hand the deck. */
+export type CoreSlideId = Exclude<(typeof DECK)[number], { feature: "evaluation" }>["id"];
 
 /**
  * A point of a slide, and the one that is MARKED (`TutorialScreen` says why only one is).
@@ -59,16 +69,18 @@ export interface Slide {
   steps?: boolean;
 }
 
-/** The slides this account is shown, in order. */
-export function deckFor(features: Features): SlideId[] {
-  return DECK.filter((slide) => slide.feature === null || features[slide.feature]).map(
-    (slide) => slide.id,
-  );
+/** The slides this account is shown, in order: its own deck, and what is open to it. */
+export function deckFor(features: Features, student = false): SlideId[] {
+  return DECK.filter(
+    (slide) =>
+      (slide.feature === null || features[slide.feature]) &&
+      (slide.audience === "all" || slide.audience === (student ? "student" : "teacher")),
+  ).map((slide) => slide.id);
 }
 
 /** How many slides the deck has for this account: what every route and counter agrees on. */
-export function slideCount(features: Features): number {
-  return deckFor(features).length;
+export function slideCount(features: Features, student = false): number {
+  return deckFor(features, student).length;
 }
 
 /**

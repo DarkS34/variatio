@@ -72,9 +72,14 @@ def _view(workspace: Workspace, role: str | None, active: bool, as_admin: bool =
 def listing(
     user: User = Depends(auth.current_user), db: DbSession = Depends(auth.db)
 ) -> dict:
-    """Answer the instances this account can open, and which one it lands in."""
-    rows = identity.memberships_for(db, user.id)
+    """Answer the instances this account can open, and which one it lands in.
+
+    A membership a teacher paused is listed too, marked `disabled`: «Mis asignaturas» shows
+    it among the subjects one studies, with its access closed, and nothing enters it.
+    """
+    rows = identity.memberships_for(db, user.id, include_disabled=True)
     mine = {workspace.id: membership.role for membership, workspace in rows}
+    paused = {workspace.id for membership, workspace in rows if not membership.active}
     current = auth.current_workspace_for(db, user)
     active_id = current.id if current else None
 
@@ -99,10 +104,11 @@ def listing(
                 ),
                 # Who is in it, counted, where the caller teaches: the way into its class.
                 **(
-                    {"people": people_of(db, workspace)}
-                    if mine.get(workspace.id) in (EDITOR, OWNER)
+                    {"people": members.people_of(db, workspace)}
+                    if mine.get(workspace.id) in (EDITOR, OWNER) and workspace.id not in paused
                     else {}
                 ),
+                "disabled": workspace.id in paused,
             }
             for workspace in workspaces
         ],
@@ -354,19 +360,3 @@ def can_create(user: User) -> bool:
     A NULL left over from an old row is not a teacher's, so it fails closed.
     """
     return user.evaluator_profile == TEACHER
-
-
-def people_of(db: DbSession, workspace: Workspace) -> dict[str, int]:
-    """Count a subject's people: its active students, its paused members and its teachers.
-
-    Counts and nothing else — who they are is the class list's, behind a teacher's role.
-    """
-    counts = {"students": 0, "disabled": 0, "teachers": 0}
-    for row, _ in identity.members_of(db, workspace.id, include_disabled=True):
-        if not row.active:
-            counts["disabled"] += 1
-        elif row.role == VIEWER:
-            counts["students"] += 1
-        else:
-            counts["teachers"] += 1
-    return counts

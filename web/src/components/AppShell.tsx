@@ -37,7 +37,7 @@ import {
 } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
+import { useFeatures, useHasWorkspace, useIsStudent, useSpeaksToStudent } from "@/state/auth";
 import {
   keys,
   useHealth,
@@ -553,13 +553,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
   const features = useFeatures();
+  const studentDeck = useSpeaksToStudent();
   // Whether the bar overflows the header's centre line. Measured on that copy, which stays
   // laid out — only hidden — while the bar is drawn on the line underneath, so it is also
   // what says when the bar fits there again.
   const [navCut, setNavCut] = useState(false);
 
   // The tutorial's slide, read from the path with the count `App` routes by; null everywhere else.
-  const tutorialAt = slideOf(path, slideCount(features));
+  const tutorialAt = slideOf(path, slideCount(features, studentDeck));
   const deck = tutorialAt !== null;
 
   // Not opened while the account is in no workspace: the handshake resolves a membership

@@ -444,9 +444,11 @@ const bodiesOf = (language) => {
   const slugs = new Map();
   for (const file of homes.filter((path) => GUIDE_HOME.exec(path)[1] === language)) {
     const map = BODIES_MAP.exec(readFileSync(resolve(SRC, file), "utf8"))?.[1] ?? "";
-    for (const match of map.matchAll(/^\s{2}(\w+):\s*\w+,$/gm)) {
-      if (slugs.has(match[1])) twice.push(`${match[1]} — en ${slugs.get(match[1])} y en ${file}`);
-      else slugs.set(match[1], file);
+    // A slug with a hyphen is a quoted key (`"student-start": StudentStart,`).
+    for (const match of map.matchAll(/^\s{2}(?:"([\w-]+)"|(\w+)):\s*\w+,$/gm)) {
+      const slug = match[1] ?? match[2];
+      if (slugs.has(slug)) twice.push(`${slug} — en ${slugs.get(slug)} y en ${file}`);
+      else slugs.set(slug, file);
     }
   }
   return slugs;

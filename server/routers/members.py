@@ -52,10 +52,13 @@ from ..members import Refusal
 
 router = APIRouter(prefix="/api/members", tags=["members"], dependencies=[auth.EDIT])
 
+DISABLE = "disable"
+REMOVE = "remove"
+
 _ACTIONS = {
-    "disable": members.disable_member,
+    DISABLE: members.disable_member,
     "enable": members.enable_member,
-    "remove": members.remove_member,
+    REMOVE: members.remove_member,
 }
 
 
@@ -70,6 +73,12 @@ class BulkBody(BaseModel):
 
     action: str
     user_ids: list[int]
+
+
+class EndCourseBody(BaseModel):
+    """How a course ends: its students paused (`disable`, undone by opening them) or removed."""
+
+    action: str = DISABLE
 
 
 class ClassLinkBody(BaseModel):
@@ -160,6 +169,42 @@ def remove(user_id: int, access: auth.Access = auth.EDIT, db: DbSession = Depend
 # THE CLASS LINK ---------------------------------------------------------------------------------
 #
 # Every fixed path here is a different shape from `/{user_id:int}`, which no word matches.
+
+
+@router.post("/end-course", dependencies=[auth.MANAGE])
+def end_course(
+    body: EndCourseBody, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """End the course: every active student paused, or removed, and the class link paused.
+
+    The teachers stay, and so do the files: what each student produced is still theirs, and a
+    paused course reopens by opening its students again. A student the service refuses is
+    counted out, never a reason to stop half way.
+    """
+    if body.action not in (DISABLE, REMOVE):
+        raise HTTPException(422, f"Fin de curso desconocido: '{body.action}'.")
+    students = [
+        user for row, user in identity.members_of(db, access.workspace.id) if row.role == VIEWER
+    ]
+    done = 0
+    for student in students:
+        try:
+            _ACTIONS[body.action](db, access.workspace, student, access.user)
+        except Refusal:
+            continue
+        done += 1
+    link = identity.live_class_link(db, access.workspace.id)
+    paused = link is not None and link.paused_at is None
+    if paused:
+        identity.edit_class_link(db, link, paused_at=identity.now())
+    logger.info(
+        "[asignatura] «{}» terminó el curso de «{}»: {} alumno(s) {}",
+        access.user.username,
+        access.ws.slug,
+        done,
+        "desactivado(s)" if body.action == DISABLE else "quitado(s)",
+    )
+    return {"action": body.action, "students": done, "class_link_paused": paused}
 
 
 @router.get("/class-link")

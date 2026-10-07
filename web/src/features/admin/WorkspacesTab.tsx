@@ -1,10 +1,10 @@
-import { Download, Eraser, Eye, MessagesSquare, Pencil, Trash2 } from "lucide-react";
+import { Crown, Download, Eraser, Eye, MessagesSquare, Pencil, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Select } from "@/components/ui/input";
 import { Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, bytes, when } from "@/lib/format";
-import type { AdminOverview, AdminWorkspace } from "@/lib/types";
+import type { AdminAccount, AdminOverview, AdminWorkspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   useActiveWorkspace,
@@ -20,7 +20,10 @@ import {
   useAdminRenameWorkspace,
   useClearCache,
   useDeleteArtifact,
+  useMembershipActions,
 } from "@/state/queries";
+import { ROLE_LABEL_KEYS } from "@/state/auth";
+import { PeopleWhoLoseAccess } from "@/features/workspaces/PeopleWhoLoseAccess";
 import { useT, withCatalogues } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
@@ -71,6 +74,9 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   // The tutor's conversations of one subject, the administrator's other read across accounts.
   const [talksSlug, setTalksSlug] = useState<string | null>(null);
   const talks = overview.workspaces.find((w) => w.slug === talksSlug) ?? null;
+  // The subject whose owner is being chosen, by slug for the same reason as `viewing`.
+  const [owningSlug, setOwningSlug] = useState<string | null>(null);
+  const owning = overview.workspaces.find((w) => w.slug === owningSlug) ?? null;
 
   // One section, so no list of sections beside it (the user's call, 2026-10-04): the tab
   // is its header and its table at full width, and the two reads opened from a row — a
@@ -102,7 +108,8 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
             <TR>
               <TH>{t("ws.col.workspace")}</TH>
               <TH>{t("ws.col.chain")}</TH>
-              <TH align="num">{t("ws.col.members")}</TH>
+              <TH>{t("ws.col.owner")}</TH>
+              <TH align="num">{t("ws.col.students")}</TH>
               <TH align="num">{t("ws.col.variants")}</TH>
               <TH>{t("ws.col.created")}</TH>
               <TH />
@@ -125,7 +132,12 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                 <TD className="px-3 py-2">
                   <ChainCell workspace={workspace} />
                 </TD>
-                <TD align="num" className="px-3 py-2 nums">{workspace.members}</TD>
+                <TD className="px-3 py-2">
+                  <OwnerCell workspace={workspace} onChoose={() => setOwningSlug(workspace.slug)} />
+                </TD>
+                <TD align="num" className="px-3 py-2 nums">
+                  {workspace.people ? workspace.people.students : "—"}
+                </TD>
                 <TD align="num" className="px-3 py-2 nums">
                   {workspace.generations > 0 ? (
                     // A button that says what it opens: as a bare underlined figure it read
@@ -192,6 +204,14 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
         <RenameWorkspaceDialog workspace={renaming} onClose={() => setRenaming(null)} />
       ) : null}
 
+      {owning ? (
+        <ChooseOwnerDialog
+          workspace={owning}
+          accounts={overview.accounts}
+          onClose={() => setOwningSlug(null)}
+        />
+      ) : null}
+
       {target ? (
         <DeleteWorkspaceDialog
           workspace={target}
@@ -227,6 +247,139 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Who owns the subject, by name; or that nobody does, with the way to choose somebody. An
+ * API older than the field says nothing rather than «Sin propietario».
+ */
+function OwnerCell({ workspace, onChoose }: { workspace: AdminWorkspace; onChoose: () => void }) {
+  const { t } = useT();
+  if (!workspace.owners) return <span className="text-muted-foreground">—</span>;
+  if (workspace.owners.length === 0) {
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        <Badge variant="danger">{t("ws.noOwner")}</Badge>
+        <Button size="sm" variant="outline" onClick={onChoose}>
+          <Crown />
+          {t("ws.chooseOwner")}
+        </Button>
+      </span>
+    );
+  }
+  return (
+    <span className="block max-w-[14rem] truncate" title={workspace.owners.map((o) => o.username).join(", ")}>
+      {workspace.owners.map((owner) => owner.name).join(", ")}
+    </span>
+  );
+}
+
+/**
+ * Giving a subject with nobody to own it an owner: one of its own people raised, or a
+ * teacher's account let in as owner. The membership is the administrator's grant
+ * (`POST /api/admin/accounts/{id}/memberships`), which raises a role and never lowers one.
+ */
+function ChooseOwnerDialog({
+  workspace,
+  accounts,
+  onClose,
+}: {
+  workspace: AdminWorkspace;
+  accounts: AdminAccount[];
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  const toast = useToast();
+  const { grant } = useMembershipActions();
+  const inside = accounts.filter(
+    (account) =>
+      !account.disabled &&
+      account.workspaces.some((row) => row.slug === workspace.slug && !row.disabled),
+  );
+  const outside = accounts.filter(
+    (account) =>
+      !account.disabled &&
+      account.evaluator_profile === "teacher" &&
+      !account.workspaces.some((row) => row.slug === workspace.slug),
+  );
+  const [other, setOther] = useState<string>("");
+
+  const make = (account: AdminAccount) =>
+    grant.mutate(
+      { id: account.id, workspace: workspace.slug, role: "owner" },
+      {
+        onSuccess: () => {
+          toast({ title: t("ws.ownerChosen", { name: account.name, subject: workspace.name }) });
+          onClose();
+        },
+        onError: (error: Error) =>
+          toast({ title: t("ws.ownerFailed"), description: error.message, tone: "danger" }),
+      },
+    );
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("ws.chooseOwnerTitle", { name: workspace.name })}
+      description={t("ws.chooseOwnerBody")}
+      className="max-w-lg"
+    >
+      <div className="space-y-4">
+        {inside.length > 0 ? (
+          <ul className="rows">
+            {inside.map((account) => {
+              const role = account.workspaces.find((row) => row.slug === workspace.slug)?.role;
+              return (
+                <li key={account.id} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{account.name}</span>
+                    <span className="block truncate text-small text-muted-foreground">
+                      <span className="font-mono">{account.username}</span>
+                      {role ? ` · ${t(ROLE_LABEL_KEYS[role])}` : ""}
+                    </span>
+                  </span>
+                  <Button size="sm" variant="outline" disabled={grant.isPending} onClick={() => make(account)}>
+                    <Crown />
+                    {t("ws.makeOwner")}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-small text-muted-foreground">{t("ws.nobodyInside")}</p>
+        )}
+        {outside.length > 0 ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-0 flex-1 space-y-1">
+              <Label htmlFor="owner-other">{t("ws.otherTeacher")}</Label>
+              <Select id="owner-other" value={other} onChange={(event) => setOther(event.target.value)}>
+                <option value="">—</option>
+                {outside.map((account) => (
+                  <option key={account.id} value={String(account.id)}>
+                    {account.name} ({account.username})
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!other || grant.isPending}
+              onClick={() => {
+                const account = outside.find((row) => String(row.id) === other);
+                if (account) make(account);
+              }}
+            >
+              <Crown />
+              {t("ws.makeOwner")}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </Dialog>
   );
 }
 
@@ -495,6 +648,7 @@ function DeleteWorkspaceDialog({
     >
       <div className="space-y-3 text-body">
         <p>{t("ws.disappear", { size: bytes(workspace.disk.total) })}</p>
+        <PeopleWhoLoseAccess people={workspace.people} others={0} />
         <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
           <li>
             {built.length > 0
