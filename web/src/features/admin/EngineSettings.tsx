@@ -27,8 +27,13 @@ import { cn } from "@/lib/utils";
    splitting by group puts the remote quota's ceilings under the local GPU. */
 const ENGINE_KEYS = ["engine.name"];
 
+// Who goes first in the queue: the installation's, not a lane's, so on "General" under the
+// queue it orders.
+const QUEUE_KEYS = ["queue.promote_b_after_seconds", "queue.promote_c_after_seconds"];
+
 export const LOCAL_KEYS = [
   "engine.ollama_host",
+  "engine.local_max_background_jobs",
   "engine.idle_unload_seconds",
   "engine.idle_unload_poll_seconds",
 ];
@@ -71,6 +76,7 @@ export function useEngineSettings() {
     payload,
     stored,
     engine: pick(ENGINE_KEYS),
+    queue: pick(QUEUE_KEYS),
     local: pick(LOCAL_KEYS),
     remote: pick(REMOTE_KEYS),
     tunnel: (payload?.settings ?? []).filter((s) => s.group === TUNNEL_GROUP),

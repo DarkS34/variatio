@@ -414,6 +414,30 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   A blocked job holds one slot of each of its lanes. `backends_for` fails closed (reserve
   both). A `generate` job's writer lane comes from the commission's model; an `evaluate`
   job's from `evaluation.local_model`.
+- **What waits goes out by class, then by arrival** (`jobs/priority.py`, decided 2026-10-06):
+  A a tutor's turn (~30 s, somebody waits in a chat), B a commission or a comparison
+  (minutes, somebody watches the bar), C everything else (`catalogue.JOB_CLASS`, a kind with
+  no row is C; the tutor classes its two kinds at install). The class is the kind's, never
+  the role's. AGING: B counts as A after `QUEUE_PROMOTE_B_AFTER_SECONDS` (90) and C as B after
+  `QUEUE_PROMOTE_C_AFTER_SECONDS` (600), then as A after B's term (690 s). On the local lane
+  background jobs hold at most `LOCAL_MAX_BACKGROUND_JOBS` (2) slots, counted by the KIND's
+  class even after aging, and a job held back only by that cap reserves nothing; with
+  capacity 1 it never acts. `queue_position` counts what goes out first on a shared lane,
+  aging included, and `pending()` lists in that order; every dispatch pass restamps, since
+  waiting moves positions with no event. The runner reads its clock from `_clock` (a test
+  ages a job at will). The order does not pre-empt: a build already running on Ollama keeps
+  the tutor waiting until it ends, so builds go outside class hours.
+- **A commission's bounds** (`routers/jobs.submit`, under one lock with the queueing): one
+  live `generate` per account and subject (409 `generation_busy`, every role); a student's
+  count at most `GENERATION_STUDENT_MAX_ITEMS` (5, never above `GENERATION_MAX_ITEMS`; 422)
+  and the day's exercises at most `GENERATION_STUDENT_DAILY_ITEMS` (empty = none) across
+  every subject, counted as asked at queueing in `generation_usage` (migration 0018; a batch
+  cancelled or failed gives nothing back): nothing left is 429 `generation_daily_limit` with
+  `Retry-After`, some left is 422 naming how many. A teacher has neither bound.
+  `GET /api/jobs/allowance` tells the form (`max_items`, `daily_items`, `used_today`); its
+  stepper stops there and says what is left of the day, and `lib/limit.ts` words the 429 from
+  its code and `Retry-After` (the wait's words are shared with the tutor's, `server/daily.py`
+  on the server).
 - `GET /api/pipeline` reports lanes: `busy` means FULL; `current_job` is the oldest job of
   YOUR workspace. A lane's holder travels as `kind` (named by the client, `lib/names.ts`) plus
   the server's `label`, both left out when the holder's function (`routers/jobs.FEATURE_OF`,
@@ -1228,10 +1252,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the queue's line, since its word is the engine chosen); the tab opens on the part that
   needs somebody, else on «General». The readings
   are `features/admin/engineState.ts`, shared by the rows and the cards' badges. «General»
-  leads with the choice of engine («Solo local» / «Híbrido», `engine.name`), then the queue,
+  leads with the choice of engine («Solo local» / «Híbrido», `engine.name`), then the queue
+  and its order («Orden de la cola», `queue.*`),
   the connection to Ollama (direct when no `OLLAMA_SSH_HOST` is named — never drawn as a
   tunnel left unconfigured — else the SSH tunnel) and the warm contexts; «Local» is the GPU and the models on ITS disk (a
-  remote model has no row there); «Remoto» is the quota. A setting the panel cannot change
+  remote model has no row there) with its cap of background jobs; «Remoto» is the quota. A setting the panel cannot change
   (environment, or `editable=False`) is not drawn. Models are never downloaded from the
   panel (a build pulls what it lacks). `CEREBRAS_MODELS` is ticked from the catalogue plus
   what the engine already lists, never typed. The four Cerebras ceilings are one group named
@@ -1412,7 +1437,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Every model call has its own temperature, top-k and top-p; empty inherits, so adding a
   phase never changes how an existing one samples.
 - Queue per backend lane; local capacity 1 forever; remote capacity safe only with the
-  ledger's lock and claims.
+  ledger's lock and claims. Inside a lane, three classes by duration and by who waits (the
+  tutor's turns, then commissions, then the background), aging so nobody waits for ever, and
+  a cap of background jobs on the local lane that aging does not lift (2026-10-06; it was
+  first come, first served).
 - `inference.generate()` streams internally and is interruptible; the stream is closed on
   abandon; waits are sliced.
 - The idle unload clock counts every lane; not replaced by a shorter keep-alive.

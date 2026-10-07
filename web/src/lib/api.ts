@@ -2,6 +2,7 @@ import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
   AdminClassLink,
+  Allowance,
   AdminEngine,
   AdminFeaturesPayload,
   AdminGenerationListing,
@@ -417,6 +418,8 @@ export const api = {
   submitJob: (kind: string, params: Record<string, unknown> = {}, force = false) =>
     post<{ job: Job; since: number }>("/api/jobs", { kind, params, force }),
   jobs: () => request<{ jobs: Job[] }>("/api/jobs"),
+  // How many exercises one commission, and the day, may ask for here: a student's are bounded.
+  allowance: () => request<Allowance>("/api/jobs/allowance"),
   currentJob: () =>
     request<{ job: Job | null; queued: Job[]; last_seq: number }>("/api/jobs/current"),
   job: (id: string) => request<{ job: Job }>(`/api/jobs/${id}`),

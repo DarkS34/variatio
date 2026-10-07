@@ -7,10 +7,11 @@ one locally and always, `CEREBRAS_MAX_CONCURRENT_JOBS` remotely, because what is
 remotely is a rolling budget that `core/cerebras_budget` already books call by call.
 
 A job reserves the lanes of the generative models it calls (`jobs/lanes.py`) and runs as
-soon as every one of them has a free slot. Within a lane the order of arrival is kept, and
-a job that cannot start holds a slot of each of its lanes against everything behind it —
-otherwise a job needing both would never get them. A job that calls no model reserves
-nothing and never waits.
+soon as every one of them has a free slot. What waits goes out by class and then by arrival
+(`jobs/priority.py`: a tutor's turn, then a batch, then a build, each raised by its wait), and
+a job that cannot start holds a slot of each of its lanes against everything behind it in
+that order — otherwise a job needing both would never get them. A job that calls no model
+reserves nothing and never waits.
 """
 
 import subprocess
@@ -22,7 +23,7 @@ from loguru import logger
 
 from variatio.core import progress
 
-from . import joblog, lanes
+from . import joblog, lanes, priority
 from .bus import EventBus
 from .catalogue import SUBPROCESS_KINDS, Job
 
@@ -116,6 +117,8 @@ class JobRunner:
         self._stopping = threading.Event()
         self._wake = threading.Event()
         self._last_activity = time.time()
+        # What a waiting job's age is read against. A test replaces it to age a job at will.
+        self._clock: Callable[[], float] = time.time
 
     # LIFECYCLE -----------------------------------------------------------------------------
 
@@ -163,6 +166,7 @@ class JobRunner:
             user_name=user_name,
             redacted=redacted,
         )
+        job.created_at = self._clock()
         # Resolved on submit rather than on dispatch: the engine can be switched from the
         # panel mid-queue, and a job waits for the lanes it was accepted against.
         job.backends = sorted(lanes.backends_for(kind, job.params))
@@ -251,11 +255,12 @@ class JobRunner:
     def queue_position(self, job_id: str) -> int:
         """Say where a job stands in ITS OWN lanes, from 1, or 0 once it is running.
 
-        What is ahead of a job is only what could hold a lane it needs, so a remote job
-        queued behind an hour of local building reports 1 and starts at once.
+        What is ahead of a job is only what could hold a lane it needs and goes out before it
+        — a higher class, aging included, or the same class and older — so a remote job queued
+        behind an hour of local building reports 1 and starts at once.
         """
         with self._lock:
-            return self._position(job_id)
+            return self._positions(self._clock(), priority.rules()).get(job_id, 0)
 
     def building_artifacts(self, workspace: str | None = None) -> set[str]:
         """Return the artifacts a running or queued job is about to (re)write here."""
@@ -290,14 +295,14 @@ class JobRunner:
             return max(0.0, time.time() - self._last_activity)
 
     def pending(self, workspace: str | None = None) -> list[Job]:
-        """Return every job still waiting for a lane, in order of arrival."""
+        """Return every job still waiting for a lane, in the order they will go out.
+
+        That order and not the order of arrival, because whatever reads this list — the
+        queue's card, «N por delante» — is saying who goes first (`priority.order`).
+        """
         with self._lock:
-            jobs = [self._jobs[i] for i in self._order]
-        return [
-            j
-            for j in jobs
-            if j.status == "queued" and (workspace is None or j.workspace == workspace)
-        ]
+            jobs = priority.order(self._waiting(), self._clock(), priority.rules())
+        return [j for j in jobs if workspace is None or j.workspace == workspace]
 
     # INTERNAL STATE ------------------------------------------------------------------------
 
@@ -305,27 +310,27 @@ class JobRunner:
         """Return every running job, in order of arrival. The caller holds the lock."""
         return [self._jobs[i] for i in self._order if self._jobs[i].status == "running"]
 
-    def _restamp(self) -> None:
-        """Re-derive every queued job's position after the queue moved. Lock held."""
-        for job_id in self._order:
-            job = self._jobs[job_id]
-            if job.status == "queued":
-                job.queue_position = self._position(job_id)
+    def _restamp(self, now: float | None = None, rules: priority.Rules | None = None) -> None:
+        """Re-derive every queued job's position after the queue moved, or aged. Lock held."""
+        positions = self._positions(
+            self._clock() if now is None else now, priority.rules() if rules is None else rules
+        )
+        for job_id, position in positions.items():
+            self._jobs[job_id].queue_position = position
 
-    def _position(self, job_id: str) -> int:
-        """Count the queued jobs ahead of this one sharing a lane with it. Lock held."""
-        job = self._jobs.get(job_id)
-        if job is None or job.status != "queued":
-            return 0
-        mine = set(job.backends)
-        position = 1
-        for other_id in self._order:
-            if other_id == job_id:
-                break
-            other = self._jobs[other_id]
-            if other.status == "queued" and mine & set(other.backends):
-                position += 1
-        return position
+    def _positions(self, now: float, rules: priority.Rules) -> dict[str, int]:
+        """Number every queued job, from 1, by what goes out before it on its lanes. Lock held."""
+        positions: dict[str, int] = {}
+        ahead: list[set[str]] = []
+        for job in priority.order(self._waiting(), now, rules):
+            mine = set(job.backends)
+            positions[job.id] = 1 + sum(1 for other in ahead if mine & other)
+            ahead.append(mine)
+        return positions
+
+    def _waiting(self) -> list[Job]:
+        """Return every queued job in order of arrival. Lock held."""
+        return [self._jobs[i] for i in self._order if self._jobs[i].status == "queued"]
 
     # WORKER --------------------------------------------------------------------------------
 
@@ -341,14 +346,19 @@ class JobRunner:
     def _launch_ready(self) -> None:
         """Start every job whose lanes have room, one worker thread each.
 
-        Capacity is read once per pass, live from the configuration: the panel changes it
-        while the process runs, and the job that starts next is the one to honour it.
+        Capacity and the queue's rules are read once per pass, live from the configuration:
+        the panel changes them while the process runs, and the job that starts next is the one
+        to honour them. A pass that starts nothing still restamps, because waiting ages a job
+        and moves the positions without any event.
         """
         while True:
             caps = lanes.capacities()
+            rules = priority.rules()
             with self._lock:
-                job_id = self._next_ready(caps)
+                now = self._clock()
+                job_id = self._next_ready(caps, now, rules)
                 if job_id is None:
+                    self._restamp(now, rules)
                     return
                 job = self._jobs[job_id]
                 control = self._controls[job_id]
@@ -366,24 +376,41 @@ class JobRunner:
                 daemon=True,
             ).start()
 
-    def _next_ready(self, caps: dict[str, int]) -> str | None:
-        """FIFO over the queue, skipping what cannot start. The caller holds the lock.
+    def _next_ready(
+        self,
+        caps: dict[str, int],
+        now: float | None = None,
+        rules: priority.Rules | None = None,
+    ) -> str | None:
+        """Pick the first job, in the order they go out, whose lanes have room. Lock held.
 
-        A blocked job TAKES A SLOT of each of its lanes for the rest of the pass, so nothing
-        behind it takes that slot: without this a job needing both lanes would be overtaken
-        for ever by single-lane jobs arriving after it.
+        The order is `priority.order`: class, aging included, then arrival. A blocked job
+        TAKES A SLOT of each of its lanes for the rest of the pass, so nothing behind it takes
+        that slot: without this a job needing both lanes would be overtaken for ever by
+        single-lane jobs arriving after it. A background job held back only by the local cap
+        of background jobs takes nothing: the cap is there to keep room for the rest.
         """
+        now = self._clock() if now is None else now
+        rules = priority.rules() if rules is None else rules
         taken = {b: len(ids) for b, ids in self._holders.items()}
-        for job_id in self._order:
-            job = self._jobs[job_id]
-            if job.status != "queued":
-                continue
+        background = sum(
+            1
+            for job_id in self._holders.get(lanes.LOCAL, ())
+            if job_id in self._jobs and priority.is_background(self._jobs[job_id])
+        )
+        for job in priority.order(self._waiting(), now, rules):
             reserved = set(job.backends)
             if any(taken.get(b, 0) >= caps.get(b, 1) for b in reserved):
                 for backend in reserved:
                     taken[backend] = taken.get(backend, 0) + 1
                 continue
-            return job_id
+            if (
+                lanes.LOCAL in reserved
+                and priority.is_background(job)
+                and background >= rules.local_background
+            ):
+                continue
+            return job.id
         return None
 
     def _execute(self, job: Job, control: JobControl) -> None:

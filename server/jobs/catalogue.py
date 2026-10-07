@@ -64,6 +64,30 @@ PRIVATE_KINDS: set[str] = {"generate", "evaluate"}
 # other kind is the construction's and takes a teacher (`routers/jobs.submit`).
 STUDENT_KINDS: set[str] = {"generate", "evaluate"}
 
+# The queue's three classes (`jobs/priority.py`), by how long a kind lasts and who waits for
+# it: A, a person waiting in a chat (a tutor's turn, added by `tutor.api.install`); B, a
+# person waiting on a progress bar; C, nobody waiting at that moment. The class is the
+# kind's, never the role's or the account's: a teacher's job does not go before a student's.
+INTERACTIVE = "A"
+BATCH = "B"
+BACKGROUND = "C"
+
+JOB_CLASS: dict[str, str] = {
+    "generate": BATCH,
+    "evaluate": BATCH,
+    "build_profile": BACKGROUND,
+    "build_kg": BACKGROUND,
+    "build_bank": BACKGROUND,
+    "transcribe": BACKGROUND,
+    "describe_concepts": BACKGROUND,
+    "index": BACKGROUND,
+    "tag": BACKGROUND,
+    "review_taggability": BACKGROUND,
+}
+
+# A kind with no row is background: never interactive by omission.
+DEFAULT_CLASS = BACKGROUND
+
 
 @dataclass
 class Job:

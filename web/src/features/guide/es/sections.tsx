@@ -1502,6 +1502,29 @@ function Runs() {
         </p>
       </SectionHead>
 
+      <Block title="Quién va primero">
+        <Paragraph>
+          Dentro de cada motor, la cola no va por orden de llegada: va primero lo que alguien
+          espera. Primero los mensajes al tutor, que duran unos segundos y alguien los espera en
+          un chat; después los lotes de ejercicios y las comparaciones, que duran minutos y
+          alguien mira su barra; y al final lo de fondo —construir, transcribir, indexar,
+          etiquetar—, que dura de minutos a horas y nadie espera en ese momento. Dentro de cada
+          grupo, el orden de llegada. El papel de la cuenta no cuenta: un docente no pasa delante
+          de un alumno.
+        </Paragraph>
+        <Paragraph>
+          Nadie espera para siempre: un trabajo que lleva mucho en cola sube al grupo de arriba.
+          El orden solo decide quién sale cuando el motor queda libre, y lo que ya está en marcha
+          sigue hasta el final: una construcción larga en el motor local hace esperar a todos.
+          Por eso las construcciones se lanzan fuera de la hora de clase.
+        </Paragraph>
+        <Paragraph>
+          Cada cuenta tiene como mucho <strong>un lote de ejercicios en marcha</strong> por
+          asignatura. Un alumno pide pocos de una vez, y puede tener un máximo al día que suma
+          todas sus asignaturas; el formulario le dice cuántos le quedan.
+        </Paragraph>
+      </Block>
+
       <Block title="Los seis estados">
         <Paragraph>
           Ningún estado se distingue solo por el color: cada uno tiene su forma, y se lee en la

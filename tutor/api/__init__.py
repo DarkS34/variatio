@@ -13,7 +13,13 @@ def install(app) -> None:
     """Register the tutor's two jobs, their lanes and their function, and mount its routers."""
     from server import features
     from server.jobs import lanes
-    from server.jobs.catalogue import PRIVATE_KINDS, STUDENT_KINDS
+    from server.jobs.catalogue import (
+        BACKGROUND,
+        INTERACTIVE,
+        JOB_CLASS,
+        PRIVATE_KINDS,
+        STUDENT_KINDS,
+    )
     from server.jobs.handlers import HANDLERS
     from server.routers.jobs import FEATURE_OF
     from variatio import config as pipeline_config
@@ -35,6 +41,10 @@ def install(app) -> None:
     # a teacher's to draft.
     PRIVATE_KINDS.add(jobs.TURN)
     STUDENT_KINDS.add(jobs.TURN)
+    # A turn is the queue's first class: about 30 s, and a person waits for it in a chat. The
+    # criteria are drafted in the background, like a build.
+    JOB_CLASS[jobs.TURN] = INTERACTIVE
+    JOB_CLASS[jobs.CRITERIA] = BACKGROUND
 
     # The models each job calls, read at queueing time like every other kind's: the reply and
     # the classification for a turn, the drafting for the criteria, and — for both — what

@@ -42,7 +42,8 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { baseType } from "@/features/profile/FieldEditor";
-import { useHealth, useScope } from "@/state/queries";
+import { leftToday } from "@/lib/limit";
+import { useAllowance, useHealth, useScope } from "@/state/queries";
 import { useT, type Translate } from "@/lib/i18n";
 
 import type { FormState } from "./commission";
@@ -316,6 +317,20 @@ export function GenerateForm({
   // nothing. One state, because only one overlay can be open.
   const [picking, setPicking] = useState<"concepts" | "curriculum" | null>(null);
   const patch = (fields: Partial<FormState>) => onChange({ ...state, ...fields });
+  // How many one commission may ask for here, and what is left of a student's day: the
+  // stepper stops there, so the server's 422 is not the first to say it. With nothing left
+  // the stepper keeps the commission's own ceiling and the line under it says why.
+  const allowance = useAllowance(variant === "generate");
+  const left = allowance.data ? leftToday(allowance.data) : null;
+  const ceiling = Math.max(
+    1,
+    Math.min(allowance.data?.max_items ?? MAX_ITEMS, left === null || left === 0 ? MAX_ITEMS : left),
+  );
+  useEffect(() => {
+    // A commission filled in from another (a teacher's, an older day's) may ask for more.
+    if (variant === "generate" && state.n > ceiling) patch({ n: ceiling });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ceiling]);
 
   const types = typeKeys(profile);
   const typeKey = activeTypeKey(state, profile);
@@ -980,9 +995,16 @@ export function GenerateForm({
           {variant === "generate" ? (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-body font-medium">{t("form.howMany")}</span>
-              <Count value={state.n} onChange={(n) => patch({ n })} />
+              <Count value={state.n} onChange={(n) => patch({ n })} max={ceiling} />
               {state.n > 1 ? (
                 <Badge variant="outline">{t("form.noRepeat")}</Badge>
+              ) : null}
+              {left !== null && allowance.data?.daily_items != null ? (
+                <span className="basis-full text-small text-muted-foreground">
+                  {left > 0
+                    ? t("limit.generation.left", { left, daily: allowance.data.daily_items })
+                    : t("limit.generation.none", { daily: allowance.data.daily_items })}
+                </span>
               ) : null}
             </div>
           ) : null}

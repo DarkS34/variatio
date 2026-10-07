@@ -493,6 +493,57 @@ presupuesto ni acelera un build; lo que compra es que varias personas trabajen a
 No hace falta reiniciar nada: se lee cada vez que la cola mira si algo puede empezar.""",
     ),
     Setting(
+        key="engine.local_max_background_jobs",
+        name="LOCAL_MAX_BACKGROUND_JOBS",
+        kind="int",
+        default=2,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántos huecos del carril local pueden ocupar a la vez los trabajos de fondo: construir,
+transcribir, describir, indexar, etiquetar, revisar la etiquetabilidad y redactar los criterios
+del tutor. Lo que queda libre es para los turnos del tutor y los lotes de ejercicios, que
+alguien espera en ese momento.
+
+Cuenta el tipo de trabajo y no su espera: una construcción que sube de clase por llevar mucho
+en cola sigue contando aquí, porque el tope protege a los interactivos y el envejecimiento no
+debe saltárselo. Con Ollama el carril local atiende un trabajo cada vez y este tope no actúa.
+
+Sin medir: hace falta un motor local que atienda varios trabajos a la vez para leer un valor.""",
+    ),
+    Setting(
+        key="queue.promote_b_after_seconds",
+        name="QUEUE_PROMOTE_B_AFTER_SECONDS",
+        kind="int",
+        default=90,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántos segundos espera en cola un lote de ejercicios o una comparación antes de contar
+como un turno del tutor. La cola atiende primero los turnos del tutor (unos 30 s, alguien
+espera en un chat), después los lotes (minutos, alguien mira la barra) y después lo de fondo
+(nadie espera en ese momento); este plazo es lo que impide que una clase entera escribiendo
+al tutor deje un lote esperando sin fin.
+
+Sin medir: el valor se fija en la prueba de carga.""",
+    ),
+    Setting(
+        key="queue.promote_c_after_seconds",
+        name="QUEUE_PROMOTE_C_AFTER_SECONDS",
+        kind="int",
+        default=600,
+        minimum=1,
+        group="Motor",
+        impact=Impact.NONE,
+        doc="""Cuántos segundos espera en cola un trabajo de fondo (una construcción, una transcripción,
+una indexación) antes de contar como un lote de ejercicios. Después sigue subiendo con el
+plazo de los lotes, así que con los valores por defecto llega a la clase de los turnos del
+tutor a los 690 s. El orden solo decide quién sale cuando un hueco queda libre: con Ollama, una
+construcción ya en marcha hace esperar a todos hasta que termina.
+
+Sin medir: el valor se fija en la prueba de carga.""",
+    ),
+    Setting(
         key="engine.ollama_host",
         name="OLLAMA_HOST",
         kind="str",

@@ -139,7 +139,7 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
   const cells: BoardCell[] = [
     {
       ...generalCell(engine, jobs.data, tr),
-      pending: pendingIn([...config.engine, ...config.tunnel]),
+      pending: pendingIn([...config.engine, ...config.queue, ...config.tunnel]),
     },
     { ...localCell(engine, tr), pending: pendingIn(config.local) },
     ...(paired ? [{ ...remoteCell(engine, tr), pending: pendingIn(config.remote) }] : []),
@@ -186,6 +186,12 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
         <>
           <EngineChoice config={config} />
           <QueueSection />
+          <SettingsPanel
+            titleKey="eng.cfg.queue"
+            noteKey="eng.cfg.queueNote"
+            settings={config.queue}
+            config={config}
+          />
           <TunnelCard tunnel={engine.tunnel} available={engine.available} host={engine.host} />
           <SettingsPanel
             titleKey="eng.cfg.tunnel"

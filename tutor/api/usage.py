@@ -6,11 +6,10 @@ conversation can be deleted by its author, and a limit somebody resets by deleti
 The day is UTC, so the limit reopens at the same moment for everybody.
 """
 
-from datetime import datetime, timedelta, timezone
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from server.daily import seconds_to_reopen, today, wait_in_words
 from server.db.models import TutorUsage
 
 # What a refused turn carries in `X-Error-Code`.
@@ -22,11 +21,9 @@ def refusal(session: Session, user_id: int, limit: int | None) -> tuple[str, int
     if not limit or used_today(session, user_id) < limit:
         return None
     wait = seconds_to_reopen()
-    hours, minutes = divmod(max(wait // 60, 1), 60)
-    span = f"{hours} h {minutes} min" if hours else f"{minutes} min"
     return (
         f"Has llegado al límite de {limit} mensajes al tutor por día. "
-        f"Podrás escribir otra vez dentro de {span}.",
+        f"Podrás escribir otra vez dentro de {wait_in_words(wait)}.",
         wait,
     )
 
@@ -45,23 +42,6 @@ def record(session: Session, user_id: int) -> None:
     else:
         row.turns += 1
     session.flush()
-
-
-def seconds_to_reopen() -> int:
-    """Return how many seconds are left of today."""
-    current = now()
-    tomorrow = datetime.combine(current.date() + timedelta(days=1), datetime.min.time(), timezone.utc)
-    return int((tomorrow - current).total_seconds()) + 1
-
-
-def today():
-    """Return the day a turn queued now is counted under."""
-    return now().date()
-
-
-def now() -> datetime:
-    """Return the present moment, in UTC."""
-    return datetime.now(timezone.utc)
 
 
 def _row(session: Session, user_id: int) -> TutorUsage | None:

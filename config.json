@@ -11,9 +11,14 @@
     "cerebras_max_tokens_day": 648000000,
     "cerebras_max_wait_seconds": 90,
     "cerebras_max_concurrent_jobs": 4,
+    "local_max_background_jobs": 2,
     "ollama_host": "localhost:13434",
     "idle_unload_seconds": 1800,
     "idle_unload_poll_seconds": 60
+  },
+  "queue": {
+    "promote_b_after_seconds": 90,
+    "promote_c_after_seconds": 600
   },
   "sampling": {
     "temperature_deterministic": 0.0,
@@ -106,6 +111,7 @@
     "avoid_entry_chars": 240,
     "min_primary_chars": 20,
     "max_items": 20,
+    "student_max_items": 5,
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [

@@ -54,9 +54,6 @@ export const es = {
   "tutor.sendFailed": "No se pudo enviar",
   // The daily limit per account, built from its code and `Retry-After` (`../limit.ts`).
   "tutor.limit.reached": "Has llegado al límite diario de mensajes al tutor. Podrás escribir otra vez dentro de {wait}.",
-  "tutor.limit.hours": { one: "1 hora", other: "{n} horas" },
-  "tutor.limit.minutes": { one: "1 minuto", other: "{n} minutos" },
-  "tutor.limit.both": "{hours} y {minutes}",
   "tutor.you": "Tú",
   "tutor.tutor": "Tutor",
   "tutor.student": "Alumno",

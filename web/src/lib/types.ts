@@ -620,6 +620,15 @@ export interface MembersBulkResult {
   refused: { user_id: number; code: string; reason: string }[];
 }
 
+/** What this account may ask for in one commission and in the day, here. */
+export interface Allowance {
+  max_items: number;
+  /** Null without a daily limit, which is always a teacher's case. */
+  daily_items: number | null;
+  /** Exercises asked for today, across every subject; counted only under a limit. */
+  used_today: number;
+}
+
 export interface WorkspaceListing {
   workspaces: WorkspaceRow[];
   active: string | null;

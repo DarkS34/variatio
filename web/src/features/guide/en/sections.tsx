@@ -1514,6 +1514,29 @@ function Runs() {
         </p>
       </SectionHead>
 
+      <Block title="Who goes first">
+        <Paragraph>
+          Inside each engine, the queue is not first come, first served: what somebody waits for
+          goes first. First the messages to the tutor, which last a few seconds and somebody
+          waits for in a chat; then the batches of exercises and the comparisons, which last
+          minutes and somebody watches on their bar; and last the background work — building,
+          transcribing, indexing, tagging — which lasts minutes to hours and nobody waits for at
+          that moment. Inside each group, the order of arrival. The account's role does not
+          count: a teacher does not go before a student.
+        </Paragraph>
+        <Paragraph>
+          Nobody waits for ever: a job that has been queued for long rises to the group above.
+          The order only decides who goes when the engine is free, and what is already running
+          goes on to the end: a long build on the local engine keeps everybody waiting. That is
+          why builds are launched outside class hours.
+        </Paragraph>
+        <Paragraph>
+          Each account has at most <strong>one batch of exercises running</strong> per subject. A
+          student asks for a few at a time, and may have a daily maximum that adds up all their
+          subjects; the form tells them how many are left.
+        </Paragraph>
+      </Block>
+
       <Block title="The six states">
         <Paragraph>
           No state is told apart by colour alone: each has its own shape, and it is read on the

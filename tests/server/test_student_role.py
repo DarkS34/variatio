@@ -31,13 +31,17 @@ ANA, LUIS = 1, 2
 # THE CODES OF A REFUSAL --------------------------------------------------------------------
 
 
-@pytest.fixture
-def db():
+def _session():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     Base.metadata.create_all(engine)
-    session = sessionmaker(bind=engine, expire_on_commit=False)()
+    return sessionmaker(bind=engine, expire_on_commit=False)()
+
+
+@pytest.fixture
+def db():
+    session = _session()
     yield session
     session.close()
 
@@ -128,8 +132,9 @@ def _access(role: str, user_id: int = ANA) -> Access:
 
 
 def _submit(kind: str, role: str, **body) -> dict:
+    # A database of its own: a student's commission is counted against the day.
     return jobs_router.submit(
-        jobs_router.JobBody(kind=kind, **body), access=_access(role), db=None
+        jobs_router.JobBody(kind=kind, **body), access=_access(role), db=_session()
     )
 
 

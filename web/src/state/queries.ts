@@ -39,6 +39,7 @@ export const keys = {
   bank: (params: Record<string, unknown>) => ["bank", params] as const,
   coverage: ["bank", "coverage"] as const,
   jobs: ["jobs"] as const,
+  allowance: ["jobs", "allowance"] as const,
   raw: ["raw"] as const,
   // The phase plan of each builder. It is a property of the code, not of the instance, so
   // it is fetched once and never invalidated — nothing a user does can change it.
@@ -1040,7 +1041,16 @@ export function useQueuedNotice() {
   };
 }
 
+/**
+ * What this account may ask for here: the count of one commission and what is left of the
+ * day. A teacher's answer has no day; a student's says how much is left.
+ */
+export function useAllowance(enabled = true) {
+  return useQuery({ queryKey: keys.allowance, queryFn: api.allowance, enabled });
+}
+
 export function useSubmitJob() {
+  const client = useQueryClient();
   const invalidate = useInvalidateChain();
   const announce = useQueuedNotice();
   return useMutation({
@@ -1058,6 +1068,8 @@ export function useSubmitJob() {
       announce(job);
       invalidate();
     },
+    // A commission queued spends a student's day; one refused may have found it spent.
+    onSettled: () => client.invalidateQueries({ queryKey: keys.allowance }),
   });
 }
 

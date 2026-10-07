@@ -122,6 +122,7 @@ LEVELS = {
     ("POST", "/api/jobs"): "viewer",
     ("GET", "/api/jobs"): "viewer",
     ("GET", "/api/jobs/current"): "viewer",
+    ("GET", "/api/jobs/allowance"): "viewer",
     ("GET", "/api/jobs/{job_id}"): "viewer",
     ("GET", "/api/jobs/{job_id}/events"): "viewer",
     ("DELETE", "/api/jobs/{job_id}"): "viewer",

@@ -15,7 +15,8 @@ DERIVED_ONLY = {
 }
 
 # An empty document prefix is qwen3-embedding's prescribed usage rather than an omission.
-MAY_BE_EMPTY = {"EMBEDDING_DOCUMENT_PREFIX"}
+# Empty is a value for these: no prefix for a document, and no daily limit for a student.
+MAY_BE_EMPTY = {"EMBEDDING_DOCUMENT_PREFIX", "GENERATION_STUDENT_DAILY_ITEMS"}
 
 
 def test_every_named_setting_is_an_attribute_of_config():
@@ -92,5 +93,5 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 256 → 290 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
     # optional import of `tutor.settings`; none carries a name, so `BY_NAME` does not move.
     # 290 → 291 the same day: the tutor's daily limit of messages per account.
-    assert len(REGISTRY) == 291
-    assert len(BY_NAME) == 153
+    assert len(REGISTRY) == 296
+    assert len(BY_NAME) == 158

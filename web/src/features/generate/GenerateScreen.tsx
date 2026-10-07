@@ -10,6 +10,7 @@ import { TabStrip, tabIds } from "@/components/TabStrip";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton } from "@/components/ui/misc";
 import { SubjectExercises, useExerciseTotal } from "@/features/generations/GenerationsPanel";
+import { launchError } from "@/lib/limit";
 import { isLive, isQueued, waitOf, waitReason } from "@/lib/queue";
 import { useRouter } from "@/lib/router";
 import type { ExemplarsProfile, ItemChecks } from "@/lib/types";
@@ -270,7 +271,7 @@ export function GenerateScreen() {
         disabled={!unlocked || Boolean(offline)}
         running={active}
         pending={submit.isPending}
-        error={submit.isError ? (submit.error as Error).message : null}
+        error={submit.isError ? launchError(submit.error as Error, tr) : null}
         blockedInstructions={stillRefused(run?.job, form.instructions)}
         onLaunch={launch}
         run={run ?? null}

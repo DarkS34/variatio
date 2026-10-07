@@ -584,6 +584,23 @@ class FeatureGrant(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class GenerationUsage(Base):
+    """How many exercises one account asked for on one day, across every subject.
+
+    What a student's daily limit counts (`generation.student_daily_items`). A row and not a
+    count of the exercise files, for `TutorUsage`'s reason: a file can be deleted, and a limit
+    somebody resets by deleting is none. The day is UTC.
+    """
+
+    __tablename__ = "generation_usage"
+    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_generation_usage_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date)
+    items: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
 class TutorUsage(Base):
     """How many turns of the tutor one account queued on one day, across every workspace.
 
