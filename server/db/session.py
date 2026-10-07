@@ -13,6 +13,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 DEFAULT_URL = "postgresql+psycopg://variatio:variatio@localhost:5432/variatio"
 
+# Connections each process keeps, and how many more it may open on demand (2026-10-06, for a
+# class of 100 at once; re-measure with a load test before trusting them further).
+POOL_SIZE = 30
+MAX_OVERFLOW = 30
+
 _engine = None
 _factory: sessionmaker | None = None
 
@@ -58,8 +63,33 @@ def engine():
     """Return this process's engine, creating it on first use."""
     global _engine
     if _engine is None:
-        _engine = create_engine(database_url(), pool_pre_ping=True, future=True)
+        url = database_url()
+        _engine = create_engine(url, pool_pre_ping=True, future=True, **_pool(url))
     return _engine
+
+
+def _pool(url: str) -> dict[str, int]:
+    """Return the connection pool's size, from `DATABASE_POOL_SIZE` and `DATABASE_MAX_OVERFLOW`.
+
+    SQLAlchemy's default (5 kept, 10 more on demand) made a route wait for a connection with
+    a class connected at once. Postgres must allow what every process sharing it may open:
+    `max_connections` at least the sum of their pools. SQLite (the tests) keeps its own pool.
+    """
+    if url.startswith("sqlite"):
+        return {}
+    return {
+        "pool_size": _positive("DATABASE_POOL_SIZE", POOL_SIZE),
+        "max_overflow": _positive("DATABASE_MAX_OVERFLOW", MAX_OVERFLOW),
+    }
+
+
+def _positive(name: str, default: int) -> int:
+    """Read a whole number from the environment, keeping the default on anything else."""
+    try:
+        value = int(os.environ.get(name, "") or default)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
 
 
 def database_url() -> str:

@@ -1967,6 +1967,20 @@ function Admin() {
         />
       </Block>
 
+      <Block title={`«${t("acc.access")}»: a school's network`}>
+        <Paragraph>
+          Logging in allows a few attempts per address in a few minutes, the right ones
+          included. From home each student has their own address and nothing fails; from a
+          school's network the whole class goes out through the same one, and the ninth student
+          could not get in. In «{t("acc.access")}», the last section of this tab's list, you list
+          the school's networks: from them only each account's own limit counts, which still
+          stops whoever tries passwords against one. Write a network, such as 192.168.1.0/24, or
+          a single address; a network wider than /8 is not accepted. The change holds from the
+          next attempt, with no restart, and the same student gets in from school in the morning
+          and from home in the afternoon alike.
+        </Paragraph>
+      </Block>
+
       <Block title="Closing an account: two different things">
         <Rows
           items={[

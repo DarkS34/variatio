@@ -20,6 +20,9 @@
     "promote_b_after_seconds": 90,
     "promote_c_after_seconds": 600
   },
+  "access": {
+    "trusted_networks": []
+  },
   "sampling": {
     "temperature_deterministic": 0.0,
     "temperature_reasoning": 0.2

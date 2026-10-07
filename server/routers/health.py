@@ -3,11 +3,18 @@
 Declares `auth.VIEW`: it reports on the machine, but it also reports this instance's
 paths and whether its context is warm, so it is not public.
 
-The *installed* listing is cached for 30 s inside `core.inference` — what is on disk only
-changes on a pull or a delete, and every open tab polls this route across the SSH tunnel.
-Residency is NEVER cached: `running_models()` is the live measurement the panel's card
-exists to show, and caching it would make the panel lie about the GPU.
+The engine is read once every `READ_EVERY` seconds for the whole process, by one thread at
+a time, and every request in between takes that reading: a class has a hundred tabs open, each
+polling this route every 15 s, and each poll crossed the SSH tunnel three times. While one
+thread reads, the others answer with the reading before it, and only the very first waits.
+The installed listing is also cached for 30 s inside `core.inference`. The panel's «Motor»
+tab reads the engine live from `/api/admin/engine`, so what it shows of the GPU is never
+five seconds old.
 """
+
+import threading
+import time
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DbSession
@@ -18,6 +25,54 @@ from variatio.core import inference
 from .. import auth, deps, features, singletons
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
+
+# How old the shared reading of the engine may be, in seconds.
+READ_EVERY = 5.0
+
+
+@dataclass(frozen=True)
+class EngineReading:
+    """What the engine said at one moment: whether it answers, and its models."""
+
+    at: float
+    available: bool
+    installed: list[str]
+    running: list[dict]
+
+
+_reading: EngineReading | None = None
+_reading_lock = threading.Lock()
+_clock = time.monotonic
+
+
+def engine_reading() -> EngineReading:
+    """Return the shared reading of the engine, reading it again when it is too old.
+
+    One thread reads at a time; the others take the reading before it rather than queue
+    behind the tunnel. Only when there is no reading at all does a request wait for one.
+    """
+    global _reading
+    current = _reading
+    if current is not None and _clock() - current.at < READ_EVERY:
+        return current
+    if not _reading_lock.acquire(blocking=current is None):
+        return current
+    try:
+        current = _reading
+        if current is not None and _clock() - current.at < READ_EVERY:
+            return current
+        available = inference.is_available()
+        installed, running = _listings() if available else ([], [])
+        _reading = EngineReading(_clock(), available, installed, running)
+        return _reading
+    finally:
+        _reading_lock.release()
+
+
+def forget_reading() -> None:
+    """Drop the shared reading, so the next request reads the engine again."""
+    global _reading
+    _reading = None
 
 
 def _listings() -> tuple[list[str], list[dict]]:
@@ -60,13 +115,9 @@ def _missing_models(required: dict, installed: list[str], remote: set[str]) -> l
 def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) -> dict:
     """Answer the engine's reachability, its models, and this workspace's own paths."""
     ws = access.ws
-    available = inference.is_available()
+    reading = engine_reading()
+    available, installed, running = reading.available, reading.installed, reading.running
     required = _required(db)
-
-    installed: list[str] = []
-    running: list[dict] = []
-    if available:
-        installed, running = _listings()
 
     remote = inference.remote_models()
 

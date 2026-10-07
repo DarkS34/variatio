@@ -1,5 +1,6 @@
 """What a setting is: its declaration, and the coercion of a raw value into it."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -45,6 +46,9 @@ class Setting:
     it — every other one shows it as shared. `phase` is the model call of that first stage
     it is drawn under; none means it governs the stage as a whole. Both stay empty for what
     belongs to the engine or the process rather than to a stage.
+
+    `clean` is the value's own rule, beyond its kind and its bounds: it returns the value as
+    it is stored (a network as its network address) or raises SettingError.
     """
 
     key: str
@@ -66,6 +70,7 @@ class Setting:
     engine_defaults: tuple[tuple[str, object], ...] | None = None
     stages: tuple[str, ...] = ()
     phase: str | None = None
+    clean: Callable[[object], object] | None = None
 
     def __post_init__(self) -> None:
         """Raise SettingError when the declaration itself is malformed."""
@@ -96,6 +101,8 @@ def coerce(setting: Setting, raw: object) -> object:
             return None
         raise SettingError(f"'{setting.name or setting.key}' no admite un valor vacío")
     value = _canonical(setting, _convert(setting, raw))
+    if setting.clean is not None:
+        value = setting.clean(value)
     _check(setting, value)
     return value
 

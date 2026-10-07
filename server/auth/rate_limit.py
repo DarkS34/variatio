@@ -5,17 +5,24 @@ of machinery. When the API grows to several processes this is the module that ch
 and only this one.
 
 Two keys per attempt, never one: the IP stops a spray across many accounts, and the
-account stops a spray from many IPs. Either alone leaves the other attack open.
+account stops a spray from many IPs. Either alone leaves the other attack open. The one
+exception is an address in a network the administrator listed as a school's
+(`TRUSTED_NETWORKS`): behind its NAT a whole class is one address, so only the account is
+counted there.
 
 `installation` and `deps` are imported inside the functions that need them, because this
 module sits between the two halves of their import cycle.
 """
 
+import functools
+import ipaddress
 import threading
 import time
 from collections import defaultdict, deque
 
 from fastapi import HTTPException, Request
+
+from variatio import config
 
 
 class RateLimiter:
@@ -97,7 +104,7 @@ def throttle(bucket: str, request: Request, account: str, cost: int = 1) -> None
 
     limit, window = limits(bucket)
     limiter.sweep()
-    for key in (client_ip(request), account):
+    for key in _keys(client_ip(request), account):
         wait = limiter.check(bucket, key, limit, window, cost)
         if wait > 0:
             raise HTTPException(
@@ -105,6 +112,42 @@ def throttle(bucket: str, request: Request, account: str, cost: int = 1) -> None
                 f"Demasiados intentos. Vuelve a probar en {int(wait) + 1} segundos.",
                 headers={"Retry-After": str(int(wait) + 1)},
             )
+
+
+def _keys(address: str, account: str) -> tuple[str, ...]:
+    """Return the keys an attempt counts against: the address, then the account.
+
+    An address inside a trusted network is left out — behind a school's NAT the ninth
+    student to log in was refused — and the account never is. A bucket with no account to
+    count (`reset`) keeps its address, or nothing would limit it at all.
+    """
+    if account and trusted(address):
+        return (account,)
+    return (address, account)
+
+
+def trusted(address: str) -> bool:
+    """Whether an address lies in a network the installation lists as a school's.
+
+    Read on every attempt, so a change in the panel holds from the next request on. An
+    IPv4 address written as IPv6 (`::ffff:10.0.0.7`) is read as the IPv4 it carries.
+    """
+    networks = _parsed(tuple(config.TRUSTED_NETWORKS))
+    if not networks or not address:
+        return False
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    if ip.version == 6 and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return any(ip in network for network in networks)
+
+
+@functools.lru_cache(maxsize=8)
+def _parsed(values: tuple[str, ...]) -> tuple:
+    """Parse the listed networks once per distinct list; the registry already checked them."""
+    return tuple(ipaddress.ip_network(value, strict=False) for value in values)
 
 
 def locked_seconds(bucket: str, account: str) -> float:

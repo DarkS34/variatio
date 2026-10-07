@@ -93,5 +93,5 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 256 → 290 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
     # optional import of `tutor.settings`; none carries a name, so `BY_NAME` does not move.
     # 290 → 291 the same day: the tutor's daily limit of messages per account.
-    assert len(REGISTRY) == 296
-    assert len(BY_NAME) == 158
+    assert len(REGISTRY) == 297
+    assert len(BY_NAME) == 159

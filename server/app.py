@@ -8,6 +8,7 @@ job runner back and mounting them from the router package would close a cycle.
 import asyncio
 import contextlib
 
+import anyio.to_thread
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,6 +19,9 @@ from variatio import config
 
 from . import installation, jobs, middleware, singletons
 from .routers import ROUTERS
+
+# Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
+WORKER_THREADS = 200
 
 try:
     from evaluation import api as evaluation_api
@@ -81,6 +85,9 @@ async def lifespan(app: FastAPI):
     hold the event loop past uvicorn's own shutdown timeout.
     """
     singletons.bus.attach_loop(asyncio.get_running_loop())
+    # Sync routes run in AnyIO's worker threads, 40 by default: a class's tabs polling at
+    # once, each route reading files and the database, queued behind those 40.
+    anyio.to_thread.current_default_thread_limiter().total_tokens = WORKER_THREADS
     _autostart_tunnel()
     singletons.runner.start()
     singletons.idle_unloader.start()

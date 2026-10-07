@@ -262,6 +262,10 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 
 - **The ORM models describe what the migrations built**; `alembic` autogenerate against the
   live schema must report zero differences. Fix drift in the models, never with DDL.
+- The pool keeps `DATABASE_POOL_SIZE` (30) connections and opens `DATABASE_MAX_OVERFLOW` (30)
+  more on demand (`session._pool`; SQLite keeps its own). Postgres's `max_connections` must
+  cover the sum over every process sharing it (prod, the lab and dev share one server, at 100
+  today).
 - Artifacts are versioned rows keyed `(workspace, kind, stage, version)`; an unchanged hash
   reuses the existing row.
 - **Reads come from files; writes are mirrored best-effort** (`server/db/mirror.py`) at three
@@ -317,7 +321,14 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `tests/server/test_route_roles.py` reads every mounted route and pins the level it
   declares against a table: a route with no row fails.
 - CSRF is an origin check (`middleware.py`); CORS off by default. Rate limiting is in memory,
-  keyed by IP and account.
+  keyed by IP and account. **A school's network counts the account alone** (decided
+  2026-10-06): behind its NAT a class is one address and the ninth login was refused, so an
+  address inside `access.trusted_networks` (`TRUSTED_NETWORKS`, env
+  `VARIATIO_TRUSTED_NETWORKS`, edited in «Administración → Cuentas → Acceso») skips the IP
+  key of every bucket (`rate_limit._keys`); the account or link key is always counted, and a
+  bucket with no account (`reset`) keeps its IP. The list is read on every attempt, stores
+  each network as its network address and refuses one wider than /8 (IPv4) or /32 (IPv6)
+  (`registry/access.networks`, the setting's `clean`).
 - **The people of a subject** (decided 2026-10-06): `server/members.py` holds the gestures —
   pause (`disable_member`), open again (`enable_member`), remove (`remove_member`), change a
   role (`change_role`) — and every door goes through them: `/api/members` (its router), the
@@ -389,9 +400,17 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - A request names its workspace (`X-Workspace`, `?workspace=` on the socket, else the
   account's `active_workspace`); `require_member` resolves it once and hands `Access.ws` down.
   Switching workspace clears the client's query cache and resets the run store.
-- `deps.py` is an LRU (8) of `RuntimeContext`s keyed by slug; `deps._lock` is held across
-  `initialize`. Runtime components keep no per-run state on `self` (two jobs of one workspace
-  may share a context).
+- `deps.py` is an LRU (8) of `RuntimeContext`s keyed by slug. Each workspace has its own
+  lock, held across `initialize` (2026-10-06: one lock for all made a subject warming up hold
+  every other subject's jobs); `deps._lock` only guards the dicts. An invalidation during a
+  build bumps the workspace's generation and that build's context is not kept. Runtime
+  components keep no per-run state on `self` (two jobs of one workspace may share a context).
+- `GET /api/health` reads the engine once every `READ_EVERY` (5) seconds for the whole
+  process, one thread at a time (`health.engine_reading`): the others answer with the reading
+  before, and only the first request ever waits. A class's hundred tabs poll it. The panel's
+  «Motor» reads the engine live (`/api/admin/engine`).
+- Sync routes run in 200 AnyIO worker threads (`app.WORKER_THREADS`, set in `lifespan`; the
+  default 40 queued a class's polls).
 - A `Job` carries workspace and author; events are stamped by the bus; `/api/jobs/{id}` 404s
   across workspaces.
 - **A private job is its author's alone** (decided 2026-10-06): `catalogue.PRIVATE_KINDS` is
@@ -1265,7 +1284,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   holder joins at registration («Funciones»), and each row shows them as badges in the
   functions' tones. The form opens on «Perfil de la cuenta» — «Docente» / «Alumno», a radio
   group with NEITHER marked, the button waiting until one is — and each row shows the profile
-  as a badge. «Cuentas» has one section per kind of account, then «Invitaciones». The accounts are ONE TABLE PER
+  as a badge. «Cuentas» has one section per kind of account, then «Invitaciones», then, ruled off,
+  «Acceso» (`AccessSection`: the school networks, a draft saved with «Guardar los cambios»,
+  read-only when the environment sets them). The accounts are ONE TABLE PER
   KIND (user's request, 2026-10-04; `features/admin/accounts.ts`, `groupOf`): «Docentes» and «Alumnos» by
   `evaluator_profile` (no «Sin perfil» since 2026-10-06: migration 0017 left none, and an older
   API's NULL reads as a student's), «Administradores», and
@@ -1492,6 +1513,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   creating subjects, and authorises nothing inside one (2026-10-06; it was a variable of the
   evaluation the registrant chose).
 - Membership checked on every route; admin bypass in one place.
+- The per-address limit on attempts has one exception, the networks the administrator lists
+  as a school's: from them only the account is counted (2026-10-06; it had none).
 - `viewer` is «Alumno» (2026-10-06; it was «Lector», who saw everything and changed
   nothing): a student sees the syllabus without editing it and generates, evaluates or uses
   the tutor by their permissions; the rest of the construction — the bank, the raw material,

@@ -91,6 +91,17 @@ def _isolated_invite_link_key(tmp_path, monkeypatch):
 # instead of quietly succeeding against real data. Tests that build their own engine are
 # unaffected, and the import is inside the function so a runtime-only checkout without the
 # `server` extra can still collect this file.
+# `/api/health` shares one reading of the engine for a few seconds; a reading left by one test
+# would answer the next one's engine.
+@pytest.fixture(autouse=True)
+def _fresh_engine_reading():
+    from server.routers import health
+
+    health.forget_reading()
+    yield
+    health.forget_reading()
+
+
 @pytest.fixture(autouse=True)
 def _isolated_database(tmp_path, monkeypatch):
     from server.db import session

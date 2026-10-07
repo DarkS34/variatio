@@ -7,10 +7,17 @@ next job rebuilds it. What bounds `MAX_CONTEXTS` is not memory but that rebuildi
 costs minutes.
 
 Two jobs of the same workspace can run at once on different lanes and share one context.
-`_lock` is held across `entrypoints.initialize` so the second waits instead of starting a second
-build, and the components a context holds (`Embedder`, `ConceptTagger`,
-`VariantGenerator`) assign no instance state after their constructor. A component that
-starts keeping per-run state on `self` breaks that.
+Each workspace has its own lock, held across `entrypoints.initialize`, so the second job waits
+instead of starting a second build — and a job of ANOTHER workspace never waits for it: one
+lock for every context made a class's tutor turns wait while a teacher's subject warmed up.
+`_lock` itself only guards the registry's dicts and is never held across a build. The
+components a context holds (`Embedder`, `ConceptTagger`, `VariantGenerator`) assign no
+instance state after their constructor. A component that starts keeping per-run state on
+`self` breaks that.
+
+An invalidation that lands while its workspace is being built does not wait for the build:
+it bumps the workspace's generation, and the build that started under the old one hands its
+context to the job that asked and keeps it out of the registry.
 """
 
 import threading
@@ -27,6 +34,8 @@ MAX_CONTEXTS = 8
 
 _contexts: "OrderedDict[str, RuntimeContext]" = OrderedDict()
 _invalid_reasons: dict[str, str] = {}
+_generations: dict[str, int] = {}
+_building: dict[str, threading.Lock] = {}
 _lock = threading.RLock()
 
 
@@ -42,25 +51,43 @@ def invalidate(slug: str, reason: str) -> None:
         if _contexts.pop(slug, None) is not None:
             logger.info(f"Contexto de «{slug}» invalidado: {reason}")
         _invalid_reasons[slug] = reason
+        _generations[slug] = _generations.get(slug, 0) + 1
 
 
 def get_context(ws: Workspace) -> RuntimeContext:
-    """Return the workspace's warm context, building it under the lock if there is none."""
+    """Return the workspace's warm context, building it under its own lock if there is none."""
+    warm = _warm(ws.slug)
+    if warm is not None:
+        return warm
     with _lock:
-        existing = _contexts.get(ws.slug)
-        if existing is not None:
-            _contexts.move_to_end(ws.slug)
-            return existing
-
+        building = _building.setdefault(ws.slug, threading.Lock())
+    with building:
+        # Whoever held the lock before us may have built it.
+        warm = _warm(ws.slug)
+        if warm is not None:
+            return warm
         require_inference()
-        reason = _invalid_reasons.pop(ws.slug, None)
+        with _lock:
+            reason = _invalid_reasons.pop(ws.slug, None)
+            generation = _generations.get(ws.slug, 0)
         if reason:
             logger.info(f"Reconstruyendo el contexto de «{ws.slug}»: {reason}")
 
         context = entrypoints.initialize(tag=False, ws=ws)
-        _contexts[ws.slug] = context
-        _evict()
+        with _lock:
+            if _generations.get(ws.slug, 0) == generation:
+                _contexts[ws.slug] = context
+                _evict()
         return context
+
+
+def _warm(slug: str) -> RuntimeContext | None:
+    """Return a workspace's warm context, marking it the most recently used, or None."""
+    with _lock:
+        existing = _contexts.get(slug)
+        if existing is not None:
+            _contexts.move_to_end(slug)
+        return existing
 
 
 def require_inference() -> None:
@@ -90,6 +117,8 @@ def invalidate_all(reason: str) -> int:
         for slug in slugs:
             _contexts.pop(slug, None)
             _invalid_reasons[slug] = reason
+        for slug in set(_generations) | set(_building):
+            _generations[slug] = _generations.get(slug, 0) + 1
         if slugs:
             logger.info(f"[contextos] {len(slugs)} contexto(s) invalidado(s): {reason}")
         return len(slugs)

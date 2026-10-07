@@ -1955,6 +1955,20 @@ function Admin() {
         />
       </Block>
 
+      <Block title={`«${t("acc.access")}»: la red de un centro`}>
+        <Paragraph>
+          Entrar admite unos pocos intentos por dirección en pocos minutos, también los
+          correctos. Desde casa cada alumno tiene su dirección y nada falla; desde la red de un
+          centro, toda la clase sale por la misma, y el noveno alumno no podía entrar. En «
+          {t("acc.access")}», la última sección de la lista de esta pestaña, apuntas las redes
+          del centro: desde ellas solo cuenta el límite de cada cuenta, que sigue cerrando el
+          paso a quien prueba contraseñas contra una. Se escribe una red, como 192.168.1.0/24, o
+          una sola dirección; no se admite una red más amplia que /8. El cambio vale en el
+          siguiente intento, sin reiniciar, y el mismo alumno entra igual desde el centro por la
+          mañana y desde casa por la tarde.
+        </Paragraph>
+      </Block>
+
       <Block title="Cerrar una cuenta: dos cosas distintas">
         <Rows
           items={[

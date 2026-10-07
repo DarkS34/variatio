@@ -3,8 +3,8 @@ from variatio.settings.registry import BY_KEY, PIPELINE, REGISTRY, STAGES
 from variatio.settings.types import STAGES as PIPELINE_STAGES
 
 # What belongs to the engine or the process and not to a stage: drawn in «Administración →
-# Motor», or not drawn at all.
-STAGELESS_GROUPS = {"Motor", "Túnel SSH", "Registro"}
+# Motor» (the trusted networks, in «Cuentas → Acceso»), or not drawn at all.
+STAGELESS_GROUPS = {"Motor", "Túnel SSH", "Acceso", "Registro"}
 
 LANE_OF = {phase.key: lane.key for lane in PIPELINE for phase in lane.phases}
 

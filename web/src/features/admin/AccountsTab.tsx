@@ -5,6 +5,7 @@ import {
   GraduationCap,
   LogOut,
   MailPlus,
+  Network,
   Presentation,
   ShieldCheck,
   ShieldOff,
@@ -39,6 +40,7 @@ import {
   useSetAccountEnabled,
 } from "@/state/queries";
 
+import { AccessSection, trustedNetworksOf, useAdminConfig } from "./AccessSection";
 import { groupOf, matchesAccount, type GroupKey } from "./accounts";
 import { CopyLink } from "./CopyLink";
 import { InvitesSection } from "./InvitesSection";
@@ -91,9 +93,11 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   const session = useSession();
   const toast = useToast();
   const [open, setOpen] = useState<number | null>(null);
-  const [section, setSection] = useState<GroupKey | "invites">("teachers");
+  const [section, setSection] = useState<GroupKey | "invites" | "access">("teachers");
   const [search, setSearch] = useState("");
   const invites = useAdminInvites();
+  const config = useAdminConfig();
+  const networks = trustedNetworksOf(config.data);
   const now = Date.now();
   const waiting = invites.data
     ? invites.data.invites.filter((row) => inviteState(row, now) === "pending").length
@@ -105,7 +109,9 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   })).filter((group) => group.accounts.length > 0);
   // An account that changes kind may empty the section open: the first one listed takes over.
   const current =
-    section === "invites" ? null : (groups.find((group) => group.key === section) ?? groups[0]);
+    section === "invites" || section === "access"
+      ? null
+      : (groups.find((group) => group.key === section) ?? groups[0]);
   const term = search.trim();
   const matches = term
     ? groups
@@ -173,10 +179,10 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   return (
     <Sections
       label={t("acc.sections")}
-      value={matches ? null : (current?.key ?? "invites")}
+      value={matches ? null : (current?.key ?? section)}
       onChange={(key) => {
         setSearch("");
-        setSection(key as GroupKey | "invites");
+        setSection(key as GroupKey | "invites" | "access");
       }}
       before={
         <Input
@@ -200,6 +206,19 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
           mark: <MailPlus className="size-4" />,
           detail:
             waiting === null ? undefined : plural("acc.invite.pendingHeading", waiting),
+        },
+        // Not a kind of account: how accounts get in from a school's network.
+        {
+          key: "access",
+          label: t("acc.access"),
+          mark: <Network className="size-4" />,
+          detail:
+            networks === null
+              ? undefined
+              : networks.length === 0
+                ? t("acc.access.none")
+                : plural("acc.access.count", networks.length),
+          separated: true,
         },
       ]}
     >
@@ -230,6 +249,8 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
           <SectionHeader title={t(current.label)} description={t(current.note)} />
           {tableOf(current.accounts, current.showProfile)}
         </>
+      ) : section === "access" ? (
+        <AccessSection />
       ) : (
         <InvitesSection overview={overview} />
       )}
