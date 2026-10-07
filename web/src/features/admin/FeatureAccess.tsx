@@ -14,6 +14,7 @@ import { featureLabelKey } from "@/lib/steps";
 import { fold } from "@/lib/text";
 import {
   featureAccessOf,
+  SUBJECT_LISTED,
   type AdminAccount,
   type AdminWorkspace,
   type FeatureAccessState,
@@ -68,6 +69,10 @@ export function useAccessDrafts(): AccessDrafts {
  * A class is ticked at once: under «Cuentas elegidas» a subject is chosen and every account
  * in it now (`accountsIn`, teachers included, paused memberships left out) is ticked, or
  * unticked, in one press. The ticks are the draft as any other, so nothing is saved by it.
+ *
+ * The tutor may also list whole subjects («Asignaturas elegidas», `SUBJECT_LISTED`): everybody
+ * in one uses it there, whoever joins later included, and not in their other subjects. The
+ * accounts' shortcut ticks who is in a subject today; the subject's list follows its class.
  */
 export function FeatureAccess({
   feature,
@@ -102,7 +107,12 @@ export function FeatureAccess({
   // Back to the saved state is no draft at all, so the save button greys out again.
   const change = (next: FeatureAccessState) =>
     setDraft(
-      saved && next.mode === saved.mode && sameIds(next.accounts, saved.accounts) ? null : next,
+      saved &&
+        next.mode === saved.mode &&
+        sameIds(next.accounts, saved.accounts) &&
+        sameSlugs(next.workspaces ?? [], saved.workspaces ?? [])
+        ? null
+        : next,
     );
   const modes = useRadioGroup(
     MODES.map(({ mode }) => mode),
@@ -121,7 +131,19 @@ export function FeatureAccess({
 
   const name = t(featureLabelKey(feature));
   const listChanged = !sameIds(current.accounts, saved.accounts);
-  const dirty = current.mode !== saved.mode || listChanged;
+  // A function a whole subject may be listed for (the tutor): its subjects are a list of their own.
+  const bySubjects = SUBJECT_LISTED.includes(feature);
+  const subjects = current.workspaces ?? [];
+  const subjectsChanged = bySubjects && !sameSlugs(subjects, saved.workspaces ?? []);
+  const dirty = current.mode !== saved.mode || listChanged || subjectsChanged;
+  const listedSubjects = new Set(subjects);
+  const tickSubjectRow = (slug: string, on: boolean) =>
+    change({
+      ...current,
+      workspaces: on
+        ? [...subjects, slug].sort((a, b) => a.localeCompare(b))
+        : subjects.filter((other) => other !== slug),
+    });
   const selecting = current.mode === "selected";
   const ticked = new Set(current.accounts);
   const known = accounts.filter((account) => ticked.has(account.id));
@@ -153,6 +175,7 @@ export function FeatureAccess({
         feature,
         mode: current.mode,
         ...(listChanged ? { accounts: current.accounts } : {}),
+        ...(subjectsChanged ? { workspaces: subjects } : {}),
       },
       {
         onSuccess: () => {
@@ -174,7 +197,7 @@ export function FeatureAccess({
       <SectionHeader
         id={headingId}
         title={t("feature.section.access")}
-        description={stateSentence(saved, t, plural)}
+        description={stateSentence(saved, t, plural, bySubjects)}
       />
       <section aria-labelledby={headingId} className="surface space-y-4 p-5">
         <div
@@ -215,8 +238,53 @@ export function FeatureAccess({
           })}
         </div>
 
+        {bySubjects && (selecting || subjects.length > 0) ? (
+          <div className="space-y-2">
+            <h3 className="text-heading">{t("feature.subjects.title")}</h3>
+            <p className="max-w-3xl text-small text-muted-foreground">
+              {selecting ? t("feature.subjects.lead") : t("feature.kept")}
+            </p>
+            {workspaces.length === 0 ? (
+              <p className="text-small text-muted-foreground">{t("feature.subjects.none")}</p>
+            ) : (
+              <ul
+                className={cn(
+                  "thin-scroll max-h-56 divide-y divide-border overflow-y-auto",
+                  !selecting && "opacity-60",
+                )}
+              >
+                {(selecting ? workspaces : workspaces.filter((row) => listedSubjects.has(row.slug))).map(
+                  (row) => (
+                    <li key={row.slug}>
+                      <label
+                        className={cn(
+                          "flex items-center gap-2 px-1 py-2",
+                          selecting && "cursor-pointer hover:bg-accent",
+                        )}
+                      >
+                        <Checkbox
+                          checked={listedSubjects.has(row.slug)}
+                          disabled={!selecting || write.isPending}
+                          onCheckedChange={(on) => tickSubjectRow(row.slug, on)}
+                          label={row.name}
+                          className={selecting ? undefined : "disabled:opacity-100"}
+                        />
+                        <span className="truncate">{row.name}</span>
+                        <span className="min-w-0 flex-1 truncate font-mono text-small text-muted-foreground">
+                          {row.slug}
+                        </span>
+                      </label>
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+          </div>
+        ) : null}
+
         {selecting || known.length > 0 ? (
           <div className="space-y-2">
+            {bySubjects ? <h3 className="text-heading">{t("feature.accounts.title")}</h3> : null}
             {selecting && workspaces.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">
                 <label htmlFor={subjectId} className="text-small text-muted-foreground">
@@ -333,17 +401,38 @@ export function FeatureAccess({
   );
 }
 
-/** What the SAVED state means, in one sentence: the draft is what the controls show. */
+/**
+ * What the SAVED state means, in one sentence: the draft is what the controls show. For a
+ * function a subject may be listed for, it names the three things — the mode, the accounts
+ * and the subjects.
+ */
 function stateSentence(
   saved: FeatureAccessState,
   t: Translate["t"],
   plural: Translate["plural"],
+  bySubjects = false,
 ): string {
   if (saved.mode === "all") return t("feature.state.all");
-  if (saved.mode === "selected" && saved.accounts.length > 0) {
-    return plural("feature.state.selected", saved.accounts.length);
+  if (saved.mode !== "selected") return t("feature.state.off");
+  const subjects = bySubjects ? (saved.workspaces ?? []).length : 0;
+  if (subjects > 0) {
+    const where = plural("feature.state.subjectsN", subjects);
+    return saved.accounts.length > 0
+      ? t("feature.state.accountsAndSubjects", {
+          accounts: plural("feature.state.accountsN", saved.accounts.length),
+          subjects: where,
+        })
+      : t("feature.state.subjectsOnly", { subjects: where });
   }
-  return saved.mode === "selected" ? t("feature.state.empty") : t("feature.state.off");
+  if (saved.accounts.length > 0) return plural("feature.state.selected", saved.accounts.length);
+  return t("feature.state.empty");
+}
+
+/** Whether two lists of subject slugs hold the same subjects, whatever their order. */
+function sameSlugs(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const other = new Set(b);
+  return a.every((slug) => other.has(slug));
 }
 
 /** Whether two lists of account ids hold the same accounts, whatever their order. */

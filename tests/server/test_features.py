@@ -185,7 +185,7 @@ def test_the_administrator_sets_a_mode_and_its_list_from_the_panel(db):
         "tutor", FeatureBody(mode="selected", accounts=[ana.id]), admin=admin, db=db
     )
 
-    assert answer["features"]["tutor"] == {"mode": "selected", "accounts": [ana.id]}
+    assert answer["features"]["tutor"] == {"mode": "selected", "accounts": [ana.id], "workspaces": []}
     assert admin_routes.read_features(db=db) == answer
 
 
@@ -197,7 +197,7 @@ def test_a_mode_sent_alone_keeps_the_list(db):
 
     answer = admin_routes.set_feature("tutor", FeatureBody(mode="off"), admin=admin, db=db)
 
-    assert answer["features"]["tutor"] == {"mode": "off", "accounts": [ana.id]}
+    assert answer["features"]["tutor"] == {"mode": "off", "accounts": [ana.id], "workspaces": []}
 
 
 @pytest.mark.parametrize(
@@ -215,7 +215,7 @@ def test_an_unknown_function_mode_or_account_is_refused(db, feature, body, statu
         admin_routes.set_feature(feature, FeatureBody(**body), admin=admin, db=db)
 
     assert refused.value.status_code == status
-    assert features.snapshot(db)["tutor"] == {"mode": "off", "accounts": []}
+    assert features.snapshot(db)["tutor"] == {"mode": "off", "accounts": [], "workspaces": []}
 
 
 # THE INVITATION ----------------------------------------------------------------------------------

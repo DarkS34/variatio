@@ -444,6 +444,22 @@ export function useMemberActions() {
   };
 }
 
+/**
+ * An owner changes a member's role. Its own session reads again too: handing the ownership over
+ * ends with the owner's own role lowered, and the screen must stop offering what it no longer may.
+ */
+export function useChangeRole() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: number; role: Role }) => api.changeMemberRole(userId, role),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: keys.members });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+      client.invalidateQueries({ queryKey: authKeys.me });
+    },
+  });
+}
+
 /** Ending the course moves the people, their counts and the class link at once. */
 export function useEndCourse() {
   const client = useQueryClient();
@@ -910,11 +926,18 @@ export function useSetFeature() {
       feature,
       mode,
       accounts,
+      workspaces,
     }: {
       feature: FeatureName;
       mode: FeatureMode;
       accounts?: number[];
-    }) => api.adminSetFeature(feature, accounts ? { mode, accounts } : { mode }),
+      workspaces?: string[];
+    }) =>
+      api.adminSetFeature(feature, {
+        mode,
+        ...(accounts ? { accounts } : {}),
+        ...(workspaces ? { workspaces } : {}),
+      }),
     onSuccess: (payload) => {
       // The answer IS the new state, so the panel draws it at once rather than flashing the
       // old one until the refetch lands.

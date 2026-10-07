@@ -19,16 +19,33 @@ more things for its students alone: whether they generate exercises and whether 
 tutor (`workspaces.student_generate`, `student_tutor`; «Clase → Qué usan los alumnos»).
 `refusal` is the one reading of all of it — the administrator's mode, the role and the
 subject's switch — and `for_user` answers it for the subject an account is in.
+
+A FUNCTION FOR A WHOLE SUBJECT (the class plan's phase 15): under `selected`, beside the
+accounts on its list, a function may list subjects (`SUBJECT_LISTED`: the tutor alone), and then
+everybody in a listed subject uses it there — not in their other subjects.
 """
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .db.models import VIEWER, FeatureAccess, FeatureGrant, Membership, User, Workspace
+from .db.models import (
+    VIEWER,
+    FeatureAccess,
+    FeatureGrant,
+    FeatureSubject,
+    Membership,
+    User,
+    Workspace,
+)
 
 EVALUATION = "evaluation"
 TUTOR = "tutor"
 FEATURES: tuple[str, ...] = (EVALUATION, TUTOR)
+
+# The functions a whole subject may be listed for (the class plan's phase 15): under `selected`
+# everybody in a listed subject uses the function there. The evaluation stays account by
+# account (decided 2026-10-06), so only the tutor.
+SUBJECT_LISTED: tuple[str, ...] = (TUTOR,)
 
 # Generating is everybody's, but a subject's teachers may close it to its students. It is not
 # an optional function: it has no mode and no row in `feature_access`.
@@ -85,7 +102,7 @@ def refusal(
     subject, the switch its teachers set. A teacher, and an administrator entering through the
     bypass (who holds the owner's role), never meets a subject's switch.
     """
-    if feature in FEATURES and not enabled(session, user, feature):
+    if feature in FEATURES and not enabled(session, user, feature, workspace):
         return REFUSALS[feature]
     column = SUBJECT_SWITCHES.get(feature)
     if column and workspace is not None and role == VIEWER and not getattr(workspace, column, True):
@@ -116,6 +133,8 @@ def offered_to_students(session: Session, workspace: Workspace) -> bool:
         return True
     if current != SELECTED:
         return False
+    if subject_listed(session, TUTOR, workspace):
+        return True
     return (
         session.scalar(
             select(Membership.id)
@@ -132,27 +151,51 @@ def offered_to_students(session: Session, workspace: Workspace) -> bool:
     )
 
 
-def enabled(session: Session, user: User, feature: str) -> bool:
-    """Say whether `feature` is open to this account."""
+def enabled(
+    session: Session, user: User, feature: str, workspace: Workspace | None = None
+) -> bool:
+    """Say whether `feature` is open to this account, in `workspace` when one is named.
+
+    Under `selected`: the account is on the function's list, or — for a function a subject may
+    be listed for — the subject it is working in is.
+    """
     current = mode(session, feature)
     if current == ALL:
         return True
-    if current == SELECTED:
-        return (
-            session.scalar(
-                select(FeatureGrant.id).where(
-                    FeatureGrant.feature == feature, FeatureGrant.user_id == user.id
-                )
-            )
-            is not None
+    if current != SELECTED:
+        return False
+    listed_account = session.scalar(
+        select(FeatureGrant.id).where(
+            FeatureGrant.feature == feature, FeatureGrant.user_id == user.id
         )
-    return False
+    )
+    if listed_account is not None:
+        return True
+    return workspace is not None and subject_listed(session, feature, workspace)
+
+
+def subject_listed(session: Session, feature: str, workspace: Workspace) -> bool:
+    """Say whether a subject is on a function's list."""
+    if feature not in SUBJECT_LISTED:
+        return False
+    return (
+        session.scalar(
+            select(FeatureSubject.id).where(
+                FeatureSubject.feature == feature, FeatureSubject.workspace_id == workspace.id
+            )
+        )
+        is not None
+    )
 
 
 def snapshot(session: Session) -> dict[str, dict]:
-    """Render every function for the panel: its mode and the accounts on its list."""
+    """Render every function for the panel: its mode, its accounts and, where it may, its subjects."""
     return {
-        feature: {"mode": mode(session, feature), "accounts": listed(session, feature)}
+        feature: {
+            "mode": mode(session, feature),
+            "accounts": listed(session, feature),
+            **({"workspaces": listed_subjects(session, feature)} if feature in SUBJECT_LISTED else {}),
+        }
         for feature in FEATURES
     }
 
@@ -196,6 +239,36 @@ def set_listed(session: Session, feature: str, user_ids: list[int]) -> None:
         )
     for user_id in sorted(wanted - current):
         session.add(FeatureGrant(feature=feature, user_id=user_id))
+    session.flush()
+
+
+def listed_subjects(session: Session, feature: str) -> list[str]:
+    """Return the slugs of the subjects on the list of `feature`, in slug order."""
+    return list(
+        session.scalars(
+            select(Workspace.slug)
+            .join(FeatureSubject, FeatureSubject.workspace_id == Workspace.id)
+            .where(FeatureSubject.feature == feature)
+            .order_by(Workspace.slug)
+        )
+    )
+
+
+def set_listed_subjects(session: Session, feature: str, workspace_ids: list[int]) -> None:
+    """Replace the subjects on the list of `feature` with exactly these."""
+    wanted = set(workspace_ids)
+    current = set(
+        session.scalars(select(FeatureSubject.workspace_id).where(FeatureSubject.feature == feature))
+    )
+    if current - wanted:
+        session.execute(
+            delete(FeatureSubject).where(
+                FeatureSubject.feature == feature,
+                FeatureSubject.workspace_id.in_(current - wanted),
+            )
+        )
+    for workspace_id in sorted(wanted - current):
+        session.add(FeatureSubject(feature=feature, workspace_id=workspace_id))
     session.flush()
 
 

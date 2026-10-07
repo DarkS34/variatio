@@ -2201,7 +2201,7 @@ function Admin() {
             {
               key: "selected",
               head: t("feature.mode.selected"),
-              body: "Only on the accounts you tick in the list. For a whole class, choose its subject under «By subject» and tick all its accounts at once. The list is kept when you choose another option, and comes back as it was when you choose this one again.",
+              body: "Only on the accounts you tick in the list. For a whole class, choose its subject under «By subject» and tick all its accounts at once. The tutor also takes «Chosen subjects»: whoever is in one uses it there, whoever joins later too, and not in their other subjects. The lists are kept when you choose another option, and come back as they were when you choose this one again.",
             },
           ]}
         />
@@ -2580,6 +2580,22 @@ function Class() {
           stays. The <strong>personal invitations</strong> are one per name and
           serve once: they are copied one by one, all together, or as a CSV with the name, the
           link and the date.
+        </Paragraph>
+        <Paragraph>
+          If the installation sends mail, each line may be «Name &lt;address&gt;»: the link goes by
+          mail, and the address is kept nowhere. If a mail fails, the list says so and the link is
+          copied by hand. An owner also chooses whom they are for: «
+          {t("class.invites.role.viewer")}» or «{t("class.invites.role.editor")}»; a teacher's
+          invitation gives a teacher's account.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.teachers")}>
+        <Paragraph>
+          Who teaches the subject, with their role. An owner may «{t("class.teachers.promote")}»
+          another teacher, «{t("class.teachers.demote")}» another owner, remove a teacher and «
+          {t("class.teachers.handOver")}»: the other becomes the owner and you a teacher. The
+          subject always keeps an owner. The other teachers read the list and change nothing.
         </Paragraph>
       </Block>
 

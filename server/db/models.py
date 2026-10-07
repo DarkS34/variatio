@@ -591,6 +591,23 @@ class FeatureGrant(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class FeatureSubject(Base):
+    """One subject listed for one optional function: everybody in it uses the function there.
+
+    It leaves with the subject.
+    """
+
+    __tablename__ = "feature_subjects"
+    __table_args__ = (UniqueConstraint("feature", "workspace_id", name="uq_feature_subject"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    feature: Mapped[str] = mapped_column(String(32), index=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class GenerationUsage(Base):
     """How many exercises one account asked for on one day, across every subject.
 

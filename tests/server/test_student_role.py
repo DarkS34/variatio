@@ -168,7 +168,7 @@ def test_a_teacher_queues_the_constructions_jobs(queue):
 
 
 def test_a_student_queues_a_comparison_when_the_evaluation_is_open_to_them(queue, monkeypatch):
-    monkeypatch.setattr(features, "enabled", lambda session, user, feature: True)
+    monkeypatch.setattr(features, "enabled", lambda session, user, feature, workspace=None: True)
 
     answer = _submit("evaluate", VIEWER)
 

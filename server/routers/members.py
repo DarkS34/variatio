@@ -30,6 +30,7 @@ exam, say. The tutor's switch matters only where the administrator opened the tu
 them, and the answer says whether that is so.
 """
 
+import re
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -38,7 +39,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from .. import auth, features, installation, members
-from ..auth import links
+from ..auth import links, mail
 from ..auth.rate_limit import throttle
 from ..db import identity
 from ..db.models import (
@@ -109,11 +110,16 @@ class UsesBody(BaseModel):
 
 
 class InvitesBody(BaseModel):
-    """Personal invitations, one per name: the name is the alias the class list reads."""
+    """Personal invitations, one per name: the name is the alias the class list reads.
+
+    `emails`, when sent, goes beside `names` line by line (None where a name has none): each
+    invitation with an address is mailed, and the address is kept nowhere.
+    """
 
     names: list[str]
     role: str = VIEWER
     expires_at: datetime | None = None
+    emails: list[str | None] | None = None
 
 
 @router.get("")
@@ -379,9 +385,25 @@ def mint_invites(
 
     A student's; a teacher's (`editor`) only when an owner mints it, and the account it then
     creates is a teacher's too. No optional function rides on them: that is the administrator's.
+
+    With mail configured, a name may come with an address (`emails`): its link is sent there
+    and the answer says whether it left (`sent`); the address is kept nowhere — not in the
+    invitation, not in the log — so a link that did not leave is copied by hand.
     """
-    names = [" ".join(name.split()) for name in body.names]
-    names = [name for name in names if name]
+    if body.emails is not None and len(body.emails) != len(body.names):
+        raise HTTPException(422, "Cada nombre lleva su correo, o ninguno.")
+    pairs = [
+        (" ".join(name.split()), (email or "").strip() or None)
+        for name, email in zip(body.names, body.emails or [None] * len(body.names))
+    ]
+    pairs = [(name, email) for name, email in pairs if name]
+    names = [name for name, _ in pairs]
+    addresses = [email for _, email in pairs if email]
+    if addresses and not mail.configured():
+        raise HTTPException(422, "Esta instalación no envía correo: copia los enlaces a mano.")
+    for email in addresses:
+        if len(email) > 254 or not _EMAIL.match(email):
+            raise HTTPException(422, f"«{email[:60]}» no es una dirección de correo.")
     if not 1 <= len(names) <= installation.INVITE_BATCH_MAX:
         raise HTTPException(
             422,
@@ -403,7 +425,7 @@ def mint_invites(
     throttle("teacher_invite", request, access.user.username, cost=len(names))
     base = auth.base_url(request)
     minted = []
-    for name in names:
+    for name, email in pairs:
         invite, token = links.mint(
             db,
             expires_at=expires_at,
@@ -413,20 +435,45 @@ def mint_invites(
             label=name,
             profile=TEACHER if body.role == EDITOR else STUDENT,
         )
-        minted.append(
-            {
-                "invite": _invite_view(db, invite),
-                "link": links.url_for(base, token),
-                "stored": invite.token_sealed is not None,
-            }
-        )
+        link = links.url_for(base, token)
+        row = {
+            "invite": _invite_view(db, invite),
+            "link": link,
+            "stored": invite.token_sealed is not None,
+        }
+        if email:
+            row["sent"] = mail.send(
+                email,
+                f"Invitación a «{access.workspace.name}»",
+                _invitation_mail(access, body.role, link, expires_at),
+                shown_as="una invitación de asignatura",
+            )
+        minted.append(row)
+    sent = sum(1 for row in minted if row.get("sent"))
     logger.info(
-        "[asignatura] «{}» creó {} invitación(es) personal(es) en «{}»",
+        "[asignatura] «{}» creó {} invitación(es) personal(es) en «{}»{}",
         access.user.username,
         len(minted),
         access.ws.slug,
+        f" · {sent} de {len(addresses)} enviada(s) por correo" if addresses else "",
     )
     return {"invites": minted}
+
+
+# An address as a person writes it; delivery is the server's to prove, not this pattern's.
+_EMAIL = re.compile(r"\A[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+\Z")
+
+
+def _invitation_mail(access: auth.Access, role: str, link: str, expires_at: datetime) -> str:
+    """Write the mail that carries one personal invitation."""
+    who = "docente" if role == EDITOR else "alumno"
+    return (
+        f"{access.user.name or access.user.username} te invita a «{access.workspace.name}» "
+        f"en Variatio, como {who}.\n\n"
+        f"Abre este enlace para entrar:\n{link}\n\n"
+        f"El enlace caduca el {expires_at:%d/%m/%Y} y sirve una sola vez. "
+        "Si no esperabas esta invitación, no hagas nada."
+    )
 
 
 @router.get("/invites/{invite_id:int}/link")

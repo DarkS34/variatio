@@ -2189,7 +2189,7 @@ function Admin() {
             {
               key: "selected",
               head: t("feature.mode.selected"),
-              body: "Solo en las cuentas que marques en la lista. Para una clase entera, elige su asignatura en «Por asignatura» y marca todas sus cuentas de una vez. La lista se conserva aunque elijas otra opción, y vuelve tal cual al elegir esta otra vez.",
+              body: "Solo en las cuentas que marques en la lista. Para una clase entera, elige su asignatura en «Por asignatura» y marca todas sus cuentas de una vez. El tutor admite además «Asignaturas elegidas»: quien esté en una de ellas lo usa allí, también quien entre más tarde, y no en sus otras asignaturas. Las listas se conservan aunque elijas otra opción, y vuelven tal cual al elegir esta otra vez.",
             },
           ]}
         />
@@ -2567,6 +2567,23 @@ function Class() {
           los dos casos, quien ya entró se queda. Las{" "}
           <strong>invitaciones personales</strong> son una por nombre y sirven una sola vez: se
           copian una a una, todas juntas o en un CSV con el nombre, el enlace y la fecha.
+        </Paragraph>
+        <Paragraph>
+          Si la instalación envía correo, cada línea puede ser «Nombre &lt;correo&gt;»: el enlace
+          sale por correo, y la dirección no se guarda en ningún sitio. Si un envío falla, la
+          lista lo dice y el enlace se copia a mano. Quien es propietario elige además para quién
+          son: «{t("class.invites.role.viewer")}» o «{t("class.invites.role.editor")}»; una
+          invitación de docente da una cuenta de docente.
+        </Paragraph>
+      </Block>
+
+      <Block title={t("class.teachers")}>
+        <Paragraph>
+          Quién da clase en la asignatura, con su papel. Quien es propietario puede «
+          {t("class.teachers.promote")}» a otro docente, «{t("class.teachers.demote")}» a otro
+          propietario, quitar a un docente y «{t("class.teachers.handOver")}»: el otro pasa a
+          propietario y tú, a docente. La asignatura siempre conserva un propietario. Los demás
+          docentes ven la lista y no cambian nada.
         </Paragraph>
       </Block>
 

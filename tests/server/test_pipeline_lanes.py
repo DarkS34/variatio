@@ -67,7 +67,9 @@ def stand(monkeypatch):
 
 
 def _access(slug: str, user_id: int = 1):
-    return SimpleNamespace(ws=SimpleNamespace(slug=slug), user=SimpleNamespace(id=user_id))
+    return SimpleNamespace(
+        ws=SimpleNamespace(slug=slug), user=SimpleNamespace(id=user_id), workspace=None
+    )
 
 
 def _wait(event: threading.Event) -> None:
@@ -134,7 +136,7 @@ def test_a_holder_of_a_closed_function_is_busy_and_unnamed(stand, monkeypatch):
     monkeypatch.setattr(pipeline_routes, "session_scope", lambda: nullcontext(None))
     open_to = {1}
     monkeypatch.setattr(
-        features, "enabled", lambda session, user, feature: user.id in open_to
+        features, "enabled", lambda session, user, feature, workspace=None: user.id in open_to
     )
     stand.runner.submit("local", {}, workspace="taller")
     _wait(stand.started["local"])

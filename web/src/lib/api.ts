@@ -320,9 +320,18 @@ export const api = {
   setStudentUses: (changes: Partial<Pick<StudentUses, "generate" | "tutor">>) =>
     patch<StudentUses>("/api/members/uses", changes),
   // The subject's personal invitations, a student's each, one per name.
+  // An owner gives a member another role, their own included: how ownership is handed over.
+  changeMemberRole: (userId: number, role: Role) =>
+    patch<{ member: Member }>(`/api/members/${userId}`, { role }),
   memberInvites: () => request<{ invites: MemberInvite[] }>("/api/members/invites"),
-  mintMemberInvites: (body: { names: string[]; expires_at: string | null }) =>
-    post<{ invites: MintedMemberInvite[] }>("/api/members/invites", { ...body, role: "viewer" }),
+  // A student's each, or — an owner's to mint — a teacher's; `emails` beside the names where
+  // the installation sends mail.
+  mintMemberInvites: (body: {
+    names: string[];
+    expires_at: string | null;
+    role?: Role;
+    emails?: (string | null)[];
+  }) => post<{ invites: MintedMemberInvite[] }>("/api/members/invites", { role: "viewer", ...body }),
   memberInviteLink: (id: number) => request<{ link: string }>(`/api/members/invites/${id}/link`),
   revokeMemberInvite: (id: number) =>
     request<{ revoked: boolean }>(`/api/members/invites/${id}`, { method: "DELETE" }),
@@ -631,7 +640,10 @@ export const api = {
 
   // Who each optional function is for. A write without `accounts` leaves the list as it is.
   adminFeatures: () => request<AdminFeaturesPayload>("/api/admin/features"),
-  adminSetFeature: (feature: FeatureName, body: { mode: FeatureMode; accounts?: number[] }) =>
+  adminSetFeature: (
+    feature: FeatureName,
+    body: { mode: FeatureMode; accounts?: number[]; workspaces?: string[] },
+  ) =>
     put<AdminFeaturesPayload>(`/api/admin/features/${feature}`, body),
 
   adminMaintenance: () => request<MaintenanceState>("/api/admin/maintenance"),

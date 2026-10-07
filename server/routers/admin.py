@@ -117,10 +117,11 @@ class ProfileBody(BaseModel):
 
 
 class FeatureBody(BaseModel):
-    """Who one optional function is for: its mode and, when sent, the accounts on its list."""
+    """Who one optional function is for: its mode and, when sent, its accounts and subjects."""
 
     mode: str
     accounts: list[int] | None = None
+    workspaces: list[str] | None = None
 
 
 class MaintenanceBody(BaseModel):
@@ -957,7 +958,8 @@ def set_feature(
 ) -> dict:
     """Set who one optional function is for.
 
-    The list is replaced only when `accounts` is sent, so switching the mode alone keeps it.
+    A list is replaced only when it is sent — `accounts`, or `workspaces` for a function a
+    subject may be listed for — so switching the mode alone keeps both.
     """
     if feature not in features.FEATURES:
         raise HTTPException(404, f"No existe la función '{feature}'.")
@@ -972,13 +974,24 @@ def set_feature(
                 422, f"No existe la cuenta {', '.join(str(uid) for uid in missing)}."
             )
         features.set_listed(db, feature, body.accounts)
+    if body.workspaces is not None:
+        if feature not in features.SUBJECT_LISTED:
+            raise HTTPException(
+                422, "Esta función se abre cuenta por cuenta, no por asignaturas."
+            )
+        rows = {slug: repository.get_workspace(db, slug) for slug in dict.fromkeys(body.workspaces)}
+        missing = [slug for slug, row in rows.items() if row is None]
+        if missing:
+            raise HTTPException(422, f"No existe la asignatura {', '.join(missing)}.")
+        features.set_listed_subjects(db, feature, [row.id for row in rows.values()])
     features.set_mode(db, feature, body.mode)
     logger.info(
-        "[funciones] {} ha puesto '{}' en modo '{}' · {} cuenta(s) en la lista",
+        "[funciones] {} ha puesto '{}' en modo '{}' · {} cuenta(s) y {} asignatura(s) en la lista",
         admin.username,
         feature,
         body.mode,
         len(features.listed(db, feature)),
+        len(features.listed_subjects(db, feature)) if feature in features.SUBJECT_LISTED else 0,
     )
     return {"features": features.snapshot(db)}
 

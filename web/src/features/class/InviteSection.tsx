@@ -8,6 +8,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
 import { CopyButton, CopyLink } from "@/features/admin/CopyLink";
 import { SectionHeader } from "@/features/admin/Sections";
@@ -27,14 +28,17 @@ import {
   inDays,
   inviteState,
   isAhead,
+  isEmail,
   linkLines,
-  namesOf,
+  recipientsOf,
   toLocalInput,
   withinTeacherCap,
   type ExpiryPreset,
 } from "@/lib/invites";
 import { qrDrawing } from "@/lib/qr";
-import type { ClassLinkTerms, ClassLinkView, MemberInvite, MintedMemberInvite } from "@/lib/types";
+import type { ClassLinkTerms, ClassLinkView, MemberInvite, MintedMemberInvite, Role } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { useIsOwner, useSession } from "@/state/auth";
 import {
   useClassLink,
   useClassLinkActions,
@@ -408,28 +412,47 @@ function QrDialog({
 
 /* Personal invitations -------------------------------------------------------------- */
 
+const INVITE_ROLES: Role[] = ["viewer", "editor"];
+
 /**
- * One invitation per name typed, a student's each. What was just minted stays on screen —
- * a link per name, «Copiar todo» and a CSV — until it is put away: a link is a credential.
+ * One invitation per name typed, a student's each — or, for an owner who chooses «Docentes»,
+ * a teacher's. Where the installation sends mail a line may be «Nombre <correo>»: its link
+ * goes there, and the address is kept nowhere. What was just minted stays on screen — a link
+ * per name, whether its mail left, «Copiar todo» and a CSV — until it is put away: a link is
+ * a credential.
  */
 function PersonalInvites({ slug }: { slug: string | null }) {
   const { t, plural } = useT();
   const toast = useToast();
+  const owner = useIsOwner();
+  const mailing = useSession().data?.mail_configured === true;
   const { mint } = useMemberInviteActions();
   const [text, setText] = useState("");
+  const [role, setRole] = useState<Role>("viewer");
+  const radios = useRadioGroup(INVITE_ROLES, role, setRole);
   const [expires, setExpires] = useState(toLocalInput(inDays(TEACHER_INVITE_DEFAULT_DAYS)));
   const [tried, setTried] = useState(false);
   const [minted, setMinted] = useState<MintedMemberInvite[] | null>(null);
-  const names = namesOf(text);
+  const recipients = recipientsOf(text);
+  const names = recipients.map((recipient) => recipient.name);
+  const unnamed = recipients.find((recipient) => !recipient.name);
+  const addressed = recipients.filter((recipient) => recipient.email !== null);
+  const badAddress = addressed.find((recipient) => !isEmail(recipient.email ?? ""));
   const dateOk = isAhead(expires) && withinTeacherCap(expires);
   const problem =
     names.length === 0
       ? t("class.invites.noNames")
       : names.length > BATCH_MAX
         ? t("class.invites.tooMany", { max: BATCH_MAX })
-        : !dateOk
-          ? t("class.expiryBounds", { days: TEACHER_LINK_MAX_DAYS })
-          : null;
+        : unnamed
+          ? t("class.invites.noNames")
+          : addressed.length > 0 && !mailing
+            ? t("class.invites.noMail")
+            : badAddress
+              ? t("class.invites.badEmail", { line: badAddress.line })
+              : !dateOk
+                ? t("class.expiryBounds", { days: TEACHER_LINK_MAX_DAYS })
+                : null;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -437,7 +460,12 @@ function PersonalInvites({ slug }: { slug: string | null }) {
     const moment = fromLocalInput(expires);
     if (problem || moment === null) return;
     mint.mutate(
-      { names, expires_at: moment.toISOString() },
+      {
+        names,
+        expires_at: moment.toISOString(),
+        role: owner ? role : "viewer",
+        ...(addressed.length > 0 ? { emails: recipients.map((recipient) => recipient.email) } : {}),
+      },
       {
         onSuccess: ({ invites }) => {
           setMinted(invites);
@@ -461,6 +489,39 @@ function PersonalInvites({ slug }: { slug: string | null }) {
       </div>
 
       <form onSubmit={submit} className="space-y-3">
+        {owner ? (
+          <div className="space-y-1">
+            <p id="class-invites-role" className="text-micro font-condensed uppercase text-muted-foreground">
+              {t("class.invites.role")}
+            </p>
+            <div role="radiogroup" aria-labelledby="class-invites-role" className="flex flex-wrap gap-2" {...radios.group}>
+              {INVITE_ROLES.map((choice) => {
+                const chosen = choice === role;
+                return (
+                  <button
+                    key={choice}
+                    {...radios.radio(choice)}
+                    type="button"
+                    role="radio"
+                    aria-checked={chosen}
+                    onClick={() => setRole(choice)}
+                    className={cn(
+                      "rounded-lg flex items-center gap-2 border px-3 py-1.5 text-body transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      chosen ? "border-ink bg-sunk" : "border-input hover:border-ink",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn("size-3 shrink-0 border-[1.5px]", chosen ? "border-ink bg-ink" : "border-input")}
+                    />
+                    {t(choice === "editor" ? "class.invites.role.editor" : "class.invites.role.viewer")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-1">
           <Label htmlFor="class-invites-names">{t("class.invites.names")}</Label>
           <Textarea
@@ -472,6 +533,9 @@ function PersonalInvites({ slug }: { slug: string | null }) {
             className="max-w-xl"
             onChange={(event) => setText(event.target.value)}
           />
+          {mailing ? (
+            <p className="max-w-xl text-small text-muted-foreground">{t("class.invites.mailHint")}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <ExpiryField id="class-invites" value={expires} onChange={setExpires} />
@@ -538,10 +602,18 @@ function MintedInvites({
         </Button>
       </div>
       <ul className="rows">
-        {minted.map(({ invite, link }) => (
-          <li key={invite.id} className="flex items-center gap-2 py-1.5">
-            <span className="w-48 shrink-0 truncate font-medium">{invite.label}</span>
+        {minted.map(({ invite, link, sent }) => (
+          <li key={invite.id} className="flex flex-wrap items-center gap-2 py-1.5">
+            <span className="flex w-48 shrink-0 items-center gap-1.5 truncate font-medium">
+              <span className="truncate">{invite.label}</span>
+              {invite.role === "editor" ? <Badge variant="outline">{t("class.invites.teacherBadge")}</Badge> : null}
+            </span>
             <code className="min-w-0 flex-1 truncate font-mono text-small text-muted-foreground">{link}</code>
+            {sent === undefined ? null : (
+              <span className={cn("text-small", sent ? "text-muted-foreground" : "text-destructive")}>
+                {t(sent ? "class.invites.sent" : "class.invites.notSent")}
+              </span>
+            )}
             <CopyButton text={link} compact />
           </li>
         ))}
@@ -624,6 +696,7 @@ function UnusedRow({ row }: { row: MemberInvite }) {
         <div className="min-w-48 flex-1">
           <p className="flex flex-wrap items-center gap-1.5">
             <span className="truncate font-medium">{name}</span>
+            {row.role === "editor" ? <Badge variant="outline">{t("class.invites.teacherBadge")}</Badge> : null}
             {expired ? <Badge variant="outline">{t("class.invites.expiredBadge")}</Badge> : null}
           </p>
           <p className="text-small text-muted-foreground">

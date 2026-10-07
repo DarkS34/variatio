@@ -121,7 +121,9 @@ def _nameable_for(access: auth.Access) -> Callable[[Job], bool]:
         if feature not in known:
             try:
                 with session_scope() as session:
-                    known[feature] = features.enabled(session, access.user, feature)
+                    known[feature] = features.enabled(
+                        session, access.user, feature, access.workspace
+                    )
             except SQLAlchemyError:
                 known[feature] = False
         return known[feature]

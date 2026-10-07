@@ -680,7 +680,13 @@ export interface FeatureAccessState {
   mode: FeatureMode;
   /** Account ids, in id order. */
   accounts: number[];
+  /** Subject slugs, in slug order: everybody in one uses the function there. The tutor's
+   *  alone (`server/features.SUBJECT_LISTED`); absent for the evaluation and an older API. */
+  workspaces?: string[];
 }
+
+/** The functions a whole subject may be listed for, as the server declares them. */
+export const SUBJECT_LISTED: readonly FeatureName[] = ["tutor"];
 
 /** What `/api/admin/features` answers, and what a write to one function answers too. */
 export interface AdminFeaturesPayload {
@@ -703,7 +709,11 @@ export function featureAccessOf(
   const accounts = Array.isArray(record.accounts)
     ? record.accounts.filter((id): id is number => Number.isInteger(id))
     : [];
-  return { mode, accounts };
+  if (!SUBJECT_LISTED.includes(feature)) return { mode, accounts };
+  const workspaces = Array.isArray(record.workspaces)
+    ? record.workspaces.filter((slug): slug is string => typeof slug === "string")
+    : [];
+  return { mode, accounts, workspaces };
 }
 
 /* Workspaces ----------------------------------------------------------------------- */
@@ -1118,6 +1128,8 @@ export interface MintedMemberInvite {
   invite: MemberInvite;
   link: string;
   stored?: boolean;
+  /** Only where it went with an address: whether the mail left. The address is kept nowhere. */
+  sent?: boolean;
 }
 
 /** A class link as the administrator's panel lists it: whose subject, how full, who minted it. */

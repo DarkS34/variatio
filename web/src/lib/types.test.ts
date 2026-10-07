@@ -7,20 +7,30 @@ describe("featureAccessOf", () => {
     const payload = {
       features: {
         evaluation: { mode: "all" as const, accounts: [] },
-        tutor: { mode: "selected" as const, accounts: [2, 5] },
+        tutor: { mode: "selected" as const, accounts: [2, 5], workspaces: ["aula"] },
       },
     };
     expect(featureAccessOf(payload, "evaluation")).toEqual({ mode: "all", accounts: [] });
-    expect(featureAccessOf(payload, "tutor")).toEqual({ mode: "selected", accounts: [2, 5] });
+    expect(featureAccessOf(payload, "tutor")).toEqual({
+      mode: "selected",
+      accounts: [2, 5],
+      workspaces: ["aula"],
+    });
   });
 
   it("reads a function the answer leaves out as the server's own default: off, no list", () => {
-    expect(featureAccessOf({}, "tutor")).toEqual({ mode: "off", accounts: [] });
+    expect(featureAccessOf({}, "tutor")).toEqual({ mode: "off", accounts: [], workspaces: [] });
     expect(featureAccessOf(null, "evaluation")).toEqual({ mode: "off", accounts: [] });
   });
 
   it("keeps what it can of a malformed answer", () => {
-    const payload = { features: { tutor: { mode: "maybe", accounts: [3, "4", null, 7.5, 9] } } };
-    expect(featureAccessOf(payload as never, "tutor")).toEqual({ mode: "off", accounts: [3, 9] });
+    const payload = {
+      features: { tutor: { mode: "maybe", accounts: [3, "4", null, 7.5, 9], workspaces: ["a", 2] } },
+    };
+    expect(featureAccessOf(payload as never, "tutor")).toEqual({
+      mode: "off",
+      accounts: [3, 9],
+      workspaces: ["a"],
+    });
   });
 });

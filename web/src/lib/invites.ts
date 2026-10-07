@@ -109,6 +109,42 @@ export function namesOf(text: string): string[] {
     .filter(Boolean);
 }
 
+/** One line of the personal invitations' box: a name, and the address it goes to if any. */
+export interface Recipient {
+  name: string;
+  email: string | null;
+  /** The line as typed, to name it in an error. */
+  line: string;
+}
+
+// «Nombre <correo>»: the address between angle brackets closes the line.
+const ADDRESSED = /^(.*?)\s*<\s*([^<>\s]*)\s*>\s*$/;
+// An address as a person writes it, as `server/routers/members._EMAIL` reads it.
+const EMAIL = /^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/;
+
+/**
+ * The lines of the box as `namesOf` reads them, each with the address it carries — «Ana Gil
+ * <ana@colegio.es>» — or none. Where mail is configured, each address goes to the server beside
+ * its name, which mails the link and keeps the address nowhere.
+ */
+export function recipientsOf(text: string): Recipient[] {
+  return text
+    .split(/\r?\n/)
+    .map((raw) => raw.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = ADDRESSED.exec(line);
+      const name = (match ? match[1] : line).split(/\s+/).filter(Boolean).join(" ");
+      return { name, email: match ? match[2] || null : null, line };
+    })
+    .filter((recipient) => recipient.name || recipient.email);
+}
+
+/** Whether an address can be one, as the server checks it. */
+export function isEmail(value: string): boolean {
+  return value.length <= 254 && EMAIL.test(value);
+}
+
 /** Whether a picker value is no further ahead than a teacher's link may expire. */
 export function withinTeacherCap(value: string, now: Date = new Date()): boolean {
   const date = fromLocalInput(value);

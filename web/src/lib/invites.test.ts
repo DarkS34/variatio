@@ -9,10 +9,12 @@ import {
   inviteProfile,
   inviteState,
   isAhead,
+  isEmail,
   linkLines,
   matchesInvite,
   namesOf,
   newDraft,
+  recipientsOf,
   termsOf,
   toLocalInput,
   tokenFrom,
@@ -286,5 +288,21 @@ describe("withinTeacherCap", () => {
     expect(withinTeacherCap("2027-04-04T10:00", now)).toBe(true);
     expect(withinTeacherCap("2027-04-05T10:00", now)).toBe(false);
     expect(withinTeacherCap("mañana", now)).toBe(false);
+  });
+});
+
+describe("recipientsOf", () => {
+  it("reads a name and, between angle brackets, its address", () => {
+    expect(recipientsOf("Ana  Gil <ana@colegio.es>\n\nPablo Ruiz\n<sin@nombre.es>")).toEqual([
+      { name: "Ana Gil", email: "ana@colegio.es", line: "Ana  Gil <ana@colegio.es>" },
+      { name: "Pablo Ruiz", email: null, line: "Pablo Ruiz" },
+      { name: "", email: "sin@nombre.es", line: "<sin@nombre.es>" },
+    ]);
+  });
+
+  it("checks an address as the server does", () => {
+    expect(isEmail("ana@colegio.es")).toBe(true);
+    expect(isEmail("ana@colegio")).toBe(false);
+    expect(isEmail("ana colegio.es")).toBe(false);
   });
 });

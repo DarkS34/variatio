@@ -365,7 +365,14 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   their own account. The admin's read routes are not behind it. A refusal is a 403 with
   `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its
   holder (`invites.features`), applied at registration. `GET /api/health` leaves out the
-  models only a switched-off function names.
+  models only a switched-off function names. **The tutor may list whole subjects too**
+  (the class plan's phase 15; migration 0020, `feature_subjects`): under `selected`,
+  everybody in a listed subject uses it THERE, whoever joins later included, and not in their
+  other subjects (`features.enabled(session, user, feature, workspace)`, `SUBJECT_LISTED` =
+  the tutor alone: the evaluation stays account by account, and `workspaces` for it is a 422).
+  `PUT /api/admin/features/tutor` takes `workspaces` (slugs; replaced only when sent, like
+  `accounts`), the snapshot lists them, and «Permisos de uso» draws «Asignaturas elegidas»
+  above «Cuentas elegidas», its state sentence naming the three things.
 - **What a subject lets its students use** (decided 2026-10-06; migration 0019): two switches
   of the subject, `workspaces.student_generate` and `student_tutor` (open by default), that
   its teachers set in «Clase → Qué usan los alumnos» (`GET`/`PATCH /api/members/uses`,
@@ -397,7 +404,11 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   preview says `kind`, `inviter` and the subject, never the seats left. A teacher mints the
   subject's personal invitations (one per name, the name as alias; a teacher's — `editor`,
   profile teacher — only by an owner; no `features`; bucket `teacher_invite` per link), reads
-  their links again (logged) and deletes them; another subject's are 404. The administrator
+  their links again (logged) and deletes them; another subject's are 404. Where the
+  installation sends mail (`mail_configured`), a line may be «Nombre <correo>» (`emails`
+  beside `names`, `lib/invites.recipientsOf`): the link is mailed, the answer says `sent` per
+  invitation, and the address is kept nowhere — not in the row, not in the log
+  (`mail.send(shown_as=…)`); without mail an address is a 422. The administrator
   lists every live class link, pauses and retires one (`/api/admin/class-links`), from the
   «Enlaces de clase» block under the table of «Asignaturas» («Pausar»/«Reanudar», «Revocar»
   asked first); their seats and dates stay the teachers'.
@@ -1209,14 +1220,20 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   what was minted stays until put away: a link per name, «Copiar todo» (alias TAB link) and
   «Descargar CSV» (`nombre,enlace,caduca`, `lib/csv.ts`: a cell opening `= + - @` or a control
   character gets the apostrophe of `server/csv_safe.py`, numbers exempt, RFC quoting, a BOM).
+  An owner chooses «Alumnos» or «Docentes» over the names (a teacher's invitation, `editor`,
+  gives a teacher's account), and a teacher's invitation wears a «Docente» badge.
   «Invitaciones sin usar»: «Copiar» reads the link and copies it in the SAME press (a
   `ClipboardItem` holding the promise), and where the browser refuses, the link opens under
   the row; «Borrar», asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
   route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
   confirmed in a dialog by typing the subject's name as written, as deleting a subject is;
   destructive, never `--attention`. «Actividad» follows «Alumnos» (`ActivitySection`, see
-  *Class activity*; a student row's icon opens it on that student). Between «Invitar» and
-  «Fin de curso»: «Avance del curso»
+  *Class activity*; a student row's icon opens it on that student). After «Invitar»,
+  «Docentes» (`TeachersSection`: who teaches it, owners first, every account's to read; an
+  owner's gestures, each asked first — «Hacer propietario», «Pasar a docente», «Activar» a
+  paused teacher, «Quitar», and «Ceder la propiedad»: the other made owner FIRST, then the
+  owner's own role lowered, two `PATCH /api/members/{id}`, so the subject has an owner at
+  every moment; the session is read again after). Then «Avance del curso»
   (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
   `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
   its confirm, and «Quitar el límite», asked first) and «Qué usan los alumnos»
@@ -1630,7 +1647,7 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   comparisons, tutor turns); a build's are the subject's. A student's job says nothing of the
   bank while it runs, and a student reads no prompt or exemplar body afterwards (2026-10-06).
 - The evaluation and the tutor are switched by the administrator for nobody, everybody or a
-  list of accounts; both start off; the administrator follows the same rule as any account;
+  list of accounts — the tutor also for a list of subjects (2026-10-07); both start off; the administrator follows the same rule as any account;
   an invitation may list its holder; the tutor's daily limit is the account's across the
   installation (decided 2026-10-03).
 - Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;

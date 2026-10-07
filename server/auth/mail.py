@@ -15,14 +15,15 @@ from loguru import logger
 from .. import installation
 
 
-def send(to: str, subject: str, body: str) -> bool:
+def send(to: str, subject: str, body: str, shown_as: str | None = None) -> bool:
     """Send the message, or log it whole when there is no SMTP.
 
     False means it was only logged, which is what lets the API hand the link back in its
-    own response instead of promising a mail that never left.
+    own response instead of promising a mail that never left. `shown_as` stands for the
+    address in the log, for a sender that keeps no address anywhere (a teacher's invitations).
     """
     if not configured():
-        logger.info(f"Correo no enviado (SMTP sin configurar) para {to}: {subject}\n{body}")
+        logger.info(f"Correo no enviado (SMTP sin configurar) para {shown_as or to}: {subject}\n{body}")
         return False
 
     message = EmailMessage()
@@ -34,7 +35,7 @@ def send(to: str, subject: str, body: str) -> bool:
     try:
         _deliver(message)
     except Exception as exc:  # noqa: BLE001 - a mail failure must not fail the request
-        logger.error(f"No se pudo enviar el correo a {to}: {type(exc).__name__}: {exc}")
+        logger.error(f"No se pudo enviar el correo a {shown_as or to}: {type(exc).__name__}: {exc}")
         return False
     return True
 

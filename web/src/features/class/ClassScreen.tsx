@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   Spline,
   UserCheck,
+  UserRoundCog,
   UserMinus,
   UserX,
 } from "lucide-react";
@@ -47,9 +48,10 @@ import { ActivitySection, activityDetail } from "./ActivitySection";
 import { EndCourseSection } from "./EndCourseSection";
 import { InviteSection, classLinkDetail } from "./InviteSection";
 import { ProgressSection, progressDetail } from "./ProgressSection";
+import { TeachersSection, teachersOf } from "./TeachersSection";
 import { UsesSection, usesDetail } from "./UsesSection";
 
-type ClassSection = "students" | "activity" | "invite" | "progress" | "uses" | "end";
+type ClassSection = "students" | "activity" | "invite" | "teachers" | "progress" | "uses" | "end";
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
@@ -57,9 +59,9 @@ type ClassSection = "students" | "activity" | "invite" | "progress" | "uses" | "
  * Drawn as the administrator's panel draws a tab (`admin/Sections`): the list of its sections
  * beside the section open, one column of blocks under the section's header, rows parted by
  * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet. «Actividad»
- * follows the class list (a row's icon opens it on that student); then what the class has
- * covered («Avance del curso») and what its students may use, and, ruled off, the owner's
- * «Fin de curso». A student never reaches it: the route is
+ * follows the class list (a row's icon opens it on that student); «Invitar», then «Docentes»
+ * (who teaches it, an owner's gestures on them); then what the class has covered («Avance del
+ * curso») and what its students may use, and, ruled off, the owner's «Fin de curso». A student never reaches it: the route is
  * a teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
  */
 export function ClassScreen() {
@@ -81,6 +83,7 @@ export function ClassScreen() {
   const slug = useActiveWorkspace() ?? session.data?.active_workspace ?? null;
   const subject = session.data?.workspaces.find((row) => row.slug === slug)?.name ?? "";
   const students = studentsOf(members.data?.members ?? []);
+  const teachers = teachersOf(members.data?.members ?? []);
   const paused = students.filter((member) => member.disabled_at !== null).length;
   const section: ClassSection = picked ?? (students.length === 0 ? "invite" : "students");
 
@@ -104,6 +107,12 @@ export function ClassScreen() {
       label: t("class.invite"),
       mark: <Link2 className="size-4" />,
       detail: classLink.isSuccess ? classLinkDetail(classLink.data.class_link, t) : null,
+    },
+    {
+      key: "teachers",
+      label: t("class.teachers"),
+      mark: <UserRoundCog className="size-4" />,
+      detail: plural("class.teachers.count", teachers.length),
     },
     {
       key: "progress",
@@ -151,6 +160,8 @@ export function ClassScreen() {
             <ActivitySection student={activityOf} onStudent={setActivityOf} />
           ) : section === "invite" ? (
             <InviteSection subject={subject} slug={slug} />
+          ) : section === "teachers" ? (
+            <TeachersSection teachers={teachers} />
           ) : section === "progress" ? (
             <ProgressSection />
           ) : section === "uses" ? (
