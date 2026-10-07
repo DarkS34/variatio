@@ -25,7 +25,6 @@ CHAIN = [
 
 @pytest.fixture
 def stand(monkeypatch):
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     monkeypatch.setattr(singletons, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
     started = threading.Event()
     release = threading.Event()

@@ -452,8 +452,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - **A job whose author is a student of the subject is `redacted`** (set by the route from
   `access.role == viewer`, never by the client): the bus strips the `prompt` event's text —
   the event still travels, the screen's marker of a new item — and keeps only `ids`,
-  `concepts` and `item_type` of `few_shot`, in the buffer AND in the job's record on disk
-  (the author reads it back). The exercise's file keeps everything.
+  `concepts` and `item_type` of `few_shot`, before the event is buffered. The exercise's
+  file keeps everything. Events live in the bus's memory buffer alone: there is no
+  per-job event log on disk (`.runs/` was removed on 2026-10-07; nothing read it).
 - **Tokens travel in batches**: `progress.token_sink` returns a `TokenBatch` that sends at
   most one `token` event every 100 ms (the first at once; a change of channel flushes), and
   `inference.generate_stream` flushes it when the answer ends, cut short or not.
@@ -603,13 +604,13 @@ Host state (`instance/.curriculum.json`), validated against the graph on read. *
 falls back to the file, `[]` means no restriction.** `resolve()` closes the list in force
 downward (prerequisites included) and the row records what ran. The file is the subject's
 «Avance de la asignatura» (decided 2026-10-06), set by its teachers in «Clase» (`PUT
-/api/kg/curriculum`, closed under prerequisites as it is saved) and tinted on the syllabus. For a
-teacher it is a default a commission replaces. **A student's commission runs inside it**
-(`resolve(student=True)`, read from `Job.redacted`): their own list is cut by it, and neither
-`[]` nor a wider list lifts it; `routers/jobs._refuse_outside_progress` refuses a target
-outside it with a 422 before the queue (the generator would fail it after, in English); a
-subject with no progress bounds nobody. A student's form draws it read-only, «Lo visto en
-clase» (`GenerateForm.classProgress`), and offers no target outside it. `GenerateForm`'s
+/api/kg/curriculum`, closed under prerequisites as it is saved) and tinted on the syllabus.
+**It bounds nobody** (the user's decision, 2026-10-07: a student who wants to run ahead of
+the class may): a commission's own list replaces it, a student's as a teacher's. The generate
+form starts with no curriculum and offers the progress as one press, «Usar lo visto en clase»
+(`GenerateForm.classProgress`), drawn only when the progress holds something and disabled
+while it is what is ticked; it ticks the progress's frontier (`prerequisites.frontier`), so
+the selector marks the rest instead of drawing every prerequisite as a pick. `GenerateForm`'s
 `assumedKnown`/`notYetTaught` mirror `variatio.assumed_known`/`forbidden` — edit the Python
 first.
 
@@ -1055,8 +1056,8 @@ admin's read.
   without the header) and shows it alone where the conversation reports a failure, never
   under «No se pudo enviar»; the next send or retry clears it.
 - **A turn's job carries no text**: params and result name the conversation and the turn
-  only, because a job is read where its conversation is not (the panel's queue, the job's
-  record on disk) and a conversation is its author's; its events reach its author alone
+  only, because a job is read where its conversation is not (the panel's queue) and a
+  conversation is its author's; its events reach its author alone
   (`PRIVATE_KINDS`). One reply on its way per conversation and per account in the workspace
   (409).
 - Logs in Spanish with `[tutor]`; never the message text.
@@ -1259,7 +1260,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   every moment; the session is read again after). «Avance de la asignatura»
   (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
   `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
-  its confirm, and «Quitar el límite», asked first) and «Funcionalidades permitidas»
+  its confirm, and «Borrar el avance», asked first) and «Funcionalidades permitidas»
   (`UsesSection`: two switches that act at once; the tutor's drawn wherever the tutor is
   installed, off and still with the reason until the administrator offers it).
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
@@ -1589,9 +1590,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - `guidance.generation` is hand-written only; modality rules carry generation.
 - Prerequisite lists are transitive closures bounded by the curriculum, with opposite set
   operations; without a curriculum, later concepts may be used but not practised.
-- The subject's curriculum is its course's progress, set by its teachers in «Clase», and it
-  bounds a student's commission, which cannot lift or widen it (2026-10-06; until then no
-  screen edited it and every commission chose its own).
+- The subject's curriculum is its course's progress, set by its teachers in «Clase». It is a
+  suggestion the generate form offers in one press, never a bound: a student may practise
+  what the class has not covered (2026-10-07; from 2026-10-06 it bounded a student's
+  commission, and until then no screen edited it).
 - The units of the syllabus are written in the order they are taught: the documents are read
   in the natural order of their names, and the prompt that finds the units orders them
   (numbering first, then the logic of the subject); code keeps that order and never sorts it

@@ -7,7 +7,6 @@ drawn as a generic failure. `error_code` is what a screen branches on instead.
 
 import time
 
-import pytest
 
 from server.jobs import EventBus, JobRunner
 from variatio.runtime.screening import InstructionsBlocked
@@ -25,11 +24,6 @@ def _run(handler):
         return job
     finally:
         runner.shutdown(timeout=1.0)
-
-
-@pytest.fixture(autouse=True)
-def _no_run_files(monkeypatch):
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
 
 
 def test_a_screened_text_marks_the_job_with_its_code():

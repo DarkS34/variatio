@@ -113,9 +113,8 @@ def _isolated_database(tmp_path, monkeypatch):
 
 
 # The third stops a test writing into the installation's own instances. Every slug a test
-# invents resolves under `paths.WORKSPACES_DIR`: a `Job` carrying an invented workspace has
-# the bus mkdir `workspaces/<slug>/instance/.runs/` and append its event log there.
-# `paths.LOGS_DIR` travels with it for the same reason — a job also opens
+# invents resolves under `paths.WORKSPACES_DIR`, and a handler given an invented workspace
+# writes there. `paths.LOGS_DIR` travels with it for the same reason — a job opens
 # `logs/<slug>/jobs.log`.
 #
 # Redirected rather than cleaned up afterwards: deleting directories under `workspaces/` is

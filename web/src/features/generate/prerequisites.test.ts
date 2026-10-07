@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GraphView } from "@/lib/types";
 
-import { adjacency, covered, priors } from "./prerequisites";
+import { adjacency, covered, frontier, priors } from "./prerequisites";
 
 // Variable ← Función ← Recursividad ← Memoización: the chain from `tests/conftest.py`,
 // the only shape where one hop and the closure differ. `[source, target]` reads "source
@@ -35,5 +35,18 @@ describe("covered — a coverage closed downwards", () => {
   it("hands the picks back untouched with no graph or no picks", () => {
     expect(covered(null, ["Recursividad"])).toEqual(["Recursividad"]);
     expect(covered(adjacency(GRAPH), [])).toEqual([]);
+  });
+});
+
+describe("frontier — the picks a stored coverage comes from", () => {
+  it("keeps what nothing else in the coverage rests on, and closing it gives the coverage back", () => {
+    const stored = covered(adjacency(GRAPH), ["Recursividad", "Suelto"]);
+    const picks = frontier(adjacency(GRAPH), stored);
+    expect(picks).toEqual(["Recursividad", "Suelto"]);
+    expect(covered(adjacency(GRAPH), picks)).toEqual(stored);
+  });
+
+  it("hands the coverage back untouched with no graph", () => {
+    expect(frontier(null, ["Función", "Variable"])).toEqual(["Función", "Variable"]);
   });
 });

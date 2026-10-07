@@ -155,11 +155,6 @@ class Workspace:
         return self.instance_dir / ".history"
 
     @property
-    def runs_dir(self) -> Path:
-        """The event log of each job run against this instance."""
-        return self.instance_dir / ".runs"
-
-    @property
     def review_state_path(self) -> Path:
         """Which artifacts are approved, and the hashes that decide whether they are stale."""
         return self.instance_dir / ".review_state.json"

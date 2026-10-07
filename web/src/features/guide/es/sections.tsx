@@ -2517,11 +2517,12 @@ function StudentStart() {
         />
       </Block>
 
-      <Block title={t("form.taught.classTitle")}>
+      <Block title="Lo visto en clase">
         <Paragraph>
-          Tu docente puede marcar hasta dónde ha llegado la clase. Entonces, al generar, el
-          formulario lo enseña como «{t("form.taught.classTitle")}» y solo te ofrece esos
-          conceptos. También puede cerrar la generación o el tutor un tiempo, por ejemplo
+          Tu docente puede marcar hasta dónde ha llegado la clase. Al generar,
+          «{t("form.taught.applyClass")}» marca esos conceptos con una sola pulsación. No es un
+          límite: puedes cambiar lo marcado y practicar lo que va más adelante. También puede
+          cerrar la generación o el tutor un tiempo, por ejemplo
           durante un examen: su puerta desaparece de la barra hasta que lo abra, y tus
           ejercicios siguen en «{t("nav.mySubjects")}».
         </Paragraph>
@@ -2652,11 +2653,10 @@ function Class() {
         <Paragraph>
           Marca lo que ya se ha visto en clase con «{t("class.progress.mark")}». Al guardar,
           lo que se apoya en lo marcado cuenta como visto: marcar «Recursividad» marca también
-          lo que va antes. Desde entonces tus alumnos generan solo sobre esos conceptos: su
-          formulario lo enseña como «{t("form.taught.classTitle")}», sin poder cambiarlo, y no
-          les ofrece lo de más adelante. El temario lo resalta. La sección lo cuenta unidad
-          por unidad, y «{t("class.progress.lift")}» deja a tus alumnos practicar cualquier
-          concepto otra vez. Tus propios encargos no tienen ese límite.
+          lo que va antes. El temario lo resalta. Al generar, «{t("form.taught.applyClass")}»
+          lo marca con una sola pulsación, en tu formulario y en el de tus alumnos. No limita a
+          nadie: un alumno puede practicar lo que va más adelante. La sección lo cuenta unidad
+          por unidad, y «{t("class.progress.lift")}» lo borra.
         </Paragraph>
       </Block>
 

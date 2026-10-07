@@ -23,7 +23,6 @@ def ws(tmp_path):
 
 @pytest.fixture
 def runner(monkeypatch):
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     return JobRunner(EventBus(), HANDLERS)
 
 

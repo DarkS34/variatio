@@ -1,8 +1,7 @@
 """What a class has covered, and what its students may use: the teachers decide both.
 
-The course's progress («Avance del curso») bounds a STUDENT's commission: it runs inside it,
-cut by the student's own list, and an empty list does not lift it. A teacher's commission
-reads it as a default, as before. Two switches of the subject close generating and the tutor
+The course's progress («Avance del curso») bounds nobody: a commission's own list replaces
+it, an empty one lifts it, and a student may run ahead of the class. Two switches of the subject close generating and the tutor
 to its students — during an exam, say — and never to its teachers.
 """
 
@@ -40,48 +39,18 @@ def _subject(tmp_path):
 # THE COURSE'S PROGRESS ---------------------------------------------------------------------
 
 
-def test_with_no_progress_a_student_is_read_as_anybody(tmp_path):
-    ws, graph = _subject(tmp_path)
-
-    assert curriculum.resolve(ws, graph, [], student=True) == []
-    assert curriculum.resolve(ws, graph, None, student=True) is None
-
-
-def test_a_student_s_commission_runs_inside_the_progress_whatever_it_asks(tmp_path):
+def test_the_progress_is_a_default_and_never_a_bound(tmp_path):
     ws, graph = _subject(tmp_path)
     curriculum.save(ws, ["Función", "Variable"], graph)
 
-    assert curriculum.resolve(ws, graph, [], student=True) == ["Función", "Variable"]
-    assert curriculum.resolve(ws, graph, None, student=True) == ["Función", "Variable"]
-    assert curriculum.resolve(ws, graph, ["Memoización"], student=True) == ["Función", "Variable"]
-    assert curriculum.resolve(ws, graph, ["Variable"], student=True) == ["Variable"]
-
-
-def test_a_teacher_still_lifts_the_progress_with_an_empty_list(tmp_path):
-    ws, graph = _subject(tmp_path)
-    curriculum.save(ws, ["Función", "Variable"], graph)
-
-    assert curriculum.resolve(ws, graph, []) == []
     assert curriculum.resolve(ws, graph, None) == ["Función", "Variable"]
-
-
-def test_the_route_refuses_a_student_s_target_outside_the_progress(tmp_path):
-    ws, graph = _subject(tmp_path)
-    curriculum.save(ws, ["Función", "Variable"], graph)
-    access = SimpleNamespace(ws=ws)
-
-    with pytest.raises(HTTPException) as refused:
-        jobs_routes._refuse_outside_progress(access, {"concepts": ["Recursividad"]})
-
-    assert refused.value.status_code == 422
-    assert "«Recursividad»" in refused.value.detail
-    jobs_routes._refuse_outside_progress(access, {"concepts": ["Función"]})
-
-
-def test_a_subject_with_no_progress_refuses_no_target(tmp_path):
-    ws, _ = _subject(tmp_path)
-
-    jobs_routes._refuse_outside_progress(SimpleNamespace(ws=ws), {"concepts": ["Recursividad"]})
+    assert curriculum.resolve(ws, graph, []) == []
+    assert curriculum.resolve(ws, graph, ["Memoización"]) == [
+        "Función",
+        "Memoización",
+        "Recursividad",
+        "Variable",
+    ]
 
 
 # WHAT THE STUDENTS USE ---------------------------------------------------------------------

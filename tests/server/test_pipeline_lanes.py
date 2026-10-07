@@ -41,7 +41,6 @@ RESERVATIONS = {"local": {LOCAL}, "remoto": {REMOTE}}
 
 @pytest.fixture
 def stand(monkeypatch):
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     monkeypatch.setattr(config, "CEREBRAS_MAX_CONCURRENT_JOBS", 1, raising=False)
     monkeypatch.setattr(singletons, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
     monkeypatch.setattr(

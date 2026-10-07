@@ -67,18 +67,17 @@ def destroy(ws: Workspace) -> bool:
 def disk_usage(ws: Workspace) -> dict[str, int]:
     """What each part of the tree weighs, by role.
 
-    `instance` excludes the host state it contains, which is reported on its own: the
-    history is the one thing that grows without a build — with the generated exercises,
-    which grow with every run.
+    `instance` excludes the history it contains, which is reported on its own: it is the
+    one thing there that grows without a build — with the generated exercises, which grow
+    with every run.
     """
     history = _tree_size(ws.history_dir)
-    runs = _tree_size(ws.runs_dir)
-    instance = _tree_size(ws.instance_dir) - history - runs
+    instance = _tree_size(ws.instance_dir) - history
     usage = {
         "raw": _tree_size(ws.raw_dir),
         "instance": max(0, instance),
         "cache": _tree_size(ws.cache_dir),
-        "history": history + runs,
+        "history": history,
         "generations": _tree_size(ws.generations_dir),
     }
     usage["total"] = sum(usage.values())

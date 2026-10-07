@@ -62,7 +62,7 @@ def stubbed(monkeypatch, tmp_path):
     monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
     monkeypatch.setattr(handlers, "context_for", lambda job: context)
     monkeypatch.setattr(
-        handlers.curriculum_store, "resolve", lambda ws, kg, given, student=False: given or []
+        handlers.curriculum_store, "resolve", lambda ws, kg, given: given or []
     )
 
 

@@ -49,7 +49,6 @@ def db(monkeypatch):
 def stage(monkeypatch):
     """A bus that keeps what is said and a queue that never starts anything."""
     bus = EventBus(buffer_size=100)
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     runner = JobRunner(bus, {"generate": lambda job, control: {}, "build_kg": lambda job, control: {}})
     monkeypatch.setattr(singletons, "bus", bus)
     monkeypatch.setattr(singletons, "runner", runner)

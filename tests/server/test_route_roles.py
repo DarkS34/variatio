@@ -130,7 +130,6 @@ LEVELS = {
     ("GET", "/api/jobs/current"): "viewer",
     ("GET", "/api/jobs/allowance"): "viewer",
     ("GET", "/api/jobs/{job_id}"): "viewer",
-    ("GET", "/api/jobs/{job_id}/events"): "viewer",
     ("DELETE", "/api/jobs/{job_id}"): "viewer",
     ("GET", "/api/events"): "viewer",
     # One's own exercises, deleting them included; taking one into the bank is a teacher's.

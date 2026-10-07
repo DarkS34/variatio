@@ -27,10 +27,8 @@ from variatio import config, entrypoints
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from .. import approvals, auth, curriculum, features, generation_usage, raw_data, singletons
+from .. import approvals, auth, features, generation_usage, raw_data, singletons
 from ..db.models import EDITOR, VIEWER
-from ..editors import kg_edit
-from ..editors.kg_edit import KGError
 from ..jobs import lanes
 from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, STUDENT_KINDS, SUBPROCESS_KINDS
 
@@ -215,33 +213,6 @@ def max_items(student: bool) -> int:
     return min(config.GENERATION_STUDENT_MAX_ITEMS, config.GENERATION_MAX_ITEMS)
 
 
-def _refuse_outside_progress(access: auth.Access, params: dict) -> None:
-    """Refuse a student's targets that lie outside what the course has covered.
-
-    The handler runs a student's commission inside the course's progress
-    (`curriculum.resolve(student=True)`), and the generator refuses a target outside its
-    curriculum — after the queue, in English. This says it first, in the student's words. A
-    subject with no graph or no progress refuses nothing here.
-    """
-    targets = [str(name) for name in params.get("concepts") or []]
-    if not targets:
-        return
-    try:
-        graph = kg_edit.load_graph(access.ws)
-    except KGError:
-        return
-    bound = curriculum.resolve(access.ws, graph, params.get("curriculum"), student=True)
-    if not bound:
-        return
-    outside = [name for name in targets if name not in set(bound)]
-    if outside:
-        raise HTTPException(
-            422,
-            "Eso todavía no se ha visto en clase: " + ", ".join(f"«{name}»" for name in outside)
-            + ". Elige conceptos de lo visto en clase.",
-        )
-
-
 def _refuse_second_batch(access: auth.Access) -> None:
     """Refuse a commission while this account has another batch queued or running here."""
     live = [*singletons.runner.running(access.ws.slug), *singletons.runner.pending(access.ws.slug)]
@@ -327,8 +298,6 @@ def submit(
 
     student = access.role == VIEWER
     count = _check_params(body.kind, body.params, student)
-    if body.kind == "generate" and student:
-        _refuse_outside_progress(access, body.params)
 
     with _COMMISSIONING:
         if body.kind == "generate":
@@ -413,22 +382,6 @@ def detail(job_id: str, access: auth.Access = auth.VIEW) -> dict:
     """Answer one job of this workspace, with how many are ahead of it."""
     job = _mine(job_id, access)
     return {"job": job.to_dict(), "queue_position": singletons.runner.queue_position(job_id)}
-
-
-@router.get("/jobs/{job_id}/events")
-def job_events(
-    job_id: str,
-    since: int = 0,
-    limit: int = Query(5000, ge=1, le=50000),
-    access: auth.Access = auth.VIEW,
-) -> dict:
-    """Replay one job's events, for a screen that arrived after they were emitted."""
-    _mine(job_id, access)
-    return {
-        "events": singletons.bus.job_events(
-            access.ws.slug, job_id, since=since, limit=limit
-        )
-    }
 
 
 @router.delete("/jobs/{job_id}")

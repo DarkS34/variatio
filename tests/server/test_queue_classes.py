@@ -54,7 +54,6 @@ def rules(monkeypatch):
 @pytest.fixture
 def runner(monkeypatch, rules):
     """A runner that queues, never dispatches, and puts every job on the local lane."""
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     monkeypatch.setattr(lanes, "backends_for", lambda kind, params=None: frozenset({LOCAL}))
     queue = JobRunner(EventBus(buffer_size=500), {kind: lambda job, control: {} for kind in KINDS})
     queue._clock = Clock()

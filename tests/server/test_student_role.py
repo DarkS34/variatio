@@ -112,7 +112,6 @@ def test_an_administrators_role_is_the_owners_whatever_the_membership(db):
 @pytest.fixture
 def queue(monkeypatch):
     """A runner that queues and never starts anything, with every gate of the chain open."""
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     kinds = ("generate", "evaluate", "build_kg", "transcribe", "tag", "index")
     runner = JobRunner(EventBus(buffer_size=100), {kind: lambda job, control: {} for kind in kinds})
     monkeypatch.setattr(singletons, "runner", runner)

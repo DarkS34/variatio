@@ -97,3 +97,16 @@ export function covered(adj: Adjacency | null, picks: string[]): string[] {
   if (!adj || picks.length === 0) return picks;
   return [...new Set([...picks, ...priors(adj, picks)])].sort((a, b) => a.localeCompare(b, "es"));
 }
+
+/**
+ * The picks a coverage closed downwards comes from: its concepts nothing else in it rests on.
+ *
+ * The course's progress is stored closed (`PUT /api/kg/curriculum` closes it), and ticking
+ * all of it would draw every prerequisite as a pick. `covered` of the answer gives the stored
+ * list back, so the selector marks the rest instead.
+ */
+export function frontier(adj: Adjacency | null, coverage: string[]): string[] {
+  if (!adj) return coverage;
+  const under = new Set(coverage.flatMap((concept) => priors(adj, [concept])));
+  return coverage.filter((concept) => !under.has(concept));
+}

@@ -10,7 +10,6 @@ A redacted job — one whose author is a student of the subject — also says no
 bank while it runs: the prompt travels without its text and the chosen exemplars as ids.
 """
 
-import json
 import threading
 from types import SimpleNamespace
 
@@ -120,19 +119,6 @@ def test_a_redacted_job_names_its_exemplars_and_says_none_of_them():
     assert "text" not in prompt
 
 
-def test_the_record_on_disk_is_redacted_as_well():
-    """The author reads it back through `GET /api/jobs/{id}/events`."""
-    bus = EventBus(buffer_size=50)
-    job = _job("generate", redacted=True)
-    _publish_the_bank(bus, job)
-
-    path = installation.workspace_for("aula").runs_dir / f"{job.id}.jsonl"
-    lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-
-    assert [line["kind"] for line in lines] == ["few_shot", "prompt"]
-    assert "SOLUCIÓN DEL BANCO" not in path.read_text(encoding="utf-8")
-
-
 def test_a_teachers_job_keeps_what_it_said():
     bus = EventBus(buffer_size=50)
     _publish_the_bank(bus, _job("generate"))
@@ -149,7 +135,6 @@ def test_a_teachers_job_keeps_what_it_said():
 @pytest.fixture
 def queue(monkeypatch):
     """A runner whose jobs hold until the test ends, on lanes of room enough for all."""
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     monkeypatch.setattr(lanes, "backends_for", lambda kind, params=None: frozenset())
     release = threading.Event()
     started: dict[str, threading.Event] = {}
@@ -212,7 +197,6 @@ def test_the_listing_leaves_out_another_accounts_commission(queue):
 
 @pytest.mark.parametrize("method,path", [
     ("get", "/api/jobs/{id}"),
-    ("get", "/api/jobs/{id}/events"),
     ("delete", "/api/jobs/{id}"),
 ])
 def test_another_accounts_commission_is_the_404_of_a_job_that_does_not_exist(queue, method, path):

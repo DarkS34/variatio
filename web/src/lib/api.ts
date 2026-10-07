@@ -54,7 +54,6 @@ import type {
   RawUpload,
   Role,
   Session,
-  VgEvent,
   WorkspaceListing,
   WorkspaceRow,
   WorkspaceSummary,
@@ -460,8 +459,6 @@ export const api = {
   currentJob: () =>
     request<{ job: Job | null; queued: Job[]; last_seq: number }>("/api/jobs/current"),
   job: (id: string) => request<{ job: Job }>(`/api/jobs/${id}`),
-  jobEvents: (id: string, since = 0) =>
-    request<{ events: VgEvent[] }>(`/api/jobs/${id}/events?since=${since}`),
   cancelJob: (id: string) =>
     request<{ cancelled: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
 

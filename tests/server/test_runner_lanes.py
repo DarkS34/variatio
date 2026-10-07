@@ -91,7 +91,6 @@ class Fixture:
 
 @pytest.fixture
 def make(monkeypatch):
-    monkeypatch.setattr(EventBus, "_append_jsonl", lambda *a, **k: None)
     built: list[Fixture] = []
 
     def factory(reservations: dict[str, set[str]], remote: int = 1) -> Fixture:

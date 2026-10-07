@@ -9,12 +9,10 @@ WebSockets, so delivery hops threads through `call_soon_threadsafe`.
 
 import asyncio
 import contextlib
-import json
 import threading
 import time
 from collections import deque
 from collections.abc import AsyncIterator
-from pathlib import Path
 
 from .. import installation
 from .catalogue import Event, Job
@@ -56,17 +54,6 @@ class EventBus:
         with self._lock:
             return self._seq
 
-    def run_dir(self, workspace: str | None) -> Path | None:
-        """Where this workspace's forensic record lives, or `None` when it belongs to none.
-
-        The record sits next to the instance it belongs to, which is also what makes
-        deleting a workspace delete its history. An event that is nobody's has no `.runs/`
-        to be written into and must not borrow somebody else's.
-        """
-        if not workspace:
-            return None
-        return Path(installation.workspace_for(workspace).runs_dir)
-
     # PUBLISH -------------------------------------------------------------------------------
 
     def publish(
@@ -91,9 +78,9 @@ class EventBus:
     def publish_job(self, job: Job, kind: str, payload: dict | None = None) -> Event:
         """Number one event of `job`, stamped private to its author when the job is.
 
-        A redacted job's event loses the bank's text BEFORE it is buffered or filed: the
-        on-disk record is read back by the author too (`GET /api/jobs/{id}/events`), and the
-        exercise's own file is what keeps the prompt whole.
+        A redacted job's event loses the bank's text BEFORE it is buffered, so a replay
+        hands the author no more than the live stream did; the exercise's own file is what
+        keeps the prompt whole.
         """
         payload = payload or {}
         if job.redacted:
@@ -116,7 +103,7 @@ class EventBus:
         private: bool = False,
         user_id: int | None = None,
     ) -> Event:
-        """Number one event, buffer it, file it under its workspace and fan it out."""
+        """Number one event, buffer it and fan it out."""
         with self._lock:
             self._seq += 1
             event = Event(
@@ -131,25 +118,8 @@ class EventBus:
             )
             self._buffer.append(event)
 
-        if job_id:
-            self._append_jsonl(workspace, job_id, event)
         self._fan_out(event)
         return event
-
-    def _append_jsonl(self, workspace: str | None, job_id: str, event: Event) -> None:
-        """Append one event to its job's on-disk record, if it has anywhere to be written.
-
-        An event with no workspace stays live only: the buffer still has it and the browser
-        still sees it. Nothing here may raise — it runs on the runner's thread, and a job
-        that cannot write its own log has not failed.
-        """
-        directory = self.run_dir(workspace)
-        if directory is None:
-            return
-        directory.mkdir(parents=True, exist_ok=True)
-        path = directory / f"{job_id}.jsonl"
-        with (contextlib.suppress(OSError), path.open("a", encoding="utf-8") as f):
-            f.write(json.dumps(event.to_dict(), ensure_ascii=False) + "\n")
 
     def _fan_out(self, event: Event) -> None:
         """Hand the event to every subscriber, hopping onto the asyncio loop to do it."""
@@ -203,28 +173,6 @@ class EventBus:
         if event.private and (user_id is None or event.user_id != user_id):
             return False
         return event.workspace is None or event.workspace == workspace
-
-    def job_events(
-        self, workspace: str | None, job_id: str, since: int = 0, limit: int = 5000
-    ) -> list[dict]:
-        """Read one job's full on-disk record — the forensic view, not the live one.
-
-        Falls back to whatever the buffer still holds when the job wrote no file.
-        """
-        directory = self.run_dir(workspace)
-        path = directory / f"{job_id}.jsonl" if directory else None
-        if path is None or not path.is_file():
-            return [e.to_dict() for e in self._buffer if e.job_id == job_id and e.seq > since]
-        out: list[dict] = []
-        with path.open(encoding="utf-8") as f:
-            for line in f:
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if event.get("seq", 0) > since:
-                    out.append(event)
-        return out[-limit:]
 
     # SUBSCRIBE -----------------------------------------------------------------------------
 
