@@ -25,3 +25,13 @@ export function matchesAccount(account: Pick<AdminAccount, "name" | "username">,
   if (!wanted) return true;
   return [account.name, account.username].some((value) => !!value && fold(value).includes(wanted));
 }
+
+/**
+ * The accounts that are in a subject now, by id: every membership of it a teacher has not
+ * paused, whatever its role. What «Permisos de uso» ticks at once for a whole class.
+ */
+export function accountsIn(accounts: Pick<AdminAccount, "id" | "workspaces">[], slug: string): number[] {
+  return accounts
+    .filter((account) => account.workspaces.some((row) => row.slug === slug && !row.disabled))
+    .map((account) => account.id);
+}

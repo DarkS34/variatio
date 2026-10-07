@@ -2,6 +2,7 @@ import { UserMinus, UserX } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
@@ -25,22 +26,22 @@ const ENDING_KEYS: Record<Ending, { title: Key; body: Key }> = {
  * and the class link paused. The owner's alone (`MANAGE` on the route, and the screen draws
  * the section for an owner only).
  *
- * Destructive, so it asks for the subject's name typed and spends no `--attention`: the coral
- * is for the thing to do next, and ending a course is never that by default.
+ * Destructive, so it spends no `--attention` — the coral is for the thing to do next, and
+ * ending a course is never that by default — and the button opens a dialog that asks for the
+ * subject's name typed, as deleting a subject does.
  */
 export function EndCourseSection({ subject }: { subject: string }) {
   const { t, plural } = useT();
   const toast = useToast();
   const end = useEndCourse();
   const [ending, setEnding] = useState<Ending>("disable");
-  const [typed, setTyped] = useState("");
+  const [asking, setAsking] = useState(false);
   const radios = useRadioGroup(ENDINGS, ending, setEnding);
-  const confirmed = typed.trim() === subject.trim() && subject.trim() !== "";
 
   const run = () =>
     end.mutate(ending, {
       onSuccess: ({ students }) => {
-        setTyped("");
+        setAsking(false);
         toast({
           title: plural(ending === "disable" ? "class.end.paused" : "class.end.removed", students),
           tone: "attention",
@@ -94,7 +95,68 @@ export function EndCourseSection({ subject }: { subject: string }) {
         </div>
         <p className="max-w-3xl text-small text-muted-foreground">{t("class.end.both")}</p>
 
-        <div className="max-w-md space-y-1">
+        <Button variant="destructive" onClick={() => setAsking(true)}>
+          {ending === "disable" ? <UserX /> : <UserMinus />}
+          {t("class.end.run")}
+        </Button>
+      </section>
+
+      {asking ? (
+        <ConfirmEnding
+          subject={subject}
+          ending={ending}
+          busy={end.isPending}
+          onClose={() => setAsking(false)}
+          onConfirm={run}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The last word before a course ends: what happens, said again, and the subject's name to
+ * type. Mounted only while open, so it never keeps a name typed the time before.
+ */
+function ConfirmEnding({
+  subject,
+  ending,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  subject: string;
+  ending: Ending;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useT();
+  const [typed, setTyped] = useState("");
+  const confirmed = typed.trim() === subject.trim() && subject.trim() !== "";
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("class.end.confirmTitle", { subject })}
+      description={t(ENDING_KEYS[ending].title)}
+      className="max-w-lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="destructive" disabled={!confirmed || busy} onClick={onConfirm}>
+            {busy ? <Spinner /> : ending === "disable" ? <UserX /> : <UserMinus />}
+            {t("class.end.run")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-body">
+        <p>{t(ENDING_KEYS[ending].body)}</p>
+        <p className="text-small text-muted-foreground">{t("class.end.both")}</p>
+        <div className="space-y-1">
           {/* The name in its own case: the label is set in capitals, and what is compared is
               the name as it is written. */}
           <Label htmlFor="class-end-confirm">
@@ -103,16 +165,16 @@ export function EndCourseSection({ subject }: { subject: string }) {
           </Label>
           <Input
             id="class-end-confirm"
-            value={typed}
+            autoFocus
             autoComplete="off"
+            value={typed}
             onChange={(event) => setTyped(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && confirmed && !busy) onConfirm();
+            }}
           />
         </div>
-        <Button variant="destructive" disabled={!confirmed || end.isPending} onClick={run}>
-          {end.isPending ? <Spinner /> : ending === "disable" ? <UserX /> : <UserMinus />}
-          {t("class.end.run")}
-        </Button>
-      </section>
-    </>
+      </div>
+    </Dialog>
   );
 }

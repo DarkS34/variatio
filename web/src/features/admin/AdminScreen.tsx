@@ -281,7 +281,12 @@ function FeatureTab({
       onChange={(key) => onSection(key as FeatureSection)}
     >
       {open === "access" && overview ? (
-        <FeatureAccess feature={feature} accounts={overview.accounts} drafts={access} />
+        <FeatureAccess
+          feature={feature}
+          accounts={overview.accounts}
+          workspaces={overview.workspaces}
+          drafts={access}
+        />
       ) : null}
 
       {open === "analytics" ? (

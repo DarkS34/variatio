@@ -472,9 +472,9 @@ export function useClassLinkUrl(enabled: boolean) {
 }
 
 /**
- * Minting, renewing and changing the class link. A mint's answer carries the new link, so it
- * goes straight into the link's query and nobody asks for it again; a change leaves the link
- * as it was.
+ * Minting, renewing, changing and deleting the class link. A mint's answer carries the new
+ * link, so it goes straight into the link's query and nobody asks for it again; a change
+ * leaves the link as it was; a deletion leaves the subject with none.
  */
 export function useClassLinkActions() {
   const client = useQueryClient();
@@ -489,6 +489,13 @@ export function useClassLinkActions() {
     edit: useMutation({
       mutationFn: api.editClassLink,
       onSuccess: ({ class_link }) => client.setQueryData(keys.classLink, { class_link }),
+    }),
+    revoke: useMutation({
+      mutationFn: api.revokeClassLink,
+      onSuccess: () => {
+        client.setQueryData(keys.classLink, { class_link: null });
+        client.removeQueries({ queryKey: keys.classLinkUrl });
+      },
     }),
   };
 }

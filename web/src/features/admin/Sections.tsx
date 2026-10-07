@@ -20,7 +20,9 @@ import { cn } from "@/lib/utils";
  * Below `lg` the list lies down and scrolls sideways over the section.
  *
  * A list of two kinds of section (the subject's own parts, then one per unit) names the
- * second kind with a caption over its first row (`group`). A list taller than the window
+ * second kind with a caption over its first row (`group`); a row of another weight — the one
+ * that ends a course among the ones that run it — is ruled off from those above (`separated`),
+ * across the list when it stands and down it when it lies. A list taller than the window
  * scrolls inside itself: pinned whole, its last rows were out of reach beside a long section.
  */
 export interface SectionEntry {
@@ -36,6 +38,8 @@ export interface SectionEntry {
   pending?: number;
   /** A caption over the row, where the rows from this one on are another kind of section. */
   group?: string;
+  /** A rule before the row, setting it apart from the rows above it (as `Tabs` does). */
+  separated?: boolean;
 }
 
 export function Sections({
@@ -73,7 +77,13 @@ export function Sections({
             {items.map((item) => {
               const current = item.key === value;
               return (
-                <li key={item.key} className="shrink-0 lg:shrink">
+                <li key={item.key} className="flex shrink-0 lg:block lg:shrink">
+                  {item.separated ? (
+                    <span
+                      aria-hidden
+                      className="mx-1 my-2 w-px shrink-0 self-stretch bg-border lg:mx-3 lg:my-1 lg:block lg:h-px lg:w-auto"
+                    />
+                  ) : null}
                   {item.group ? (
                     <p className="hidden px-3 pb-1 pt-3 text-micro font-condensed uppercase text-muted-foreground lg:block">
                       {item.group}

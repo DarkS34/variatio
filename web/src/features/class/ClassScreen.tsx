@@ -7,7 +7,6 @@ import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
@@ -72,7 +71,7 @@ export function ClassScreen() {
     },
     // The owner's alone: ending a course takes every student out at once.
     ...(owner
-      ? [{ key: "end", label: t("class.end"), mark: <CalendarX className="size-4" /> }]
+      ? [{ key: "end", label: t("class.end"), mark: <CalendarX className="size-4" />, separated: true }]
       : []),
   ];
 
@@ -114,12 +113,16 @@ export function ClassScreen() {
 }
 
 /**
- * The students of the subject, active and paused: who they are, since when and how they
- * came in, and the three gestures over the ones ticked.
+ * The students of the subject, active or paused: who they are, how and when they came in,
+ * and the three gestures, over one student or over the ones ticked.
  *
- * Pausing is offered over the active ones ticked and opening over the paused ones; removing
- * over any, and it says it is final and offers to pause instead. Each confirmation names
- * how many it is about. What the server refuses comes back person by person.
+ * Drawn as `/raw` draws its documents: one compact row per person in a well, a strip over
+ * them with the box that ticks the whole list and the gestures over what is ticked, and on
+ * each row the same gestures as small icons, shown on hover or focus. A table with a column
+ * per fact left most of its width empty. Each filter holds one kind of student, so its
+ * strip offers one way to change them (pause the active, open the paused) plus removing,
+ * which says it is final and offers to pause instead. Each confirmation names how many it is
+ * about; what the server refuses comes back person by person.
  */
 function StudentsSection({ students }: { students: Member[] }) {
   const { t, plural } = useT();
@@ -135,14 +138,11 @@ function StudentsSection({ students }: { students: Member[] }) {
     () => ({
       active: students.filter((member) => inFilter(member, "active")).length,
       disabled: students.filter((member) => inFilter(member, "disabled")).length,
-      all: students.length,
     }),
     [students],
   );
   const shown = students.filter((member) => inFilter(member, filter) && matchesMember(member, query));
   const chosen = shown.filter((member) => ticked.has(member.user_id));
-  const toPause = chosen.filter((member) => member.disabled_at === null);
-  const toOpen = chosen.filter((member) => member.disabled_at !== null);
   const allTicked = shown.length > 0 && chosen.length === shown.length;
 
   const tick = (member: Member, on: boolean) =>
@@ -158,7 +158,11 @@ function StudentsSection({ students }: { students: Member[] }) {
       { action, userIds: people.map((member) => member.user_id) },
       {
         onSuccess: ({ done, refused }) => {
-          setTicked(new Set());
+          setTicked((held) => {
+            const next = new Set(held);
+            for (const member of people) next.delete(member.user_id);
+            return next;
+          });
           if (done.length > 0) {
             toast({ title: plural(DONE_KEYS[action], done.length) });
           }
@@ -194,6 +198,9 @@ function StudentsSection({ students }: { students: Member[] }) {
     if (asked) run("enable", people);
   };
 
+  // The gesture that changes access, for the kind of student this filter holds.
+  const change = (people: Member[]) => (filter === "active" ? pause(people) : open(people));
+
   return (
     <>
       <SectionHeader title={t("class.students")} description={t("class.students.lead")} />
@@ -209,7 +216,6 @@ function StudentsSection({ students }: { students: Member[] }) {
             items={[
               { value: "active", label: t("class.filter.active"), badge: <Count n={counts.active} /> },
               { value: "disabled", label: t("class.filter.paused"), badge: <Count n={counts.disabled} /> },
-              { value: "all", label: t("class.filter.all"), badge: <Count n={counts.all} /> },
             ]}
           />
           <div className="relative ml-auto w-full sm:w-72">
@@ -225,73 +231,66 @@ function StudentsSection({ students }: { students: Member[] }) {
           </div>
         </div>
 
-        {/* The gestures stand over the list only while something is ticked: with nothing
-            chosen they would answer a press with nothing at all. */}
-        {chosen.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-small text-muted-foreground">
-              {plural("class.ticked", chosen.length)}
-            </span>
-            {toPause.length > 0 ? (
-              <Button size="sm" variant="outline" disabled={many.isPending} onClick={() => pause(toPause)}>
-                <UserX />
-                {t("class.pauseN", { n: toPause.length })}
-              </Button>
-            ) : null}
-            {toOpen.length > 0 ? (
-              <Button size="sm" variant="outline" disabled={many.isPending} onClick={() => open(toOpen)}>
-                <UserCheck />
-                {t("class.openN", { n: toOpen.length })}
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive hover:bg-destructive/10"
-              disabled={many.isPending}
-              onClick={() => setRemoving(chosen)}
-            >
-              <UserMinus />
-              {t("class.removeN", { n: chosen.length })}
-            </Button>
-            {many.isPending ? <Spinner /> : null}
-          </div>
-        ) : null}
-
         {students.length === 0 ? (
           <p className="text-small text-muted-foreground">{t("class.students.none")}</p>
         ) : shown.length === 0 ? (
-          <p className="text-small text-muted-foreground">{t("class.students.noMatch")}</p>
+          <p className="text-small text-muted-foreground">
+            {query.trim() ? t("class.students.noMatch") : t(EMPTY_KEYS[filter])}
+          </p>
         ) : (
-          <Table minWidth="40rem" className="table-fixed">
-            <THead>
-              <TR>
-                <TH className="w-10">
-                  <Checkbox
-                    checked={allTicked}
-                    indeterminate={chosen.length > 0 && !allTicked}
-                    label={t("class.tickAll")}
-                    onCheckedChange={(on) =>
-                      setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set())
-                    }
-                  />
-                </TH>
-                <TH>{t("class.col.student")}</TH>
-                <TH className="w-[8rem]">{t("class.col.joined")}</TH>
-                <TH className="w-[11rem]">{t("class.col.via")}</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {shown.map((member) => (
-                <StudentRow
-                  key={member.user_id}
-                  member={member}
-                  ticked={ticked.has(member.user_id)}
-                  onTick={(on) => tick(member, on)}
-                />
-              ))}
-            </TBody>
-          </Table>
+          <ul className="well px-1 py-1.5">
+            {/* The strip carries the box that ticks the whole list, in the column of the
+                rows' boxes, and the gestures over what is ticked. */}
+            <li className="mx-2 flex min-h-9 flex-wrap items-center gap-2 px-2 py-1.5 text-small">
+              <Checkbox
+                checked={allTicked}
+                indeterminate={chosen.length > 0 && !allTicked}
+                label={t("class.tickAll")}
+                onCheckedChange={(on) =>
+                  setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set())
+                }
+              />
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {chosen.length > 0 ? plural("class.ticked", chosen.length) : t("class.tickAll")}
+              </span>
+              {chosen.length > 0 ? (
+                <span className="flex items-center gap-1">
+                  {many.isPending ? <Spinner /> : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="-my-1 h-7"
+                    disabled={many.isPending}
+                    onClick={() => change(chosen)}
+                  >
+                    {filter === "active" ? <UserX /> : <UserCheck />}
+                    {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="-my-1 h-7 text-destructive hover:text-destructive"
+                    disabled={many.isPending}
+                    onClick={() => setRemoving(chosen)}
+                  >
+                    <UserMinus />
+                    {t("class.removeN", { n: chosen.length })}
+                  </Button>
+                </span>
+              ) : null}
+            </li>
+            {shown.map((member) => (
+              <StudentRow
+                key={member.user_id}
+                member={member}
+                ticked={ticked.has(member.user_id)}
+                busy={many.isPending}
+                onTick={(on) => tick(member, on)}
+                onChange={() => change([member])}
+                onRemove={() => setRemoving([member])}
+              />
+            ))}
+          </ul>
         )}
       </section>
 
@@ -318,51 +317,94 @@ const DONE_KEYS = {
   remove: "class.removed",
 } as const;
 
+const EMPTY_KEYS = {
+  active: "class.students.noneActive",
+  disabled: "class.students.nonePaused",
+} as const;
+
 function Count({ n }: { n: number }) {
   return <span className="nums text-small text-muted-foreground">{n}</span>;
 }
 
-/** One student: who, since when, how they came in, and whether a teacher paused them. */
+/**
+ * One student on one line: who, whether a teacher paused them, how and when they came in,
+ * and the two gestures over them alone.
+ */
 function StudentRow({
   member,
   ticked,
+  busy,
   onTick,
+  onChange,
+  onRemove,
 }: {
   member: Member;
   ticked: boolean;
+  busy: boolean;
   onTick: (on: boolean) => void;
+  onChange: () => void;
+  onRemove: () => void;
 }) {
   const { t } = useT();
   const via = viaKey(member.via);
   const paused = member.disabled_at !== null;
+  const how = [via ? t(via) : null, member.invited_by ? t("class.invitedBy", { name: member.invited_by }) : null]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <TR className={cn(paused && "text-muted-foreground")}>
-      <TD className="align-top">
+    <li className="mx-2 border-t border-border">
+      <div className="group flex items-center gap-2 px-2 py-1.5 text-small">
         <Checkbox checked={ticked} label={t("class.tick", { name: member.name })} onCheckedChange={onTick} />
-      </TD>
-      <TD className="align-top">
-        <span className="flex flex-wrap items-center gap-1.5">
-          <span className={cn("truncate font-medium", paused ? "text-muted-foreground" : "text-foreground")}>
+        <span className="flex min-w-0 flex-1 items-baseline gap-2">
+          <span
+            className={cn(
+              "truncate text-body font-medium",
+              paused ? "text-muted-foreground" : "text-foreground",
+            )}
+            title={member.name}
+          >
             {member.name}
           </span>
-          {paused ? (
-            <Badge variant="outline">
-              {t("class.pausedSince", { date: when(member.disabled_at) })}
-            </Badge>
-          ) : null}
+          <span className="hidden truncate font-mono text-muted-foreground sm:inline">
+            {member.username}
+          </span>
         </span>
-        <span className="block truncate font-mono text-small text-muted-foreground">
-          {member.username}
-        </span>
-      </TD>
-      <TD className="whitespace-nowrap align-top text-muted-foreground">{when(member.joined_at)}</TD>
-      <TD className="align-top text-muted-foreground">
-        {via ? t(via) : "—"}
-        {member.invited_by ? (
-          <span className="block truncate text-small">{t("class.invitedBy", { name: member.invited_by })}</span>
+        {paused ? (
+          <Badge variant="outline" className="shrink-0">
+            {t("class.pausedSince", { date: when(member.disabled_at) })}
+          </Badge>
         ) : null}
-      </TD>
-    </TR>
+        <span className="hidden w-52 shrink-0 truncate text-muted-foreground md:block" title={how || undefined}>
+          {how || "—"}
+        </span>
+        <span className="nums hidden w-40 shrink-0 text-muted-foreground sm:block">
+          {t("class.joinedOn", { date: when(member.joined_at) })}
+        </span>
+        <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t(paused ? "class.openOne" : "class.pauseOne", { name: member.name })}
+            title={t(paused ? "class.open" : "class.pause")}
+            disabled={busy}
+            onClick={onChange}
+          >
+            {paused ? <UserCheck /> : <UserX />}
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("class.removeOne", { name: member.name })}
+            title={t("class.remove")}
+            disabled={busy}
+            onClick={onRemove}
+            className="hover:text-destructive"
+          >
+            <UserMinus />
+          </Button>
+        </span>
+      </div>
+    </li>
   );
 }
 

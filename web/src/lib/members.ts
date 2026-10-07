@@ -7,8 +7,8 @@ import type { Member, MemberVia } from "@/lib/types";
  * shows, what a search matches, and what an origin is called.
  */
 
-/** The three readings of the students' list. */
-export type MemberFilter = "active" | "disabled" | "all";
+/** The two readings of the students' list: who may enter, and who a teacher paused. */
+export type MemberFilter = "active" | "disabled";
 
 /** A subject's students — `viewer`s — active and paused, by name. Teachers are listed apart. */
 export function studentsOf(members: Member[]): Member[] {
@@ -17,9 +17,8 @@ export function studentsOf(members: Member[]): Member[] {
     .sort((a, b) => a.name.localeCompare(b.name) || a.username.localeCompare(b.username));
 }
 
-/** Whether a person is shown under a filter: open access, paused, or either. */
+/** Whether a person is shown under a filter: open access, or paused. */
 export function inFilter(member: Pick<Member, "disabled_at">, filter: MemberFilter): boolean {
-  if (filter === "all") return true;
   return filter === "disabled" ? member.disabled_at !== null : member.disabled_at === null;
 }
 

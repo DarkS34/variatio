@@ -1083,9 +1083,14 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   `people` — students, paused, teachers — on those rows), switching into it first. Drawn as a
   panel tab (`admin/Sections`): the list of its sections beside the one open, «Alumnos» first
   — the other sections of the plan join it — the subject's name read off the TAB's slug,
-  never the session's `active` flag. «Alumnos» (`lib/members.ts`): a filter «Activos» /
-  «Desactivados» / «Todos», a search over name and username, one table, ticks, and over the
-  ticked ones «Desactivar (n)», «Activar (n)», «Quitar (n)», each confirmed naming how many;
+  never the session's `active` flag. «Fin de curso» is ruled off from the
+  others (`SectionEntry.separated`). «Alumnos» (`lib/members.ts`): a filter «Activos» /
+  «Desactivados» (no «Todos», user's request 2026-10-07), a search over name and username,
+  and the students drawn as `/raw` draws its documents — one compact row each in a `.well`,
+  a strip over them with the box that ticks the list and, over the ticked ones, the
+  filter's gesture («Desactivar (n)» or «Activar (n)») and «Quitar (n)»; each row carries the
+  same two as icons on hover or focus (a table left most of its width empty) — each
+  confirmed naming how many;
   removing is its own dialog — final, offering «Desactivar en su lugar» — and every gesture
   goes through `POST /api/members/bulk`, refusals toasted person by person. A tab whose
   subject closes on its account (`not_member`, `membership_disabled`, or the stream closed
@@ -1098,8 +1103,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   (a big dialog to project: `lib/qr.ts` draws ONE SVG path with `qrcode-generator` — MIT, no
   dependencies, in the class screen's chunk alone — medium correction and a quiet zone of
   four, in `--qr`), «Pausar»/«Reanudar», «Renovar el enlace» (asked first: the current link
-  stops, whoever came in stays; same seats, same date unless gone) and «Cambiar plazas o
-  caducidad» (only what moved is sent). «Invitaciones personales»: one name per line
+  stops, whoever came in stays; same seats, same date unless gone), «Cambiar plazas o
+  caducidad» (only what moved is sent) and «Borrar el enlace» (asked first;
+  `DELETE /api/members/class-link`, no link after it, whoever came in stays). «Invitaciones personales»: one name per line
   (`invites.namesOf`, twins kept), a date, «Crear N invitaciones» — validated on press, at
   most 50, 180 days ahead at most (the server's constants mirrored in `lib/invites.ts`) — and
   what was minted stays until put away: a link per name, «Copiar todo» (alias TAB link) and
@@ -1109,7 +1115,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   `ClipboardItem` holding the promise), and where the browser refuses, the link opens under
   the row; «Borrar», asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
   route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
-  confirmed by typing the subject's name as written; destructive, never `--attention`.
+  confirmed in a dialog by typing the subject's name as written, as deleting a subject is;
+  destructive, never `--attention`.
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
   2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
   «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,
@@ -1248,7 +1255,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
   marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
   under another mode because the server keeps the list; one sentence states the SAVED state,
-  one line says the administrator is not exempt); «Analíticas» is the evaluation's reading
+  one line says the administrator is not exempt; «Por asignatura» ticks or unticks at once
+  every account in a subject now, `accounts.accountsIn`, paused memberships left out); «Analíticas» is the evaluation's reading
   (lazy); «Configuración» is the function's stage settings (`ConfigTab.StageSettings`, its
   own save bar over the same values; `tutor.daily_messages` is there). A folded link to
   another stage opens «Configuración» on it: `AdminScreen` owns the tab, the open stage and

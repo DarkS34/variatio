@@ -2175,7 +2175,7 @@ function Admin() {
             {
               key: "selected",
               head: t("feature.mode.selected"),
-              body: "Solo en las cuentas que marques en la lista. La lista se conserva aunque elijas otra opción, y vuelve tal cual al elegir esta otra vez.",
+              body: "Solo en las cuentas que marques en la lista. Para una clase entera, elige su asignatura en «Por asignatura» y marca todas sus cuentas de una vez. La lista se conserva aunque elijas otra opción, y vuelve tal cual al elegir esta otra vez.",
             },
           ]}
         />
@@ -2539,7 +2539,8 @@ function Class() {
           Dos maneras de traer a tus alumnos, y con las dos entran como alumnos. El{" "}
           <strong>enlace de clase</strong> es uno para toda la clase: tiene plazas, una fecha de
           caducidad y una pausa, y se muestra como código QR para proyectarlo. Renovarlo deja el
-          enlace viejo sin efecto; quien ya entró se queda. Las{" "}
+          enlace viejo sin efecto y crea otro; borrarlo lo deja sin efecto y no crea ninguno. En
+          los dos casos, quien ya entró se queda. Las{" "}
           <strong>invitaciones personales</strong> son una por nombre y sirven una sola vez: se
           copian una a una, todas juntas o en un CSV con el nombre, el enlace y la fecha.
         </Paragraph>
@@ -2547,8 +2548,9 @@ function Class() {
 
       <Block title={t("class.students")}>
         <Paragraph>
-          La lista de tus alumnos, activos y desactivados, con cuándo y cómo entró cada uno.
-          Marcas a uno o a varios y eliges qué hacer:
+          La lista de tus alumnos, una fila por alumno, con cuándo y cómo entró. Un filtro
+          muestra los activos o los desactivados. Para un alumno, pasa el cursor por su fila y
+          pulsa uno de sus botones. Para varios, márcalos y elige qué hacer sobre la lista:
         </Paragraph>
         <Rows
           items={[
@@ -2574,8 +2576,8 @@ function Class() {
         <Paragraph>
           Solo para quien es propietario de la asignatura. Saca a todos los alumnos de una vez:
           desactivados, y el curso se reabre activándolos, o quitados. El enlace de clase queda
-          en pausa y los docentes se quedan. Para confirmarlo hay que escribir el nombre de la
-          asignatura.
+          en pausa y los docentes se quedan. Para confirmarlo, una ventana te pide escribir el
+          nombre de la asignatura.
         </Paragraph>
       </Block>
     </div>

@@ -2,10 +2,11 @@ import { useId, useState, type Dispatch, type SetStateAction } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
+import { accountsIn } from "@/features/admin/accounts";
 import { SectionHeader } from "@/features/admin/Sections";
 import { FormError } from "@/features/auth/AuthLayout";
 import { useT, type Key, type Translate } from "@/lib/i18n";
@@ -14,6 +15,7 @@ import { fold } from "@/lib/text";
 import {
   featureAccessOf,
   type AdminAccount,
+  type AdminWorkspace,
   type FeatureAccessState,
   type FeatureMode,
   type FeatureName,
@@ -62,14 +64,20 @@ export function useAccessDrafts(): AccessDrafts {
  * The administrator is not exempt (`server/features.py`): under «Cuentas elegidas» their own
  * account opens the function only when it is ticked, like anybody's. One line says so,
  * because the panel is the one screen where an administrator expects to see everything.
+ *
+ * A class is ticked at once: under «Cuentas elegidas» a subject is chosen and every account
+ * in it now (`accountsIn`, teachers included, paused memberships left out) is ticked, or
+ * unticked, in one press. The ticks are the draft as any other, so nothing is saved by it.
  */
 export function FeatureAccess({
   feature,
   accounts,
+  workspaces,
   drafts,
 }: {
   feature: FeatureName;
   accounts: AdminAccount[];
+  workspaces: AdminWorkspace[];
   drafts: AccessDrafts;
 }) {
   const { t, plural } = useT();
@@ -86,7 +94,9 @@ export function FeatureAccess({
       return updated;
     });
   const [search, setSearch] = useState("");
+  const [subject, setSubject] = useState("");
   const headingId = useId();
+  const subjectId = useId();
   const saved = query.data ? featureAccessOf(query.data, feature) : null;
   const current = draft ?? saved;
   // Back to the saved state is no draft at all, so the save button greys out again.
@@ -123,6 +133,19 @@ export function FeatureAccess({
         ? [...current.accounts, id].sort((a, b) => a - b)
         : current.accounts.filter((other) => other !== id),
     });
+
+  // The chosen subject's accounts, and how many of them are ticked already.
+  const inSubject = subject ? accountsIn(accounts, subject) : [];
+  const tickedInSubject = inSubject.filter((id) => ticked.has(id)).length;
+  const tickSubject = (on: boolean) => {
+    const wanted = new Set(inSubject);
+    change({
+      ...current,
+      accounts: on
+        ? [...new Set([...current.accounts, ...inSubject])].sort((a, b) => a - b)
+        : current.accounts.filter((id) => !wanted.has(id)),
+    });
+  };
 
   const submit = () =>
     write.mutate(
@@ -194,6 +217,48 @@ export function FeatureAccess({
 
         {selecting || known.length > 0 ? (
           <div className="space-y-2">
+            {selecting && workspaces.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor={subjectId} className="text-small text-muted-foreground">
+                  {t("feature.bySubject")}
+                </label>
+                <Select
+                  id={subjectId}
+                  value={subject}
+                  className="w-full sm:w-auto sm:min-w-64 sm:max-w-md"
+                  onChange={(event) => setSubject(event.target.value)}
+                >
+                  <option value="">{t("feature.bySubject.pick")}</option>
+                  {workspaces.map((row) => (
+                    <option key={row.slug} value={row.slug}>
+                      {row.name}
+                    </option>
+                  ))}
+                </Select>
+                {subject ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={write.isPending || tickedInSubject === inSubject.length}
+                      onClick={() => tickSubject(true)}
+                    >
+                      {t("feature.bySubject.tick", { n: inSubject.length })}
+                    </Button>
+                    {tickedInSubject > 0 ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={write.isPending}
+                        onClick={() => tickSubject(false)}
+                      >
+                        {t("feature.bySubject.untick", { n: tickedInSubject })}
+                      </Button>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            ) : null}
             {selecting && accounts.length >= SEARCH_FROM ? (
               <Input
                 type="search"

@@ -2187,7 +2187,7 @@ function Admin() {
             {
               key: "selected",
               head: t("feature.mode.selected"),
-              body: "Only on the accounts you tick in the list. The list is kept when you choose another option, and comes back as it was when you choose this one again.",
+              body: "Only on the accounts you tick in the list. For a whole class, choose its subject under «By subject» and tick all its accounts at once. The list is kept when you choose another option, and comes back as it was when you choose this one again.",
             },
           ]}
         />
@@ -2551,8 +2551,9 @@ function Class() {
         <Paragraph>
           Two ways to bring your students in, and with both they come in as students. The{" "}
           <strong>class link</strong> is one for the whole class: it has seats, an expiry date
-          and a pause, and it shows as a QR code to project. Renewing it stops the old link;
-          whoever came in stays. The <strong>personal invitations</strong> are one per name and
+          and a pause, and it shows as a QR code to project. Renewing it stops the old link
+          and makes another; deleting it stops it and makes none. Either way, whoever came in
+          stays. The <strong>personal invitations</strong> are one per name and
           serve once: they are copied one by one, all together, or as a CSV with the name, the
           link and the date.
         </Paragraph>
@@ -2560,8 +2561,9 @@ function Class() {
 
       <Block title={t("class.students")}>
         <Paragraph>
-          The list of your students, active and paused, with when and how each one came in. You
-          tick one or several and choose what to do:
+          The list of your students, one row each, with when and how they came in. A filter
+          shows the active ones or the paused ones. For one student, point at their row and
+          press one of its buttons. For several, tick them and choose what to do over the list:
         </Paragraph>
         <Rows
           items={[
@@ -2587,7 +2589,7 @@ function Class() {
         <Paragraph>
           For the subject's owner alone. It takes every student out at once: paused, and the
           course reopens by opening them, or removed. The class link is paused and the teachers
-          stay. To confirm it, you type the subject's name.
+          stay. To confirm it, a dialog asks you to type the subject's name.
         </Paragraph>
       </Block>
     </div>

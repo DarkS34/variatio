@@ -31,10 +31,9 @@ describe("inFilter", () => {
   const open = member({});
   const paused = member({ disabled_at: "2026-10-06T11:00:00+00:00" });
 
-  it("reads the three filters", () => {
+  it("reads the two filters", () => {
     expect([inFilter(open, "active"), inFilter(paused, "active")]).toEqual([true, false]);
     expect([inFilter(open, "disabled"), inFilter(paused, "disabled")]).toEqual([false, true]);
-    expect([inFilter(open, "all"), inFilter(paused, "all")]).toEqual([true, true]);
   });
 });
 

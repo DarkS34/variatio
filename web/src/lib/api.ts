@@ -297,6 +297,9 @@ export const api = {
     post<MintedClassLink>("/api/members/class-link", terms),
   editClassLink: (changes: ClassLinkTerms) =>
     patch<{ class_link: ClassLinkView }>("/api/members/class-link", changes),
+  // Retires the live link without a new one: it stops working, and whoever entered stays.
+  revokeClassLink: () =>
+    request<{ revoked: boolean }>("/api/members/class-link", { method: "DELETE" }),
   // The subject's personal invitations, a student's each, one per name.
   memberInvites: () => request<{ invites: MemberInvite[] }>("/api/members/invites"),
   mintMemberInvites: (body: { names: string[]; expires_at: string | null }) =>

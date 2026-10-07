@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupOf, matchesAccount } from "./accounts";
+import { accountsIn, groupOf, matchesAccount } from "./accounts";
 
 const account = (over: Partial<Parameters<typeof groupOf>[0]> = {}) => ({
   disabled: false,
@@ -37,5 +37,18 @@ describe("matchesAccount", () => {
 
   it("matches every account while nothing is typed", () => {
     expect(matchesAccount(ana, "  ")).toBe(true);
+  });
+});
+
+describe("accountsIn", () => {
+  it("names every account in a subject, whatever its role, and none a teacher paused", () => {
+    const accounts = [
+      { id: 1, workspaces: [{ slug: "algebra", role: "owner" as const }] },
+      { id: 2, workspaces: [{ slug: "algebra", role: "viewer" as const, disabled: false }] },
+      { id: 3, workspaces: [{ slug: "algebra", role: "viewer" as const, disabled: true }] },
+      { id: 4, workspaces: [{ slug: "fisica", role: "viewer" as const }] },
+    ];
+    expect(accountsIn(accounts, "algebra")).toEqual([1, 2]);
+    expect(accountsIn(accounts, "quimica")).toEqual([]);
   });
 });

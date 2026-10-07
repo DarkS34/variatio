@@ -116,7 +116,7 @@ function LiveLink({ link, subject }: { link: ClassLinkView; subject: string }) {
   const confirm = useConfirm();
   const toast = useToast();
   const url = useClassLinkUrl(link.link_stored);
-  const { mint, edit } = useClassLinkActions();
+  const { mint, edit, revoke } = useClassLinkActions();
   const [editing, setEditing] = useState(false);
   const [projecting, setProjecting] = useState(false);
   const text = url.data?.link ?? null;
@@ -136,6 +136,17 @@ function LiveLink({ link, subject }: { link: ClassLinkView; subject: string }) {
       { max_uses: link.max_uses, expires_at: link.expired ? null : link.expires_at },
       { onSuccess: () => toast({ title: t("class.link.renewed") }), onError: failed },
     );
+  };
+
+  const remove = async () => {
+    const asked = await confirm({
+      title: t("class.link.deleteConfirm"),
+      body: t("class.link.deleteConfirmBody"),
+      confirmLabel: t("class.link.delete"),
+      tone: "danger",
+    });
+    if (!asked) return;
+    revoke.mutate(undefined, { onSuccess: () => toast({ title: t("class.link.deleted") }), onError: failed });
   };
 
   const pause = (paused: boolean) =>
@@ -204,6 +215,16 @@ function LiveLink({ link, subject }: { link: ClassLinkView; subject: string }) {
         >
           <Settings2 />
           {t("class.link.change")}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-auto text-destructive hover:text-destructive"
+          disabled={revoke.isPending}
+          onClick={remove}
+        >
+          {revoke.isPending ? <Spinner /> : <Trash2 />}
+          {t("class.link.delete")}
         </Button>
       </div>
 
