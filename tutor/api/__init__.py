@@ -13,7 +13,7 @@ def install(app) -> None:
     """Register the tutor's two jobs, their lanes and their function, and mount its routers."""
     from server import features
     from server.jobs import lanes
-    from server.jobs.catalogue import PRIVATE_KINDS
+    from server.jobs.catalogue import PRIVATE_KINDS, STUDENT_KINDS
     from server.jobs.handlers import HANDLERS
     from server.routers.jobs import FEATURE_OF
     from variatio import config as pipeline_config
@@ -31,8 +31,10 @@ def install(app) -> None:
     FEATURE_OF[jobs.TURN] = features.TUTOR
     FEATURE_OF[jobs.CRITERIA] = features.TUTOR
     # A turn is its author's alone, as a commission is: its events reach the author's socket
-    # and nobody else's. The criteria are the subject's, and every teacher watches them.
+    # and nobody else's, and a student may ask for one. The criteria are the subject's, and
+    # a teacher's to draft.
     PRIVATE_KINDS.add(jobs.TURN)
+    STUDENT_KINDS.add(jobs.TURN)
 
     # The models each job calls, read at queueing time like every other kind's: the reply and
     # the classification for a turn, the drafting for the criteria, and — for both — what

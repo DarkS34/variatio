@@ -47,6 +47,14 @@ NO_WORKSPACE = (
     "una existente a quien administra la instalación."
 )
 
+# What a refused request carries in `X-Error-Code`, so the client tells the cases apart by
+# code and never by sentence. `not_member`: the account has no membership of the workspace
+# the request names — removed while a tab was open, say — and the client reads the session
+# again to land somewhere it belongs. `role_too_low`: it is a member, below the level the
+# action needs.
+NOT_MEMBER = "not_member"
+ROLE_TOO_LOW = "role_too_low"
+
 
 @dataclass(frozen=True)
 class Access:
@@ -315,10 +323,13 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
 
     The administrator bypass lives here and nowhere else: an account that administers the
     installation gets in as the owner with `as_admin` set, whether the membership is
-    missing or merely too junior. The installation's maintenance door is here for the
-    same reason — this is the one place every route that touches an instance goes through
-    — and the administrator gets through that too, since a door that shuts on them has
-    nothing left to reopen it from.
+    missing or merely too junior. Its role is the owner's even when its own membership
+    reached the level asked for, so a route that decides by role inside (`at_least`) reads
+    the bypass from here and never applies it again; `as_admin` says only whether the request
+    needed it. The installation's maintenance door is here for the same reason — this is
+    the one place every route that touches an instance goes through — and the administrator
+    gets through that too, since a door that shuts on them has nothing left to reopen it
+    from.
 
     Raises 403 without a membership and without the flag, and 503 while it is closed.
     """
@@ -330,16 +341,24 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
 
     if row is None:
         if not user.is_admin:
-            raise HTTPException(403, f"No tienes acceso a la asignatura '{workspace.slug}'.")
+            raise HTTPException(
+                403,
+                f"No tienes acceso a la asignatura '{workspace.slug}'.",
+                headers={"X-Error-Code": NOT_MEMBER},
+            )
         as_admin, role = True, OWNER
     else:
         role = row.role
         if ROLE_RANK[role] < ROLE_RANK[minimum]:
             if not user.is_admin:
                 raise HTTPException(
-                    403, f"Tu rol ({role}) no permite esta acción; hace falta {minimum}."
+                    403,
+                    f"Tu rol ({role}) no permite esta acción; hace falta {minimum}.",
+                    headers={"X-Error-Code": ROLE_TOO_LOW},
                 )
-            as_admin, role = True, OWNER
+            as_admin = True
+        if user.is_admin:
+            role = OWNER
 
     return Access(
         user=user,
@@ -348,6 +367,17 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
         ws=installation.workspace_for(workspace.slug),
         as_admin=as_admin,
     )
+
+
+def at_least(access: Access, minimum: str) -> bool:
+    """Say whether a resolved access reaches `minimum`.
+
+    For a route that declares a lower level and lets part of what it does through only at a
+    higher one — `POST /api/jobs` takes a student's commission and a teacher's build. The
+    administrator's bypass is already in `access.role` (`access_for`), so this compares roles
+    and nothing else.
+    """
+    return ROLE_RANK[access.role] >= ROLE_RANK[minimum]
 
 
 # WEBSOCKET -----------------------------------------------------------------------------

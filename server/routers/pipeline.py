@@ -1,7 +1,7 @@
 """The chain of one workspace: its three stages, its approvals and its history.
 
 Declares `auth.VIEW` for the whole router; approving, reopening and restoring add
-`auth.EDIT`.
+`auth.EDIT`, and so does reading a stage's history, whose snapshots are the construction's.
 
 ROUTE ORDER IS LOAD-BEARING. `/phases` and `/scope` are declared ABOVE the
 `/{artifact}/…` routes: FastAPI matches in declaration order, and the other way round the
@@ -299,7 +299,7 @@ def reopen(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     return pipeline_payload(access)
 
 
-@router.get("/{artifact}/history")
+@router.get("/{artifact}/history", dependencies=[auth.EDIT])
 def history(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     """Answer one artifact's snapshots, the undo behind every destructive edit."""
     _check(artifact)

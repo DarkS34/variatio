@@ -1,9 +1,10 @@
 """The knowledge graph: its concepts, its domains, its relations and the curriculum.
 
-Declares `auth.VIEW` for the whole router; every write adds `auth.EDIT`. Concept and
-domain names are free text in the instance's own language, so they travel in the body
-and never in the path — that sidesteps every encoding question about slashes, accents
-and spaces at once.
+Declares `auth.VIEW` for the whole router, because a student of the subject reads the
+syllabus; every write adds `auth.EDIT`, and so does the document verbatim (`GET /raw`), which
+is the construction's working copy and not what a student reads. Concept and domain names
+are free text in the instance's own language, so they travel in the body and never in the
+path — that sidesteps every encoding question about slashes, accents and spaces at once.
 
 The curriculum is host state rather than an artifact, and `close_prerequisites` is an
 opt-in on the WRITE path only: materialising the closure at save time is what keeps the
@@ -109,7 +110,7 @@ def graph(access: auth.Access = auth.VIEW) -> dict:
         raise HTTPException(404, str(exc)) from exc
 
 
-@router.get("/raw")
+@router.get("/raw", dependencies=[auth.EDIT])
 def read_raw(access: auth.Access = auth.VIEW) -> dict:
     """Answer the graph document verbatim, as it sits on disk."""
     try:

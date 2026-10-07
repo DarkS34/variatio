@@ -1,6 +1,9 @@
 """The job queue: submitting work, watching it, and replaying what it said.
 
-Declares `auth.VIEW` for the whole router; submitting and cancelling add `auth.EDIT`.
+Declares `auth.VIEW` for the whole router, submitting and cancelling included, and decides
+by kind inside: a student of the subject (`viewer`) queues a commission or a comparison
+(`STUDENT_KINDS`) and cancels their own; everything else — a build, a transcription, an
+indexing — takes a teacher, and a refusal says `role_too_low`.
 
 The chain's gates are enforced here and not merely drawn in the UI, so a stale artifact
 cannot be silently consumed. A job is only ever visible to the workspace it was submitted
@@ -18,9 +21,9 @@ from variatio.core import inference
 from variatio.core.workspace import Workspace
 
 from .. import approvals, auth, features, raw_data, singletons
-from ..db.models import VIEWER
+from ..db.models import EDITOR, VIEWER
 from ..jobs import lanes
-from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS
+from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, STUDENT_KINDS, SUBPROCESS_KINDS
 
 router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 
@@ -52,7 +55,11 @@ NEEDS_APPROVED: dict[str, str] = {
 
 
 class JobBody(BaseModel):
-    """What to run, with what parameters, and whether to skip the chain's gates."""
+    """What to run, with what parameters, and whether to skip the chain's gates.
+
+    `force` is a teacher's: a student's commission always waits for the construction to be
+    closed, because what it would read is a subject still being corrected.
+    """
 
     kind: str
     params: dict = {}
@@ -186,13 +193,21 @@ def _mine(job_id: str, access: auth.Access):
     return job
 
 
-@router.post("/jobs", dependencies=[auth.EDIT])
+@router.post("/jobs")
 def submit(
     body: JobBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
 ) -> dict:
     """Queue one job, answering its position behind whatever is already on its lanes."""
     if body.kind not in JOB_LABELS:
         raise HTTPException(422, f"Trabajo desconocido: '{body.kind}'")
+
+    teacher = auth.at_least(access, EDITOR)
+    if body.kind not in STUDENT_KINDS and not teacher:
+        raise HTTPException(
+            403,
+            "Ese trabajo es de quien da clase en la asignatura.",
+            headers={"X-Error-Code": auth.ROLE_TOO_LOW},
+        )
 
     # A kind that belongs to an optional function is that function's: this route must not be
     # a way round the dependency its own router declares.
@@ -203,7 +218,7 @@ def submit(
         )
 
     # Without an engine no job can succeed: every kind calls a model. `force` skips the
-    # chain's gates, which are the user's decision, and never this, which is impossible.
+    # chain's gates, which are a teacher's decision, and never this, which is impossible.
     if not inference.is_available():
         raise HTTPException(
             503,
@@ -211,7 +226,7 @@ def submit(
             f"'{inference.engine_name()}'. Arráncalo y vuelve a intentarlo.",
         )
 
-    if not body.force:
+    if not (body.force and teacher):
         error = gate_error(access.ws, body.kind)
         if error:
             raise HTTPException(409, error)
@@ -299,10 +314,20 @@ def job_events(
     }
 
 
-@router.delete("/jobs/{job_id}", dependencies=[auth.EDIT])
+@router.delete("/jobs/{job_id}")
 def cancel(job_id: str, access: auth.Access = auth.VIEW) -> dict:
-    """Ask one job of this workspace to stop at its next checkpoint."""
-    _mine(job_id, access)
+    """Ask one job of this workspace to stop at its next checkpoint.
+
+    A student stops their own jobs and no other; a teacher stops any job they can see — every
+    build, and their own commissions. Another account's private job is a 404 to both.
+    """
+    job = _mine(job_id, access)
+    if job.user_id != access.user.id and not auth.at_least(access, EDITOR):
+        raise HTTPException(
+            403,
+            "Solo puedes detener tus propios trabajos.",
+            headers={"X-Error-Code": auth.ROLE_TOO_LOW},
+        )
     return {"cancelled": singletons.runner.cancel(job_id)}
 
 

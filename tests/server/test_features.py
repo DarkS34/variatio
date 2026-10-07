@@ -156,7 +156,7 @@ def test_the_generic_jobs_route_is_no_way_round_the_evaluation_s_switch(db):
     from server.routers import jobs as jobs_router
 
     ana = _user(db, "ana")
-    access = SimpleNamespace(user=ana, ws=None)
+    access = SimpleNamespace(user=ana, ws=None, role="viewer")
 
     with pytest.raises(HTTPException) as refused:
         jobs_router.submit(jobs_router.JobBody(kind="evaluate"), access=access, db=db)

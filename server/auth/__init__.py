@@ -10,8 +10,11 @@ from fastapi import Depends
 from .. import features
 from ..db.models import EDITOR, OWNER, VIEWER
 from .deps import (
+    NOT_MEMBER,
+    ROLE_TOO_LOW,
     Access,
     access_for,
+    at_least,
     authenticate_socket,
     base_url,
     client_ip,
@@ -47,10 +50,13 @@ __all__ = [
     "EDIT",
     "EVALUATION",
     "MANAGE",
+    "NOT_MEMBER",
+    "ROLE_TOO_LOW",
     "TUTOR",
     "VIEW",
     "Access",
     "access_for",
+    "at_least",
     "authenticate_socket",
     "base_url",
     "client_ip",

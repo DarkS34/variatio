@@ -1,7 +1,9 @@
 """The exemplars bank: the items an instance learns its shapes from.
 
-Declares `auth.VIEW` for the whole router; every write adds `auth.EDIT`. Each write
-answers with the chain's new state, so a screen never has to ask for it separately.
+Declares `auth.EDIT` for the whole router, reads included: the bank's exercises carry their
+solutions, and a student of the subject (`viewer`) reads none of them — not the items, not
+the coverage. Each write answers with the chain's new state, so a screen never has to ask
+for it separately.
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -12,7 +14,7 @@ from ..editors import bank_edit
 from ..editors.bank_edit import BankError
 from .pipeline import pipeline_payload
 
-router = APIRouter(prefix="/api/bank", tags=["bank"], dependencies=[auth.VIEW])
+router = APIRouter(prefix="/api/bank", tags=["bank"], dependencies=[auth.EDIT])
 
 
 class PatchBody(BaseModel):
@@ -39,7 +41,7 @@ def listing(
     order: str = Query("id", pattern="^(suspicion|difficulty|id|recent)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
-    access: auth.Access = auth.VIEW,
+    access: auth.Access = auth.EDIT,
 ) -> dict:
     """Answer one page of the bank, filtered and ordered as asked.
 
@@ -82,7 +84,7 @@ def listing(
 
 
 @router.get("/coverage")
-def coverage(access: auth.Access = auth.VIEW) -> dict:
+def coverage(access: auth.Access = auth.EDIT) -> dict:
     """Answer how much of the graph the bank's tags actually reach."""
     try:
         return bank_edit.coverage(access.ws)
@@ -90,8 +92,8 @@ def coverage(access: auth.Access = auth.VIEW) -> dict:
         raise HTTPException(404, str(exc)) from exc
 
 
-@router.patch("/{item_id}", dependencies=[auth.EDIT])
-def patch(item_id: str, body: PatchBody, access: auth.Access = auth.VIEW) -> dict:
+@router.patch("/{item_id}")
+def patch(item_id: str, body: PatchBody, access: auth.Access = auth.EDIT) -> dict:
     """Rewrite some of an item's fields."""
     try:
         result = bank_edit.patch_item(access.ws, item_id, body.fields)
@@ -100,8 +102,8 @@ def patch(item_id: str, body: PatchBody, access: auth.Access = auth.VIEW) -> dic
     return {**result, "pipeline": pipeline_payload(access)}
 
 
-@router.put("/{item_id}/concepts", dependencies=[auth.EDIT])
-def set_concepts(item_id: str, body: ConceptsBody, access: auth.Access = auth.VIEW) -> dict:
+@router.put("/{item_id}/concepts")
+def set_concepts(item_id: str, body: ConceptsBody, access: auth.Access = auth.EDIT) -> dict:
     """Replace an item's concept tags by hand."""
     try:
         result = bank_edit.set_concepts(
@@ -112,8 +114,8 @@ def set_concepts(item_id: str, body: ConceptsBody, access: auth.Access = auth.VI
     return {**result, "pipeline": pipeline_payload(access)}
 
 
-@router.delete("/{item_id}", dependencies=[auth.EDIT])
-def delete(item_id: str, access: auth.Access = auth.VIEW) -> dict:
+@router.delete("/{item_id}")
+def delete(item_id: str, access: auth.Access = auth.EDIT) -> dict:
     """Remove one item from the bank."""
     try:
         result = bank_edit.delete_item(access.ws, item_id)

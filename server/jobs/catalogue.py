@@ -1,4 +1,4 @@
-"""What a job and an event are, and the four tables that classify a job kind.
+"""What a job and an event are, and the tables that classify a job kind.
 
 Deliberately not called `models`: under `server/` that already means the ML model
 (`model_pulls.py`, `required_models`) and the ORM row (`db/models.py`).
@@ -58,6 +58,11 @@ JOB_ARTIFACT: dict[str, str] = {
 # 404 for them (`Job.seen_by`). Everything else — a build, a transcription, an indexing — is
 # the subject's, and every member watches it.
 PRIVATE_KINDS: set[str] = {"generate", "evaluate"}
+
+# The kinds a student of the subject (`viewer`) may queue: a commission, a comparison and —
+# added by `tutor.api.install` — a tutor's turn, each behind its own permission besides. Every
+# other kind is the construction's and takes a teacher (`routers/jobs.submit`).
+STUDENT_KINDS: set[str] = {"generate", "evaluate"}
 
 
 @dataclass

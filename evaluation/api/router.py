@@ -10,9 +10,11 @@ are `/api/admin/evaluations`': handing an evaluator the running score of the thi
 judging invites them to even it out, and a per-session export of everybody's judgements is
 research data rather than a feature of the screen where you compare two cards.
 
-Nor does it hand a STUDENT of the subject the trace of a revealed card: the prompt quotes the
-bank's exemplars with their solutions, and the raw answer is what was written before the
-item was parsed out of it. The cards themselves are read whole.
+Every route is a member's (`auth.VIEW`) behind the function's own door (`auth.EVALUATION`):
+whoever the administrator opened the evaluation to launches and judges their own sessions,
+a student of the subject included. It does not hand a student the trace of a revealed card:
+the prompt quotes the bank's exemplars with their solutions, and the raw answer is what was
+written before the item was parsed out of it. The cards themselves are read whole.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -22,7 +24,7 @@ from sqlalchemy.orm import Session as DbSession
 from server import auth
 from server import curriculum as curriculum_store
 from server import singletons
-from server.db.models import VIEWER, EvalSession
+from server.db.models import EDITOR, VIEWER, EvalSession
 from server.editors import kg_edit
 from server.routers.jobs import gate_error
 
@@ -37,7 +39,7 @@ router = APIRouter(
 
 
 class EvaluationBody(BaseModel):
-    """A commission to compare. `force` runs it with the chain not yet approved."""
+    """A commission to compare. `force` runs it with the chain not yet approved, for a teacher."""
 
     concepts: list[str] = []
     item_type: str | None = None
@@ -89,12 +91,12 @@ class DeclineBody(BaseModel):
 # LAUNCH ----------------------------------------------------------------------------------------
 
 
-@router.post("", dependencies=[auth.EDIT])
+@router.post("")
 def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
     """Queue one blind comparison for this workspace."""
     if not body.concepts:
         raise HTTPException(422, "Hay que elegir al menos un concepto objetivo.")
-    if not body.force:
+    if not (body.force and auth.at_least(access, EDITOR)):
         error = gate_error(access.ws, "evaluate")
         if error:
             raise HTTPException(409, error)
@@ -200,7 +202,7 @@ def _queue(rows: list) -> dict:
 # a route nobody meant to call. `tests/evaluation/test_route_order.py` pins it.
 
 
-@router.delete("", dependencies=[auth.EDIT])
+@router.delete("")
 def delete_sessions(
     body: DeleteBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
 ) -> dict:
@@ -229,7 +231,7 @@ def detail(
     return _payload(EvaluationSession.from_dict(row.trace), access)
 
 
-@router.post("/{session_id}/triage", dependencies=[auth.EDIT])
+@router.post("/{session_id}/triage")
 def triage(
     session_id: str,
     body: TriageBody,
@@ -251,7 +253,7 @@ def triage(
     return _payload(session, access)
 
 
-@router.post("/{session_id}/decline", dependencies=[auth.EDIT])
+@router.post("/{session_id}/decline")
 def decline(
     session_id: str,
     body: DeclineBody,
@@ -273,7 +275,7 @@ def decline(
     return _payload(session, access)
 
 
-@router.post("/{session_id}/choice", dependencies=[auth.EDIT])
+@router.post("/{session_id}/choice")
 def choose(
     session_id: str,
     body: ChoiceBody,
@@ -295,7 +297,7 @@ def choose(
     return _payload(session, access)
 
 
-@router.post("/{session_id}/rating", dependencies=[auth.EDIT])
+@router.post("/{session_id}/rating")
 def rate(
     session_id: str,
     body: RatingBody,

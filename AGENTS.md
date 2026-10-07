@@ -285,8 +285,26 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - Sessions: opaque token, SHA-256 in DB, sliding 14 d + absolute 30 d, rotate on login and
   password change, password change revokes other sessions.
 - **Authorisation is a membership row, checked on every route** (`auth.VIEW`/`EDIT`/`MANAGE`).
-  The admin bypass exists only in `auth.deps.access_for`. The WebSocket authenticates before
-  `accept()` (close 4401) and filters events by workspace and, for a private job, by author.
+  The admin bypass exists only in `auth.deps.access_for`, which also gives an administrator
+  the owner's role whatever its membership says, so `auth.at_least(access, level)` — for a
+  route that lets part of what it does through only at a higher level — compares roles and
+  nothing else. The WebSocket authenticates before `accept()` (close 4401) and filters
+  events by workspace and, for a private job, by author. A refused membership carries
+  `X-Error-Code`: `not_member` (no row for the workspace named) or `role_too_low`.
+- **The three roles are a class** (decided 2026-10-06): `viewer` is a student of the subject,
+  `editor` a teacher, `owner` the teacher who answers for it; `ROLE_RANK` stays linear. A
+  student reads the syllabus (the `/api/kg` reads), the subject's description and its types
+  of exercise, and queues only `catalogue.STUDENT_KINDS` (`generate`, `evaluate`, and
+  `tutor_turn` joined at the tutor's install), each behind its own permission. The bank
+  (`/api/bank`, its coverage included), the raw documents and their transcriptions
+  (`/api/raw`), the graph's document verbatim (`GET /api/kg/raw`) and a stage's history
+  (`GET /api/pipeline/{artifact}/history`) are `auth.EDIT`, reads included. `POST /api/jobs`
+  and `DELETE /api/jobs/{id}` are `auth.VIEW` and decide inside: any other kind is
+  `role_too_low` for a student, a student's `force` is ignored (here and on
+  `POST /api/evaluation`), and a student cancels their own jobs only. The evaluation's own
+  routes are `auth.VIEW` + `auth.EVALUATION`, and a student deletes their own exercises.
+  `tests/server/test_route_roles.py` reads every mounted route and pins the level it
+  declares against a table: a route with no row fails.
 - CSRF is an origin check (`middleware.py`); CORS off by default. Rate limiting is in memory,
   keyed by IP and account.
 - The username is the identity; `users.email` is an optional delivery detail, shown only when
@@ -1281,6 +1299,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 **Identity and access**
 - Invitation-only sign-up; own auth; no JWT; username identity, email optional.
 - Membership checked on every route; admin bypass in one place.
+- `viewer` is «Alumno» (2026-10-06; it was «Lector», who saw everything and changed
+  nothing): a student sees the syllabus without editing it and generates, evaluates or uses
+  the tutor by their permissions; the rest of the construction — the bank, the raw material,
+  the types of exercise as a step — is not theirs to see. No fourth role.
 - Invitations and membership managed by the admin alone; links sealed, not stored in clear.
 - No «forgot password» on the login screen; no password generator; no session list.
 - The evaluator never sees the evaluation's score; blind instruments come before the reveal.

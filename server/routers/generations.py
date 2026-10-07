@@ -1,6 +1,7 @@
 """The exercises this account has generated, kept so they can be read back.
 
-Declares `auth.VIEW` for the whole router; promoting and deleting add `auth.EDIT`.
+Declares `auth.VIEW` for the whole router, deleting one's own included; promoting into the
+bank adds `auth.EDIT`.
 
 Every validated item is a file (`server/generations.py`) carrying the commission that
 produced it — concepts, curriculum, fixed fields, extra instructions, which model wrote it
@@ -109,13 +110,13 @@ def promote(generation_id: str, access: auth.Access = auth.VIEW) -> dict:
     }
 
 
-@router.delete("/{generation_id}", dependencies=[auth.EDIT])
+@router.delete("/{generation_id}")
 def remove(generation_id: str, access: auth.Access = auth.VIEW) -> dict:
     """Delete one of your own stored exercises.
 
-    `auth.EDIT` is not enough on its own and neither is being the owner: `_require` already
-    refuses an exercise that is not yours, so nobody can delete somebody else's work — which
-    was the rule before, arrived at now by the same door that hides it.
+    Any member may, a student included: `_require` refuses an exercise that is not yours,
+    so nobody can delete somebody else's work whatever their role — the same door that
+    hides it.
     """
     _require(generation_id, access)
     store.delete(access.ws, access.user.id, generation_id)
