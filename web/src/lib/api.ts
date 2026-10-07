@@ -249,15 +249,12 @@ export const api = {
 
   invitePreview: (token: string) =>
     request<InvitePreview>(`/api/auth/invites/${encodeURIComponent(token)}`),
-  // The profile is answered here and nowhere earlier: the link binds nothing beyond the
-  // access, and this is the one moment the person is in front of a form. Null when the form
-  // did not ask (`InvitePreview.asks_profile`).
+  // Nothing about what the account will be: the invitation says it, and nobody is asked.
   acceptInvite: (body: {
     token: string;
     username: string;
     name: string;
     password: string;
-    evaluator_profile: EvaluatorProfile | null;
     ui_language: string;
   }) => post<Session>("/api/auth/accept", body),
 
@@ -512,14 +509,12 @@ export const api = {
     post<{ user_id: number; is_admin: boolean }>(`/api/admin/accounts/${userId}/admin`, {
       is_admin: isAdmin,
     }),
-  // Not a permission, which is why it is not one more argument of the membership calls:
-  // the profile decides what this account is asked when it compares, and `null` means
-  // nobody said. It has a route of its own because it is corrected long after the account
-  // was created — the command line can only set it at birth.
-  adminSetProfile: (userId: number, profile: EvaluatorProfile | null) =>
+  // The account's profile only climbs, so the one call there is makes a student a teacher:
+  // the server refuses anything else (`profile_only_climbs`).
+  adminMakeTeacher: (userId: number) =>
     post<{ user_id: number; evaluator_profile: EvaluatorProfile | null }>(
       `/api/admin/accounts/${userId}/profile`,
-      { evaluator_profile: profile },
+      { evaluator_profile: "teacher" },
     ),
   adminResetLink: (userId: number) =>
     post<{ user_id: number; link: string; expires_in_minutes: number }>(

@@ -7,16 +7,20 @@ import { LanguageFlag } from "@/components/ui/flag";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { api } from "@/lib/api";
-import { PROFILES, PROFILE_SELF_LABEL_KEYS } from "@/lib/evaluator";
 import { LANGUAGES, LANGUAGE_NAMES, localeStore, useLanguage, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
-import type { EvaluatorProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useT } from "@/lib/i18n";
+import { useT, type Key } from "@/lib/i18n";
+import type { EvaluatorProfile } from "@/lib/types";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useAcceptInvite } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
 import { useStripTokenFromUrl } from "./token";
+
+const PROFILE_IS_KEYS: Record<EvaluatorProfile, Key> = {
+  teacher: "invite.profileIs.teacher",
+  student: "invite.profileIs.student",
+};
 
 
 export function AcceptInvite({ token }: { token: string }) {
@@ -32,7 +36,6 @@ export function AcceptInvite({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   const [visible, setVisible] = useState(false);
-  const [profile, setProfile] = useState<EvaluatorProfile | null>(null);
   const [language, setLanguage] = useState<Language>(useLanguage());
   const accept = useAcceptInvite();
   const { navigate } = useRouter();
@@ -76,20 +79,15 @@ export function AcceptInvite({ token }: { token: string }) {
 
   const invite = preview.data!;
   const mismatch = repeat.length > 0 && password !== repeat;
-  // Only the evaluation reads the answer, so it is asked only of somebody it will be open to;
-  // an API that does not say asks, as it always did.
-  const asksProfile = invite.asks_profile !== false;
-  const unanswered = asksProfile && !profile;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (mismatch || unanswered) return;
+    if (mismatch) return;
     accept.mutate({
       token,
       username: username.trim(),
       name: name.trim(),
       password,
-      evaluator_profile: asksProfile ? profile : null,
       ui_language: language,
     });
   };
@@ -167,33 +165,6 @@ export function AcceptInvite({ token }: { token: string }) {
           />
         </div>
 
-        {asksProfile ? (
-          <div className="flex flex-col gap-1.5">
-            <Label id="invite-profile-label">{t("invite.teachOrStudy")}</Label>
-            <div role="group" aria-labelledby="invite-profile-label" className="flex gap-1">
-              {PROFILES.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setProfile(option)}
-                  aria-pressed={profile === option}
-                  className={cn(
-                    "rounded-md h-9 flex-1 border text-small font-medium transition-colors",
-                    profile === option
-                      ? "border-ink bg-ink text-ink-foreground"
-                      : "border-dashed border-attention bg-card text-attention hover:bg-accent/60",
-                  )}
-                >
-                  {t(PROFILE_SELF_LABEL_KEYS[option])}
-                </button>
-              ))}
-            </div>
-            <p className="text-small text-muted-foreground">
-              {t("invite.profileHint")}
-            </p>
-          </div>
-        ) : null}
-
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-password">{t("auth.password")}</Label>
           <div className="relative">
@@ -237,11 +208,15 @@ export function AcceptInvite({ token }: { token: string }) {
           ) : null}
         </div>
 
-        <p className="text-small text-muted-foreground">{t(ROLE_HINT_KEYS[invite.role])}</p>
+        <p className="text-small text-muted-foreground">
+          {/* What the account will be, said and never asked: the invitation decided it. */}
+          {invite.profile ? `${t(PROFILE_IS_KEYS[invite.profile])} ` : ""}
+          {t(ROLE_HINT_KEYS[invite.role])}
+        </p>
 
         <FormError error={accept.error} />
 
-        <Button type="submit" disabled={accept.isPending || mismatch || unanswered}>
+        <Button type="submit" disabled={accept.isPending || mismatch}>
           {accept.isPending ? <Spinner /> : null}
           {t("invite.createAccount")}
         </Button>

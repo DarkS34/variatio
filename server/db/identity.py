@@ -18,6 +18,7 @@ from .models import (
     EDITOR,
     EVALUATOR_PROFILES,
     INVITE_LABEL_MAX,
+    STUDENT,
     Invite,
     Membership,
     PasswordReset,
@@ -66,15 +67,18 @@ def username_error(username: str) -> str | None:
 
 
 def profile_error(profile: str | None) -> str | None:
-    """Return why this evaluator profile is not acceptable, or None; `None` is valid.
+    """Return why this account profile is not acceptable, or None.
 
     The same single boundary `username_error` is, and for the same reason: the command
-    line, the panel and the registration form all set this, and three places deciding
-    what a profile may be is three ways for them to drift. `None` means nobody said. The
-    profile is not an authorisation — `require_member` never reads it.
+    line, the panel and an invitation all set this, and three places deciding what a
+    profile may be is three ways for them to drift. Every account has one: `None` is not
+    a profile. It decides one thing outside the subjects — whether the account creates them
+    — and `require_member` never reads it.
     """
-    if profile is None or profile in EVALUATOR_PROFILES:
+    if profile in EVALUATOR_PROFILES:
         return None
+    if profile is None:
+        return "Hay que decir si la cuenta es de un docente o de un alumno."
     return f"Perfil desconocido: «{profile}». Usa uno de {', '.join(EVALUATOR_PROFILES)}."
 
 
@@ -141,7 +145,7 @@ def create_user(
 
 
 def set_evaluator_profile(session: Session, user: User, profile: str | None) -> User:
-    """Set the account's evaluator profile, `None` included."""
+    """Set the account's profile. The rule that it only climbs is the caller's to keep."""
     user.evaluator_profile = profile
     session.flush()
     return user
@@ -205,11 +209,24 @@ def membership(session: Session, workspace_id: int, user_id: int) -> Membership 
     )
 
 
-def grant(session: Session, workspace_id: int, user_id: int, role: str) -> Membership:
-    """Give the account this role, creating the membership when it has none."""
+def grant(
+    session: Session,
+    workspace_id: int,
+    user_id: int,
+    role: str,
+    via: str | None = None,
+    invited_by: int | None = None,
+) -> Membership:
+    """Give the account this role, creating the membership when it has none.
+
+    `via` and `invited_by` say how a NEW membership came to be (`models.VIAS`); a membership
+    that already exists keeps the origin it was recorded with.
+    """
     existing = membership(session, workspace_id, user_id)
     if existing is None:
-        existing = Membership(workspace_id=workspace_id, user_id=user_id)
+        existing = Membership(
+            workspace_id=workspace_id, user_id=user_id, via=via, invited_by=invited_by
+        )
         session.add(existing)
     existing.role = role
     session.flush()
@@ -354,9 +371,9 @@ def revoke_all_sessions(session: Session, user_id: int) -> int:
 
 # INVITES -------------------------------------------------------------------------------
 
-# What may change on an invitation after it is minted: its four terms and its sealed link.
+# What may change on an invitation after it is minted: its terms and its sealed link.
 _EDITABLE_INVITE_FIELDS = frozenset(
-    {"label", "expires_at", "workspace_id", "role", "token_sealed", "features"}
+    {"label", "expires_at", "workspace_id", "role", "token_sealed", "features", "profile"}
 )
 
 _NUMBER = re.compile(r"[0-9]+")
@@ -388,8 +405,13 @@ def create_invite(
     label: str | None = None,
     token_sealed: str | None = None,
     features: list[str] | None = None,
+    profile: str = STUDENT,
 ) -> Invite:
-    """Insert an invitation for this token digest, expiring at a moment or after a `ttl`."""
+    """Insert an invitation for this token digest, expiring at a moment or after a `ttl`.
+
+    `profile` is what the account it creates will be; absent, a student's, which is the way
+    a forgotten argument fails closed.
+    """
     if expires_at is None:
         if ttl is None:
             raise ValueError("An invitation needs an expiry: pass `expires_at` or `ttl`.")
@@ -401,6 +423,7 @@ def create_invite(
         workspace_id=workspace_id,
         role=role,
         features=list(features or []),
+        profile=profile,
         created_by=created_by,
         expires_at=expires_at,
     )

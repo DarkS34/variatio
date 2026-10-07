@@ -1,4 +1,4 @@
-import { FolderPlus } from "lucide-react";
+import { FolderPlus, Link as LinkIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { EmptyState, Spinner } from "@/components/ui/misc";
-import { useSession } from "@/state/auth";
+import { useCanCreate, useSession } from "@/state/auth";
 import { useCreateWorkspace } from "@/state/queries";
 import { usePromptLanguage } from "./promptLanguage";
 
@@ -15,9 +15,27 @@ import { usePromptLanguage } from "./promptLanguage";
  *
  * A screen and NOT a gate, which is the whole point: the shell is up and `/guide` and
  * `/account` are reachable, because none of them needs a workspace. What sits in the middle
- * is the one thing there is to do here — start a subject.
+ * is the one thing there is to do here: for a teacher, start a subject; for a student, open
+ * the link their teacher gave them — a student creates none (`useCanCreate`).
  */
 export function NoWorkspace() {
+  return useCanCreate() ? <StartSubject /> : <AwaitLink />;
+}
+
+/** A student in no subject yet: the way in is the teacher's link, and nothing here is a door. */
+function AwaitLink() {
+  const { t } = useT();
+  return (
+    <div className="space-y-6">
+      <EmptyState icon={<LinkIcon />} title={t("workspace.noneYet")} titleAs="h1">
+        <p>{t("noWorkspace.student")}</p>
+      </EmptyState>
+    </div>
+  );
+}
+
+/** A teacher in no subject yet: the form that starts the first one. */
+function StartSubject() {
   const session = useSession();
   const create = useCreateWorkspace();
   const { t } = useT();

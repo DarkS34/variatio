@@ -1,10 +1,9 @@
 """The tutor's routes: a student's conversations, and the subject's criteria for its teachers.
 
-Declares `auth.VIEW` for the whole router, because a student is a reader of the subject and the
-tutor is for students; the criteria routes add `auth.EDIT`, because what the tutor demands of
-a subject is a teacher's to decide. The account's own `evaluator_profile` is not read here: it
-is chosen by whoever registers, and an authorisation somebody grants themselves is none. The
-membership role is the one an administrator gave.
+Declares `auth.VIEW` for the whole router, because the tutor is for the students of the subject
+(`viewer`); the criteria routes add `auth.EDIT`, because what the tutor demands of a subject is
+a teacher's to decide. The account's own profile (`evaluator_profile`) is not read here: it
+authorises nothing inside a subject, where the membership role is the one that counts.
 
 EVERY CONVERSATION ROUTE IS SCOPED TO THE ACCOUNT THAT ASKS, exactly as the generated exercises
 are: the author's directory is the only one read, and another account's conversation, another

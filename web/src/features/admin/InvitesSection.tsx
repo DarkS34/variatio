@@ -17,9 +17,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Alert, Checkbox, LoadError, Spinner } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
+import { PROFILES, PROFILE_LABEL_KEYS } from "@/lib/evaluator";
 import { dateTime, relative } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import {
@@ -31,6 +33,7 @@ import {
   fromLocalInput,
   inDays,
   inviteFeatures,
+  inviteProfile,
   inviteState,
   isAhead,
   linkLines,
@@ -322,6 +325,10 @@ function RecoverInvite({
 /**
  * What an invitation grants and until when, and the name only the panel shows.
  *
+ * The account's profile comes first and with nothing marked: whoever registers is never
+ * asked, so this is the one moment it is decided, and a default would decide it for the
+ * administrator. A teacher creates subjects; a student does not.
+ *
  * The date is a real picker and the four quick periods only write into it, so what will
  * be sent is always the moment on screen and never a hidden «+7 días».
  *
@@ -347,9 +354,44 @@ function TermsFields({
   const set = (patch: Partial<TermsDraft>) => onChange({ ...draft, ...patch });
   const moment = fromLocalInput(draft.expires);
   const ahead = isAhead(draft.expires);
+  const profiles = useRadioGroup(PROFILES, draft.profile, (profile) => set({ profile }));
 
   return (
     <div className="space-y-3">
+      <div className="space-y-1">
+        <span id={`${idPrefix}-profile-label`} className="text-small font-medium">
+          {t("acc.invite.profile")}
+        </span>
+        <div
+          role="radiogroup"
+          aria-labelledby={`${idPrefix}-profile-label`}
+          aria-describedby={`${idPrefix}-profile-hint`}
+          className="flex flex-wrap gap-1"
+          {...profiles.group}
+        >
+          {PROFILES.map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              {...profiles.radio(option)}
+              role="radio"
+              aria-checked={draft.profile === option}
+              variant={draft.profile === option ? "default" : "outline"}
+              onClick={() => set({ profile: option })}
+            >
+              {t(PROFILE_LABEL_KEYS[option])}
+            </Button>
+          ))}
+        </div>
+        <p
+          id={`${idPrefix}-profile-hint`}
+          className={cn("text-small", draft.profile ? "text-muted-foreground" : "text-attention")}
+        >
+          {t(draft.profile ? "acc.invite.profileHint" : "acc.invite.profileMissing")}
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-end gap-2">
         <div className={FIELD}>
           <Label htmlFor={`${idPrefix}-label`}>{t("acc.invite.alias")}</Label>
@@ -683,6 +725,7 @@ function InviteItem({
   // No addressee to fall back on: an invitation with no alias is told apart by when it was
   // issued, which is what the list said before aliases existed.
   const name = row.label || t("acc.invite.linkOf", { date: dateTime(row.created_at) });
+  const profile = inviteProfile(row);
   const toggle = (next: Panel) => setPanel(panel === next ? null : next);
 
   const remove = async () => {
@@ -715,6 +758,11 @@ function InviteItem({
               {name}
             </span>
             {expired ? <Badge variant="outline">{t("acc.invite.expiredBadge")}</Badge> : null}
+            {profile ? (
+              <Badge variant="secondary" className="shrink-0">
+                {t(PROFILE_LABEL_KEYS[profile])}
+              </Badge>
+            ) : null}
             {inviteFeatures(row).map((feature) => (
               <Badge key={feature} variant={feature} className="shrink-0">
                 {t(featureLabelKey(feature))}

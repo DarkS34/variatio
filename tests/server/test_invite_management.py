@@ -98,10 +98,12 @@ def _request() -> Request:
 
 
 def _create(db, admin, **terms) -> dict:
+    terms = {"profile": "teacher", **terms}
     return admin_routes.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
 
 
 def _import(db, admin, link: str, **terms) -> dict:
+    terms = {"profile": "teacher", **terms}
     return admin_routes.import_invite(
         InviteImportBody(link=link, **terms), _request(), admin=admin, db=db
     )
@@ -126,7 +128,6 @@ def _redeem(db, link: str, username: str = "ana"):
             username=username,
             name=username,
             password="una-contraseña-larga",
-            evaluator_profile="teacher",
         ),
         _request(),
         Response(),
@@ -542,14 +543,16 @@ def test_the_command_line_mints_a_numbered_batch_with_its_alias(capsys, monkeypa
     monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.app")
 
     code = accounts.invite(
-        Namespace(workspace="", role="editor", alias="Clase", days=3, count=2)
+        Namespace(workspace="", role="viewer", alias="Clase", days=3, count=2, profile="student")
     )
 
     lines = capsys.readouterr().out.splitlines()
     assert code == 0
     assert lines[0].startswith("Clase 1\thttps://variatio.app/invite?token=")
     assert lines[1].startswith("Clase 2\thttps://variatio.app/invite?token=")
+    assert "alumno" in lines[2]
     with db_session.session_scope() as session:
         rows = session.query(Invite).order_by(Invite.id).all()
         assert [row.label for row in rows] == ["Clase 1", "Clase 2"]
         assert all(row.token_sealed for row in rows)
+        assert {row.profile for row in rows} == {"student"}

@@ -28,7 +28,7 @@ from .. import features, installation
 from ..auth import deps, mail, passwords, tokens
 from ..auth.rate_limit import forgive, throttle
 from ..db import identity
-from ..db.models import OWNER, Invite, User, Workspace
+from ..db.models import EVALUATOR_PROFILES, OWNER, STUDENT, VIA_INVITE, Invite, User, Workspace
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -57,13 +57,16 @@ class ProfileBody(BaseModel):
 
 
 class AcceptBody(BaseModel):
-    """An invitation being redeemed: the link, and who the holder says they are."""
+    """An invitation being redeemed: the link, and who the holder says they are.
+
+    Nothing about what the account will be: the invitation says it. A field this model does
+    not name — an `evaluator_profile` an older form still sends — is ignored.
+    """
 
     token: str
     username: str
     name: str = ""
     password: str
-    evaluator_profile: str | None = None
     # Absent is allowed here and nowhere else: a browser that never asked can still register,
     # and the form seeds this from `navigator.language`. `create_user` resolves it.
     ui_language: str | None = None
@@ -331,8 +334,8 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
         "role": invite.role,
         "workspace": workspace.name if workspace else None,
         "expires_at": invite.expires_at.isoformat(),
-        # Whether the form asks "docente o alumno": only the evaluation reads the answer.
-        "asks_profile": _asks_profile(session, invite),
+        # What the account will be. Said, never asked: the invitation decided it.
+        "profile": _profile_of(invite),
     }
 
 
@@ -352,17 +355,12 @@ def accept_invite(
     through it and both got an account.
 
     A username already taken is refused outright: an invitation is not a way to set
-    somebody else's credentials. An evaluator profile is required here and required
-    nowhere else — this is the one moment the person is in front of the form, and NULL
-    ("nobody said") has to stay reachable for the accounts the command line creates and
-    for every account older than the question. It is not a permission and never becomes
-    one. And it is required only when the evaluation will be open to the new account
-    (`_asks_profile`), the one function that reads it: asking everybody told every invitee
-    about a study most of them will never see. NULL is what the evaluation already reads as
-    "nobody said" if it is opened to them later, and the administrator can set it then.
-    An unknown UI language, unlike an absent profile, is refused rather than ignored:
-    the account reads everything through it, so silently seating somebody in Spanish
-    because they typed `fr` is worse than saying the installation does not speak it.
+    somebody else's credentials. The account's profile — teacher or student — is the
+    invitation's and nobody asks the person registering: a profile somebody chose for
+    themselves would be a door they opened for themselves, since a teacher creates subjects.
+    An unknown UI language is refused rather than ignored: the account reads everything
+    through it, so silently seating somebody in Spanish because they typed `fr` is worse
+    than saying the installation does not speak it.
     """
     token_hash = tokens.digest(body.token)
     throttle("accept", request, token_hash)
@@ -387,12 +385,6 @@ def accept_invite(
     if error:
         raise HTTPException(422, error)
 
-    error = identity.profile_error(body.evaluator_profile)
-    if error:
-        raise HTTPException(422, error)
-    if body.evaluator_profile is None and _asks_profile(session, invite):
-        raise HTTPException(422, "Di si das clase o si estudias: decide qué se te preguntará.")
-
     if body.ui_language is not None:
         error = identity.language_error(body.ui_language)
         if error:
@@ -403,7 +395,7 @@ def accept_invite(
         username=username,
         name=body.name.strip() or username,
         password_hash=passwords.hash_password(body.password),
-        evaluator_profile=body.evaluator_profile,
+        evaluator_profile=_profile_of(invite),
         ui_language=body.ui_language,
     )
     _apply_membership(session, invite, user)
@@ -524,19 +516,19 @@ def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:
     """Grant the membership an invitation carried, if it carried one at all."""
     if invite.workspace_id is None:
         return
-    identity.grant(session, invite.workspace_id, user.id, invite.role)
+    identity.grant(
+        session,
+        invite.workspace_id,
+        user.id,
+        invite.role,
+        via=VIA_INVITE,
+        invited_by=invite.created_by,
+    )
 
 
-def _asks_profile(session: DbSession, invite: Invite) -> bool:
-    """Say whether the evaluation will be open to whoever redeems this invitation.
-
-    Open to every account, or to the chosen ones with this invitation listing its holder for
-    it (`_apply_features`): the two ways the account it creates can use it from the start.
-    """
-    mode = features.mode(session, features.EVALUATION)
-    if mode == features.ALL:
-        return True
-    return mode == features.SELECTED and features.EVALUATION in (invite.features or [])
+def _profile_of(invite: Invite) -> str:
+    """Return the profile an invitation gives, a student's when it names none it knows."""
+    return invite.profile if invite.profile in EVALUATOR_PROFILES else STUDENT
 
 
 def _apply_features(session: DbSession, invite: Invite, user: User) -> None:

@@ -117,11 +117,12 @@ def build_parser():
         default="",
         help="contraseña; si se omite se pregunta (o se lee de VARIATIO_PASSWORD)",
     )
+    # Required: every account is a teacher or a student, and only a teacher creates subjects.
     creator.add_argument(
         "--profile",
-        default=None,
+        required=True,
         choices=("teacher", "student"),
-        help="perfil de evaluador: decide qué se le pregunta al comparar propuestas",
+        help="perfil de la cuenta: un docente crea asignaturas, un alumno no",
     )
     # A default here and none on the registration form: there is no browser to ask, and an
     # account with no language can read nothing.
@@ -147,6 +148,12 @@ def build_parser():
         "--workspace", default="", help="asignatura a la que suma; vacío para ninguna"
     )
     inviter.add_argument("--role", default="editor", choices=("viewer", "editor", "owner"))
+    inviter.add_argument(
+        "--profile",
+        required=True,
+        choices=("teacher", "student"),
+        help="perfil de la cuenta que cree: un docente crea asignaturas, un alumno no",
+    )
     inviter.add_argument(
         "--alias", default="", help="nombre interno; solo lo ve el panel de administración"
     )

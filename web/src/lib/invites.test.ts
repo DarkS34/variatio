@@ -6,6 +6,7 @@ import {
   fromLocalInput,
   inDays,
   inviteFeatures,
+  inviteProfile,
   inviteState,
   isAhead,
   linkLines,
@@ -137,9 +138,10 @@ describe("the form's terms", () => {
     workspace_slug: "enfermeria",
     role: "owner" as const,
     expires_at: new Date(2020, 0, 1, 9, 30, 45).toISOString(),
+    profile: "teacher",
   };
 
-  it("starts a new invitation on the default week, with no alias", () => {
+  it("starts a new invitation on the default week, with no alias and no profile marked", () => {
     const draft = newDraft("enfermeria", new Date(2026, 8, 16, 18, 5, 12));
     expect(draft).toEqual({
       label: "",
@@ -147,6 +149,7 @@ describe("the form's terms", () => {
       role: "editor",
       expires: "2026-09-23T18:05",
       features: [],
+      profile: null,
     });
     expect(newDraft(undefined).workspace).toBe("");
   });
@@ -158,6 +161,7 @@ describe("the form's terms", () => {
       role: "viewer",
       expires: "2031-01-05T09:07",
       features: ["tutor"],
+      profile: "student",
     });
     expect(terms).toEqual({
       workspace: null,
@@ -165,10 +169,29 @@ describe("the form's terms", () => {
       expires_at: new Date(2031, 0, 5, 9, 7).toISOString(),
       label: null,
       features: ["tutor"],
+      profile: "student",
     });
     expect(
-      termsOf({ label: "", workspace: "", role: "viewer", expires: "", features: [] }),
+      termsOf({ label: "", workspace: "", role: "viewer", expires: "", features: [], profile: "student" }),
     ).toBeNull();
+  });
+
+  it("sends nothing while no profile is chosen: nobody is asked afterwards", () => {
+    expect(
+      termsOf({
+        label: "",
+        workspace: "",
+        role: "viewer",
+        expires: "2031-01-05T09:07",
+        features: [],
+        profile: null,
+      }),
+    ).toBeNull();
+  });
+
+  it("sends the profile only when it changes", () => {
+    expect(changesOf(row, { ...draftOf(row), profile: "student" })).toEqual({ profile: "student" });
+    expect(changesOf(row, { ...draftOf(row), profile: "teacher" })).toEqual({});
   });
 
   it("changes nothing when nothing was touched, even with seconds on the stored date", () => {
@@ -188,6 +211,7 @@ describe("the form's terms", () => {
       role: "viewer" as const,
       expires: "2031-01-05T09:07",
       features: [],
+      profile: "teacher" as const,
     };
     expect(changesOf(row, draft)).toEqual({
       label: null,
@@ -209,6 +233,15 @@ describe("the form's terms", () => {
     expect(changesOf(listed, withFeature(draftOf(listed), "evaluation", false))).toEqual({
       features: ["tutor"],
     });
+  });
+});
+
+describe("inviteProfile", () => {
+  it("reads the two profiles and nothing else", () => {
+    expect(inviteProfile({ profile: "teacher" })).toBe("teacher");
+    expect(inviteProfile({ profile: "student" })).toBe("student");
+    expect(inviteProfile({ profile: "admin" })).toBeNull();
+    expect(inviteProfile({})).toBeNull();
   });
 });
 

@@ -1,6 +1,7 @@
 import { fold } from "@/lib/text";
 import {
   FEATURE_NAMES,
+  type EvaluatorProfile,
   type FeatureName,
   type InviteRow,
   type InviteState,
@@ -125,8 +126,18 @@ export function inviteFeatures(row: Pick<InviteRow, "features">): FeatureName[] 
 }
 
 /**
+ * What the account an invitation creates will be, or null when the row does not say — an
+ * API older than the account's profile, or a value this panel does not know.
+ */
+export function inviteProfile(row: Pick<InviteRow, "profile">): EvaluatorProfile | null {
+  return row.profile === "teacher" || row.profile === "student" ? row.profile : null;
+}
+
+/**
  * An invitation's terms as the form holds them: text as typed, and the date as the
- * `datetime-local` control keeps it. `workspace` is a slug, and "" is «ninguna».
+ * `datetime-local` control keeps it. `workspace` is a slug, and "" is «ninguna». `profile`
+ * is null until somebody chooses: a new invitation has none marked, because nobody else is
+ * asked afterwards.
  */
 export interface TermsDraft {
   label: string;
@@ -135,9 +146,10 @@ export interface TermsDraft {
   expires: string;
   /** In door order, whatever order they were ticked in, so a comparison is by value. */
   features: FeatureName[];
+  profile: EvaluatorProfile | null;
 }
 
-/** The form for a new invitation: no alias, the first asignatura, the default week. */
+/** The form for a new invitation: no alias, the first asignatura, the default week, no profile. */
 export function newDraft(firstWorkspace: string | undefined, now: Date = new Date()): TermsDraft {
   return {
     label: "",
@@ -145,12 +157,13 @@ export function newDraft(firstWorkspace: string | undefined, now: Date = new Dat
     role: "editor",
     expires: toLocalInput(inDays(DEFAULT_EXPIRY_DAYS, now)),
     features: [],
+    profile: null,
   };
 }
 
 /** The form for an existing invitation, holding exactly what it has now. */
 export function draftOf(
-  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at" | "features">,
+  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at" | "features" | "profile">,
 ): TermsDraft {
   return {
     label: row.label ?? "",
@@ -158,6 +171,7 @@ export function draftOf(
     role: row.role,
     expires: toLocalInput(new Date(row.expires_at)),
     features: inviteFeatures(row),
+    profile: inviteProfile(row),
   };
 }
 
@@ -169,16 +183,18 @@ export function withFeature(draft: TermsDraft, feature: FeatureName, on: boolean
   return { ...draft, features: FEATURE_NAMES.filter((name) => chosen.has(name)) };
 }
 
-/** What a new invitation is asked for with; null while the date names no moment. */
+/** What a new invitation is asked for with; null while the date names no moment or no
+ *  profile is chosen. */
 export function termsOf(draft: TermsDraft): InviteTerms | null {
   const expires = fromLocalInput(draft.expires);
-  if (!expires) return null;
+  if (!expires || !draft.profile) return null;
   return {
     workspace: draft.workspace || null,
     role: draft.role,
     expires_at: expires.toISOString(),
     label: draft.label.trim() || null,
     features: draft.features,
+    profile: draft.profile,
   };
 }
 
@@ -190,7 +206,7 @@ export function termsOf(draft: TermsDraft): InviteTerms | null {
  * reads as a change because the stored moment carried seconds.
  */
 export function changesOf(
-  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at" | "features">,
+  row: Pick<InviteRow, "label" | "workspace_slug" | "role" | "expires_at" | "features" | "profile">,
   draft: TermsDraft,
 ): Partial<InviteTerms> {
   const before = draftOf(row);
@@ -203,5 +219,6 @@ export function changesOf(
     if (expires) changes.expires_at = expires.toISOString();
   }
   if (draft.features.join() !== before.features.join()) changes.features = draft.features;
+  if (draft.profile && draft.profile !== before.profile) changes.profile = draft.profile;
   return changes;
 }

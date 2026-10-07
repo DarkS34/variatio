@@ -43,13 +43,24 @@ OWNER = "owner"
 ROLE_RANK: dict[str, int] = {VIEWER: 0, EDITOR: 1, OWNER: 2}
 ROLES: tuple[str, ...] = (VIEWER, EDITOR, OWNER)
 
-# Who an account is when it judges, which decides the one question it is asked about each
-# proposal. NOT an authorisation: a profile grants and withholds nothing, and
-# `require_member` never reads it. NULL means nobody said — the teacher's wording is used
-# and the panel reports it as unset, which is what makes it fixable.
+# The account's profile: a teacher or a student. Set by the invitation that created the
+# account and never by whoever registers, raised from student to teacher by the administrator
+# and never lowered. It decides ONE thing outside the subjects — whether the account creates
+# them — and nothing inside one, where the membership is the authorisation and
+# `require_member` never reads it. The evaluation still reads it to choose its wording. A
+# NULL left over from an old row reads as a student (`can_create`): it fails closed.
 TEACHER = "teacher"
 STUDENT = "student"
 EVALUATOR_PROFILES: tuple[str, ...] = (TEACHER, STUDENT)
+
+# How an account entered a subject, kept on its membership. NULL is "not recorded": every
+# membership older than the column.
+VIA_OWNER = "owner"
+VIA_ADMIN = "admin"
+VIA_INVITE = "invite"
+VIA_CLASS_LINK = "class_link"
+VIA_CLI = "cli"
+VIAS: tuple[str, ...] = (VIA_OWNER, VIA_ADMIN, VIA_INVITE, VIA_CLASS_LINK, VIA_CLI)
 
 # An invitation's alias is a name for a row, not a note.
 INVITE_LABEL_MAX = 120
@@ -193,8 +204,9 @@ class User(Base):
     `identity.normalise_username` is the one door an identifier enters or is looked up
     through, which answers the same question without an extension SQLite could not run.
 
-    `evaluator_profile` (`teacher` / `student` / NULL) is a stratification variable for
-    the evaluation and nothing else. `ui_language` is what this person READS — the interface,
+    `evaluator_profile` (`teacher` / `student`) is the account's profile: what its invitation
+    made of it, deciding whether it creates subjects and how the evaluation words its
+    questions, and nothing inside a subject. `ui_language` is what this person READS — the interface,
     the guide, the errors — and is deliberately a different axis from a workspace's
     `prompt_language`; NOT NULL, because there is no such thing as reading no language.
     `active_workspace_id` is a *preference* and never an authorisation: `require_member`
@@ -225,7 +237,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     memberships: Mapped[list["Membership"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user", cascade="all, delete-orphan", foreign_keys="Membership.user_id"
     )
 
     @property
@@ -239,6 +251,11 @@ class Membership(Base):
 
     Nothing else in the request path may answer it — an admin flag is about running the
     installation, not about reading someone else's workspace.
+
+    A membership with `disabled_at` set is a paused one: a teacher closed it and can open it
+    again, keeping its role, its origin and its date. It grants nothing while paused.
+    `via` and `invited_by` say how the account came in and who let it in, NULL when that
+    was never recorded.
     """
 
     __tablename__ = "memberships"
@@ -251,9 +268,22 @@ class Membership(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     role: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    via: Mapped[str | None] = mapped_column(String(16), default=None)
+    invited_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    disabled_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
 
     workspace: Mapped[Workspace] = relationship(back_populates="memberships")
-    user: Mapped[User] = relationship(back_populates="memberships")
+    user: Mapped[User] = relationship(back_populates="memberships", foreign_keys=[user_id])
+
+    @property
+    def active(self) -> bool:
+        """True while no teacher has paused this membership."""
+        return self.disabled_at is None
 
 
 class UserSession(Base):
@@ -289,7 +319,8 @@ class Invite(Base):
     administrator issued one of these, or because it was the first and came from the CLI.
 
     `features` names the optional functions (`server/features.py`) the account is listed for
-    the moment it registers. `label` is the administrator's own name for it and never reaches
+    the moment it registers, and `profile` what the account will be — a teacher or a student;
+    the person registering is never asked. `label` is the administrator's own name for it and never reaches
     the person holding the link. `token_sealed` is the token encrypted with a key kept outside the database
     (`server/auth/links.py`), so the panel can show the link again; it is emptied the
     moment the invitation is used, and it is NULL on every row minted before it existed.
@@ -306,6 +337,7 @@ class Invite(Base):
     )
     role: Mapped[str] = mapped_column(String(16), default=EDITOR)
     features: Mapped[list] = mapped_column(Json, default=list, server_default="[]")
+    profile: Mapped[str] = mapped_column(String(16), default=STUDENT, server_default=STUDENT)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
@@ -317,6 +349,36 @@ class Invite(Base):
     )
 
     workspace: Mapped[Workspace | None] = relationship()
+
+
+class ClassLink(Base):
+    """A link a whole class redeems: up to `max_uses` students, until it expires or is paused.
+
+    Looked up by digest like an invitation, with the same sealed copy so its teacher can show
+    it again. A subject has at most one live link (`revoked_at` NULL); renewing revokes it and
+    mints another. `uses` counts the seats taken and is only ever raised by the one
+    conditional statement that reserves a seat.
+    """
+
+    __tablename__ = "class_links"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    token_sealed: Mapped[str | None] = mapped_column(String(255), default=None)
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    max_uses: Mapped[int] = mapped_column(Integer)
+    uses: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    workspace: Mapped[Workspace] = relationship()
 
 
 class PasswordReset(Base):

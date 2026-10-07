@@ -2,9 +2,11 @@
 
 A workspace is a whole instance — its corpus, its graph, its exemplars profile, its bank,
 its caches and its generations — so "tener varios perfiles de ejemplares o varios grafos"
-is exactly "tener varios workspaces". That is why creating one is offered to any account
+is exactly "tener varios workspaces". That is why creating one is offered to every teacher
 rather than reserved to the administrator: a teacher with two subjects needs two, and
-nothing about the second touches anybody else's data.
+nothing about the second touches anybody else's data. A teacher is the account's profile
+(`users.evaluator_profile`), which its invitation set: a student creates none, and there is
+no administrator bypass here — `set_admin` makes every administrator a teacher.
 
 Authorisation is declared per route here rather than on the router, because the routes do
 not share one level: listing, creating and activating resolve the account themselves,
@@ -31,9 +33,12 @@ from .. import auth, deps, installation, singletons
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..db import identity, repository
-from ..db.models import OWNER, VIEWER, User, Workspace
+from ..db.models import OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
+
+# What a refused creation carries in `X-Error-Code`: the account's profile is not a teacher's.
+CANNOT_CREATE = "cannot_create"
 
 
 class CreateBody(BaseModel):
@@ -96,7 +101,7 @@ def listing(
             for workspace in workspaces
         ],
         "active": current.slug if current else None,
-        "can_create": True,
+        "can_create": can_create(user),
     }
 
 
@@ -106,7 +111,14 @@ def create(
     user: User = Depends(auth.current_user),
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Create an instance, make the caller its owner, and activate it."""
+    """Create an instance, make the caller its owner, and activate it. A teacher's alone."""
+    if not can_create(user):
+        raise HTTPException(
+            403,
+            "Solo una cuenta de docente crea asignaturas. Entra en la tuya con el enlace que "
+            "te dio tu docente.",
+            headers={"X-Error-Code": CANNOT_CREATE},
+        )
     slug = body.slug.strip().lower()
     error = installation.slug_error(slug)
     if error:
@@ -121,7 +133,7 @@ def create(
     workspace = repository.create_workspace(
         db, slug, body.name.strip() or slug, prompt_language=body.prompt_language
     )
-    identity.grant(db, workspace.id, user.id, OWNER)
+    identity.grant(db, workspace.id, user.id, OWNER, via=VIA_OWNER)
     user.active_workspace_id = workspace.id
 
     # The directory tree before the row is usable: every screen of a brand-new workspace
@@ -311,3 +323,11 @@ def summary(
         "ready": all(s["status"] == "approved" for s in stages),
         "generations": generations_store.count(access.ws),
     }
+
+
+def can_create(user: User) -> bool:
+    """Say whether this account creates subjects: its profile is a teacher's.
+
+    A NULL left over from an old row is not a teacher's, so it fails closed.
+    """
+    return user.evaluator_profile == TEACHER

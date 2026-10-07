@@ -22,6 +22,7 @@ def create_user(args) -> int:
         normalise_username,
         username_error,
     )
+    from ..db.models import TEACHER, VIA_CLI
     from ..db.repository import ensure_workspace
 
     username = normalise_username(args.username)
@@ -51,15 +52,16 @@ def create_user(args) -> int:
             email=args.email or None,
             is_admin=args.admin,
             email_verified=bool(args.email),
-            evaluator_profile=getattr(args, "profile", None),
+            # An administrator is a teacher, whatever the flag said.
+            evaluator_profile=TEACHER if args.admin else args.profile,
             ui_language=getattr(args, "language", None),
         )
         membership = "sin asignatura"
         if args.workspace:
             workspace = ensure_workspace(session, args.workspace)
-            grant(session, workspace.id, user.id, args.role)
+            grant(session, workspace.id, user.id, args.role, via=VIA_CLI)
             membership = f"{args.role} de '{workspace.slug}'"
-        profile = PROFILE_LABELS.get(user.evaluator_profile, "sin perfil de evaluador")
+        profile = PROFILE_LABELS.get(user.evaluator_profile, "sin perfil")
         print(
             f"Cuenta creada: {user.username} "
             f"({'administrador' if user.is_admin else 'usuario'}), "
@@ -94,7 +96,7 @@ def _ask_password(args) -> str | None:
 
 
 def list_users(_args) -> int:
-    """Print every account with its roles, its flags and its evaluator profile."""
+    """Print every account with its roles, its flags and its profile."""
     from ..db import session_scope
     from ..db.identity import list_users as rows_of, memberships_for
 
@@ -119,6 +121,7 @@ def grant_role(args) -> int:
     """Give an account a role in a workspace, or name whichever of the two is missing."""
     from ..db import session_scope
     from ..db.identity import get_user, grant
+    from ..db.models import VIA_CLI
     from ..db.repository import get_workspace
 
     with session_scope() as session:
@@ -130,7 +133,7 @@ def grant_role(args) -> int:
         if workspace is None:
             print(f"No existe la asignatura '{args.workspace}'. Créala con `import-instance`.")
             return 1
-        grant(session, workspace.id, user.id, args.role)
+        grant(session, workspace.id, user.id, args.role, via=VIA_CLI)
         print(f"{user.username} es ahora {args.role} de '{workspace.slug}'.")
     return 0
 
@@ -138,9 +141,9 @@ def grant_role(args) -> int:
 def invite(args) -> int:
     """Mint single-use invitations and print their links, one per line.
 
-    The link *is* the invitation: whoever opens it chooses their own username and says
-    whether they teach or study, so it binds the access and nothing else. `--alias` names it
-    for the administration panel only, numbered when `--count` asks for several.
+    The link *is* the invitation: whoever opens it chooses their own username, and the
+    invitation says what the account will be (`--profile`): nobody asks them. `--alias` names
+    it for the administration panel only, numbered when `--count` asks for several.
     """
     from datetime import timedelta
 
@@ -186,15 +189,17 @@ def invite(args) -> int:
                 workspace_id=workspace_id,
                 role=args.role,
                 label=name,
+                profile=args.profile,
             )
             link = f"{base}/invite?token={token}"
             printed.append((f"{name}\t{link}" if name else link, invite.token_sealed is not None))
 
     for line, _ in printed:
         print(line)
+    who = PROFILE_LABELS[args.profile]
     print(
         f"Caducan en {args.days} día(s). Quien canjee cada enlace elegirá su usuario "
-        "y dirá si da clase o si estudia."
+        f"y su cuenta será de {who}."
     )
     if not all(stored for _, stored in printed):
         print("No se ha podido guardar el enlace para volver a verlo en el panel: cópialo ahora.")

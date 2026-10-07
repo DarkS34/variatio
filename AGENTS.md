@@ -103,7 +103,7 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
 docker compose up -d postgres
 uv run alembic upgrade head
 uv run system import-instance --slug default
-uv run system create-user --username tunombre --admin --workspace default
+uv run system create-user --username tunombre --admin --profile teacher --workspace default
 uv run system
 ```
 
@@ -275,10 +275,21 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 
 - **No registration endpoint, ever.** Accounts come from single-use invitations or
-  `create-user`. The person registering chooses their username and language, and their
-  evaluator profile only when the evaluation will be open to the new account (mode `all`, or
-  `selected` with the invitation listing its holder: `asks_profile` on the preview); otherwise
-  it stays NULL.
+  `create-user`. The person registering chooses their username and language, and nothing
+  else: the account's profile is the invitation's.
+- **The account's profile** (`users.evaluator_profile`, decided 2026-10-06): every account is
+  a teacher or a student, and the INVITATION says which (`invites.profile`, required in the
+  panel's form and in `system invite --profile`; a row with none is a student's). The
+  registration form asks nothing and `/accept` ignores an `evaluator_profile` sent to it; the
+  preview says `profile`. It only climbs: `POST /api/admin/accounts/{id}/profile` takes
+  `teacher` and nothing else (409 `profile_only_climbs`), and `set_admin` makes an
+  administrator a teacher. It decides ONE thing outside the subjects — a teacher creates them
+  (`POST /api/workspaces`, 403 `cannot_create` otherwise; `can_create` on the listing), with
+  no administrator bypass — and nothing inside one. A NULL left over reads as a student.
+  Migration 0017 made every account without one, and every administrator, a teacher.
+  `create-user` requires `--profile`. A membership records how it began (`via`: `owner`,
+  `admin`, `invite`, `class_link`, `cli`; NULL before 0017) and who let it in
+  (`invited_by`).
 - Argon2id; policy is length plus rejecting the obvious. No HIBP.
 - **Username enumeration is refused in three places at once** (`/login` uniform answer +
   decoy hash timing, `/forgot` always 202). Weakening one re-opens it.
@@ -310,7 +321,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - The username is the identity; `users.email` is an optional delivery detail, shown only when
   mail is configured (`mail_configured` on `/api/auth/me`). No «forgot password» link on the
   login screen; admins hand out reset links. No password generator anywhere.
-- `users.evaluator_profile` (`teacher`/`student`/NULL) is **not an authorisation**.
+- `users.evaluator_profile` authorises nothing inside a subject: the membership does.
 - **The evaluation and the tutor are optional functions** ([server/features.py](server/features.py)):
   each is `off`, `all` or `selected` (a list of accounts), set by the administrator
   (`GET /api/admin/features`, `PUT /api/admin/features/{feature}`; the list is replaced only
@@ -798,7 +809,7 @@ admin's read.
   method's rules (`prompts.METHOD_RULES`) are one list numbered into the system prompt and
   live there alone: no route returns them and no screen lists them (the screens describe the
   tutor in prose). Criteria routes are `auth.EDIT`: the membership role, never
-  `users.evaluator_profile`, which the registrant chooses.
+  `users.evaluator_profile`, which authorises nothing inside a subject.
 - **Grammar**: `calls.grammar_for` drops it when the call reasons or the model is remote
   (Cerebras mangles non-ASCII under constrained decoding); the schema then goes in the prompt.
 - **Passages** are cut by SECTION from the page cache (`split_sections`, long ones by
@@ -932,7 +943,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the phase folds into one pill. From `xl` the bar sits on the header's centre line while it
   fits there; when it does not (three doors with the steps unfolded, at 1280–1390), it takes
   the line under the header, measured, never a fixed breakpoint. The current pill is scrolled
-  into sight. There is **no dashboard**: `/` redirects to the current step.
+  into sight. There is **no dashboard**: `/` redirects to the current step. An account in no
+  subject sees `NoWorkspace`: a teacher, the form that starts one; a student, the sentence
+  that sends them to their teacher's link. Creating — there and in the switcher — is offered
+  to a teacher only (`useCanCreate`, the session's profile).
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
 - Vocabulary seen by teachers: «Apuntes y ejercicios», «Tipos de ejercicio», «Temario»
   (the step, with no article; «concepto» for a node; «grafo» only for the structure), «Banco
@@ -1090,7 +1104,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the ONE draft of the stages' settings (`useStagesDraft`), so a change left pending follows
   the link and any of the three save bars saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
   holder joins at registration («Funciones»), and each row shows them as badges in the
-  functions' tones. «Cuentas» has one section per kind of account, then «Invitaciones». The accounts are ONE TABLE PER
+  functions' tones. The form opens on «Perfil de la cuenta» — «Docente» / «Alumno», a radio
+  group with NEITHER marked, the button waiting until one is — and each row shows the profile
+  as a badge. «Cuentas» has one section per kind of account, then «Invitaciones». The accounts are ONE TABLE PER
   KIND (user's request, 2026-10-04; `features/admin/accounts.ts`, `groupOf`): «Docentes» and «Alumnos» by
   `evaluator_profile`, «Sin perfil», «Administradores», and
   «Desactivadas» — a deactivated account is that first, an administrator before a profile.
@@ -1100,7 +1116,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   draws the same tables with the matching rows alone, across every kind.
   Same columns and widths on each: the account, its subjects one per line (name, then the
   permission in a column of its own, the widest first), the date, and «Gestionar», which
-  opens the memberships and the account's controls under the row. No count of exercises,
+  opens the memberships and the account's controls under the row. The profile is a line
+  there, «Perfil: …», with one button, «Hacer docente» (confirmed), on an account that is not
+  a teacher; a teacher's has no control, since the profile only climbs. No count of exercises,
   no comparisons and no «ver sus sesiones» there: what an account evaluated is read in
   «Evaluaciones».
   «Motor» tab: **one section per part of the engine** — «General», «Local», and
@@ -1298,6 +1316,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 
 **Identity and access**
 - Invitation-only sign-up; own auth; no JWT; username identity, email optional.
+- The account's profile («Docente» / «Alumno») is the invitation's, never the registrant's
+  answer; only the administrator raises it, and nothing lowers it; it decides one thing,
+  creating subjects, and authorises nothing inside one (2026-10-06; it was a variable of the
+  evaluation the registrant chose).
 - Membership checked on every route; admin bypass in one place.
 - `viewer` is «Alumno» (2026-10-06; it was «Lector», who saw everything and changed
   nothing): a student sees the syllabus without editing it and generates, evaluates or uses

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/misc";
 import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
-import { ROLE_LABEL_KEYS } from "@/state/auth";
+import { ROLE_LABEL_KEYS, useCanCreate } from "@/state/auth";
 import { useCreateWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/queries";
 import { cn } from "@/lib/utils";
 import { usePromptLanguage } from "./promptLanguage";
@@ -23,6 +23,7 @@ export function WorkspaceSwitcher() {
   const { t } = useT();
   const listing = useWorkspaces();
   const switching = useSwitchWorkspace();
+  const canCreate = useCanCreate();
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
@@ -147,12 +148,12 @@ export function WorkspaceSwitcher() {
               ))}
             </div>
 
-            <Separator />
-            {/* Creating is offered here and renaming is NOT, and there is no owner-facing
-                route left for it either: a workspace is named when it is created, and after
-                that only an administrator renames it, from "Administración". What the name
-                is worth is that everybody means the same instance by it. */}
-            {creating ? (
+            {/* Creating is offered here, to a teacher, and renaming is NOT, and there is no
+                owner-facing route left for it either: a workspace is named when it is created,
+                and after that only an administrator renames it, from "Administración". What
+                the name is worth is that everybody means the same instance by it. */}
+            {canCreate ? <Separator /> : null}
+            {!canCreate ? null : creating ? (
               <CreateForm onDone={close} />
             ) : (
               <div className="p-1">

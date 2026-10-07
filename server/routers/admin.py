@@ -31,7 +31,7 @@ from ..auth import deps as auth_deps
 from ..auth import links
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..db import identity, repository
-from ..db.models import EDITOR, ROLES, Invite, User, Workspace
+from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, Invite, User, Workspace
 from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
 from .generations import row_view
@@ -40,6 +40,9 @@ router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
 )
 
+# What a refused profile change carries in `X-Error-Code`: the profile only climbs.
+PROFILE_ONLY_CLIMBS = "profile_only_climbs"
+
 
 class InviteTerms(BaseModel):
     """What an invitation grants, until when, and the name only the panel ever reads.
@@ -47,9 +50,9 @@ class InviteTerms(BaseModel):
     `workspace` may be absent — an invitation granting no membership creates an account
     and no access, which is the honest way to add somebody who will be given a workspace
     later. `features` lists the new account for the optional functions named
-    (`server/features.py`), which is access too. There is no evaluator profile here on
-    purpose: the link binds the access and nothing else, and whoever registers answers for
-    themselves. An absent `expires_at` is
+    (`server/features.py`), which is access too. `profile` is what the account will be, a
+    teacher or a student, and it is REQUIRED: nobody asks the person registering, and no
+    default is presumed for them — a teacher creates subjects. An absent `expires_at` is
     the installation's default week, and a chosen one has no upper bound; `label` is the
     administrator's alias and never reaches the person holding the link.
     """
@@ -59,6 +62,7 @@ class InviteTerms(BaseModel):
     expires_at: datetime | None = None
     label: str | None = None
     features: list[str] = []
+    profile: str | None = None
 
 
 class InviteBody(InviteTerms):
@@ -84,6 +88,7 @@ class InviteEditBody(BaseModel):
     expires_at: datetime | None = None
     label: str | None = None
     features: list[str] | None = None
+    profile: str | None = None
 
 
 class MembershipBody(BaseModel):
@@ -100,7 +105,7 @@ class AdminBody(BaseModel):
 
 
 class ProfileBody(BaseModel):
-    """The evaluator profile being corrected: `teacher`, `student` or nothing."""
+    """The profile an account is raised to, which can only be `teacher`."""
 
     evaluator_profile: str | None = None
 
@@ -266,6 +271,7 @@ def create_invite(
             created_by=admin.id,
             label=label,
             features=terms.features,
+            profile=terms.profile,
         )
         minted.append(_minted(db, request, invite, token))
     logger.info(
@@ -328,6 +334,7 @@ def import_invite(
         created_by=admin.id,
         label=terms.label,
         features=terms.features,
+        profile=terms.profile,
     )
     logger.info("[invitaciones] {} ha recuperado un enlace como invitación {}", admin.username, invite.id)
     return {"outcome": "created", **_minted(db, request, invite, token)}
@@ -393,6 +400,8 @@ def edit_invite(
         changes["workspace_id"] = workspace.id if workspace else None
     if "features" in sent:
         changes["features"] = _features(body.features)
+    if "profile" in sent:
+        changes["profile"] = _profile(body.profile)
     identity.edit_invite(db, invite, **changes)
     if changes:
         logger.info(
@@ -434,26 +443,32 @@ def grant_membership(
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
 
-    identity.grant(db, workspace.id, user.id, body.role)
+    identity.grant(db, workspace.id, user.id, body.role, via=VIA_ADMIN)
     return {"user_id": user.id, "workspace": workspace.slug, "role": body.role}
 
 
 @router.post("/accounts/{user_id}/profile")
 def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db)) -> dict:
-    """Correct an account's evaluator profile, administrators included.
+    """Make an account a teacher. The profile only climbs: nothing lowers a teacher.
 
-    It changes the wording of one question and how the evaluation groups its results; it
-    grants and withholds nothing, which is why withholding this control from anybody
-    would be a restriction with no reason.
+    A teacher creates subjects and may have created some already, so lowering one would
+    leave them owning what their profile no longer lets them make; and a student who is to
+    teach is raised here, never by their own answer. Anything but `teacher` — a student,
+    nothing, a word nobody knows — is refused with `profile_only_climbs`. Raising a teacher
+    changes nothing and is not an error.
     """
-    error = identity.profile_error(body.evaluator_profile)
-    if error:
-        raise HTTPException(422, error)
     user = identity.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
-
-    identity.set_evaluator_profile(db, user, body.evaluator_profile)
+    if body.evaluator_profile != TEACHER:
+        raise HTTPException(
+            409,
+            "El perfil de una cuenta solo sube, de alumno a docente: no se puede bajar ni quitar.",
+            headers={"X-Error-Code": PROFILE_ONLY_CLIMBS},
+        )
+    if user.evaluator_profile != TEACHER:
+        identity.set_evaluator_profile(db, user, TEACHER)
+        logger.info("[cuentas] «{}» pasa a ser docente", user.username)
     return {"user_id": user.id, "evaluator_profile": user.evaluator_profile}
 
 
@@ -750,7 +765,9 @@ def set_admin(
     """Grant or withdraw administration, never from oneself.
 
     A flag on the account; the bypass it buys lives in one `if`, `auth.deps.access_for`.
-    Taking it from yourself is refused for the same reason deleting yourself is.
+    Taking it from yourself is refused for the same reason deleting yourself is. An
+    administrator is a teacher: granting it raises the profile, which only climbs, so
+    withdrawing it leaves the teacher a teacher.
     """
     user = identity.get_user_by_id(db, user_id)
     if user is None:
@@ -758,6 +775,8 @@ def set_admin(
     if user.id == admin.id and not body.is_admin:
         raise HTTPException(409, "No puedes quitarte la administración a ti mismo.")
     user.is_admin = body.is_admin
+    if user.is_admin and user.evaluator_profile != TEACHER:
+        user.evaluator_profile = TEACHER
     db.flush()
     return {"user_id": user.id, "is_admin": user.is_admin}
 
@@ -890,6 +909,7 @@ class _Terms:
     expires_at: datetime
     label: str | None
     features: list[str]
+    profile: str
 
 
 def _terms(db: DbSession, body: InviteTerms) -> _Terms:
@@ -900,6 +920,7 @@ def _terms(db: DbSession, body: InviteTerms) -> _Terms:
         expires_at=_expiry(body.expires_at),
         label=_label(body.label),
         features=_features(body.features),
+        profile=_profile(body.profile),
     )
 
 
@@ -918,6 +939,14 @@ def _role(role: str | None) -> str:
     if role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{role}'. Usa uno de {', '.join(ROLES)}.")
     return role
+
+
+def _profile(profile: str | None) -> str:
+    """Accept what the account an invitation creates will be: a teacher or a student."""
+    error = identity.profile_error(profile)
+    if error:
+        raise HTTPException(422, error)
+    return profile
 
 
 def _features(names: list[str] | None) -> list[str]:
@@ -993,6 +1022,7 @@ def _invite(db: DbSession, invite: Invite, moment: datetime | None = None) -> di
         "label": invite.label,
         "role": invite.role,
         "features": list(invite.features or []),
+        "profile": invite.profile,
         "workspace": workspace.name if workspace else None,
         "workspace_slug": workspace.slug if workspace else None,
         "created_at": invite.created_at.isoformat(),

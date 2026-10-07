@@ -78,7 +78,7 @@ uv sync                            # runtime + builders + server
 docker compose up -d postgres      # PostgreSQL 16 on :5432, credentials in .env
 uv run alembic upgrade head        # create the schema
 uv run system create-workspace <slug> --name "<Subject>" --language es
-uv run system create-user --username <name> --admin --workspace <slug>
+uv run system create-user --username <name> --admin --profile teacher --workspace <slug>
 uv run system                      # the API on :8000
 ```
 

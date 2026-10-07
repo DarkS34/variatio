@@ -1801,9 +1801,10 @@ function Admin() {
           account exists because somebody opened a single-use invitation link, or because it was
           created from the command line. The link <em>is</em> the invitation and it is tied to no
           address, so it is handed over by hand and not left in a shared place. Whoever opens it
-          chooses their username and their password. If the evaluation will be open to that
-          account, they also say whether they teach or study: it is the only function that reads
-          that answer.
+          chooses their username and their password, and nothing else: the invitation says
+          whether the account will be a teacher's or a student's, which is why the invitation's
+          form asks for that profile with neither marked. A teacher creates subjects; a student
+          does not.
         </Paragraph>
         <Paragraph>
           The tab's list has one section per kind of account — «{t("acc.group.teachers")}», «
@@ -1882,7 +1883,15 @@ function Admin() {
             {
               key: "perfil",
               head: <>"{t("acc.profileLabel")}"</>,
-              body: "Teacher or student. It decides the wording of the question asked when comparing proposals, and how the evaluation groups the answers; it grants and removes no permission, which is why it is corrected here with no further ceremony.",
+              body: (
+                <>
+                  Teacher or student. A teacher creates subjects; a student does not. Inside a
+                  subject it grants and removes no permission: the role they have there decides
+                  that. It only climbs: "{t("acc.makeTeacher")}" turns a student into a teacher,
+                  after a confirmation, and nobody lowers a teacher. The evaluation reads it too,
+                  to choose the wording of its questions.
+                </>
+              ),
             },
           ]}
         />

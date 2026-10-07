@@ -219,6 +219,7 @@ def test_an_unknown_function_mode_or_account_is_refused(db, feature, body, statu
 
 
 def _invite(db, admin, **terms) -> dict:
+    terms = {"profile": "student", **terms}
     return admin_routes.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
 
 
@@ -229,7 +230,6 @@ def _redeem(db, link: str, username: str):
             username=username,
             name=username,
             password="una-contraseña-larga",
-            evaluator_profile="student",
         ),
         _request(),
         Response(),

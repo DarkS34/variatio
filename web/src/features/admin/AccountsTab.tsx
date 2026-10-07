@@ -25,10 +25,10 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
-import { PROFILE_LABEL_KEYS, PROFILES, profileLabel } from "@/lib/evaluator";
+import { profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
 import { inviteState } from "@/lib/invites";
-import type { AdminAccount, AdminOverview, EvaluatorProfile, Role } from "@/lib/types";
+import type { AdminAccount, AdminOverview, Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
@@ -476,7 +476,7 @@ function SubjectList({ account, names }: { account: AdminAccount; names: Map<str
 function AccountControls({ account, self }: { account: AdminAccount; self: boolean }) {
   const { plural, t } = useT();
   const confirm = useConfirm();
-  const { setAdmin, setProfile, resetLink, revokeSessions, unlock } = useAccountActions();
+  const { setAdmin, makeTeacher, resetLink, revokeSessions, unlock } = useAccountActions();
   const toast = useToast();
   const locked = account.locked_seconds > 0;
 
@@ -518,25 +518,21 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
     });
   };
 
-  // Not confirmed, unlike everything else on this row: it grants nothing, nobody is locked
-  // out by it, and setting it back costs one more click.
-  const changeProfile = (value: string) => {
-    const profile = (value || null) as EvaluatorProfile | null;
-    setProfile.mutate(
-      { id: account.id, profile },
-      {
-        onSuccess: () =>
-          toast({
-            title: t("acc.profileToast"),
-            description: t("acc.profileToastBody", {
-              username: account.username,
-              profile: profileLabel(profile, t).toLowerCase(),
-            }),
-          }),
-        onError: (error: Error) =>
-          toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
-      },
-    );
+  // Confirmed, because it cannot be undone: the profile only climbs, and a teacher creates
+  // subjects from the moment it lands.
+  const confirmTeacher = async () => {
+    const asked = await confirm({
+      title: t("acc.makeTeacherConfirm", { username: account.username }),
+      body: t("acc.makeTeacherConfirmBody"),
+      confirmLabel: t("acc.makeTeacher"),
+    });
+    if (!asked) return;
+    makeTeacher.mutate(account.id, {
+      onSuccess: () =>
+        toast({ title: t("acc.nowTeacher"), description: account.username }),
+      onError: (error: Error) =>
+        toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
+    });
   };
 
   return (
@@ -590,32 +586,32 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           </Button>
         ) : null}
       </div>
-      {/* An administrator is a teacher or a student like anybody else: the profile decides
-          what somebody is asked when they compare, and `require_member` never reads it. It
-          lives here rather than beside the memberships for exactly that reason. */}
+      {/* The account's profile decides one thing, creating subjects, and `require_member`
+          never reads it: it lives here rather than beside the memberships for that reason.
+          It only climbs, so a teacher has no control and anybody else has one button. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Label htmlFor={`profile-${account.id}`}>{t("acc.profileLabel")}</Label>
-        <Select
-          id={`profile-${account.id}`}
-          value={account.evaluator_profile ?? ""}
-          className="w-44"
-          disabled={setProfile.isPending}
-          onChange={(event) => changeProfile(event.target.value)}
-        >
-          <option value="">{t("acc.profileUnset")}</option>
-          {PROFILES.map((option) => (
-            <option key={option} value={option}>
-              {t(PROFILE_LABEL_KEYS[option])}
-            </option>
-          ))}
-        </Select>
+        <span className="text-small">
+          {t("acc.profileLabel")}:{" "}
+          <span className="font-medium">{profileLabel(account.evaluator_profile, t)}</span>
+        </span>
+        {account.evaluator_profile !== "teacher" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={makeTeacher.isPending}
+            onClick={confirmTeacher}
+          >
+            {makeTeacher.isPending ? <Spinner /> : <Presentation />}
+            {t("acc.makeTeacher")}
+          </Button>
+        ) : null}
         <InfoHint label={t("acc.profileHint")}>{t("acc.profileHint.body")}</InfoHint>
       </div>
 
       <FormError
         error={
           setAdmin.error ??
-          setProfile.error ??
+          makeTeacher.error ??
           resetLink.error ??
           revokeSessions.error ??
           unlock.error

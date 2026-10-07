@@ -75,14 +75,14 @@ def list_workspaces(_args) -> int:
 def create_workspace(args) -> int:
     """Create an empty workspace, provision its tree, and optionally give it an owner.
 
-    The web can create one too — any account may, since "tener varios grafos" is "tener
+    The web can create one too — any teacher may, since "tener varios grafos" is "tener
     varios workspaces" — but the command line is what an operator uses to prepare one
     before there is anybody to hand it to. The prompt language is chosen here and never
     after: it is baked into the artifacts a build writes.
     """
     from ..db import session_scope
     from ..db.identity import get_user, grant
-    from ..db.models import OWNER
+    from ..db.models import OWNER, VIA_CLI
     from ..db.repository import create_workspace as insert, get_workspace
     from variatio.instance import locale
 
@@ -106,7 +106,7 @@ def create_workspace(args) -> int:
             if user is None:
                 print(f"No existe ninguna cuenta con el usuario {args.owner}.")
                 return 1
-            grant(session, workspace.id, user.id, OWNER)
+            grant(session, workspace.id, user.id, OWNER, via=VIA_CLI)
 
         ws = workspace_for(args.slug)
         provision(ws)

@@ -177,6 +177,15 @@ export function useIsOwner() {
 }
 
 /**
+ * May this account create subjects? Only a teacher's may: the account's profile, which its
+ * invitation set (the server's own `can_create`, and a 403 `cannot_create` otherwise). False
+ * while the session loads, and for a profile nobody recorded.
+ */
+export function useCanCreate() {
+  return useSession().data?.user.evaluator_profile === "teacher";
+}
+
+/**
  * Which optional functions this account may open: the evaluation and the tutor.
  *
  * Both closed while the session loads, so no door is drawn and then withdrawn. The server

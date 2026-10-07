@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 from variatio.core import paths
 
 from ..db import identity
-from ..db.models import EDITOR, Invite
+from ..db.models import EDITOR, STUDENT, Invite
 from . import tokens
 
 KEY_ENV = "VARIATIO_INVITE_LINK_KEY"
@@ -64,6 +64,7 @@ def mint(
     label: str | None = None,
     token: str | None = None,
     features: list[str] | None = None,
+    profile: str = STUDENT,
 ) -> tuple[Invite, str]:
     """Insert one invitation and return it with its token, a fresh one unless one is given.
 
@@ -82,6 +83,7 @@ def mint(
         label=label,
         token_sealed=seal(token),
         features=features,
+        profile=profile,
     )
     return invite, token
 

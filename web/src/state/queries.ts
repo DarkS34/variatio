@@ -15,7 +15,6 @@ import type {
   ArtifactName,
   BuildPhase,
   CommissionScope,
-  EvaluatorProfile,
   FeatureMode,
   FeatureName,
   InviteTerms,
@@ -654,9 +653,8 @@ export function useAccountActions() {
         api.adminSetAdmin(id, isAdmin),
       onSuccess: refresh,
     }),
-    setProfile: useMutation({
-      mutationFn: ({ id, profile }: { id: number; profile: EvaluatorProfile | null }) =>
-        api.adminSetProfile(id, profile),
+    makeTeacher: useMutation({
+      mutationFn: (id: number) => api.adminMakeTeacher(id),
       onSuccess: refresh,
     }),
     resetLink: useMutation({ mutationFn: (id: number) => api.adminResetLink(id) }),

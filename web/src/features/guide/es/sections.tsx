@@ -1786,9 +1786,10 @@ function Admin() {
           es una decisión, no una carencia: una cuenta existe porque alguien abrió un enlace de
           invitación de un solo uso, o porque se creó desde la línea de órdenes. El enlace{" "}
           <em>es</em> la invitación y no va atado a ningún correo, así que se pasa a mano y no se
-          deja en un sitio compartido. Quien lo abre elige su usuario y su contraseña. Si la
-          evaluación va a estar abierta para esa cuenta, dice también si da clase o si estudia:
-          es la única función que lee esa respuesta.
+          deja en un sitio compartido. Quien lo abre elige su usuario y su contraseña, y nada
+          más: la invitación dice si la cuenta será de un docente o de un alumno, y por eso el
+          formulario de la invitación pide ese perfil sin marcar ninguno. Un docente crea
+          asignaturas; un alumno no.
         </Paragraph>
         <Paragraph>
           La lista de la pestaña tiene un apartado por clase de cuenta —«
@@ -1868,7 +1869,15 @@ function Admin() {
             {
               key: "perfil",
               head: <>«{t("acc.profileLabel")}»</>,
-              body: "Docente o alumno. Decide con qué palabras se le pregunta al comparar propuestas y cómo agrupa el estudio sus respuestas; no da ni quita ningún permiso, y por eso se corrige aquí sin más trámite.",
+              body: (
+                <>
+                  Docente o alumno. Un docente crea asignaturas; un alumno no. Dentro de una
+                  asignatura no da ni quita ningún permiso: eso lo decide el papel que tiene allí.
+                  Solo sube: «{t("acc.makeTeacher")}» convierte a un alumno en docente, con
+                  confirmación, y a un docente nadie lo baja. La evaluación también lo lee, para
+                  elegir las palabras de sus preguntas.
+                </>
+              ),
             },
           ]}
         />

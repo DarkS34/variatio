@@ -477,6 +477,11 @@ export interface CurrentUser {
   email: string | null;
   name: string;
   is_admin: boolean;
+  /**
+   * The account's profile: a teacher creates subjects, a student does not (`useCanCreate`).
+   * Its invitation set it. Null on an old row, and read as a student's.
+   */
+  evaluator_profile?: EvaluatorProfile | null;
   /** What the interface is drawn in. Not a workspace's `prompt_language`: see `lib/i18n`. */
   ui_language: string;
 }
@@ -866,11 +871,10 @@ export interface InvitePreview {
   workspace: string | null;
   expires_at: string;
   /**
-   * Whether the form asks «docente o alumno»: only while the evaluation, the one function
-   * that reads the answer, will be open to the account. Absent from an older API, which
-   * always asked.
+   * What the account will be: the invitation says it and the form never asks. Absent from
+   * an API older than the account's profile.
    */
-  asks_profile?: boolean;
+  profile?: EvaluatorProfile;
 }
 
 /** Unused and still working, or unused and past its date — which can be moved. */
@@ -892,6 +896,8 @@ export interface InviteRow {
   /** The functions whose list the holder joins on registering. Absent from an older API, so
    *  it is read through `lib/invites.inviteFeatures`. */
   features?: unknown;
+  /** What the account it creates will be. Read through `lib/invites.inviteProfile`. */
+  profile?: unknown;
 }
 
 /** What an invitation grants and until when, as the panel sends it. */
@@ -901,6 +907,7 @@ export interface InviteTerms {
   expires_at: string;
   label: string | null;
   features: FeatureName[];
+  profile: EvaluatorProfile;
 }
 
 /** An invitation just handed over: its row, its link, and whether that link was kept. */

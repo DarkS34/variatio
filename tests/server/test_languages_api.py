@@ -67,7 +67,7 @@ def _request() -> Request:
 
 def _register(db, admin, username: str, language):
     link = create_invite(
-        InviteBody(workspace=None, role="editor"), _request(), admin=admin, db=db
+        InviteBody(workspace=None, role="editor", profile="teacher"), _request(), admin=admin, db=db
     )["link"]
     accept_invite(
         AcceptBody(
@@ -75,7 +75,6 @@ def _register(db, admin, username: str, language):
             username=username,
             name=username,
             password="una-contraseña-larga",
-            evaluator_profile="teacher",
             ui_language=language,
         ),
         _request(),
