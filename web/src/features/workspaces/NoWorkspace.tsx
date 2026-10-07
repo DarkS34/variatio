@@ -1,12 +1,14 @@
-import { FolderPlus, Link as LinkIcon } from "lucide-react";
+import { FolderPlus, Link as LinkIcon, LogIn } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
+import { tokenFrom } from "@/lib/invites";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { EmptyState, Spinner } from "@/components/ui/misc";
-import { useCanCreate, useSession } from "@/state/auth";
+import { useToast } from "@/components/ui/toast";
+import { useCanCreate, useJoin, useSession } from "@/state/auth";
 import { useCreateWorkspace } from "@/state/queries";
 import { usePromptLanguage } from "./promptLanguage";
 
@@ -22,12 +24,68 @@ export function NoWorkspace() {
   return useCanCreate() ? <StartSubject /> : <AwaitLink />;
 }
 
-/** A student in no subject yet: the way in is the teacher's link, and nothing here is a door. */
+/**
+ * A student in no subject yet: the way in is the teacher's link. Opened, it lands on
+ * `/invite`; pasted here, it joins with the account already in the tab (`POST
+ * /api/auth/join`) — the whole link, a link a mail client cut in two, or the token alone.
+ */
 function AwaitLink() {
   const { t } = useT();
+  const toast = useToast();
+  const join = useJoin();
+  const [text, setText] = useState("");
+  // Pressed with nothing pasted: said under the field, as the teacher's form says a missing name.
+  const [touched, setTouched] = useState(false);
+  const token = tokenFrom(text);
+
+  const submit = () =>
+    join.mutate(token, {
+      onSuccess: (session) => {
+        const name = session.workspaces.find((row) => row.slug === session.active_workspace)?.name;
+        if (name) toast({ title: t("invite.joined", { workspace: name }) });
+      },
+    });
+
   return (
     <div className="space-y-6">
-      <EmptyState icon={<LinkIcon />} title={t("workspace.noneYet")} titleAs="h1">
+      <EmptyState
+        icon={<LinkIcon />}
+        title={t("workspace.noneYet")}
+        titleAs="h1"
+        action={
+          <form
+            className="w-full max-w-sm space-y-2 text-left"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setTouched(true);
+              if (token) submit();
+            }}
+          >
+            <Label htmlFor="join-link">{t("noWorkspace.pasteLink")}</Label>
+            <Input
+              id="join-link"
+              value={text}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={t("noWorkspace.pastePlaceholder")}
+              onChange={(event) => setText(event.target.value)}
+            />
+            {join.isError ? (
+              <p role="alert" className="text-small text-destructive">
+                {(join.error as Error).message}
+              </p>
+            ) : touched && !token ? (
+              <p role="alert" className="text-small text-destructive">
+                {t("noWorkspace.pasteMissing")}
+              </p>
+            ) : null}
+            <Button type="submit" className="w-full" disabled={join.isPending}>
+              {join.isPending ? <Spinner /> : <LogIn />}
+              {t("invite.join")}
+            </Button>
+          </form>
+        }
+      >
         <p>{t("noWorkspace.student")}</p>
       </EmptyState>
     </div>

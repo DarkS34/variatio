@@ -1,4 +1,4 @@
-import { GraduationCap, Search, UserCheck, UserMinus, UserX } from "lucide-react";
+import { GraduationCap, Link2, Search, UserCheck, UserMinus, UserX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,30 +23,35 @@ import {
 import type { Member, MemberAction } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/state/auth";
-import { useActiveWorkspace, useMemberActions, useMembers } from "@/state/queries";
+import { useActiveWorkspace, useClassLink, useMemberActions, useMembers } from "@/state/queries";
 
-type ClassSection = "students";
+import { InviteSection, classLinkDetail } from "./InviteSection";
+
+type ClassSection = "students" | "invite";
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
  *
  * Drawn as the administrator's panel draws a tab (`admin/Sections`): the list of its sections
  * beside the section open, one column of blocks under the section's header, rows parted by
- * rules. «Alumnos» is the section it opens on; the others of the plan join the list as they
- * arrive. A student never reaches it: the route is a teacher's (`App`), and so is every read
- * behind it (`/api/members`, `auth.EDIT`).
+ * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet; the
+ * others of the plan join the list as they arrive. A student never reaches it: the route is
+ * a teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
  */
 export function ClassScreen() {
   const { t, plural } = useT();
   const session = useSession();
   const members = useMembers();
-  const [section, setSection] = useState<ClassSection>("students");
+  const classLink = useClassLink();
+  // Null until somebody picks: the section to open on depends on the list, which arrives later.
+  const [picked, setPicked] = useState<ClassSection | null>(null);
   // The tab's subject, which is the one `/api/members` answered for, and not necessarily the
   // account's last choice that the session flags as active.
   const slug = useActiveWorkspace() ?? session.data?.active_workspace ?? null;
   const subject = session.data?.workspaces.find((row) => row.slug === slug)?.name ?? "";
   const students = studentsOf(members.data?.members ?? []);
   const paused = students.filter((member) => member.disabled_at !== null).length;
+  const section: ClassSection = picked ?? (students.length === 0 ? "invite" : "students");
 
   const items: SectionEntry[] = [
     {
@@ -56,6 +61,12 @@ export function ClassScreen() {
       detail: paused
         ? `${plural("class.studentCount", students.length - paused)} · ${plural("class.pausedCount", paused)}`
         : plural("class.studentCount", students.length),
+    },
+    {
+      key: "invite",
+      label: t("class.invite"),
+      mark: <Link2 className="size-4" />,
+      detail: classLink.isSuccess ? classLinkDetail(classLink.data.class_link, t) : null,
     },
   ];
 
@@ -81,9 +92,13 @@ export function ClassScreen() {
           label={t("class.sections")}
           items={items}
           value={section}
-          onChange={(key) => setSection(key as ClassSection)}
+          onChange={(key) => setPicked(key as ClassSection)}
         >
-          <StudentsSection students={students} />
+          {section === "invite" ? (
+            <InviteSection subject={subject} slug={slug} />
+          ) : (
+            <StudentsSection students={students} />
+          )}
         </Sections>
       )}
     </div>

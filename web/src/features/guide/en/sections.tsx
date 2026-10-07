@@ -1709,16 +1709,25 @@ function Account() {
 
       <Block title="How you get in here">
         <Paragraph>
-          There is no open sign-up. An account exists because somebody passed you a{" "}
-          <strong>single-use invitation link</strong> and you chose your username on opening it.
-          That link <em>is</em> the invitation: it is not tied to any address, so do not leave it
-          in a shared place. On opening it you also choose your password: whichever you like, or
-          the one your manager suggests.
+          There is no open sign-up. An account exists because somebody passed you a link: a{" "}
+          <strong>personal invitation</strong>, good for one use, or your teacher's{" "}
+          <strong>class link</strong>, good for the whole class until its seats are full. On
+          opening it you choose your username and your password: whichever you like, or the one
+          your manager suggests. The link is tied to no address, so do not leave it in a shared
+          place.
         </Paragraph>
         <Paragraph>
-          The invitation may already carry a subject and a role inside it, or carry none: in
-          that case you come in all the same and are offered to create yours. An account with no
-          subject is a normal account, not a half-made one.
+          The link says whether the account will be a teacher's or a student's, and it may
+          already carry a subject and a role inside it. If it carries none, you come in all the
+          same: a teacher can create theirs, and a student waits for their class's link. An
+          account with no subject is a normal account, not a half-made one.
+        </Paragraph>
+        <Paragraph>
+          With an account already made, another subject's link does not make a second one: open
+          it with your session and press «{t("invite.join")}», or choose «
+          {t("invite.tab.existing")}» and log in with your username. A student in no subject can
+          also paste it on the start screen. A paused class link lets nobody in until your
+          teacher resumes it.
         </Paragraph>
       </Block>
 
@@ -1799,8 +1808,9 @@ function Admin() {
         <Paragraph>
           This is where it is decided who exists and where they get in.{" "}
           <strong>There is no open sign-up</strong>, and that is a decision rather than a gap: an
-          account exists because somebody opened a single-use invitation link, or because it was
-          created from the command line. The link <em>is</em> the invitation and it is tied to no
+          account exists because somebody opened a single-use invitation link or a teacher's
+          class link, or because it was created from the command line. The link <em>is</em> the
+          invitation and it is tied to no
           address, so it is handed over by hand and not left in a shared place. Whoever opens it
           chooses their username and their password, and nothing else: the invitation says
           whether the account will be a teacher's or a student's, which is why the invitation's
@@ -1928,6 +1938,11 @@ function Admin() {
           {t("nav.mySubjects")}» sees only their own subjects and exercises, like any account.
           Deleting them or generating more like them is still up to
           whoever wrote them, from «{t("nav.mySubjects")}».
+        </Paragraph>
+        <Paragraph>
+          Under the table, «{t("ws.classLinks.title")}» lists the live link of each subject that
+          has one: the seats taken, the expiry and who made it. From here it is paused or
+          revoked; its seats and its date are changed by its teachers, in «{t("class.title")}».
         </Paragraph>
         <Rows
           items={[

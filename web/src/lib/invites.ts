@@ -6,7 +6,6 @@ import {
   type InviteRow,
   type InviteState,
   type InviteTerms,
-  type MintedInvite,
   type Role,
 } from "@/lib/types";
 
@@ -33,6 +32,17 @@ export const BATCH_MAX = 50;
 
 /** The alias column's width, mirrored so the input stops where the server would refuse. */
 export const LABEL_MAX = 120;
+
+/**
+ * A teacher's links, mirrored from `server/installation.py` so a form stops where the server
+ * would refuse: a class link's seats and days by default, its ceiling of seats, a personal
+ * invitation's days by default, and how far ahead either may expire.
+ */
+export const CLASS_LINK_DEFAULT_SEATS = 40;
+export const CLASS_LINK_MAX_SEATS = 300;
+export const CLASS_LINK_DEFAULT_DAYS = 30;
+export const TEACHER_INVITE_DEFAULT_DAYS = 14;
+export const TEACHER_LINK_MAX_DAYS = 180;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -88,6 +98,44 @@ export function inviteState(
   return new Date(row.expires_at).getTime() > now ? "pending" : "expired";
 }
 
+/**
+ * The names a teacher typed, one per line, as the server will read them: inner runs of
+ * blank collapsed, empty lines dropped. Two students may share a name, so nothing is merged.
+ */
+export function namesOf(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.split(/\s+/).filter(Boolean).join(" "))
+    .filter(Boolean);
+}
+
+/** Whether a picker value is no further ahead than a teacher's link may expire. */
+export function withinTeacherCap(value: string, now: Date = new Date()): boolean {
+  const date = fromLocalInput(value);
+  // A minute of slack: the picker is to the minute, the server's clock to the microsecond.
+  return date !== null && date.getTime() <= inDays(TEACHER_LINK_MAX_DAYS, now).getTime() + 60_000;
+}
+
+const TOKEN_PARAM = /[?&#]token=([^&#\s]+)/;
+
+/**
+ * The token a pasted link carries, or the pasted text itself when it is bare — the reading
+ * `server/auth/links.token_from` makes, so a link copied whole, cut in two by a mail client
+ * or reduced to its token all name the same invitation. The origin is never read.
+ */
+export function tokenFrom(text: string): string {
+  const trimmed = text.trim();
+  const found = TOKEN_PARAM.exec(trimmed);
+  if (found) {
+    try {
+      return decodeURIComponent(found[1]);
+    } catch {
+      return found[1];
+    }
+  }
+  return trimmed;
+}
+
 /** Whether a row answers a search: its alias, its asignatura or who issued it. */
 export function matchesInvite(
   row: Pick<InviteRow, "label" | "workspace" | "workspace_slug" | "created_by">,
@@ -107,7 +155,7 @@ export function matchesInvite(
  * carries the alias column or none does, so an unnamed row inside a named batch still
  * lines its link up with the others.
  */
-export function linkLines(minted: Pick<MintedInvite, "invite" | "link">[]): string {
+export function linkLines(minted: { invite: { label?: string | null }; link: string }[]): string {
   const named = minted.some(({ invite }) => !!invite.label);
   return minted
     .map(({ invite, link }) => (named ? `${invite.label ?? ""}\t${link}` : link))

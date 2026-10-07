@@ -51,6 +51,10 @@ export const keys = {
   workspaces: ["workspaces"] as const,
   // The class of the subject in use: instance data, dropped with the rest on a switch.
   members: ["members"] as const,
+  classLink: ["members", "class-link"] as const,
+  classLinkUrl: ["members", "class-link", "link"] as const,
+  memberInvites: ["members", "invites"] as const,
+  adminClassLinks: ["admin", "class-links"] as const,
   adminOverview: ["admin", "overview"] as const,
   adminGenerations: (slug: string, params: Record<string, unknown>) =>
     ["admin", "generations", slug, params] as const,
@@ -435,6 +439,62 @@ export function useMemberActions() {
   };
 }
 
+/** The subject's live class link, its terms only: how full and until when. */
+export function useClassLink() {
+  return useQuery({ queryKey: keys.classLink, queryFn: api.classLink });
+}
+
+/**
+ * The class link itself, opened from its sealed copy. A read of its own, which the server
+ * logs, so it is asked only while a link exists to be read and kept for the visit.
+ */
+export function useClassLinkUrl(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.classLinkUrl,
+    queryFn: api.classLinkUrl,
+    enabled,
+    staleTime: Infinity,
+    retry: false,
+  });
+}
+
+/**
+ * Minting, renewing and changing the class link. A mint's answer carries the new link, so it
+ * goes straight into the link's query and nobody asks for it again; a change leaves the link
+ * as it was.
+ */
+export function useClassLinkActions() {
+  const client = useQueryClient();
+  return {
+    mint: useMutation({
+      mutationFn: api.mintClassLink,
+      onSuccess: ({ class_link, link }) => {
+        client.setQueryData(keys.classLink, { class_link });
+        client.setQueryData(keys.classLinkUrl, { link });
+      },
+    }),
+    edit: useMutation({
+      mutationFn: api.editClassLink,
+      onSuccess: ({ class_link }) => client.setQueryData(keys.classLink, { class_link }),
+    }),
+  };
+}
+
+/** The subject's personal invitations nobody has used yet. */
+export function useMemberInvites() {
+  return useQuery({ queryKey: keys.memberInvites, queryFn: api.memberInvites });
+}
+
+/** Minting personal invitations, one per name, and withdrawing one before anybody uses it. */
+export function useMemberInviteActions() {
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: keys.memberInvites });
+  return {
+    mint: useMutation({ mutationFn: api.mintMemberInvites, onSettled: refresh }),
+    revoke: useMutation({ mutationFn: api.revokeMemberInvite, onSettled: refresh }),
+  };
+}
+
 /**
  * What survives leaving an instance: the session, and the state of the installation's door.
  *
@@ -814,6 +874,25 @@ export function useImportInvite() {
  * a mutation fired from an effect: React's development double-mount detaches a mutation's
  * observer, and the answer then never reaches the panel.
  */
+/** Every subject's live class link, for the administrator's «Asignaturas» tab. */
+export function useAdminClassLinks() {
+  return useQuery({ queryKey: keys.adminClassLinks, queryFn: api.adminClassLinks });
+}
+
+/** Pausing, resuming or retiring a subject's class link from the panel. */
+export function useAdminClassLinkActions() {
+  const client = useQueryClient();
+  const refresh = () => client.invalidateQueries({ queryKey: keys.adminClassLinks });
+  return {
+    pause: useMutation({
+      mutationFn: ({ id, paused }: { id: number; paused: boolean }) =>
+        api.adminPauseClassLink(id, paused),
+      onSettled: refresh,
+    }),
+    revoke: useMutation({ mutationFn: api.adminRevokeClassLink, onSettled: refresh }),
+  };
+}
+
 export function useInviteLink(id: number, enabled: boolean) {
   return useQuery({
     queryKey: ["admin", "invite-link", id] as const,

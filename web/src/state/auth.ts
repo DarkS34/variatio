@@ -111,6 +111,41 @@ export function useAcceptInvite() {
   return useMutation({ mutationFn: api.acceptInvite, onSuccess: adopt });
 }
 
+/**
+ * Enter the subject a link names with the account already in this tab.
+ *
+ * The answer is the session, landed in that subject, so it is adopted like a login's: the
+ * tab moves into the subject and drops what the previous one cached. `already` stays on the
+ * mutation's data for the screen that says whether the account was in before.
+ */
+export function useJoin() {
+  const adopt = useAdopt();
+  return useMutation({ mutationFn: (token: string) => api.join(token), onSuccess: adopt });
+}
+
+/**
+ * Log in, then enter the subject a link names: the «Ya tengo cuenta» half of `/invite`.
+ *
+ * Two requests in order, the login's answer as uniform as the login screen's. A login that
+ * works and a join that does not still leaves the session in — the person IS logged in — so
+ * the screen turns into the one for an open session, saying why the join was refused.
+ */
+export function useLoginAndJoin() {
+  const adopt = useAdopt();
+  return useMutation({
+    mutationFn: async (input: { username: string; password: string; token: string }) => {
+      const session = await api.login(input.username, input.password);
+      try {
+        return await api.join(input.token);
+      } catch (error) {
+        adopt(session);
+        throw error;
+      }
+    },
+    onSuccess: adopt,
+  });
+}
+
 export function useResetPassword() {
   const adopt = useAdopt();
   return useMutation({

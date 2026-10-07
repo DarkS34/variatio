@@ -1696,16 +1696,25 @@ function Account() {
 
       <Block title="Cómo se entra aquí">
         <Paragraph>
-          No hay registro abierto. Una cuenta existe porque alguien te pasó un{" "}
-          <strong>enlace de invitación de un solo uso</strong> y tú elegiste tu nombre de usuario
-          al abrirlo. Ese enlace <em>es</em> la invitación: no está atado a ningún correo, así que
-          no lo dejes en un sitio compartido. Al abrirlo eliges también tu contraseña: la que
-          quieras, o la que te sugiera tu gestor.
+          No hay registro abierto. Una cuenta existe porque alguien te pasó un enlace: una{" "}
+          <strong>invitación personal</strong>, que sirve una sola vez, o el{" "}
+          <strong>enlace de clase</strong> de tu docente, que sirve a toda la clase hasta llenar
+          sus plazas. Al abrirlo eliges tu nombre de usuario y tu contraseña: la que quieras, o
+          la que te sugiera tu gestor. El enlace no está atado a ningún correo, así que no lo
+          dejes en un sitio compartido.
         </Paragraph>
         <Paragraph>
-          La invitación puede traer ya una asignatura y un papel dentro de ella, o no traer
-          ninguna: en ese caso entras igual y se te ofrece crear la tuya. Una cuenta sin
+          El enlace dice si la cuenta será de un docente o de un alumno, y puede traer ya una
+          asignatura y un papel dentro de ella. Si no trae ninguna, entras igual: un docente
+          puede crear la suya, y un alumno espera el enlace de su clase. Una cuenta sin
           asignatura es una cuenta normal, no una cuenta a medio hacer.
+        </Paragraph>
+        <Paragraph>
+          Con una cuenta ya hecha, el enlace de otra asignatura no crea otra: ábrelo con tu
+          sesión y pulsa «{t("invite.join")}», o elige «{t("invite.tab.existing")}» y entra con tu
+          usuario. Un alumno sin ninguna asignatura también puede pegarlo en la pantalla de
+          inicio. Un enlace de clase en pausa no deja entrar a nadie hasta que tu docente lo
+          reanude.
         </Paragraph>
       </Block>
 
@@ -1784,7 +1793,8 @@ function Admin() {
         <Paragraph>
           Aquí se decide quién existe y dónde entra. <strong>No hay registro abierto</strong>, y
           es una decisión, no una carencia: una cuenta existe porque alguien abrió un enlace de
-          invitación de un solo uso, o porque se creó desde la línea de órdenes. El enlace{" "}
+          invitación de un solo uso o el enlace de clase de un docente, o porque se creó desde la
+          línea de órdenes. El enlace{" "}
           <em>es</em> la invitación y no va atado a ningún correo, así que se pasa a mano y no se
           deja en un sitio compartido. Quien lo abre elige su usuario y su contraseña, y nada
           más: la invitación dice si la cuenta será de un docente o de un alumno, y por eso el
@@ -1913,6 +1923,12 @@ function Admin() {
           {t("nav.mySubjects")}» ve solo sus asignaturas y sus ejercicios, como cualquier
           cuenta. Borrarlos o generar más como ellos sigue siendo cosa de quien los escribió,
           desde «{t("nav.mySubjects")}».
+        </Paragraph>
+        <Paragraph>
+          Debajo de la tabla, «{t("ws.classLinks.title")}» lista el enlace vivo de cada
+          asignatura que tiene uno: las plazas ocupadas, la caducidad y quién lo creó. Desde aquí
+          se pausa o se revoca; sus plazas y su fecha las cambian sus docentes, en «
+          {t("class.title")}».
         </Paragraph>
         <Rows
           items={[

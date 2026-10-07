@@ -1,6 +1,7 @@
 import { workspaceHeader } from "@/state/workspace";
 import type {
   ContentContextState,
+  AdminClassLink,
   AdminEngine,
   AdminFeaturesPayload,
   AdminGenerationListing,
@@ -8,6 +9,8 @@ import type {
   AdminOverview,
   ArtifactName,
   BankListing,
+  ClassLinkTerms,
+  ClassLinkView,
   BuildPlans,
   CommissionScope,
   ConceptSource,
@@ -28,11 +31,15 @@ import type {
   InviteRow,
   InviteTerms,
   Job,
+  JoinedSession,
   KgSummary,
   MaintenanceState,
   Member,
   MemberAction,
+  MemberInvite,
   MembersBulkResult,
+  MintedClassLink,
+  MintedMemberInvite,
   MintedInvite,
   Pipeline,
   TunnelStatus,
@@ -261,6 +268,9 @@ export const api = {
     ui_language: string;
   }) => post<Session>("/api/auth/accept", body),
 
+  // An account that already exists entering the subject a link names: either kind of link.
+  join: (token: string) => post<JoinedSession>("/api/auth/join", { token }),
+
   workspaces: () => request<WorkspaceListing>("/api/workspaces"),
 
   // The people of the subject in use, for its teachers (`server/routers/members.py`).
@@ -271,6 +281,22 @@ export const api = {
       : post<{ members: Member[] }>(`/api/members/${userId}/${action}`),
   membersBulk: (action: MemberAction, userIds: number[]) =>
     post<MembersBulkResult>("/api/members/bulk", { action, user_ids: userIds }),
+  // The subject's class link. Its terms travel without the link; the link is a read of its
+  // own, and the server logs who made it.
+  classLink: () => request<{ class_link: ClassLinkView | null }>("/api/members/class-link"),
+  classLinkUrl: () => request<{ link: string }>("/api/members/class-link/link"),
+  // Mints the link, or renews it: the live one stops working, and whoever entered stays.
+  mintClassLink: (terms: { max_uses: number; expires_at: string | null }) =>
+    post<MintedClassLink>("/api/members/class-link", terms),
+  editClassLink: (changes: ClassLinkTerms) =>
+    patch<{ class_link: ClassLinkView }>("/api/members/class-link", changes),
+  // The subject's personal invitations, a student's each, one per name.
+  memberInvites: () => request<{ invites: MemberInvite[] }>("/api/members/invites"),
+  mintMemberInvites: (body: { names: string[]; expires_at: string | null }) =>
+    post<{ invites: MintedMemberInvite[] }>("/api/members/invites", { ...body, role: "viewer" }),
+  memberInviteLink: (id: number) => request<{ link: string }>(`/api/members/invites/${id}/link`),
+  revokeMemberInvite: (id: number) =>
+    request<{ revoked: boolean }>(`/api/members/invites/${id}`, { method: "DELETE" }),
   // The prompt language travels with the creation and only with it: the relation labels a
   // build writes into the graph are what the loader indexes by, so once anything is built
   // the choice is baked into the artifacts and there is nothing to change it to.
@@ -469,6 +495,13 @@ export const api = {
     patch<{ invite: InviteRow }>(`/api/admin/invites/${id}`, changes),
   adminRevokeInvite: (id: number) =>
     request<{ revoked: boolean }>(`/api/admin/invites/${id}`, { method: "DELETE" }),
+  // Every subject's live class link; the administrator pauses or retires one, and changes
+  // nothing else of it — its seats and its date are its teachers'.
+  adminClassLinks: () => request<{ class_links: AdminClassLink[] }>("/api/admin/class-links"),
+  adminPauseClassLink: (id: number, paused: boolean) =>
+    patch<{ id: number; paused: boolean }>(`/api/admin/class-links/${id}`, { paused }),
+  adminRevokeClassLink: (id: number) =>
+    request<{ revoked: number }>(`/api/admin/class-links/${id}`, { method: "DELETE" }),
   // The one thing the panel writes about instances, and it is deletion. It goes through
   // `/api/admin` and not `/api/workspaces` because the latter requires membership of the
   // active workspace, which would force entering each instance in order to remove it.

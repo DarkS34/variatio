@@ -237,7 +237,8 @@ export function translator(language: Language): Translate {
 }
 
 export function useLanguage(): Language {
-  return useSyncExternalStore(localeStore.subscribe, localeStore.getSnapshot);
+  // The same snapshot server-side, so a screen also draws as markup (its tests do).
+  return useSyncExternalStore(localeStore.subscribe, localeStore.getSnapshot, localeStore.getSnapshot);
 }
 
 /**

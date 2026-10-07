@@ -95,6 +95,12 @@
   --code-string: oklch(0.449 0.065 208);
   --code-number: oklch(0.436 0.131 298);
 
+  /* A QR CODE IS CONTENT, like a page of the notes: dark modules on a light ground in either
+     theme, because a phone reads a projected code only that way round. Not redefined in
+     dark on purpose. The ground sits at the no-white ceiling; the contrast is measured. */
+  --qr: oklch(0.93 0.008 203);
+  --qr-foreground: oklch(0.2 0.02 216);
+
   /* BOTH HALVES OF A SHADOW ARE THE SEA. The light falls from the top left: the dark half is
      a deeper sea, the light half a pale sea-glass — never white. */
   --shadow-dark: oklch(0.661 0.040 218);
@@ -236,6 +242,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-ink: var(--ink);
   --color-ink-foreground: var(--ink-foreground);
+  --color-qr: var(--qr);
+  --color-qr-foreground: var(--qr-foreground);
   --color-sunk: var(--sunk);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);

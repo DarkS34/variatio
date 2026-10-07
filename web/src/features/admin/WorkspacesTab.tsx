@@ -24,6 +24,7 @@ import {
 import { useT, withCatalogues } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
+import { ClassLinksBlock } from "./ClassLinksBlock";
 import { SectionHeader } from "./Sections";
 import { WorkspaceGenerations } from "./WorkspaceGenerations";
 
@@ -182,6 +183,10 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
       </div>
 
       <FormError error={remove.error} />
+
+      <ClassLinksBlock
+        names={Object.fromEntries(overview.workspaces.map((row) => [row.slug, row.name]))}
+      />
 
       {renaming ? (
         <RenameWorkspaceDialog workspace={renaming} onClose={() => setRenaming(null)} />

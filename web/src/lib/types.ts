@@ -900,7 +900,12 @@ export interface AdminEngine {
   cerebras?: CerebrasState;
 }
 
+/** The two kinds of link one address carries: one person's invitation, or a class's link. */
+export type InviteKind = "personal" | "class";
+
 export interface InvitePreview {
+  /** Absent from an API older than class links, whose every link was a personal one. */
+  kind?: InviteKind;
   role: Role;
   workspace: string | null;
   expires_at: string;
@@ -909,6 +914,74 @@ export interface InvitePreview {
    * an API older than the account's profile.
    */
   profile?: EvaluatorProfile;
+  /** Who invites, by the name they show; null when that account is gone. */
+  inviter?: string | null;
+  /** A class link its teacher paused: it lets nobody in until it is resumed. */
+  paused?: boolean;
+}
+
+/** What joining with an account that already exists answers: the session, and whether it was in. */
+export type JoinedSession = Session & { already: boolean };
+
+/** A subject's live class link as its teachers read it: how full, until when — never the link. */
+export interface ClassLinkView {
+  id: number;
+  uses: number;
+  max_uses: number;
+  expires_at: string;
+  expired: boolean;
+  paused: boolean;
+  created_at: string | null;
+  created_by: string | null;
+  /** Whether its link can be read again; false only when the sealing key was missing. */
+  link_stored: boolean;
+}
+
+/** A class link just minted or renewed: its terms and the link itself. */
+export interface MintedClassLink {
+  class_link: ClassLinkView;
+  link: string;
+  stored: boolean;
+}
+
+/** New terms for a class link; only the fields sent change. */
+export interface ClassLinkTerms {
+  max_uses?: number;
+  expires_at?: string;
+  paused?: boolean;
+}
+
+/** One of the subject's personal invitations nobody has used, as its teachers read it. */
+export interface MemberInvite {
+  id: number;
+  label: string | null;
+  role: Role;
+  profile?: unknown;
+  created_at: string | null;
+  expires_at: string;
+  created_by: string | null;
+  state?: InviteState;
+  link_stored?: boolean;
+}
+
+/** A personal invitation a teacher has just minted: its row and the link that IS it. */
+export interface MintedMemberInvite {
+  invite: MemberInvite;
+  link: string;
+  stored?: boolean;
+}
+
+/** A class link as the administrator's panel lists it: whose subject, how full, who minted it. */
+export interface AdminClassLink {
+  id: number;
+  workspace: string;
+  workspace_name: string;
+  uses: number;
+  max_uses: number;
+  expires_at: string;
+  expired: boolean;
+  paused: boolean;
+  created_by: string | null;
 }
 
 /** Unused and still working, or unused and past its date — which can be moved. */

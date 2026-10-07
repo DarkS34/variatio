@@ -11,10 +11,13 @@ import {
   isAhead,
   linkLines,
   matchesInvite,
+  namesOf,
   newDraft,
   termsOf,
   toLocalInput,
+  tokenFrom,
   withFeature,
+  withinTeacherCap,
 } from "./invites";
 
 describe("toLocalInput / fromLocalInput", () => {
@@ -254,5 +257,34 @@ describe("inviteFeatures", () => {
   it("reads nothing from an older API or a malformed answer", () => {
     expect(inviteFeatures({})).toEqual([]);
     expect(inviteFeatures({ features: "tutor" })).toEqual([]);
+  });
+});
+
+describe("tokenFrom", () => {
+  const token = "A".repeat(20) + "b_-" + "c".repeat(20);
+
+  it("reads a link whole, a link with more after it, and a bare token", () => {
+    expect(tokenFrom(`https://variatio.app/invite?token=${token}`)).toBe(token);
+    expect(tokenFrom(`  https://otra.org/invite?x=1&token=${token}#algo `)).toBe(token);
+    expect(tokenFrom(` ${token} `)).toBe(token);
+  });
+});
+
+describe("namesOf", () => {
+  it("reads one name per line, blanks collapsed, empty lines gone, twins kept", () => {
+    expect(namesOf("  Ana   Pérez \r\n\n\tLuis Gil\nAna Pérez\n   \n")).toEqual([
+      "Ana Pérez",
+      "Luis Gil",
+      "Ana Pérez",
+    ]);
+  });
+});
+
+describe("withinTeacherCap", () => {
+  it("lets a date up to 180 days ahead through and stops one past it", () => {
+    const now = new Date(2026, 9, 6, 10, 0);
+    expect(withinTeacherCap("2027-04-04T10:00", now)).toBe(true);
+    expect(withinTeacherCap("2027-04-05T10:00", now)).toBe(false);
+    expect(withinTeacherCap("mañana", now)).toBe(false);
   });
 });

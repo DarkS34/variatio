@@ -369,7 +369,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   subject's personal invitations (one per name, the name as alias; a teacher's — `editor`,
   profile teacher — only by an owner; no `features`; bucket `teacher_invite` per link), reads
   their links again (logged) and deletes them; another subject's are 404. The administrator
-  lists every live class link, pauses and retires one (`/api/admin/class-links`).
+  lists every live class link, pauses and retires one (`/api/admin/class-links`), from the
+  «Enlaces de clase» block under the table of «Asignaturas» («Pausar»/«Reanudar», «Revocar»
+  asked first); their seats and dates stay the teachers'.
   `system class-link --workspace S [--seats N] [--days D] [--renew]` prints or mints it.
 - Invitations are the admin's alone (`routers/admin.py`): chosen expiry (floor, no ceiling),
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
@@ -957,6 +959,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 - `--arm-naive/--arm-rag/--arm-system` are the one categorical scale, order fixed, slots per
   entity, bars and rows only.
+- `--qr`/`--qr-foreground` (2026-10-06) are content, like a page of the notes: a QR code is
+  dark on light in EITHER theme or a phone cannot read it projected, so the pair is not
+  redefined in dark; the ground sits at the no-white ceiling and `check:color` measures the
+  pair as any `-foreground`.
 - Theme: three-state (`system`/`light`/`dark`), dark tokens only under
   `:root[data-theme="dark"]`.
 - Typography: Archivo only, roles by width axis and weight; six ordered steps. Tutorial alone
@@ -1055,7 +1061,38 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   removing is its own dialog — final, offering «Desactivar en su lugar» — and every gesture
   goes through `POST /api/members/bulk`, refusals toasted person by person. A tab whose
   subject closes on its account (`not_member`, `membership_disabled`, or the stream closed
-  with 4403: `runStore.lost`) leaves it through `queries.leaveLostWorkspace`.
+  with 4403: `runStore.lost`) leaves it through `queries.leaveLostWorkspace`. «Invitar»
+  (`features/class/InviteSection.tsx`) is where the screen opens while there is no student;
+  its row reads «Enlace activo · N de M», «Enlace en pausa · …», «Enlace caducado» or «Sin
+  enlace». Three blocks. «Enlace de clase»: without one, seats and a date and «Crear el
+  enlace»; with one, the state line («N de M plazas · caduca el … · Activo»), the link (read
+  once per visit, a logged read; a mint's answer seeds it), «Copiar», «Mostrar el código QR»
+  (a big dialog to project: `lib/qr.ts` draws ONE SVG path with `qrcode-generator` — MIT, no
+  dependencies, in the class screen's chunk alone — medium correction and a quiet zone of
+  four, in `--qr`), «Pausar»/«Reanudar», «Renovar el enlace» (asked first: the current link
+  stops, whoever came in stays; same seats, same date unless gone) and «Cambiar plazas o
+  caducidad» (only what moved is sent). «Invitaciones personales»: one name per line
+  (`invites.namesOf`, twins kept), a date, «Crear N invitaciones» — validated on press, at
+  most 50, 180 days ahead at most (the server's constants mirrored in `lib/invites.ts`) — and
+  what was minted stays until put away: a link per name, «Copiar todo» (alias TAB link) and
+  «Descargar CSV» (`nombre,enlace,caduca`, `lib/csv.ts`: a cell opening `= + - @` or a control
+  character gets the apostrophe of `server/csv_safe.py`, numbers exempt, RFC quoting, a BOM).
+  «Invitaciones sin usar»: «Copiar» reads the link and copies it in the SAME press (a
+  `ClipboardItem` holding the promise), and where the browser refuses, the link opens under
+  the row; «Borrar», asked first.
+- **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
+  2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
+  «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,
+  «Unirme» (`/join`) and «No soy luis — salir»; a link that names no subject (an
+  administrator's invitation to create an account) has nothing to join and says so. Without
+  one: tabs «Crear mi cuenta» (the registration) and «Ya tengo cuenta» (only when the link
+  names a subject): `useLoginAndJoin` logs in and joins in one press, and a login that works
+  with a join that does not still adopts the session, so the screen turns into the open
+  session's with the reason. A paused class link says so, with «Volver a comprobar», and lets
+  nothing through. A join adopts the answer like a login (`useJoin`), toasts «Ya estás en…» or
+  «Ya estabas en…» named from that answer, and goes to `/`. A student in no subject pastes
+  the link instead (`NoWorkspace`), read by `invites.tokenFrom`, which mirrors
+  `links.token_from`.
 - «Mis asignaturas y ejercicios» (`/account/workspaces`, the account menu's entry): the
   subjects are the rows of ONE block and open alone, across the whole width; the button on a
   row that counts its exercises narrows the list into a column (its width animated,
@@ -1287,6 +1324,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   union, the functions' keys through `import type` only. A key read anywhere in core stays
   in `lib/i18n/`. `pnpm check:i18n` refuses a function's key read outside its folder, a key
   in no catalogue, a key in two, and a lazy module that does not register first.
+- A screen's test draws it as markup (`renderToStaticMarkup`, node, its providers around
+  it, `features/auth/AcceptInvite.test.ts`); `useLanguage` has a server snapshot for that.
 - API payloads are read defensively: an older API must degrade the screen, never blank it.
   A panel that cannot load says so.
 - `index.html` revalidates, `/assets` is immutable; a stale-chunk error reloads once.
