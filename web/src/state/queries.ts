@@ -34,6 +34,7 @@ export const keys = {
   // Not scoped: the tab's subject, the one `X-Workspace` names.
   curriculum: ["kg", "curriculum"] as const,
   studentUses: ["members", "uses"] as const,
+  activity: ["activity"] as const,
   pipeline: ["pipeline"] as const,
   profile: ["profile"] as const,
   context: ["context"] as const,
@@ -469,6 +470,32 @@ export function useSaveCurriculum() {
   return useMutation({
     mutationFn: (concepts: string[]) => putCurriculum(concepts, true),
     onSuccess: (state) => client.setQueryData(keys.curriculum, state),
+  });
+}
+
+/** The class's weeks, the newest first, with their figures; `student` narrows the figures. */
+export function useActivityWeeks(student: number | null) {
+  return useQuery({
+    queryKey: [...keys.activity, "weeks", student],
+    queryFn: () => api.activityWeeks(student),
+  });
+}
+
+/** One week of the class, or of one student. */
+export function useActivityWeek(week: string | null, student: number | null) {
+  return useQuery({
+    queryKey: [...keys.activity, "week", week, student],
+    queryFn: () => api.activityWeek(week!, student),
+    enabled: week !== null,
+  });
+}
+
+/** Ask for a week's digest; the screen follows its job and reads the week again when it ends. */
+export function useWriteDigest() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.writeDigest,
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.activity }),
   });
 }
 

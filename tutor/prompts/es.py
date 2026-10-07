@@ -416,6 +416,49 @@ def criteria_merge_prompt(texts: list[str]) -> str:
     )
 
 
+# THE WEEKLY DIGEST -----------------------------------------------------------------------
+
+
+def digest_prompt(
+    concept: str, unit: str | None, messages: list[str], max_themes: int, max_words: int
+) -> str:
+    """Return the prompt that sums up, for a teacher, what a class asked about one concept in a week."""
+    numbered = "\n\n".join(f"[{index}] {text}" for index, text in enumerate(messages, 1))
+    placed = f", de la unidad «{unit}»" if unit else ""
+    return (
+        "Resume para un docente lo que sus alumnos han preguntado esta semana al tutor de la "
+        "asignatura sobre un concepto.\n\n"
+        f"Concepto: «{concept}»{placed}.\n\n"
+        f"Mensajes de los alumnos, numerados:\n{numbered}\n\n"
+        "Escribe los temas que se repiten: qué no entienden, en qué se equivocan o qué piden.\n\n"
+        "Reglas:\n"
+        f"- Como mucho {max_themes} temas, el más frecuente primero. Menos es mejor que muchos.\n"
+        f"- Cada tema es UNA frase de {max_words} palabras como mucho, en tercera persona del "
+        "plural («Confunden…», «Piden…», «No ven…»).\n"
+        "- Escribe con tus palabras: no copies frases de los mensajes, tampoco entre comillas.\n"
+        "- No nombres a ningún alumno ni digas cuántos son.\n"
+        "- En \"messages\", los números de los mensajes que cubre el tema.\n"
+        "- Un mensaje que no trata de la asignatura no entra en ningún tema.\n\n"
+        'Contesta solo con el JSON {"themes": [{"text": "...", "messages": [1, 2]}]}.'
+    )
+
+
+_DIGEST_FAILURES = {
+    "copy": "un tema copiaba palabras de un mensaje: escríbelo con las tuyas",
+    "name": "un tema nombraba a un alumno: no nombres a nadie",
+    "long": "un tema pasaba del número de palabras",
+    "empty": "un tema no cubría ningún mensaje de la lista",
+}
+
+
+def digest_retry_note(failures: list[str]) -> str:
+    """Return the note a second digest call carries, naming what the first got wrong."""
+    said = "; ".join(
+        _DIGEST_FAILURES[code] for code in dict.fromkeys(failures) if code in _DIGEST_FAILURES
+    )
+    return f"\n\nLa respuesta anterior no valía ({said}). Escríbela otra vez siguiendo las reglas."
+
+
 def schema_text(schema: dict) -> str:
     """Render a JSON schema for a prompt that runs without its grammar."""
     return json.dumps(schema, ensure_ascii=False, indent=2)

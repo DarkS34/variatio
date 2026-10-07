@@ -12,7 +12,7 @@ from variatio.settings.types import Impact, Setting
 STAGE = "tutoring"
 GROUP = "Tutor"
 
-# The tutor's three model calls, drawn on its own configuration screen. The guardrail it
+# The tutor's four model calls, drawn on its own configuration screen. The guardrail it
 # runs first is the generation's call, read through `READS` and not declared again.
 LANE = Lane(
     STAGE,
@@ -41,12 +41,25 @@ LANE = Lane(
             effort="tutor.effort.criteria",
             note="Redacta los criterios de la asignatura, una llamada por unidad del temario.",
         ),
+        Phase(
+            "tutor_digest",
+            "Síntesis",
+            "tutor.models.digest",
+            setting="tutor.reasoning.digest",
+            effort="tutor.effort.digest",
+            note="Resume para los docentes lo que sus alumnos preguntan al tutor en una semana, una llamada por concepto.",
+        ),
     ),
 )
 
 # The settings that name the model of a call: they get the context cap and the protection
 # against deletion that every phase model has.
-MODEL_KEYS = ("tutor.models.reply", "tutor.models.classify", "tutor.models.criteria")
+MODEL_KEYS = (
+    "tutor.models.reply",
+    "tutor.models.classify",
+    "tutor.models.criteria",
+    "tutor.models.digest",
+)
 
 # The pipeline's settings a turn reads too: the guardrail, the embedder and the matching of
 # names, the offered models a turn writes with by default, and the repair of a broken JSON.
@@ -379,6 +392,39 @@ convenciones que el docente sigue en todas.""",
         phase="tutor_criteria",
         minimum=0,
     ),
+    _model(
+        "digest",
+        """QUÉ MODELO ESCRIBE LA SÍNTESIS DE LA SEMANA: los temas de lo que los alumnos de una asignatura
+preguntan al tutor, que sus docentes leen en «Clase → Actividad». Vacío usa el modelo de la
+clasificación. Solo corre cuando un docente la pide, y espera en la cola detrás de los turnos
+del tutor.""",
+    ),
+    _switch(
+        "digest",
+        False,
+        """Si la síntesis de la semana razona. Apagado por defecto, como las demás lecturas acotadas: con
+gramática el modelo solo puede devolver temas y números de mensajes. Encenderlo quita la
+gramática. Sin medir.""",
+    ),
+    _effort("digest"),
+    _number(
+        "digest_max_messages",
+        "int",
+        40,
+        """Cuántos mensajes de cada concepto lee la síntesis de una semana, los más recientes. Más llena
+el prompt sin cambiar los temas: lo que se repite ya está en los cuarenta últimos. Sin medir.""",
+        phase="tutor_digest",
+        minimum=5,
+    ),
+    _number(
+        "digest_max_concepts",
+        "int",
+        15,
+        """Sobre cuántos conceptos escribe temas la síntesis de una semana, los más preguntados: una
+llamada por concepto. Lo que queda fuera sigue en las cifras de la semana. Sin medir.""",
+        phase="tutor_digest",
+        minimum=1,
+    ),
     *phase_sampling(
         "tutor_reply",
         (STAGE,),
@@ -389,4 +435,5 @@ seguidos no repitan la misma fórmula. Sin medir.""",
     ),
     *phase_sampling("tutor_classify", (STAGE,)),
     *phase_sampling("tutor_criteria", (STAGE,)),
+    *phase_sampling("tutor_digest", (STAGE,)),
 ]

@@ -10,8 +10,10 @@ from variatio import settings
 REPLY_MODEL: str
 CLASSIFY_MODEL: str
 CRITERIA_MODEL: str
+DIGEST_MODEL: str
 THINK_REPLY: bool | str
 THINK_CRITERIA: bool | str
+THINK_DIGEST: bool | str
 MESSAGE_MAX_CHARS: int
 DAILY_MESSAGES: int | None
 HISTORY_TURNS: int
@@ -31,6 +33,8 @@ CRITERIA_EVIDENCE_CHARS: int
 CRITERIA_SOLUTIONS: int
 CRITERIA_PER_UNIT: int
 CRITERIA_MAX_TOKENS: int
+DIGEST_MAX_MESSAGES: int
+DIGEST_MAX_CONCEPTS: int
 
 
 def derive(values: dict[str, object]) -> dict[str, object]:
@@ -38,12 +42,16 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     # An empty model is the writer of a generation, which every installation already has
     # loaded, capped and protected; the two other calls follow the reply's.
     reply = str(values.get("tutor.models.reply") or "") or pipeline_config.VARIANT_GENERATION_LLM
+    classify = str(values.get("tutor.models.classify") or "") or reply
     return {
         "REPLY_MODEL": reply,
-        "CLASSIFY_MODEL": str(values.get("tutor.models.classify") or "") or reply,
+        "CLASSIFY_MODEL": classify,
         "CRITERIA_MODEL": str(values.get("tutor.models.criteria") or "") or reply,
+        # The weekly digest reads like the classification: short answers under a grammar.
+        "DIGEST_MODEL": str(values.get("tutor.models.digest") or "") or classify,
         "THINK_REPLY": _think(values, "reply"),
         "THINK_CRITERIA": _think(values, "criteria"),
+        "THINK_DIGEST": _think(values, "digest"),
         "MESSAGE_MAX_CHARS": values["tutor.message_max_chars"],
         "DAILY_MESSAGES": values["tutor.daily_messages"],
         "HISTORY_TURNS": values["tutor.history_turns"],
@@ -63,6 +71,8 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         "CRITERIA_SOLUTIONS": values["tutor.criteria_solutions"],
         "CRITERIA_PER_UNIT": values["tutor.criteria_per_unit"],
         "CRITERIA_MAX_TOKENS": values["tutor.criteria_max_tokens"],
+        "DIGEST_MAX_MESSAGES": values["tutor.digest_max_messages"],
+        "DIGEST_MAX_CONCEPTS": values["tutor.digest_max_concepts"],
     }
 
 

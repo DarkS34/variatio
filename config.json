@@ -161,7 +161,9 @@
     "criteria_evidence_chars": 14000,
     "criteria_per_unit": 5,
     "criteria_max_tokens": 4096,
-    "criteria_solutions": 6
+    "criteria_solutions": 6,
+    "digest_max_messages": 40,
+    "digest_max_concepts": 15
   },
   "profiles": {
     "cerebras+ollama": {

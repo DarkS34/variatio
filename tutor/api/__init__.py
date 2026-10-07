@@ -10,7 +10,8 @@ package: that is what keeps `import tutor` free of FastAPI and SQLAlchemy.
 
 
 def install(app) -> None:
-    """Register the tutor's two jobs, their lanes and their function, and mount its routers."""
+    """Register the tutor's three jobs, their lanes and their function, and mount its routers."""
+    from server import activity as class_activity
     from server import features
     from server.jobs import lanes
     from server.jobs.catalogue import (
@@ -25,7 +26,7 @@ def install(app) -> None:
     from variatio import config as pipeline_config
 
     from .. import config as tutor_config
-    from . import admin, jobs, router
+    from . import activity, admin, digest, jobs, router
 
     # Handlers only, and no entry in `JOB_LABELS`: that table is what `POST /api/jobs` accepts,
     # and a turn or a drafting must come through the tutor's own routes, which check what the
@@ -46,6 +47,15 @@ def install(app) -> None:
     JOB_CLASS[jobs.TURN] = INTERACTIVE
     JOB_CLASS[jobs.CRITERIA] = BACKGROUND
 
+    # The weekly digest of what a class asks, queued by the teachers' activity route and not
+    # behind the tutor's function (a teacher reads their class's whether or not the tutor is
+    # open to their own account). Its author's alone while it runs, background work, and the
+    # server reads the conversations for its weekly counts through this package's reader.
+    HANDLERS[digest.DIGEST] = digest.handle_digest
+    PRIVATE_KINDS.add(digest.DIGEST)
+    JOB_CLASS[digest.DIGEST] = BACKGROUND
+    class_activity.TUTOR_READER = activity.read
+
     # The models each job calls, read at queueing time like every other kind's: the reply and
     # the classification for a turn, the drafting for the criteria, and — for both — what
     # warming a cold context may call (the concept describer and the repair).
@@ -59,6 +69,10 @@ def install(app) -> None:
         *warming(),
     ]
     lanes.EXTRA_MODELS[jobs.CRITERIA] = lambda params: [tutor_config.CRITERIA_MODEL, *warming()]
+    lanes.EXTRA_MODELS[digest.DIGEST] = lambda params: [
+        tutor_config.DIGEST_MODEL,
+        pipeline_config.REPAIR_LLM,
+    ]
 
     app.include_router(router.router)
     app.include_router(admin.router)

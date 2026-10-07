@@ -41,6 +41,8 @@ import type {
   MembersBulkResult,
   MintedClassLink,
   StudentUses,
+  ActivityHistory,
+  ActivityWeek,
   MintedMemberInvite,
   MintedInvite,
   Pipeline,
@@ -301,6 +303,18 @@ export const api = {
   // Retires the live link without a new one: it stops working, and whoever entered stays.
   revokeClassLink: () =>
     request<{ revoked: boolean }>("/api/members/class-link", { method: "DELETE" }),
+  // What the subject's students do, week by week, for its teachers; `student` narrows it.
+  activityWeeks: (student: number | null) =>
+    request<ActivityHistory>(`/api/activity/weeks${student ? `?student=${student}` : ""}`),
+  activityWeek: (week: string, student: number | null) =>
+    request<ActivityWeek>(
+      `/api/activity/weeks/${encodeURIComponent(week)}${student ? `?student=${student}` : ""}`,
+    ),
+  // Queues the week's digest: what the class asked the tutor, in a few themes per concept.
+  writeDigest: (week: string) =>
+    post<{ job: Job; queue_position: number }>(
+      `/api/activity/weeks/${encodeURIComponent(week)}/digest`,
+    ),
   // What the subject's students may use; a teacher closes generating or the tutor to them.
   studentUses: () => request<StudentUses>("/api/members/uses"),
   setStudentUses: (changes: Partial<Pick<StudentUses, "generate" | "tutor">>) =>

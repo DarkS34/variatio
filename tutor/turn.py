@@ -51,6 +51,7 @@ class TurnResult:
     references: list[dict] = field(default_factory=list)
     card: dict | None = None
     concept_map: dict | None = None
+    sent_back: tuple[str, str] | None = None
     checks: dict = field(default_factory=dict)
     retried: bool = False
     fallback: bool = False
@@ -67,6 +68,9 @@ class TurnResult:
             "references": self.references,
             "card": self.card,
             "concept_map": self.concept_map,
+            # The concept and the prerequisite the reply sent the student back to, read by
+            # the teachers' weekly counts (`server/activity.py`) whether or not a map was drawn.
+            "sent_back": list(self.sent_back) if self.sent_back else None,
             "checks": self.checks,
             "retried": self.retried,
             "fallback": self.fallback,
@@ -229,6 +233,7 @@ def run_turn(
         next_state=focus.after_reply(state, current, drawn),
         references=the_card.references(text, sent_back),
         concept_map=the_map.record() if the_map else None,
+        sent_back=sent_back,
         card={
             **the_card.record(),
             **({"exercise_score": classified.exercise_score} if classified.exercise_score else {}),

@@ -1,4 +1,5 @@
 import {
+  Activity,
   CalendarX,
   GraduationCap,
   Link2,
@@ -34,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { useIsOwner, useSession } from "@/state/auth";
 import {
   useActiveWorkspace,
+  useActivityWeeks,
   useClassLink,
   useCurriculum,
   useMemberActions,
@@ -41,30 +43,36 @@ import {
   useStudentUses,
 } from "@/state/queries";
 
+import { ActivitySection, activityDetail } from "./ActivitySection";
 import { EndCourseSection } from "./EndCourseSection";
 import { InviteSection, classLinkDetail } from "./InviteSection";
 import { ProgressSection, progressDetail } from "./ProgressSection";
 import { UsesSection, usesDetail } from "./UsesSection";
 
-type ClassSection = "students" | "invite" | "progress" | "uses" | "end";
+type ClassSection = "students" | "activity" | "invite" | "progress" | "uses" | "end";
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
  *
  * Drawn as the administrator's panel draws a tab (`admin/Sections`): the list of its sections
  * beside the section open, one column of blocks under the section's header, rows parted by
- * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet. Then
- * what the class has covered («Avance del curso») and what its students may use, and,
- * ruled off, the owner's «Fin de curso». A student never reaches it: the route is
+ * rules. It opens on «Alumnos», or on «Invitar» while there is nobody to list yet. «Actividad»
+ * follows the class list (a row's icon opens it on that student); then what the class has
+ * covered («Avance del curso») and what its students may use, and, ruled off, the owner's
+ * «Fin de curso». A student never reaches it: the route is
  * a teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
  */
 export function ClassScreen() {
-  const { t, plural } = useT();
+  const tr = useT();
+  const { t, plural } = tr;
   const session = useSession();
   const members = useMembers();
   const classLink = useClassLink();
   const progress = useCurriculum();
   const uses = useStudentUses();
+  const activity = useActivityWeeks(null);
+  // The student «Actividad» reads, or the whole class: kept here so «Alumnos» can open it.
+  const [activityOf, setActivityOf] = useState<number | null>(null);
   const owner = useIsOwner();
   // Null until somebody picks: the section to open on depends on the list, which arrives later.
   const [picked, setPicked] = useState<ClassSection | null>(null);
@@ -84,6 +92,12 @@ export function ClassScreen() {
       detail: paused
         ? `${plural("class.studentCount", students.length - paused)} · ${plural("class.pausedCount", paused)}`
         : plural("class.studentCount", students.length),
+    },
+    {
+      key: "activity",
+      label: t("class.activity"),
+      mark: <Activity className="size-4" />,
+      detail: activityDetail(activity.data, tr),
     },
     {
       key: "invite",
@@ -133,7 +147,9 @@ export function ClassScreen() {
           value={section}
           onChange={(key) => setPicked(key as ClassSection)}
         >
-          {section === "invite" ? (
+          {section === "activity" ? (
+            <ActivitySection student={activityOf} onStudent={setActivityOf} />
+          ) : section === "invite" ? (
             <InviteSection subject={subject} slug={slug} />
           ) : section === "progress" ? (
             <ProgressSection />
@@ -142,7 +158,13 @@ export function ClassScreen() {
           ) : section === "end" && owner ? (
             <EndCourseSection subject={subject} />
           ) : (
-            <StudentsSection students={students} />
+            <StudentsSection
+              students={students}
+              onActivity={(id) => {
+                setActivityOf(id);
+                setPicked("activity");
+              }}
+            />
           )}
         </Sections>
       )}
@@ -162,7 +184,13 @@ export function ClassScreen() {
  * which says it is final and offers to pause instead. Each confirmation names how many it is
  * about; what the server refuses comes back person by person.
  */
-function StudentsSection({ students }: { students: Member[] }) {
+function StudentsSection({
+  students,
+  onActivity,
+}: {
+  students: Member[];
+  onActivity: (id: number) => void;
+}) {
   const { t, plural } = useT();
   const confirm = useConfirm();
   const toast = useToast();
@@ -326,6 +354,7 @@ function StudentsSection({ students }: { students: Member[] }) {
                 onTick={(on) => tick(member, on)}
                 onChange={() => change([member])}
                 onRemove={() => setRemoving([member])}
+                onActivity={() => onActivity(member.user_id)}
               />
             ))}
           </ul>
@@ -375,6 +404,7 @@ function StudentRow({
   onTick,
   onChange,
   onRemove,
+  onActivity,
 }: {
   member: Member;
   ticked: boolean;
@@ -382,6 +412,7 @@ function StudentRow({
   onTick: (on: boolean) => void;
   onChange: () => void;
   onRemove: () => void;
+  onActivity: () => void;
 }) {
   const { t } = useT();
   const via = viaKey(member.via);
@@ -419,6 +450,15 @@ function StudentRow({
           {t("class.joinedOn", { date: when(member.joined_at) })}
         </span>
         <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("class.viewActivity", { name: member.name })}
+            title={t("class.viewActivityShort")}
+            onClick={onActivity}
+          >
+            <Activity />
+          </Button>
           <Button
             size="icon-sm"
             variant="ghost"

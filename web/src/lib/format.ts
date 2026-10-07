@@ -41,6 +41,30 @@ export function clock(ts: number): string {
   return new Date(ts * 1000).toLocaleTimeString(dateLocale(), { hour12: false });
 }
 
+/** A figure in the reader's language, one decimal at most: «2,5» in Spanish. */
+export function number(value: number): string {
+  return new Intl.NumberFormat(dateLocale(), { maximumFractionDigits: 1 }).format(value);
+}
+
+/** A day and its month, short, in the reader's language: «29 sep». */
+export function dayMonth(isoDate: string): string {
+  const [year, month, day] = isoDate.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(dateLocale(), {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+/** A day's initial in the reader's language: «L» for a Monday in Spanish. */
+export function weekdayInitial(isoDate: string): string {
+  const [year, month, day] = isoDate.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(dateLocale(), {
+    weekday: "narrow",
+    timeZone: "UTC",
+  });
+}
+
 export function when(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString(dateLocale(), {

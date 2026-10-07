@@ -2609,6 +2609,31 @@ function Class() {
         </Paragraph>
       </Block>
 
+      <Block title={t("class.activity")}>
+        <Paragraph>
+          What your students do, week by week: what they ask the tutor and which exercises
+          they generate. At the top you choose whose: the whole class or one student, also from
+          «{t("class.students")}», with the icon of their row. Below, the strip of weeks is the
+          course's history: each week with its messages and its exercises, and a dot when it
+          has a digest. A week with nothing stays on the strip, dimmed.
+        </Paragraph>
+        <Paragraph>
+          Each week opens on «{t("activity.important")}»: a few sentences, each with the figure
+          behind it, such as a concept half the class asks about and the prerequisite the tutor
+          sends them back to, or who has done nothing. Then «{t("activity.tutor")}», «
+          {t("activity.exercises")}» (by type, level and unit of the syllabus) and, for the
+          whole class, «{t("activity.who")}». A student's figures stand beside the class's
+          median.
+        </Paragraph>
+        <Paragraph>
+          You ask for the digest, with «{t("activity.digest.write")}» or «
+          {t("activity.digest.update")}»: the model sums up the recurring themes, in other words
+          and with no names, and waits in the queue behind your students' messages. The week
+          needs 10 messages about the subject. You never see a conversation or an exercise:
+          only figures and the digest.
+        </Paragraph>
+      </Block>
+
       <Block title={t("class.progress")}>
         <Paragraph>
           Mark what has already been covered in class with «{t("class.progress.mark")}». On

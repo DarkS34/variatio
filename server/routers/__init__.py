@@ -7,6 +7,7 @@ that could swallow it.
 """
 
 from . import (
+    activity,
     admin,
     admin_engine,
     auth,
@@ -31,6 +32,7 @@ ROUTERS = [
     maintenance.router,
     workspaces.router,
     members.router,
+    activity.router,
     health.router,
     pipeline.router,
     context.router,

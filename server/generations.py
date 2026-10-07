@@ -250,6 +250,11 @@ def _matches(
     return not query or query.lower() in _searchable(record)
 
 
+def read(path: Path) -> dict | None:
+    """Return the record one file holds, or None when it is missing or unreadable."""
+    return _read(path)
+
+
 def _read(path: Path) -> dict | None:
     """Read one record, or None when it is missing or unreadable — said once per file."""
     if not path.is_file():

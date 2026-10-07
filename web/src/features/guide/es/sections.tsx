@@ -2596,6 +2596,31 @@ function Class() {
         </Paragraph>
       </Block>
 
+      <Block title={t("class.activity")}>
+        <Paragraph>
+          Qué hacen tus alumnos, semana a semana: qué preguntan al tutor y qué ejercicios
+          generan. Arriba eliges de quién: toda la clase o un alumno, también desde «
+          {t("class.students")}», con el icono de su fila. Debajo, la tira de semanas es el
+          historial del curso: cada semana con sus mensajes y sus ejercicios, y un punto cuando
+          tiene síntesis. Una semana sin nada se queda en la tira, atenuada.
+        </Paragraph>
+        <Paragraph>
+          Cada semana empieza por «{t("activity.important")}»: unas pocas frases, cada una con
+          la cifra que la apoya, como un concepto por el que pregunta media clase y el
+          prerrequisito al que el tutor los manda, o quién no ha hecho nada. Después, «
+          {t("activity.tutor")}», «{t("activity.exercises")}» (por tipo, nivel y unidad del
+          temario) y, para toda la clase, «{t("activity.who")}». Lo de un alumno sale al lado
+          de la mediana de la clase.
+        </Paragraph>
+        <Paragraph>
+          La síntesis la pides tú, con «{t("activity.digest.write")}» o «
+          {t("activity.digest.update")}»: el modelo resume los temas que se repiten, con otras
+          palabras y sin nombres, y espera en la cola detrás de los mensajes de tus alumnos.
+          Hacen falta 10 mensajes sobre la asignatura en la semana. Nunca ves una conversación
+          ni un ejercicio: solo cifras y la síntesis.
+        </Paragraph>
+      </Block>
+
       <Block title={t("class.progress")}>
         <Paragraph>
           Marca lo que ya se ha visto en clase con «{t("class.progress.mark")}». Al guardar,

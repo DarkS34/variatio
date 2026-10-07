@@ -57,6 +57,7 @@ const JOB_KEYS: Record<string, Key> = {
   evaluate: "job.evaluate.label",
   tutor_turn: "job.tutor_turn.label",
   tutor_criteria: "job.tutor_criteria.label",
+  activity_digest: "job.activity_digest.label",
 };
 
 export function artifactName(

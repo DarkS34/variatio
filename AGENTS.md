@@ -50,7 +50,7 @@ education is out of scope; hardcoding a subject is equally a regression.
 - **`main`** (this tree, `/home/deploy/variatio-dev`): the complete system — the library,
   the API, the client, the study (`evaluation/`, `web/src/evaluation/`, the `evaluate` job,
   evaluator profiles, the stage questionnaires) and the Socratic tutor (`tutor/`,
-  `web/src/tutor/`, the `tutor_turn` and `tutor_criteria` jobs). Production serves a separate
+  `web/src/tutor/`, the `tutor_turn`, `tutor_criteria` and `activity_digest` jobs). Production serves a separate
   worktree, `/home/deploy/variatio-prod`. Until 2026-10-03 this was three branches
   (`variatio-web`, `variatio-web-eval`, `variatio-web-tutor`); this one replaces them.
 - **`variatio-vanilla`**: the library and its CLI alone (the branch `main` named until
@@ -500,7 +500,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   workspace scope, the same 404 for others' and malformed ids. The one exception is the
   installation administrator, read-only and only from the panel
   (`GET /api/admin/workspaces/{slug}/generations`, `generations.list_all`, opened from the
-  «Asignaturas» tab's «Ver N ejercicios» button); the author's own routes refuse the admin as anyone. Format 0 is a row exported
+  «Asignaturas» tab's «Ver N ejercicios» button); the author's own routes refuse the admin as anyone. A subject's
+  teachers read FIGURES of their students' exercises — date, type, level, concepts — and never
+  one exercise (`server/activity.py`, decided 2026-10-07). Format 0 is a row exported
   from the retired table: what it never kept is null, never reconstructed. A student (role
   `viewer`) reads their own exercise whole, solution included, but not the bank it was made
   from: `GET /api/generations/{id}` answers them with `provenance.prompt` null and
@@ -598,6 +600,57 @@ subject with no progress bounds nobody. A student's form draws it read-only, «L
 clase» (`GenerateForm.classProgress`), and offers no target outside it. `GenerateForm`'s
 `assumedKnown`/`notYetTaught` mirror `variatio.assumed_known`/`forbidden` — edit the Python
 first.
+
+### Class activity (`server/activity.py`)
+
+What a subject's students do, for its teachers (the user's request and decision, 2026-10-07):
+`/api/activity` (`auth.EDIT`; a student reads nobody's, their own included). **The week is
+the unit**: ISO weeks, Monday to Sunday, UTC (`server/daily.py`); a past week is closed — every
+message and exercise is dated, so its figures do not move — and the present one is open. The
+history is the strip of weeks from the first with activity to now, an empty week kept.
+`?student=<id>` narrows to one student (active or paused; anybody else is 404); a removed
+student counts for nothing, a teacher's own files are not the class's.
+
+- **Counted by code, never read**: of a conversation, each student turn's date, its reply's
+  kind (`on_subject` for theory/exercise/attempt/solution), the concept (chosen, else the
+  reply's first focus) and `sent_back`; of an exercise, its date, type, level (the workspace's
+  difficulty field, `locale.difficulty`) and concepts, and whether a conversation was opened on
+  it. The tutor's half comes through `activity.TUTOR_READER`, which `tutor.api.install` sets
+  (the server never opens the tutor's files); every file goes through `activity.cached`, keyed
+  by modification time and size.
+- **Findings** are typed by the server (`asked`, `solutions`, `unpractised` — with the course's
+  progress only —, `idle`, `trend`; for one student `quiet`, `topic`, `reviewed`, `practised`)
+  and worded by the client (`lib/activity.sayFindings`); the first a teacher can act on is the
+  screen's one `--attention`. Thresholds (`MIN_ASKERS` 3, `SOLUTION_SHARE` 0.4 over
+  `MIN_SOLUTION_MESSAGES` 5) are placeholders until the pilot measures them.
+- **The digest is the teacher's to ask for**, never written on its own:
+  `POST /api/activity/weeks/{week}/digest` queues the tutor's `activity_digest` job (class C,
+  private to its author, not behind the tutor's function — a teacher reads their class's
+  whether or not the tutor is open to them; one per week at a time, 409 `digest_busy`; at
+  least `DIGEST_MIN_MESSAGES` 10 messages about the subject). Its parameter is the week; it
+  groups the week's messages by concept (the `tutor.digest_max_concepts` most asked, each
+  with its latest `tutor.digest_max_messages`), reads their texts inside the job, and asks the
+  `tutor_digest` call (`tutor.models.digest`, empty = the classification's model) for at most
+  three themes per concept, one sentence of 20 words at most, with the numbers of the messages
+  they cover. **Paraphrase only**: a theme that copies more than 8 running words of a message,
+  names a student (whole name, username, or a part of 4 letters or more), is too long or covers
+  nothing is asked again once with a note, then dropped (`tutor/digest.clean_themes`). Only
+  step events cross the stream, the log says counts, and the file —
+  `<workspace>/analytics/digest/<week>.json` — keeps the themes and REFERENCES to the messages
+  (author, conversation, turn), never a message. One digest per week, of the class: a theme's
+  figures are counted from its references over who is of the class now, and a student's
+  reading is the class's digest cut to the themes their messages fall under, with how many
+  are theirs.
+- **The screen** (`features/class/ActivitySection.tsx`, `activity/*`): the scope in the
+  header, the strip of weeks (`WeekStrip`: two figures per week, a dot when it has a digest, an
+  empty week dimmed, arrows from week to week), then three questions in order — where the
+  class gets stuck («Lo importante», then «Qué preguntan al tutor»: the digest by unit and
+  concept, or the most asked concepts until it exists, what they ask for, where the tutor sent
+  them back), what it practises («Qué ejercicios generan»: by type and level in the type's
+  own scale, by unit of the syllabus, a unit not covered yet dashed) and who stopped working
+  («Quién trabaja», the least active first, seven day squares). One student's week is the
+  same blocks with the class's median beside each figure. The design was the user's to choose
+  in rounds; a change to it starts with screenshots.
 
 ### Which model writes a variant
 
@@ -844,7 +897,7 @@ A top-level package, mounted like the evaluation: **`tutor` imports
 `variatio` and never the reverse** (the registry's optional import is the exception);
 `tutor/__init__.py` never imports `tutor/api/`, so `import tutor` stays free of
 FastAPI/SQLAlchemy (pinned by `tests/tutor/test_tutor_boundary.py`). `server/app.py` calls
-`tutor.api.install(app)`, which registers the two jobs in `HANDLERS` (never in `JOB_LABELS`,
+`tutor.api.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
 which is what `POST /api/jobs` accepts: a turn comes through the tutor's routes or not at
 all), their models in `server/jobs/lanes.EXTRA_MODELS`, and mounts `/api/tutor` and the
 admin's read.
@@ -927,7 +980,11 @@ admin's read.
   text), held per slug in memory and rebuilt when a page changes.
 - **Conversations** are files, `<workspace>/tutor/user_<id>/<id>.json`, private to their
   author (the same 404 for others' and malformed ids); the installation administrator reads
-  every account's, read-only, at `/api/admin/workspaces/{slug}/tutor`. A file is written whole
+  every account's, read-only, at `/api/admin/workspaces/{slug}/tutor`. A subject's teachers
+  read what their students asked as figures and a weekly digest in paraphrase, never a
+  conversation (`tutor/api/activity.read`, `tutor/digest.py`; see *Class activity*). Every
+  reply keeps `sent_back` — the concept and the prerequisite it sent the student back to, or
+  null — which the weekly counts read; an older turn says it only through its map's `review`. A file is written whole
   under a per-file lock; the job reads it under that lock too (the route holds it until
   `pending` is written — a free lane started the job before that). `pending` names the job;
   a job gone (failed, cancelled while queued, lost to a restart) marks the student turn
@@ -1157,7 +1214,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the row; «Borrar», asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
   route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
   confirmed in a dialog by typing the subject's name as written, as deleting a subject is;
-  destructive, never `--attention`. Between «Invitar» and «Fin de curso»: «Avance del curso»
+  destructive, never `--attention`. «Actividad» follows «Alumnos» (`ActivitySection`, see
+  *Class activity*; a student row's icon opens it on that student). Between «Invitar» and
+  «Fin de curso»: «Avance del curso»
   (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
   `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
   its confirm, and «Quitar el límite», asked first) and «Qué usan los alumnos»
@@ -1564,7 +1623,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Deleting workspaces/artifacts is the admin's and takes the files; a last-member deletion
   takes the tree; `.history/` is never emptied by it. CORS off.
 - Exercises are private to their author; the installation administrator alone reads every
-  account's, read-only, from the panel (never through `/api/generations`).
+  account's, read-only, from the panel (never through `/api/generations`). A subject's
+  teachers read figures of their students' exercises (type, level, concept, day), never an
+  exercise (2026-10-07; until then they saw no figure of use per student).
 - A private job's events and job routes are its author's alone (`PRIVATE_KINDS`: commissions,
   comparisons, tutor turns); a build's are the subject's. A student's job says nothing of the
   bank while it runs, and a student reads no prompt or exemplar body afterwards (2026-10-06).
@@ -1632,7 +1693,10 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   with the single branch, 2026-10-03); no fourth door.
 - The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
   after the checks, never streamed.
-- Conversations are private to their author; the administrator reads them read-only.
+- Conversations are private to their author; the administrator reads them read-only. A
+  subject's teachers read, of the class and of each student, figures and a weekly digest
+  written in paraphrase — never a student's sentence, never a name, never a conversation —
+  which the teacher asks for; the students are not told (the user's decision, 2026-10-07).
 - The subject's criteria are generated by the system and curated by a teacher (edit role);
   a student never sees or changes them. The method's rules are fixed, not editable, and live
   in the prompt alone (not listed on any screen).

@@ -14,7 +14,8 @@ export type JobKind =
   | "generate"
   | "evaluate"
   | "tutor_turn"
-  | "tutor_criteria";
+  | "tutor_criteria"
+  | "activity_digest";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
@@ -389,6 +390,114 @@ export interface CurriculumState {
   concepts: string[];
   updated_at: string | null;
   dropped: string[];
+}
+
+/* Class activity ------------------------------------------------------------------ */
+
+/** A student of the subject, as the activity names them; `disabled` when a teacher paused them. */
+export interface ActivityStudent {
+  id: number;
+  name: string;
+  username: string;
+  disabled: boolean;
+}
+
+/** One week of the strip: its two figures and whether its digest is written. */
+export interface ActivityWeekSummary {
+  week: string;
+  /** Its Monday, `YYYY-MM-DD`. */
+  start: string;
+  messages: number;
+  exercises: number;
+  active: number;
+  digest: boolean;
+}
+
+/** `GET /api/activity/weeks`: the class's weeks, the newest first, and who is in the class. */
+export interface ActivityHistory {
+  current: string;
+  weeks: ActivityWeekSummary[];
+  students: ActivityStudent[];
+  /** Whether the tutor is installed: without it there is nothing of the tutor to count. */
+  tutor: boolean;
+}
+
+/** What a teacher should read first about a week, typed: the screen words it. */
+export type ActivityFinding =
+  | { kind: "asked"; concept: string; students: number; of: number; prerequisite: string | null; sent_back: number }
+  | { kind: "solutions"; concept: string; solution: number; messages: number }
+  | { kind: "unpractised"; units: string[]; more: number }
+  | { kind: "idle"; students: number; of: number; open: boolean }
+  | { kind: "trend"; active: number; previous: number; open: boolean }
+  | { kind: "quiet"; open: boolean }
+  | { kind: "topic"; concept: string; messages: number }
+  | { kind: "reviewed"; prerequisite: string; times: number }
+  | { kind: "practised"; unit: string; exercises: number };
+
+export interface ActivityTutor {
+  messages: number;
+  students: number;
+  /** By the kind of reply each message got (`theory`, `solution`…). */
+  by_kind: Record<string, number>;
+  by_concept: { concept: string; unit: string | null; messages: number; students: number }[];
+  sent_back: { concept: string; prerequisite: string; times: number; students: number }[];
+  /** Monday first. */
+  per_day: number[];
+}
+
+export interface ActivityExercises {
+  count: number;
+  students: number;
+  by_type: { type: string; count: number; levels: Record<string, number> }[];
+  by_concept: { concept: string; unit: string | null; count: number; students: number }[];
+  /** Every unit of the syllabus in order; `covered` only where the course's progress is set. */
+  by_unit: { unit: string; count: number; covered: boolean | null }[];
+  to_tutor: number;
+  per_day: number[];
+}
+
+export interface ActivityDigestTheme {
+  text: string;
+  messages: number;
+  students: number;
+  /** In one student's reading: how many of the theme's messages are theirs. */
+  mine?: number;
+}
+
+export interface ActivityDigest {
+  written_at: string | null;
+  messages_seen: number;
+  /** Messages about the subject sent after it was written. */
+  new_since: number;
+  concepts: { concept: string; unit: string | null; themes: ActivityDigestTheme[] }[];
+}
+
+export interface ActivityStudentRow extends ActivityStudent {
+  messages: number;
+  exercises: number;
+  /** Messages and exercises per day, Monday first. */
+  days: number[];
+}
+
+/** `GET /api/activity/weeks/{week}`: one week of the class, or of one student. */
+export interface ActivityWeek {
+  week: string;
+  start: string;
+  closed: boolean;
+  scope: "class" | "student";
+  student: ActivityStudent | null;
+  class_size: number;
+  tutor: ActivityTutor | null;
+  exercises: ActivityExercises;
+  digest: ActivityDigest | null;
+  digest_ready: boolean;
+  digest_running?: boolean;
+  tutor_offered?: boolean;
+  findings: ActivityFinding[];
+  /** The class's reading only. */
+  students?: ActivityStudentRow[];
+  /** One student's reading only: the class's median, the idle included. */
+  median?: { messages: number; exercises: number };
 }
 
 /** What a subject's teachers let its students use (`GET /api/members/uses`). */
