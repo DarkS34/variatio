@@ -4,6 +4,7 @@ import { readableValue } from "@/lib/text";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
+import { ChoiceMark } from "@/components/ui/choice";
 import { CHOICE_CARD, CHOICE_CHOSEN } from "./FormStep";
 
 /**
@@ -103,7 +104,8 @@ function Rung({
         active && CHOICE_CHOSEN,
       )}
     >
-      <span className={cn("text-body font-medium", active ? "text-primary" : "text-foreground")}>
+      <span className="flex items-center gap-2 text-body font-medium text-foreground">
+        <ChoiceMark chosen={active} />
         {label}
       </span>
       {/* Clamped at three lines, like a modality's description, and never `block` beside

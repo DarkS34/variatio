@@ -31,7 +31,7 @@ export function StatTile({
   tone?: "plain" | "accent";
 }) {
   return (
-    <div className="surface px-4 py-3">
+    <div className="surface p-5">
       <p className="text-small text-muted-foreground">{label}</p>
       <p
         className={cn(

@@ -97,7 +97,7 @@ export function WorkspaceSwitcher() {
             <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
           ) : null}
           <span className="min-w-0 flex-1 text-left">
-            <span className="block truncate text-[12px] font-medium uppercase leading-none tracking-wide text-muted-foreground">
+            <span className="block truncate text-micro font-condensed uppercase leading-none text-muted-foreground">
               {t("workspace.switcher.label")}
             </span>
             <span className="mt-1 block truncate font-medium leading-tight">

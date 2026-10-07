@@ -26,7 +26,7 @@ export function TagLive({ run }: { run: RunView | null }) {
     <Card>
       <CardContent className="space-y-3 py-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h4 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+          <h4 className="text-micro font-condensed uppercase text-muted-foreground">
             {t("bank.tagLive.title")}
           </h4>
           {run && run.taggedCount > 0 ? (

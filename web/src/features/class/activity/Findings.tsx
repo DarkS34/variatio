@@ -45,13 +45,13 @@ export function Findings({ findings, figures }: { findings: ActivityFinding[]; f
         </dl>
       ) : null}
       {views.length === 0 ? (
-        <p className={cn("text-body text-muted-foreground", ruled && "border-t border-border pt-4")}>
+        <p className={cn("text-body text-muted-foreground", ruled && "border-t border-border pt-3.5")}>
           {tr.t("activity.nothing")}
         </p>
       ) : (
-        <ul className={cn("rows", ruled && "border-t border-border")}>
+        <ul className={cn("rows", ruled && "border-t border-border pt-3.5")}>
           {views.map((view, index) => (
-            <li key={index} className="flex items-baseline gap-4 py-3">
+            <li key={index} className="flex items-baseline gap-4">
               <span
                 className={cn(
                   "nums w-14 shrink-0 text-right font-display font-expanded text-title",

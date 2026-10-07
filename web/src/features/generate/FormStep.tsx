@@ -1,6 +1,7 @@
 import { Check, Pencil } from "lucide-react";
 import { useId, type ReactNode } from "react";
 
+import { CARD_CHOICE, CARD_CHOSEN } from "@/components/ui/choice";
 import { InfoHint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
@@ -24,10 +25,9 @@ import { useT } from "@/lib/i18n";
  * pressed, and the chosen one is pressed in (`CHOICE_CHOSEN`). The border stays, transparent:
  * it is one of the pixels the height above was measured with.
  */
-export const CHOICE_CARD =
-  "raised h-[8.3125rem] overflow-hidden border border-transparent p-2.5 text-left transition-[box-shadow,background-color] hover:bg-accent/40";
+export const CHOICE_CARD = cn(CARD_CHOICE, "h-[8.3125rem] overflow-hidden p-2.5");
 /** The chosen card: carved into the block it stood out of. */
-export const CHOICE_CHOSEN = "shadow-well hover:bg-transparent";
+export const CHOICE_CHOSEN = CARD_CHOSEN;
 
 /**
  * One question of the form: open while it is being answered, one line once it is.
@@ -128,7 +128,7 @@ export function FormStep({
               {optional ? (
                 <span
                   id={`${id}-optional`}
-                  className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase"
+                  className="rounded bg-muted px-1.5 py-0.5 text-micro font-condensed uppercase text-muted-foreground"
                 >
                   {t("common.optional")}
                 </span>

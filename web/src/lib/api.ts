@@ -284,12 +284,6 @@ export const api = {
       : post<{ members: Member[] }>(`/api/members/${userId}/${action}`),
   membersBulk: (action: MemberAction, userIds: number[]) =>
     post<MembersBulkResult>("/api/members/bulk", { action, user_ids: userIds }),
-  // Ends the course: every active student paused (or removed) and the class link paused.
-  endCourse: (action: "disable" | "remove") =>
-    post<{ action: string; students: number; class_link_paused: boolean }>(
-      "/api/members/end-course",
-      { action },
-    ),
   // The subject's class link. Its terms travel without the link; the link is a read of its
   // own, and the server logs who made it.
   classLink: () => request<{ class_link: ClassLinkView | null }>("/api/members/class-link"),
@@ -548,6 +542,13 @@ export const api = {
     patch<{ slug: string; name: string }>(
       `/api/admin/workspaces/${encodeURIComponent(slug)}`,
       { name },
+    ),
+  // Ends a subject's course, the administrator's alone: every active student paused (or
+  // removed) and the class link paused.
+  adminEndCourse: (slug: string, action: "disable" | "remove") =>
+    post<{ action: string; students: number; class_link_paused: boolean }>(
+      `/api/admin/workspaces/${encodeURIComponent(slug)}/end-course`,
+      { action },
     ),
   adminDeleteWorkspace: (slug: string) =>
     request<WorkspaceGone>(

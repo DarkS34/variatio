@@ -10,15 +10,17 @@ import {
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label, SearchInput, Select } from "@/components/ui/input";
 import { Alert, Checkbox, LoadError, Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
+import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { PROFILES, PROFILE_LABEL_KEYS } from "@/lib/evaluator";
@@ -66,7 +68,7 @@ import {
   useRevokeInvite,
 } from "@/state/queries";
 
-import { CopyButton, CopyLink } from "./CopyLink";
+import { CopyButton, CopyLink, LinkTable } from "./CopyLink";
 import { SectionHeader } from "./Sections";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
@@ -291,7 +293,7 @@ function RecoverInvite({
 
   return (
     <form noValidate onSubmit={submit} className="space-y-3">
-      <p className="max-w-3xl text-small text-muted-foreground">{t("acc.invite.recover.lead")}</p>
+      <p className="text-small text-muted-foreground">{t("acc.invite.recover.lead")}</p>
       <div className="space-y-1">
         <Label htmlFor="invite-recover-link">{t("acc.invite.recover.link")}</Label>
         <Input
@@ -359,7 +361,7 @@ function TermsFields({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <span id={`${idPrefix}-profile-label`} className="text-small font-medium">
+        <span id={`${idPrefix}-profile-label`} className="text-micro font-condensed uppercase text-muted-foreground">
           {t("acc.invite.profile")}
         </span>
         <div
@@ -370,18 +372,14 @@ function TermsFields({
           {...profiles.group}
         >
           {PROFILES.map((option) => (
-            <Button
+            <ChoicePill
               key={option}
-              type="button"
-              size="sm"
               {...profiles.radio(option)}
-              role="radio"
-              aria-checked={draft.profile === option}
-              variant={draft.profile === option ? "default" : "outline"}
+              chosen={draft.profile === option}
               onClick={() => set({ profile: option })}
             >
               {t(PROFILE_LABEL_KEYS[option])}
-            </Button>
+            </ChoicePill>
           ))}
         </div>
         <p
@@ -457,12 +455,11 @@ function TermsFields({
             onChange={(event) => set({ expires: event.target.value })}
           />
         </div>
-        <div role="group" aria-label={t("acc.invite.quickExpiry")} className="flex flex-wrap gap-1">
+        <div role="group" aria-label={t("acc.invite.quickExpiry")} className="flex flex-wrap gap-2">
           {EXPIRY_PRESETS.map((preset) => (
             <Button
               key={preset.key}
               type="button"
-              size="sm"
               variant="outline"
               onClick={() => set({ expires: toLocalInput(inDays(preset.days)) })}
             >
@@ -538,7 +535,7 @@ function MintedLinks({ minted, onDismiss }: { minted: MintedInvite[]; onDismiss:
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="min-w-0 flex-1 font-medium">{plural("acc.invite.batchDone", minted.length)}</p>
         <CopyButton text={linkLines(minted)} label={t("acc.invite.copyAll")} />
@@ -553,17 +550,10 @@ function MintedLinks({ minted, onDismiss }: { minted: MintedInvite[]; onDismiss:
         </Button>
       </div>
       <p className="text-body">{t("acc.invite.copyMany")}</p>
-      <ul className="max-h-72 divide-y divide-border overflow-y-auto rounded-md border border-border bg-background">
-        {minted.map(({ invite, link }) => (
-          <li key={invite.id} className="flex items-center gap-2 px-2 py-1">
-            <span className="w-40 shrink-0 truncate text-small font-medium" title={invite.label ?? undefined}>
-              {invite.label ?? "—"}
-            </span>
-            <code className="min-w-0 flex-1 truncate font-mono text-small">{link}</code>
-            <CopyButton text={link} compact />
-          </li>
-        ))}
-      </ul>
+      <LinkTable
+        label={plural("acc.invite.batchDone", minted.length)}
+        rows={minted.map(({ invite, link }) => ({ id: invite.id, label: invite.label, link, teacher: false }))}
+      />
       {warning}
     </div>
   );
@@ -661,13 +651,12 @@ function InviteList({
             ]}
           />
         ) : (
-          <h3 className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-micro font-condensed uppercase text-muted-foreground">
             {plural("acc.invite.pendingHeading", pending.length)}
           </h3>
         )}
         {inTab.length > SEARCH_FROM ? (
-          <Input
-            type="search"
+          <SearchInput
             value={query}
             aria-label={t("acc.invite.search")}
             placeholder={t("acc.invite.search")}
@@ -684,7 +673,7 @@ function InviteList({
           {inTab.length === 0 ? t("acc.invite.nonePending") : t("acc.invite.noMatch")}
         </p>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="rows">
           {shown.map((row) => (
             <InviteItem
               key={row.id}
@@ -744,7 +733,7 @@ function InviteItem({
   };
 
   return (
-    <li className="space-y-2 p-2">
+    <li className="group space-y-3">
       {/* The text keeps a floor so that, on a phone, the three actions drop below it as one
           group instead of squeezing it into a column one word wide. */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -786,10 +775,16 @@ function InviteItem({
               : ""}
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-1">
+        {/* Showing the link and editing open a panel under the row and stay in sight;
+            deleting is the row's gesture, shown on hover or focus as on every list. */}
+        <RowGestures
+          className="ml-auto"
+          always={
+            <>
           <Button
             variant="ghost"
             size="sm"
+            className="h-7"
             aria-expanded={panel === "link"}
             onClick={() => toggle("link")}
           >
@@ -799,34 +794,41 @@ function InviteItem({
           <Button
             variant="ghost"
             size="sm"
+            className="h-7"
             aria-expanded={panel === "edit"}
             onClick={() => toggle("edit")}
           >
             <Pencil />
             {t("acc.invite.edit")}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
+            </>
+          }
+        >
+          <RowAction
+            label={t("acc.invite.revokeOne", { name })}
             title={t("acc.invite.revoke")}
-            aria-label={t("acc.invite.revoke")}
+            icon={<Trash2 />}
             disabled={revoke.isPending}
             onClick={remove}
-          >
-            <Trash2 />
-          </Button>
-        </div>
+            danger
+          />
+        </RowGestures>
       </div>
+      {/* What unfolds under a row is held in a well, as «Gestionar» holds an account's. */}
       {panel === "link" ? (
-        <LinkPanel row={row} expired={expired} onRecover={onRecover} />
+        <div className="well p-4">
+          <LinkPanel row={row} expired={expired} onRecover={onRecover} />
+        </div>
       ) : null}
       {panel === "edit" ? (
-        <EditPanel
-          row={row}
-          expired={expired}
-          overview={overview}
-          onClose={() => setPanel(null)}
-        />
+        <div className="well p-4">
+          <EditPanel
+            row={row}
+            expired={expired}
+            overview={overview}
+            onClose={() => setPanel(null)}
+          />
+        </div>
       ) : null}
     </li>
   );
@@ -910,11 +912,7 @@ function EditPanel({
   };
 
   return (
-    <form
-      noValidate
-      onSubmit={submit}
-      className="space-y-3 rounded-lg border border-border bg-muted/30 p-3"
-    >
+    <form noValidate onSubmit={submit} className="space-y-3">
       <TermsFields
         draft={draft}
         onChange={setDraft}

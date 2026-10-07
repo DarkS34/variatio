@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, Checkbox, Skeleton, Spinner } from "@/components/ui/misc";
+import { RowGestures, Table, TableBulk, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { bytes } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import { slotLabel, slotPurpose, staleReasons } from "@/lib/raw";
 import type { RawSlot } from "@/lib/types";
@@ -28,6 +30,9 @@ const VISIBLE = 6;
 
 function DocumentRow({
   name,
+  extension,
+  bytes: size,
+  pages,
   state,
   reasons,
   failedPages,
@@ -41,6 +46,10 @@ function DocumentRow({
   onRemove,
 }: {
   name: string;
+  /** What the file is, how heavy, and how many pages its reading holds: the row's second line. */
+  extension: string;
+  bytes: number;
+  pages: number;
   state: DocumentState;
   reasons: string[];
   failedPages: number;
@@ -49,7 +58,8 @@ function DocumentRow({
   unreadableImages: number;
   busy: boolean;
   canEdit: boolean;
-  selected: boolean | null;
+  /** Undefined where nobody can pick (no column); null on a row that cannot be picked now. */
+  selected?: boolean | null;
   onSelect: (next: boolean) => void;
   onOpen: () => void;
   onRemove: () => void;
@@ -58,98 +68,140 @@ function DocumentRow({
   const meta = STATE[state];
   const notes = staleReasons(reasons, t);
 
+  // A note under the row sits in a row of its own, so the rule falls under the note and the
+  // document and its note read as one entry.
+  const noted = notes.length > 0 || failedPages > 0;
   return (
-    <li className="mx-2 border-t border-border first:border-t-0">
-      <div className="group flex items-center gap-2 px-2 py-1.5 text-small">
+    <>
+      <TR joined={noted} className="group [&>td]:align-top">
         {/* The box goes where the eye starts the row, and it is drawn only for somebody
             who can actually delete: for a reader it would be a control down every row
             that does nothing at all. The icon beside it stays — it is what carries the
             spinner while a document is being re-read. */}
-        {selected === null ? null : (
-          <Checkbox
-            checked={selected}
-            onCheckedChange={onSelect}
-            label={t("raw.selectFile", { name })}
-          />
+        {selected === undefined ? null : (
+          <TD className="pr-0 pt-3.5">
+            {selected === null ? null : (
+              <Checkbox checked={selected} onCheckedChange={onSelect} label={t("raw.selectFile", { name })} />
+            )}
+          </TD>
         )}
-        {busy ? (
-          <Spinner className="size-3.5 shrink-0" />
-        ) : (
-          <FileText aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
-        <span className="min-w-0 flex-1 truncate" title={name}>
-          {name}
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          {/* "leído" is a grey tick and the other two states keep their words: what a
-              person scans this column for is the rows that still need something, and a word
-              on every finished row buries them. Grey is `--settled`. */}
-          {!busy && state === "done" ? (
-            <span title={t("transcribe.state.done")} className="flex items-center px-1">
-              <Check aria-hidden className="size-4 text-settled" />
-              <span className="sr-only">{t("transcribe.state.done")}</span>
+        {/* The name takes what the state and the gestures leave: `max-w-0` lets its cell
+            shrink below its text, so the text truncates instead of widening the table. */}
+        <TD className="max-w-0 py-2.5">
+          {/* Each document an entry of two lines (user's request, 2026-10-08: one thin line
+              a document read as a list of nothing): its name — which opens its pages, as the
+              pencil does — and under it what it is, how heavy and how many pages were read. */}
+          <span className="flex min-w-0 items-start gap-2.5">
+            {busy ? (
+              <Spinner className="mt-0.5 size-4 shrink-0" />
+            ) : (
+              <FileText aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="min-w-0">
+              {state === "pending" || busy ? (
+                <span className="block truncate font-medium" title={name}>
+                  {name}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpen}
+                  title={t("transcribe.reviewPages")}
+                  className="block max-w-full truncate text-left font-medium underline-offset-4 hover:underline"
+                >
+                  {name}
+                </button>
+              )}
+              <span className="nums block truncate text-small text-muted-foreground">
+                {[
+                  extension.replace(/^\./, "").toUpperCase(),
+                  bytes(size),
+                  pages > 0 ? plural("raw.pages", pages) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
             </span>
-          ) : (
-            <Badge variant={busy ? "outline" : (meta?.variant ?? "outline")}>
-              {busy ? t("transcribe.transcribing") : meta ? t(meta.labelKey) : state}
-            </Badge>
-          )}
-          {!busy && failedPages > 0 ? (
-            <Badge variant="danger">{plural("transcribe.failedCount", failedPages)}</Badge>
-          ) : null}
-          {/* A picture of a Word or PowerPoint file nothing could read — a WMF or EMF
-              metafile, usually — leaves a mark in the page and this badge on the row, for
-              the same reason a failed page does: a formula that vanished in silence is
-              worse than one that says it is gone. */}
-          {!busy && unreadableImages > 0 ? (
-            <Badge variant="danger">{plural("transcribe.unreadableImages", unreadableImages)}</Badge>
-          ) : null}
-        </span>
-
-        <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("transcribe.reviewPagesOf", { name })}
-            title={
-              busy
-                ? t("transcribe.beingRewritten")
-                : state === "pending"
-                  ? t("transcribe.noPagesYet")
-                  : t("transcribe.reviewPages")
-            }
-            disabled={state === "pending" || busy}
-            onClick={onOpen}
-          >
-            <PenLine />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("raw.deleteFile", { name })}
-            title={busy ? t("transcribe.beingRewritten") : t("raw.deleteFromSlot")}
-            disabled={busy || !canEdit}
-            onClick={onRemove}
-            className="hover:text-destructive"
-          >
-            <Trash2 />
-          </Button>
-        </span>
-      </div>
-
-      {notes.length > 0 ? (
-        <p className="px-2 pb-1.5 pl-[30px] text-small text-attention">{notes.join(" · ")}</p>
+          </span>
+        </TD>
+        <TD className="py-2.5">
+          <span className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+            {/* "leído" is a grey tick and the other two states keep their words: what a
+                person scans this column for is the rows that still need something, and a word
+                on every finished row buries them. Grey is `--settled`. */}
+            {!busy && state === "done" ? (
+              <span title={t("transcribe.state.done")} className="flex items-center px-1">
+                <Check aria-hidden className="size-4 text-settled" />
+                <span className="sr-only">{t("transcribe.state.done")}</span>
+              </span>
+            ) : (
+              <Badge variant={busy ? "outline" : (meta?.variant ?? "outline")}>
+                {busy ? t("transcribe.transcribing") : meta ? t(meta.labelKey) : state}
+              </Badge>
+            )}
+            {!busy && failedPages > 0 ? (
+              <Badge variant="danger">{plural("transcribe.failedCount", failedPages)}</Badge>
+            ) : null}
+            {/* A picture of a Word or PowerPoint file nothing could read — a WMF or EMF
+                metafile, usually — leaves a mark in the page and this badge on the row, for
+                the same reason a failed page does: a formula that vanished in silence is
+                worse than one that says it is gone. */}
+            {!busy && unreadableImages > 0 ? (
+              <Badge variant="danger">{plural("transcribe.unreadableImages", unreadableImages)}</Badge>
+            ) : null}
+          </span>
+        </TD>
+        <TD className="w-20 py-2">
+          <RowGestures>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("transcribe.reviewPagesOf", { name })}
+              title={
+                busy
+                  ? t("transcribe.beingRewritten")
+                  : state === "pending"
+                    ? t("transcribe.noPagesYet")
+                    : t("transcribe.reviewPages")
+              }
+              disabled={state === "pending" || busy}
+              onClick={onOpen}
+            >
+              <PenLine />
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("raw.deleteFile", { name })}
+              title={busy ? t("transcribe.beingRewritten") : t("raw.deleteFromSlot")}
+              disabled={busy || !canEdit}
+              onClick={onRemove}
+              className="hover:text-destructive"
+            >
+              <Trash2 />
+            </Button>
+          </RowGestures>
+        </TD>
+      </TR>
+      {noted ? (
+        <TR>
+          {selected === undefined ? null : <TD className="pr-0" />}
+          <TD colSpan={3} className="pb-2.5 pl-[2.375rem] pt-0 text-small">
+            {notes.length > 0 ? <p className="text-attention">{notes.join(" · ")}</p> : null}
+            {/* A failed page the next read tries again says so: without it the row reports a
+                loss nobody can act on, when pressing "Procesarlos todos ahora" is exactly the
+                move. */}
+            {failedPages > 0 ? (
+              <p className="text-destructive">
+                {retryPages > 0
+                  ? plural("transcribe.failedPagesRetry", failedPages)
+                  : plural("transcribe.failedPages", failedPages)}
+              </p>
+            ) : null}
+          </TD>
+        </TR>
       ) : null}
-      {/* A failed page the next read tries again says so: without it the row reports a loss
-          nobody can act on, when pressing "Procesarlos todos ahora" is exactly the move. */}
-      {failedPages > 0 ? (
-        <p className="px-2 pb-1.5 pl-[30px] text-small text-destructive">
-          {retryPages > 0
-            ? plural("transcribe.failedPagesRetry", failedPages)
-            : plural("transcribe.failedPages", failedPages)}
-        </p>
-      ) : null}
-    </li>
+    </>
   );
 }
 
@@ -179,6 +231,9 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
         failedPages: entry?.failed_pages ?? 0,
         retryPages: entry?.retry_pages ?? 0,
         unreadableImages: entry?.images_unreadable ?? 0,
+        extension: file.extension,
+        bytes: file.bytes,
+        pages: entry?.pages ?? 0,
       };
     });
   }, [slot.files, state.data]);
@@ -221,7 +276,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
   return (
     <Card className="flex flex-col">
       <div className="mx-5 flex flex-col gap-1.5 border-b border-border py-5">
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <div className="flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <h2 className="min-w-0 flex-1 truncate text-heading">{slotLabel(slot, t)}</h2>
           {empty ? (
             <Badge variant="attention">{t("common.empty")}</Badge>
@@ -245,72 +300,86 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
             <p>{t("transcribe.noResponse", { path: `/api/raw/${slot.kind}/transcription` })}</p>
           </Alert>
         ) : (
-          <ul className="well px-1 py-1.5">
-            {/* One strip over the list rather than a bar under it: what it carries is the
-                select-all box, which has to sit in the column its rows' boxes are in — the
-                same `px-2` as a row — and the one action that acts on the picks. It only
-                exists while the boxes do. */}
-            {picking ? (
-              <li className="mx-2 flex items-center gap-2 border-b border-border px-2 py-1.5 text-small">
-                <Checkbox
-                  checked={allPicked}
-                  indeterminate={selected.length > 0 && !allPicked}
-                  onCheckedChange={(next) => setPicked(next ? deletable : [])}
-                  label={t("raw.selectAll")}
-                  disabled={deletable.length === 0}
-                />
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {selected.length > 0
-                    ? plural("raw.selectedCount", selected.length)
-                    : t("raw.selectAll")}
-                </span>
-                {selected.length > 0 ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={intake.removing}
-                    onClick={async () => {
-                      await intake.removeMany(selected);
-                      setPicked([]);
-                    }}
-                    // No taller than the line of text it shares the strip with: at its own
-                    // height it pushed every row down the moment a box was ticked.
-                    className="-my-1 h-7 text-destructive hover:text-destructive"
-                  >
-                    {intake.removing ? <Spinner /> : <Trash2 />}
-                    {t("raw.deleteSelected")}
-                  </Button>
+          <Table aria-label={slotLabel(slot, t)} minWidth="0">
+            <THead>
+              <tr>
+                {/* The select-all box sits in the column of its rows' boxes, and once
+                    something is picked the head carries the one action over the picks in
+                    place of its captions — the same line, so ticking moves nothing. */}
+                {picking ? (
+                  <TH className="w-10 pr-0">
+                    <Checkbox
+                      checked={allPicked}
+                      indeterminate={selected.length > 0 && !allPicked}
+                      onCheckedChange={(next) => setPicked(next ? deletable : [])}
+                      label={t("raw.selectAll")}
+                      disabled={deletable.length === 0}
+                    />
+                  </TH>
                 ) : null}
-              </li>
-            ) : null}
-            {visible.map((row) => (
-              <DocumentRow
-                key={row.name}
-                {...row}
-                busy={busy === row.name}
-                canEdit={canEdit}
-                selected={picking && busy !== row.name ? selected.includes(row.name) : null}
-                onSelect={(next) =>
-                  setPicked((was) =>
-                    next ? [...was, row.name] : was.filter((name) => name !== row.name),
-                  )
-                }
-                onOpen={() => setOpened(row.name)}
-                onRemove={() => void intake.remove(row.name)}
-              />
-            ))}
-            {rows.length > VISIBLE ? (
-              <li className="mx-2 border-t border-border px-2 py-1.5">
-                <button
-                  type="button"
-                  onClick={() => setExpanded((was) => !was)}
-                  className="text-small text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {expanded ? t("common.showLess") : plural("raw.showRest", rows.length - VISIBLE)}
-                </button>
-              </li>
-            ) : null}
-          </ul>
+                {selected.length > 0 ? (
+                  <TableBulk colSpan={3}>
+                      <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                        {plural("raw.selectedCount", selected.length)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={intake.removing}
+                        onClick={async () => {
+                          await intake.removeMany(selected);
+                          setPicked([]);
+                        }}
+                        className="-my-1.5 h-7 text-destructive hover:text-destructive"
+                      >
+                        {intake.removing ? <Spinner /> : <Trash2 />}
+                        {t("raw.deleteSelected")}
+                      </Button>
+                  </TableBulk>
+                ) : (
+                  <>
+                    {/* The list named, with its size: it reads as a list before a row is read. */}
+                    <TH className="w-full">{plural("raw.col.documents", rows.length)}</TH>
+                    <TH className="whitespace-nowrap text-right">{t("raw.col.state")}</TH>
+                    <TH className="w-20">
+                      <span className="sr-only">{t("raw.col.document")}</span>
+                    </TH>
+                  </>
+                )}
+              </tr>
+            </THead>
+            <TBody>
+              {visible.map((row) => (
+                <DocumentRow
+                  key={row.name}
+                  {...row}
+                  busy={busy === row.name}
+                  canEdit={canEdit}
+                  selected={picking ? (busy !== row.name ? selected.includes(row.name) : null) : undefined}
+                  onSelect={(next) =>
+                    setPicked((was) =>
+                      next ? [...was, row.name] : was.filter((name) => name !== row.name),
+                    )
+                  }
+                  onOpen={() => setOpened(row.name)}
+                  onRemove={() => void intake.remove(row.name)}
+                />
+              ))}
+              {rows.length > VISIBLE ? (
+                <TR>
+                  <TD colSpan={picking ? 4 : 3}>
+                    <button
+                      type="button"
+                      onClick={() => setExpanded((was) => !was)}
+                      className="text-small text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {expanded ? t("common.showLess") : plural("raw.showRest", rows.length - VISIBLE)}
+                    </button>
+                  </TD>
+                </TR>
+              ) : null}
+            </TBody>
+          </Table>
         )}
 
       </div>

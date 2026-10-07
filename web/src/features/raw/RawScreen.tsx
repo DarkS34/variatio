@@ -84,7 +84,7 @@ export function RawScreen() {
               deliberately not `text-display`, or one of the four steps would be the only one
               shouting. */}
           <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: stepNumber(0) })}</p>
-          <h1 className="text-title">{t("nav.step.raw")}</h1>
+          <h1 className="font-display font-expanded text-title">{t("nav.step.raw")}</h1>
           <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
           <GuideLink slug="raw" />
         </header>
@@ -143,7 +143,10 @@ export function RawScreen() {
           phone held upright. Tailwind's `grid-cols-1` is `repeat(1, minmax(0, 1fr))`, and
           the 0 is the whole fix. Nothing is lost by it: the card's real min-content is
           247 px, so the content fits and it is the track that was refusing to. */}
-      <div className="grid grid-cols-1 items-stretch gap-7 lg:grid-cols-2">
+      {/* Each origin as tall as what it holds (user's request, 2026-10-08): stretched to the
+          taller one, the shorter card ended in a band of nothing under its last document. An
+          empty origin keeps the drop zone's own floor (`SlotDropzone`'s `fill`). */}
+      <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-2">
         {slots.map((slot) => (
           <SlotCard key={slot.kind} slot={slot} extensions={raw.data.supported_extensions} />
         ))}

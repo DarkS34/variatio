@@ -57,7 +57,6 @@ LEVELS = {
     ("POST", "/api/members/{user_id:int}/enable"): "editor",
     ("DELETE", "/api/members/{user_id:int}"): "editor",
     # A teacher's links: the class link and the subject's personal invitations.
-    ("POST", "/api/members/end-course"): "owner",
     ("GET", "/api/members/uses"): "editor",
     ("GET", "/api/activity/weeks"): "editor",
     ("GET", "/api/activity/weeks/{week}"): "editor",

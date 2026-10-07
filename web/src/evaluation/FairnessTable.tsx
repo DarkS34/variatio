@@ -77,18 +77,20 @@ export function FairnessTable({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border", className)}>
+    // A fold of the block it sits in, with no frame of its own: the table under it lies flat on
+    // that block as every table does (2026-10-07).
+    <div className={cn("space-y-2", className)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
+        className="flex items-center gap-2 py-1 text-left text-small font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
         {t("fair.title")}
       </button>
       {open ? (
-        <div className="border-t border-border">
+        <div>
           {/* The three arms stay in the declared order — naive, rag, system — which is what
               their contrast pairs were validated on. */}
           <Table minWidth="34rem">

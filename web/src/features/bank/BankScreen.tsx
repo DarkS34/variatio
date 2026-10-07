@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  Search,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -25,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { Label, SearchInput, Select, Textarea } from "@/components/ui/input";
 import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { diagramSource } from "@/lib/diagram";
@@ -616,7 +615,7 @@ function BankMeters({
           there is nothing to do. With an EMPTY bank it is drawn, because there "0 of 0" is
           not "finished" but "there is no bank". */}
       {untagged > 0 || items === 0 ? (
-        <div className="flex-[1.2] space-y-2 p-4">
+        <div className="flex-[1.2] space-y-2 p-5">
           <div className="flex items-baseline justify-between gap-2 text-body">
             <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
             <span className="nums font-medium">
@@ -644,7 +643,7 @@ function BankMeters({
           there. The whole column goes with them: empty, it would be a quarter of a card with
           its border and its padding announcing that something used to be here. */}
       <Correction>
-        <div className="flex flex-[0.9] flex-col items-start gap-2 p-4">
+        <div className="flex flex-[0.9] flex-col items-start gap-2 p-5">
           <div className="flex flex-wrap gap-2">
             {untagged > 0 ? (
               <Button
@@ -861,19 +860,16 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
 
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-56 flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              aria-label={t("bank.search")}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setPage(1);
-              }}
-              placeholder={t("bank.search")}
-              className="pl-8"
-            />
-          </div>
+          <SearchInput
+            className="min-w-56 flex-1"
+            aria-label={t("bank.search")}
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder={t("bank.search")}
+          />
           {severalDeclared ? (
             <Select
               aria-label={t("bank.filterByModality")}
@@ -937,7 +933,6 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
               the row rather than as a dropdown that lost its label. */}
           <Button
             variant={untagged === true ? "default" : "outline"}
-            size="sm"
             onClick={() => {
               setUntagged(untagged === true ? undefined : true);
               setPage(1);
@@ -953,7 +948,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
         ) : null}
 
         {listing ? (
-          <div className="surface overflow-hidden">
+          <div className="surface p-5">
             {/* FIXED LAYOUT, or an open row widens the table. Under the auto algorithm a
                 cell is never narrower than its longest unbreakable line, and a code block
                 with one such line in it — measured: 376 characters — pushed the table to
@@ -1031,7 +1026,7 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
                 scoped retries are the strip above and this one, which re-runs the tagger
                 over items chosen by hand whatever their state. */}
             {listing.items.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3 py-2.5 text-body">
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3 text-body">
                 <Pager
                   page={listing.page}
                   pages={pages}

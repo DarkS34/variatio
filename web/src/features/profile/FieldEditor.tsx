@@ -374,18 +374,17 @@ export function FieldEditor({
   const enumMismatch = type === "enum" && typeAllowsNull(schema) && !enumAllowsNull(schema);
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-inner border bg-card transition-colors",
-        isPrimary ? "border-primary/40" : "border-border",
-      )}
-    >
-      <div className="flex items-center gap-2 pr-2">
+    // One row of the block's ruled list, as the same field is when the stage is read; what it
+    // unfolds is held in a well under it. A frame per field was the screen's last one.
+    <div>
+      {/* The header reaches into the block's padding by its own, so the name starts where
+          the block's title does and the hover tint has room around it. */}
+      <div className="-mx-3 flex items-center gap-2 pr-1">
         <button
           type="button"
           onClick={onToggleOpen}
           aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 p-3 text-left transition-colors hover:bg-accent/40"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-inner p-3 text-left transition-colors hover:bg-accent/40"
         >
           <ChevronDown
             className={cn(
@@ -475,7 +474,7 @@ export function FieldEditor({
       </div>
 
       {open ? (
-        <div className="animate-fade-in space-y-4 border-t border-border p-4">
+        <div className="well animate-fade-in mb-3 space-y-4 p-4">
           {/* Four questions about the FORM of a field, in two rows of two: what it is called
               beside what it is, and under them the two choices of one kind — whether it is
               obligatory, and whether whoever generates chooses to have it. They are ONE

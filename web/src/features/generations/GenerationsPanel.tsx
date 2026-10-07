@@ -152,7 +152,7 @@ export function SubjectExercises({
     );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <form
           className="flex min-w-56 flex-1 items-center gap-2"
@@ -167,17 +167,16 @@ export function SubjectExercises({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <Button type="submit" variant="outline" size="sm">
+          <Button type="submit" variant="outline">
             <Search />
             {t("common.search")}
           </Button>
         </form>
 
         {rows.length > 0 && profile ? (
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => download(`${slug}-ejercicios.md`, asMarkdown, "text/markdown")}
             >
               <Download />
@@ -185,7 +184,6 @@ export function SubjectExercises({
             </Button>
             <Button
               variant="outline"
-              size="sm"
               onClick={() =>
                 download(
                   `${slug}-ejercicios.json`,
@@ -283,7 +281,7 @@ export function GenerationCard({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           {/* The modality first, then the concepts: the row answers "¿qué clase de
               exercise is it, and about what?", which is the order those two are asked in — and
@@ -319,6 +317,7 @@ export function GenerationCard({
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-7"
                 title={t("generations.againHint")}
                 onClick={onAgain}
               >
@@ -327,7 +326,7 @@ export function GenerationCard({
               </Button>
             ) : null}
             {onTutor ? (
-              <Button variant="tutor" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+              <Button variant="tutor" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
                 <MessagesSquare />
                 {t("tutor.fromExercise")}
               </Button>

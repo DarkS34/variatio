@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
  * may use a function — so no row of tiles has to repeat it above.
  *
  * A row is a small thing inside a block: the one open is the sunk tint, never a relief.
- * Every row is the same two lines — a name and one line of state — so the list reads as a
- * list on every tab, whatever it lists.
+ * Every row is the same three parts on every tab — a 16 px mark, a name and one line of state
+ * (user's request, 2026-10-07: «Motor» led with squares of state and «Clase» with icons, and
+ * the two lists read as two components). The mark is an icon; where the list is an ORDER —
+ * the four steps, the units of the syllabus — it is the number in `NumberMark`.
  * Below `lg` the list lies down and scrolls sideways over the section.
  *
  * A list of two kinds of section (the subject's own parts, then one per unit) names the
@@ -24,9 +26,6 @@ import { cn } from "@/lib/utils";
  * that ends a course among the ones that run it — is ruled off from those above (`separated`),
  * across the list when it stands and down it when it lies. A list taller than the window
  * scrolls inside itself: pinned whole, its last rows were out of reach beside a long section.
- * A row that is not part of the work the list orders — ending a course — stands apart under
- * the list, on the ground and out of its block (`apart`), and a row whose gesture does damage
- * is tinted as damage is (`tone`), softly: it is there to be found, not to call.
  */
 export interface SectionEntry {
   key: string;
@@ -43,10 +42,6 @@ export interface SectionEntry {
   group?: string;
   /** A rule before the row, setting it apart from the rows above it (as `Tabs` does). */
   separated?: boolean;
-  /** Drawn under the list, out of its block: a row set apart from the work the list orders. */
-  apart?: boolean;
-  /** Tinted as damage is, for a section whose gesture cannot be undone. */
-  tone?: "danger";
 }
 
 export function Sections({
@@ -70,7 +65,6 @@ export function Sections({
   after?: ReactNode;
   children: ReactNode;
 }) {
-  const apart = items.filter((item) => item.apart);
   return (
     <div className="grid items-start gap-7 lg:grid-cols-[17rem_minmax(0,1fr)]">
       {/* Cleared of the sticky header, which takes a second row of navigation below `xl`. */}
@@ -81,35 +75,24 @@ export function Sections({
           className="surface p-2 lg:max-h-[calc(100dvh-11.5rem)] lg:overflow-y-auto xl:max-h-[calc(100dvh-7.5rem)]"
         >
           <ul className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:flex-col lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-            {items
-              .filter((item) => !item.apart)
-              .map((item) => (
-                <li key={item.key} className="flex shrink-0 lg:block lg:shrink">
-                  {item.separated ? (
-                    <span
-                      aria-hidden
-                      className="mx-1 my-2 w-px shrink-0 self-stretch bg-border lg:mx-3 lg:my-1 lg:block lg:h-px lg:w-auto"
-                    />
-                  ) : null}
-                  {item.group ? (
-                    <p className="hidden px-3 pb-1 pt-3 text-micro font-condensed uppercase text-muted-foreground lg:block">
-                      {item.group}
-                    </p>
-                  ) : null}
-                  <SectionRow item={item} current={item.key === value} onChange={onChange} />
-                </li>
-              ))}
-          </ul>
-        </nav>
-        {apart.length > 0 ? (
-          <ul aria-label={label} className="flex gap-1 lg:flex-col">
-            {apart.map((item) => (
-              <li key={item.key} className="min-w-0 flex-1 lg:flex-none">
+            {items.map((item) => (
+              <li key={item.key} className="flex shrink-0 lg:block lg:shrink">
+                {item.separated ? (
+                  <span
+                    aria-hidden
+                    className="mx-1 my-2 w-px shrink-0 self-stretch bg-border lg:mx-3 lg:my-1 lg:block lg:h-px lg:w-auto"
+                  />
+                ) : null}
+                {item.group ? (
+                  <p className="hidden px-3 pb-1 pt-3 text-micro font-condensed uppercase text-muted-foreground lg:block">
+                    {item.group}
+                  </p>
+                ) : null}
                 <SectionRow item={item} current={item.key === value} onChange={onChange} />
               </li>
             ))}
           </ul>
-        ) : null}
+        </nav>
         {after}
       </div>
 
@@ -129,7 +112,6 @@ function SectionRow({
   onChange: (key: string) => void;
 }) {
   const { plural } = useT();
-  const danger = item.tone === "danger";
   return (
     <button
       type="button"
@@ -140,13 +122,7 @@ function SectionRow({
       className={cn(
         "flex w-full items-start gap-2.5 rounded-inner px-3 py-2.5 text-left transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        danger
-          ? current
-            ? "bg-[color-mix(in_oklab,var(--destructive)_16%,transparent)]"
-            : "bg-[color-mix(in_oklab,var(--destructive)_7%,transparent)] hover:bg-[color-mix(in_oklab,var(--destructive)_12%,transparent)]"
-          : current
-            ? "bg-sunk"
-            : "hover:bg-accent",
+        current ? "bg-sunk" : "hover:bg-accent",
       )}
     >
       {item.mark ? (
@@ -154,7 +130,7 @@ function SectionRow({
           aria-hidden
           className={cn(
             "flex h-6 w-5 shrink-0 items-center justify-center",
-            danger ? "text-destructive" : current ? "text-foreground" : "text-muted-foreground",
+            current ? "text-foreground" : "text-muted-foreground",
           )}
         >
           {item.mark}
@@ -164,14 +140,16 @@ function SectionRow({
         <span
           className={cn(
             "block whitespace-nowrap text-body font-medium lg:truncate",
-            danger ? "text-destructive" : current ? "text-foreground" : "text-muted-foreground",
+            current ? "text-foreground" : "text-muted-foreground",
           )}
         >
           {item.label}
         </span>
-        {item.detail ? (
-          <span className="block whitespace-nowrap text-small text-muted-foreground lg:truncate">{item.detail}</span>
-        ) : null}
+        {/* Always drawn, empty while its reading loads: a row is two lines from its first
+            frame, so the list does not grow under the pointer when the figures arrive. */}
+        <span className="block whitespace-nowrap text-small text-muted-foreground lg:truncate">
+          {item.detail ?? "\u00a0"}
+        </span>
       </span>
       {item.pending ? (
         <Badge variant="attention" className="mt-0.5 shrink-0" title={plural("admin.sections.unsaved", item.pending)}>
@@ -186,6 +164,12 @@ function SectionRow({
 /**
  * What opens every section: its name, one sentence of what it is, and the one action that
  * concerns the section whole, on the name's line.
+ *
+ * ONE SHAPE ON EVERY SECTION (user's request, 2026-10-07): the name's line is 36 px tall
+ * whether it carries an action or not — a select of 36 px beside a 30 px title used to push
+ * that header's sentence 6 px further down than every other one — and the sentence runs under
+ * the name and the action across the whole width, reading on one line where the window
+ * allows, as «Actividad» first asked.
  */
 export function SectionHeader({
   title,
@@ -202,19 +186,26 @@ export function SectionHeader({
   id?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-1">
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 id={id} className="font-display font-expanded text-title">
             {title}
           </h2>
           {hint}
         </div>
-        {description ? (
-          <p className="max-w-3xl text-small text-muted-foreground">{description}</p>
-        ) : null}
+        {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
       </div>
-      {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
+      {description ? <p className="text-small text-muted-foreground">{description}</p> : null}
     </div>
+  );
+}
+
+/** A place in an order — a step, a unit — drawn at an icon's size, for the mark of a row. */
+export function NumberMark({ n }: { n: number | string }) {
+  return (
+    <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm border border-current px-0.5 text-micro leading-none nums">
+      {n}
+    </span>
   );
 }

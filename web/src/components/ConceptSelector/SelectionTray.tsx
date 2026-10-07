@@ -98,7 +98,7 @@ export function SelectionTray({
         {implied.length > 0 ? (
           <div className="thin-scroll max-h-20 overflow-y-auto border-t border-dashed border-border pt-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-micro font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="mr-1 text-micro font-condensed uppercase text-muted-foreground">
                 {t("tray.byPrerequisiteLabel")}
               </span>
               {implied.map((name) => (

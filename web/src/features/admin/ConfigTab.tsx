@@ -4,12 +4,12 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/input";
 import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { ReasoningLegend } from "@/features/admin/PhaseNode";
-import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
+import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
 import { DiffSummary, GroupCard, SETTING_LIST, sameValue } from "@/features/admin/SettingFields";
 import {
   FlowNode,
@@ -151,7 +151,7 @@ export function ConfigTab({
         onGo(key);
       }}
       before={
-        <Input
+        <SearchInput
           aria-label={t("cfg.search")}
           placeholder={t("cfg.searchPlaceholder")}
           value={search}
@@ -532,7 +532,7 @@ function StageView({
 
       {phases.length > 0 ? (
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader>
             <CardTitle>{t("cfg.flow")}</CardTitle>
             <CardDescription>{t("cfg.flowDesc")}</CardDescription>
           </CardHeader>
@@ -656,7 +656,7 @@ function SettingsCard({
 }) {
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
@@ -701,9 +701,5 @@ function HomeCaption({ setting }: { setting: ConfigSetting }) {
 /** A stage's mark, as the bar draws it: its number, or the icon of its door. */
 function StageMark({ stage }: { stage: ConfigStage }) {
   if (stage.icon) return <stage.icon className="size-4 shrink-0" />;
-  return (
-    <span className="rounded-sm flex size-4 shrink-0 items-center justify-center border border-current text-micro leading-none">
-      {stage.number}
-    </span>
-  );
+  return <NumberMark n={stage.number ?? ""} />;
 }

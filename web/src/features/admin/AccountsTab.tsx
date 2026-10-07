@@ -19,9 +19,9 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Label, SearchInput, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { RowAction, RowGestures, Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
@@ -185,8 +185,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
         setSection(key as GroupKey | "invites" | "access");
       }}
       before={
-        <Input
-          type="search"
+        <SearchInput
           aria-label={t("acc.search")}
           placeholder={t("acc.searchPlaceholder")}
           value={search}
@@ -288,14 +287,14 @@ function AccountsTable({
 }) {
   const { t } = useT();
   return (
-    <div className="surface overflow-hidden p-2">
+    <div className="surface p-5">
       <Table minWidth="50rem" className="table-fixed">
         <THead>
           <TR>
             <TH className="w-[12.5rem]">{t("acc.col.account")}</TH>
             <TH>{t("acc.col.subjects")}</TH>
             <TH className="w-[7rem]">{t("acc.col.created")}</TH>
-            <TH className="w-[15.5rem]" />
+            <TH className="w-44" />
           </TR>
         </THead>
         <TBody>
@@ -355,10 +354,12 @@ function AccountRows({
   const locked = account.locked_seconds > 0;
   return (
     <>
-      <TR className={cn(expanded && "bg-none")}>
+      <TR joined={expanded} className="group">
         <TD className="py-3 align-top">
+          {/* The person as every list writes one: the name first, the username after it in
+              the code face (user's request, 2026-10-07; this table led with the username). */}
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate font-mono text-body">{account.username}</span>
+            <span className="truncate text-body font-medium">{account.name || account.username}</span>
             {/* Only where the table is not the administrators' own: a deactivated one. */}
             {account.is_admin && account.disabled ? (
               <Badge variant="secondary">{t("acc.badge.admin")}</Badge>
@@ -371,7 +372,7 @@ function AccountRows({
             ) : null}
           </span>
           <span className="block truncate text-muted-foreground">
-            {account.name}
+            <span className="font-mono">{account.username}</span>
             {showProfile ? ` · ${profileLabel(account.evaluator_profile, t).toLowerCase()}` : ""}
           </span>
         </TD>
@@ -381,39 +382,39 @@ function AccountRows({
         <TD className="whitespace-nowrap py-3 align-top text-muted-foreground">
           {account.created_at ? when(account.created_at) : "—"}
         </TD>
-        <TD className="py-2 align-top">
-          <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={onToggle}>
-            {t("acc.manage")}
-            <ChevronDown className={cn("transition-transform", expanded && "rotate-180")} />
-          </Button>
-          {/* Deactivating or deleting one's own account leaves the installation with nobody to
-              administer it, and the server refuses both anyway; not offering them avoids a surprise
-              409. They go together and in this order because they are one decision at two
-              intensities: closing the door, or removing the account. */}
-          {self ? null : (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => onEnabled(account.disabled)}
-              >
-                {account.disabled ? <UserCheck /> : <UserX />}
-                {account.disabled ? t("acc.reactivate") : t("acc.deactivate")}
+        <TD className="py-2.5 align-top">
+          {/* «Gestionar» opens the row and stays in sight; deactivating and deleting are the
+              row's gestures, shown on hover or focus as on every list. Deactivating or deleting
+              one's own account leaves the installation with nobody to administer it, and the
+              server refuses both anyway; not offering them avoids a surprise 409. */}
+          <RowGestures
+            always={
+              <Button variant="ghost" size="sm" className="h-7" aria-expanded={expanded} onClick={onToggle}>
+                {t("acc.manage")}
+                <ChevronDown className={cn("transition-transform", expanded && "rotate-180")} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                title={t("acc.deleteTitle")}
-                disabled={busy}
-                onClick={onDelete}
-              >
-                <Trash2 />
-              </Button>
-            </>
-          )}
-          </div>
+            }
+          >
+            {self ? null : (
+              <>
+                <RowAction
+                  label={t(account.disabled ? "acc.reactivateOne" : "acc.deactivateOne", { name: account.username })}
+                  title={account.disabled ? t("acc.reactivate") : t("acc.deactivate")}
+                  icon={account.disabled ? <UserCheck /> : <UserX />}
+                  disabled={busy}
+                  onClick={() => onEnabled(account.disabled)}
+                />
+                <RowAction
+                  label={t("acc.deleteOne", { name: account.username })}
+                  title={t("acc.deleteTitle")}
+                  icon={<Trash2 />}
+                  disabled={busy}
+                  onClick={onDelete}
+                  danger
+                />
+              </>
+            )}
+          </RowGestures>
         </TD>
       </TR>
 

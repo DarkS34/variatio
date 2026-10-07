@@ -60,6 +60,9 @@ const RULES = [
     exempt: [
       "components/ConceptPicker.tsx",
       "components/ConceptSelector/index.tsx",
+      // The primitive's own wrapper: `SearchInput` hands its caller's `aria-label` to the
+      // box inside, and every caller passes one.
+      "components/ui/input.tsx",
     ],
   },
   {
@@ -91,7 +94,12 @@ const RULES = [
 // per screen. The ceiling is set well above that and far below the 247 uses `text-xs` had,
 // so hitting it does not mean "one too many" — it means micro has quietly become the new
 // default and the question of §2.2 is open again.
-const BUDGET = { name: "text-micro sigue siendo un tamaño raro", re: /\btext-micro\b/g, max: 90 };
+//
+// 100 since 2026-10-07: the consistency pass moved eleven hand-made captions — set in
+// `text-small` capitals with their own tracking, or at 11 and 12 px by hand — onto micro,
+// which is the job micro declares (a caption over a list, a column, a form). Those were the
+// same rare captions drawn a second way, not new uses; 98 counted after the move.
+const BUDGET = { name: "text-micro sigue siendo un tamaño raro", re: /\btext-micro\b/g, max: 100 };
 
 let failures = 0;
 

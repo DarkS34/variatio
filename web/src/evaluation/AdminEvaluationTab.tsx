@@ -4,8 +4,10 @@ import { Download, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ChoicePill } from "@/components/ui/choice";
 import { Select } from "@/components/ui/input";
 import { Checkbox, LoadError, Skeleton } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
@@ -62,6 +64,9 @@ const RUBRIC_LABELS: Record<string, Key> = {
 
 /** The two kinds of account as the FILTER names them — plural, because the button names a
  *  group of people, where `profileLabel` names one person's own profile. */
+/** The kinds of account a reading counts, «Todos» first. */
+const KINDS: (EvaluatorProfile | null)[] = [null, ...PROFILES];
+
 const PROFILE_FILTER_LABELS: Record<EvaluatorProfile, Key> = {
   teacher: "adminEvaluation.profile.teachers",
   student: "adminEvaluation.profile.students",
@@ -237,25 +242,29 @@ function FilterBar({
     const keep = !profile || !current || current.evaluator_profile === profile;
     onFilters({ ...filters, profile, account: keep ? filters.account : null });
   };
+  const kinds = useRadioGroup(KINDS, filters.profile ?? null, setProfile);
 
   return (
-    <div className="surface flex flex-wrap items-end gap-3 p-4">
+    <div className="surface flex flex-wrap items-end gap-3 p-5">
       <Field label={t("adminEvaluation.filter.profile")}>
-        {/* Three buttons and not a select: which KIND of person is the first question
-            of the reading, and a control with all its options in view is one that gets
-            found. `aria-pressed` says which is on. */}
-        <div role="group" aria-label={t("adminEvaluation.filter.profile")} className="flex gap-1">
-          {([null, ...PROFILES] as (EvaluatorProfile | null)[]).map((profile) => (
-            <Button
+        {/* Three pills and not a select: which KIND of person is the first question of the
+            reading, and a control with all its options in view is one that gets found. The
+            pills are the app's one way of choosing among a few words (`ChoicePill`). */}
+        <div
+          role="radiogroup"
+          aria-label={t("adminEvaluation.filter.profile")}
+          className="flex flex-wrap gap-2"
+          {...kinds.group}
+        >
+          {KINDS.map((profile) => (
+            <ChoicePill
               key={profile ?? "all"}
-              type="button"
-              size="sm"
-              variant={(filters.profile ?? null) === profile ? "default" : "outline"}
-              aria-pressed={(filters.profile ?? null) === profile}
+              {...kinds.radio(profile)}
+              chosen={(filters.profile ?? null) === profile}
               onClick={() => setProfile(profile)}
             >
               {profile ? t(PROFILE_FILTER_LABELS[profile]) : t("adminEvaluation.allProfiles")}
-            </Button>
+            </ChoicePill>
           ))}
         </div>
       </Field>
@@ -342,7 +351,7 @@ function Comparisons({ data }: { data: AdminEvaluations }) {
   const { t } = useT();
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="grid gap-7 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <Card title={t("adminEvaluation.card.wins")}>
           <Preferences aggregates={data.aggregates} />
         </Card>
@@ -351,7 +360,7 @@ function Comparisons({ data }: { data: AdminEvaluations }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card title={t("adminEvaluation.card.rubric")}>
           <Rubric aggregates={data.aggregates} />
         </Card>
@@ -393,12 +402,13 @@ function Section({
           {eyebrow ? (
             <p className="text-micro font-condensed uppercase text-muted-foreground">{eyebrow}</p>
           ) : null}
-          <h3 className="font-expanded text-heading">{title}</h3>
-          <p className="max-w-3xl text-small text-muted-foreground">{description}</p>
+          <h3 className="text-heading">{title}</h3>
+          <p className="text-small text-muted-foreground">{description}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </header>
-      {children}
+      {/* The blocks under one title keep a block's distance from each other. */}
+      <div className="space-y-7">{children}</div>
     </section>
   );
 }
@@ -413,10 +423,10 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="surface space-y-3 p-4">
+    <section className="surface space-y-4 p-5">
       {title ? (
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h4 className="text-small font-medium">{title}</h4>
+          <h3 className="text-heading">{title}</h3>
           {aside}
         </div>
       ) : null}
@@ -1146,7 +1156,8 @@ function SessionsTable({ rows }: { rows: SessionRow[] }) {
           {t("sessions.deleteSelection")}
         </Button>
       </div>
-    <div className="thin-scroll max-h-[28rem] overflow-y-auto">
+      {/* A list that scrolls inside its block is held in a well: the cut needs an edge. */}
+    <div className="well thin-scroll max-h-[28rem] overflow-y-auto px-3 py-1">
       <Table minWidth="48rem">
         <THead>
           <TR>
@@ -1241,7 +1252,7 @@ function StageForms({ data }: { data: AdminStageEvaluations }) {
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t("adminEvaluation.stages.stat.answered")}
           value={aggregates.answered}
@@ -1265,7 +1276,7 @@ function StageForms({ data }: { data: AdminStageEvaluations }) {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-7 xl:grid-cols-3">
         {STAGE_ARTIFACTS.map((artifact) => {
           const summary = byArtifact.get(artifact);
           return summary ? <StageCard key={artifact} summary={summary} /> : null;

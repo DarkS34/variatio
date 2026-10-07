@@ -1,6 +1,7 @@
-import { Cloud, Download, Timer } from "lucide-react";
+import { Download, Timer } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress } from "@/components/ui/misc";
@@ -32,9 +33,8 @@ export function CerebrasCard({ cerebras }: { cerebras: CerebrasState }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <Cloud className="size-4 text-muted-foreground" />
           <CardTitle>Cerebras</CardTitle>
           <Badge variant={state.tone}>{t(state.labelKey)}</Badge>
           <InfoHint label={t("cere.budgetHint")}>
@@ -80,7 +80,8 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
   const flying = cerebras.inflight;
   if (!flying) {
     return (
-      <div className="rounded-lg flex items-center gap-3 border border-border bg-muted px-3 py-2.5 text-small text-muted-foreground">
+      // A strip the block holds, so a well (it was a bordered box, the last of the tab).
+      <div className="well flex items-center gap-3 px-3 py-2.5 text-small text-muted-foreground">
         <span className="size-2 rounded-full bg-muted-foreground/40" />
         {t("cere.noCalls")}
       </div>
@@ -95,8 +96,8 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
     <div
       className={
         waiting
-          ? "rounded-lg flex flex-wrap items-center gap-3 border border-[color-mix(in_oklch,var(--attention)_40%,transparent)] bg-[color-mix(in_oklch,var(--attention)_8%,transparent)] px-3 py-2.5"
-          : "rounded-lg flex flex-wrap items-center gap-3 border border-border bg-muted px-3 py-2.5"
+          ? "well flex flex-wrap items-center gap-3 bg-[color-mix(in_oklab,var(--attention)_8%,var(--card))] px-3 py-2.5"
+          : "well flex flex-wrap items-center gap-3 px-3 py-2.5"
       }
     >
       <span
@@ -269,12 +270,13 @@ function Breakdown({ entry }: { entry: CerebrasModel }) {
           </p>
           <p className="text-small text-muted-foreground">{t("cere.byPhase.sub")}</p>
         </div>
+        {/* A link that downloads, drawn as the outline button every other CSV is. */}
         <a
-          className="rounded-md inline-flex items-center gap-1.5 border border-input px-3 py-1.5 text-small font-medium hover:bg-muted"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
           href="/api/admin/engine/cerebras/export.csv"
           download
         >
-          <Download className="size-3.5" />
+          <Download />
           {t("cere.downloadCsv")}
         </a>
       </div>

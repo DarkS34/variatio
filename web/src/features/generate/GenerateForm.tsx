@@ -16,6 +16,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
+import { ChoiceMark } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
 import { ConceptChip } from "@/components/ui/concept-chip";
 import { InfoHint } from "@/components/ui/hint";
@@ -606,9 +607,9 @@ export function GenerateForm({
                     active && CHOICE_CHOSEN,
                   )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    {active ? <Check className="size-3.5 text-primary" /> : null}
-                    <span className="text-body font-medium">{spec.label || key}</span>
+                  <span className="flex items-center gap-2">
+                    <ChoiceMark chosen={active} />
+                    <span className="truncate text-body font-medium">{spec.label || key}</span>
                   </span>
                   <span className="mt-0.5 block font-mono text-[12px] text-muted-foreground">
                     {key}
@@ -1026,7 +1027,7 @@ export function GenerateForm({
         </details>
       ) : null}
       {chosen ? (
-        <div className="surface animate-slide-up space-y-3 p-4">
+        <div className="surface animate-slide-up space-y-3 p-5">
           {variant === "generate" ? (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-body font-medium">{t("form.howMany")}</span>

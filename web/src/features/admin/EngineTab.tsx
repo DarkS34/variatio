@@ -1,15 +1,15 @@
 import {
   Ban,
-  Cable,
+  Cloud,
+  Cpu,
   Eraser,
-  Flame,
-  HardDrive,
-  ListOrdered,
+  Gauge,
   PlugZap,
   Power,
   Trash2,
   Unplug,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { RowAction, RowGestures, Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { CerebrasCard } from "@/features/admin/CerebrasCard";
@@ -71,18 +71,16 @@ import { jobName } from "@/lib/names";
  * which is why it is gathered here.
  *
  * The list answers for every part at once — the queue, the machine, the quota — so the part
- * somebody then wants to look at is one press away. A part's square is the mark's own
- * vocabulary and introduces nothing: solid grey for what needs nobody, solid coral for the
- * one that needs the administrator, an outline for what is not there yet, the ink while it
- * is working and red when calls are failing. The word beside it says the same thing, so the
- * colour is never the only channel.
+ * somebody then wants to look at is one press away. Each row leads with its part's icon, as
+ * every list of sections does (user's request, 2026-10-07: the squares of state this list
+ * had made «Administración» read as a list without icons beside «Clase»). The state is the
+ * row's line, written in a word and tinted only where it calls for somebody — the coral of
+ * acting or the red of failing — so the colour is never the only channel.
  */
-const MARK: Record<CellTone, string> = {
-  ok: "bg-settled",
-  live: "bg-primary animate-pulse-soft",
-  act: "bg-attention-fill",
-  down: "bg-destructive",
-  off: "border-[1.5px] border-muted-foreground",
+const PART_ICON: Record<ScreenKey, LucideIcon> = {
+  general: Gauge,
+  local: Cpu,
+  remote: Cloud,
 };
 
 const STATE_TEXT: Record<CellTone, string> = {
@@ -149,10 +147,11 @@ function EngineScreens({ engine, overview }: { engine: AdminEngine; overview: Ad
   // the line is the queue's. The pair is one hover away, and each section draws it in full.
   const items: SectionEntry[] = cells.map((cell) => {
     const line = (cell.key === "general" && cell.detail) || cell.state;
+    const Icon = PART_ICON[cell.key];
     return {
       key: cell.key,
       label: cell.label,
-      mark: <span className={cn("size-2.5", MARK[cell.tone])} />,
+      mark: <Icon className="size-4" />,
       detail: (
         <span className={STATE_TEXT[cell.tone]}>
           {line.charAt(0).toUpperCase() + line.slice(1)}
@@ -257,9 +256,8 @@ function TunnelCard({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <Cable className="size-4 text-muted-foreground" />
           <CardTitle>{t("eng.tunnel.cardTitle")}</CardTitle>
           <Badge variant={state.tone}>{t(state.labelKey)}</Badge>
           <InfoHint label={t(direct ? "eng.tunnel.directHintLabel" : "eng.tunnel.hintLabel")}>
@@ -364,9 +362,8 @@ function ResidencyCard({ engine }: { engine: AdminEngine }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <Flame className="size-4 text-muted-foreground" />
           <CardTitle>{t("eng.gpu.title")}</CardTitle>
           <Badge variant={engine.available ? "settled" : "outline"}>
             {engine.available ? t("eng.gpu.online") : t("eng.gpu.offline")}
@@ -520,9 +517,9 @@ function IdleClock({ engine }: { engine: AdminEngine }) {
 function Residents({ running }: { running: RunningModel[] }) {
   const { t, language } = useT();
   return (
-    <ul className="divide-y divide-border text-small">
+    <ul className="rows text-small rows-tight">
       {byShare(running).map((model, index) => (
-        <li key={model.model} className="flex flex-wrap items-center gap-2 py-2">
+        <li key={model.model} className="flex flex-wrap items-center gap-2">
           <span
             className={cn("size-2.5 shrink-0", SHARE_TINT[Math.min(index, SHARE_TINT.length - 1)])}
             aria-hidden="true"
@@ -574,9 +571,8 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <HardDrive className="size-4 text-muted-foreground" />
           <CardTitle>{t("eng.models.title")}</CardTitle>
           <InfoHint label={t("eng.models.hintLabel")}>{t("eng.models.hint")}</InfoHint>
         </div>
@@ -607,39 +603,40 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
         <FormError error={remove.error} />
 
         {onDisk.length > 0 ? (
-          <div className="-mx-3">
-            <Table minWidth="32rem">
-              <THead>
-                <TR>
-                  <TH>{t("eng.models.col.model")}</TH>
-                  <TH align="num">{t("eng.models.col.size")}</TH>
-                  <TH>{t("eng.models.col.state")}</TH>
-                  <TH />
-                </TR>
-              </THead>
-              <TBody>
-                {onDisk.map((model) => {
-                  // Read only for the delete guard: a model some setting names cannot be
-                  // removed. WHICH setting names it is read in "Configuración", where it
-                  // can also be changed.
-                  const asked = model.asked_by.length > 0;
-                  return (
-                    <TR key={model.model}>
-                      <TD className="px-3 py-2 font-mono text-small">{model.model}</TD>
-                      <TD align="num" className="px-3 py-2 nums text-small">
-                        {model.size ? bytes(model.size) : "—"}
-                      </TD>
-                      <TD className="px-3 py-2">
-                        {resident.has(model.model) ? (
-                          <Badge variant="settled">{t("eng.models.loaded")}</Badge>
-                        ) : (
-                          <Badge variant="outline">{t("eng.models.stored")}</Badge>
-                        )}
-                      </TD>
-                      <TD align="num" className="px-3 py-2">
+          <Table minWidth="32rem">
+            <THead>
+              <TR>
+                <TH>{t("eng.models.col.model")}</TH>
+                <TH align="num">{t("eng.models.col.size")}</TH>
+                <TH>{t("eng.models.col.state")}</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {onDisk.map((model) => {
+                // Read only for the delete guard: a model some setting names cannot be
+                // removed. WHICH setting names it is read in "Configuración", where it
+                // can also be changed.
+                const asked = model.asked_by.length > 0;
+                return (
+                  <TR key={model.model} className="group">
+                    <TD className="px-3 py-2 font-mono text-small">{model.model}</TD>
+                    <TD align="num" className="px-3 py-2 nums text-small">
+                      {model.size ? bytes(model.size) : "—"}
+                    </TD>
+                    <TD className="px-3 py-2">
+                      {resident.has(model.model) ? (
+                        <Badge variant="settled">{t("eng.models.loaded")}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t("eng.models.stored")}</Badge>
+                      )}
+                    </TD>
+                    <TD align="num" className="px-3 py-2">
+                      <RowGestures>
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          className="hover:text-destructive"
                           disabled={asked || remove.isPending || engine.busy}
                           aria-label={t("eng.models.deleteOne", { model: model.model })}
                           title={
@@ -653,13 +650,13 @@ function ModelsCard({ engine }: { engine: AdminEngine }) {
                         >
                           <Trash2 />
                         </Button>
-                      </TD>
-                    </TR>
-                  );
-                })}
-              </TBody>
-            </Table>
-          </div>
+                      </RowGestures>
+                    </TD>
+                  </TR>
+                );
+              })}
+            </TBody>
+          </Table>
         ) : null}
       </CardContent>
     </Card>
@@ -676,7 +673,7 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>{t("eng.ctx.title")}</CardTitle>
           <InfoHint label={t("eng.ctx.hintLabel")}>{t("eng.ctx.hint")}</InfoHint>
@@ -689,29 +686,29 @@ function ContextsCard({ engine, overview }: { engine: AdminEngine; overview: Adm
       </CardHeader>
       <CardContent className="space-y-3">
         {engine.contexts.length > 0 ? (
-          <ul className="divide-y divide-border text-small">
+          <ul className="rows text-small rows-tight">
             {engine.contexts.map((slug) => (
-              <li key={slug} className="flex items-center justify-between gap-2 py-2">
+              <li key={slug} className="group flex items-center justify-between gap-2">
                 <span>
                   {names.get(slug) ?? slug}
-                  <span className="ml-2 font-mono text-micro text-muted-foreground">{slug}</span>
+                  <span className="ml-2 font-mono text-small text-muted-foreground">{slug}</span>
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  title={t("eng.ctx.invalidateOne")}
-                  disabled={invalidate.isPending}
-                  onClick={() =>
-                    invalidate.mutate(slug, {
-                      onSuccess: () =>
-                        toast({ title: t("eng.ctx.invalidated"), description: slug }),
-                      onError: (error: Error) =>
-                        toast({ title: t("eng.ctx.failed"), description: error.message, tone: "danger" }),
-                    })
-                  }
-                >
-                  <X />
-                </Button>
+                <RowGestures>
+                  <RowAction
+                    label={t("eng.ctx.invalidateNamed", { name: names.get(slug) ?? slug })}
+                    title={t("eng.ctx.invalidateOne")}
+                    icon={<X />}
+                    disabled={invalidate.isPending}
+                    onClick={() =>
+                      invalidate.mutate(slug, {
+                        onSuccess: () =>
+                          toast({ title: t("eng.ctx.invalidated"), description: slug }),
+                        onError: (error: Error) =>
+                          toast({ title: t("eng.ctx.failed"), description: error.message, tone: "danger" }),
+                      })
+                    }
+                  />
+                </RowGestures>
               </li>
             ))}
           </ul>
@@ -791,9 +788,8 @@ function QueueSection() {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <ListOrdered className="size-4 text-muted-foreground" />
           <CardTitle>{t("eng.queue.title", { n: rows.length })}</CardTitle>
           <InfoHint label={t("eng.queue.hintLabel")}>{t("eng.queue.hint")}</InfoHint>
         </div>
@@ -805,47 +801,48 @@ function QueueSection() {
         {jobs.isLoading ? (
           <Skeleton className="h-16" />
         ) : empty ? null : (
-          <div className="-mx-3">
-            <Table minWidth="36rem">
-              <THead>
-                <TR>
-                  <TH className="w-8" />
-                  <TH>{t("eng.queue.col.job")}</TH>
-                  <TH>{t("eng.queue.col.when")}</TH>
-                  <TH align="num">{t("eng.queue.col.elapsed")}</TH>
-                  <TH>{t("eng.queue.col.state")}</TH>
-                  <TH />
-                </TR>
-              </THead>
-              <TBody>
-                {rows.map((job) => {
-                  const active = job.status === "running";
-                  return (
-                    <TR key={job.id} className={cn(!active && "text-muted-foreground")}>
-                      <TD className="py-2 pl-3 pr-0">
-                        <JobMark status={job.status} />
-                      </TD>
-                      <TD className="px-3 py-2">
-                        <span className={cn("block", active && "font-medium text-foreground")}>
-                          {jobName(job.kind, t, job.label)}
-                        </span>
-                        <JobOrigin job={job} />
-                      </TD>
-                      <TD className="whitespace-nowrap px-3 py-2 text-small">
-                        {when(new Date(job.created_at * 1000).toISOString())}
-                      </TD>
-                      <TD align="num" className="whitespace-nowrap px-3 py-2 text-small">
-                        {active ? duration(job.elapsed_ms) : "—"}
-                      </TD>
-                      <TD className="whitespace-nowrap px-3 py-2 text-small font-medium">
-                        {active
-                          ? t(JOB_STATUS.running.labelKey)
-                          : t("eng.queue.position", { n: job.queue_position ?? 0 })}
-                      </TD>
-                      <TD align="num" className="py-2 pl-0 pr-2">
+          <Table minWidth="36rem">
+            <THead>
+              <TR>
+                <TH className="w-8" />
+                <TH>{t("eng.queue.col.job")}</TH>
+                <TH>{t("eng.queue.col.when")}</TH>
+                <TH align="num">{t("eng.queue.col.elapsed")}</TH>
+                <TH>{t("eng.queue.col.state")}</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
+              {rows.map((job) => {
+                const active = job.status === "running";
+                return (
+                  <TR key={job.id} className={cn("group", !active && "text-muted-foreground")}>
+                    <TD className="py-2 pl-3 pr-0">
+                      <JobMark status={job.status} />
+                    </TD>
+                    <TD className="px-3 py-2">
+                      <span className={cn("block", active && "font-medium text-foreground")}>
+                        {jobName(job.kind, t, job.label)}
+                      </span>
+                      <JobOrigin job={job} />
+                    </TD>
+                    <TD className="whitespace-nowrap px-3 py-2 text-small">
+                      {when(new Date(job.created_at * 1000).toISOString())}
+                    </TD>
+                    <TD align="num" className="whitespace-nowrap px-3 py-2 text-small">
+                      {active ? duration(job.elapsed_ms) : "—"}
+                    </TD>
+                    <TD className="whitespace-nowrap px-3 py-2 text-small font-medium">
+                      {active
+                        ? t(JOB_STATUS.running.labelKey)
+                        : t("eng.queue.position", { n: job.queue_position ?? 0 })}
+                    </TD>
+                    <TD align="num" className="py-2 pl-0 pr-2">
+                      <RowGestures>
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          className="hover:text-destructive"
                           disabled={cancel.isPending}
                           title={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
                           aria-label={active ? t("eng.queue.stopHint") : t("eng.queue.remove")}
@@ -853,67 +850,67 @@ function QueueSection() {
                         >
                           {active ? <Ban /> : <Trash2 />}
                         </Button>
-                      </TD>
-                    </TR>
-                  );
-                })}
-                {past.length > 0 ? (
-                  <TR className="bg-muted">
-                    <TD
-                      colSpan={4}
-                      className="px-3 py-1.5 text-micro font-condensed uppercase text-muted-foreground"
+                      </RowGestures>
+                    </TD>
+                  </TR>
+                );
+              })}
+              {past.length > 0 ? (
+                <TR className="bg-muted">
+                  <TD
+                    colSpan={4}
+                    className="px-3 py-1.5 text-micro font-condensed uppercase text-muted-foreground"
+                  >
+                    {t("eng.queue.past", { n: past.length })}
+                  </TD>
+                  <TD colSpan={2} align="num" className="py-1 pl-0 pr-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={clear.isPending}
+                      title={t("eng.queue.clear")}
+                      onClick={() =>
+                        clear.mutate(undefined, {
+                          onSuccess: () => toast({ title: t("eng.queue.cleared") }),
+                        })
+                      }
                     >
-                      {t("eng.queue.past", { n: past.length })}
-                    </TD>
-                    <TD colSpan={2} align="num" className="py-1 pl-0 pr-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={clear.isPending}
-                        title={t("eng.queue.clear")}
-                        onClick={() =>
-                          clear.mutate(undefined, {
-                            onSuccess: () => toast({ title: t("eng.queue.cleared") }),
-                          })
-                        }
-                      >
-                        {clear.isPending ? <Spinner /> : <Eraser />}
-                        {t("eng.queue.clearShort")}
-                      </Button>
-                    </TD>
-                  </TR>
-                ) : null}
-                {past.map((job) => (
-                  <TR key={job.id} className="text-settled">
-                    <TD className="py-2 pl-3 pr-0">
-                      <JobMark status={job.status} />
-                    </TD>
-                    <TD className="max-w-72 px-3 py-2">
-                      <span className="block">{jobName(job.kind, t, job.label)}</span>
-                      <JobOrigin job={job} />
-                      {job.error ? (
-                        <span className="block truncate text-small text-destructive" title={job.error}>
-                          {job.error}
-                        </span>
-                      ) : null}
-                    </TD>
-                    <TD className="whitespace-nowrap px-3 py-2 text-small">
-                      {job.finished_at ? when(new Date(job.finished_at * 1000).toISOString()) : "—"}
-                    </TD>
-                    <TD align="num" className="whitespace-nowrap px-3 py-2 text-small">
-                      {duration(job.elapsed_ms)}
-                    </TD>
-                    <TD className="whitespace-nowrap px-3 py-2">
-                      <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
-                        {t(JOB_STATUS[job.status].labelKey)}
+                      {clear.isPending ? <Spinner /> : <Eraser />}
+                      {t("eng.queue.clearShort")}
+                    </Button>
+                  </TD>
+                </TR>
+              ) : null}
+              {past.map((job) => (
+                <TR key={job.id} className="text-settled">
+                  <TD className="py-2 pl-3 pr-0">
+                    <JobMark status={job.status} />
+                  </TD>
+                  <TD className="max-w-72 px-3 py-2">
+                    <span className="block">{jobName(job.kind, t, job.label)}</span>
+                    <JobOrigin job={job} />
+                    {job.error ? (
+                      <span className="block truncate text-small text-destructive" title={job.error}>
+                        {job.error}
                       </span>
-                    </TD>
-                    <TD />
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </div>
+                    ) : null}
+                  </TD>
+                  <TD className="whitespace-nowrap px-3 py-2 text-small">
+                    {job.finished_at ? when(new Date(job.finished_at * 1000).toISOString()) : "—"}
+                  </TD>
+                  <TD align="num" className="whitespace-nowrap px-3 py-2 text-small">
+                    {duration(job.elapsed_ms)}
+                  </TD>
+                  <TD className="whitespace-nowrap px-3 py-2">
+                    <span className={cn("text-small font-medium", JOB_STATUS[job.status].tone)}>
+                      {t(JOB_STATUS[job.status].labelKey)}
+                    </span>
+                  </TD>
+                  <TD />
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
         <FormError error={cancel.error ?? clear.error} />
       </CardContent>

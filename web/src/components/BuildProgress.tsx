@@ -229,7 +229,7 @@ export function JobProgress({
 setStepsOpen((was) => !was)}
               aria-expanded={stepsOpen}
               aria-controls={stepsId}
-              className="flex items-center gap-1.5 text-small font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+              className="flex items-center gap-1.5 text-micro font-condensed uppercase text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronRight
                 aria-hidden

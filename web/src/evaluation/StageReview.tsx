@@ -116,7 +116,7 @@ export function StageReview({
   if (!review.data?.built) {
     return (
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader>
           <CardTitle className="text-evaluation">{t("stageReview.title")}</CardTitle>
         </CardHeader>
         <CardContent>
@@ -143,7 +143,7 @@ export function StageReview({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="gap-1 pb-3">
+        <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle className="flex-1 text-evaluation">{t("stageReview.title")}</CardTitle>
             {/* Only "guardada", never "sin contestar": the button that opens this panel is

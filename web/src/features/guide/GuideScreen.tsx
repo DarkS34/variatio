@@ -112,8 +112,9 @@ export function GuideScreen({ slug }: { slug: string }) {
                     aria-current={on ? "page" : undefined}
                     onClick={() => setNavOpen(false)}
                     className={cn(
-                      "flex items-center gap-2 border-l-2 border-transparent px-2.5 py-1.5 text-body text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                      on && "border-primary bg-accent font-medium text-foreground",
+                      // The open one as every list of sections draws it: the sunk tint.
+                      "flex items-center gap-2 rounded-inner px-2.5 py-1.5 text-body text-muted-foreground transition-colors",
+                      on ? "bg-sunk font-medium text-foreground" : "hover:bg-accent hover:text-foreground",
                     )}
                   >
                     <Icon className="size-4 shrink-0" />

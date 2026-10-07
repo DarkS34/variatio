@@ -460,12 +460,17 @@ export function useChangeRole() {
   });
 }
 
-/** Ending the course moves the people, their counts and the class link at once. */
-export function useEndCourse() {
+/**
+ * Ending a subject's course, the administrator's alone: it moves the people, their counts and
+ * the class link at once, in the panel and in the class of a subject the tab has open.
+ */
+export function useAdminEndCourse() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: api.endCourse,
+    mutationFn: ({ slug, action }: { slug: string; action: "disable" | "remove" }) =>
+      api.adminEndCourse(slug, action),
     onSettled: () => {
+      client.invalidateQueries({ queryKey: ["admin"] });
       client.invalidateQueries({ queryKey: keys.members });
       client.invalidateQueries({ queryKey: keys.workspaces });
     },

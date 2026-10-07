@@ -96,7 +96,7 @@ export function UsesSection() {
             const still = use.key === "tutor" && !uses.data.tutor_offered;
             const on = still ? false : uses.data[use.key];
             return (
-              <li key={use.key} className="flex items-start justify-between gap-4 py-3">
+              <li key={use.key} className="flex items-start justify-between gap-4">
                 <div className="min-w-0 space-y-0.5">
                   <p className="font-medium">{t(use.label)}</p>
                   <p className="text-small text-muted-foreground">

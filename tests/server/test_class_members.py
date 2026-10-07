@@ -410,13 +410,20 @@ def test_the_listing_counts_the_people_where_the_account_teaches(db, aula, stage
 # THE END OF A COURSE ----------------------------------------------------------------------------
 
 
+def _root(db):
+    return identity.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
+
+
+def _end(db, admin, action="disable"):
+    return admin_routes.end_course("aula", admin_routes.EndCourseBody(action=action), admin=admin, db=db)
+
+
 def test_ending_the_course_pauses_every_student_and_the_link_and_keeps_the_teachers(db, aula, stage):
-    link, _ = links.mint_class_link(
+    links.mint_class_link(
         db, workspace_id=aula.workspace.id, expires_at=identity.now() + timedelta(days=9), max_uses=9
     )
-    access = _access(db, aula.ana, aula.workspace)
 
-    answer = member_routes.end_course(member_routes.EndCourseBody(), access=access, db=db)
+    answer = _end(db, _root(db))
 
     assert answer == {"action": "disable", "students": 2, "class_link_paused": True}
     rows = {user.username: row for row, user in identity.members_of(db, aula.workspace.id, include_disabled=True)}
@@ -426,10 +433,9 @@ def test_ending_the_course_pauses_every_student_and_the_link_and_keeps_the_teach
 
 
 def test_a_paused_course_reopens_by_opening_its_students(db, aula, stage):
-    access = _access(db, aula.ana, aula.workspace)
-    member_routes.end_course(member_routes.EndCourseBody(), access=access, db=db)
+    _end(db, _root(db))
 
-    member_routes.enable(aula.carla.id, access=access, db=db)
+    member_routes.enable(aula.carla.id, access=_access(db, aula.ana, aula.workspace), db=db)
 
     assert auth.access_for(db, aula.carla, aula.workspace, VIEWER).role == VIEWER
 
@@ -437,11 +443,8 @@ def test_a_paused_course_reopens_by_opening_its_students(db, aula, stage):
 def test_ending_it_by_removing_takes_the_students_out_and_leaves_their_files(db, aula, stage):
     ws = installation.workspace_for("aula")
     saved = store.save(ws, aula.carla.id, "job9", 1, {"output": {"item": {"enunciado": "queda"}}})
-    access = _access(db, aula.ana, aula.workspace)
 
-    answer = member_routes.end_course(
-        member_routes.EndCourseBody(action="remove"), access=access, db=db
-    )
+    answer = _end(db, _root(db), "remove")
 
     assert answer["students"] == 2 and answer["class_link_paused"] is False
     assert identity.membership(db, aula.workspace.id, aula.carla.id) is None
@@ -449,15 +452,19 @@ def test_ending_it_by_removing_takes_the_students_out_and_leaves_their_files(db,
     assert store.get(ws, aula.carla.id, saved) is not None
 
 
-def test_ending_the_course_is_an_owners_and_names_a_known_end(db, aula, stage):
-    access = _access(db, aula.ana, aula.workspace)
-    refused = _refused(
-        lambda: member_routes.end_course(
-            member_routes.EndCourseBody(action="olvidar"), access=access, db=db
-        )
+def test_ending_the_course_names_a_known_end_and_a_subject_that_exists(db, aula, stage):
+    root = _root(db)
+    assert _refused(lambda: _end(db, root, "olvidar")).status_code == 422
+    missing = lambda: admin_routes.end_course(  # noqa: E731
+        "nada", admin_routes.EndCourseBody(), admin=root, db=db
     )
-    assert refused.status_code == 422
-    assert _refused(lambda: _access(db, aula.bruno, aula.workspace, OWNER)).status_code == 403
+    assert _refused(missing).status_code == 404
+
+
+def test_a_teacher_has_no_door_to_end_the_course():
+    # The administrator's alone since 2026-10-07: the class's routes carry no such gesture.
+    paths = {route.path for route in member_routes.router.routes}
+    assert not any("end-course" in path for path in paths)
 
 
 # THE ACCOUNT'S OWN LIST AND THE PANEL -----------------------------------------------------------

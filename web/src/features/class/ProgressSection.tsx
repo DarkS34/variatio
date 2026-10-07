@@ -113,65 +113,65 @@ export function ProgressSection() {
   return (
     <>
       {header}
-      <section className="surface space-y-4 p-5" aria-labelledby="class-progress-state">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-0.5">
-            <h3 id="class-progress-state" className="text-heading">
-              {set
-                ? t("class.progress.covered", { n: covered.length, total })
-                : t("class.progress.noLimit")}
-            </h3>
-            <p className="max-w-3xl text-small text-muted-foreground">
-              {set
-                ? t("class.progress.savedOn", { date: when(state.data?.updated_at ?? null) })
-                : t("class.progress.noLimitBody")}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {save.isPending ? <Spinner /> : null}
-            <Button
-              variant="outline"
-              disabled={save.isPending || total === 0}
-              onClick={() => setDraft([...covered])}
-            >
-              <ListChecks />
-              {t(set ? "class.progress.change" : "class.progress.mark")}
-            </Button>
-            {set ? (
-              <Button variant="ghost" disabled={save.isPending} onClick={lift}>
-                <Undo2 />
-                {t("class.progress.lift")}
+      {/* Drawn as «Funcionalidades permitidas» draws its switches: ruled rows, each a name,
+          one line under it and its control on the right. */}
+      <section className="surface p-5" aria-label={t("class.progress")}>
+        <ul className="rows">
+          <li className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-0.5">
+              <p className="font-medium">
+                {set ? t("class.progress.covered", { n: covered.length, total }) : t("class.progress.noLimit")}
+              </p>
+              <p className="text-small text-muted-foreground">
+                {set
+                  ? t("class.progress.savedOn", { date: when(state.data?.updated_at ?? null) })
+                  : t("class.progress.noLimitBody")}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              {save.isPending ? <Spinner /> : null}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={save.isPending || total === 0}
+                onClick={() => setDraft([...covered])}
+              >
+                <ListChecks />
+                {t(set ? "class.progress.change" : "class.progress.mark")}
               </Button>
-            ) : null}
-          </div>
-        </div>
-
-        {set ? (
-          <ul className="rows" aria-label={t("class.progress.byUnit")}>
-            {units.map((unit) => (
-              <li key={unit.name} className="flex items-center gap-3 py-2">
-                <span
-                  aria-hidden
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: colours.get(unit.name) }}
-                />
-                <span className="min-w-0 flex-1 truncate">{unit.name}</span>
-                <span className="well hidden h-2 w-40 overflow-hidden rounded-full sm:block">
+              {set ? (
+                <Button size="sm" variant="ghost" disabled={save.isPending} onClick={lift}>
+                  <Undo2 />
+                  {t("class.progress.lift")}
+                </Button>
+              ) : null}
+            </div>
+          </li>
+          {set
+            ? units.map((unit) => (
+                <li key={unit.name} className="flex items-center gap-3">
                   <span
-                    className="block h-full rounded-full bg-ink"
-                    style={{ width: `${unit.total ? (100 * unit.covered) / unit.total : 0}%` }}
+                    aria-hidden
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ background: colours.get(unit.name) }}
                   />
-                </span>
-                <span className="nums w-16 shrink-0 text-right text-small text-muted-foreground">
-                  {t("class.progress.ofUnit", { n: unit.covered, total: unit.total })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+                  <span className="min-w-0 flex-1 truncate font-medium">{unit.name}</span>
+                  <span className="hidden h-2 w-40 overflow-hidden rounded-full bg-muted sm:block">
+                    <span
+                      className="block h-full rounded-full bg-ink"
+                      style={{ width: `${unit.total ? (100 * unit.covered) / unit.total : 0}%` }}
+                    />
+                  </span>
+                  <span className="nums w-16 shrink-0 text-right text-small text-muted-foreground">
+                    {t("class.progress.ofUnit", { n: unit.covered, total: unit.total })}
+                  </span>
+                </li>
+              ))
+            : null}
+        </ul>
 
         {state.data && state.data.dropped.length > 0 ? (
-          <p className="text-small text-attention">
+          <p className="pt-3 text-small text-attention">
             {t("class.progress.dropped", { names: state.data.dropped.join(", ") })}
           </p>
         ) : null}

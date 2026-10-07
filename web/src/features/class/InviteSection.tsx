@@ -2,15 +2,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Download, Link2, Maximize2, Pause, Play, QrCode, RefreshCw, Settings2, Trash2, UserPlus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 
+import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { PersonName } from "@/components/ui/person";
 import { useRadioGroup } from "@/components/ui/radio";
+import { RowAction, RowGestures, TD, TR } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { CopyButton, CopyLink } from "@/features/admin/CopyLink";
+import { CopyButton, CopyLink, LinkTable } from "@/features/admin/CopyLink";
 import { SectionHeader } from "@/features/admin/Sections";
 import { api } from "@/lib/api";
 import { csvFile, saveCsv } from "@/lib/csv";
@@ -47,7 +50,7 @@ import {
   useMemberInvites,
 } from "@/state/queries";
 
-import { PeopleList, RowAction } from "./PersonRow";
+import { PEOPLE_COLUMNS, PeopleTable } from "./PersonRow";
 
 const PRESET_KEYS: Record<ExpiryPreset, Key> = {
   day: "acc.invite.preset.day",
@@ -103,7 +106,7 @@ function GeneralInvite({ subject }: { subject: string }) {
           <h3 id="class-general-title" className="text-heading">
             {t("class.link.title")}
           </h3>
-          <p className="max-w-2xl text-small text-muted-foreground">{t("class.link.lead")}</p>
+          <p className="text-small text-muted-foreground">{t("class.link.lead")}</p>
         </div>
         {link ? (
           <Badge variant={link.expired || link.paused ? "outline" : "settled"}>
@@ -118,9 +121,7 @@ function GeneralInvite({ subject }: { subject: string }) {
       ) : link ? (
         <LiveLink link={link} subject={subject} />
       ) : (
-        <div className="well rounded-inner p-4">
-          <LinkTerms />
-        </div>
+        <LinkTerms />
       )}
     </section>
   );
@@ -411,13 +412,14 @@ return (
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
-    <div role="group" aria-label={t("acc.invite.quickExpiry")} className="flex flex-wrap gap-1">
+    {/* The shortcuts as the administrator's form draws them: outline buttons, level with
+        the date beside them. */}
+    <div role="group" aria-label={t("acc.invite.quickExpiry")} className="flex flex-wrap gap-2">
       {EXPIRY_PRESETS.map((preset) => (
         <Button
           key={preset.key}
           type="button"
-          size="sm"
-          variant="ghost"
+          variant="outline"
           onClick={() => onChange(toLocalInput(inDays(preset.days)))}
         >
           {t(PRESET_KEYS[preset.key])}
@@ -476,7 +478,7 @@ const INVITE_ROLES: Role[] = ["viewer", "editor"];
  * are, and «Nuevas invitaciones», which opens the form in a dialog.
  */
 function PersonalInvites({ slug }: { slug: string | null }) {
-const { t, plural } = useT();
+const { t } = useT();
 const read = useMemberInvites();
 const rows = read.data?.invites ?? [];
 const [creating, setCreating] = useState(false);
@@ -487,7 +489,7 @@ return (
         <h3 id="class-personal-title" className="text-heading">
           {t("class.invites.title")}
         </h3>
-        <p className="max-w-2xl text-small text-muted-foreground">{t("class.invites.lead")}</p>
+        <p className="text-small text-muted-foreground">{t("class.invites.lead")}</p>
       </div>
       <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
         <UserPlus />
@@ -499,15 +501,16 @@ return (
     ) : read.isError ? (
       <LoadError title={t("class.invites.unreadable")} error={read.error} onRetry={() => read.refetch()} />
     ) : rows.length === 0 ? (
-      <p className="well rounded-inner px-4 py-3 text-small text-muted-foreground">{t("class.invites.noneUnused")}</p>
+      <p className="text-small text-muted-foreground">{t("class.invites.noneUnused")}</p>
     ) : (
-      <PeopleList
-        strip={<span className="text-muted-foreground">{plural("class.invites.detail", rows.length)}</span>}
+      <PeopleTable
+        label={t("class.invites.title")}
+        captions={{ name: t("class.col.invitee"), how: t("class.col.invitedBy"), since: t("class.col.expires") }}
       >
         {rows.map((row) => (
           <UnusedRow key={row.id} row={row} />
         ))}
-      </PeopleList>
+      </PeopleTable>
     )}
     <NewInvites open={creating} slug={slug} onClose={() => setCreating(false)} />
   </section>
@@ -624,25 +627,9 @@ return (
             {INVITE_ROLES.map((choice) => {
               const chosen = choice === role;
               return (
-                <button
-                  key={choice}
-                  {...radios.radio(choice)}
-                  type="button"
-                  role="radio"
-                  aria-checked={chosen}
-                  onClick={() => setRole(choice)}
-                  className={cn(
-                    "rounded-lg flex items-center gap-2 border px-3 py-1.5 text-body transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    chosen ? "border-ink bg-sunk" : "border-input hover:border-ink",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn("size-3 shrink-0 border-[1.5px]", chosen ? "border-ink bg-ink" : "border-input")}
-                  />
+                <ChoicePill key={choice} {...radios.radio(choice)} chosen={chosen} onClick={() => setRole(choice)}>
                   {t(choice === "editor" ? "class.invites.role.editor" : "class.invites.role.viewer")}
-                </button>
+                </ChoicePill>
               );
             })}
           </div>
@@ -709,31 +696,16 @@ function MintedInvites({ minted, slug }: { minted: MintedMemberInvite[]; slug: s
           {t("class.invites.csv")}
         </Button>
       </div>
-      <ul className="well px-1 py-1.5">
-        {minted.map(({ invite, link, sent }, index) => (
-          <li key={invite.id} className={cn("mx-2", index > 0 && "border-t border-border")}>
-            <div className="flex min-h-11 items-center gap-2 px-2 py-1.5 text-small">
-              <span className="flex w-44 shrink-0 items-center gap-1.5">
-                <span className="truncate text-body font-medium">{invite.label}</span>
-                {invite.role === "editor" ? (
-                  <Badge variant="outline" className="shrink-0">
-                    {t("class.invites.teacherBadge")}
-                  </Badge>
-                ) : null}
-              </span>
-              <code className="min-w-0 flex-1 truncate font-mono text-muted-foreground" title={link}>
-                {link}
-              </code>
-              {sent === undefined ? null : (
-                <span className={cn("shrink-0", sent ? "text-muted-foreground" : "text-destructive")}>
-                  {t(sent ? "class.invites.sent" : "class.invites.notSent")}
-                </span>
-              )}
-              <CopyButton text={link} compact />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <LinkTable
+        label={t("class.invites.title")}
+        rows={minted.map(({ invite, link, sent }) => ({
+          id: invite.id,
+          label: invite.label,
+          link,
+          teacher: invite.role === "editor",
+          sent,
+        }))}
+      />
     </div>
   );
 }
@@ -780,50 +752,61 @@ function UnusedRow({ row }: { row: MemberInvite }) {
   };
 
   return (
-    <li className="mx-2 border-t border-border">
-      <div className="flex min-h-11 items-center gap-2 px-2 py-1.5 text-small">
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate text-body font-medium" title={name}>
-            {name}
-          </span>
-          {row.role === "editor" ? (
-            <Badge variant="outline" className="shrink-0">
-              {t("class.invites.teacherBadge")}
-            </Badge>
-          ) : null}
-          {expired ? (
-            <Badge variant="outline" className="shrink-0">
-              {t("class.invites.expiredBadge")}
-            </Badge>
-          ) : null}
-        </span>
-        <span className="hidden w-52 shrink-0 truncate text-muted-foreground md:block">
-          {row.created_by ? t("class.invitedBy", { name: row.created_by }) : "—"}
-        </span>
-        <span className="nums hidden w-40 shrink-0 text-muted-foreground sm:block">
-          {t(expired ? "class.invites.expiredOn" : "class.invites.expiresOn", { date: when(row.expires_at) })}
-        </span>
-        {/* The two gestures stay in sight: copying is what this list is for. */}
-        <span className="flex w-28 shrink-0 items-center justify-end gap-0.5">
-          {expired || row.link_stored === false ? null : (
-            <RowAction label={t("class.invites.copyOne", { name })} title={t("acc.copy")} icon={<Copy />} onClick={copy} />
-          )}
-          <RowAction
-            label={t("class.invites.deleteOne", { name })}
-            title={t("class.invites.delete")}
-            icon={<Trash2 />}
-            disabled={revoke.isPending}
-            onClick={remove}
-            danger
+    <>
+      <TR className="group h-11">
+        <TD>
+          <PersonName
+            name={name}
+            badges={
+              <>
+                {row.role === "editor" ? (
+                  <Badge variant="outline" className="shrink-0">
+                    {t("class.invites.teacherBadge")}
+                  </Badge>
+                ) : null}
+                {expired ? (
+                  <Badge variant="outline" className="shrink-0">
+                    {t("class.invites.expiredBadge")}
+                  </Badge>
+                ) : null}
+              </>
+            }
           />
-        </span>
-      </div>
+        </TD>
+        <TD className={cn(PEOPLE_COLUMNS.how, "truncate text-muted-foreground")}>
+          {row.created_by ? t("class.invitedBy", { name: row.created_by }) : "—"}
+        </TD>
+        <TD className={cn(PEOPLE_COLUMNS.since, "nums text-muted-foreground")}>{when(row.expires_at)}</TD>
+        <TD className="py-1.5">
+          {/* Copying stays in sight: it is what this list is for. Deleting shows on hover. */}
+          <RowGestures
+            always={
+              expired || row.link_stored === false ? null : (
+                <RowAction label={t("class.invites.copyOne", { name })} title={t("acc.copy")} icon={<Copy />} onClick={copy} />
+              )
+            }
+          >
+            <RowAction
+              label={t("class.invites.deleteOne", { name })}
+              title={t("class.invites.delete")}
+              icon={<Trash2 />}
+              disabled={revoke.isPending}
+              onClick={remove}
+              danger
+            />
+          </RowGestures>
+        </TD>
+      </TR>
       {shown ? (
-        <div className="px-2 pb-2">
-          <ShownLink id={row.id} onDismiss={() => setShown(false)} />
-        </div>
+        <TR>
+          <TD colSpan={4} className="pb-3 pt-0">
+            <div className="well rounded-inner p-3">
+              <ShownLink id={row.id} onDismiss={() => setShown(false)} />
+            </div>
+          </TD>
+        </TR>
       ) : null}
-    </li>
+    </>
   );
 }
 

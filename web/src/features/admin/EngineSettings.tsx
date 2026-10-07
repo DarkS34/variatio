@@ -110,7 +110,7 @@ export function SettingsPanel({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <CardTitle>{t(titleKey)}</CardTitle>
         <CardDescription>{t(noteKey)}</CardDescription>
       </CardHeader>
@@ -206,9 +206,10 @@ function CeilingField({ setting, config }: { setting: ConfigSetting; config: Eng
           className={cn("nums", pending && "border-attention ring-1 ring-attention")}
         />
         {canReset(setting) ? (
+          // The field's own height: a 28 px button beside a 36 px field sat 4 px off its line.
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             title={t("cfg.backTo", { value: formatValue(setting.default, t) })}
             aria-label={t("cfg.backTo", { value: formatValue(setting.default, t) })}
             onClick={() => config.reset.mutate(setting.key)}

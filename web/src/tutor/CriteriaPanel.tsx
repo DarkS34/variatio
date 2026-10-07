@@ -9,7 +9,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
+import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
 import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -67,7 +67,7 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
 
   const header = (
     <Card>
-      <CardHeader className="space-y-2">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>{t("tutor.criteria.title")}</CardTitle>
           {data.origin !== "missing" ? (
@@ -91,7 +91,7 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
 
   if (working) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-7">
         {header}
         <Alert
           tone="info"
@@ -104,7 +104,7 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
 
   if (data.origin === "missing") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-7">
         {header}
         {build.error ? (
           <Alert tone="danger" title={t("tutor.criteria.buildFailed")}>
@@ -170,7 +170,7 @@ export function CriteriaPanel({ ready }: { ready: boolean }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       {header}
 
       {warnings}
@@ -355,11 +355,7 @@ function Correction({
       label: unit.name,
       title: unit.name,
       group: index === 0 ? t("tutor.criteria.byUnit") : undefined,
-      mark: (
-        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm border border-current px-0.5 text-micro leading-none">
-          {index + 1}
-        </span>
-      ),
+      mark: <NumberMark n={index + 1} />,
       detail: plural("tutor.criteria.count", (draft.units[unit.name] ?? []).length),
       pending: changes(saved.units[unit.name] ?? [], draft.units[unit.name] ?? []),
     })),

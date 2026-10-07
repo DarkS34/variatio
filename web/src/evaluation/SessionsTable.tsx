@@ -75,9 +75,9 @@ export function SessionsTable({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-body font-semibold">
+        <h2 className="text-heading">
           {t("sessions.title")}
           <span className="ml-2 font-normal nums text-muted-foreground">{total}</span>
         </h2>
@@ -103,7 +103,7 @@ export function SessionsTable({
       {sessions.length === 0 ? (
         <EmptyState title={t("sessions.empty")}>{t("sessions.emptyBody")}</EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="surface p-5">
           <Table minWidth="36rem">
             <THead>
               <TR>

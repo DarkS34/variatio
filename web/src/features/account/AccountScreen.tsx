@@ -4,25 +4,24 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  KeyRound,
-  Languages,
   Library,
   Trash2,
-  UserRound,
   Users,
   X,
 } from "lucide-react";
 
+import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkspaceContext } from "@/features/context/WorkspaceContext";
 import { useToast } from "@/components/ui/toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { RowAction, RowGestures } from "@/components/ui/table";
 import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
@@ -136,15 +135,11 @@ function LanguageCard() {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Languages className="size-4 text-muted-foreground" />
-          {t("language.title")}
-        </CardTitle>
+      <CardHeader>
+        <CardTitle>{t("language.title")}</CardTitle>
+        <CardDescription>{t("language.help")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-small text-muted-foreground">{t("language.help")}</p>
-
         <div
           role="radiogroup"
           aria-label={t("language.title")}
@@ -152,22 +147,16 @@ function LanguageCard() {
           {...radios.group}
         >
           {LANGUAGES.map((code) => (
-            <Button
+            <ChoicePill
               key={code}
               {...radios.radio(code)}
-              role="radio"
-              aria-checked={code === language}
-              variant={code === language ? "default" : "outline"}
+              chosen={code === language}
               disabled={setLanguage.isPending}
               onClick={() => choose(code)}
             >
-              {setLanguage.isPending && setLanguage.variables === code ? (
-                <Spinner />
-              ) : code === language ? (
-                <Check />
-              ) : null}
               {LANGUAGE_NAMES[code]}
-            </Button>
+              {setLanguage.isPending && setLanguage.variables === code ? <Spinner /> : null}
+            </ChoicePill>
           ))}
         </div>
 
@@ -183,22 +172,19 @@ function LanguageCard() {
 }
 
 /**
- * The three cards of "Cuenta", in two columns that are each their own stack.
+ * The three cards of "Cuenta", one under another in one column, 28 px apart as blocks keep.
  *
- * Two columns and NOT three cells of a grid: a grid row is as tall as its tallest cell, so
- * the third card starts below the foot of the second and leaves a hand's width of nothing.
- * A flex stack starts each card where the one above it ended. The pairing is by SIZE and
- * not by subject — the tall password card alone, the two short ones sharing the other
- * track — and below `lg` all three stack in this same order.
+ * They were two columns paired by size, which left two blocks side by side with two heights
+ * (user's request, 2026-10-07: blocks that go together are one height). One column needs no
+ * pairing: each block is as tall as what it holds, and none has a neighbour to match. The
+ * column keeps a reading measure, so the fields do not run across the whole window.
  */
 function AccountTabView() {
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-2">
-      <div className="flex flex-col gap-4">
-        <IdentityCard />
-        <LanguageCard />
-      </div>
+    <div className="max-w-3xl space-y-7">
+      <IdentityCard />
       <PasswordCard />
+      <LanguageCard />
     </div>
   );
 }
@@ -243,11 +229,8 @@ function IdentityCard() {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <UserRound className="size-4 text-muted-foreground" />
-          {t("account.identity.title")}
-        </CardTitle>
+      <CardHeader>
+        <CardTitle>{t("account.identity.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
@@ -346,16 +329,12 @@ function PasswordCard() {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <KeyRound className="size-4 text-muted-foreground" />
-          {t("password.title")}
-        </CardTitle>
+      <CardHeader>
+        <CardTitle>{t("password.title")}</CardTitle>
+        <CardDescription>{t("password.help")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
-          <p className="text-small text-muted-foreground">{t("password.help")}</p>
-
           <div className="space-y-1.5">
             <Label htmlFor="current-password">{t("password.current")}</Label>
             <Input
@@ -526,10 +505,11 @@ function MyWorkspacesTab() {
                       {t(group.label)}
                     </li>
                   ) : null}
-                  {group.rows.map((workspace) => (
+                  {group.rows.map((workspace, index) => (
                     <SubjectRow
                       key={workspace.slug}
                       workspace={workspace}
+                      last={index === group.rows.length - 1}
                       inUse={workspace.slug === current}
                       compact={split}
                       chosen={split && workspace.slug === chosen}
@@ -630,6 +610,7 @@ function subjectGroups(rows: WorkspaceRow[]): { key: string; label: Key; rows: W
 
 function SubjectRow({
   workspace,
+  last,
   inUse,
   compact,
   chosen,
@@ -640,6 +621,8 @@ function SubjectRow({
   onDelete,
 }: {
   workspace: WorkspaceRow;
+  /** The last row of its group draws no rule: the group's caption or the block's end follows. */
+  last: boolean;
   inUse: boolean;
   compact: boolean;
   chosen: boolean;
@@ -662,7 +645,7 @@ function SubjectRow({
       <li
         className={cn(
           "text-muted-foreground",
-          compact ? "flex items-center gap-3 px-3 py-2.5" : "mx-3 border-b border-border py-4 last:border-b-0",
+          compact ? "flex items-center gap-3 px-3 py-2.5" : cn("mx-3 py-4", !last && "border-b border-border"),
         )}
       >
         <span className="min-w-0 flex-1">
@@ -721,7 +704,7 @@ function SubjectRow({
     );
 
   return (
-    <li className="mx-3 space-y-3 border-b border-border py-4 last:border-b-0">
+    <li className={cn("group mx-3 space-y-3 py-4", !last && "border-b border-border")}>
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
         <div className="min-w-0 flex-1 space-y-0.5">
           <p className="flex flex-wrap items-center gap-2 text-heading">
@@ -732,36 +715,45 @@ function SubjectRow({
             <span className="font-mono">{workspace.slug}</span> · {role}
           </p>
         </div>
+        {/* The row's gestures keep their places from one row to the next: «Entrar» leaves
+            its room empty on the subject in use, and deleting — the row's one gesture that
+            changes anything — shows on hover or focus and keeps its room where it is not
+            offered. With the gaps closed, the buttons moved left on one row of three. */}
         <div className="flex flex-wrap items-center gap-1">
-          <Button size="sm" variant="outline" onClick={onExercises}>
+          <Button size="sm" variant="outline" className="h-7" onClick={onExercises}>
             <Library />
             {count ?? t("generations.title")}
             <ChevronRight />
           </Button>
           {workspace.people && (workspace.role === "editor" || workspace.role === "owner") ? (
-            <Button size="sm" variant="ghost" disabled={entering} onClick={onClass}>
+            <Button size="sm" variant="ghost" className="h-7" disabled={entering} onClick={onClass}>
               <Users />
               {plural("class.link", workspace.people.students)}
             </Button>
           ) : null}
-          {inUse ? null : (
-            <Button size="sm" variant="ghost" disabled={entering} onClick={onEnter}>
-              {t("ws.enter")}
-              <ArrowRight />
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn("h-7", inUse && "invisible")}
+            aria-hidden={inUse || undefined}
+            disabled={entering || inUse}
+            onClick={onEnter}
+          >
+            {t("ws.enter")}
+            <ArrowRight />
+          </Button>
           {/* Only over what you own. An administrator disposes of anybody's from
               "Administración", where the whole installation is on one screen. */}
-          {workspace.role === "owner" ? (
-            <Button
-              size="icon-sm"
-              variant="ghost"
+          <RowGestures className={workspace.role === "owner" ? undefined : "invisible"}>
+            <RowAction
+              label={t("acc.ws.delete", { name: workspace.name })}
               title={t("acc.ws.delete", { name: workspace.name })}
+              icon={<Trash2 />}
+              disabled={workspace.role !== "owner"}
               onClick={onDelete}
-            >
-              <Trash2 />
-            </Button>
-          ) : null}
+              danger
+            />
+          </RowGestures>
         </div>
       </div>
 

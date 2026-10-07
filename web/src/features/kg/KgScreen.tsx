@@ -6,7 +6,6 @@ import {
   ListChecks,
   Maximize2,
   Plus,
-  Search,
   Trash2,
   Waypoints,
   X,
@@ -28,7 +27,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { ConfirmDialog, PromptDialog } from "@/components/ui/prompt";
 import { Field } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/hint";
-import { Input, Select, Textarea } from "@/components/ui/input";
+import { Input, SearchInput, Select, Textarea } from "@/components/ui/input";
 import { Alert, LoadError, Separator, Skeleton, Spinner, Switch } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { api, getCurriculum } from "@/lib/api";
@@ -615,16 +614,14 @@ function GraphExplorer({ reading = false }: { reading?: boolean }) {
                 </>
               )}
             </span>
-            <div className="relative min-w-56 flex-1 sm:flex-none">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                aria-label={t("kg.search")}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("kg.searchPlaceholder")}
-                className="h-8 pl-8"
-              />
-            </div>
+            <SearchInput
+              compact
+              className="min-w-56 flex-1 sm:w-auto sm:flex-none"
+              aria-label={t("kg.search")}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("kg.searchPlaceholder")}
+            />
             {/* Adding a unit or a concept only ever writes, so while the stage is being
                 looked at neither is drawn. Greyed out they would claim something is wrong
                 with a screen whose task, right now, is to be read. The search beside them
@@ -1004,7 +1001,7 @@ function SyllabusReader() {
   return (
     <div className="space-y-7">
       <header className="min-w-0 space-y-1.5">
-        <h1 className="text-title">{t("nav.step.graph")}</h1>
+        <h1 className="font-display font-expanded text-title">{t("nav.step.graph")}</h1>
         <p className="max-w-[74ch] text-body text-muted-foreground">{t("kg.reading.title")}</p>
         <GuideLink slug="graph" />
       </header>

@@ -1,3 +1,4 @@
+import { CARD_CHOICE, CARD_CHOSEN, ChoiceMark } from "@/components/ui/choice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
 import { Skeleton } from "@/components/ui/misc";
@@ -37,7 +38,7 @@ export function EngineChoice({ config }: { config: EngineSettings }) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle id="engine-choice-title">{t("eng.kind.title")}</CardTitle>
           {hintKey ? (
@@ -66,21 +67,14 @@ export function EngineChoice({ config }: { config: EngineSettings }) {
                 disabled={disabled}
                 onClick={() => config.change(setting.key, choice)}
                 className={cn(
-                  "rounded-lg flex items-start gap-3 border p-3 text-left transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "disabled:cursor-not-allowed disabled:opacity-60",
-                  chosen ? "border-primary" : "border-input hover:border-primary",
-                  chosen && pending && "border-attention ring-1 ring-attention",
+                  CARD_CHOICE,
+                  "flex items-start gap-3 p-3",
+                  chosen && CARD_CHOSEN,
+                  chosen && pending && "ring-1 ring-attention",
                 )}
               >
                 {/* The square the mark is made of: filled is the one in force. */}
-                <span
-                  aria-hidden
-                  className={cn(
-                    "mt-1 size-3 shrink-0 border-[1.5px]",
-                    chosen ? "border-primary bg-primary" : "border-input",
-                  )}
-                />
+                <ChoiceMark chosen={chosen} className="mt-1.5" />
                 <span className="min-w-0 space-y-0.5">
                   <span className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-expanded text-heading">

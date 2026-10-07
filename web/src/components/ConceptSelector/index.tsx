@@ -1,10 +1,10 @@
-import { LayoutGrid, LayoutList, ListFilter, Search, Waypoints, X } from "lucide-react";
+import { LayoutGrid, LayoutList, ListFilter, Waypoints, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { useModalFocus } from "@/components/ui/focus";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/input";
 import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import type { GraphView, KgConcept } from "@/lib/types";
@@ -263,17 +263,14 @@ export function ConceptSelector({
           {/* Only the board is searchable. A graph whose nodes vanish as you type is not
               a graph any more, and this is a selector, not a search tool. */}
           {view === "board" ? (
-            <div className="relative min-w-56 flex-1 sm:max-w-md">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                aria-label={t("concept.search")}
-                autoFocus
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t("concept.search.placeholder")}
-                className="pl-8"
-              />
-            </div>
+            <SearchInput
+              className="min-w-56 flex-1 sm:max-w-md"
+              aria-label={t("concept.search")}
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("concept.search.placeholder")}
+            />
           ) : null}
 
           {/* The scope is a visible SWITCH and not a setting. It sits beside the view

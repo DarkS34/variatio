@@ -1,9 +1,11 @@
 import { useId, useState, type Dispatch, type SetStateAction } from "react";
 
+import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/input";
+import { SearchInput, Select } from "@/components/ui/input";
 import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { PersonName } from "@/components/ui/person";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
 import { accountsIn } from "@/features/admin/accounts";
@@ -209,31 +211,15 @@ export function FeatureAccess({
           {MODES.map(({ mode, labelKey }) => {
             const chosen = mode === current.mode;
             return (
-              <button
+              <ChoicePill
                 key={mode}
                 {...modes.radio(mode)}
-                type="button"
-                role="radio"
-                aria-checked={chosen}
+                chosen={chosen}
                 disabled={write.isPending}
                 onClick={() => change({ ...current, mode })}
-                className={cn(
-                  "rounded-lg flex items-center gap-2 border px-3 py-2 text-left text-body transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "disabled:cursor-not-allowed disabled:opacity-60",
-                  chosen ? "border-primary" : "border-input hover:border-primary",
-                )}
               >
-                {/* The square the mark is made of: filled is the one chosen. */}
-                <span
-                  aria-hidden
-                  className={cn(
-                    "size-3 shrink-0 border-[1.5px]",
-                    chosen ? "border-primary bg-primary" : "border-input",
-                  )}
-                />
                 {t(labelKey)}
-              </button>
+              </ChoicePill>
             );
           })}
         </div>
@@ -241,7 +227,7 @@ export function FeatureAccess({
         {bySubjects && (selecting || subjects.length > 0) ? (
           <div className="space-y-2">
             <h3 className="text-heading">{t("feature.subjects.title")}</h3>
-            <p className="max-w-3xl text-small text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               {selecting ? t("feature.subjects.lead") : t("feature.kept")}
             </p>
             {workspaces.length === 0 ? (
@@ -249,7 +235,7 @@ export function FeatureAccess({
             ) : (
               <ul
                 className={cn(
-                  "thin-scroll max-h-56 divide-y divide-border overflow-y-auto",
+                  "well thin-scroll rows max-h-56 overflow-y-auto px-2 py-1 rows-flush",
                   !selecting && "opacity-60",
                 )}
               >
@@ -258,7 +244,7 @@ export function FeatureAccess({
                     <li key={row.slug}>
                       <label
                         className={cn(
-                          "flex items-center gap-2 px-1 py-2",
+                          "flex items-center gap-2 rounded-md px-1 py-2",
                           selecting && "cursor-pointer hover:bg-accent",
                         )}
                       >
@@ -328,12 +314,11 @@ export function FeatureAccess({
               </div>
             ) : null}
             {selecting && accounts.length >= SEARCH_FROM ? (
-              <Input
-                type="search"
+              <SearchInput
                 value={search}
                 aria-label={t("feature.search")}
                 placeholder={t("feature.search")}
-                className="w-full sm:w-72"
+                className="sm:w-72"
                 onChange={(event) => setSearch(event.target.value)}
               />
             ) : null}
@@ -349,7 +334,7 @@ export function FeatureAccess({
               // the one that says why, and dimmed it fell under the contrast floor.
               <ul
                 className={cn(
-                  "thin-scroll max-h-72 divide-y divide-border overflow-y-auto",
+                  "well thin-scroll rows max-h-72 overflow-y-auto px-2 py-1 rows-flush",
                   !selecting && "opacity-60",
                 )}
               >
@@ -358,7 +343,7 @@ export function FeatureAccess({
                     {/* A label around the box: the whole row ticks it, the name included. */}
                     <label
                       className={cn(
-                        "flex items-center gap-2 px-1 py-2",
+                        "flex items-center gap-2 rounded-md px-1 py-2",
                         selecting && "cursor-pointer hover:bg-accent",
                       )}
                     >
@@ -371,16 +356,20 @@ export function FeatureAccess({
                         // dimming on top would all but erase the ticks.
                         className={selecting ? undefined : "disabled:opacity-100"}
                       />
-                      <span className="truncate font-mono">{account.username}</span>
-                      {account.id === session.data?.user.id ? (
-                        <Badge variant="outline">{t("acc.badge.you")}</Badge>
-                      ) : null}
-                      {account.disabled ? (
-                        <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
-                      ) : null}
-                      <span className="min-w-0 flex-1 truncate text-small text-muted-foreground">
-                        {account.name}
-                      </span>
+                      <PersonName
+                        name={account.name || account.username}
+                        username={account.username}
+                        badges={
+                          <>
+                            {account.id === session.data?.user.id ? (
+                              <Badge variant="outline">{t("acc.badge.you")}</Badge>
+                            ) : null}
+                            {account.disabled ? (
+                              <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
+                            ) : null}
+                          </>
+                        }
+                      />
                     </label>
                   </li>
                 ))}

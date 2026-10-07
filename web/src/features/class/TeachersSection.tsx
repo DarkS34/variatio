@@ -2,6 +2,7 @@ import { ArrowRightLeft, Crown, UserCheck, UserMinus, UserRoundCog } from "lucid
 
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/confirm";
+import { RowAction } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader } from "@/features/admin/Sections";
 import { useT } from "@/lib/i18n";
@@ -9,7 +10,7 @@ import type { Member, Role } from "@/lib/types";
 import { ROLE_LABEL_KEYS, useIsOwner, useSession } from "@/state/auth";
 import { useChangeRole, useMemberActions } from "@/state/queries";
 
-import { PeopleList, PersonRow, RowAction } from "./PersonRow";
+import { PeopleTable, PersonRow } from "./PersonRow";
 
 /** A subject's teachers — its owners first, then by name — active and paused. */
 export function teachersOf(members: Member[]): Member[] {
@@ -31,7 +32,7 @@ export function teachersOf(members: Member[]): Member[] {
  * two role changes in that order, so the subject has an owner at every moment and the server's
  * guard (`last_owner`) never has to refuse. Every gesture is asked first. A teacher reads the
  * list and changes nothing; nobody acts on their own row here. Teachers come in through an
- * owner's personal invitation, in «Invitar». Drawn as the students are (`PersonRow`), the
+ * owner's personal invitation, in «Invitar», which this list does not repeat. Drawn as the students are (`PersonRow`), the
  * gestures as icons on the row.
  */
 export function TeachersSection({ teachers }: { teachers: Member[] }) {
@@ -117,12 +118,9 @@ export function TeachersSection({ teachers }: { teachers: Member[] }) {
     <>
       <SectionHeader title={t("class.teachers")} description={t("class.teachers.lead")} />
       <section aria-label={t("class.teachers")} className="surface space-y-4 p-5">
-        <PeopleList
-          strip={
-            <span className="min-w-0 flex-1 truncate text-muted-foreground">
-              {t(owner ? "class.teachers.inviteHint" : "class.teachers.readOnly")}
-            </span>
-          }
+        <PeopleTable
+          label={t("class.teachers")}
+          captions={{ name: t("class.col.teacher"), how: t("class.col.how"), since: t("class.col.joined") }}
         >
           {teachers.map((member) => {
             const self = member.user_id === me;
@@ -199,7 +197,8 @@ export function TeachersSection({ teachers }: { teachers: Member[] }) {
               />
             );
           })}
-        </PeopleList>
+        </PeopleTable>
+        {owner ? null : <p className="text-small text-muted-foreground">{t("class.teachers.readOnly")}</p>}
       </section>
     </>
   );

@@ -1,4 +1,4 @@
-import { Crown, Download, Eraser, Eye, MessagesSquare, Pencil, Trash2 } from "lucide-react";
+import { CalendarX, Crown, Download, Eraser, Eye, MessagesSquare, Pencil, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Skeleton, Spinner } from "@/components/ui/misc";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { RowGestures, Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
@@ -28,6 +28,7 @@ import { useT, withCatalogues } from "@/lib/i18n";
 import { artifactName } from "@/lib/names";
 
 import { ClassLinksBlock } from "./ClassLinksBlock";
+import { EndCourseDialog } from "./EndCourseDialog";
 import { SectionHeader } from "./Sections";
 import { WorkspaceGenerations } from "./WorkspaceGenerations";
 
@@ -77,6 +78,9 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
   // The subject whose owner is being chosen, by slug for the same reason as `viewing`.
   const [owningSlug, setOwningSlug] = useState<string | null>(null);
   const owning = overview.workspaces.find((w) => w.slug === owningSlug) ?? null;
+  // The subject whose course is being ended: the administrator's alone since 2026-10-07.
+  const [endingSlug, setEndingSlug] = useState<string | null>(null);
+  const ending = overview.workspaces.find((w) => w.slug === endingSlug) ?? null;
 
   // One section, so no list of sections beside it (the user's call, 2026-10-04): the tab
   // is its header and its table at full width, and the two reads opened from a row — a
@@ -102,7 +106,7 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
         })}
       />
 
-      <div className="surface overflow-hidden p-2">
+      <div className="surface p-5">
         <Table minWidth="60rem">
           <THead>
             <TR>
@@ -117,10 +121,13 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
           </THead>
           <TBody>
             {overview.workspaces.map((workspace) => (
-              <TR key={workspace.id}>
+              <TR key={workspace.id} className="group">
                 <TD className="px-3 py-2">
                   {workspace.name}
-                  <span className="ml-2 font-mono text-micro text-muted-foreground">
+                  {/* The slug in the code face at the size of the text around it: as a
+                      caption (`text-micro`) it took the caption's weight and spacing and
+                      read as a bold label. */}
+                  <span className="ml-2 font-mono text-small text-muted-foreground">
                     {workspace.slug}
                   </span>
                   {workspace.warm ? (
@@ -145,6 +152,7 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7"
                       title={t("ws.viewVariants", { name: workspace.name })}
                       onClick={() => setViewing(workspace)}
                     >
@@ -159,34 +167,54 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
                   {workspace.created_at ? when(workspace.created_at) : "—"}
                 </TD>
                 <TD align="num" className="whitespace-nowrap px-3 py-2">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    title={t("ws.renameNamed", { name: workspace.name })}
-                    onClick={() => setRenaming(workspace)}
+                  {/* Reading the conversations opens something and stays in sight, like
+                      «Ver N ejercicios»; the gestures that change the subject show on hover. */}
+                  <RowGestures
+                    always={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title={t("tutor.admin.view", { name: workspace.name })}
+                        aria-label={t("tutor.admin.view", { name: workspace.name })}
+                        onClick={() => setTalksSlug(workspace.slug)}
+                      >
+                        <MessagesSquare />
+                      </Button>
+                    }
                   >
-                    <Pencil />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    title={t("tutor.admin.view", { name: workspace.name })}
-                    aria-label={t("tutor.admin.view", { name: workspace.name })}
-                    onClick={() => setTalksSlug(workspace.slug)}
-                  >
-                    <MessagesSquare />
-                  </Button>
-                  <ExportButton workspace={workspace} />
-                  <ClearCacheButton workspace={workspace} />
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={remove.isPending}
-                    title={t("ws.deleteTitle")}
-                    onClick={() => setTarget(workspace)}
-                  >
-                    <Trash2 />
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title={t("ws.renameNamed", { name: workspace.name })}
+                      aria-label={t("ws.renameNamed", { name: workspace.name })}
+                      onClick={() => setRenaming(workspace)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title={t("ws.endCourse", { name: workspace.name })}
+                      aria-label={t("ws.endCourse", { name: workspace.name })}
+                      disabled={!workspace.people?.students}
+                      onClick={() => setEndingSlug(workspace.slug)}
+                    >
+                      <CalendarX />
+                    </Button>
+                    <ExportButton workspace={workspace} />
+                    <ClearCacheButton workspace={workspace} />
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={remove.isPending}
+                      title={t("ws.deleteTitle")}
+                      aria-label={t("ws.deleteTitle")}
+                      onClick={() => setTarget(workspace)}
+                      className="hover:text-destructive"
+                    >
+                      <Trash2 />
+                    </Button>
+                  </RowGestures>
                 </TD>
               </TR>
             ))}
@@ -199,6 +227,8 @@ export function WorkspacesTab({ overview }: { overview: AdminOverview }) {
       <ClassLinksBlock
         names={Object.fromEntries(overview.workspaces.map((row) => [row.slug, row.name]))}
       />
+
+      {ending ? <EndCourseDialog workspace={ending} onClose={() => setEndingSlug(null)} /> : null}
 
       {renaming ? (
         <RenameWorkspaceDialog workspace={renaming} onClose={() => setRenaming(null)} />
@@ -261,7 +291,7 @@ function OwnerCell({ workspace, onChoose }: { workspace: AdminWorkspace; onChoos
     return (
       <span className="flex flex-wrap items-center gap-2">
         <Badge variant="danger">{t("ws.noOwner")}</Badge>
-        <Button size="sm" variant="outline" onClick={onChoose}>
+        <Button size="sm" variant="outline" className="h-7" onClick={onChoose}>
           <Crown />
           {t("ws.chooseOwner")}
         </Button>
@@ -328,11 +358,11 @@ function ChooseOwnerDialog({
     >
       <div className="space-y-4">
         {inside.length > 0 ? (
-          <ul className="rows">
+          <ul className="rows rows-tight">
             {inside.map((account) => {
               const role = account.workspaces.find((row) => row.slug === workspace.slug)?.role;
               return (
-                <li key={account.id} className="flex items-center gap-3 py-2">
+                <li key={account.id} className="flex items-center gap-3">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{account.name}</span>
                     <span className="block truncate text-small text-muted-foreground">

@@ -203,10 +203,10 @@ export function ComparisonGrid({
   const missing = answerable.length - answered.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       {/* THE QUESTION, ASKED ONCE. The answers are per card, but the wording belongs to
           the task rather than to the card, so one copy per card would only be noise. */}
-      <div className="surface flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-4">
+      <div className="surface flex flex-wrap items-center gap-x-3 gap-y-1 p-5">
         <p className="text-body">
           <strong>
             {t("grid.forEach", { question: instruments.triage.question.toLowerCase() })}
@@ -218,7 +218,7 @@ export function ComparisonGrid({
         </p>
       </div>
 
-      <div className={cn("grid grid-cols-1 items-stretch gap-4", columnsFor(positions.length))}>
+      <div className={cn("grid grid-cols-1 items-stretch gap-7", columnsFor(positions.length))}>
         {positions.map((position) => (
           <ProposalCard
             key={position.position}

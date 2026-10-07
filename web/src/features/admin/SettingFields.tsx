@@ -131,7 +131,7 @@ export function GroupCard({
   return (
     <Card>
       {title ? (
-        <CardHeader className="pb-2">
+        <CardHeader>
           <CardTitle>{title}</CardTitle>
         </CardHeader>
       ) : null}
@@ -877,7 +877,7 @@ export function DiffSummary({
 
   return (
     <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-      <p className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-micro font-condensed uppercase text-muted-foreground">
         {t("cfg.pending", { n: touched.length })}
       </p>
       <ul className="space-y-1 text-body">

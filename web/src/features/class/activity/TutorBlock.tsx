@@ -84,9 +84,9 @@ export function TutorWays({ week }: { week: ActivityWeek }) {
         {tutor.sent_back.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-micro font-condensed uppercase text-muted-foreground">{t("activity.sentBack")}</h4>
-            <ul className="rows">
+            <ul className="rows rows-tight">
               {tutor.sent_back.map((row) => (
-                <li key={`${row.concept}-${row.prerequisite}`} className="flex items-baseline gap-2 py-1.5">
+                <li key={`${row.concept}-${row.prerequisite}`} className="flex items-baseline gap-2">
                   <span className="min-w-0 flex-1 text-small">
                     <span className="font-medium">«{row.prerequisite}»</span>{" "}
                     <span className="text-muted-foreground">
@@ -220,9 +220,9 @@ function Themes({
           {group.concepts.map((entry) => (
             <div key={entry.concept} className="space-y-1.5">
               <p className="font-medium">«{entry.concept}»</p>
-              <ul className="rows">
+              <ul className="rows rows-tight">
                 {entry.themes.map((theme) => (
-                  <li key={theme.text} className="flex items-baseline justify-between gap-4 py-2">
+                  <li key={theme.text} className="flex items-baseline justify-between gap-4">
                     <span className="text-body">{theme.text}</span>
                     <span className="nums shrink-0 text-small text-muted-foreground">
                       {student && theme.mine !== undefined

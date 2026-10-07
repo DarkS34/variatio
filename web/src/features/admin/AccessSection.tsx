@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { FormError } from "@/features/auth/AuthLayout";
 import { api } from "@/lib/api";
@@ -109,28 +110,27 @@ export function AccessSection() {
           <h3 id="access-networks" className="text-heading">
             {t("acc.access.networks")}
           </h3>
-          <p className="max-w-3xl text-small text-muted-foreground">{t("acc.access.help")}</p>
+          <p className="text-small text-muted-foreground">{t("acc.access.help")}</p>
         </div>
 
         {list.length === 0 ? (
           <p className="text-small text-muted-foreground">{t("acc.access.empty")}</p>
         ) : (
-          <ul className="rows max-w-xl">
+          <ul className="rows max-w-xl rows-tight">
             {list.map((network) => (
-              <li key={network} className="flex items-center gap-2 py-1.5">
+              <li key={network} className="group flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-mono">{network}</span>
                 {fixed ? null : (
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label={t("acc.access.remove", { network })}
-                    title={t("acc.access.removeShort")}
-                    disabled={save.isPending}
-                    onClick={() => setDraft(list.filter((item) => item !== network))}
-                    className="hover:text-destructive"
-                  >
-                    <X />
-                  </Button>
+                  <RowGestures>
+                    <RowAction
+                      label={t("acc.access.remove", { network })}
+                      title={t("acc.access.removeShort")}
+                      icon={<X />}
+                      disabled={save.isPending}
+                      onClick={() => setDraft(list.filter((item) => item !== network))}
+                      danger
+                    />
+                  </RowGestures>
                 )}
               </li>
             ))}

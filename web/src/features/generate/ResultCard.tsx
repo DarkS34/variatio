@@ -158,7 +158,7 @@ export function ResultCard({
 
   return (
     <Card className="animate-fade-in">
-      <CardHeader className="pb-2">
+      <CardHeader>
         {/* Wraps: on a phone the title, the badge and the two controls do not fit one line. */}
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>{t("result.itemHeading", { n: index })}</CardTitle>
@@ -175,7 +175,7 @@ export function ResultCard({
           ) : null}
           <div className="ml-auto flex flex-wrap justify-end gap-1">
             {onTutor ? (
-              <Button variant="tutor" size="sm" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+              <Button variant="tutor" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
                 <MessagesSquare />
                 {t("tutor.fromExercise")}
               </Button>

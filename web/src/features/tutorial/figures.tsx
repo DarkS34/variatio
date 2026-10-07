@@ -169,7 +169,7 @@ export function SourcesFigure() {
     <div className="grid gap-3 sm:grid-cols-2">
       {piles.map(({ title, body }) => (
         <Box key={title} className="items-start justify-start gap-3 p-4 text-left">
-          <span className="flex items-center gap-1.5 text-small font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-micro font-condensed uppercase text-muted-foreground">
             <FileText aria-hidden className="size-4 shrink-0" />
             {t(title)}
           </span>
@@ -196,7 +196,7 @@ export function AskFigure() {
     <Chain>
       {[
         <Box key="ask" className="w-full items-start gap-3 p-5 text-left">
-          <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="text-micro font-condensed uppercase text-muted-foreground">
             {t("tutorial.fig.youAsk")}
           </span>
           <span className="flex flex-wrap gap-2">

@@ -30,7 +30,7 @@ export function ExercisesBlock({
   const top = Math.max(1, ...block.by_unit.map((row) => row.count));
 
   return (
-    <section aria-labelledby={id} className="surface space-y-5 p-5">
+    <section aria-labelledby={id} className="surface space-y-4 p-5">
       <h3 id={id} className="text-heading">
         {t("activity.practise")}
       </h3>
@@ -72,7 +72,7 @@ export function ExercisesBlock({
             <h4 className="text-micro font-condensed uppercase text-muted-foreground">
               {t("activity.byType")}
             </h4>
-            <ul className="rows">
+            <ul className="rows rows-tight">
               {block.by_type.map((row) => {
                 const spec = profile?.item_types[row.type];
                 const ladder = difficultyLevelsOf(spec);
@@ -80,7 +80,7 @@ export function ExercisesBlock({
                   ([a], [b]) => rank(ladder, a) - rank(ladder, b),
                 );
                 return (
-                  <li key={row.type} className="space-y-1.5 py-2.5">
+                  <li key={row.type} className="space-y-1.5">
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="truncate font-medium" title={row.type}>
                         {typeLabel(profile, row.type, t)}

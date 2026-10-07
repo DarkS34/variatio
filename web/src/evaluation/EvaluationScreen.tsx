@@ -87,8 +87,8 @@ function Running({
   const done = step?.current ?? 0;
 
   return (
-    <div className="space-y-4">
-      <div className="surface flex flex-wrap items-center gap-3 p-4">
+    <div className="space-y-7">
+      <div className="surface flex flex-wrap items-center gap-3 p-5">
         {queued ? <Clock className="size-4 shrink-0 text-muted-foreground" /> : <Spinner />}
         <div className="min-w-0 flex-1">
           <p className="text-body font-medium">
@@ -115,7 +115,7 @@ function Running({
       {/* One placeholder per card the session will hold. Which two arms are being written
           is the seed's and never said here: a placeholder named after an arm would be the
           reveal before the cards. */}
-      <div className={cn("grid items-stretch gap-4", columnsFor(CARDS))}>
+      <div className={cn("grid items-stretch gap-7", columnsFor(CARDS))}>
         {Array.from({ length: CARDS }, (_, index) => index + 1).map((position) => (
           <div
             key={position}
@@ -379,7 +379,7 @@ export function EvaluationScreen() {
       ) : null}
 
       {tab === "compose" && !showComparison && !running && canCompose ? (
-        <div className="mx-auto w-full max-w-3xl space-y-4">
+        <div className="mx-auto w-full max-w-3xl space-y-7">
           <GenerateForm
             state={form}
             onChange={setForm}

@@ -95,7 +95,7 @@ function Start() {
         {/* It is the bar above, drawn here: the steps come from `STEPS` and the doors from
             `usesFor`, so this figure cannot promise an order the navigation does not
             have. */}
-        <div className="flex flex-wrap items-center gap-3 rounded-inner border border-border p-4 sm:p-6">
+        <div className="surface flex flex-wrap items-center gap-3 p-5">
           <div>
             <div className="flex flex-wrap items-center gap-3">
               {STEPS.map((step, index) => (
@@ -561,8 +561,9 @@ function Raw() {
         <Steps
           items={[
             <>
-              Hover over the document's row and press the pencil. It opens with the index of
-              pages on the left and the markdown of whichever you pick on the right.
+              Press the document's name, or hover over its row and press the pencil. It opens with
+              the index of pages on the left and the markdown of whichever you pick on the right.
+              Under each name you see its type, its size and how many pages were read.
             </>,
             <>
               Edit and save. You can also <strong>insert</strong> a blank page right after the
@@ -1594,7 +1595,7 @@ function Runs() {
       </Block>
 
       <Block title="The bar is the plan">
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <div className="surface space-y-3 p-5">
           <BuildPlanBar />
           <Paragraph>
             This is the graph builder's real plan, read from the API and not copied out here.
@@ -2028,6 +2029,11 @@ function Admin() {
               key: "cache",
               head: "Empty the cache",
               body: "It deletes only the vectors and the converted markdown, which the next job recomputes. The concept descriptions and their anchoring to your notes stay: the model wrote them by reading those, and they cost a long pass.",
+            },
+            {
+              key: "end",
+              head: t("class.end"),
+              body: "Takes every student out of a subject at once, when the course is over: paused, and the course reopens by opening them, or removed. The general invitation is paused and the teachers stay. It is chosen in a window that asks for the subject's name typed. Only whoever administers does it; teachers have no such button.",
             },
             {
               key: "export",
@@ -2571,7 +2577,7 @@ function Class() {
           {t("nav.mySubjects")}», with the button that counts the students of each subject you
           teach. On the left is the list of its parts, in three groups: «
           {t("class.group.members")}», «{t("class.group.activity")}» and «
-          {t("class.group.course")}». Below it, apart, is «{t("class.end")}».
+          {t("class.group.course")}». Ending the course is done by whoever administers the installation.
         </p>
       </SectionHead>
 
@@ -2682,13 +2688,6 @@ function Class() {
         </Paragraph>
       </Block>
 
-      <Block title={t("class.end")}>
-        <Paragraph>
-          For the subject's owner alone. It takes every student out at once: paused, and the
-          course reopens by opening them, or removed. The general invitation is paused and the teachers
-          stay. To confirm it, a dialog asks you to type the subject's name.
-        </Paragraph>
-      </Block>
     </div>
   );
 }

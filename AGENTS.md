@@ -333,9 +333,10 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   pause (`disable_member`), open again (`enable_member`), remove (`remove_member`), change a
   role (`change_role`) — and every door goes through them: `/api/members` (its router), the
   panel's membership routes (`POST /api/admin/accounts/{id}/memberships/{slug}/enable` opens a
-  paused one), leaving a subject, and ending a course (`POST /api/members/end-course`,
-  `MANAGE`: every active student paused — `disable`, the default — or removed, the teachers
-  stay, the class link is paused, the files stay). `members.people_of` counts a subject's
+  paused one), leaving a subject, and ending a course (`members.end_course`, the
+  administrator's alone since 2026-10-07 at the user's request — it was the owner's —:
+  `POST /api/admin/workspaces/{slug}/end-course`; every active student paused — `disable`,
+  the default — or removed, the teachers stay, the class link is paused, the files stay). `members.people_of` counts a subject's
   people and `owners_of` names its active owners, for the listing and the panel. Closing a membership refuses taking the last
   active owner from people still active (`identity.would_orphan`, 409 `last_owner`; a
   subject with no owner to lose, or emptying, is not refused), moves the account's active
@@ -658,7 +659,9 @@ student counts for nothing, a teacher's own files are not the class's.
   figures are counted from its references over who is of the class now, and a student's
   reading is the class's digest cut to the themes their messages fall under, with how many
   are theirs.
-- **The screen** (`features/class/ActivitySection.tsx`, `activity/*`): two pages of «Clase»,
+- **The screen** (`features/class/ActivitySection.tsx`, `activity/*`): two pages of «Clase»
+  (their lead under the title AND the scope, on one line where the window allows:
+  `SectionHeader wide`),
   one for each thing a student uses (`ActivityView`; user's requests, 2026-10-07: one page
   stacked five blocks, then a page of the week in general read as neither): «Ejercicios
   generados» and «Tutor socrático» (only where the tutor is installed). Both carry the scope
@@ -1064,6 +1067,11 @@ admin's read.
 
 ## The web interface (`web/`)
 
+**Before building or changing any UI, read [`web/DESIGN.md`](web/DESIGN.md)**: the rulebook
+for every block, table, list, control, choice, tab, caption and colour, with the primitive to
+use for each and a checklist to run on every element. It is the prescriptive half of what
+this section explains; when the two disagree, fix both in the same change.
+
 ### Material and tokens
 
 [web/src/index.css](web/src/index.css) holds shadcn token names. **Atlas, worked in clay**
@@ -1085,8 +1093,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 - **Two levels of depth and no more**, three classes in `index.css`: `.surface` is a block
   (it stands out of the ground; `Card` is one; a `.surface` inside a `.surface` goes flat);
   `.raised` is what can be pressed inside a block (an option card, an `lg`/`xl` outline
-  button); `.well` is what holds something inside a block (a list of documents, the drop zone,
-  the graph's tray, the tutor's box, a diagram). **Small things never cast a shadow** — chips,
+  button); `.well` is what holds something inside a block that is NOT a row of data: the drop
+  zone, the graph's canvas and tray, the tutor's box, a diagram, a live strip, a form or a
+  conversation that unfolds under a row, and a list that scrolls inside its block (its cut
+  needs an edge). **A table or a list of data rows lies flat on its block** (user's decision,
+  2026-10-07: «Clase» and `/raw` sank theirs while «Administración» laid them flat). **Small things never cast a shadow** — chips,
   badges, tabs, fields, checkboxes, small buttons: what is chosen is the sunk tint (`bg-sunk`),
   never a relief. A floating thing (dialog, menu, tooltip, sticky save bar) is `bg-popover` +
   `shadow-overlay`.
@@ -1094,6 +1105,31 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   dividers stop short of a rounded edge (`rule-inset-b`, `rule-inset-head`, or an `mx-*` on
   the row); radii step down as they nest (`rounded-block` 24, `rounded-inner` 16, controls 12
   and under); blocks keep 28 px apart (`gap-7`/`space-y-7`) so two shadows never meet.
+- **One base for every block, table and list** (the consistency pass of 2026-10-07, at the
+  user's request; the inventory with screenshots is `docs/consistencia-visual/`, untracked):
+  - A block pads 20 px (`p-5`; the list of sections and the strip of weeks 8, their rows
+    being tiles). Its head (`CardHeader`) is the title in `text-heading` with no icon, the
+    sentence 4 px under it, the content 16 px under that; a head alone closes at 20.
+    Two blocks of one row are one height; a group of blocks may carry a title on the ground
+    in `text-heading`, 16 px over its first block.
+  - A table (`ui/table.tsx`) sits in a block and its text starts where the block's title
+    does (its frame reaches 12 px into the padding). Head of `text-micro` captions; rules that
+    stop short; a row `joined` to the one under it draws none. Ticked rows: the box that
+    ticks all is the head's first cell, and the head turns into the count and its gestures
+    (`TableBulk`), on the same line. A list without columns is `.rows`; the LIST sets its
+    density (`rows-tight`, `rows-flush`), never its rows. Empty is one sentence where the
+    table would be.
+  - A row's gestures are 28 px icons at its end in a column of fixed width, shown on hover
+    or focus (`RowGestures`, `RowAction`); the gesture that opens something («Gestionar»,
+    «Ver N ejercicios», the conversations, copying where copying is the list's job) stays in
+    sight. A person is written name first, username after in the code face (`PersonName`).
+  - Controls sharing a line are one height: 36 px in a toolbar (fields, selects, buttons,
+    `SearchInput` — the one search field, magnifier inside), 28 px in a row.
+  - A choice of a few words is `ChoicePill` (square mark, ink border over the sunk tint); a
+    choice that takes a sentence is a card (`CARD_CHOICE`, `.raised`, pressed in when chosen,
+    the same square). Tabs are the sunk pill everywhere (`TabStrip` draws them so too).
+  - Small captions are `text-micro font-condensed uppercase` and nothing else. Lines are
+    whole pixels (`--text-*--line-height` in rem), so 28 px between blocks draws as 28.
 - **The ink and the coral are each two tokens**: `--primary`/`--attention` are what a WORD is
   written in (`check:color` measures them as text); `--ink`/`--attention-fill` (with their
   `-foreground`) are what a filled control is painted with. In dark the text ink is a pale
@@ -1209,15 +1245,15 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   The list goes in three groups captioned with `SectionEntry.group`, in this order:
   «Miembros» («Alumnos», «Docentes», «Invitar»), «Actividad» («Ejercicios generados»,
   «Tutor socrático» — the last only where the tutor is installed) and «Curso» («Avance de la
-  asignatura», «Funcionalidades permitidas»). «Fin de curso» stands apart under the list, out
-  of its block and softly tinted in `--destructive` (`SectionEntry.apart`, `tone`). It opens
-  on «Alumnos», or on «Invitar» while there is no student. «Alumnos» and «Docentes» draw a
-  person the same way (`PersonRow.tsx`: a well of compact rows under a strip, the gestures
-  as icons on hover or focus; user's request, 2026-10-07). «Alumnos» (`lib/members.ts`): a filter «Activos» /
+  asignatura», «Funcionalidades permitidas»). Ending a course is not here: it is the
+  administrator's, from «Administración → Asignaturas». It opens
+  on «Alumnos», or on «Invitar» while there is no student. «Alumnos», «Docentes» and the
+  unused invitations draw people the same way (`PersonRow.tsx`, `PeopleTable`: the panel's
+  flat table — who, how they came in, since when — one 44 px row each, the gestures as icons
+  on hover or focus; user's requests, 2026-10-07). «Alumnos» (`lib/members.ts`): a filter «Activos» /
   «Desactivados» (no «Todos», user's request 2026-10-07), a search over name and username,
-  and the students drawn as `/raw` draws its documents — one compact row each in a `.well`,
-  a strip over them with the box that ticks the list and, over the ticked ones, the
-  filter's gesture («Desactivar (n)» or «Activar (n)») and «Quitar (n)»; each row carries the
+  and the students in that table, its head's box ticking the list and, over the ticked ones,
+  the head turned into the filter's gesture («Desactivar (n)» or «Activar (n)») and «Quitar (n)»; each row carries the
   same two as icons on hover or focus (a table left most of its width empty) — each
   confirmed naming how many;
   removing is its own dialog — final, offering «Desactivar en su lugar» — and every gesture
@@ -1249,10 +1285,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   gives a teacher's account), and a teacher's invitation wears a «Docente» badge.
   On an unused one, the copy icon reads the link and copies it in the SAME press (a
   `ClipboardItem` holding the promise), and where the browser refuses, the link opens under
-  the row; the bin deletes it, asked first. «Fin de curso» is the owner's alone (`useIsOwner`; the
-  route is `MANAGE`): pause every student (the default, undone in «Alumnos») or remove them,
-  confirmed in a dialog by typing the subject's name as written, as deleting a subject is;
-  destructive, never `--attention`. «Actividad» is `ActivitySection`, see *Class
+  the row; the bin deletes it, asked first. «Actividad» is `ActivitySection`, see *Class
   activity*; a student row's icon opens «Ejercicios generados» on that student. «Docentes» (`TeachersSection`: who teaches it, owners first, every account's to read; an
   owner's gestures, as icons on the row and each asked first — «Hacer propietario», «Pasar a docente», «Activar» a
   paused teacher, «Quitar», and «Ceder la propiedad»: the other made owner FIRST, then the
@@ -1261,7 +1294,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
   `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
   its confirm, and «Borrar el avance», asked first) and «Funcionalidades permitidas»
-  (`UsesSection`: two switches that act at once; the tutor's drawn wherever the tutor is
+  (`UsesSection`: two switches that act at once — the two «Curso» blocks are drawn alike,
+  ruled rows of a name, one line under it and its control on the right; the tutor's drawn wherever the tutor is
   installed, off and still with the reason until the administrator offers it).
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
   2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
@@ -1298,7 +1332,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the other teachers), here and in the panel. Generate's
   «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
   `/variants`) still redirect here.
-- `/raw`: one row per document; multi-select delete; a finished origin carries a
+- `/raw`: one entry per document, in a flat table (2026-10-07) whose head counts the documents;
+  each entry two lines — the name, which opens its pages, and its type, size and pages read
+  (user's request, 2026-10-08: one thin line each read as no list at all); each origin as tall as what it
+  holds, never stretched to the other (user's request, 2026-10-08); multi-select delete; a finished origin carries a
   filled coral tick and no tint on its card (user's request, 2026-10-05); once both origins hold something, «Continuar» stands to the right of the
   title as on a stage (`WayOn`) — coral when everything is read, an outline while the
   reading block under the header holds the coral.
@@ -1329,7 +1366,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   defaults to «Solo conceptos con ejemplos» each opening; model cards above the reasoning
   block (hidden with one model); a refused instruction locks the button until the text
   changes; after a run, «Variar el encargo actual» / «Empezar desde cero», both clearing the
-  previous batch. Two tabs under the title (`components/TabStrip`, the evaluation's strip):
+  previous batch. Two tabs under the title (`components/TabStrip`, drawn as every tab):
   «Generar», where every visit opens, and «Mis ejercicios» with the count of the account's
   exercises in the subject in use (`useExerciseTotal`, a one-row page of the list's
   endpoint, refreshed as each item saves). The tab is `SubjectExercises` for that subject;
@@ -1380,8 +1417,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   (`--tutor`), drawn for the administrator whatever the function's mode. **Every tab is one
   list of its sections beside the section open** (`features/admin/Sections.tsx`, user's
   request of 2026-10-04: «Motor» had a board of cells, «Configuración» a column of stages
-  and the functions' tabs stacked everything down one page). A row of the list is a name and
-  ONE line of state (how many accounts, a part of the engine in a word, who may use a
+  and the functions' tabs stacked everything down one page). A row of the list is a 16 px
+  mark — an icon, or `NumberMark` where the list is an order (steps, units); «Motor» shows its
+  parts' icons, its state in the line, since 2026-10-07 — a name and
+  ONE line of state, drawn even while it loads so the row never changes height (how many accounts, a part of the engine in a word, who may use a
   function, how many settings) plus the count of what is changed there and not saved; the
   list is the tab's summary, so no row of total tiles sits above the tabs. The section opens
   under `SectionHeader` (name, one sentence, the section's one action on the name's line) as
@@ -1390,7 +1429,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   `SETTING_LIST`). A tab with one section («Asignaturas») has no list; its table names each
   subject's owners and counts its students (2026-10-06), and a subject with no owner reads
   «Sin propietario» with «Elegir propietario»: one of its people, or another teacher's
-  account, made owner through the panel's grant. Below `lg` the list
+  account, made owner through the panel's grant. A row's calendar icon ends its course
+  (`EndCourseDialog`, drawn off where the subject has no student): pause every student (the
+  default, undone by opening them) or remove them, confirmed in one dialog by typing the
+  subject's name as written, as deleting a subject is; destructive, never `--attention`. Below `lg` the list
   lies down and scrolls sideways. The maintenance switch is in the header, beside the
   title: one line while the installation is open, a red block across the page while it is
   closed; it is no tab and no section. A function's tab has three sections — «Permisos de
@@ -1684,6 +1726,12 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The material is Atlas in clay (2026-10-04, reopening the grid, `--radius: 0` and the ink
   `--primary`): no white, two levels of depth, small things flat, careful edges; the palette
   is measured; arm colours fixed; theme three-state.
+- One base for blocks, tables, lists, lists of sections, controls on a line, choices and tabs
+  (2026-10-07, the user's request after an inventory with screenshots): tables and lists of
+  data lie flat on their block — `.well` holds what is not a row of data, and a list that
+  scrolls inside its block —; row gestures show on hover except the one that opens; every
+  list of sections leads with a 16 px mark; one tab, one pill, one choice card; whole-pixel
+  lines. See *Material and tokens*.
 - The bar is the path: four numbered steps and the unnumbered doors open to the account (up
   to three), the two groups set apart by a rule and with no phase captions (2026-10-04); no
   dashboard; the rail is gone. For a student the bar draws «Temario» without a number as the

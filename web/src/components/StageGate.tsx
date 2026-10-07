@@ -335,7 +335,7 @@ export function StageGate({
             ) : null}
             {/* No tag of any kind beside the title: the bar already says the state under
                 each step's name, and what a state ASKS is said by the notices below. */}
-            <h1 className="text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
+            <h1 className="font-display font-expanded text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
             {intro ?? (
               WHAT[stage.artifact] ? (
                 <p className="max-w-[74ch] text-body text-muted-foreground">

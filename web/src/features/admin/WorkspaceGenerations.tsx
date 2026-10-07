@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { SectionHeader } from "@/features/admin/Sections";
 import { GenerationCard } from "@/features/generations/GenerationsPanel";
 import { useT } from "@/lib/i18n";
 import type { AdminWorkspace } from "@/lib/types";
@@ -44,17 +45,21 @@ export function WorkspaceGenerations({
   const filtered = Boolean(author || search);
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className="space-y-7">
+      <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft />
           {t("wsgen.back")}
         </Button>
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h2 className="text-heading">{t("wsgen.title", { name: workspace.name })}</h2>
-          <span className="text-body nums text-muted-foreground">{total}</span>
-        </div>
-        <p className="text-small text-muted-foreground">{t("wsgen.readOnly")}</p>
+        <SectionHeader
+          title={
+            <>
+              {t("wsgen.title", { name: workspace.name })}{" "}
+              <span className="nums text-body text-muted-foreground">{total}</span>
+            </>
+          }
+          description={t("wsgen.readOnly")}
+        />
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -91,7 +96,7 @@ export function WorkspaceGenerations({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <Button type="submit" variant="outline" size="sm">
+          <Button type="submit" variant="outline">
             <Search />
             {t("common.search")}
           </Button>
@@ -112,7 +117,7 @@ export function WorkspaceGenerations({
           title={filtered ? t("generations.noMatch") : t("generations.empty")}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-7">
           {rows.map((row) => (
             <GenerationCard
               key={row.id}

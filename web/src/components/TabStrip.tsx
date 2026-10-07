@@ -21,12 +21,15 @@ export function tabIds(strip: string, value: string): { tab: string; panel: stri
 }
 
 /**
- * A row of underlined tabs under a screen's header, each with an optional count.
+ * A row of tabs under a screen's header, each with an optional count, that tie each tab to
+ * the panel it shows (`tabIds`).
  *
- * The underline and not the pill of `ui/tabs`: these split ONE screen into the work and its
- * record («Encargar evaluación» / «Mis evaluaciones», «Generar» / «Mis ejercicios»), and the
- * rule they sit on is the edge of the panel they switch. Arrows, Home and End move the
- * choice and the focus with it; only the chosen tab is in the tab order.
+ * DRAWN AS EVERY TAB OF THE APP IS (user's request, 2026-10-07): the pill of `ui/tabs`, the
+ * chosen one the sunk tint. These were underlined, on a rule across the screen, and the app
+ * had two kinds of tab for one job — «Generar» / «Mis ejercicios» beside «Conversaciones» /
+ * «Criterios». What stays of their own is the panel ids and the focus moving with the arrows.
+ * Arrows, Home and End move the choice and the focus with it; only the chosen tab is in the
+ * tab order.
  */
 export function TabStrip<T extends string>({
   items,
@@ -61,7 +64,10 @@ export function TabStrip<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn("flex border-b border-border", className)}
+      className={cn(
+        "inline-flex max-w-full items-center gap-1.5 overflow-x-auto rounded-xl p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className,
+      )}
       onKeyDown={(event) => {
         if (event.key === "ArrowRight") move(1);
         else if (event.key === "ArrowLeft") move(-1);
@@ -89,20 +95,13 @@ export function TabStrip<T extends string>({
             tabIndex={chosen ? 0 : -1}
             onClick={() => onChange(item.value)}
             className={cn(
-              "-mb-px flex items-center gap-2 border-b-2 px-4 pt-2.5 pb-3 text-body transition-colors",
-              chosen
-                ? "border-primary font-semibold text-foreground"
-                : "border-transparent font-medium text-muted-foreground hover:text-foreground",
+              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              chosen ? "bg-sunk text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {item.label}
-            {item.count ? (
-              // A count is a fact, not an action: it wears the ink. The one "act here"
-              // colour is the screen's to spend on the thing to do.
-              <span className="inline-grid h-[18px] min-w-5 place-items-center rounded-full bg-ink px-1.5 text-[12px] font-semibold text-ink-foreground nums">
-                {item.count}
-              </span>
-            ) : null}
+            {/* The count as the other tabs write theirs: a quiet figure beside the name. */}
+            {item.count ? <span className="nums text-small text-muted-foreground">{item.count}</span> : null}
           </button>
         );
       })}

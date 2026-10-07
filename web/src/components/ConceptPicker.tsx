@@ -1,9 +1,9 @@
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ConceptChip } from "@/components/ui/concept-chip";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/input";
 import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import type { KgConcept } from "@/lib/types";
@@ -171,16 +171,13 @@ export function ConceptPicker({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            aria-label={t("concept.search")}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("concept.search.placeholder")}
-            className="pl-8"
-          />
-        </div>
+        <SearchInput
+          className="min-w-0 flex-1"
+          aria-label={t("concept.search")}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("concept.search.placeholder")}
+        />
         {grouped.length > 1 ? (
           <Button variant="ghost" size="sm" onClick={() => setAll(!anyOpen)}>
             {anyOpen ? t("concept.collapseAll") : t("concept.expandAll")}
@@ -220,7 +217,7 @@ export function ConceptPicker({
                       className="size-2 shrink-0 rounded-full"
                       style={{ background: colour }}
                     />
-                    <span className="truncate text-small font-medium uppercase tracking-wide text-muted-foreground">
+                    <span className="truncate text-micro font-condensed uppercase text-muted-foreground">
                       {domain}
                     </span>
                   </button>

@@ -43,16 +43,16 @@ export function WhoWorks({
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
 
   return (
-    <section aria-labelledby={id} className="surface space-y-3 p-5">
-      <div className="space-y-0.5">
+    <section aria-labelledby={id} className="surface space-y-4 p-5">
+      <div className="space-y-1">
         <h3 id={id} className="text-heading">
           {t(words.title)}
         </h3>
         <p className="text-small text-muted-foreground">{t(words.lead)}</p>
       </div>
-      <ul className="rows">
+      <ul className="rows rows-flush">
         {sorted.map((row) => (
-          <li key={row.id} className="py-0">
+          <li key={row.id}>
             <button
               type="button"
               aria-label={t("activity.who.open", { name: row.name })}

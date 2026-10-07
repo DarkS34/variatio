@@ -122,6 +122,30 @@ def change_role(session: Session, workspace: Workspace, member: User, role: str)
     return row
 
 
+def end_course(session: Session, workspace: Workspace, by: User | None, action: str) -> dict:
+    """End a course: every active student paused (`disable`) or removed, the class link paused.
+
+    The administrator's alone (2026-10-07; it was the owner's). The teachers stay, and so do
+    the files: what each student produced is still theirs, and a paused course reopens by
+    opening its students again. A student the gesture refuses is counted out, never a reason
+    to stop half way.
+    """
+    gesture = {"disable": disable_member, "remove": remove_member}[action]
+    students = [user for row, user in identity.members_of(session, workspace.id) if row.role == VIEWER]
+    done = 0
+    for student in students:
+        try:
+            gesture(session, workspace, student, by)
+        except Refusal:
+            continue
+        done += 1
+    link = identity.live_class_link(session, workspace.id)
+    paused = link is not None and link.paused_at is None
+    if paused:
+        identity.edit_class_link(session, link, paused_at=identity.now())
+    return {"action": action, "students": done, "class_link_paused": paused}
+
+
 def _row(session: Session, workspace: Workspace, member: User) -> Membership:
     """Return the account's membership of this subject, or refuse: it is not one of its people."""
     row = identity.membership(session, workspace.id, member.id)

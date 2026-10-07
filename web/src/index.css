@@ -308,8 +308,13 @@
      by the type alone. 40 px at 700 with -0.03em, against 36 at 600 with -0.02. It is the
      only step whose SIZE moves — the other five keep their measured values, because the
      density of the app did not change. */
+  /* EVERY LINE IS A WHOLE NUMBER OF PIXELS (2026-10-07): 43, 30, 25, 23, 21 and 16 at the
+     default root size, each within a third of a pixel of the ratio it replaces (1.08, 1.25,
+     1.4, 1.55, 1.5, 1.35). With fractional lines a block measured 278.9 px, and the 28 px
+     between two blocks was drawn as 27 here and 29 there. Set in rem, so they still follow
+     the reader's own text size. */
   --text-display: 2.5rem;
-  --text-display--line-height: 1.08;
+  --text-display--line-height: 2.6875rem;
   --text-display--letter-spacing: -0.03em;
   --text-display--font-weight: 700;
 
@@ -319,11 +324,11 @@
   --text-title--font-weight: 600;
 
   --text-heading: 1.125rem;
-  --text-heading--line-height: 1.4;
+  --text-heading--line-height: 1.5625rem;
   --text-heading--font-weight: 600;
 
   --text-body: 0.9375rem;
-  --text-body--line-height: 1.55;
+  --text-body--line-height: 1.4375rem;
 
   --text-small: 0.875rem;
   --text-small--line-height: 1.5;
@@ -333,7 +338,7 @@
      badge, and in a material with no tinted structure those are read as marks rather than
      as words — the extra letterspacing is what makes them hold that job. */
   --text-micro: 0.75rem;
-  --text-micro--line-height: 1.35;
+  --text-micro--line-height: 1rem;
   --text-micro--letter-spacing: 0.12em;
   --text-micro--font-weight: 600;
 }
@@ -385,9 +390,13 @@
     box-shadow: var(--depth-2);
   }
   /* A LIST INSIDE A BLOCK: rows parted by a rule, none in a frame of its own. The first and
-     the last lie against the block's own padding, so the list adds no room of its own. */
+     the last lie against the block's own padding, so the list adds no room of its own.
+     THE LIST SETS ITS DENSITY, NOT ITS ROWS: a row that carried its own `py-*` beat the
+     zeroing below (utilities outrank components) and pushed its list's first line down — by
+     10 px beside a list without rules, in «Qué practican» (2026-10-07). A tighter list says
+     so once, on itself, with one of the two densities below. */
   .rows > * {
-    padding-block: 0.875rem;
+    padding-block: var(--rows-pad, 0.875rem);
   }
   .rows > * + * {
     border-top: 1px solid var(--border);
@@ -403,6 +412,16 @@
     border-radius: var(--radius-inner);
     box-shadow: var(--well);
   }
+}
+
+/* The two other densities of a ruled list: `rows-tight` for one line of text a row, 8 px each
+   side of the rule; `rows-flush` where each row is a control that pads itself (a row that
+   opens, a box that ticks). */
+@utility rows-tight {
+  --rows-pad: 0.5rem;
+}
+@utility rows-flush {
+  --rows-pad: 0rem;
 }
 
 /* A divider that stops short of a rounded edge: drawn as a background line 16 px in from
@@ -472,7 +491,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  line-height: 1.55;
+  line-height: 1.4375rem;
   -webkit-font-smoothing: antialiased;
 }
 

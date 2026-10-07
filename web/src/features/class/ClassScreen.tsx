@@ -1,10 +1,8 @@
 import {
   Activity,
-  CalendarX,
   GraduationCap,
   MessagesSquare,
   Play,
-  Search,
   SlidersHorizontal,
   Spline,
   UserCheck,
@@ -15,12 +13,14 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { GuideLink } from "@/components/GuideLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { SearchInput } from "@/components/ui/input";
+import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { RowAction } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
@@ -33,7 +33,7 @@ import {
   type MemberFilter,
 } from "@/lib/members";
 import type { Member, MemberAction } from "@/lib/types";
-import { useIsOwner, useSession } from "@/state/auth";
+import { useSession } from "@/state/auth";
 import {
   useActiveWorkspace,
   useActivityWeeks,
@@ -46,14 +46,13 @@ import {
 } from "@/state/queries";
 
 import { ActivitySection, activityDetail, type ActivityView } from "./ActivitySection";
-import { EndCourseSection } from "./EndCourseSection";
 import { InviteSection, inviteDetail } from "./InviteSection";
-import { PeopleList, PersonRow, RowAction } from "./PersonRow";
+import { PeopleTable, PersonRow } from "./PersonRow";
 import { ProgressSection, progressDetail } from "./ProgressSection";
 import { TeachersSection, teachersOf } from "./TeachersSection";
 import { UsesSection, usesDetail } from "./UsesSection";
 
-type ClassSection = ActivityView | "students" | "teachers" | "invite" | "progress" | "uses" | "end";
+type ClassSection = ActivityView | "students" | "teachers" | "invite" | "progress" | "uses";
 
 const ACTIVITY_VIEWS: readonly string[] = ["exercises", "tutor"] satisfies ActivityView[];
 
@@ -65,8 +64,8 @@ const ACTIVITY_VIEWS: readonly string[] = ["exercises", "tutor"] satisfies Activ
  * scrolling past another (user's requests, 2026-10-07). The list goes in three groups, each
  * named by a caption: «Miembros» (students, teachers, and «Invitar», the two ways in), then
  * «Actividad» (one page for each thing a student uses: the exercises, and the tutor where it
- * is installed), then «Curso» (the subject's progress, what its students may use); the
- * owner's «Fin de curso» stands apart under the list, tinted as damage is. The two pages of
+ * is installed), then «Curso» (the subject's progress, what its students may use). Ending a
+ * course is the administrator's, from «Administración → Asignaturas». The two pages of
  * the activity share the scope and the week chosen, held here. It opens on «Alumnos», or on
  * «Invitar» while there is nobody to list yet. A student never reaches it: the route is a
  * teacher's (`App`), and so is every read behind it (`/api/members`, `auth.EDIT`).
@@ -85,7 +84,6 @@ export function ClassScreen() {
   // activity's two pages share them and «Alumnos» can open them on one student.
   const [activityOf, setActivityOf] = useState<number | null>(null);
   const [activityWeek, setActivityWeek] = useState<string | null>(null);
-  const owner = useIsOwner();
   // Null until somebody picks: the section to open on depends on the list, which arrives later.
   const [picked, setPicked] = useState<ClassSection | null>(null);
   // The tab's subject, which is the one `/api/members` answered for, and not necessarily the
@@ -155,18 +153,6 @@ export function ClassScreen() {
       mark: <SlidersHorizontal className="size-4" />,
       detail: usesDetail(uses.data, t),
     },
-    // The owner's alone: ending a course takes every student out at once, so it stands apart.
-    ...(owner
-      ? [
-          {
-            key: "end",
-            label: t("class.end"),
-            mark: <CalendarX className="size-4" />,
-            apart: true,
-            tone: "danger" as const,
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -176,6 +162,8 @@ export function ClassScreen() {
         <p className="max-w-[74ch] text-body text-muted-foreground">
           {t("class.lead", { subject })}
         </p>
+        {/* Every screen links its section of the guide under its title. */}
+        <GuideLink slug="class" />
       </header>
 
       {members.isError ? (
@@ -209,8 +197,6 @@ export function ClassScreen() {
             <ProgressSection />
           ) : section === "uses" ? (
             <UsesSection />
-          ) : section === "end" && owner ? (
-            <EndCourseSection subject={subject} />
           ) : (
             <StudentsSection
               students={students}
@@ -338,17 +324,13 @@ function StudentsSection({
               { value: "disabled", label: t("class.filter.paused"), badge: <Count n={counts.disabled} /> },
             ]}
           />
-          <div className="relative ml-auto w-full sm:w-72">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              type="search"
-              value={query}
-              aria-label={t("class.search")}
-              placeholder={t("class.search")}
-              className="pl-8"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
+          <SearchInput
+            className="ml-auto sm:w-72"
+            value={query}
+            aria-label={t("class.search")}
+            placeholder={t("class.search")}
+            onChange={(event) => setQuery(event.target.value)}
+          />
         </div>
 
         {students.length === 0 ? (
@@ -358,46 +340,44 @@ function StudentsSection({
             {query.trim() ? t("class.students.noMatch") : t(EMPTY_KEYS[filter])}
           </p>
         ) : (
-          <PeopleList
-            strip={
-              <>
-                <Checkbox
-                  checked={allTicked}
-                  indeterminate={chosen.length > 0 && !allTicked}
-                  label={t("class.tickAll")}
-                  onCheckedChange={(on) =>
-                    setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set())
-                  }
-                />
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {chosen.length > 0 ? plural("class.ticked", chosen.length) : t("class.tickAll")}
-                </span>
-                {chosen.length > 0 ? (
-                  <span className="flex items-center gap-1">
-                    {many.isPending ? <Spinner /> : null}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="-my-1 h-7"
-                      disabled={many.isPending}
-                      onClick={() => change(chosen)}
-                    >
-                      {filter === "active" ? <UserX /> : <UserCheck />}
-                      {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="-my-1 h-7 text-destructive hover:text-destructive"
-                      disabled={many.isPending}
-                      onClick={() => setRemoving(chosen)}
-                    >
-                      <UserMinus />
-                      {t("class.removeN", { n: chosen.length })}
-                    </Button>
+          <PeopleTable
+            label={t("class.students")}
+            captions={{ name: t("class.col.student"), how: t("class.col.how"), since: t("class.col.joined") }}
+            tick={{
+              checked: allTicked,
+              indeterminate: chosen.length > 0 && !allTicked,
+              label: t("class.tickAll"),
+              onChange: (on) => setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set()),
+            }}
+            bulk={
+              chosen.length > 0 ? (
+                <>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                    {plural("class.ticked", chosen.length)}
                   </span>
-                ) : null}
-              </>
+                  {many.isPending ? <Spinner /> : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="-my-1.5 h-7"
+                    disabled={many.isPending}
+                    onClick={() => change(chosen)}
+                  >
+                    {filter === "active" ? <UserX /> : <UserCheck />}
+                    {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="-my-1.5 h-7 text-destructive hover:text-destructive"
+                    disabled={many.isPending}
+                    onClick={() => setRemoving(chosen)}
+                  >
+                    <UserMinus />
+                    {t("class.removeN", { n: chosen.length })}
+                  </Button>
+                </>
+              ) : null
             }
           >
             {shown.map((member) => {
@@ -442,7 +422,7 @@ function StudentsSection({
                 />
               );
             })}
-          </PeopleList>
+          </PeopleTable>
         )}
       </section>
 

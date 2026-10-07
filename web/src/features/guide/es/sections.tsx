@@ -91,7 +91,7 @@ function Start() {
       <Block title="El recorrido, de un vistazo">
         {/* The bar above, drawn here: the steps come from `STEPS` and the doors from
             `usesFor`, so this figure cannot promise an order the navigation does not have. */}
-        <div className="flex flex-wrap items-center gap-3 rounded-inner border border-border p-4 sm:p-6">
+        <div className="surface flex flex-wrap items-center gap-3 p-5">
           <div>
             <div className="flex flex-wrap items-center gap-3">
               {STEPS.map((step, index) => (
@@ -556,8 +556,9 @@ function Raw() {
         <Steps
           items={[
             <>
-              Pasa el cursor por la fila del documento y pulsa el lápiz. Se abre con el índice de
-              páginas a la izquierda y el markdown de la que elijas a la derecha.
+              Pulsa el nombre del documento, o pasa el cursor por su fila y pulsa el lápiz. Se abre
+              con el índice de páginas a la izquierda y el markdown de la que elijas a la derecha.
+              Bajo cada nombre ves su tipo, su tamaño y cuántas páginas se han leído.
             </>,
             <>
               Edita y guarda. También puedes <strong>insertar</strong> una página en blanco
@@ -1585,7 +1586,7 @@ function Runs() {
       </Block>
 
       <Block title="La barra es el plan">
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <div className="surface space-y-3 p-5">
           <BuildPlanBar />
           <Paragraph>
             Es el plan real del constructor del grafo, leído de la API y no copiado aquí. Cada
@@ -2017,6 +2018,11 @@ function Admin() {
               key: "cache",
               head: "Vaciar la caché",
               body: "Borra solo los vectores y el markdown convertido, que el próximo trabajo vuelve a calcular. Las descripciones de conceptos y su anclaje a tus apuntes se quedan: los escribió el modelo leyéndolos y cuestan una pasada larga.",
+            },
+            {
+              key: "fin",
+              head: t("class.end"),
+              body: "Saca de una asignatura a todos sus alumnos de una vez, cuando el curso termina: desactivados, y el curso se reabre activándolos, o quitados. La invitación general queda en pausa y los docentes se quedan. Se elige en una ventana que pide escribir el nombre de la asignatura. Solo lo hace quien administra; los docentes no tienen este botón.",
             },
             {
               key: "export",
@@ -2558,7 +2564,7 @@ function Class() {
           {t("nav.mySubjects")}», con el botón que cuenta los alumnos de cada asignatura donde
           das clase. A la izquierda está la lista de sus partes, en tres grupos: «
           {t("class.group.members")}», «{t("class.group.activity")}» y «
-          {t("class.group.course")}». Debajo, aparte, está «{t("class.end")}».
+          {t("class.group.course")}». El fin de curso lo hace quien administra la instalación.
         </p>
       </SectionHead>
 
@@ -2671,14 +2677,6 @@ function Class() {
         </Paragraph>
       </Block>
 
-      <Block title={t("class.end")}>
-        <Paragraph>
-          Solo para quien es propietario de la asignatura. Saca a todos los alumnos de una vez:
-          desactivados, y el curso se reabre activándolos, o quitados. La invitación general queda
-          en pausa y los docentes se quedan. Para confirmarlo, una ventana te pide escribir el
-          nombre de la asignatura.
-        </Paragraph>
-      </Block>
     </div>
   );
 }

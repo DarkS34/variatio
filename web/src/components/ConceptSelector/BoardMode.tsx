@@ -79,7 +79,7 @@ export function BoardMode({
                 className="size-2.5 shrink-0 rounded-full"
                 style={{ background: colour }}
               />
-              <h3 className="min-w-0 flex-1 truncate text-small font-semibold uppercase tracking-wide">
+              <h3 className="min-w-0 flex-1 truncate text-micro font-condensed uppercase">
                 {domain}
               </h3>
               <span

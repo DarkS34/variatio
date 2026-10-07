@@ -66,7 +66,7 @@ export function MaintenanceSwitch() {
   }
 
   return (
-    <section className="surface w-full bg-[color-mix(in_oklab,var(--destructive)_10%,var(--card))] p-4 sm:p-5">
+    <section className="surface w-full bg-[color-mix(in_oklab,var(--destructive)_10%,var(--card))] p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <Wrench className="mt-0.5 size-4 shrink-0 animate-pulse-soft text-destructive" />

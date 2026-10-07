@@ -103,7 +103,7 @@ function ModelCard({
           {active ? <Check className="size-3.5 shrink-0 text-primary" /> : null}
           <span className="text-body font-medium">{family.label || model}</span>
           {family.speed ? (
-            <span className="ml-auto flex shrink-0 items-center gap-1 text-micro font-condensed uppercase tracking-wide text-muted-foreground">
+            <span className="ml-auto flex shrink-0 items-center gap-1 text-micro font-condensed uppercase text-muted-foreground">
               <Speed className="size-3.5" />
               {t(family.speed === "fast" ? "form.model.fast" : "form.model.slow")}
             </span>

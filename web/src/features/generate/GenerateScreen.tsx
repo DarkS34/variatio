@@ -305,7 +305,7 @@ export function GenerateScreen() {
   );
 
   const runPane = run ? (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <RunStrip
         run={run}
         running={running}
@@ -393,7 +393,7 @@ export function GenerateScreen() {
             arrived at half the width of the window, beside a form you had already filled in.
             The commission collapses to a line, the run to a strip, and what is left is the
             items, at a width you can read a statement and a block of code in. */}
-        <div className="mx-auto w-full max-w-4xl space-y-4">
+        <div className="mx-auto w-full max-w-4xl space-y-7">
           {collapsed ? null : formPanel}
           {hasRun ? runPane : null}
         </div>
@@ -523,9 +523,9 @@ function Results({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-body font-semibold">
+    <div className="space-y-7">
+      <div className="-mb-3 flex flex-wrap items-center gap-2">
+        <h2 className="text-heading">
           {t("generate.results")}
           <span className="ml-2 font-normal text-muted-foreground nums">
             {results.length}

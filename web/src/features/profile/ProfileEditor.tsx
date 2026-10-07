@@ -127,7 +127,7 @@ function TypeStrip({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-body font-semibold tracking-tight">{t("modality.title")}</h2>
+        <h2 className="text-heading">{t("modality.title")}</h2>
         <InfoHint label={t("modality.whatAre")}>{t("modality.whatAre.body")}</InfoHint>
       </div>
 
@@ -386,22 +386,22 @@ function FieldsRead({
   const { t } = tr;
   const omittable = omittableFields(spec);
   return (
-    <div className="space-y-2 pt-2">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-body font-semibold tracking-tight">{title}</h2>
+        <h2 className="text-heading">{title}</h2>
         <InfoHint label={t("modality.fields.hintLabel")}>
           {t("modality.fields.hintA")} <Star className="inline size-3" /> {t("modality.fields.hintB")}
         </InfoHint>
       </div>
-      <Card>
-        <ul className="divide-y divide-border">
+      <Card className="p-5">
+        <ul className="rows">
           {names.map((name) => {
             const field = spec.fields[name];
             const schema = field?.schema ?? {};
             const optional = isNullable(schema);
             const values = baseType(schema) === "enum" ? enumValues(schema) : [];
             return (
-              <li key={name} className="space-y-1.5 px-4 py-3">
+              <li key={name} className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="mr-1 font-mono text-body font-medium">{name}</span>
                   {name === spec.primary_field ? (
@@ -646,7 +646,7 @@ export function ProfileEditor() {
         </Alert>
       ) : null}
 
-      <div className="space-y-4">
+      <div className="space-y-7">
         <TypeStrip
           keys={typeKeys}
           active={activeKey}
@@ -662,7 +662,7 @@ export function ProfileEditor() {
           editing={editing}
         />
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-7 lg:grid-cols-2">
           <Card>
             {/* No `pb-2` here or on the card beside it: the header's own `p-4` leaves 16 px
                 under the title, which is the gap between two fields — so every element of
@@ -817,9 +817,9 @@ export function ProfileEditor() {
             stage is being looked at the same fields are READ instead (`FieldsRead`), because
             what an exercise of this type is made of is part of what is being reviewed. */}
         {editing ? (
-          <>
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <h2 className="text-body font-semibold tracking-tight">
+          <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-heading">
               {t("modality.fieldsOf", { name: spec.label || activeKey })}
             </h2>
             <InfoHint label={t("modality.fields.hintLabel")}>
@@ -852,7 +852,7 @@ export function ProfileEditor() {
             </Alert>
           ) : null}
 
-          <div className="space-y-2">
+          <Card className="rows px-5 py-2 rows-flush">
             {names.map((name, index) => (
               <FieldEditor
                 key={name}
@@ -890,7 +890,7 @@ export function ProfileEditor() {
                 onMove={(direction) => moveField(name, direction)}
               />
             ))}
-          </div>
+          </Card>
 
           <AddInline
             placeholder={t("modality.newFieldPlaceholder")}
@@ -898,7 +898,7 @@ export function ProfileEditor() {
             onAdd={addField}
             validate={(name) => fieldNameError(name, names, tr)}
           />
-          </>
+          </div>
         ) : names.length ? (
           <FieldsRead
             title={t("modality.fieldsOf", { name: spec.label || activeKey })}

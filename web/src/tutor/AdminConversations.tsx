@@ -1,12 +1,13 @@
 import "./i18n";
 
-import { ArrowLeft, MessagesSquare } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/input";
-import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
+import { LoadError, Skeleton } from "@/components/ui/misc";
+import { SectionHeader } from "@/features/admin/Sections";
 import { when } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import type { AdminWorkspace } from "@/lib/types";
@@ -51,72 +52,90 @@ export function AdminConversations({
   const total = listing.data?.total ?? 0;
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
+    <div className="space-y-7">
+      <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft />
           {t("wsgen.back")}
         </Button>
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h2 className="text-heading">{t("tutor.admin.title", { name: workspace.name })}</h2>
-          <span className="text-body nums text-muted-foreground">{total}</span>
-        </div>
-        <p className="text-small text-muted-foreground">{t("tutor.admin.readOnly")}</p>
+        <SectionHeader
+          title={
+            <>
+              {t("tutor.admin.title", { name: workspace.name })}{" "}
+              <span className="nums text-body text-muted-foreground">{total}</span>
+            </>
+          }
+          description={t("tutor.admin.readOnly")}
+        />
       </div>
 
-      {(listing.data?.authors.length ?? 0) > 1 ? (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="tutor-admin-author">{t("wsgen.author")}</Label>
-          <Select
-            id="tutor-admin-author"
-            className="w-64"
-            value={author}
-            onChange={(event) => {
-              setAuthor(event.target.value);
-              setOffset(0);
-            }}
-          >
-            <option value="">{t("wsgen.allAuthors")}</option>
-            {listing.data?.authors.map((a) => (
-              <option key={a.id} value={String(a.id)}>
-                {a.name || a.username || `#${a.id}`}
-              </option>
-            ))}
-          </Select>
-        </div>
-      ) : null}
+      {/* One block, its conversations ruled rows as every list (2026-10-07: a frame per row,
+          on the ground, was the panel's one list drawn that way). What a row opens — the
+          conversation — is held in a well under it. */}
+      <section className="surface space-y-4 p-5">
+        {(listing.data?.authors.length ?? 0) > 1 ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tutor-admin-author">{t("wsgen.author")}</Label>
+            <Select
+              id="tutor-admin-author"
+              className="w-64"
+              value={author}
+              onChange={(event) => {
+                setAuthor(event.target.value);
+                setOffset(0);
+              }}
+            >
+              <option value="">{t("wsgen.allAuthors")}</option>
+              {listing.data?.authors.map((a) => (
+                <option key={a.id} value={String(a.id)}>
+                  {a.name || a.username || `#${a.id}`}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
 
-      {listing.isLoading ? <Skeleton className="h-64" /> : null}
-      {listing.isError ? (
-        <LoadError title={t("tutor.admin.unreadable")} error={listing.error} onRetry={listing.refetch} />
-      ) : null}
-      {listing.data && rows.length === 0 ? (
-        <EmptyState icon={<MessagesSquare />} title={t("tutor.admin.empty")} />
-      ) : null}
+        {listing.isLoading ? <Skeleton className="h-64" /> : null}
+        {listing.isError ? (
+          <LoadError title={t("tutor.admin.unreadable")} error={listing.error} onRetry={listing.refetch} />
+        ) : null}
+        {listing.data && rows.length === 0 ? (
+          <p className="text-small text-muted-foreground">{t("tutor.admin.empty")}</p>
+        ) : null}
 
-      <ul className="space-y-2">
-        {rows.map((row) => {
-          const isOpen = open?.id === row.id && open.author === row.author.id;
-          return (
-            <li key={`${row.author.id}-${row.id}`} className="rounded-lg border border-border">
-              <button
-                type="button"
-                className={cn("w-full px-4 py-3 text-left hover:bg-accent", isOpen && "bg-accent")}
-                onClick={() => setOpen(isOpen ? null : { author: row.author.id, id: row.id })}
-                aria-expanded={isOpen}
-              >
-                <span className="block font-medium">{row.title || t("tutor.untitled")}</span>
-                <span className="text-small text-muted-foreground">
-                  {row.author.username ?? t("generations.byNobody")} ·{" "}
-                  {plural("tutor.list.turns", row.turns, { n: row.turns })} ·{" "}
-                  {row.updated_at ? when(row.updated_at) : "—"}
-                </span>
-              </button>
-              {isOpen ? <Transcript slug={workspace.slug} author={row.author.id} id={row.id} /> : null}
-            </li>
-          );
-        })}
-      </ul>
+        {rows.length > 0 ? (
+          <ul className="rows rows-flush">
+            {rows.map((row) => {
+              const isOpen = open?.id === row.id && open.author === row.author.id;
+              return (
+                <li key={`${row.author.id}-${row.id}`}>
+                  <button
+                    type="button"
+                    className={cn(
+                      "-mx-3 block w-[calc(100%+1.5rem)] rounded-inner px-3 py-2.5 text-left transition-colors",
+                      isOpen ? "bg-sunk" : "hover:bg-accent",
+                    )}
+                    onClick={() => setOpen(isOpen ? null : { author: row.author.id, id: row.id })}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="block font-medium">{row.title || t("tutor.untitled")}</span>
+                    <span className="text-small text-muted-foreground">
+                      {row.author.username ?? t("generations.byNobody")} ·{" "}
+                      {plural("tutor.list.turns", row.turns, { n: row.turns })} ·{" "}
+                      {row.updated_at ? when(row.updated_at) : "—"}
+                    </span>
+                  </button>
+                  {isOpen ? (
+                    <div className="well mb-2 mt-1">
+                      <Transcript slug={workspace.slug} author={row.author.id} id={row.id} />
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </section>
 
       {total > PAGE ? (
         <div className="flex items-center gap-2">
@@ -143,7 +162,7 @@ function Transcript({ slug, author, id }: { slug: string; author: number; id: st
     return <LoadError title={t("tutor.unreadable")} error={conversation.error} onRetry={conversation.refetch} />;
   }
   return (
-    <div className="space-y-3 border-t border-border p-4">
+    <div className="space-y-3 p-4">
       {conversation.data.turns.map((turn, index) => (
         <div key={index} className="space-y-1">
           <p className="flex flex-wrap items-center gap-2 text-micro text-muted-foreground">

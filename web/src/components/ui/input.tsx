@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import type { InputHTMLAttributes, LabelHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
@@ -15,6 +16,32 @@ const field =
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(field, "h-9 py-1", className)} {...props} />;
+}
+
+/**
+ * THE ONE SEARCH FIELD: a magnifier inside the box, on every list that can be searched.
+ *
+ * It was drawn by hand eight times, and two of them — over the sections of «Configuración»
+ * and of «Cuentas» — had lost the magnifier, so the same field read as a search in one tab
+ * and as a plain box in the next. `className` sizes the wrapper; the box fills it.
+ */
+export function SearchInput({
+  className,
+  compact = false,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  /** 32 px tall, for a line of small buttons; 36 px otherwise, as every other field. */
+  compact?: boolean;
+}) {
+  return (
+    <div className={cn("relative w-full", className)}>
+      <Search
+        aria-hidden
+        className={cn("pointer-events-none absolute left-2.5 size-4 text-muted-foreground", compact ? "top-2" : "top-2.5")}
+      />
+      <Input type="search" className={cn("pl-8", compact && "h-8")} {...props} />
+    </div>
+  );
 }
 
 /**

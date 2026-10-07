@@ -51,7 +51,7 @@ export function GraphMode({
     <div className="flex h-full flex-col">
       <div className="shrink-0 border-b border-border px-4 py-2 sm:px-6">
         <div className="mx-auto flex max-w-[110rem] flex-wrap items-center gap-2">
-          <span className="text-small font-medium uppercase tracking-wide text-muted-foreground">
+          <span className="text-micro font-condensed uppercase text-muted-foreground">
             {t("concept.prerequisiteLevels")}
           </span>
           {bands.map((band) => (

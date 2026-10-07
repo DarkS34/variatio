@@ -660,6 +660,40 @@ def delete_workspace(
     }
 
 
+class EndCourseBody(BaseModel):
+    """How a course ends: its students paused (`disable`, undone by opening them) or removed."""
+
+    action: str = "disable"
+
+
+@router.post("/workspaces/{slug}/end-course")
+def end_course(
+    slug: str,
+    body: EndCourseBody,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """End one subject's course: every active student paused, or removed, and the link paused.
+
+    The administrator's alone (the user's decision, 2026-10-07: the owner's button at the foot
+    of «Clase» was taken away). The teachers and the files stay (`members.end_course`).
+    """
+    if body.action not in ("disable", "remove"):
+        raise HTTPException(422, f"Fin de curso desconocido: '{body.action}'.")
+    workspace = repository.get_workspace(db, slug)
+    if workspace is None:
+        raise HTTPException(404, f"No existe la asignatura '{slug}'.")
+    answer = members.end_course(db, workspace, admin, body.action)
+    logger.info(
+        "[admin] «{}» terminó el curso de «{}»: {} alumno(s) {}",
+        admin.username,
+        slug,
+        answer["students"],
+        "desactivado(s)" if body.action == "disable" else "quitado(s)",
+    )
+    return answer
+
+
 @router.delete("/workspaces/{slug}/artifacts/{artifact}")
 def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) -> dict:
     """Empty one stage, leaving the workspace standing and the artifact "missing".

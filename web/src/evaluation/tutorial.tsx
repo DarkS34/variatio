@@ -73,7 +73,7 @@ function BlindFigure() {
     <div className="grid gap-3 sm:grid-cols-2">
       {["A", "B"].map((letter) => (
         <Box key={letter} className="items-start gap-3 p-4 text-left">
-          <span className="text-small font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="text-micro font-condensed uppercase text-muted-foreground">
             {t("grid.proposal", { letter })}
           </span>
           <span className="flex w-full flex-col gap-1.5" aria-hidden>

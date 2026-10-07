@@ -81,14 +81,16 @@ export function WeekStrip({
                 onClick={() => onChange(week.week)}
                 onKeyDown={(event) => move(event, index)}
                 className={cn(
-                  "flex w-36 flex-col items-start gap-1 rounded-inner px-3 py-2 text-left transition-colors",
+                  // The tile of a row of `Sections`, line for line, so the two strips of the
+                  // page — the sections, the weeks — are one height (64 px).
+                  "flex w-36 flex-col items-start rounded-inner px-3 py-2.5 text-left transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   chosen ? "bg-sunk" : "hover:bg-accent",
                 )}
               >
                 <span
                   className={cn(
-                    "flex w-full items-center gap-1.5 text-small font-medium",
+                    "flex w-full items-center gap-1.5 text-body font-medium",
                     chosen ? "text-foreground" : empty ? "text-muted-foreground" : "text-foreground/85",
                   )}
                 >
