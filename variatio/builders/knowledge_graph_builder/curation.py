@@ -1,6 +1,6 @@
 """Phase 3 — domains, the syllabus order, and the one file a build writes.
 
-The result is still a DRAFT. The final curation into `instance/knowledge_graph.json`
+The result is still a DRAFT. The final curation into `artifacts/knowledge_graph.json`
 (draining the unclassified bucket, fixing dubious directions) is manual.
 """
 

@@ -20,7 +20,7 @@ from .. import wording as wording_sets
 from .tagger import TRACE_KEY, ConceptTagger
 from ..core.lexicon import mentions
 from .embedder import Embedder
-from ..instance.exemplars_profile import ItemType
+from ..loaders.exemplars_profile import ItemType
 
 RULE_MENTIONS = "mentions"
 RULE_PRACTISES = "practises"

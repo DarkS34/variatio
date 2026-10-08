@@ -1,6 +1,6 @@
 """Phase 1 — load the instance, warm the indices, hand back a `RuntimeContext`.
 
-Read-only by default: `initialize(tag=True)` is the only phase-1 write to `instance/`.
+Read-only by default: `initialize(tag=True)` is the only phase-1 write to `artifacts/`.
 Initialize once per process and generate many times — building the embedder writes every
 missing concept description and indexes the graph, which is minutes.
 """
@@ -17,11 +17,11 @@ from ..runtime.tagger import ConceptTagger
 from ..core import progress
 from ..core.workspace import Workspace
 from ..runtime.embedder import Embedder
-from ..instance import locale
-from ..instance.content_context import ContentContext
+from ..loaders import locale
+from ..loaders.content_context import ContentContext
 from .. import prompts as prompts_pkg
-from ..instance.exemplars_profile import ExemplarsProfile
-from ..instance.knowledge_graph import KnowledgeGraph
+from ..loaders.exemplars_profile import ExemplarsProfile
+from ..loaders.knowledge_graph import KnowledgeGraph
 from ..runtime.generator import VariantGenerator
 from . import _artifacts
 

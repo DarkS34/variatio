@@ -8,7 +8,7 @@ from variatio import config
 from variatio.builders import exemplars_bank_builder
 from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 PROFILE = {
     "item_types": {

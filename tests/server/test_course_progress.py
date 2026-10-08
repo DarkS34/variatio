@@ -24,14 +24,14 @@ from server.routers import members as member_routes
 from server.routers.auth import _me
 from server.routers.members import UsesBody
 from variatio.core.workspace import Workspace
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from ..conftest import CHAIN_GRAPH
 
 
 def _subject(tmp_path):
     ws = Workspace(root=tmp_path, slug="aula")
-    ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    ws.artifacts_dir.mkdir(parents=True, exist_ok=True)
     ws.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     return ws, KnowledgeGraph(str(ws.kg_path))
 

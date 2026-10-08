@@ -12,7 +12,7 @@ import pytest
 
 from variatio.core import languages
 from variatio.core.workspace import Workspace
-from variatio.instance import locale
+from variatio.loaders import locale
 
 
 @pytest.fixture

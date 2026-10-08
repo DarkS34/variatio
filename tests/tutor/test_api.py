@@ -39,7 +39,7 @@ def _schema():
 @pytest.fixture
 def ws(tmp_path):
     ws = Workspace(tmp_path / "ws", slug="ws")
-    ws.instance_dir.mkdir(parents=True)
+    ws.artifacts_dir.mkdir(parents=True)
     ws.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     return ws
 

@@ -13,8 +13,8 @@ from .. import config
 from ..core import inference
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
-from ..instance import locale
-from ..instance.content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
+from ..loaders import locale
+from ..loaders.content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
 from .. import prompts as prompts_pkg
 
 CONTENT_CONTEXT_SCHEMA = {

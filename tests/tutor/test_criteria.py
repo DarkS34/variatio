@@ -41,7 +41,7 @@ def test_the_curated_file_wins_over_the_draft_and_none_reads_as_missing(tutor_co
     graph = tutor_context.knowledge_graph
     assert criteria.load(ws, graph, DEFAULT).origin == criteria.MISSING
 
-    ws.instance_dir.mkdir(parents=True)
+    ws.artifacts_dir.mkdir(parents=True)
     paths.criteria_draft_path(ws).write_text(
         json.dumps({"general": [{"text": "Del borrador."}]}), encoding="utf-8"
     )

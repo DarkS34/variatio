@@ -9,7 +9,7 @@ from variatio.core.workspace import Workspace
 @pytest.fixture
 def ws(tmp_path):
     workspace = Workspace(root=tmp_path / "ws", slug="probe")
-    workspace.instance_dir.mkdir(parents=True, exist_ok=True)
+    workspace.artifacts_dir.mkdir(parents=True, exist_ok=True)
     return workspace
 
 

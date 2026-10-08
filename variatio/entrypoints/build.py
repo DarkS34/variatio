@@ -20,8 +20,8 @@ from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
 from ..core import progress
 from ..core.json_io import write_json
 from ..core.workspace import Workspace
-from ..instance.exemplars_profile import ExemplarsProfile
-from ..instance.knowledge_graph import KnowledgeGraph
+from ..loaders.exemplars_profile import ExemplarsProfile
+from ..loaders.knowledge_graph import KnowledgeGraph
 from . import _artifacts
 from .initialize import make_embedder, make_tagger
 

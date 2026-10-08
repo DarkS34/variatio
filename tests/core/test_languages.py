@@ -68,4 +68,4 @@ def test_the_locale_file_is_undotted_and_lives_in_the_instance(tmp_path):
     # workspace handed over without it is a workspace whose prompts nobody can reproduce.
     ws = Workspace(root=tmp_path, slug="x")
     assert ws.locale_path.name == "locale.json"
-    assert ws.locale_path.parent == ws.instance_dir
+    assert ws.locale_path.parent == ws.artifacts_dir

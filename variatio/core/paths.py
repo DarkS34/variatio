@@ -1,14 +1,16 @@
 """The installation's root paths, and the workspace a slug resolves to.
 
-It imports only `dotenv` and `workspace`, which is what lets `settings.store` import it
-with no cycle.
+It imports only `dotenv` and `workspace` from the package, which is what lets
+`settings.store` import it with no cycle.
 """
 
 import os
 from pathlib import Path
 
+from loguru import logger
+
 from .dotenv import load_dotenv
-from .workspace import Workspace
+from .workspace import ARTIFACTS_DIRNAME, LEGACY_ARTIFACTS_DIRNAME, Workspace
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -57,9 +59,46 @@ def workspace_logs_dir(slug: str) -> Path:
 def workspace(slug: str) -> Workspace:
     """Return the workspace called `slug`; raises ValueError when no slug was given.
 
-    There is no default instance to fall back to, so an empty slug is a caller's bug.
+    There is no default instance to fall back to, so an empty slug is a caller's bug. The one
+    door every workspace is opened through, so it is where a tree still laid out the old way
+    is brought up to date (`adopt_legacy_layout`).
     """
     slug = (slug or "").strip()
     if not slug:
         raise ValueError("Una asignatura se nombra: no hay instancia por defecto.")
-    return Workspace(WORKSPACES_DIR / slug, slug=slug)
+    root = WORKSPACES_DIR / slug
+    adopt_legacy_layout(root)
+    return Workspace(root, slug=slug)
+
+
+# The roots already looked at by this process: the check is a stat, and this door is passed
+# on every request.
+_ADOPTED: set[Path] = set()
+
+
+def adopt_legacy_layout(root: Path) -> None:
+    """Rename a workspace's `instance/` to `artifacts/`, once, if it still has the old name.
+
+    The directory was renamed on 2026-10-08, and the trees on disk carry the old name until
+    they are opened: nobody has to move anything by hand. The rename is atomic within one
+    disk, and a second process that lost the race finds `artifacts/` and carries on. With both
+    directories present nothing is touched — which of the two holds the subject is a person's
+    call — and `artifacts/`, the one every path reads, is what the workspace runs on.
+    """
+    if root in _ADOPTED:
+        return
+    legacy = root / LEGACY_ARTIFACTS_DIRNAME
+    current = root / ARTIFACTS_DIRNAME
+    if legacy.is_dir() and current.exists():
+        logger.warning(
+            f"'{root}' holds both '{LEGACY_ARTIFACTS_DIRNAME}/' and '{ARTIFACTS_DIRNAME}/'; "
+            f"'{ARTIFACTS_DIRNAME}/' is used and nothing is moved"
+        )
+    elif legacy.is_dir():
+        try:
+            legacy.rename(current)
+            logger.info(f"'{root.name}': '{LEGACY_ARTIFACTS_DIRNAME}/' renamed '{ARTIFACTS_DIRNAME}/'")
+        except FileNotFoundError:
+            if not current.is_dir():
+                raise
+    _ADOPTED.add(root)

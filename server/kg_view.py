@@ -9,8 +9,8 @@ import unicodedata
 from collections import defaultdict
 from datetime import datetime
 
-from variatio.instance.knowledge_graph import KnowledgeGraph
-from variatio.instance.relations import RelationSchema
+from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.loaders.relations import RelationSchema
 
 
 def build(

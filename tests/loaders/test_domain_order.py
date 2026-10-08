@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from variatio.instance.knowledge_graph import KnowledgeGraph
-from variatio.instance.relations import RELATION_SCHEMA_ES
+from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.loaders.relations import RELATION_SCHEMA_ES
 
 # The domains are deliberately NOT in size order, NOT alphabetical and NOT in the order
 # the concepts sort in: any test that passes by accident here proves nothing.
@@ -65,7 +65,7 @@ def ws(tmp_path, monkeypatch):
 
     monkeypatch.setattr(mirror, "mirror_file", lambda ws, path: None)
     workspace = Workspace(tmp_path, "aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     workspace.kg_path.write_text(json.dumps(GRAPH, ensure_ascii=False), encoding="utf-8")
     return workspace
 

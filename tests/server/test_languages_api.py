@@ -160,7 +160,7 @@ def test_the_interface_language_and_the_prompt_language_do_not_touch_each_other(
 def test_importing_a_directory_brings_its_language_into_the_row(db, tmp_path):
     from server.db.instance_io import import_instance
     from variatio.core.workspace import Workspace as FsWorkspace
-    from variatio.instance import locale
+    from variatio.loaders import locale
 
     ws = FsWorkspace(root=tmp_path / "ingles", slug="ingles")
     locale.set_prompt_language(ws, "en")
@@ -173,7 +173,7 @@ def test_importing_a_directory_brings_its_language_into_the_row(db, tmp_path):
 def test_exporting_writes_the_language_out_even_with_nothing_built(db, tmp_path):
     from server.db.instance_io import export_instance
     from variatio.core.workspace import Workspace as FsWorkspace
-    from variatio.instance import locale
+    from variatio.loaders import locale
 
     repository.create_workspace(db, "salida", "Salida", prompt_language="en")
     ws = FsWorkspace(root=tmp_path / "salida", slug="salida")
@@ -187,7 +187,7 @@ def test_exporting_writes_the_language_out_even_with_nothing_built(db, tmp_path)
 def test_the_language_survives_a_round_trip(db, tmp_path):
     from server.db.instance_io import export_instance, import_instance
     from variatio.core.workspace import Workspace as FsWorkspace
-    from variatio.instance import locale
+    from variatio.loaders import locale
 
     source = FsWorkspace(root=tmp_path / "a", slug="ida")
     locale.set_prompt_language(source, "en")

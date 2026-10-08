@@ -102,7 +102,7 @@ def test_it_patches_the_graph_in_place_and_builds_no_artifact():
 def aula(tmp_path, monkeypatch):
     """A workspace with a graph, a profile and a context, its handler pointed at it."""
     ws = Workspace(tmp_path / "aula", slug="aula")
-    ws.instance_dir.mkdir(parents=True)
+    ws.artifacts_dir.mkdir(parents=True)
     ws.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     ws.exemplars_profile_path.write_text(json.dumps(PROFILE, ensure_ascii=False), encoding="utf-8")
     ws.content_context_path.write_text(

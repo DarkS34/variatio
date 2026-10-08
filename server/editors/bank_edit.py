@@ -11,8 +11,8 @@ import re
 from variatio import config
 from variatio.runtime.tagger import TRACE_KEY
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from .. import approvals, deps, storage
 

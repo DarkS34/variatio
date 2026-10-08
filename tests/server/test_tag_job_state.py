@@ -16,7 +16,7 @@ BANK = {"C001": {"enunciado": "Suma dos números.", "item_type": "ejercicio"}}
 @pytest.fixture
 def ws(tmp_path):
     workspace = Workspace(tmp_path / "aula", slug="aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     workspace.exemplars_bank_path.write_text(json.dumps(BANK), encoding="utf-8")
     return workspace
 

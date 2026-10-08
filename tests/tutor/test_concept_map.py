@@ -7,7 +7,7 @@ import numpy as np
 
 from tutor import ATTEMPT, SOCIAL, SOLUTION, THEORY, concept_map
 from tutor.card import Card, FocusConcept, Prerequisite, Quote
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 PREREQUISITE = "tiene como prerrequisito"
 PART_OF = "se engloba en"

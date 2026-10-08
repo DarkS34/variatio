@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from evaluation import prompts as evaluation_prompts
-from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 MODALITY = {
     "label": "Ejercicio",

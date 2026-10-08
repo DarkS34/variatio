@@ -16,7 +16,7 @@ from .. import config
 from ..core import inference, progress
 from ..core.repair import parse_with_repair
 from .embedder import Embedder
-from ..instance.content_context import ContentContext
+from ..loaders.content_context import ContentContext
 
 TRACE_KEY = "_tagging"
 

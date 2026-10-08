@@ -9,7 +9,7 @@ from variatio.builders.knowledge_graph_builder import (
     extraction,
     parsing,
 )
-from variatio.instance.relations import RELATION_SCHEMA_ES as SCHEMA
+from variatio.loaders.relations import RELATION_SCHEMA_ES as SCHEMA
 
 from ..conftest import ES
 

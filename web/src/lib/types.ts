@@ -200,7 +200,8 @@ export interface Health {
   };
   context_ready: boolean;
   paths: {
-    instance: string;
+    /** The subject's `artifacts/` directory; an API older than 2026-10-08 says `instance`. */
+    artifacts?: string;
     raw_exemplars: string;
     raw_corpus: string;
     raw_exemplars_exists: boolean;
@@ -917,7 +918,8 @@ export interface AdminAccount {
 
 export interface DiskUsage {
   raw: number;
-  instance: number;
+  /** The artifacts and their host state, history aside; an older API says `instance`. */
+  artifacts?: number;
   cache: number;
   history: number;
   /** Absent from an older API. */

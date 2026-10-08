@@ -6,7 +6,7 @@ from server.db import mirror
 from server.editors import bank_edit
 from server.editors.bank_edit import BankError
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ITEM_TYPE_KEY
+from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 
 PROFILE = {
     "item_types": {
@@ -38,7 +38,7 @@ GRAPH = {
 def ws(tmp_path, monkeypatch):
     monkeypatch.setattr(mirror, "mirror_file", lambda ws, path: None)
     workspace = Workspace(tmp_path, "aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     _write(workspace.exemplars_profile_path, PROFILE)
     _write(workspace.kg_path, GRAPH)
     _write(workspace.exemplars_bank_path, {"C001": {"enunciado": "uno", "source": "tema1"}})

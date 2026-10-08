@@ -6,9 +6,9 @@ import pytest
 from variatio import prompts
 from variatio.runtime import screening
 from variatio.core import cerebras_budget
-from variatio.instance.content_context import ContentContext
-from variatio.instance.exemplars_profile import ExemplarsProfile
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.content_context import ContentContext
+from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 # The Spanish set, which is what every measurement in this suite was taken against.
 # A test that is ABOUT the two languages resolves its own with `prompts.of`.

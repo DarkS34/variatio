@@ -14,7 +14,7 @@ stored list meaning exactly what it says when it is read back.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variatio.instance import locale
+from variatio.loaders import locale
 
 from .. import auth, curriculum, kg_view
 from ..editors import kg_edit

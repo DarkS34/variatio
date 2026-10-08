@@ -1,7 +1,7 @@
 import json
 
 from variatio.core.workspace import Workspace
-from variatio.instance.content_context import ContentContext
+from variatio.loaders.content_context import ContentContext
 from variatio.entrypoints import _artifacts
 
 

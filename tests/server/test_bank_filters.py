@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from server.editors import bank_edit
 from server.routers import bank as route
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ITEM_TYPE_KEY
+from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 
 PROFILE = {
     "item_types": {
@@ -80,7 +80,7 @@ BANK = {
 @pytest.fixture
 def ws(tmp_path):
     workspace = Workspace(tmp_path, "aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     _write(workspace.exemplars_profile_path, PROFILE)
     _write(workspace.exemplars_bank_path, BANK)
     return workspace

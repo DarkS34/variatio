@@ -258,8 +258,8 @@ def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
 
 def test_restamp_adopts_the_new_fingerprints_without_touching_the_texts(tmp_path):
     from variatio.runtime.embedder import ConceptDescriber, load_descriptions
-    from variatio.instance.content_context import ContentContext
-    from variatio.instance.knowledge_graph import KnowledgeGraph
+    from variatio.loaders.content_context import ContentContext
+    from variatio.loaders.knowledge_graph import KnowledgeGraph
 
     graph_path = tmp_path / "kg.json"
     graph_path.write_text(

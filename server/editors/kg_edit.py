@@ -12,8 +12,8 @@ from pathlib import Path
 
 from variatio import entrypoints
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ITEM_TYPE_KEY
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from .. import approvals, deps, storage
 

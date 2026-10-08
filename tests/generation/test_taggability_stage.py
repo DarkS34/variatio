@@ -13,7 +13,7 @@ from ..conftest import CHAIN_GRAPH, PROFILE
 @pytest.fixture
 def ws(tmp_path):
     workspace = Workspace(tmp_path, "aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     return workspace
 
 

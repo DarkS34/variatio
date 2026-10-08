@@ -38,7 +38,7 @@ PROFILE = {
 @pytest.fixture
 def aula(tmp_path) -> Workspace:
     ws = Workspace(tmp_path / "aula", slug="aula")
-    ws.instance_dir.mkdir(parents=True)
+    ws.artifacts_dir.mkdir(parents=True)
     ws.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     ws.exemplars_profile_path.write_text(json.dumps(PROFILE, ensure_ascii=False), encoding="utf-8")
     return ws

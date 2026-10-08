@@ -15,7 +15,7 @@ import pytest
 from variatio import prompts
 from variatio.builders.exemplars_profile_builder import guarantee_difficulty
 from variatio.core import languages
-from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 SETS = {code: prompts.of(code) for code in languages.LANGUAGES}
 

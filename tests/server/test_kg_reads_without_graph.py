@@ -20,7 +20,7 @@ from variatio.core.workspace import Workspace
 def access(tmp_path):
     """An `Access` with nothing built: the workspace directory exists and is empty."""
     ws = Workspace(root=tmp_path, slug="test")
-    ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    ws.artifacts_dir.mkdir(parents=True, exist_ok=True)
     return SimpleNamespace(ws=ws, user=None, as_admin=False)
 
 

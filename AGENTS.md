@@ -169,7 +169,7 @@ table and refuses while a row has no file: on an installation that still has the
 
 ## Architecture
 
-The hard line: **`instance/` holds the instance definition (data), `variatio/` is the code
+The hard line: **`artifacts/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
 `evaluation/` (the TFM's study), `tutor/` (the Socratic tutor),
 `web/` (React client), `migrations/`.
@@ -179,7 +179,7 @@ that produces and consumes it.** Top-level packages: `variatio/` (library), `ser
 The root holds three files only: `config.py`, `cli.py`, `__init__.py`. Everything else is one
 of three kinds:
 
-- **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `instance/`, `prompts/`, `wording/`.
+- **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `loaders/`, `prompts/`, `wording/`.
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
   `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
 - **The door**: `entrypoints/`.
@@ -194,7 +194,8 @@ put a component back at the root.
   `embed_batch()`; never call an SDK from business logic), `cerebras`, `cerebras_budget`,
   `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `repair`
   (`parse_with_repair`, requires an explicit `shape`), `repetition`.
-- `instance/`: loaders — `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`.
+- `loaders/`: `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`, `locale`
+  (the package was `instance/` until 2026-10-08, the directory's old name).
   The bank has no loader module; `entrypoints/initialize.py` reads it inline.
 - Import `config` from the root and read `config.X` by module attribute; **never
   `from ..config import X`** — the hot rewrite depends on it.
@@ -202,12 +203,18 @@ put a component back at the root.
 ### `Workspace` — every per-instance path, as data
 
 [workspace.py](variatio/core/workspace.py) is a frozen dataclass over `root` deriving every
-path (`instance/`, `cache/`, `raw/`, `generations/`, artifacts, derivations, host state). It imports nothing
+path (`artifacts/`, `cache/`, `raw/`, `generations/`, artifacts, derivations, host state). It imports nothing
 from the package. Root paths live in [paths.py](variatio/core/paths.py). **There is no
 default workspace**: `ws` is required everywhere, `paths.workspace("")` raises, an
 installation may hold zero workspaces and an account may belong to none. A component with a
 path parameter requires it. No cache key is a path, so a workspace is portable.
 `server/installation.py` has `workspace_for(slug)`, never a no-argument `workspace()`.
+**The artifacts' directory is `artifacts/`** (2026-10-08; it was `instance/`, a word that also
+named the loaders' package and the whole subject). `paths.workspace`, the one door every
+workspace is opened through, renames an old tree's `instance/` the first time it opens it
+(`adopt_legacy_layout`: an atomic rename, a lost race harmless, and nothing touched when both
+names exist). A tree renamed so is no longer readable by a version from before the rename.
+`/api/health` says `paths.artifacts` and the disk usage `artifacts`, where both said `instance`.
 
 ### Settings (`variatio/settings/`)
 
@@ -567,7 +574,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   reseal=True)` when the graph was approved, `Approvals.sealed`): it is the system's
   derivation, not a teacher's edit; a hand edit of the switch still withdraws it.
 - **The raw documents are an upstream**: `jobs/handlers._build` records the slot's documents
-  (name, size, mtime) in `instance/.built_from.json`; a stage built from documents its slot no
+  (name, size, mtime) in `artifacts/.built_from.json`; a stage built from documents its slot no
   longer holds is stale with the drift named, and offers «Volver a construir» (the only
   rebuild offered anywhere). `approvals.RAW_SOURCE` is the one table of which slot feeds which
   artifact. A stage with no record is never stale for its documents.
@@ -575,7 +582,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   because both write the same page cache. `singletons.transcribing(slug, slot)` is the one
   reading. This is not a gate on transcription having happened.
 - Every hand edit withdraws the stage's approval on the server; the client never reopens.
-- The bank checkpoints per document into `instance/.exemplars_bank.building.json` and writes
+- The bank checkpoints per document into `artifacts/.exemplars_bank.building.json` and writes
   `exemplars_bank.json` once at the end, starting empty (`C001`); cancelling loses the run;
   the parent sweeps the working file.
 
@@ -649,7 +656,7 @@ Both raw slots use the same VLM page route (quality over speed).
 
 ### Curriculum (`server/curriculum.py`)
 
-Host state (`instance/.curriculum.json`), validated against the graph on read. **Absent
+Host state (`artifacts/.curriculum.json`), validated against the graph on read. **Absent
 falls back to the file, `[]` means no restriction.** `resolve()` closes the list in force
 downward (prerequisites included) and the row records what ran. The file is the subject's
 «Avance de la asignatura» (decided 2026-10-06), set by its teachers in «Clase» (`PUT
@@ -743,7 +750,7 @@ last word; reasoning switched off is never turned on. `GET /api/health` carries
 ### Artifacts
 
 Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
-`variatio/builders/<stem>_builder` → `instance/<stem>.json` → loader.
+`variatio/builders/<stem>_builder` → `artifacts/<stem>.json` → loader.
 
 - `knowledge_graph.json` — curated schema (`concepts_by_domains`,
   `generic_non_taggable_concepts`, `taggability_reviewed`, typed `relations`). The number and
@@ -760,7 +767,7 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
   `context` phase. `prompt_block()` is the only renderer; capped at
   `CONTENT_CONTEXT_MAX_CHARS` (900); it feeds the description fingerprint. Read-only on
   screen (under «Mi perfil → Asignaturas y ejercicios»); `PUT /api/context` still exists.
-- `instance/locale.json` — the workspace's prompt language, chosen at creation and never
+- `artifacts/locale.json` — the workspace's prompt language, chosen at creation and never
   after (relation labels are baked into the graph).
 
 ### Builders (`variatio/builders/`)
@@ -772,7 +779,7 @@ Builders use `inference.generate()`, never `generate_stream()` (a build runs out
 **Knowledge graph** ([knowledge_graph_builder/](variatio/builders/knowledge_graph_builder/)):
 extract → clean → curate, handing dicts in memory; only `curate()` writes.
 
-- Relation vocabulary is `instance/relations.py` per language. The `verbose` labels
+- Relation vocabulary is `loaders/relations.py` per language. The `verbose` labels
   («tiene como prerrequisito», «se engloba en», «se relaciona con») are load-bearing: the
   loader indexes by them. `ORIGEN`/`DESTINO` (SOURCE/TARGET) slot names live in
   `CATALOG_WORDS` and in the prompts' prose. The hierarchy is ONE relation, `se_engloba_en`.
@@ -1043,7 +1050,7 @@ admin's read.
   sentence opening by telling the student they are right (`VALIDATION_PATTERN`), not empty,
   not cut. A failure is retried ONCE with a note naming it; a second failure sends a fixed
   question built from the card. Replies are shown whole, never streamed.
-- **Criteria are an artifact of their own**: `instance/tutor_criteria_autogenerated.json`
+- **Criteria are an artifact of their own**: `artifacts/tutor_criteria_autogenerated.json`
   (the `tutor_criteria` job: one grammar call per KG domain over its normative paragraphs —
   `NORMATIVE_PATTERN` first — its anchored passages and up to `criteria_solutions` bank
   solutions; every criterion must cite an id it was given or it is dropped; subject-wide ones
@@ -1053,7 +1060,7 @@ admin's read.
   20 words at most with at most three concepts — the first draft was long sentences tied to
   four or five concepts and eight sources, and unreadable; a forbidden term is a name as code
   writes it, three words at most — the model wrote practices there, which no check can find) and
-  `instance/tutor_criteria.json`
+  `artifacts/tutor_criteria.json`
   (a teacher's correction, which wins). A rebuild retires the curated file to `.history/`.
   `criteria.normalize` is the one cleaner of both, validated against the graph on read. The
   method's rules (`prompts.METHOD_RULES`) are one list numbered into the system prompt and
@@ -1698,6 +1705,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   `models.phases.concept_tagger`) and on-disk names (`.review_state.json`) do not follow
   module renames. Renames are done per importer, never with a global `sed`.
 - No default workspace; no reserved slug; a path is never a defaulted argument.
+- A workspace's artifacts live in `artifacts/` and their loaders in `variatio/loaders/`
+  (2026-10-08, the user's decision: both were `instance`). It is a renaming of its own and
+  not one that followed a module's; an old tree is renamed the first time it is opened.
 - Settings in the registry + `config.json`; one writer (`store.write_file` → `json_io`);
   dotenv loader lives in `core/dotenv.py`.
 - One writer of persisted JSON: `json_io.write_json`.

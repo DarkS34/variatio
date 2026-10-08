@@ -18,7 +18,7 @@ def ws(tmp_path, monkeypatch):
     monkeypatch.setattr(mirror, "mirror_approval", lambda *a, **k: None)
     monkeypatch.setattr(mirror, "mirror_file", lambda *a, **k: None)
     workspace = Workspace(tmp_path / "aula", slug="aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     return workspace
 
 

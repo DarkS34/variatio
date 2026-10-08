@@ -149,7 +149,7 @@ def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) ->
         "context_ready": deps.is_ready(ws.slug),
         "workspace": ws.slug,
         "paths": {
-            "instance": str(ws.instance_dir),
+            "artifacts": str(ws.artifacts_dir),
             "raw_exemplars": str(ws.raw_exemplars_dir),
             "raw_corpus": str(ws.raw_corpus_dir),
             "raw_exemplars_exists": ws.raw_exemplars_dir.is_dir(),

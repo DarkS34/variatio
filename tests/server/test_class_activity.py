@@ -26,7 +26,7 @@ from tutor.api import digest as digest_job
 from tutor.digest import Asked, clean_themes, names_someone
 from tutor.turn import TurnResult
 from variatio.core.workspace import Workspace
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from ..conftest import CHAIN_GRAPH
 
@@ -52,7 +52,7 @@ def tutor_reader(monkeypatch):
 @pytest.fixture
 def ws(tmp_path):
     workspace = Workspace(root=tmp_path / "aula", slug="aula")
-    workspace.instance_dir.mkdir(parents=True, exist_ok=True)
+    workspace.artifacts_dir.mkdir(parents=True, exist_ok=True)
     workspace.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     return workspace
 

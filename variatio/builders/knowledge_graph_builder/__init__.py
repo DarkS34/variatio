@@ -26,8 +26,8 @@ from ... import wording as wording_sets
 from ...core import progress
 from ...core.inference import ensure_models
 from ...core.workspace import Workspace
-from ...instance import locale
-from ...instance.relations import RelationSchema
+from ...loaders import locale
+from ...loaders.relations import RelationSchema
 from .. import _context, source_docs
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 

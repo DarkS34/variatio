@@ -6,7 +6,7 @@ gets the exact error the pipeline would raise.
 """
 
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 from .. import approvals, deps, storage
 

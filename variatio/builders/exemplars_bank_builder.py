@@ -23,9 +23,9 @@ from ..core.json_io import write_json
 from ..core.lexicon import fold
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
-from ..instance import locale
-from ..instance.content_context import ContentContext
-from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
+from ..loaders import locale
+from ..loaders.content_context import ContentContext
+from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from . import source_docs
 
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page

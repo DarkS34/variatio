@@ -75,7 +75,7 @@ class Workspace(Base):
 
     `prompt_language` is what this instance's PROMPTS are written in — not what its
     material is written in, which `content_context.json` carries and the corpus decides.
-    It is a MIRROR of `instance/locale.json` and never the truth: the pipeline runs from
+    It is a MIRROR of `artifacts/locale.json` and never the truth: the pipeline runs from
     the command line with no database, so a build reads the file, and the column is here
     so the panel can list the instances without touching disk.
 

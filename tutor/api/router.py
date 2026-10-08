@@ -28,8 +28,8 @@ from server import generations as generations_store
 from server.jobs.catalogue import Job
 from variatio import entrypoints
 from variatio.core import inference
-from variatio.instance import locale
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders import locale
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from .. import config as tutor_config
 from .. import criteria as criteria_store

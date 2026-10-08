@@ -26,7 +26,7 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from variatio import prompts as prompts_pkg
 from variatio.core import json_io, progress
-from variatio.instance import locale
+from variatio.loaders import locale
 
 from .. import config as tutor_config
 from .. import prompts as tutor_prompts_pkg

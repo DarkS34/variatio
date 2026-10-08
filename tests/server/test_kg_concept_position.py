@@ -23,7 +23,7 @@ ORDER = ["Alfa", "Beta", "Gamma"]
 def ws(tmp_path):
     """A workspace whose curated graph holds one unit of three concepts, in order."""
     workspace = Workspace(root=tmp_path, slug="test")
-    workspace.instance_dir.mkdir(parents=True, exist_ok=True)
+    workspace.artifacts_dir.mkdir(parents=True, exist_ok=True)
     write_json(
         workspace.kg_path,
         {

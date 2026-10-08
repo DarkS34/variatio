@@ -13,7 +13,7 @@ import pytest
 from server.editors import bank_edit
 from server.editors.bank_edit import BankError
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ITEM_TYPE_KEY
+from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 
 PROFILE = {
     "item_types": {

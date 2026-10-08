@@ -15,7 +15,7 @@ from ..builders import source_docs
 from ..builders.source_docs.pages import META_NAME
 from ..core import paths, progress
 from ..core.workspace import Workspace
-from ..instance import locale
+from ..loaders import locale
 
 CORPUS = "corpus"
 EXEMPLARS = "exemplars"

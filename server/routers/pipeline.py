@@ -15,8 +15,8 @@ from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
 from variatio.runtime import screening
-from variatio.instance import locale
-from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.loaders import locale
+from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
 from variatio.entrypoints import build_phases as phases_of
 

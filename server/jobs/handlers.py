@@ -10,7 +10,7 @@ from importlib import metadata
 from loguru import logger
 
 from variatio import config, entrypoints
-from variatio.instance import locale
+from variatio.loaders import locale
 from variatio.runtime.tagger import ConceptTagger
 from variatio.core import inference, progress
 from variatio.core.workspace import Workspace

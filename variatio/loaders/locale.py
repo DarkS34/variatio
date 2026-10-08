@@ -1,6 +1,6 @@
 """The workspace's own language: which prompt set and relation vocabulary it is built with.
 
-`instance/locale.json` is undotted because it travels with `export-instance`; the database
+`artifacts/locale.json` is undotted because it travels with `export-instance`; the database
 column beside it is a mirror, so the panel can list without touching disk. A workspace's
 language is chosen at creation and never after — the relation `verbose` labels are written
 into `knowledge_graph.json` and the loader indexes by them.

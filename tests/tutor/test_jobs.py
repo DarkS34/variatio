@@ -94,7 +94,7 @@ def test_a_job_naming_a_turn_the_conversation_does_not_wait_for_is_refused(wired
 
 
 def test_a_build_writes_the_draft_and_retires_the_teacher_s_copy_to_the_history(wired, monkeypatch):
-    wired.instance_dir.mkdir(parents=True, exist_ok=True)
+    wired.artifacts_dir.mkdir(parents=True, exist_ok=True)
     paths.criteria_path(wired).write_text(json.dumps({"general": [{"text": "Del docente."}]}), encoding="utf-8")
     monkeypatch.setattr(jobs, "cut_corpus", lambda ws, sources, chars: [])
     monkeypatch.setattr(

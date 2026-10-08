@@ -21,7 +21,7 @@ BANK = {"C001": {"enunciado": "El de antes"}}
 @pytest.fixture
 def ws(tmp_path):
     workspace = Workspace(tmp_path / "aula", slug="aula")
-    workspace.instance_dir.mkdir(parents=True)
+    workspace.artifacts_dir.mkdir(parents=True)
     workspace.exemplars_bank_path.write_text(
         json.dumps(BANK, ensure_ascii=False), encoding="utf-8"
     )

@@ -56,7 +56,7 @@ def workspace(
     bank=False,
 ) -> Workspace:
     ws = Workspace(root=tmp_path, slug="test")
-    ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    ws.artifacts_dir.mkdir(parents=True, exist_ok=True)
     ws.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     if profile:
         ws.exemplars_profile_path.write_text(
@@ -139,7 +139,7 @@ def test_with_no_profile_the_descriptions_still_follow(tmp_path, monkeypatch):
 def test_without_a_graph_nothing_is_described(tmp_path, monkeypatch):
     """The one condition describing actually has, and it is reported rather than raised."""
     ws = Workspace(root=tmp_path, slug="test")
-    ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    ws.artifacts_dir.mkdir(parents=True, exist_ok=True)
     runner = advance(monkeypatch, ws, Job(kind="build_kg", workspace=ws.slug))
     assert runner.submitted == []
 

@@ -18,8 +18,8 @@ from ... import wording as wording_sets
 from ...core import inference, progress
 from ...core.json_io import write_json
 from ...core.repair import parse_with_repair
-from ...instance.content_context import ContentContext
-from ...instance.knowledge_graph import KnowledgeGraph
+from ...loaders.content_context import ContentContext
+from ...loaders.knowledge_graph import KnowledgeGraph
 from .vectors import embed_normalized
 
 # Grammar-constrained decoding, not a bare `think=False`: with the reasoning channel closed

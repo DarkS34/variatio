@@ -19,8 +19,8 @@ from ..core.inference import ensure_models
 from ..core.json_io import write_json
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
-from ..instance import content_context, locale
-from ..instance.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
+from ..loaders import content_context, locale
+from ..loaders.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
 from .. import wording as wording_sets
 from . import _context, source_docs

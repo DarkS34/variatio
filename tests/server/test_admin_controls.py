@@ -123,7 +123,7 @@ def test_disk_usage_splits_the_tree_by_role(tmp_path):
     ws = Workspace(tmp_path / "w", slug="w")
     (ws.raw_corpus_dir).mkdir(parents=True)
     (ws.raw_corpus_dir / "a.pdf").write_bytes(b"x" * 10)
-    ws.instance_dir.mkdir(parents=True)
+    ws.artifacts_dir.mkdir(parents=True)
     ws.kg_path.write_bytes(b"x" * 20)
     ws.history_dir.mkdir()
     (ws.history_dir / "old.json").write_bytes(b"x" * 5)
@@ -135,7 +135,7 @@ def test_disk_usage_splits_the_tree_by_role(tmp_path):
     usage = installation.disk_usage(ws)
     assert usage == {
         "raw": 10,
-        "instance": 20,
+        "artifacts": 20,
         "cache": 7,
         "history": 5,
         "generations": 3,

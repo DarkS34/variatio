@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from variatio import entrypoints
 from variatio.core import json_io
 from variatio.core.workspace import Workspace as FsWorkspace
-from variatio.instance import locale
+from variatio.loaders import locale
 
 from . import repository as repo
 from .layout import KINDS, artifact_paths
@@ -174,7 +174,7 @@ def _slots(ws: FsWorkspace) -> dict[str, Path]:
 def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
     """Write a database workspace back out as the directory layout the entry points read.
 
-    `instance/locale.json` is written unconditionally, unlike the artifacts: a directory
+    `artifacts/locale.json` is written unconditionally, unlike the artifacts: a directory
     without it reads as Spanish, which for an English instance is not a missing file but
     a wrong one.
     """
@@ -182,7 +182,7 @@ def export_instance(session: Session, slug: str, ws: FsWorkspace) -> dict:
     if workspace is None:
         raise LookupError(f"No workspace '{slug}' in the database")
 
-    ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    ws.artifacts_dir.mkdir(parents=True, exist_ok=True)
     locale.set_prompt_language(ws, workspace.prompt_language)
 
     written: list[str] = []

@@ -1,4 +1,4 @@
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from ..conftest import PREREQUISITE
 

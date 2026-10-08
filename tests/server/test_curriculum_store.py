@@ -2,14 +2,14 @@ import json
 
 from server import curriculum
 from variatio.core.workspace import Workspace
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from ..conftest import CHAIN_GRAPH
 
 
 def workspace(tmp_path):
     ws = Workspace(root=tmp_path, slug="test")
-    ws.instance_dir.mkdir(parents=True, exist_ok=True)
+    ws.artifacts_dir.mkdir(parents=True, exist_ok=True)
     ws.kg_path.write_text(json.dumps(CHAIN_GRAPH, ensure_ascii=False), encoding="utf-8")
     return ws, KnowledgeGraph(str(ws.kg_path))
 

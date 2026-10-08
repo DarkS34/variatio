@@ -23,7 +23,7 @@ Developed as the final thesis (TFM) of a Master's degree in Artificial Intellige
 
 ### The four artifacts
 
-Each instance is defined in `workspaces/<slug>/instance/`:
+Each instance is defined in `workspaces/<slug>/artifacts/`:
 
 | Artifact | Contents |
 |---|---|
@@ -142,7 +142,7 @@ loads; run it after `pnpm build`).
 ```
 variatio/       the pipeline
   core/         inference, progress, paths, JSON I/O, the Cerebras ledger
-  instance/     the loaders of the four artifacts
+  loaders/      the loaders of the four artifacts
   builders/     raw → artifacts: document plumbing, the three builders
   runtime/      artifacts → items: generator, tagger, embedder, screening, checks
   entrypoints/  the library's public API — everything that takes a Workspace

@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import languages
-from variatio.instance import locale
+from variatio.loaders import locale
 
 from .. import auth, deps, installation, members, singletons
 from .. import generations as generations_store

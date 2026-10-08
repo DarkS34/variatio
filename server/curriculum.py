@@ -1,6 +1,6 @@
 """The concepts a course has actually covered, per workspace.
 
-Host state rather than an artifact (`instance/.curriculum.json`, gitignored), because two
+Host state rather than an artifact (`artifacts/.curriculum.json`, gitignored), because two
 courses over one graph disagree about it. It is validated against the graph on every read,
 not on write alone, so a rename or a deletion surfaces as a named casualty instead of a
 silent shrink.
@@ -14,8 +14,8 @@ import json
 from datetime import datetime, timezone
 
 from variatio.core.workspace import Workspace
-from variatio.instance import locale
-from variatio.instance.knowledge_graph import KnowledgeGraph
+from variatio.loaders import locale
+from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from . import storage
 

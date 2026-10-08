@@ -13,7 +13,7 @@ from .. import config
 from ..builders.knowledge_graph_builder import blocks, parsing
 from ..builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
 from ..core import inference, progress
-from ..instance.content_context import ContentContext
+from ..loaders.content_context import ContentContext
 
 BUILD_PHASES = (("taggable", "Reviewing which concepts work as labels", 100),)
 

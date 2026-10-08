@@ -84,7 +84,7 @@ def create_workspace(args) -> int:
     from ..db.identity import get_user, grant
     from ..db.models import OWNER, VIA_CLI
     from ..db.repository import create_workspace as insert, get_workspace
-    from variatio.instance import locale
+    from variatio.loaders import locale
 
     from ..installation import provision, slug_error, workspace_for
 

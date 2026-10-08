@@ -23,9 +23,9 @@ from .tagger import ConceptTagger
 from ..core import inference, progress
 from ..core.repair import parse_with_repair
 from .embedder import Embedder
-from ..instance.content_context import ContentContext
-from ..instance.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
-from ..instance.knowledge_graph import KnowledgeGraph
+from ..loaders.content_context import ContentContext
+from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
+from ..loaders.knowledge_graph import KnowledgeGraph
 
 
 def _public_fields(item: dict) -> dict:

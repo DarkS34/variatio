@@ -14,7 +14,7 @@ from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
 from variatio.core import progress
 from variatio.core.json_io import write_json
 from variatio.core.workspace import Workspace
-from variatio.instance.exemplars_profile import ExemplarsProfile
+from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 PROFILE = {
     "item_types": {

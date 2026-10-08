@@ -97,7 +97,7 @@ export function userDecidedFields(spec: ItemTypeSpec | null | undefined): string
 // THE ONE FIELD EVERY MODALITY CARRIES ------------------------------------------------------
 
 /**
- * Mirrors DIFFICULTY_FIELDS in variatio/instance/exemplars_profile.py.
+ * Mirrors DIFFICULTY_FIELDS in variatio/loaders/exemplars_profile.py.
  *
  * Two names because the name is the workspace's PROMPT language's: `prompts/es` writes
  * Spanish field names and `prompts/en` English ones. A screen does not know which language a
