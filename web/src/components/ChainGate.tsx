@@ -26,7 +26,8 @@ export function ChainGate({ title, stages }: { title: string; stages: StageState
   if (pending.length === 0) return null;
 
   const first = pending[0];
-  const step = STEPS.find((s) => s.artifact === first.artifact);
+  // By every artifact a step closes: the types of exercise are the first part of the bank's.
+  const step = STEPS.find((s) => (s.artifacts as readonly string[]).includes(first.artifact));
   // The number is `STEPS`' own and not computed here, so the button cannot promise a
   // step the bar numbers differently.
   const at = stepNumberOf(first.artifact);

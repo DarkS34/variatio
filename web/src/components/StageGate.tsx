@@ -23,6 +23,7 @@ import {
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GuideLink } from "@/components/GuideLink";
 import type { GuideSlug } from "@/features/guide/sections";
 import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
@@ -35,7 +36,7 @@ import { Link, useRouter } from "@/lib/router";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isRebuild } from "@/lib/progress";
-import { nextStepOf, stepNumberOf } from "@/lib/steps";
+import { STEPS, nextStepOf, stepNumberOf } from "@/lib/steps";
 import {
   useArtifactRun,
   useInvalidateChain,
@@ -199,17 +200,99 @@ export function useRegisterPendingEdit({ dirty, blocked, save, discard }: Pendin
 }
 
 /**
+ * What a stage screen holds for one visit: whether it is being corrected, what is pending
+ * under it, whether this visit wrote, and the one way to close it.
+ *
+ * A hook of its own and not `StageGate`'s private state because the bank's step draws TWO
+ * stages under one header (`features/bank/BankStep`): its way out has to save the types'
+ * draft and close them before collecting the bank, and only one of the two parts may be
+ * corrected at a time.
+ */
+export interface StageControl {
+  /** Whether the stage is open for correcting: an act of this visit, never the default. */
+  curating: boolean;
+  setCurating: (on: boolean) => void;
+  /** Whether this visit has written to the artifact — what the questionnaire records. */
+  wrote: boolean;
+  markWrote: () => void;
+  /** What the screen under the stage holds that the file does not have yet. */
+  pending: PendingEdit | null;
+  register: (edit: PendingEdit | null) => void;
+  /** Why the pending edit may not be written, or null. */
+  blocked: string | null;
+  /** Save what is pending, then close the stage — unless it is closed and nothing was written. */
+  close: () => Promise<void>;
+  closing: boolean;
+}
+
+export function useStageControl(stage: StageState | undefined): StageControl {
+  const { t } = useT();
+  const invalidate = useInvalidateChain();
+  const toast = useToast();
+  // Correcting is an act and not the default state. It belongs to the visit and not to the
+  // artifact: "estoy corrigiendo ahora" is nothing anything on disk records.
+  const [curating, setCurating] = useState(false);
+  // Whether this visit has written to the artifact. A fact of the stage, and the one the
+  // stage questionnaire records as "corrected before judging" (`StageReviewSlot`).
+  const [wrote, setWrote] = useState(false);
+  const [pending, setPending] = useState<PendingEdit | null>(null);
+  const register = useCallback((edit: PendingEdit | null) => setPending(edit), []);
+  // Another artifact is another stage: what was open for correcting was the one you left.
+  useEffect(() => {
+    setCurating(false);
+    setWrote(false);
+  }, [stage?.artifact]);
+  const approve = useMutation({
+    // Save first, approve second, and never approve if the write fails: an approval over
+    // the previous file is worse than none, because it reads as done.
+    mutationFn: async () => {
+      if (pending?.dirty) await pending.save();
+      return api.approve(stage!.artifact);
+    },
+    onSuccess: () => {
+      invalidate();
+      toast({ title: t("stage.approved"), description: stage!.label });
+    },
+  });
+  const approved = stage?.status === "approved";
+  return {
+    curating,
+    setCurating,
+    wrote,
+    markWrote: () => setWrote(true),
+    pending,
+    register,
+    blocked: (pending?.dirty && pending.blocked) || null,
+    closing: approve.isPending,
+    // A closed stage with a draft in the browser is still a write: saving it withdraws the
+    // approval on the server, so it has to be given again in the same breath.
+    close: async () => {
+      const writes = Boolean(pending?.dirty);
+      if (writes || !approved) await approve.mutateAsync();
+      if (writes) setWrote(true);
+    },
+  };
+}
+
+/**
  * A stage is visible before it is available, and says exactly why it is not.
  *
  * A disabled control with no explanation is the thing this screen exists to avoid. What the
  * stage IS belongs to the guide, linked under the title; what is wrong with it right now
  * stays on the page, because that is the part you act on.
+ *
+ * `headless` draws the stage without its header and way out: the bank's step draws one
+ * header over two stages, each a part of it (`features/bank/BankStep`). It hands its own
+ * `control` in, so the header's buttons reach both parts.
  */
 export function StageGate({
   stage,
   intro,
   livePreview,
   children,
+  control,
+  headless = false,
+  staleAction,
 }: {
   stage: StageState | undefined;
   /**
@@ -226,51 +309,35 @@ export function StageGate({
  */
   livePreview?: ReactNode;
   children: ReactNode;
+  /** The stage's state for this visit, when somebody above draws its way out. */
+  control?: StageControl;
+  /** Draw the body alone: no header, no way out. See above. */
+  headless?: boolean;
+  /**
+   * The stale notice's action. Absent, the build button in its rebuild mode; `null`, none —
+   * for a stage whose way out already offers the rebuild, so the screen keeps one coral.
+   */
+  staleAction?: ReactNode;
 }) {
   const tr = useT();
   const { t, plural } = tr;
-  const invalidate = useInvalidateChain();
+  const own = useStageControl(stage);
+  const ctl = control ?? own;
+  const { curating, setCurating, wrote, pending, register } = ctl;
   const rawMissing = useRawMissingFor(stage?.artifact);
   const busyRun = useArtifactRun(stage?.artifact);
   const lanes = useLanes();
   const split = useSplitEngine();
-  const toast = useToast();
   const confirm = useConfirm();
   const { navigate } = useRouter();
   const asksReview = useAsksStageReview();
-  // Correcting is an act and not the default state. It belongs to the visit and not to the
-  // artifact: "estoy corrigiendo ahora" is nothing anything on disk records.
-  const [curating, setCurating] = useState(false);
-  // Whether this visit has written to the artifact. A fact of the stage, and the one the
-  // stage questionnaire records as "corrected before judging" (`StageReviewSlot`).
-  const [wrote, setWrote] = useState(false);
   // Whether the bar's "Guardar" has written once this visit: what lets it say "Cambios
   // guardados" over a clean draft instead of "todavía no has cambiado nada".
   const [savedOnce, setSavedOnce] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Another artifact is another stage: what was open for correcting was the one you left.
-  useEffect(() => {
-    setCurating(false);
-    setWrote(false);
-    setSavedOnce(false);
-  }, [stage?.artifact]);
-  // What the screen below is holding, if it holds anything. See `PendingEdit`.
+  useEffect(() => setSavedOnce(false), [stage?.artifact]);
   const [advanceFailed, setAdvanceFailed] = useState(false);
   const [curateFailed, setCurateFailed] = useState(false);
-  const [pending, setPending] = useState<PendingEdit | null>(null);
-  const register = useCallback((edit: PendingEdit | null) => setPending(edit), []);
-  const approve = useMutation({
-    // Save first, approve second, and never approve if the write fails: an approval over
-    // the previous file is worse than none, because it reads as done.
-    mutationFn: async () => {
-      if (pending?.dirty) await pending.save();
-      return api.approve(stage!.artifact);
-    },
-    onSuccess: () => {
-      invalidate();
-      toast({ title: t("stage.approved"), description: stage!.label });
-    },
-  });
 
   if (!stage) {
     return (
@@ -300,71 +367,49 @@ export function StageGate({
   const next = nextStepOf(stage.artifact);
 
   // Moving on CLOSES the stage, or the one control the screen offers would lead to a step
-  // that then refuses to build for want of an approval nobody was asked for. It reuses the
-  // approve mutation rather than opening a second path to the same endpoint.
-  const advance = {
-    blocked: (pending?.dirty && pending.blocked) || null,
-    running: approve.isPending,
-    run: async () => {
-      // A closed stage with a draft in the browser is still a write: saving it withdraws
-      // the approval on the server, so it has to be given again in the same breath.
-      const writes = Boolean(pending?.dirty);
-      if (writes || !approved) await approve.mutateAsync();
-      if (writes) setWrote(true);
-    },
-  };
+  // that then refuses to build for want of an approval nobody was asked for.
+  const advance = { blocked: ctl.blocked, running: ctl.closing, run: ctl.close };
+
+  // The same block a part of the bank's step draws in place of the dashed empty state: the
+  // dashes are a whole screen's with nothing in it yet, and a part sits under a header.
+  const empty = headless ? "block" : "screen";
 
   return (
     <StageScope locked={locked} register={register}>
       <div className="space-y-7">
-        {/* The header and the two ways out, on one line: the title on the left, and on the
-            right "Quiero corregir algo" and "Continuar", under the eye on arrival and not
-            below the whole artifact. They stand on the ground like the title beside them,
-            with no block of their own. Below `lg` they go under the title, still above the
-            artifact. */}
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
-          <header className="min-w-0 space-y-1.5">
-            {/* The guide link goes UNDER the title, on a line of its own: beside it, it is
-                one more chip in a row of chips and the only one there not about the stage's
-                state. It replaces an (i) — a paragraph behind a glyph can be neither read at
-                length nor searched. */}
-            {stepNumberOf(stage.artifact) ? (
-              <p className="text-micro text-muted-foreground">
-                {t("nav.stepNumber", { n: stepNumberOf(stage.artifact)! })}
+        {headless ? null : (
+        <StageHeader
+          number={stepNumberOf(stage.artifact)}
+          title={artifactName(stage.artifact, t, stage.label)}
+          lead={
+            intro ??
+            (WHAT[stage.artifact] ? (
+              <p className="max-w-[74ch] text-body text-muted-foreground">
+                {t(WHAT[stage.artifact])}
+                {asksReview && RATED_AFTER_WHAT.has(stage.artifact)
+                  ? ` ${t("stage.what.rated")}`
+                  : null}
               </p>
-            ) : null}
-            {/* No tag of any kind beside the title: the bar already says the state under
-                each step's name, and what a state ASKS is said by the notices below. */}
-            <h1 className="font-display font-expanded text-title">{artifactName(stage.artifact, t, stage.label)}</h1>
-            {intro ?? (
-              WHAT[stage.artifact] ? (
-                <p className="max-w-[74ch] text-body text-muted-foreground">
-                  {t(WHAT[stage.artifact])}
-                  {asksReview && RATED_AFTER_WHAT.has(stage.artifact)
-                    ? ` ${t("stage.what.rated")}`
-                    : null}
-                </p>
-              ) : null
-            )}
-            {GUIDE[stage.artifact] ? <GuideLink slug={GUIDE[stage.artifact]} /> : null}
-          </header>
-
-          {/* Correcting is optional, and moving on asks nobody to understand the word
-              "aprobar". The build button is never here: it is the one thing to do on an
-              unbuilt stage, so it is drawn in the middle of the emptiness at a size that
-              says so. Nothing offers a rebuild over the SAME documents — a second pass gives
-              no different result and would throw the corrections away; the one rebuild
-              offered is the stale notice's, over documents the last build never read.
-
-              Moving on CLOSES the stage, because the next step cannot be built without that.
-              Saving and closing are one operation: the pending write first, and no approval
-              at all if the write is refused.
-
-              "Continuar" is the big coral button — it is the only control here that leads
-              anywhere. A CLOSED step offers both the same: correcting it reopens it with the
-              first saved change. What correcting changes is said where the pointer rests on
-              its button, and while correcting, what "Continuar" does with the draft. */}
-          {ready && !blocked ? (
+            ) : null)
+          }
+          guide={GUIDE[stage.artifact]}
+          // Correcting is optional, and moving on asks nobody to understand the word
+          // "aprobar". The build button is never here: it is the one thing to do on an
+          // unbuilt stage, so it is drawn in the middle of the emptiness at a size that says
+          // so. Nothing offers a rebuild over the SAME documents — a second pass gives no
+          // different result and would throw the corrections away; the one rebuild offered
+          // is the stale notice's, over documents the last build never read.
+          //
+          // Moving on CLOSES the stage, because the next step cannot be built without that.
+          // Saving and closing are one operation: the pending write first, and no approval
+          // at all if the write is refused.
+          //
+          // "Continuar" is the big coral button — it is the only control here that leads
+          // anywhere. A CLOSED step offers both the same: correcting it reopens it with the
+          // first saved change. What correcting changes is said where the pointer rests on
+          // its button, and while correcting, what "Continuar" does with the draft.
+          wayOn={
+            ready && !blocked ? (
             <WayOn
               caption={t(
                 curating
@@ -410,8 +455,10 @@ export function StageGate({
                 {advance.running ? null : <ArrowRight />}
               </Button>
             </WayOn>
-          ) : null}
-        </div>
+          ) : null
+          }
+        />
+        )}
 
         {/* `attention` and not `danger`: stale is "the step above changed, close this one",
             a move to make — the same tone the badge, the status mark and a re-read document
@@ -421,7 +468,11 @@ export function StageGate({
             since the build — and the notice's action is the build button in its rebuild
             mode, which draws nothing for a stage stale only because the step above moved. */}
         {stage.stale_because.length > 0 ? (
-          <Alert tone="attention" title={t("stage.stale")} action={<BuildButton stage={stage} />}>
+          <Alert
+            tone="attention"
+            title={t("stage.stale")}
+            action={staleAction === undefined ? <BuildButton stage={stage} /> : staleAction}
+          >
             {stage.stale_because.map((cause) => {
               const drift = rawDriftOf(cause);
               if (!drift) return <p key={cause.artifact ?? cause.label}>{cause.reason}</p>;
@@ -455,7 +506,8 @@ export function StageGate({
             blocks for one action. The header's button explains itself: with no corpus it is disabled
             and its tooltip says exactly that. */}
         {missing && rawMissing ? (
-          <EmptyState
+          <EmptyCall
+            as={empty}
             icon={<UploadCloud />}
             title={t("stage.rawMissing")}
             action={
@@ -471,13 +523,13 @@ export function StageGate({
               slot: slotLabelOf(rawMissing, t)!,
               stage: artifactName(stage.artifact, t, stage.label),
             })}
-          </EmptyState>
+          </EmptyCall>
         ) : null}
 
         {/* The one thing to do, in the middle of the screen. With the raw material missing
             the block above takes its place, "Importar" being the only way to make this one
             pressable: still one control per unbuilt stage. */}
-        {missing && !rawMissing ? <BuildCall stage={stage} /> : null}
+        {missing && !rawMissing ? <BuildCall stage={stage} as={empty} /> : null}
 
         {/* A stage that is not built has no content, and asking the screen for it is asking it to
             read a file that does not exist: the bank answered with a 404 and painted it as a red
@@ -609,7 +661,7 @@ export function StageGate({
                     setSaving(true);
                     try {
                       await pending.save();
-                      setWrote(true);
+                      ctl.markWrote();
                       setSavedOnce(true);
                     } catch {
                       setCurateFailed(true);
@@ -634,13 +686,13 @@ export function StageGate({
  * The way out of a step, beside its title: one line of state, the controls under it, and
  * the failure if the move failed.
  *
- * Shared by the three stages and `/raw`, which is what keeps the way out of the four steps
- * of the construction one shape instead of four that drift. It has no block around it: it
+ * Shared by the stages, the bank's step and `/raw`, which is what keeps the way out of the
+ * construction's steps one shape instead of several that drift. It has no block around it: it
  * stands on the ground like the header it shares a line with, to the right from `lg` and
  * under the title below it. It never takes more than half the line: two controls too wide
  * for that go one under the other, so the explanation beside them keeps its measure.
  *
- * It hangs from the TOP of that line, so "Continuar" is at one height on the four steps
+ * It hangs from the TOP of that line, so "Continuar" is at one height on every step
  * whatever the length of the explanation beside it; centred, it moved with every sentence.
  * The row wraps in reverse for the same reason: the last control — "Continuar" — keeps the
  * first line, and the one before it goes under.
@@ -665,14 +717,16 @@ export function WayOn({
   );
 }
 
-/** What "Continuar" says: the next step's number, or the way into the testing phase after the last. */
+/**
+ * What "Continuar" says: the next step's number, or — after the last — the door it opens,
+ * named as the bar names it. «Ya está: crear mi primer ejercicio» said "first" on every
+ * visit, the hundredth included (2026-10-08).
+ */
 export function continueLabel(
   next: { number: string | null },
   t: (key: Key, vars?: Record<string, string | number>) => string,
 ): string {
-  return next.number === null
-    ? t("stage.continueGenerate")
-    : t("stage.continue", { n: next.number });
+  return next.number === null ? t("nav.create") : t("stage.continue", { n: next.number });
 }
 
 export function StaleWarning({ children }: { children: ReactNode }) {
@@ -690,14 +744,15 @@ export function StaleWarning({ children }: { children: ReactNode }) {
  * What this step would build, in the middle of the empty screen.
  *
  * The sentence is the step's own (`lib/names.buildCall`): it names what does not exist yet
- * and which slot is read to make it, since the four steps do not read the same one. The
+ * and which slot is read to make it, since the stages do not read the same one. The
  * trailing sentence about how long it takes is shared, which is why this is two keys.
  */
-function BuildCall({ stage }: { stage: StageState }) {
+function BuildCall({ stage, as }: { stage: StageState; as: "screen" | "block" }) {
   const { t } = useT();
   const call = buildCall(stage.artifact);
   return (
-    <EmptyState
+    <EmptyCall
+      as={as}
       icon={<Hammer />}
       title={call ? t(call.title) : t("build.callTitle")}
       action={<BuildButton stage={stage} />}
@@ -710,6 +765,87 @@ function BuildCall({ stage }: { stage: StageState }) {
       ) : (
         t("build.callBody", { label: artifactName(stage.artifact, t, stage.label) })
       )}
-    </EmptyState>
+    </EmptyCall>
+  );
+}
+
+/**
+ * What a stage with nothing built offers, drawn for where it stands.
+ *
+ * A stage of its own fills the screen with it, as the dashed empty state of a screen with
+ * nothing in it yet. A part of the bank's step sits under the step's header with another
+ * part beside it, so the same call is a block there: the dashes are a whole screen's
+ * (`web/DESIGN.md` §3).
+ */
+function EmptyCall({
+  as,
+  icon,
+  title,
+  action,
+  children,
+}: {
+  as: "screen" | "block";
+  icon: ReactNode;
+  title: string;
+  action: ReactNode;
+  children: ReactNode;
+}) {
+  if (as === "screen") {
+    return (
+      <EmptyState icon={icon} title={title} action={action}>
+        {children}
+      </EmptyState>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{children}</CardDescription>
+      </CardHeader>
+      <CardContent>{action}</CardContent>
+    </Card>
+  );
+}
+
+/** The line over a step's title — and over a part of one — that says where it sits. */
+export const STAGE_KICKER = "text-micro text-muted-foreground";
+
+/**
+ * A step's header: where it sits in the path, its name, what it is, and its way out.
+ *
+ * The four screens of the construction draw it, so a step cannot be headed one way here and
+ * another there. The way out stands to the right from `lg` and under the title below it
+ * (`WayOn`). The guide link goes UNDER the title, on a line of its own: beside it, it is one
+ * more chip in a row of chips. No tag of any kind beside the title: the bar already says the
+ * state under each step's name, and what a state ASKS is said by the notices below.
+ */
+export function StageHeader({
+  number,
+  title,
+  lead,
+  guide,
+  wayOn,
+}: {
+  /** The step's number in the bar, or null for a screen outside the path. */
+  number: string | null;
+  title: ReactNode;
+  lead?: ReactNode;
+  guide?: GuideSlug;
+  wayOn?: ReactNode;
+}) {
+  const { t } = useT();
+  return (
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+      <header className="min-w-0 space-y-1.5">
+        {number ? (
+          <p className={STAGE_KICKER}>{t("nav.stepNumber", { n: number, total: STEPS.length })}</p>
+        ) : null}
+        <h1 className="font-display font-expanded text-title">{title}</h1>
+        {lead}
+        {guide ? <GuideLink slug={guide} /> : null}
+      </header>
+      {wayOn}
+    </div>
   );
 }

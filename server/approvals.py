@@ -36,10 +36,12 @@ EXEMPLARS_PROFILE = entrypoints.EXEMPLARS_PROFILE
 KNOWLEDGE_GRAPH = entrypoints.KNOWLEDGE_GRAPH
 EXEMPLARS_BANK = entrypoints.EXEMPLARS_BANK
 
-# The chain as the screens draw it: the navbar and the panel's cards read this tuple, so it
-# is the order a person works in. The profile leads because finishing the graph needs an
-# APPROVED profile — `routers/jobs.NEEDS_APPROVED` gates the taggability review on it.
-ARTIFACTS: tuple[str, ...] = (EXEMPLARS_PROFILE, KNOWLEDGE_GRAPH, EXEMPLARS_BANK)
+# The chain in the order a person works it: the navbar and the panel's cards read this tuple.
+# The graph leads, because the bank is tagged with it; the profile and the bank are the two
+# parts of one step, the types first and then the exercises collected with them. The
+# taggability review, which needs the APPROVED profile (`routers/jobs.NEEDS_APPROVED`), heads
+# the bank's collection (`jobs/chain.py`) and not the graph's build.
+ARTIFACTS: tuple[str, ...] = (KNOWLEDGE_GRAPH, EXEMPLARS_PROFILE, EXEMPLARS_BANK)
 
 # `UPSTREAM[KNOWLEDGE_GRAPH]` is `()` and must stay so: a graph build reads only the raw
 # corpus, so a read path that makes its screen depend on the profile fails in exactly the
@@ -135,6 +137,7 @@ DERIVED: dict[str, tuple[Callable[[Workspace], Path], ...]] = {
         attrgetter("concept_descriptions_path"),
         attrgetter("concept_sources_path"),
         attrgetter("concepts_embeddings_path"),
+        attrgetter("taggability_review_path"),
     ),
     EXEMPLARS_PROFILE: (),
     EXEMPLARS_BANK: (attrgetter("exemplars_bank_embeddings_path"),),
@@ -392,6 +395,15 @@ class Approvals:
             )
             result.append(state)
         return result
+
+    def sealed(self, artifact: str) -> bool:
+        """Whether the approval on record still matches the artifact's file, staleness aside.
+
+        `state` says `stale` both for an approved stage whose documents moved and for a draft
+        whose documents moved; this asks only whether somebody closed THIS file.
+        """
+        digest = storage.sha256_of(current_path(self.ws, artifact))
+        return _status(artifact, set(), digest, self._load().get(artifact)) == "approved"
 
     def gate_open(self, artifact: str) -> bool:
         """True when everything this artifact depends on has been approved."""

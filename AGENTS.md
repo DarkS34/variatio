@@ -218,7 +218,9 @@ path parameter requires it. No cache key is a path, so a workspace is portable.
   is the pipeline's, the registry appends the study's) and the model call it is drawn under
   (`phase`, a `PIPELINE` phase of its owner's lane). Engine, tunnel and logging have none.
   `tests/settings/test_setting_stages.py` pins it; the panel has one screen per stage (an
-  optional function's in that function's own admin tab).
+  optional function's in that function's own admin tab). `types.STAGES` is
+  `transcription, graph, bank, generation` since 2026-10-08: the profile's calls and the
+  taggability review are the bank's lane, in the order they run before the extraction.
   The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
   reads is `evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
@@ -534,12 +536,36 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 
 ### Build chain and approvals
 
-- `review.ARTIFACTS` order: profile → graph → bank. The profile leads because taggability
-  needs an APPROVED profile. `GATES` answers «are X's upstreams approved?»;
+- `approvals.ARTIFACTS` order: graph → profile → bank (2026-10-08; it led with the profile).
+  The graph comes first because the bank is tagged with it; the profile and the bank are the
+  two parts of ONE step, the types first. `GATES` answers «are X's upstreams approved?»;
   `NEEDS_APPROVED` gates `review_taggability` on the profile.
-- A build writes exactly one artifact (+ its cache). `server/jobs/chain.py` chains the graph
-  build into describing concepts (condition: the graph exists) and the taggability review
-  (condition: approved profile); an unmet condition skips, never fails.
+- A build writes exactly one artifact (+ its cache). `server/jobs/chain.py` holds two chains,
+  each link with its own condition, an unmet one a skip with its reason logged, never a
+  failure: the graph build chains describing its concepts (the graph exists), and the
+  taggability review heads the BANK's collection — `review_taggability → build_bank → index`
+  (the profile and the graph approved and a document in the exemplars' slot; a profile and
+  a bank). «Recoger el banco» queues the head; the pipeline's `build_job` of the bank is
+  `review_taggability`. The graph no longer chains the review or the index: indexing between
+  a graph build and a bank collection embedded concepts nobody had reviewed.
+- **The route checks every link of a chain** before queueing its head
+  (`routers/jobs.gate_error`, `transcribing_slot`, both over `chain.links(kind)`): a link the
+  runner queues has no route, so a closed gate behind the head would be skipped in silence
+  and a transcription of the exercises would collide with the build behind the review.
+- **The bank reads as building from its review on** (`singletons.building`: a live
+  `review_taggability` whose chain names `build_bank`), and the runner queues a job's next
+  link BEFORE announcing the job finished (`runner._execute`), so no reading between the two
+  finds the chain gone and offers to collect again.
+- **The review is skipped when nothing it reads changed** (`server/taggability.py`): a
+  fingerprint of the profile's bytes, the graph's units and concepts in their order and the
+  context's bytes — NOT the non-taggable list, which is what a teacher corrects by hand, and
+  not the bank —, kept in `cache/taggability_review.json` (a cache: a graph that says
+  `taggability_reviewed` with no record is taken at its word and the record written; emptying
+  the graph's stage deletes it, `approvals.DERIVED`). Skipped, the job answers
+  `{"skipped": true, …}` with no model call, and a switch turned by hand survives the next
+  collection. **The review seals the graph's approval again** (`kg_edit.set_non_taggable(…,
+  reseal=True)` when the graph was approved, `Approvals.sealed`): it is the system's
+  derivation, not a teacher's edit; a hand edit of the switch still withdraws it.
 - **The raw documents are an upstream**: `jobs/handlers._build` records the slot's documents
   (name, size, mtime) in `instance/.built_from.json`; a stage built from documents its slot no
   longer holds is stale with the drift named, and offers «Volver a construir» (the only
@@ -791,8 +817,9 @@ modality's own**. The artifact shape is an ordinary field (`schema.enum`, `descr
 (`nivel_dificultad` / `difficulty_level`); writers resolve it via `locale.difficulty(ws)`,
 readers via `ItemType.difficulty_field`. Rank = position in the modality's own enum;
 unranked sorts last. The criterion has a shape the client splits (`«rung»:` markers,
-`web/src/lib/difficulty.ts`, needs ≥2 marks else shown whole) and writes back: step 2
-corrects it one rung at a time, each in a box beside its name under the sentence that says
+`web/src/lib/difficulty.ts`, needs ≥2 marks else shown whole) and writes back: the types of
+exercise (step 3's first part) correct it one rung at a time, each in a box beside its name
+under the sentence that says
 what the scale measures (`DifficultyEdit`), and `joinCriterion` joins them into the ONE
 string the artifact keeps, every rung opened as soon as one is written. `guarantee_difficulty` is a
 floor, never a rewrite; it keeps the field out of `embed_fields` and writes it last. It is
@@ -805,7 +832,7 @@ exemplars split along a discrete form of the deliverable.
 ### Fields a commission may leave out
 
 A field marked `omittable: true` is one whoever commissions chooses to have or not (user's
-request, 2026-10-05). The mark is set by hand in step 2 («Se elige al generar»); no builder
+request, 2026-10-05). The mark is set by hand in the types of exercise («Se elige al generar»); no builder
 writes it, and absent means the field is always written. The validator refuses it on the
 primary field and on the difficulty. A commission names what it leaves out (`omit`, a job
 parameter and `--omit` on the CLI); `ItemType.without(names)` returns a second reading of
@@ -824,7 +851,9 @@ Not part of the builder: a job (`review_taggability`) judged per domain against 
 profile's modalities and real bank samples; operative test is discrimination, tie-break
 «exclude when in doubt». A build writes `taggability_reviewed: false`; the library states the
 flag and does not enforce it. `entrypoints/taggability.review_taggability(ws)` assembles it and
-returns data; the handler writes through `kg_edit.set_non_taggable`.
+returns data; the handler writes through `kg_edit.set_non_taggable`. Since 2026-10-08 it runs
+at the head of every collection of the bank and nowhere else, skipped when its inputs did not
+change (see *Build chain and approvals*); no screen names it but the collection's own rows.
 
 ### Entry points (`variatio/entrypoints/`)
 
@@ -1172,20 +1201,24 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 - `vertical-align` on a `<tr>` does nothing; select the cells (`[&>td]:align-top`).
 - `line-clamp-N` must never sit beside `block`.
 
-### Navigation and the four steps
+### Navigation and the three steps
 
 - [lib/steps.ts](web/src/lib/steps.ts) is the single home of the path: `STEPS` (raw
-  material, profile, graph, bank, numbered 1-4: the «Fase de construcción») and `USES` (the three
+  material, graph, bank, numbered 1-3: the «Fase de construcción»; until 2026-10-08 four, the
+  types of exercise a step of their own before the syllabus) and `USES` (the three
   unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» and
   «Tutor socrático»). Each door names its `feature`; the bar and the guide draw
   `usesFor(useFeatures())`, so a function closed to the account has no door, and its route
   draws «not found». The bar no longer captions the two phases (user's request, 2026-10-04):
   a rule sets the groups apart, and the guide and the tutorial still name them. The
-  first not-done step is `now`; done steps show a bare tick, no box. Doors are half-dimmed and
-  unclickable until construction is complete. Once all four are done and you are not on one,
-  the phase folds into one pill. From `xl` the bar sits on the header's centre line while it
-  fits there; when it does not (three doors with the steps unfolded, at 1280–1390), it takes
-  the line under the header, measured, never a fixed breakpoint. The current pill is scrolled
+  first not-done step is `now`; done steps show a bare tick, no box. A step names every
+  artifact it closes (`artifacts`): step 3 is done with the types of exercise AND the bank
+  closed, and spins while either builds or the review that opens a collection runs. Doors are
+  half-dimmed and unclickable until construction is complete. **The steps never fold**
+  (2026-10-08; with four they folded into one pill «Asignatura preparada» once done, with a
+  `‹` to fold them again). From `xl` the bar sits on the header's centre line while it fits
+  there; when it does not, it takes the line under the header, measured, never a fixed
+  breakpoint. The current pill is scrolled
   into sight. There is **no dashboard**: `/` redirects to the current step. An account in no
   subject sees `NoWorkspace`: a teacher, the form that starts one; a student, the sentence
   that sends them to their teacher's link. Creating — there and in the switcher — is offered
@@ -1194,14 +1227,16 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   `SYLLABUS` — «Temario», with an icon where a step has its number — as the whole
   construction, then the rule and the doors open to them; all of it half off until the
   construction is closed, the reason «Tu docente todavía está preparando esta asignatura».
-  `STUDENT_HIDDEN` (`/raw`, `/prepare/profile`, `/prepare/bank`) draw «not found»; every other
+  `STUDENT_HIDDEN` (`/raw`, `/prepare/bank`) draw «not found» (`/prepare/profile` redirects to
+  `/prepare/bank`, so it is «not found» for them too); every other
   route of the subject draws `SubjectNotReady` (no button) until `generation_unlocked`; `/`
   lands a student on `studentLandingPath` — generating, then the tutor, then the evaluation,
   else the syllabus. `useRaw` and `useCoverage` are never asked for a student.
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
-- Vocabulary seen by teachers: «Apuntes y ejercicios», «Tipos de ejercicio», «Temario»
-  (the step, with no article; «concepto» for a node; «grafo» only for the structure), «Banco
-  de ejercicios» (the step), «leer», «sirve de etiqueta», «asignatura» for a workspace,
+- Vocabulary seen by teachers: «Apuntes y ejercicios», «Temario» (the step, with no article;
+  «concepto» for a node; «grafo» only for the structure), «Banco de ejercicios» (the step)
+  with its two parts «Tipos de ejercicio» and «Banco de ejercicios», «Recoger el banco» (what
+  starts its collection), «leer», «sirve de etiqueta», «asignatura» for a workspace,
   «ejercicio(s) generado(s)» for output. Steps 3 and 4 were «El temario» and «Etiquetado»
   until 2026-10-05 (user's request). A sentence that takes a step's name quotes it («…»)
   and never lowercases it: the names carry no article to lean on.
@@ -1217,14 +1252,20 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   unlocks correction, with a sticky bottom bar carrying the save state and «Guardar los
   cambios»; «Continuar» (big, `--attention`) saves-and-approves and moves on. **Both stand
   to the right of the title** (under it below `lg`), under one line of state and with no
-  block around them (`StageGate.WayOn`, the four steps' one way out; user's request,
+  block around them (`StageGate.WayOn`, the steps' one way out; user's request,
   2026-10-05: at the foot they sat below the whole artifact); the group hangs from
-  the TOP of that line, so «Continuar» is at one height on the four steps whatever the
+  the TOP of that line, so «Continuar» is at one height on every step whatever the
   length of the explanation (centred, it moved with it), takes half the line at most, and
   wraps in reverse so «Continuar» keeps the first line; the sentence the foot block carried
-  is the `title` of the button it explains.
+  is the `title` of the button it explains. After the last step «Continuar» is the door it
+  opens, «Generar ejercicios» (`continueLabel`; until 2026-10-08 «Ya está: crear mi primer
+  ejercicio», which said "first" on every visit).
   No «Aprobar» or «Reabrir». No tags or (i) beside a stage's title; the guide link sits
-  under it.
+  under it. The header is `StageHeader` (kicker «Paso N de 3», `STEPS.length`), and a
+  stage's state for the visit — correcting, the pending edit, whether it wrote, closing it —
+  is `useStageControl`, which `StageGate` makes for itself or is handed (`control`); with
+  `headless` it draws its body alone. That is how the bank's step draws two stages under one
+  header (*Specific screens*).
 - The stage questionnaire unfolds under its button at the foot of the artifact, on every
   built stage, for an account the evaluation is open to AND whose role may correct the
   subject (`useAsksStageReview`: editor or owner, because its routes that record are
@@ -1246,6 +1287,30 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 ### Specific screens
 
+- **Step 3, «Banco de ejercicios»** (`/prepare/bank`, `features/bank/BankStep.tsx`; the
+  user's decision of 2026-10-08, which merged the steps «Tipos de ejercicio» and «Banco de
+  ejercicios»; `/prepare/profile` redirects here): ONE page, TWO parts, read in order — the
+  types of exercise (`ProfilePart`, the profile editor under a headless `StageGate`), then
+  the bank (`BankPart`). One `StageHeader` for the step. The parts are told apart by space
+  and a rule on the ground, never a box (that would be a third level of depth): 56 px and a
+  rule over each, a kicker «Parte N de 2», the name in the display face at `text-heading`,
+  one sentence, and on the right its state as a `Badge` in the bar's words («Hecho», «Te toca
+  ahora», «Después», «Construyendo», plus «Corrigiendo» and «Con cambios») and its own action
+  as an outline button («Corregir los tipos», «Corregir el banco»). The types fold to one line
+  («N tipos de ejercicio · M campos», «Ver los tipos») once a bank exists, unless they are
+  being built, corrected, read or are stale for their documents; the bank's part is dimmed,
+  with one sentence, until the types are confirmed. ONE coral, on the move that is next: the
+  types' build button; their rebuild (their documents changed); «Recoger el banco» — which
+  saves the types' draft, closes them and queues the review that heads the collection —;
+  «Recoger el banco otra vez» (types changed since, or the bank stale; asked first, the
+  bank's corrections go) beside an outline «Seguir con este banco» where the bank can be
+  closed as it is; «Ir al Paso 2 · Temario» while the syllabus is open; else «Generar
+  ejercicios», which closes both. Only one part is corrected at a time (one sticky bar).
+  While a collection runs the bank's part shows its three links as ruled rows (each job named
+  as every screen names it: «Decidir qué conceptos sirven de etiqueta», «Recoger los ejercicios
+  y etiquetarlos», «Preparar el banco para generar»; a skipped review says «Sin cambios desde
+  la última vez») and under them the running link's progress card; a stopped collection
+  keeps the rows with the failure.
 - **«Clase»** (`/class`, `features/class/ClassScreen.tsx`; decided 2026-10-06): the class of
   the subject in use, its teachers' alone (a student gets «not found», and `/api/members` is
   `auth.EDIT`). Entered from the account menu's «Mi clase», above «Mis asignaturas y
@@ -1357,6 +1422,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   out as syllabus-ordered regions, relaxes concepts in a worker (Barnes-Hut, deterministic),
   caches layouts per structure, and picks detail by on-screen distance. Units open collapsed;
   the per-row «sirve de etiqueta» switch is the only place it is set and never moves the row.
+  The syllabus no longer offers to decide the labels: that review heads the bank's
+  collection (2026-10-08), and the build's own chain under the header is the descriptions'.
   The line over the list counts the concepts, the ones that work as a label and, once a bank
   exists, the ones with an exemplar (`/api/bank/coverage`, «N con ejemplo» with its (i)): it
   is a fact about the graph, so the bank's screen draws no coverage (user's request,
@@ -1365,10 +1432,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   nothing lifts) — list, concept card, map and relations; no build, progress, correction or
   questionnaire, no column «sirve de etiqueta», no «sin descripción», and a line that counts
   the concepts and nothing else.
-- Bank: seven rows a page, every collapsed row the same height, bounded cells, `table-fixed`,
-  filters (search, modality, source, level, «Sin concepto»), no ordering control, no
-  similarity scores, primary concept as a filled badge placed first. `ConceptBadge`/
-  `ConceptChip` are the two ways to draw a concept; badges truncate with a `title`.
+- Bank (the second part of step 3): seven rows a page, every collapsed row the same height,
+  bounded cells, `table-fixed`, filters (search, modality, source, level, «Sin concepto»),
+  no ordering control, no similarity scores, primary concept as a filled badge placed first.
+  `ConceptBadge`/`ConceptChip` are the two ways to draw a concept; badges truncate with a
+  `title`.
 - Generate: numbered steps; after «¿De qué nivel?» and before the other decisions, «¿Qué
   partes lleva?» — one switch per `omittable` field of the type, all on at the start, drawn
   only when the type has one and never in the evaluation's form; a part switched off is
@@ -1399,6 +1467,13 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   AND bundled (`web/vite/mermaid-subset.ts` fails the build if Mermaid's shape moves). One
   KaTeX version is forced via `pnpm-workspace.yaml`.
 - `Progress`: total zero reads empty, unknown total sweeps (`barFill`).
+- **The guide and the tutorial are hidden** (the user's decision, 2026-10-07): one flag,
+  `lib/help.HELP_HIDDEN`. No entry in the account menu, `GuideLink` draws nothing, a new
+  account lands on `/` instead of `/tutorial`, and `/guide`, `/guide/*`, `/tutorial` and
+  `/tutorial/*` draw «not found» before anything else (`isHelpPath`), so neither chunk is
+  fetched. Their code and copy stay as they were and speak of four steps; they are not
+  updated while hidden, so the rule that a behaviour change ends with its guide section is
+  suspended — and resumes the day the flag goes. The server has no route of either.
 - The tutorial is two decks of full-window slides (2026-10-06): a teacher's opens on the
   construction (s1–s4), a student's on what is to hand (st1–st4: welcome, the syllabus,
   generating, and the tutor only with it open), and both end on the study's two when the
@@ -1423,7 +1498,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   is «El temario» to a student, never «Paso 3 · Temario»). A hyphenated slug is a quoted
   key of `BODIES`, which `check:i18n` reads.
 - The in-app guide (`/guide`) is user-facing copy: a behaviour change is not finished until
-  its section is. Every screen links its section via `GuideLink` typed by `GuideSlug`.
+  its section is — while it is hidden (above), the rule waits. Every screen links its section
+  via `GuideLink` typed by `GuideSlug`.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   Six tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off, one per
   optional function in its own tone — «Evaluaciones» (`--evaluation`) and «Tutor»
@@ -1629,8 +1705,11 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   the only graph viewer.
 - A build writes only its final artifact; draft and curated stay two files. The bank's
   building file is the one exception.
-- Taggability is not part of the builder; the graph build chains it (and describing) at the
-  job layer; no `GATES` or `JOB_ARTIFACT` entry for it.
+- Taggability is not part of the builder; it heads the bank's collection at the job layer
+  (`review_taggability → build_bank → index`, 2026-10-08; until then the graph build chained
+  it), skipped when the profile, the syllabus and the context did not change, and sealing the
+  graph's approval again; no `GATES` or `JOB_ARTIFACT` entry for it. The route checks the
+  gates of every link before queueing a chain's head.
 - Content context is its own artifact, written by the other two builders; keep the three
   named facts and the single renderer.
 - Transcription is an accelerator and a step of `/raw`, never a gate or a stage; both slots
@@ -1750,14 +1829,22 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   scrolls inside its block —; row gestures show on hover except the one that opens; every
   list of sections leads with a 16 px mark; one tab, one pill, one choice card; whole-pixel
   lines. See *Material and tokens*.
-- The bar is the path: four numbered steps and the unnumbered doors open to the account (up
-  to three), the two groups set apart by a rule and with no phase captions (2026-10-04); no
-  dashboard; the rail is gone. For a student the bar draws «Temario» without a number as the
-  only stage, and `/` leads to the first open door or to `SubjectNotReady`; for a teacher
-  nothing changes (2026-10-06).
+- The bar is the path: three numbered steps — «Apuntes y ejercicios», «Temario», «Banco de
+  ejercicios», the types of exercise being the first part of the third (2026-10-08; four
+  steps until then, the types before the syllabus) — and the unnumbered doors open to the
+  account (up to three), the two groups set apart by a rule and with no phase captions
+  (2026-10-04); the steps never fold (2026-10-08); no dashboard; the rail is gone. For a
+  student the bar draws «Temario» without a number as the only stage, and `/` leads to the
+  first open door or to `SubjectNotReady`; for a teacher nothing changes (2026-10-06).
+- Step 3 is one page of two parts, the types of exercise and then the bank, told apart by
+  space and a rule and never by a box; «Recoger el banco» confirms the types and collects the
+  bank; one coral on the move that is next; one part corrected at a time (2026-10-08).
 - View and correct are two moments; «Continuar» closes a stage and stands with «Quiero
-  corregir algo» beside the title on the four steps, never in a block at the foot
-  (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift.
+  corregir algo» beside the title on every step, never in a block at the foot
+  (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift. After the last
+  step it names the door it opens, «Generar ejercicios» (2026-10-08).
+- The guide and the tutorial are hidden behind one flag (`lib/help.HELP_HIDDEN`): no entry,
+  no link, no route (2026-10-07). Their copy is not updated while hidden.
 - A queued job is not a running one. No time estimates. No «loading model» signal. No log on
   screen. No run drawer.
 - Generate screen belongs to the visit; its «Mis ejercicios» tab lists the subject in use

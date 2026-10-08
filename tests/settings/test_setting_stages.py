@@ -65,7 +65,22 @@ def test_a_call_made_by_several_stages_carries_them_all():
     # The tagger runs inside the bank build and again in every generation's checks; the
     # repair answers whoever's JSON came back broken.
     assert set(BY_KEY["models.phases.concept_tagger"].stages) >= {"bank", "generation"}
-    assert set(BY_KEY["models.phases.repair"].stages) >= {"profile", "graph", "bank", "generation"}
+    assert set(BY_KEY["models.phases.repair"].stages) >= {"graph", "bank", "generation"}
+
+
+def test_the_types_of_exercise_are_configured_with_the_bank():
+    # One step since 2026-10-08: the profile's calls and the taggability review are drawn in
+    # the bank's lane, in the order they run before the extraction.
+    lane = next(lane for lane in PIPELINE if lane.key == "bank")
+    assert [phase.key for phase in lane.phases] == [
+        "ep_scan",
+        "ep_consolidate",
+        "ep_context",
+        "kg_taggable",
+        "eb_extract",
+        "concept_tagger",
+    ]
+    assert "profile" not in STAGES
 
 
 def test_the_snapshot_carries_stages_and_phase():

@@ -72,9 +72,10 @@ const PROFILE_FILTER_LABELS: Record<EvaluatorProfile, Key> = {
   student: "adminEvaluation.profile.students",
 };
 
-/** The three stages of the chain in the order the bar numbers them, so the forms are
- *  read in the order they were answered. */
-const STAGE_ARTIFACTS = STEPS.flatMap((step) => (step.artifact ? [step.artifact] : []));
+/** The three stages of the chain in the order the bar numbers them — the types of exercise
+ *  and the bank being the two parts of one step — so the forms are read in the order they
+ *  were answered. */
+const STAGE_ARTIFACTS: string[] = STEPS.flatMap((step) => [...step.artifacts]);
 
 /**
  * The evaluation's tab: WHO first, then the two instruments, each with its own CSV.
@@ -1294,7 +1295,9 @@ function StageForms({ data }: { data: AdminStageEvaluations }) {
  */
 function StageCard({ summary }: { summary: StageArtifactSummary }) {
   const { t, plural, language } = useT();
-  const stepIndex = STEPS.findIndex((step) => step.artifact === summary.artifact);
+  const stepIndex = STEPS.findIndex((step) =>
+    (step.artifacts as readonly string[]).includes(summary.artifact),
+  );
 
   return (
     <Card

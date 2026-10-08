@@ -20,12 +20,13 @@ describe("the configuration's stages and the functions' tabs", () => {
 
   it("leaves «Configuración» the product's own stages, in the path's order", () => {
     const product = CONFIG_STAGES.filter((stage) => stage.feature === null);
+    // The types of exercise have no screen of their own: they are the bank's step's first part.
     expect(product.map((stage) => stage.key)).toEqual([
       "transcription",
-      "profile",
       "graph",
       "bank",
       "generation",
     ]);
+    expect(product.map((stage) => stage.number)).toEqual(["1", "2", "3", null]);
   });
 });

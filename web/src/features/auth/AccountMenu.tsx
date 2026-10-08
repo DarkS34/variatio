@@ -15,6 +15,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
+import { HELP_HIDDEN } from "@/lib/help";
 import { useRouter } from "@/lib/router";
 import { useT, type Key } from "@/lib/i18n";
 import { ROLE_LABEL_KEYS, useCanEdit, useLogout, useSession } from "@/state/auth";
@@ -123,20 +124,23 @@ export function AccountMenu() {
             />
           </div>
 
-          <Separator />
-
-          <div className="p-1">
-            <MenuItem
-              icon={<Compass className="size-4" />}
-              label={t("tutorial.again")}
-              onClick={() => go("/tutorial")}
-            />
-            <MenuItem
-              icon={<BookOpen className="size-4" />}
-              label={t("menu.guide")}
-              onClick={() => go("/guide")}
-            />
-          </div>
+          {HELP_HIDDEN ? null : (
+            <>
+              <Separator />
+              <div className="p-1">
+                <MenuItem
+                  icon={<Compass className="size-4" />}
+                  label={t("tutorial.again")}
+                  onClick={() => go("/tutorial")}
+                />
+                <MenuItem
+                  icon={<BookOpen className="size-4" />}
+                  label={t("menu.guide")}
+                  onClick={() => go("/guide")}
+                />
+              </div>
+            </>
+          )}
 
           {user.is_admin ? (
             <>

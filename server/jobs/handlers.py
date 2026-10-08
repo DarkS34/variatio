@@ -17,7 +17,7 @@ from variatio.core.workspace import Workspace
 
 from .. import curriculum as curriculum_store
 from .. import generations as generations_store
-from .. import approvals, deps, installation, storage
+from .. import approvals, deps, installation, storage, taggability
 from ..db import identity, mirror, session_scope
 from ..editors import kg_edit
 from . import lanes
@@ -191,20 +191,37 @@ def handle_tag(job: Job, control: JobControl) -> dict:
 
 
 def handle_review_taggability(job: Job, control: JobControl) -> dict:
-    """Decide which graph concepts work as labels, and patch the verdict into the graph.
+    """Decide which graph concepts work as labels, unless nothing they are judged by changed.
 
-    The judgement is `entrypoints.review_taggability`; what stays here is the writing, because
-    `kg_edit` owns the history, the database mirror and the approval the edit revokes.
+    The review heads every collection of the bank (`jobs/chain.py`). When the profile, the
+    syllabus and the context are what the last review read (`taggability.up_to_date`) it is
+    skipped: no model call, and what a teacher switched by hand since stays as it is. The
+    judgement is `entrypoints.review_taggability`; what stays here is the writing, because
+    `kg_edit` owns the history, the database mirror and the approval — which the review
+    seals again, being the system's derivation and not a teacher's edit.
     """
-    deps.require_inference()
     ws = _workspace(job)
+    if taggability.up_to_date(ws):
+        graph = kg_edit.raw(ws)
+        logger.info(
+            "[etiquetabilidad] Al día: el perfil, el temario y el contexto no cambiaron; se omite"
+        )
+        return {
+            "skipped": True,
+            "non_taggable": len(graph.get("generic_non_taggable_concepts") or []),
+            "concepts": sum(len(names) for names in graph["concepts_by_domains"].values()),
+        }
 
+    deps.require_inference()
     try:
         verdict = entrypoints.review_taggability(ws)
     except entrypoints.MissingArtifactError as exc:
         raise ValueError(_TAGGABILITY_MISSING[exc.artifact]) from exc
 
-    saved = kg_edit.set_non_taggable(ws, verdict["non_taggable"])
+    saved = kg_edit.set_non_taggable(ws, verdict["non_taggable"], reseal=True)
+    taggability.write_record(
+        ws, taggability.fingerprint(ws), verdict["non_taggable"], verdict["concepts"]
+    )
     return {"non_taggable": saved["non_taggable"], "concepts": verdict["concepts"]}
 
 

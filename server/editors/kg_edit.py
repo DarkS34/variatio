@@ -164,18 +164,23 @@ def replace(ws: Workspace, graph_raw: dict) -> dict:
     return _save(ws, graph_raw, "grafo de conocimiento reemplazado")
 
 
-def set_non_taggable(ws: Workspace, concepts: list[str]) -> dict:
+def set_non_taggable(ws: Workspace, concepts: list[str], *, reseal: bool = False) -> dict:
     """Record which concepts do not work as labels, and mark the review as done.
 
-    Both the job's verdict and a hand edit come through here, and both set
-    `taggability_reviewed` in the same write, so the file is left in one shape either way.
-    Names the graph does not hold are dropped rather than stored.
+    Names the graph does not hold are dropped rather than stored. The write withdraws the
+    graph's approval like every edit; `reseal` gives it back when it was there, because the
+    review that passes it is the system's own derivation and not a teacher's correction — it
+    runs at the head of every collection of the bank, and withdrawing the syllabus each time
+    would reopen a step nobody touched. A graph still in draft stays in draft.
     """
+    was_approved = approvals.Approvals(ws).sealed(ARTIFACT)
     graph_raw = raw(ws)
     kept = sorted(set(concepts) & _all_concepts(graph_raw))
     graph_raw["generic_non_taggable_concepts"] = kept
     graph_raw["taggability_reviewed"] = True
     _save(ws, graph_raw, "etiquetabilidad revisada")
+    if reseal and was_approved:
+        approvals.Approvals(ws).approve(ARTIFACT)
     return {"non_taggable": len(kept)}
 
 

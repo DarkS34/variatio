@@ -73,7 +73,7 @@ export function TranscriptionBadge({ slot }: { slot: RawSlot }) {
 
 /**
  * The slot's transcription while it runs, drawn as every other job is: one `JobProgress`
- * card for the four steps of the construction.
+ * card for the steps of the construction.
  *
  * The stop button takes BOTH live runs and not this slot's alone: "Leerlos todos ahora"
  * starts one job per origin, so stopping one card and leaving the other running means the

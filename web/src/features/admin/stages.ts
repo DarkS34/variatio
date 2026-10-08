@@ -6,7 +6,7 @@ import type { ConfigSetting, FeatureName } from "@/lib/types";
 
 /**
  * THE CONFIGURATION'S SCREENS ARE THE PATH'S STAGES, named and numbered as the bar names
- * and numbers them: the four construction steps carry their number, the doors their icon.
+ * and numbers them: the construction steps carry their number, the doors their icon.
  *
  * The keys are the server's (`variatio.settings.types.STAGES` plus the study's and the
  * tutor's), matched against what `/api/admin/config` sends; the labels come from
@@ -61,9 +61,10 @@ const door = (
 
 export const CONFIG_STAGES: ConfigStage[] = [
   step(0, "transcription", "cfg.stage.transcription"),
-  step(1, "profile", "cfg.stage.profile"),
-  step(2, "graph", "cfg.stage.graph"),
-  step(3, "bank", "cfg.stage.bank"),
+  step(1, "graph", "cfg.stage.graph"),
+  // The types of exercise are the first part of the bank's step since 2026-10-08, and their
+  // settings with them: one screen per step, as the bar draws the path.
+  step(2, "bank", "cfg.stage.bank"),
   door("generate", "generation", Play, "cfg.stage.generation"),
   door("compare", "evaluation", Scale, "cfg.stage.evaluation"),
   door("tutor", "tutoring", MessagesSquare, "cfg.stage.tutoring"),
@@ -75,7 +76,7 @@ export function stageOfFeature(feature: FeatureName): ConfigStage {
 }
 
 /** The construction stages: a setting every one of them reads is common to the whole path. */
-const CONSTRUCTION = ["transcription", "profile", "graph", "bank", "generation"];
+const CONSTRUCTION = ["transcription", "graph", "bank", "generation"];
 
 /** The stage whose screen owns a setting, or null for one the server staged nowhere. */
 export function homeOf(setting: ConfigSetting): string | null {

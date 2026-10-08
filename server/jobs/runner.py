@@ -424,8 +424,11 @@ class JobRunner:
                 self._settle(job, "cancelled")
             else:
                 job.result = result
-                self._settle(job, "succeeded")
+                # The next link is queued BEFORE this one is announced finished, so no
+                # reading between the two finds the chain gone: the bank's step would offer
+                # «Recoger el banco» again for the instant between its review and its build.
                 self._chain(job)
+                self._settle(job, "succeeded")
         except progress.Cancelled:
             self._settle(job, "cancelled")
         except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
@@ -469,7 +472,7 @@ class JobRunner:
         """Queue whatever follows this job, if anything.
 
         A convenience and not part of the result: when it fails the job that just finished
-        is still finished, and only the next link is lost.
+        still finishes, and only the next link is lost.
         """
         if self.after_success is None:
             return

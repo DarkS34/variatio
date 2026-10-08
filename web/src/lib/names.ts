@@ -28,7 +28,7 @@ const ARTIFACT_KEYS: Record<string, Key> = {
 
 /**
  * The call to build, one per step: what does not exist yet and which slot is read to make
- * it, since the four steps do not read the same one. The sentence about how long it takes
+ * it, since the stages do not read the same one. The sentence about how long it takes
  * is shared.
  *
  * Same fallback as every other table here: an artifact this bundle has never heard of still

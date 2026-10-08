@@ -57,6 +57,11 @@ def _form(
 # AGGREGATES --------------------------------------------------------------------------------
 
 
+def _graph(summary: dict) -> dict:
+    """The syllabus's row of a summary, read by name: the stages' order is the path's."""
+    return next(a for a in summary["by_artifact"] if a["artifact"] == GRAPH)
+
+
 def test_an_opened_but_unanswered_form_counts_apart_from_a_verdict():
     summary = store.aggregates([_form(overall=4), _form(overall=None, id=2)])
 
@@ -70,7 +75,7 @@ def test_an_opened_but_unanswered_form_counts_apart_from_a_verdict():
 
 def test_the_mean_and_the_distribution_are_over_answered_rows_only():
     rows = [_form(overall=2, id=1), _form(overall=5, id=2), _form(overall=None, id=3)]
-    graph = store.aggregates(rows)["by_artifact"][1]
+    graph = _graph(store.aggregates(rows))
 
     assert graph["overall"]["mean"] == 3.5
     assert graph["overall"]["counts"] == {"1": 0, "2": 1, "3": 0, "4": 0, "5": 1}
@@ -89,7 +94,7 @@ def test_the_statements_are_counted_rung_by_rung_in_the_instruments_own_order():
         _form(answers={"precision": 2, "effort": 4}, id=2),
         _form(answers={"precision": 5, "effort": 1}, id=3),
     ]
-    graph = store.aggregates(rows)["by_artifact"][1]
+    graph = _graph(store.aggregates(rows))
 
     keys = [q["key"] for q in graph["questions"]]
     assert keys == [q["key"] for q in instruments.QUESTIONS[GRAPH]]
@@ -112,22 +117,22 @@ def test_the_usable_share_is_over_answers_on_the_scale_only():
         _form(answers={"effort": "none"}, id=2),
         _form(answers={"effort": 2}, id=3),
     ]
-    graph = store.aggregates(rows)["by_artifact"][1]
+    graph = _graph(store.aggregates(rows))
 
     assert graph["usable"] == 0.5
     assert graph["questions"][3]["counts"]["none"] == 1
-    assert store.aggregates([_form(answers={"effort": "redo"})])["by_artifact"][1]["usable"] is None
+    assert _graph(store.aggregates([_form(answers={"effort": "redo"})]))["usable"] is None
 
 
 def test_a_digit_stored_as_a_string_still_counts_as_its_rung():
-    graph = store.aggregates([_form(answers={"precision": "4"})])["by_artifact"][1]
+    graph = _graph(store.aggregates([_form(answers={"precision": "4"})]))
     precision = graph["questions"][0]
 
     assert precision["counts"]["4"] == 1 and precision["mean"] == 4.0
 
 
 def test_an_answer_under_an_earlier_wording_is_kept_under_its_raw_value():
-    graph = store.aggregates([_form(answers={"precision": "old_value"})])["by_artifact"][1]
+    graph = _graph(store.aggregates([_form(answers={"precision": "old_value"})]))
     precision = graph["questions"][0]
 
     assert precision["counts"]["old_value"] == 1
@@ -142,7 +147,7 @@ def test_the_curation_contrast_has_three_buckets_and_null_is_not_a_no():
         _form(overall=3, curated=None, id=3),
         _form(overall=4, curated=None, id=4),
     ]
-    curation = store.aggregates(rows)["by_artifact"][1]["curation"]
+    curation = _graph(store.aggregates(rows))["curation"]
 
     assert curation["yes"] == {"n": 1, "overall_mean": 5.0}
     assert curation["no"] == {"n": 1, "overall_mean": 2.0}
@@ -151,7 +156,7 @@ def test_the_curation_contrast_has_three_buckets_and_null_is_not_a_no():
 
 def test_the_median_time_on_task_ignores_rows_with_no_clock():
     rows = [_form(seconds=30.0, id=1), _form(seconds=90.0, id=2), _form(seconds=600.0, id=3)]
-    graph = store.aggregates(rows)["by_artifact"][1]
+    graph = _graph(store.aggregates(rows))
 
     assert graph["seconds"] == {"n": 3, "median": 90.0}
 

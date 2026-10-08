@@ -132,9 +132,7 @@ function Start() {
           needs the one before it closed. Each carries a word underneath saying where you are:{" "}
           <em>{t("nav.state.done").toLowerCase()}</em>,{" "}
           <em>{t("nav.state.now").toLowerCase()}</em> or{" "}
-          <em>{t("nav.state.later").toLowerCase()}</em>. Once all four are done the phase
-          folds into a single pill reading "{t("nav.build.folded")}": pressing it shows the
-          steps again, and the browser remembers.
+          <em>{t("nav.state.later").toLowerCase()}</em>.
         </Paragraph>
         <Paragraph>
           The <strong>{t("nav.phase.test").toLowerCase()}</strong> is what you do with the
@@ -712,7 +710,7 @@ function Verdict({ artifact }: { artifact: string }) {
             <strong>
               "
               {next.number === null
-                ? t("stage.continueGenerate")
+                ? t("nav.create")
                 : t("stage.continue", { n: next.number })}
               "
             </strong>{" "}

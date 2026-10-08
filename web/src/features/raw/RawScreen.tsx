@@ -1,12 +1,12 @@
 import { ArrowRight, ScanText } from "lucide-react";
 
 import { GuideLink } from "@/components/GuideLink";
-import { continueLabel, WayOn } from "@/components/StageGate";
+import { continueLabel, STAGE_KICKER, WayOn } from "@/components/StageGate";
 import { Button } from "@/components/ui/button";
 import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
-import { nextStepOf, stepNumber } from "@/lib/steps";
+import { STEPS, nextStepOf, stepNumber } from "@/lib/steps";
 import type { RawKind } from "@/lib/types";
 import { useCanEdit } from "@/state/auth";
 import { useEngineOffline, useRaw } from "@/state/queries";
@@ -81,9 +81,9 @@ export function RawScreen() {
               This screen does not go through `StageGate` — it writes no artifact and nobody
               approves it — so it repeats the shape by hand, and the ORDINAL is what puts it
               on the path: it is step 1 even though it is not a stage. The title is
-              deliberately not `text-display`, or one of the four steps would be the only one
+              deliberately not `text-display`, or one of the steps would be the only one
               shouting. */}
-          <p className="text-micro text-muted-foreground">{t("nav.stepNumber", { n: stepNumber(0) })}</p>
+          <p className={STAGE_KICKER}>{t("nav.stepNumber", { n: stepNumber(0), total: STEPS.length })}</p>
           <h1 className="font-display font-expanded text-title">{t("nav.step.raw")}</h1>
           <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
           <GuideLink slug="raw" />

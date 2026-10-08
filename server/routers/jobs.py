@@ -29,6 +29,7 @@ from variatio.core.workspace import Workspace
 
 from .. import approvals, auth, features, generation_usage, raw_data, singletons
 from ..db.models import EDITOR, VIEWER
+from ..jobs import chain as job_chain
 from ..jobs import lanes
 from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, STUDENT_KINDS, SUBPROCESS_KINDS
 
@@ -60,9 +61,10 @@ GENERATION_BUSY = "generation_busy"
 _COMMISSIONING = threading.Lock()
 
 # `GATES` answers "are the UPSTREAM of X approved?", which is the question for building X.
-# Taggability asks a different one — that a SPECIFIC artifact is approved — and cannot
-# reuse `EXEMPLARS_BANK` as a gate: that would demand the graph be approved, and the review
-# is what happens before approving it. Hence a table of its own.
+# Taggability asks a different one — that a SPECIFIC artifact is approved, the profile its
+# verdict is judged against — hence a table of its own. The graph's approval it needs too,
+# since the review heads the bank's collection, comes from the link behind it: `build_bank`'s
+# gate, which `gate_error` reads for every link of the chain.
 NEEDS_APPROVED: dict[str, str] = {
     "review_taggability": approvals.EXEMPLARS_PROFILE,
 }
@@ -83,10 +85,23 @@ class JobBody(BaseModel):
 def gate_error(ws: Workspace, kind: str) -> str | None:
     """Say in Spanish which steps have to be settled before `kind` may run, or nothing.
 
+    Every link `kind` chains is checked too (`jobs/chain.links`): queued by the runner and
+    not by this route, a link whose gate is closed would be skipped in silence, and
+    «Recoger el banco» would decide the labels and collect nothing.
+
     It names the STATE and not a button: "Aprobar" is not a control any more — a stage is
     closed by moving on from it — so "aprueba primero" sent people looking for something
     that is not on the screen.
     """
+    for link in (kind, *job_chain.links(kind)):
+        error = _gate_error_of(ws, link)
+        if error is not None:
+            return error
+    return None
+
+
+def _gate_error_of(ws: Workspace, kind: str) -> str | None:
+    """Say which steps have to be settled before one kind of job may run, or nothing."""
     needed = NEEDS_APPROVED.get(kind)
     if needed is not None:
         if singletons.approvals(ws).state(needed)["status"] != "approved":
@@ -108,21 +123,24 @@ def gate_error(ws: Workspace, kind: str) -> str | None:
 
 
 def transcribing_slot(slug: str, kind: str) -> str | None:
-    """Name the raw slot `kind` would read that is being transcribed right now, or nothing.
+    """Name the raw slot `kind` or a link it chains would read, while it is transcribed.
 
     Only the three builds read a slot (`SUBPROCESS_KINDS`); `tag` rewrites the bank from
     what is already in it. A transcription and a build of the same slot both write the
     same page cache, document by document, so they must not run at once — and the queue
     does not keep them apart, since on a hybrid engine they may sit on different lanes.
+    The links count because the taggability review heads the bank's collection: refusing
+    only the build would let the review run and the build behind it collide.
     This is NOT the transcription becoming a gate: a slot nobody is reading builds whether
     its pages are cached or not.
     """
-    if kind not in SUBPROCESS_KINDS:
-        return None
-    slot = raw_data.slot_feeding(JOB_ARTIFACT.get(kind))
-    if slot is None or singletons.transcribing(slug, slot) is None:
-        return None
-    return slot
+    for link in (kind, *job_chain.links(kind)):
+        if link not in SUBPROCESS_KINDS:
+            continue
+        slot = raw_data.slot_feeding(JOB_ARTIFACT.get(link))
+        if slot is not None and singletons.transcribing(slug, slot) is not None:
+            return slot
+    return None
 
 
 def transcription_error(ws: Workspace, kind: str) -> str | None:

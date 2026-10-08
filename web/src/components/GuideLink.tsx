@@ -1,6 +1,7 @@
 import { BookOpen } from "lucide-react";
 
 import { GUIDE_SECTIONS, sectionLabel, type GuideSlug } from "@/features/guide/sections";
+import { HELP_HIDDEN } from "@/lib/help";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,8 @@ export function GuideLink({ slug, className }: { slug: GuideSlug; className?: st
   const { t } = useT();
   const student = useSpeaksToStudent();
   const section = GUIDE_SECTIONS.find((entry) => entry.slug === slug);
-  if (!section) return null;
+  // The guide is hidden (`lib/help.ts`): the screens keep their typed slug, and draw nothing.
+  if (HELP_HIDDEN || !section) return null;
 
   return (
     <Link

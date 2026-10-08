@@ -10,23 +10,45 @@ import { isQueued } from "@/lib/queue";
  * with two contradictory numberings of one chain — so the answer is computed here and
  * nowhere else.
  *
- * The order is `server/review.ARTIFACTS` with the raw material in front, and it must stay
- * so: the profile leads because finishing the syllabus needs an APPROVED profile
- * (`routers/jobs.NEEDS_APPROVED` gates its taggability review on it), so starting at the
- * syllabus is starting at a step you cannot finish.
+ * The order is `server/approvals.ARTIFACTS` with the raw material in front: the syllabus
+ * before the bank, because the bank is tagged with it. Since 2026-10-08 the types of exercise
+ * and the bank are ONE step in two parts — the types first, then the exercises collected with
+ * them — so a step names the artifact its screen is about (`artifact`) and every artifact it
+ * closes (`artifacts`): step 3 is done only with both closed.
  */
 export const STEPS = [
-  { path: "/raw", labelKey: "nav.step.raw", artifact: null },
-  { path: "/prepare/profile", labelKey: "nav.step.profile", artifact: "exemplars_profile" },
-  { path: "/prepare/graph", labelKey: "nav.step.graph", artifact: "knowledge_graph" },
-  { path: "/prepare/bank", labelKey: "nav.step.bank", artifact: "exemplars_bank" },
-] as const satisfies readonly { path: string; labelKey: Key; artifact: string | null }[];
+  { path: "/raw", labelKey: "nav.step.raw", artifact: null, artifacts: [] },
+  {
+    path: "/prepare/graph",
+    labelKey: "nav.step.graph",
+    artifact: "knowledge_graph",
+    artifacts: ["knowledge_graph"],
+  },
+  {
+    path: "/prepare/bank",
+    labelKey: "nav.step.bank",
+    artifact: "exemplars_bank",
+    artifacts: ["exemplars_profile", "exemplars_bank"],
+  },
+] as const satisfies readonly {
+  path: string;
+  labelKey: Key;
+  artifact: string | null;
+  artifacts: readonly string[];
+}[];
+
+/** The step that closes an artifact, by its index in `STEPS`, or -1 for none. */
+function stepIndexOf(artifact: string | null): number {
+  return STEPS.findIndex((step) =>
+    artifact === null ? step.artifact === null : (step.artifacts as readonly string[]).includes(artifact),
+  );
+}
 
 /**
  * Two phases, NAMED and not numbered.
  *
  * A number encodes dependency, so it goes exactly where there is one: inside the
- * construction, `1 … 4`, where each step needs the one before it closed. Generating,
+ * construction, `1 … 3`, where each step needs the one before it closed. Generating,
  * evaluating and the tutor open on the same condition — the whole construction closed — and
  * none waits for another, so numbering them would claim an order that does not exist. They
  * carry an ICON where a step carries its number: an icon says "a door", a number "a stop".
@@ -104,9 +126,9 @@ export function stepNumber(index: number): string {
   return `${index + 1}`;
 }
 
-/** The same, addressed by the artifact a step builds — the stage screens' way in. */
+/** The same, addressed by an artifact the step closes — the stage screens' way in. */
 export function stepNumberOf(artifact: string): string | null {
-  const index = STEPS.findIndex((step) => step.artifact === artifact);
+  const index = stepIndexOf(artifact);
   return index === -1 ? null : stepNumber(index);
 }
 
@@ -119,7 +141,7 @@ export function stepNumberOf(artifact: string): string | null {
 export function nextStepOf(
   artifact: string | null,
 ): { path: string; number: string | null; labelKey: Key } {
-  const index = STEPS.findIndex((step) => step.artifact === artifact);
+  const index = stepIndexOf(artifact);
   const next = index === -1 ? -1 : index + 1;
   return next > 0 && next < STEPS.length
     ? { path: STEPS[next].path, number: stepNumber(next), labelKey: STEPS[next].labelKey }
@@ -134,14 +156,17 @@ export type StepState = "done" | "now" | "later";
  * The current step is the FIRST one not done and never "every one not done": what makes a
  * path obvious is one next move, not a list of pending chores. Step 1 has no artifact and
  * no approval, so "done" there means both origins hold documents — the condition the three
- * builds behind it actually need. Being untranscribed is deliberately NOT part of it:
+ * builds behind it actually need; a step of two parts is done with both closed. Being
+ * untranscribed is deliberately NOT part of it:
  * transcribing is an accelerator and never a gate, and a step marked pending by something
  * that does not stop you would be a false promise in the one bar everybody reads.
  */
 export function stepStates(stages: StageState[], rawStocked: boolean): StepState[] {
   const done = STEPS.map((step) =>
     step.artifact
-      ? stages.find((s) => s.artifact === step.artifact)?.status === "approved"
+      ? step.artifacts.every(
+          (artifact) => stages.find((s) => s.artifact === artifact)?.status === "approved",
+        )
       : rawStocked,
   );
   const now = done.indexOf(false);
@@ -176,12 +201,28 @@ export function stepBusy(stages: StageState[], jobs: Job[]): boolean[] {
     if (step.artifact === null) {
       return jobs.some((job) => job.kind === "transcribe" && job.status === "running");
     }
+    const mine = step.artifacts as readonly string[];
     const building = stages.some(
-      (stage) => stage.artifact === step.artifact && stage.status === "building",
+      (stage) => mine.includes(stage.artifact) && stage.status === "building",
+    );
+    const running = jobs.some(
+      (job) => job.status === "running" && (mine.includes(job.artifact ?? "") || chainOf(step, job)),
     );
     const queued = jobs.some(
-      (job) => job.artifact === step.artifact && job.status !== "running" && isQueued(job),
+      (job) =>
+        (mine.includes(job.artifact ?? "") || chainOf(step, job)) &&
+        job.status !== "running" &&
+        isQueued(job),
     );
-    return building && !queued;
+    return building && (running || !queued);
   });
+}
+
+/**
+ * Whether a job with no artifact of its own is part of a step's work: the taggability review
+ * heads the bank's collection (`server/jobs/chain.py`), and the pipeline marks the bank as
+ * building from the moment it starts.
+ */
+function chainOf(step: (typeof STEPS)[number], job: Job): boolean {
+  return step.artifact === "exemplars_bank" && job.kind === "review_taggability";
 }

@@ -6,12 +6,13 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   StageGate,
   useRegisterPendingEdit,
   useStageLocked,
+  type StageControl,
 } from "@/components/StageGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,12 +127,9 @@ function TypeStrip({
   const { t } = tr;
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-heading">{t("modality.title")}</h2>
-        <InfoHint label={t("modality.whatAre")}>{t("modality.whatAre.body")}</InfoHint>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
+      {/* No heading of its own: the strip sits under the part «Tipos de ejercicio» of the
+          bank's step, which names it. What a type is stays behind the (i) after the tabs. */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {keys.map((key) => (
           <button
             key={key}
@@ -160,6 +158,7 @@ function TypeStrip({
             ) : null}
           </button>
         ))}
+        <InfoHint label={t("modality.whatAre")}>{t("modality.whatAre.body")}</InfoHint>
       </div>
 
       {editing ? (
@@ -918,19 +917,17 @@ export function ProfileEditor() {
 const MAX_NAMED_TYPES = 6;
 
 /**
- * What came out of the build, counted and named.
+ * What came out of the build, counted and named: the lead of the types' part of the bank's
+ * step (`features/bank/BankStep`).
  *
- * Only this screen holds those numbers, so it hands the sentence up rather than the header
- * reaching down for them. `undefined` while there is no profile yet, because `StageGate`
- * falls back on its own generic sentence and "se han detectado 0 tipos" is worse.
- *
- * It counts the FILE, twice over: never the editor's draft, since "se han detectado" is
- * about what the build produced and not about a name somebody is halfway through typing;
- * and not the file at all during a rebuild, where the query still serves the profile about
- * to be replaced and the header would spend the build naming types on their way out.
+ * `undefined` while there is no profile yet, because the part falls back on its generic
+ * sentence and "se han detectado 0 tipos" is worse. It counts the FILE, twice over: never the
+ * editor's draft, since "se han detectado" is about what the build produced and not about a
+ * name somebody is halfway through typing; and not the file at all during a rebuild, where
+ * the query still serves the profile about to be replaced.
  */
-function useProfileIntro(stage: StageState | undefined): ReactNode {
-  const { t, plural, language } = useT();
+export function useProfileIntro(stage: StageState | undefined): string | undefined {
+  const { plural, language } = useT();
   const query = useProfile();
   const stale = !stage || stage.status === "building";
   const profile = !stale && query.data?.exists ? query.data.profile : null;
@@ -946,21 +943,22 @@ function useProfileIntro(stage: StageState | undefined): ReactNode {
   const listed = new Intl.ListFormat(language, { type: "conjunction" }).format(
     rest ? [...shown, plural("stage.what.profile.more", rest)] : shown,
   );
-
-  return (
-    <p className="max-w-[74ch] text-body text-muted-foreground">
-      {[
-        plural("stage.what.profile.found", names.length, { names: listed }),
-        t("stage.what.profile.why"),
-      ].join(" ")}
-    </p>
-  );
+  return plural("stage.what.profile.found", names.length, { names: listed });
 }
 
-export function ProfileScreen({ stage }: { stage: StageState | undefined }) {
-  const intro = useProfileIntro(stage);
+/**
+ * The types of exercise as the first part of the bank's step: the stage without a header of
+ * its own, its state handed in by the step that draws both parts.
+ */
+export function ProfilePart({
+  stage,
+  control,
+}: {
+  stage: StageState | undefined;
+  control: StageControl;
+}) {
   return (
-    <StageGate stage={stage} intro={intro}>
+    <StageGate stage={stage} control={control} headless>
       <ProfileEditor />
     </StageGate>
   );

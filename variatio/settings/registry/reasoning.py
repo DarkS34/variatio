@@ -149,8 +149,9 @@ _DEFAULTS = {
 # The stages whose work makes each phase's call, the one whose lane draws it first.
 _STAGES = {
     **dict.fromkeys(("transcribe", "transcribe_image", "transcribe_seam"), ("transcription",)),
-    **dict.fromkeys(("ep_scan", "ep_consolidate", "ep_context"), ("profile",)),
-    "eb_extract": ("bank",),
+    **dict.fromkeys(
+        ("ep_scan", "ep_consolidate", "ep_context", "kg_taggable", "eb_extract"), ("bank",)
+    ),
     **dict.fromkeys(
         (
             "kg_extract",
@@ -162,7 +163,6 @@ _STAGES = {
             "kg_link_domain",
             "kg_link_cross_domain",
             "description_generation",
-            "kg_taggable",
             "kg_context",
         ),
         ("graph",),
@@ -349,15 +349,6 @@ _TRANSCRIPTION = Lane(
 PIPELINE: tuple[Lane, ...] = (
     _TRANSCRIPTION,
     Lane(
-        "profile",
-        "Perfil de ejemplares",
-        (
-            _switch("ep_scan", "Escaneo"),
-            _switch("ep_consolidate", "Consolidación"),
-            _switch("ep_context", "Contexto"),
-        ),
-    ),
-    Lane(
         "graph",
         "Grafo de conocimiento",
         (
@@ -384,14 +375,24 @@ PIPELINE: tuple[Lane, ...] = (
                 "Del grafo, pero la paga el indexado y no la construcción; lo que deliberara "
                 "quedaría embebido como prosa.",
             ),
-            _switch("kg_taggable", "Etiquetabilidad", "Trabajo aparte; necesita el perfil aprobado."),
         ),
     ),
+    # The types of exercise and the bank are one step since 2026-10-08, and its calls are
+    # drawn in the order they run: the profile's, then the labels it decides, then the
+    # extraction and the tagging that use both.
     Lane(
         "bank",
-        "Banco de ejemplares",
+        "Banco de ejercicios",
         (
-            _switch("eb_extract", "Extracción"),
+            _switch("ep_scan", "Escaneo de tipos"),
+            _switch("ep_consolidate", "Consolidación de tipos"),
+            _switch("ep_context", "Contexto"),
+            _switch(
+                "kg_taggable",
+                "Etiquetabilidad",
+                "Corre antes de extraer el banco, con los tipos dados por buenos; se omite si nada cambió.",
+            ),
+            _switch("eb_extract", "Extracción del banco"),
             _switch(
                 "concept_tagger",
                 "Etiquetado",

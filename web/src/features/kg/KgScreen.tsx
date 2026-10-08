@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   FolderPlus,
   Link2,
-  ListChecks,
   Maximize2,
   Plus,
   Trash2,
@@ -36,15 +35,12 @@ import type { KgConcept, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   useCoverage,
-  useEngineOffline,
   useInvalidateChain,
   useJobPhases,
   useJobRun,
   useJobRunning,
   useKg,
   useKgGraph,
-  usePipeline,
-  useSubmitJob,
 } from "@/state/queries";
 import { useIsStudent } from "@/state/auth";
 import { ConceptFlow } from "./ConceptFlow";
@@ -907,81 +903,6 @@ function GraphExplorer({ reading = false }: { reading?: boolean }) {
 }
 
 /**
- * Deciding which topics serve as labels — a job launched on the graph, so a correction.
- *
- * It is a child of `StageGate` rather than a block of `KgScreen` because that is the only
- * side of the boundary where the lock is readable: `curating` lives inside the header and
- * travels down as context. Out of the static view entirely: "Quiero corregir algo" at the
- * foot is what brings it back, closed stage or not.
- */
-/**
- * The job that patches the graph, beside the notice that explains it.
- *
- * One block, shaped like every other secondary job of the construction: a small outline
- * button beside the number it acts on. While the graph is only being looked at the notice
- * still reports and the button is not drawn.
- *
- * The flag is absent from every graph written before it existed, so it reads `false` even
- * on one whose exclusion list proves the old in-build pass ran. The second half of the
- * condition is what tells those apart, mirroring `entrypoints/initialize.py`.
- */
-function TaggabilityReview({ stage }: { stage: StageState | undefined }) {
-  const { t, plural } = useT();
-  const reason = useStageLockReason();
-  const kg = useKg();
-  const pipeline = usePipeline();
-  const submitReview = useSubmitJob();
-  const offline = useEngineOffline();
-  const reviewing = useJobRunning("review_taggability");
-
-  const totals = kg.data?.totals;
-  const reviewed = Boolean(totals?.taggability_reviewed);
-  const profileReady =
-    pipeline.data?.stages.find((s) => s.artifact === "exemplars_profile")?.status === "approved";
-  const reviewReason =
-    !stage || stage.status === "missing"
-      ? t("kg.review.buildFirst")
-      : stage.status === "building"
-        ? t("kg.review.rebuilding")
-        : offline
-            ? offline
-            : !profileReady
-              ? t("kg.review.needsProfile")
-              : reviewing
-                ? t("kg.review.running")
-                : null;
-
-  const unreviewed =
-    Boolean(totals) && !totals!.taggability_reviewed && totals!.taggable === totals!.concepts;
-  const curating = reason === null;
-
-  const button = curating ? (
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={Boolean(reviewReason) || submitReview.isPending}
-      title={reviewReason ?? (reviewed ? t("kg.review.again") : t("kg.review.first"))}
-      onClick={() => submitReview.mutate({ kind: "review_taggability" })}
-    >
-      {submitReview.isPending || reviewing ? <Spinner /> : <ListChecks />}
-      {reviewing ? t("kg.review.reviewing") : t("kg.review.button")}
-    </Button>
-  ) : null;
-
-  if (unreviewed) {
-    return (
-      <Alert tone="attention" className="mb-4" title={t("kg.unreviewed")} action={button}>
-        <p>{plural("kg.unreviewed.body", totals!.concepts)}</p>
-      </Alert>
-    );
-  }
-
-  if (!button) return null;
-
-  return <div className="mb-4 flex flex-wrap items-center justify-end gap-2">{button}</div>;
-}
-
-/**
  * The syllabus: a teacher's stage to build and correct, a student's to read.
  *
  * A student reaches it only once the construction is closed (`App`), so it is the finished
@@ -1014,45 +935,27 @@ function SyllabusReader() {
 
 function SyllabusStage({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
-  const reviewRun = useJobRun("review_taggability");
-  const reviewing = useJobRunning("review_taggability");
-  const reviewPhases = useJobPhases("review_taggability");
   // The build does not end with the graph and the screen has to say so: `jobs/chain.py`
-  // queues describing, the taggability review and the index behind every `build_kg`, and
-  // only the middle one has a screen of its own. The two a person waits for are one block
-  // with one sentence — nothing below is blocked by them.
+  // queues the descriptions behind every `build_kg`. Which concepts work as labels is no
+  // longer decided here: since 2026-10-08 that review heads the bank's collection, where it
+  // is judged against the types of exercise it needs.
   const describeRun = useJobRun("describe_concepts");
   const describing = useJobRunning("describe_concepts");
   const describePhases = useJobPhases("describe_concepts");
-  const finishing = describing || reviewing;
 
   return (
     <StageGate stage={stage}>
       {/* One view, and one thing to do to it. A description is corrected on the concept it
           belongs to, in the panel beside the list, and what the class has covered is chosen
-          per commission — so there is one view left and nothing to switch between.
-
-          The review button is something done TO the graph and exists in both states (a first
-          pass and a re-run), where the notice below exists in only one. */}
-      <TaggabilityReview stage={stage} />
-
-      {finishing ? (
+          per commission — so there is one view left and nothing to switch between. */}
+      {describing ? (
         <Alert tone="info" className="mb-4" title={t("kg.finishing")}>
-          <p>{t(describing ? "kg.finishing.describing" : "kg.finishing.taggable")}</p>
+          <p>{t("kg.finishing.describing")}</p>
         </Alert>
       ) : null}
 
       {describing || describeRun?.job?.status === "failed" ? (
         <JobProgress run={describeRun} phases={describePhases} className="mb-4" />
-      ) : null}
-
-      {reviewing || reviewRun?.job?.status === "failed" ? (
-        <JobProgress
-          run={reviewRun}
-          phases={reviewPhases}
-          className="mb-4"
-          waiting={t("kg.review.waiting")}
-        />
       ) : null}
 
       <GraphExplorer />

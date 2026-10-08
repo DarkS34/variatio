@@ -28,7 +28,7 @@ SCOPES = ("global", "engine")
 # The pipeline's stages, in the order the path walks them. The panel draws one screen per
 # stage, and a setting names the stages that read it so each screen holds all it uses. The
 # registry appends any stage a declaring package brings of its own.
-STAGES = ("transcription", "profile", "graph", "bank", "generation")
+STAGES = ("transcription", "graph", "bank", "generation")
 
 
 class SettingError(ValueError):

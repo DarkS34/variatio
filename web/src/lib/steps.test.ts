@@ -8,6 +8,7 @@ import {
   currentStepPath,
   nextStepOf,
   stepBusy,
+  stepNumberOf,
   stepStates,
   studentLandingPath,
   usesFor,
@@ -17,10 +18,11 @@ import { featuresOf, type ArtifactStatus, type Job, type StageState } from "./ty
 const stage = (artifact: string, status: ArtifactStatus): StageState =>
   ({ artifact, status, stale_because: [] }) as unknown as StageState;
 
+// In `server/approvals.ARTIFACTS` order: the syllabus, the types of exercise, the bank.
 const chain = (...statuses: ArtifactStatus[]) =>
   [
-    stage("exemplars_profile", statuses[0]),
-    stage("knowledge_graph", statuses[1]),
+    stage("knowledge_graph", statuses[0]),
+    stage("exemplars_profile", statuses[1]),
     stage("exemplars_bank", statuses[2]),
   ] as StageState[];
 
@@ -29,7 +31,7 @@ describe("stepStates", () => {
     // What makes a path obvious is ONE next move, not a list of things outstanding.
     const states = stepStates(chain("missing", "missing", "missing"), true);
     expect(states.filter((s) => s === "now")).toHaveLength(1);
-    expect(states).toEqual(["done", "now", "later", "later"]);
+    expect(states).toEqual(["done", "now", "later"]);
   });
 
   it("puts the first step in play while an origin has no documents", () => {
@@ -43,10 +45,18 @@ describe("stepStates", () => {
   });
 
   it("a stale stage stops being done, and the path goes back to it", () => {
-    // And the one BEHIND it stays marked done, which is the truth: it is approved. The path
-    // sends you back to the stale one without un-doing what you did close.
-    const states = stepStates(chain("approved", "stale", "approved"), true);
-    expect(states).toEqual(["done", "done", "now", "done"]);
+    // And a step that is closed stays marked done, which is the truth: it is approved. The
+    // path sends you back to the stale one without un-doing what you did close.
+    const states = stepStates(chain("stale", "approved", "approved"), true);
+    expect(states).toEqual(["done", "now", "done"]);
+  });
+
+  it("the bank's step is done only with its two parts closed", () => {
+    // The types of exercise and the bank are one step: a bank closed over types reopened
+    // since is not a finished step.
+    expect(stepStates(chain("approved", "draft", "approved"), true)[2]).toBe("now");
+    expect(stepStates(chain("approved", "approved", "draft"), true)[2]).toBe("now");
+    expect(stepStates(chain("approved", "approved", "approved"), true)[2]).toBe("done");
   });
 
   it("leaves nothing in play once the whole path is walked", () => {
@@ -57,7 +67,8 @@ describe("stepStates", () => {
 
 describe("currentStepPath", () => {
   it("answers with the step that is next", () => {
-    expect(currentStepPath(chain("approved", "missing", "missing"), true)).toBe("/prepare/graph");
+    expect(currentStepPath(chain("missing", "missing", "missing"), true)).toBe("/prepare/graph");
+    expect(currentStepPath(chain("approved", "missing", "missing"), true)).toBe("/prepare/bank");
   });
 
   it("answers with the first step when there is nothing uploaded", () => {
@@ -77,15 +88,21 @@ describe("currentStepPath", () => {
 });
 
 describe("the order of the path", () => {
-  it("is the raw material, then review.ARTIFACTS", () => {
-    // The profile comes before the syllabus because closing the syllabus needs an APPROVED
-    // profile: starting at the syllabus is starting at a step you cannot finish.
-    expect(STEPS.map((s) => s.artifact)).toEqual([
-      null,
-      "exemplars_profile",
-      "knowledge_graph",
-      "exemplars_bank",
+  it("is the raw material, then approvals.ARTIFACTS, the types and the bank as one step", () => {
+    // The syllabus comes before the bank because the bank is tagged with it; the types of
+    // exercise are the first part of the bank's step (2026-10-08).
+    expect(STEPS.map((s) => s.artifact)).toEqual([null, "knowledge_graph", "exemplars_bank"]);
+    expect(STEPS.map((s) => s.artifacts)).toEqual([
+      [],
+      ["knowledge_graph"],
+      ["exemplars_profile", "exemplars_bank"],
     ]);
+  });
+
+  it("numbers the types of exercise as the bank's step", () => {
+    expect(stepNumberOf("knowledge_graph")).toBe("2");
+    expect(stepNumberOf("exemplars_profile")).toBe("3");
+    expect(stepNumberOf("exemplars_bank")).toBe("3");
   });
 });
 
@@ -93,9 +110,14 @@ describe("nextStepOf", () => {
   it("leads the raw material to the first stage, numbered", () => {
     // The step with no artifact offers the same "Continuar" as the rest, from the same list.
     expect(nextStepOf(null)).toEqual({
-      path: "/prepare/profile",
+      path: "/prepare/graph",
       number: "2",
-      labelKey: "nav.step.profile",
+      labelKey: "nav.step.graph",
+    });
+    expect(nextStepOf("knowledge_graph")).toEqual({
+      path: "/prepare/bank",
+      number: "3",
+      labelKey: "nav.step.bank",
     });
   });
 
@@ -105,6 +127,7 @@ describe("nextStepOf", () => {
       number: null,
       labelKey: "nav.create",
     });
+    expect(nextStepOf("exemplars_profile")).toEqual(nextStepOf("exemplars_bank"));
   });
 });
 
@@ -113,20 +136,30 @@ describe("stepBusy", () => {
     ({ kind: "build_kg", artifact: "knowledge_graph", status: "running", ...over }) as Job;
 
   it("spins a stage that is building and not queued", () => {
-    const busy = stepBusy(chain("approved", "building", "missing"), [job({})]);
-    expect(busy).toEqual([false, false, true, false]);
+    const busy = stepBusy(chain("building", "missing", "missing"), [job({})]);
+    expect(busy).toEqual([false, true, false]);
   });
 
   it("does not spin over a build still waiting in the queue", () => {
     // A queued job is not a running one, and the wheel claims something is happening.
-    const busy = stepBusy(chain("approved", "building", "missing"), [
+    const busy = stepBusy(chain("building", "missing", "missing"), [
       job({ status: "queued", queue_position: 2 }),
     ]);
-    expect(busy[2]).toBe(false);
+    expect(busy[1]).toBe(false);
   });
 
   it("believes the pipeline when the stream knows no job for the artifact", () => {
-    expect(stepBusy(chain("approved", "building", "missing"), [])[2]).toBe(true);
+    expect(stepBusy(chain("building", "missing", "missing"), [])[1]).toBe(true);
+  });
+
+  it("spins the bank's step for either part, and for the review that opens a collection", () => {
+    const types = job({ kind: "build_profile", artifact: "exemplars_profile" });
+    expect(stepBusy(chain("approved", "building", "missing"), [types])[2]).toBe(true);
+    // The review writes no bank, but the pipeline marks the bank as building from its start.
+    const review = job({ kind: "review_taggability", artifact: null });
+    expect(stepBusy(chain("approved", "approved", "building"), [review])[2]).toBe(true);
+    const waiting = job({ kind: "review_taggability", artifact: null, status: "queued", queue_position: 1 });
+    expect(stepBusy(chain("approved", "approved", "building"), [waiting])[2]).toBe(false);
   });
 
   it("spins step 1 while the documents are being read, and only then", () => {
@@ -183,7 +216,7 @@ describe("a student's bar", () => {
   });
 
   it("hides every other step of the construction, the raw material included", () => {
-    expect([...STUDENT_HIDDEN].sort()).toEqual(["/prepare/bank", "/prepare/profile", "/raw"]);
+    expect([...STUDENT_HIDDEN].sort()).toEqual(["/prepare/bank", "/raw"]);
     expect(STUDENT_HIDDEN).not.toContain(SYLLABUS.path);
   });
 });

@@ -7,6 +7,7 @@ import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";
 import { slideCount, slideOf } from "@/features/tutorial/slides";
 import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent, useSpeaksToStudent } from "@/state/auth";
+import { HELP_HIDDEN, isHelpPath } from "@/lib/help";
 import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
@@ -23,8 +24,8 @@ const AccountScreen = lazy(() =>
 const AdminScreen = lazy(() =>
   import("@/features/admin/AdminScreen").then((m) => ({ default: m.AdminScreen })),
 );
-const BankScreen = lazy(() =>
-  import("@/features/bank/BankScreen").then((m) => ({ default: m.BankScreen })),
+const BankStep = lazy(() =>
+  import("@/features/bank/BankStep").then((m) => ({ default: m.BankStep })),
 );
 const ClassScreen = lazy(() =>
   import("@/features/class/ClassScreen").then((m) => ({ default: m.ClassScreen })),
@@ -39,9 +40,6 @@ const EvaluationScreen = lazy(() =>
 );
 const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
-);
-const ProfileScreen = lazy(() =>
-  import("@/features/profile/ProfileEditor").then((m) => ({ default: m.ProfileScreen })),
 );
 const GenerateScreen = lazy(() =>
   import("@/features/generate/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
@@ -64,7 +62,6 @@ const TutorialScreen = lazy(() =>
 const NEEDS_WORKSPACE = [
   "/",
   "/raw",
-  "/prepare/profile",
   "/prepare/graph",
   "/prepare/bank",
   "/generate",
@@ -93,6 +90,9 @@ export function App() {
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
+    // Hidden at the user's decision: «not found» before anything, so neither chunk loads.
+    if (HELP_HIDDEN && isHelpPath(path)) return <NotFound />;
+
     // The tutorial runs inside the shell, and the shell reads its slide from the PATH,
     // which is why there is one route per slide. `AppShell` reads it with the same count.
     const slide = slideOf(path, slideCount(features, studentDeck));
@@ -130,15 +130,23 @@ export function App() {
       case "/":
         return <Landing />;
       // The raw material is not a stage — it writes no artifact and nobody approves it —
-      // so it is a destination of its own rather than a fourth `/prepare/…`.
+      // so it is a destination of its own rather than one more `/prepare/…`.
       case "/raw":
         return <RawScreen />;
+      // The types of exercise are the first part of the bank's step since 2026-10-08: an
+      // old link to their own step lands on it.
       case "/prepare/profile":
-        return <ProfileScreen stage={stage("exemplars_profile")} />;
+        return <Redirect to="/prepare/bank" />;
       case "/prepare/graph":
         return <KgScreen stage={stage("knowledge_graph")} />;
       case "/prepare/bank":
-        return <BankScreen stage={stage("exemplars_bank")} />;
+        return (
+          <BankStep
+            profile={stage("exemplars_profile")}
+            bank={stage("exemplars_bank")}
+            graph={stage("knowledge_graph")}
+          />
+        );
       case "/generate":
         return <GenerateScreen />;
       // Reached only with the function open to the account (`FEATURE_OF`).

@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
  * A rebuild over the SAME documents is still not offered: a second pass gives no different
  * result, so the control would only throw a person's corrections away. What is offered is
  * a build over documents the last one never read (`rawDriftOf` on a stale cause), and it
- * asks first, because the corrections do go. One label for the four steps, at `xl`, on an
+ * asks first, because the corrections do go. One label for every step, at `xl`, on an
  * unbuilt stage, where this is the whole screen's decision; `lg` inside the stale notice,
  * beside the sentence that explains it.
  *

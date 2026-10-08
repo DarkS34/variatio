@@ -29,11 +29,13 @@ from .jobs import FEATURE_OF, transcribing_slot
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
-# The job that moves each stage forward, so the UI never has to hardcode it.
+# The job that moves each stage forward, so the UI never has to hardcode it. The bank's is
+# the taggability review, the head of its collection (`jobs/chain.py`): collecting it, or
+# collecting it again, decides the labels before extracting with them.
 NEXT_JOB = {
     approvals.EXEMPLARS_PROFILE: "build_profile",
     approvals.KNOWLEDGE_GRAPH: "build_kg",
-    approvals.EXEMPLARS_BANK: "build_bank",
+    approvals.EXEMPLARS_BANK: "review_taggability",
 }
 
 

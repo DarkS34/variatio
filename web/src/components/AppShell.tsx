@@ -1,8 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   MessagesSquare,
   Network,
@@ -23,6 +21,7 @@ import { Lockup } from "@/components/ui/logo";
 import { DOOR_TONE } from "@/components/ui/tone";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { slideCount, slideOf } from "@/features/tutorial/slides";
+import { HELP_HIDDEN } from "@/lib/help";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import {
@@ -299,59 +298,6 @@ function NavRule() {
   return <span aria-hidden className="mx-1 h-7 w-px shrink-0 self-center bg-border" />;
 }
 
-/**
- * Whether the person asked to keep the four steps on the bar once they are all done.
- *
- * A per-browser convenience and not a setting: `localStorage`, guarded like `vg.theme`,
- * absent by default — which is the folded state — and "open" once somebody unfolds them.
- */
-const STEPS_KEY = "vg.buildSteps";
-
-function readStepsPreference(): boolean {
-  try {
-    return localStorage.getItem(STEPS_KEY) === "open";
-  } catch {
-    return false;
-  }
-}
-
-function writeStepsPreference(open: boolean) {
-  try {
-    if (open) localStorage.setItem(STEPS_KEY, "open");
-    else localStorage.removeItem(STEPS_KEY);
-  } catch {
-    // A browser that refuses site data still gets the session's own state.
-  }
-}
-
-/**
- * The construction phase, folded into one pill once its four steps are done.
- *
- * Four stops with nothing left to do were most of the bar for the whole life of a subject,
- * and at 1280 px they pushed "Evaluar el sistema" past the edge of the strip. The same
- * two-line pill as a step, so unfolding moves nothing vertically.
- */
-function FoldedPhase({ onUnfold }: { onUnfold: () => void }) {
-  const { t } = useT();
-  return (
-    <button
-      type="button"
-      onClick={onUnfold}
-      title={t("nav.build.unfold")}
-      className={cn(PILL, PILL_HEIGHT, "text-left")}
-    >
-      <span className={cn(PILL_NAME, "font-medium text-foreground")}>
-        <StepCounter state="done" n="" />
-        {t("nav.build.folded")}
-      </span>
-      <span className={cn(PILL_WORD, "text-muted-foreground")}>
-        {t("nav.build.unfold")}
-        <ChevronRight className="size-3" strokeWidth={2.5} aria-hidden />
-      </span>
-    </button>
-  );
-}
-
 /** How wide the fade over a cut strip's right edge is, in px: a pill under it is not in sight. */
 const FADE_PX = 32;
 
@@ -369,7 +315,7 @@ const DOOR_ICONS: Record<
  * The path, once, rendered in one of two places.
  *
  * Above `xl` it sits on the header's centre line, between the two flanks, as long as it
- * fits there. Below it, or when it does not fit — three doors with the four steps unfolded,
+ * fits there. Below it, or when it does not fit — three doors beside the three steps,
  * or a long subject name in the switcher — the same navigation moves to a line of its own
  * underneath, where it has the whole width and scrolls sideways if even that is short. What
  * it deliberately does NOT do is collapse into a menu: the bar IS the state of the path,
@@ -382,8 +328,6 @@ function MainNav({
   locked,
   rawStocked,
   rawWaiting,
-  stepsOpen,
-  onSteps,
   onOverflow,
   className,
 }: {
@@ -396,11 +340,6 @@ function MainNav({
   rawStocked: boolean;
   /** What is still untranscribed, or null. A hint on step 1 and never a gate. */
   rawWaiting: string | null;
-  /** Whether the person asked to keep the four steps on the bar. Owned by `AppShell`:
-   *  this navigation is mounted twice, one instance per breakpoint, so a `useState` here
-   *  would be two states over one `localStorage` key. */
-  stepsOpen: boolean;
-  onSteps: (open: boolean) => void;
   /** Told whether the pills overflow the strip, scrolled or not: what the copy on the
    *  header's centre line reports, so `AppShell` can hand the bar to the line underneath. */
   onOverflow?: (overflows: boolean) => void;
@@ -412,11 +351,9 @@ function MainNav({
   const student = useIsStudent();
   const states = stepStates(stages, rawStocked);
 
-  // Folded once everything is done, unless the person unfolded it or is standing on one of
-  // the steps — a bar that hides the stop you are on says you are nowhere.
-  const allDone = stages.length > 0 && states.every((state) => state === "done");
-  const onStep = STEPS.some((step) => step.path === path);
-  const folded = allDone && !stepsOpen && !onStep;
+  // The steps are never folded (2026-10-08): with three of them the bar fits, and where it
+  // does not it takes the line under the header whole. It folded into one pill while there
+  // were four, with a button to fold it again — a control that hid the path's own state.
 
   // Whether the strip is cut off on the right, so the fade below can say so. Its scrollbar
   // is hidden on purpose, so without this nothing suggests the row continues. A layout
@@ -443,7 +380,7 @@ function MainNav({
       el.removeEventListener("scroll", measure);
       observer.disconnect();
     };
-  }, [stages.length, locked, rawWaiting, rawStocked, doors.length, folded]);
+  }, [stages.length, locked, rawWaiting, rawStocked, doors.length]);
 
   // The pill of the screen you are on is brought into the strip: on a phone the doors sit
   // past its right edge, and a bar whose current stop is out of sight does not say where
@@ -456,7 +393,7 @@ function MainNav({
     const pill = current.getBoundingClientRect();
     if (pill.left >= box.left && pill.right <= box.right - FADE_PX) return;
     el.scrollLeft += pill.left + pill.width / 2 - (box.left + box.width / 2);
-  }, [path, folded, doors.length]);
+  }, [path, doors.length]);
 
   return (
     <nav
@@ -488,38 +425,18 @@ function MainNav({
             open={locked === null}
             disabledReason={locked === null ? null : t("nav.subjectNotReady")}
           />
-        ) : folded ? (
-          <FoldedPhase onUnfold={() => onSteps(true)} />
         ) : (
-          <>
-            {STEPS.map((step, index) => (
-              <StepPill
-                key={step.path}
-                step={step}
-                state={states[index]}
-                n={stepNumber(index)}
-                active={path === step.path}
-                title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
-                busy={busy[index]}
-              />
-            ))}
-            {/* Drawn only where pressing it folds something: with a step pending, or while
-                standing on one, it would answer a press with nothing at all. */}
-            {allDone && !onStep ? (
-              <button
-                type="button"
-                onClick={() => onSteps(false)}
-                title={t("nav.build.fold")}
-                aria-label={t("nav.build.fold")}
-                className={cn(
-                  PILL_HEIGHT,
-                  "flex shrink-0 items-center rounded-md px-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                )}
-              >
-                <ChevronLeft className="size-4" strokeWidth={2.25} aria-hidden />
-              </button>
-            ) : null}
-          </>
+          STEPS.map((step, index) => (
+            <StepPill
+              key={step.path}
+              step={step}
+              state={states[index]}
+              n={stepNumber(index)}
+              active={path === step.path}
+              title={step.artifact === null && rawWaiting ? rawWaiting : undefined}
+              busy={busy[index]}
+            />
+          ))
         )}
       </PhaseGroup>
 
@@ -560,7 +477,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [navCut, setNavCut] = useState(false);
 
   // The tutorial's slide, read from the path with the count `App` routes by; null everywhere else.
-  const tutorialAt = slideOf(path, slideCount(features, studentDeck));
+  const tutorialAt = HELP_HIDDEN ? null : slideOf(path, slideCount(features, studentDeck));
   const deck = tutorialAt !== null;
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
@@ -607,13 +524,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const rawStocked =
     rawSlots.length > 0 && rawSlots.every((slot) => slot.files.length > 0);
 
-  // One preference for both copies of the bar: `MainNav` is rendered twice, each hidden by
-  // CSS at the other's breakpoint, so the state cannot live inside it.
-  const [stepsOpen, setStepsOpen] = useState(readStepsPreference);
-  const setSteps = (open: boolean) => {
-    setStepsOpen(open);
-    writeStepsPreference(open);
-  };
 
   return (
     // The deck is the one screen that is a fixed layout — a head, a scrolling column and
@@ -660,8 +570,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               locked={locked}
               rawWaiting={rawWaiting}
               rawStocked={rawStocked}
-              stepsOpen={stepsOpen}
-              onSteps={setSteps}
               onOverflow={setNavCut}
               className={cn("hidden xl:flex", navCut && "invisible")}
             />
@@ -682,8 +590,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             locked={locked}
             rawWaiting={rawWaiting}
             rawStocked={rawStocked}
-            stepsOpen={stepsOpen}
-            onSteps={setSteps}
             className={cn("flex border-t border-border px-3 py-1.5", !navCut && "xl:hidden")}
           />
         ) : null}

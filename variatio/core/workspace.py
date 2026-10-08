@@ -147,6 +147,15 @@ class Workspace:
         """The exemplars bank index, cached per item text."""
         return self.cache_dir / "embeddings" / "exemplars_bank_embeddings.npz"
 
+    @property
+    def taggability_review_path(self) -> Path:
+        """What the last taggability review judged against, so an unchanged input skips it.
+
+        A cache and not host state: losing it re-reads nothing a person decided, because a
+        graph that says it was reviewed is taken as reviewed and the record written again.
+        """
+        return self.cache_dir / "taggability_review.json"
+
     # HOST STATE --------------------------------------------------------------------------
 
     @property

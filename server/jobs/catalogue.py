@@ -27,12 +27,12 @@ JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 JOB_LABELS: dict[str, str] = {
     "build_profile": "Construir el perfil de ejemplares",
     "build_kg": "Construir el grafo de conocimiento",
-    "build_bank": "Extraer el banco de ejemplos",
+    "build_bank": "Recoger los ejercicios y etiquetarlos",
     "transcribe": "Transcribir los documentos",
     "describe_concepts": "Generar descripciones de conceptos",
-    "index": "Indexar conceptos y banco",
+    "index": "Preparar el banco para generar",
     "tag": "Etiquetar el banco",
-    "review_taggability": "Revisar la etiquetabilidad",
+    "review_taggability": "Decidir qué conceptos sirven de etiqueta",
     "generate": "Generar ítems",
     "evaluate": "Evaluación comparativa",
 }

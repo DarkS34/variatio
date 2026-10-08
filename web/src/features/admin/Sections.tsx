@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  * Every row is the same three parts on every tab — a 16 px mark, a name and one line of state
  * (user's request, 2026-10-07: «Motor» led with squares of state and «Clase» with icons, and
  * the two lists read as two components). The mark is an icon; where the list is an ORDER —
- * the four steps, the units of the syllabus — it is the number in `NumberMark`.
+ * the steps, the units of the syllabus — it is the number in `NumberMark`.
  * Below `lg` the list lies down and scrolls sideways over the section.
  *
  * A list of two kinds of section (the subject's own parts, then one per unit) names the

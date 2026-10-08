@@ -205,12 +205,12 @@ export const es = {
   "artifact.bank": "Banco de ejercicios",
   "job.build_profile.label": "Detectar los tipos de ejercicio",
   "job.build_kg.label": "Construir el grafo de conocimiento",
-  "job.build_bank.label": "Extraer el banco de ejemplos",
+  "job.build_bank.label": "Recoger los ejercicios y etiquetarlos",
   "job.transcribe.label": "Transcribir los documentos",
   "job.describe_concepts.label": "Generar descripciones de conceptos",
-  "job.index.label": "Indexar conceptos y banco",
+  "job.index.label": "Preparar el banco para generar",
   "job.tag.label": "Etiquetar el banco",
-  "job.review_taggability.label": "Revisar la etiquetabilidad",
+  "job.review_taggability.label": "Decidir qué conceptos sirven de etiqueta",
   "job.generate.label": "Generar ejercicios",
   "job.evaluate.label": "Evaluación comparativa",
   "job.tutor_turn.label": "Turno del tutor",
@@ -305,17 +305,13 @@ export const es = {
   "nav.compare": "Evaluar el sistema",
   "nav.tutor": "Tutor socrático",
 
-  // Two phases, named and not numbered: the construction, whose four steps do go in order
-  // and are numbered 1–4, and the testing phase, whose doors have no order between them.
+  // Two phases, named and not numbered: the construction, whose three steps do go in order
+  // and are numbered, and the testing phase, whose doors have no order between them.
   // Numbering those would claim one comes after another.
   "nav.phase.build": "Fase de construcción",
   "nav.phase.test": "Fase de pruebas",
-  // The construction folds into one pill once it is done, and the word under the name is
-  // the way back to the four steps. Remembered in the browser.
-  "nav.build.folded": "Asignatura preparada",
-  "nav.build.unfold": "Ver los pasos",
-  "nav.build.fold": "Ocultar los pasos",
-  "nav.stepNumber": "Fase de construcción · Paso {n} de 4",
+  // The kicker over a step's title; `total` is the path's own count (`lib/steps.STEPS`).
+  "nav.stepNumber": "Fase de construcción · Paso {n} de {total}",
   // THE TUTORIAL IS THE MANUAL, not a greeting. Whoever has just redeemed an invitation
   // has never seen this and does not even know what the thing is called, so the first
   // sentence is a definition — name, category, what it is for — and every negation comes
@@ -466,7 +462,6 @@ export const es = {
   "stage.curate.closedTitle": "Este paso ya está cerrado",
   "stage.curate.closed": "Puedes corregirlo igualmente. El primer cambio que guardes lo vuelve a abrir, y se cierra otra vez al continuar.",
   "stage.continue": "Continuar al Paso {n}",
-  "stage.continueGenerate": "Ya está: crear mi primer ejercicio",
   "stage.continueFailed":
     "No se ha podido cerrar este paso, así que no se ha avanzado. Vuelve a intentarlo.",
   // What this step IS, in two sentences and without naming a single piece of the system.
@@ -497,6 +492,44 @@ export const es = {
   // What is asked at the end, drawn after the graph's or the bank's own description: only
   // for an account the evaluation is open to, since nobody else has the questionnaire.
   "stage.what.rated": "Al final se te pide una valoración de este paso.",
+  // STEP 3 IN TWO PARTS (2026-10-08): the types of exercise, then the bank collected with
+  // them. «Recoger el banco» closes the types and starts the collection, whose first link —
+  // deciding which concepts work as labels — is never a button of its own.
+  "bank.step.lead":
+    "Dos partes, en este orden: primero confirmas cómo son tus tipos de ejercicio, y después se recogen con esa forma los ejercicios de tus documentos, etiquetados con los conceptos del temario.",
+  "bank.step.collect": "Recoger el banco",
+  "bank.step.recollect": "Recoger el banco otra vez",
+  "bank.step.collectTip": "Da por buenos los tipos de ejercicio y recoge con ellos los ejercicios de tus documentos.",
+  "bank.step.recollectTip": "Vuelve a recoger los ejercicios con los tipos y el temario de ahora.",
+  "bank.step.collectCaption": "Al recoger el banco, los tipos quedan dados por buenos.",
+  "bank.step.recollectCaption": "Este banco se recogió antes de los últimos cambios.",
+  "bank.step.finishCaption": "Cuando el banco esté bien, sigue.",
+  "bank.step.keep": "Seguir con este banco",
+  "bank.step.keepTip": "Da por bueno el banco tal como está, sin recogerlo otra vez.",
+  "bank.step.needsSyllabus": "Antes hay que dar por bueno el «Temario».",
+  "bank.part": "Parte {n} de {total}",
+  "bank.part.curating": "Corrigiendo",
+  "bank.part.changed": "Con cambios",
+  "bank.chain.stoppedTitle": "La última recogida se detuvo",
+  "bank.chain.stoppedLead": "Se detuvo en el paso marcado. Pulsa otra vez «Recoger el banco» para empezarla de nuevo.",
+  "bank.part.otherCurating": "Termina antes la corrección de la otra parte.",
+  "bank.part.types.correct": "Corregir los tipos",
+  "bank.part.types.show": "Ver los tipos",
+  "bank.part.types.hide": "Ocultar los tipos",
+  "bank.part.types.count": { one: "1 tipo de ejercicio", other: "{n} tipos de ejercicio" },
+  "bank.part.fields.count": { one: "1 campo", other: "{n} campos" },
+  "bank.part.bank.correct": "Corregir el banco",
+  "bank.part.bank.lead":
+    "Los ejercicios de tus documentos, recogidos uno a uno con esos tipos y etiquetados con los conceptos del temario.",
+  "bank.part.bank.later": "Se recoge cuando confirmes los tipos de ejercicio con «Recoger el banco».",
+  "bank.part.bank.ready": "Todavía no se ha recogido el banco: pulsa «Recoger el banco», arriba a la derecha.",
+  "bank.chain.title": "Recogiendo el banco",
+  "bank.chain.lead": "Tres pasos seguidos. Puedes salir de esta pantalla: la recogida sigue por su cuenta.",
+  "bank.chain.taggabilityWaiting":
+    "Decidiendo qué conceptos sirven de etiqueta. El detalle aparecerá con el primer bloque.",
+  "bank.chain.skipped": "Sin cambios desde la última vez",
+  "bank.chain.failed": "Falló",
+  "bank.chain.cancelled": "Detenido",
   "stage.approved": "Aprobado",
   "stage.stale": "Obsoleto",
   "stage.blocked": "Bloqueado",
@@ -1736,30 +1769,15 @@ export const es = {
   "kg.noRelations": "Este concepto no apunta a ningún otro.",
   "kg.finishing": "Rematando el temario",
   "kg.finishing.describing": "Escribiendo una descripción de cada concepto. Es lo que se usa después para decidir de qué va cada ejercicio. Puedes seguir revisando la lista mientras tanto.",
-  "kg.finishing.taggable": "Decidiendo qué conceptos sirven de etiqueta para clasificar un ejercicio. Puedes seguir revisando la lista mientras tanto.",
   "kg.map": "Grafo de conocimiento",
   "kg.enlarge": "Ampliar",
   "kg.showRelation": "Mostrar esta relación",
   "kg.hideRelation": "Ocultar esta relación del mapa",
   "kg.ordersCurriculum": "Ordena la vista de currículo",
-  "kg.unreviewed": "Falta decidir qué conceptos sirven de etiqueta",
-  "kg.unreviewed.body": { one: "El único concepto se trata como si sirviera de etiqueta, aunque no identifique nada. Marcarlos decide cuáles descartar, y necesita el Paso 2 dado: qué sirve de etiqueta depende de qué forma tienen tus ejercicios.", other: "Los {n} conceptos se tratan como si todos sirvieran de etiqueta, incluidos los que no identifican nada. Marcarlos decide cuáles descartar, y necesita el Paso 2 dado: qué sirve de etiqueta depende de qué forma tienen tus ejercicios." },
   "kg.mapTitle": "Grafo de conocimiento del temario",
   "kg.mapDescription": "Arrastra para mover, rueda para acercar. Al elegir un concepto se edita aquí mismo.",
   "kg.clearSelection": "Quitar la selección",
   "kg.pickOnMap": "Elige un concepto en el grafo y aparecerá aquí para editarlo.",
-  "kg.review.buildFirst": "Antes hay que sacar el temario.",
-  "kg.review.rebuilding": "El temario se está reconstruyendo.",
-  "kg.review.needsProfile":
-    "Antes hay que dar por bueno el Paso 2: qué sirve de etiqueta depende de qué forma tienen tus ejercicios.",
-  "kg.review.running": "La revisión está en marcha.",
-  "kg.review.again":
-    "La IA vuelve a decidir qué conceptos sirven de etiqueta para clasificar un ejercicio, mirando los tipos de ejercicio que has aprobado.",
-  "kg.review.first":
-    "La IA decide qué conceptos sirven de etiqueta para clasificar un ejercicio, mirando los tipos de ejercicio que has aprobado.",
-  "kg.review.reviewing": "Revisando…",
-  "kg.review.button": "Marcar las etiquetas",
-  "kg.review.waiting": "Decidiendo qué conceptos sirven de etiqueta. El detalle aparecerá con el primer bloque.",
 
   // THE CONCEPT OUTLINE -------------------------------------------------------------------
   "outline.unitActions": "Acciones de {unit}",
@@ -1860,7 +1878,6 @@ export const es = {
   "field.description.hint": "Viaja al modelo dentro del esquema: di qué contiene el campo, no cómo escribirlo.",
   "field.description.placeholder": "Qué contiene este campo",
 
-  "modality.title": "Tipos de ejercicio",
   "modality.whatAre": "Qué son los tipos",
   "modality.whatAre.body": "Cada tipo es una forma distinta de plantear la tarea: una pregunta con opciones, un encargo de escribir código, un fallo que corregir. Cada uno tiene sus propios campos y sus propias reglas. Al pedir un ejercicio se elige uno, y como ejemplo solo se miran los que ya tienes de ese mismo tipo. El primero es el de por defecto.",
   "modality.remove": "Quitar el tipo {key}",
@@ -2198,9 +2215,8 @@ export const es = {
   "cfg.section.others": "Otros",
   "cfg.section.othersDesc": "Ajustes cuyo grupo no tiene sitio propio en el panel.",
   "cfg.stage.transcription": "Leer los documentos de las dos procedencias, página a página e imagen a imagen, antes de que ningún constructor los use: con qué modelo, cómo se renderiza cada página y cuándo una respuesta se da por fallida.",
-  "cfg.stage.profile": "Construir los tipos de ejercicio a partir de los ejercicios de ejemplo: el rastreo del material, la consolidación de las modalidades y el contexto de la asignatura.",
-  "cfg.stage.graph": "Construir el temario a partir de los apuntes: extraer los conceptos, limpiarlos, ordenarlos en unidades y dominios, enlazar sus prerrequisitos, describirlos y decidir cuáles sirven de etiqueta.",
-  "cfg.stage.bank": "Extraer los ejercicios de ejemplo y etiquetarlos con los conceptos del temario, con el índice de conceptos que hace la primera criba.",
+  "cfg.stage.graph": "Construir el temario a partir de los apuntes: extraer los conceptos, limpiarlos, ordenarlos en unidades y dominios, enlazar sus prerrequisitos y describirlos.",
+  "cfg.stage.bank": "Construir los tipos de ejercicio a partir de los ejercicios de ejemplo, decidir qué conceptos del temario sirven de etiqueta, y extraer y etiquetar los ejercicios, con el índice de conceptos que hace la primera criba.",
   "cfg.stage.generation": "Lo que pasa cada vez que alguien pide un ejercicio: el guardián y la admisibilidad del texto libre, el modelo que lo escribe, las comprobaciones y la reparación.",
   "cfg.stage.evaluation": "El estudio comparativo: el escenario de cada sesión, el modelo de las dos propuestas locales y la cadena de proveedores de la comercial.",
   "cfg.stage.tutoring": "Lo que pasa en cada turno del tutor —el guardián, la clasificación del mensaje y la respuesta— y la redacción de los criterios de la asignatura.",

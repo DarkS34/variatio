@@ -16,6 +16,7 @@ import {
   useStageLocked,
   useStageLockReason,
   useStageLockedHint,
+  type StageControl,
 } from "@/components/StageGate";
 import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
@@ -715,7 +716,18 @@ function SelectionActions({
   );
 }
 
-export function BankScreen({ stage }: { stage: StageState | undefined }) {
+/**
+ * The bank as the second part of its step (`BankStep`): the stage without a header of its
+ * own, its state handed in by the step that draws both parts. Its stale notice carries no
+ * rebuild: collecting the bank again is the step's own way out, beside its title.
+ */
+export function BankPart({
+  stage,
+  control,
+}: {
+  stage: StageState | undefined;
+  control: StageControl;
+}) {
   const { t } = useT();
   const confirm = useConfirm();
   const kg = useKg();
@@ -845,7 +857,13 @@ export function BankScreen({ stage }: { stage: StageState | undefined }) {
   const livePreview = tagging ? <TagLive run={tagRun} /> : null;
 
   return (
-    <StageGate stage={stage} livePreview={livePreview}>
+    <StageGate
+      stage={stage}
+      control={control}
+      headless
+      staleAction={null}
+      livePreview={livePreview}
+    >
       <div className="space-y-4">
         <BankMeters
           listing={listing}
