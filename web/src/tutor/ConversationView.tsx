@@ -1,4 +1,4 @@
-import { BookOpen, ChevronRight, RotateCcw } from "lucide-react";
+import { ChevronRight, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,8 @@ import { when } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 
 import { Composer, type Picking } from "./Composer";
-import { ConceptMap } from "./ConceptMap";
 import type { TutorDraft } from "@/lib/tutorDraft";
 import { DAILY_LIMIT, limitSentence } from "./limit";
-import { NotesReader } from "./NotesReader";
 import { Reply } from "./Reply";
 import {
   useCancelTurn,
@@ -24,7 +22,7 @@ import {
 import type { SyllabusUnit } from "./syllabus";
 import { Thinking } from "./Thinking";
 import { UnitDot } from "./TopicPicker";
-import type { Conversation, Place, Turn } from "./types";
+import type { Conversation, Turn } from "./types";
 
 const FAILED_KEYS: Record<string, Key> = {
   failed: "tutor.failed.failed",
@@ -71,7 +69,6 @@ export function ConversationView({
   const [message, setMessage] = useState(draft?.message ?? "");
   const [chosen, setChosen] = useState<string | null>(null);
   const [picking, setPicking] = useState<Picking>(null);
-  const [reading, setReading] = useState<Place | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
 
   const data = conversation.data;
@@ -138,6 +135,8 @@ export function ConversationView({
 
   const last = turns[turns.length - 1];
   const unanswered = last?.role === "student" && last.failed ? last.failed : null;
+  // The reply whose question is open: the last one, unless a newer message waits for its own.
+  const answering = pending ? -1 : turns.map((turn) => turn.role).lastIndexOf("tutor");
   const units = syllabus.data ?? [];
 
   return (
@@ -154,7 +153,7 @@ export function ConversationView({
         ) : null}
         {data ? <Opened conversation={data} /> : null}
         {turns.map((turn, index) => (
-          <TurnBubble key={`${index}-${turn.at}`} turn={turn} onRead={setReading} />
+          <TurnBubble key={`${index}-${turn.at}`} turn={turn} open={index === answering} />
         ))}
         {pending ? <Thinking pending={pending} onStop={() => cancel.mutate()} /> : null}
         {unanswered ? (
@@ -193,7 +192,6 @@ export function ConversationView({
           onPicking={setPicking}
         />
       </div>
-      <NotesReader place={reading} onClose={() => setReading(null)} />
     </section>
   );
 }
@@ -289,11 +287,14 @@ const SPEAKER = "text-micro font-condensed uppercase text-muted-foreground";
  *
  * The two voices are two materials, not two shades of one. What the student sent is a block
  * of INK on the right, as wide as its text: something handed over, closed. What the tutor
- * answers is the page itself on the left — open text on the card, tied by one rule to the
- * map and the places of the notes that belong to it — because it is the part to read and
- * work on, with the question it closes with set apart from its explanation (`Reply`). Each is named above, so the difference never rests on colour or side alone.
+ * answers is the page itself on the left — open text on the card, its map and then the
+ * question it closes with (`Reply`) — because it is the part to read and work on. Each is
+ * named above, so the difference never rests on colour or side alone.
+ *
+ * `open` says this is the reply whose question the student is answering now: the last one,
+ * and only while no newer message is waiting for its reply.
  */
-function TurnBubble({ turn, onRead }: { turn: Turn; onRead: (place: Place) => void }) {
+function TurnBubble({ turn, open }: { turn: Turn; open: boolean }) {
   const { t } = useT();
   if (turn.role === "student") {
     return (
@@ -309,50 +310,11 @@ function TurnBubble({ turn, onRead }: { turn: Turn; onRead: (place: Place) => vo
     );
   }
   return (
-    <div data-turn className="space-y-2.5 border-l-2 border-foreground pl-4">
+    <div data-turn className="space-y-3">
       <p className={SPEAKER}>
         <span className="font-semibold text-foreground">{t("tutor.tutor")}</span> · {when(turn.at)}
       </p>
-      <Reply text={turn.text} />
-      <ConceptMap map={turn.concept_map} />
-      {turn.references && turn.references.length > 0 ? (
-        <References places={turn.references} onRead={onRead} />
-      ) : null}
+      <Reply text={turn.text} map={turn.concept_map} latest={open} />
     </div>
   );
-}
-
-/**
- * Where in the notes to look, each place opening the reader at it. This is the only place a
- * reply's origin is written — the reply itself says «en los apuntes» and names no section —
- * and the places are the card's, never the model's.
- */
-function References({ places, onRead }: { places: Place[]; onRead: (place: Place) => void }) {
-  const { t } = useT();
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 text-small text-muted-foreground">
-      <BookOpen className="size-3.5" aria-hidden />
-      <span>{t("tutor.references")}</span>
-      {places.map((place) => {
-        const label = lastPart(place.location) || place.document;
-        return (
-          <button
-            key={`${place.document}|${place.location}`}
-            type="button"
-            onClick={() => onRead(place)}
-            title={t("tutor.notes.open", { place: place.location || place.document })}
-            className="max-w-full truncate rounded-full border border-border px-2 py-0.5 text-foreground underline-offset-2 transition-colors hover:bg-accent hover:underline"
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** The section a heading path ends in, which is what a reply names. */
-function lastPart(location: string): string {
-  const parts = location.split(" > ");
-  return parts[parts.length - 1] ?? "";
 }

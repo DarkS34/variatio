@@ -73,13 +73,21 @@ export function ConversationList({
               )}
             >
               <span className="line-clamp-2 text-body">{row.title || t("tutor.untitled")}</span>
-              <span className="mt-0.5 flex items-center gap-1.5 text-small text-muted-foreground">
-                {row.pending ? <Spinner className="size-3" /> : null}
-                {row.pending
-                  ? t("tutor.list.waiting")
-                  : plural("tutor.list.turns", row.turns, { n: row.turns })}
-                {row.updated_at ? <span aria-hidden>·</span> : null}
-                {row.updated_at ? relative(row.updated_at) : null}
+              {/* One line, never wrapped: a row that waits says only that it waits — its
+                  time is now — and a long relative time is cut, never pushed under. */}
+              <span className="mt-0.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-small text-muted-foreground">
+                {row.pending ? (
+                  <>
+                    <Spinner className="size-3 shrink-0" />
+                    <span className="truncate">{t("tutor.list.waiting")}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="shrink-0">{plural("tutor.list.turns", row.turns, { n: row.turns })}</span>
+                    {row.updated_at ? <span aria-hidden>·</span> : null}
+                    {row.updated_at ? <span className="truncate">{relative(row.updated_at)}</span> : null}
+                  </>
+                )}
               </span>
             </button>
             <Button

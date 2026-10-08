@@ -8,7 +8,7 @@ from variatio.runtime import screening
 
 from .conftest import SOURCES, vector_for
 
-GOOD = "En los apuntes, la recursividad se apoya en un caso base. ¿Cuál sería el de tu programa?"
+GOOD = "La recursividad se apoya en un caso base. ¿Cuál sería el de tu programa?"
 DEFAULT_REPLY = "Pregunta a tu docente."
 
 
@@ -51,9 +51,10 @@ def test_a_question_about_the_theory_is_answered_with_its_card(tutor_context, en
     assert "Se da por sabido" in reply["prompt"], "what comes before is taken as known"
     assert "Tema 1 Fundamentos" not in reply["prompt"], "the card quotes the notes without their headings"
     assert "Tema 2 Avanzado" not in reply["prompt"]
-    assert "No nombra el tema, el apartado ni el documento" in reply["system"]
+    assert "apuntes" not in reply["prompt"], "the card is what the tutor knows, not what it cites"
+    assert "No manda al alumno a los apuntes" in reply["system"]
     assert "comprueba de forma breve" not in reply["system"]
-    assert {"document": "apuntes.pdf", "location": "Tema 2 Avanzado > Recursividad"} in result.references
+    assert "references" not in result.record(), "nothing is drawn under a reply but its map"
 
 
 def test_an_administrative_question_gets_the_subject_s_fixed_text_and_no_reply_call(tutor_context, engine):
@@ -124,8 +125,20 @@ def test_two_broken_replies_give_way_to_a_fixed_question_built_from_the_card(tut
 
     assert result.fallback
     assert "«Recursividad»" in result.text and "Tema 2 Avanzado" not in result.text
-    assert {"document": "apuntes.pdf", "location": "Tema 2 Avanzado > Recursividad"} in result.references
+    assert "apuntes" not in result.text and "abajo" not in result.text
     assert result.text.count("?") == 1
+
+
+def test_a_reply_that_sends_the_student_to_the_notes_is_asked_again(tutor_context, engine):
+    pointing = "Lo tienes explicado en los apuntes. ¿Qué detiene las llamadas?"
+    scripted = engine(classify=['{"kind": "theory"}'], reply=[pointing, GOOD])
+
+    result = run(tutor_context, "¿Cómo funciona la recursividad?")
+
+    assert result.retried and not result.fallback and result.text == GOOD
+    assert result.checks["attempts"] == [["pointed"], []]
+    second = [call for call in scripted.calls if call["kind"] == "reply"][1]
+    assert "mandaba al alumno a los apuntes" in second["prompt"]
 
 
 def test_an_unreadable_classification_fails_open_to_theory(tutor_context, engine):
@@ -165,68 +178,19 @@ def test_a_greeting_carries_no_notes_and_leaves_the_focus_where_it_was(tutor_con
 
     result = run(tutor_context, "Hola, buenas", state={"focus": ["Recursividad"], "trail": []})
 
-    assert result.kind == "social" and result.references == []
+    assert result.kind == "social"
     assert result.state["focus"] == ["Recursividad"]
     reply = next(call for call in scripted.calls if call["kind"] == "reply")
     assert "Una función recursiva necesita" not in reply["prompt"]
 
 
-def test_the_places_shown_under_a_reply_follow_its_words_else_are_the_card_s_first():
-    from tutor.card import Card, FocusConcept, Prerequisite, Quote
-    from tutor.prompts import es
+def test_a_concept_of_the_focus_is_never_a_later_one():
+    from tutor.card import Card, FocusConcept
 
-    the_card = Card(
-        kind=THEORY,
-        focus=(
-            FocusConcept(
-                name="Recursividad",
-                unit="Avanzado",
-                prerequisites=(Prerequisite("Parámetro", "Tema 1 Fundamentos > Parámetros", "apuntes.pdf"),),
-                later=("Memoización", "Subproblema"),
-                anchors=(
-                    Quote("apuntes.pdf", "", "Sin sitio."),
-                    Quote("apuntes.pdf", "Tema 2 Avanzado > Recursividad", "Se llama a sí misma."),
-                ),
-            ),
-        ),
-        passages=(
-            Quote("apuntes.pdf", "Tema 1 Fundamentos > Funciones", "Una función devuelve."),
-            Quote("apuntes.pdf", "Tema 2 Avanzado > Casos base", "El caso base detiene."),
-        ),
-    )
-    with_subproblem = Card(kind=THEORY, focus=(the_card.focus[0], FocusConcept("Subproblema", "Avanzado")))
-    assert with_subproblem.later() == ["Memoización"], "a concept of the focus is never a later one"
+    recursion = FocusConcept(name="Recursividad", unit="Avanzado", later=("Memoización", "Subproblema"))
+    with_subproblem = Card(kind=THEORY, focus=(recursion, FocusConcept("Subproblema", "Avanzado")))
 
-    named = the_card.references("En los apuntes, los casos base cortan la cadena. ¿Qué detiene las llamadas?")
-    assert named == [{"document": "apuntes.pdf", "location": "Tema 2 Avanzado > Casos base"}]
-    first = [
-        "Tema 2 Avanzado > Recursividad",
-        "Tema 1 Fundamentos > Funciones",
-    ]
-    assert [p["location"] for p in the_card.references("¿Qué piensas tú?")] == first
-    unsent = the_card.references("Un parámetro recibe un valor. ¿Qué piensas tú?")
-    assert [p["location"] for p in unsent] == first, "a prerequisite's place waits for a send-back"
-    lacking = "Si te falta qué es un parámetro, repásalo en los apuntes. ¿Qué piensas tú?"
-    sent_back = the_card.sent_back(lacking, es.REVIEW_PATTERN)
-    assert sent_back == ("Recursividad", "Parámetro")
-    assert [p["location"] for p in the_card.references(lacking, sent_back)] == [
-        "Tema 1 Fundamentos > Parámetros",
-        *first,
-    ], "the place of the prerequisite to review leads"
-    bare = Card(
-        kind=THEORY,
-        focus=(
-            FocusConcept(
-                name="Recursividad",
-                unit="Avanzado",
-                prerequisites=the_card.focus[0].prerequisites,
-                anchors=(Quote("apuntes.pdf", "", "Sin sitio."),),
-            ),
-        ),
-    )
-    assert bare.references(lacking, sent_back) == [
-        {"document": "apuntes.pdf", "location": "Tema 1 Fundamentos > Parámetros"}
-    ], "a document with a located place is not shown bare beside it"
+    assert with_subproblem.later() == ["Memoización"]
 
 
 def test_the_first_reply_on_a_concept_carries_its_map_and_the_next_one_does_not(tutor_context, engine):
@@ -249,7 +213,7 @@ def test_the_first_reply_on_a_concept_carries_its_map_and_the_next_one_does_not(
 
 
 def test_a_reply_that_sends_the_student_back_marks_the_prerequisite_on_a_second_map(tutor_context, engine):
-    back = "Si te falta qué es una función, repásalo en los apuntes. ¿Qué hace que la tuya pare?"
+    back = "Si te falta qué es una función, repásala primero. ¿Qué hace que la tuya pare?"
     engine(classify=['{"kind": "theory"}'], reply=[back])
     state = {"focus": ["Recursividad"], "trail": ["Recursividad"], "mapped": ["Recursividad"], "since_map": 2}
 
@@ -261,6 +225,20 @@ def test_a_reply_that_sends_the_student_back_marks_the_prerequisite_on_a_second_
 
     soon = run(tutor_context, "No sé qué es una función", state={**state, "since_map": 1})
     assert soon.concept_map is None, "never right after another map"
+
+
+def test_a_message_naming_a_prerequisite_has_the_send_back_pointed_out_on_its_card(tutor_context, engine):
+    scripted = engine(classify=['{"kind": "theory"}'], reply=[GOOD])
+    state = {"focus": ["Recursividad"], "trail": ["Recursividad"], "mapped": ["Recursividad"], "since_map": 2}
+
+    named = run(tutor_context, "No sé qué es una función", state=state)
+    plain = run(tutor_context, "¿Y cuándo para la recursividad?", state=state)
+
+    assert named.card["named_before"] == [["Recursividad", ["Función"]]]
+    assert plain.card["named_before"] is None
+    first, second = [call for call in scripted.calls if call["kind"] == "reply"]
+    assert "El mensaje nombra «Función», que se da por sabido para «Recursividad»" in first["prompt"]
+    assert "no se lo expliques" in first["prompt"] and "El mensaje nombra" not in second["prompt"]
 
 
 def test_a_greeting_and_a_fixed_answer_carry_no_map(tutor_context, engine):

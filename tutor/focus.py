@@ -20,6 +20,8 @@ say outright what a message is about, by choosing a concept beside the box they 
 (`with_chosen`): nothing is deduced then, the chosen concept leads.
 """
 
+from collections.abc import Callable
+
 MAX_FOCUS = 2
 
 
@@ -32,6 +34,7 @@ def next_focus(
     eligible: set[str],
     before: set[str] | None = None,
     given: list[str] | None = None,
+    named: Callable[[str], bool] | None = None,
 ) -> list[str]:
     """Return the focus a turn is answered with.
 
@@ -39,7 +42,11 @@ def next_focus(
     tags, a generated exercise's targets — and they win outright. Otherwise the scores of
     the message decide, against `current`, within `eligible` (the graph's concepts minus the
     generic ones, which name no topic anybody can work on); a best concept in `before` — the
-    prerequisite closure of the current focus — keeps the focus where it is.
+    prerequisite closure of the current focus — keeps the focus where it is, and so does a
+    message that names a concept of `before` (`named`, read on the message) but not the best
+    one: «no entiendo qué es un registro», inside a conversation on binary files, scored
+    «Campo», a neighbour of the record, above the record itself, and the focus left for it.
+    A second concept is never one of `before` either.
     """
     current = [name for name in current if name in eligible]
     if given:
@@ -57,6 +64,8 @@ def next_focus(
         return current
     if current and before and best in before:
         return current
+    if current and before and named and not named(best) and any(named(name) for name in before):
+        return current
     if current:
         held = max(scores.get(name, 0.0) for name in current)
         if best_score - held <= margin:
@@ -65,7 +74,8 @@ def next_focus(
     focus = [best]
     if len(ranked) > 1:
         second, second_score = ranked[1]
-        if second_score >= threshold and best_score - second_score <= margin:
+        close = second_score >= threshold and best_score - second_score <= margin
+        if close and second not in (before or set()):
             focus.append(second)
     return focus[:MAX_FOCUS]
 

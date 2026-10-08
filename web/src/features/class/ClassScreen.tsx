@@ -350,34 +350,36 @@ function StudentsSection({
               onChange: (on) => setTicked(on ? new Set(shown.map((member) => member.user_id)) : new Set()),
             }}
             bulk={
-              chosen.length > 0 ? (
-                <>
-                  <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                    {plural("class.ticked", chosen.length)}
-                  </span>
-                  {many.isPending ? <Spinner /> : null}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="-my-1.5 h-7"
-                    disabled={many.isPending}
-                    onClick={() => change(chosen)}
-                  >
-                    {filter === "active" ? <UserX /> : <UserCheck />}
-                    {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="-my-1.5 h-7 text-destructive hover:text-destructive"
-                    disabled={many.isPending}
-                    onClick={() => setRemoving(chosen)}
-                  >
-                    <UserMinus />
-                    {t("class.removeN", { n: chosen.length })}
-                  </Button>
-                </>
-              ) : null
+              chosen.length > 0
+                ? {
+                    count: plural("class.ticked", chosen.length),
+                    gestures: (
+                      <>
+                        {many.isPending ? <Spinner /> : null}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="-my-1.5 h-7"
+                          disabled={many.isPending}
+                          onClick={() => change(chosen)}
+                        >
+                          {filter === "active" ? <UserX /> : <UserCheck />}
+                          {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="-my-1.5 h-7 text-destructive hover:text-destructive"
+                          disabled={many.isPending}
+                          onClick={() => setRemoving(chosen)}
+                        >
+                          <UserMinus />
+                          {t("class.removeN", { n: chosen.length })}
+                        </Button>
+                      </>
+                    ),
+                  }
+                : undefined
             }
           >
             {shown.map((member) => {

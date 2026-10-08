@@ -448,8 +448,8 @@ function Raw() {
         </Paragraph>
         <Paragraph>
           Una vez hay documentos, cada uno es <strong>una fila</strong>: su nombre, cómo va su
-          lectura y los dos botones que actúan sobre él —abrirlo para corregir sus páginas, o
-          quitarlo del origen—.
+          lectura y los dos botones que actúan sobre él —abrirlo junto a su transcripción para
+          leerla y corregirla, o quitarlo del origen—.
         </Paragraph>
         <Paragraph>
           Las filas van en el <strong>orden alfabético de los nombres</strong>, y un número
@@ -552,25 +552,43 @@ function Raw() {
         </p>
       </Alert>
 
-      <Block title="Corregir una página a mano">
+      <Block title="Leer y corregir un documento">
         <Steps
           items={[
             <>
-              Pulsa el nombre del documento, o pasa el cursor por su fila y pulsa el lápiz. Se abre
-              con el índice de páginas a la izquierda y el markdown de la que elijas a la derecha.
-              Bajo cada nombre ves su tipo, su tamaño y cuántas páginas se han leído.
+              Pulsa el nombre del documento, o pasa el cursor por su fila y pulsa el libro. Se
+              abre una ventana con dos columnas: a la izquierda, «{t("doc.view.original")}», el
+              documento tal como es —las páginas del PDF, las diapositivas, el documento de
+              Word—; a la derecha, «{t("doc.view.text")}», su transcripción página a página, ya
+              con formato. Bajo cada nombre de la fila ves su tipo, su tamaño y cuántas páginas
+              se han leído.
             </>,
             <>
-              Edita y guarda. También puedes <strong>insertar</strong> una página en blanco
-              justo después de la que estás viendo, o <strong>borrarla</strong>: las dos cosas
-              renumeran las siguientes, y la pantalla lo dice antes de hacerlo.
+              Las dos columnas <strong>van a la par</strong>: al bajar por una, la otra se coloca
+              en la misma página. La barra de arriba cambia de página con sus flechas, con el
+              número que escribas o con las flechas del teclado, y «
+              {t("doc.toReview", { n: "N" })}» salta a la siguiente página señalada.
             </>,
             <>
-              Salir con cambios sin guardar pregunta antes de descartarlos, igual que cambiar de
-              página.
+              Para corregir una página, pulsa su lápiz: su texto pasa a ser el markdown que se
+              guarda, y lo editas ahí mismo. También puedes <strong>insertar</strong> una página
+              en blanco justo después de una, o <strong>borrarla</strong>, con los iconos que
+              aparecen al pasar el cursor: las dos cosas renumeran las siguientes, y la pantalla
+              lo dice antes de hacerlo. Mientras corriges una página, insertar y borrar esperan.
+            </>,
+            <>
+              Cerrar con cambios sin guardar pregunta antes de descartarlos, igual que abrir otra
+              página para corregirla.
             </>,
           ]}
         />
+        <Paragraph>
+          Si el original y la transcripción no se corresponden página a página —un documento de
+          Word se lee como un solo texto, o se insertaron o borraron páginas a mano—, una frase
+          lo dice y cada columna se desplaza por su cuenta. Un documento que no se puede mostrar
+          en su forma original se abre solo con el texto. En una pantalla estrecha se ve una
+          columna cada vez, y dos pestañas cambian de una a otra.
+        </Paragraph>
         <Paragraph>
           De las páginas solo se señalan dos, que son las únicas que necesitan a una persona:
         </Paragraph>

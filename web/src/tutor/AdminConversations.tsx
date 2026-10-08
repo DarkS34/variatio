@@ -13,7 +13,6 @@ import { useT, type Key } from "@/lib/i18n";
 import type { AdminWorkspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { ConceptMap } from "./ConceptMap";
 import { useAdminConversation, useAdminConversations } from "./queries";
 import { Reply } from "./Reply";
 
@@ -175,10 +174,7 @@ function Transcript({ slug, author, id }: { slug: string; author: number; id: st
             ) : null}
           </p>
           {turn.role === "tutor" ? (
-            <>
-              <Reply text={turn.text} />
-              <ConceptMap map={turn.concept_map} />
-            </>
+            <Reply text={turn.text} map={turn.concept_map} />
           ) : (
             <p className="whitespace-pre-wrap">{turn.text}</p>
           )}

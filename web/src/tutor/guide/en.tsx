@@ -28,7 +28,8 @@ function Tutor() {
         </p>
         <p>
           The tutor <strong>gives no solutions</strong>: it asks you questions so that you reach
-          them yourself, and shows you where to look in the notes. To practise, the door is "{t("nav.create")}".
+          them yourself, and tells you what the subject explains in its own words. To practise,
+          the door is "{t("nav.create")}".
         </p>
       </SectionHead>
 
@@ -46,18 +47,18 @@ function Tutor() {
             },
             {
               key: "notes",
-              head: "Where the notes explain it",
-              body: "The passages the syllabus anchored to that concept and the pieces of the notes closest to the message. The references under each reply come from here, never from what the model writes, and each one opens the notes at that section.",
+              head: "What the notes explain",
+              body: "The passages the syllabus anchored to that concept and the pieces of the notes closest to the message. The tutor starts from them and tells you in its own words: it does not copy them, does not send you to read them and does not tell you which unit or section they are in. If you want to see the document, look for it on your own.",
             },
             {
               key: "before",
               head: "What you need to know first",
-              body: "The concept's direct prerequisites. The tutor takes them as known: if you ask about a concept, it works on that concept and does not walk you through the earlier ones. Only if you say something earlier is missing does it tell you to review it, and its section appears under the reply.",
+              body: "The concept's direct prerequisites. The tutor takes them as known: if you ask about a concept, it works on that concept and does not walk you through the earlier ones. Only if you say something earlier is missing does it tell you which concept to review.",
             },
             {
               key: "map",
               head: "The concept map",
-              body: "A diagram of the concept with what it takes as known, what comes later and its other relations in the syllabus. The system draws it from the syllabus, never the model, so it cannot invent a relation. It does not come with every reply: it appears the first time the conversation reaches a concept, and when the tutor sends you back to review something earlier, with that concept marked.",
+              body: "A graph of the concept in the order it is learnt: on the left what it takes as known, in the middle the concept, on the right what comes later. Its other relations are dotted branches with the relation's name on them. The system draws it from the syllabus, never the model, so it cannot invent a relation. It does not come with every reply: it appears the first time the conversation reaches a concept, and when the tutor sends you back to review something earlier, with that concept marked in coral.",
             },
             {
               key: "after",
@@ -82,10 +83,11 @@ function Tutor() {
         <Paragraph>
           Before you read it, a reply goes through some checks: it has to ask at least one
           question and not too many, it cannot carry more than a few lines of code, it cannot
-          draw a diagram of its own, it cannot copy a passage of the notes, it cannot introduce a later concept and it cannot suggest
-          what the criteria rule out. If it fails, the model writes another one with the reason;
-          if it fails again, you get a fallback question that points you to the notes. That is
-          why the reply appears whole and not word by word.
+          draw a diagram of its own, it cannot copy a passage of the notes, it cannot send you to
+          the notes or to a unit, it cannot introduce a later concept and it cannot suggest what
+          the criteria rule out. If it fails, the model writes another one with the reason; if
+          it fails again, you get a fallback question about the concept. That is why the reply
+          appears whole and not word by word.
         </Paragraph>
         <Paragraph>
           Administrative questions (grades, dates, submissions) and questions outside the subject
@@ -126,28 +128,16 @@ function Tutor() {
         </Paragraph>
         <Paragraph>
           Every reply has two parts: the explanation, in plain text, and the question it ends
-          with, larger and in bold, because that is what you are to answer. The reply speaks
-          of "the notes" without naming the unit or the section: the exact place is below it. Under each reply, "{t("tutor.references")}" lists the sections it
-          comes from. Each one opens the notes at that section.
-        </Paragraph>
-        <Paragraph>
-          The notes open in "{t("tutor.notes.view.original")}": the document as it is —the
-          pages of the PDF, the slides, the Word document—, with all its pages one under
-          another, opened at the page where the section starts. From there you scroll freely:
-          if the section goes on to the next page, keep scrolling, and the line under the list
-          says which page you are on. The arrows and the list jump to another section. In a
-          Word document, or in one whose pages were rearranged by hand, the page opened is
-          approximate: if the section is not there, keep scrolling.
-          "{t("tutor.notes.view.text")}" shows the same section as text, which is what the
-          tutor reads and what you can select and copy. The window is the same size in both
-          views, and the view you choose holds while you stay in the conversation. A document
-          that cannot be shown in its original form opens as text straight away.
+          with, last of all, larger and in bold, because that is what you are to answer. Beside
+          it stands the tutor's mark, a question mark made of squares: its dot in coral on the
+          question you have open, and grey on the ones you already answered. While the tutor
+          writes, that same mark is drawn square by square.
         </Paragraph>
         <Paragraph>
           When what is being worked on is written in mathematical notation —a formula, a
           recurrence, a cost—, the tutor writes it as a formula and not in words. On a narrow
-          screen, the concept map draws only what comes before and after, and writes the other
-          relations under it.
+          screen, the concept map stands up: what comes before above, the concept in the
+          middle, what comes later below and the other relations last.
         </Paragraph>
       </Block>
 

@@ -1,15 +1,10 @@
 /**
- * The concept map's diagram, written from what the server read off the graph.
+ * The concept map, as the server reads it off the graph and the client draws it.
  *
  * The server sends names, relations and directions (`tutor/concept_map.py`) and no drawing:
  * the words on a map belong to the reader's interface language and its colours to the theme,
- * and both are the client's. This module writes the Mermaid source — pure, so vitest pins
- * it — and `ConceptMap.tsx` paints it.
- *
- * The prerequisite relation is drawn in the order things are learnt: what the concept takes
- * as known, an arrow into the concept, an arrow out to what comes later. Every other
- * relation of the graph is a dotted edge carrying the graph's own label, pointing the way
- * the graph does. What a cap left out is one small «and N more» node, never silence.
+ * and both are the client's. `ConceptMap.tsx` lays it out with the app's own chips and draws
+ * the lines between them; the geometry of those lines is here, pure, so vitest can pin it.
  */
 
 export interface ConceptMapLink {
@@ -29,120 +24,6 @@ export interface ConceptMapData {
   review?: string | null;
 }
 
-export interface ConceptMapWords {
-  before: string;
-  after: string;
-  more: (n: number) => string;
-}
-
-export type ConceptMapDirection = "LR" | "TD";
-
-// Mermaid spaces a flowchart for a page of its own (50 px between nodes and between ranks).
-// A map sits under a paragraph: drawn that loose, ten boxes filled the whole conversation
-// panel and pushed the reply they illustrate out of sight.
-const COMPACT = '%%{init: {"flowchart": {"nodeSpacing": 14, "rankSpacing": 34, "padding": 10, "diagramPadding": 4}}}%%';
-
-/**
- * A label as Mermaid reads it inside double quotes. `#` first, since the other two are
- * written with it; a backtick, because a quoted label that opens with one is read as
- * markdown; a line break, because a node is one line.
- */
-function label(text: string): string {
-  return text
-    .replace(/#/g, "#35;")
-    .replace(/"/g, "#quot;")
-    .replace(/`/g, "#96;")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export function conceptMapSource(
-  map: ConceptMapData,
-  words: ConceptMapWords,
-  direction: ConceptMapDirection = "LR",
-): string {
-  const before = map.before ?? [];
-  const after = map.after ?? [];
-  const links = map.links ?? [];
-  const hidden = map.hidden ?? {};
-  const review = map.review && before.includes(map.review) ? map.review : null;
-  const lines = [COMPACT, `flowchart ${direction}`];
-
-  // With a prerequisite to go and review, that node is the one thing to act on and the
-  // concept steps back to ink: a map never asks for attention in two places.
-  lines.push(`  focus(["${label(map.concept)}"]):::${review ? "anchor" : "focus"}`);
-
-  if (before.length > 0) {
-    lines.push(`  subgraph before["${label(words.before)}"]`);
-    before.forEach((name, index) => {
-      lines.push(`    b${index}["${label(name)}"]:::${name === review ? "review" : "known"}`);
-    });
-    if (hidden.before) lines.push(`    bMore["${label(words.more(hidden.before))}"]:::more`);
-    lines.push("  end");
-    before.forEach((_, index) => lines.push(`  b${index} --> focus`));
-  }
-
-  if (after.length > 0) {
-    lines.push(`  subgraph after["${label(words.after)}"]`);
-    after.forEach((name, index) => lines.push(`    a${index}["${label(name)}"]:::later`));
-    if (hidden.after) lines.push(`    aMore["${label(words.more(hidden.after))}"]:::more`);
-    lines.push("  end");
-    after.forEach((_, index) => lines.push(`  focus --> a${index}`));
-  }
-
-  links.forEach((link, index) => {
-    const node = `l${index}["${label(link.name)}"]:::tied`;
-    const text = `|"${label(link.relation)}"|`;
-    if (link.direction === "in") lines.push(`  ${node} -.->${text} focus`);
-    else if (link.direction === "out") lines.push(`  focus -.->${text} ${node}`);
-    else lines.push(`  focus -.-${text} ${node}`);
-  });
-  if (links.length > 0 && hidden.links) {
-    lines.push(`  focus -.- lMore["${label(words.more(hidden.links))}"]:::more`);
-  }
-
-  if (direction === "TD") lines.push(...stacked(map));
-  return lines.join("\n");
-}
-
-/**
- * Invisible links that stand each group of a top-down map in a column of its own.
- *
- * A top-down flowchart lays the nodes of one rank side by side, so three dependents and
- * three related concepts made a row six boxes wide — on a phone, scaled down to text nobody
- * can read. Chained by links Mermaid lays out but does not draw, each group takes one rank
- * per node instead, and the map is as narrow as its two widest boxes.
- */
-function stacked(map: ConceptMapData): string[] {
-  const hidden = map.hidden ?? {};
-  const links = map.links ?? [];
-  const column = (ids: string[]) => (ids.length > 1 ? [`  ${ids.join(" ~~~ ")}`] : []);
-  const range = (prefix: string, n: number, more?: number) => [
-    ...Array.from({ length: n }, (_, index) => `${prefix}${index}`),
-    ...(n > 0 && more ? [`${prefix}More`] : []),
-  ];
-  const above = links.flatMap((link, index) => (link.direction === "in" ? [`l${index}`] : []));
-  const below = links.flatMap((link, index) => (link.direction === "in" ? [] : [`l${index}`]));
-  if (links.length > 0 && hidden.links) below.push("lMore");
-  return [
-    ...column(range("b", map.before?.length ?? 0, hidden.before)),
-    ...column(range("a", map.after?.length ?? 0, hidden.after)),
-    ...column(above),
-    ...column(below),
-  ];
-}
-
-/**
- * The map a narrow screen draws: the learning order alone.
- *
- * Even stacked, the other relations add a second column and their labels a third, and a
- * phone scaled that down to 8 px text. So the drawing keeps what a map is for — what comes
- * before and after — and the caller writes the other relations as a line of text under it.
- */
-export function narrowed(map: ConceptMapData): ConceptMapData {
-  return { ...map, links: [] };
-}
-
 /**
  * Whether a turn's map has anything to draw: a concept, and something before or after it.
  * The server sends no other kind; an older or a damaged record is simply not drawn.
@@ -150,4 +31,66 @@ export function narrowed(map: ConceptMapData): ConceptMapData {
 export function isDrawable(map: ConceptMapData | null | undefined): map is ConceptMapData {
   if (!map || typeof map.concept !== "string" || !map.concept) return false;
   return (map.before?.length ?? 0) + (map.after?.length ?? 0) > 0;
+}
+
+/** The prerequisite a map marks as the one to go over, when it is one the map draws. */
+export function reviewOf(map: ConceptMapData): string | null {
+  return map.review && (map.before ?? []).includes(map.review) ? map.review : null;
+}
+
+/**
+ * Whether a relation that is not the learning order points INTO the concept. Those are
+ * drawn on the concept's left, read «Caso base se engloba en» towards it; the rest — out of
+ * it or with no direction — on its right, read «se engloba en Abstracción» away from it.
+ */
+export function pointsIn(link: ConceptMapLink): boolean {
+  return link.direction === "in";
+}
+
+/** A box on the map, in pixels from the top left of the figure. */
+export interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export type Side = "left" | "right" | "above" | "below";
+
+/**
+ * Where a node stands relative to the concept. The layout decides it — side by side on a
+ * wide figure, stacked on a narrow one — and the lines follow whatever the layout did.
+ */
+export function sideOf(node: Box, concept: Box): Side {
+  if (node.right <= concept.left) return "left";
+  if (node.left >= concept.right) return "right";
+  return node.top + node.bottom < concept.top + concept.bottom ? "above" : "below";
+}
+
+/** Half a pixel is the grain a one-pixel line is drawn crisp at. */
+function px(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+/** A smooth curve between two points, leaving and arriving level. */
+export function curve(x1: number, y1: number, x2: number, y2: number): string {
+  const mid = px((x1 + x2) / 2);
+  return `M${px(x1)} ${px(y1)}C${mid} ${px(y1)} ${mid} ${px(y2)} ${px(x2)} ${px(y2)}`;
+}
+
+/**
+ * A line that leaves the concept to the left, runs down a rail at `x` and turns into a node
+ * below: how a narrow figure reaches the relations it lists under everything else, without
+ * crossing the concepts in between. Its two turns are rounded.
+ */
+export function rail(x1: number, y1: number, x: number, x2: number, y2: number): string {
+  const r = Math.min(8, Math.abs(y2 - y1) / 2);
+  return [
+    `M${px(x1)} ${px(y1)}`,
+    `H${px(x + r)}`,
+    `Q${px(x)} ${px(y1)} ${px(x)} ${px(y1 + r)}`,
+    `V${px(y2 - r)}`,
+    `Q${px(x)} ${px(y2)} ${px(x + r)} ${px(y2)}`,
+    `H${px(x2)}`,
+  ].join("");
 }

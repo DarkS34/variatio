@@ -28,8 +28,8 @@ function Tutor() {
         </p>
         <p>
           El tutor <strong>no da soluciones</strong>: te hace preguntas para que llegues tú a
-          ellas y te enseña dónde mirar en los apuntes. Si quieres practicar, la puerta es «
-          {t("nav.create")}».
+          ellas, y lo que la asignatura explica te lo cuenta con sus propias palabras. Si
+          quieres practicar, la puerta es «{t("nav.create")}».
         </p>
       </SectionHead>
 
@@ -48,18 +48,18 @@ function Tutor() {
             },
             {
               key: "notes",
-              head: "Dónde lo explican los apuntes",
-              body: "Los pasajes que el temario ancló a ese concepto y los fragmentos de los apuntes más parecidos al mensaje. Las referencias que aparecen bajo cada respuesta salen de aquí, nunca de lo que escribe el modelo, y cada una abre los apuntes por ese apartado.",
+              head: "Lo que explican los apuntes",
+              body: "Los pasajes que el temario ancló a ese concepto y los fragmentos de los apuntes más parecidos al mensaje. El tutor parte de ellos y te los cuenta con sus palabras: no los copia, no te manda a leerlos y no te dice en qué tema o apartado están. Si quieres ver el documento, búscalo por tu cuenta.",
             },
             {
               key: "before",
               head: "Lo que hay que saber antes",
-              body: "Los prerrequisitos directos del concepto. El tutor los da por sabidos: si preguntas por un concepto, trabaja ese concepto y no te lleva por los anteriores. Solo si dices que te falta algo previo te dice que lo repases, y su apartado aparece bajo la respuesta.",
+              body: "Los prerrequisitos directos del concepto. El tutor los da por sabidos: si preguntas por un concepto, trabaja ese concepto y no te lleva por los anteriores. Solo si dices que te falta algo previo te dice qué concepto repasar.",
             },
             {
               key: "map",
               head: "El mapa del concepto",
-              body: "Un diagrama del concepto con lo que da por sabido, lo que viene después y sus demás relaciones en el temario. Lo dibuja el sistema a partir del temario, nunca el modelo, así que no puede inventar una relación. No sale en cada respuesta: aparece la primera vez que la conversación llega a un concepto y cuando el tutor te manda a repasar algo anterior, con ese concepto marcado.",
+              body: "Un grafo del concepto en el orden en que se aprende: a la izquierda lo que da por sabido, en el centro el concepto y a la derecha lo que viene después. Sus demás relaciones son ramas de puntos con el nombre de la relación encima. La dibuja el sistema a partir del temario, nunca el modelo, así que no puede inventar una relación. No sale en cada respuesta: aparece la primera vez que la conversación llega a un concepto y cuando el tutor te manda a repasar algo anterior, con ese concepto marcado en coral.",
             },
             {
               key: "after",
@@ -85,10 +85,10 @@ function Tutor() {
           Antes de que la leas, una respuesta pasa unas comprobaciones: tiene que hacer al
           menos una pregunta y no demasiadas, no puede llevar más de unas pocas líneas de
           código, no puede dibujar un diagrama por su cuenta, no puede copiar un pasaje de los
-          apuntes, no puede introducir un concepto posterior y no puede sugerir lo que los
-          criterios descartan. Si falla, el modelo
-          escribe otra con el motivo; si vuelve a fallar, recibes una pregunta de reserva que
-          te remite a los apuntes. Por eso la respuesta aparece entera y no palabra a palabra.
+          apuntes, no puede mandarte a los apuntes ni a un tema, no puede introducir un concepto
+          posterior y no puede sugerir lo que los criterios descartan. Si falla, el modelo
+          escribe otra con el motivo; si vuelve a fallar, recibes una pregunta de reserva sobre
+          el concepto. Por eso la respuesta aparece entera y no palabra a palabra.
         </Paragraph>
         <Paragraph>
           Las consultas administrativas (notas, fechas, entregas) y las preguntas ajenas a la
@@ -129,30 +129,17 @@ function Tutor() {
         </Paragraph>
         <Paragraph>
           Cada respuesta tiene dos partes: la explicación, en texto normal, y la pregunta con
-          la que termina, más grande y en negrita, porque es lo que te toca contestar. La
-          respuesta habla de «los apuntes» sin nombrar el tema ni el apartado: el sitio
-          exacto está debajo. Bajo cada respuesta, «{t("tutor.references")}» lista los
-          apartados de los que sale. Cada uno abre los apuntes por ese apartado.
-        </Paragraph>
-        <Paragraph>
-          Los apuntes se abren en «{t("tutor.notes.view.original")}»: el documento tal como es
-          —las páginas del PDF, las diapositivas, el documento de Word—, con todas sus páginas una
-          debajo de otra, abierto por la página donde empieza el apartado. Desde ahí te
-          desplazas con libertad: si el apartado sigue en la página siguiente, basta con seguir
-          bajando, y la línea bajo la lista dice en qué página estás. Las flechas y la lista
-          saltan a otro apartado. En un documento de Word, o en uno cuyas páginas se
-          reordenaron a mano, la página abierta es aproximada: si el apartado no está ahí,
-          sigue bajando. «{t("tutor.notes.view.text")}» muestra el mismo apartado como texto,
-          que es de donde lee el tutor y lo que puedes seleccionar y copiar. La ventana tiene
-          el mismo tamaño en las dos vistas, y la vista que eliges se mantiene mientras sigues
-          en la conversación. Un documento que no se puede mostrar en su forma original se
-          abre directamente como texto.
+          la que termina, al final de todo, más grande y en negrita, porque es lo que te toca
+          contestar. A su lado va la marca del tutor, un signo de interrogación hecho de
+          cuadrados: con el punto en coral en la pregunta que tienes abierta, y en gris en las
+          que ya contestaste. Mientras el tutor escribe, esa misma marca se dibuja cuadrado a
+          cuadrado.
         </Paragraph>
         <Paragraph>
           Cuando lo que se trabaja se escribe con notación matemática —una fórmula, una
           recurrencia, un coste—, el tutor la escribe como fórmula y no con palabras. En una
-          pantalla estrecha, el mapa del concepto dibuja solo lo anterior y lo posterior, y
-          escribe las demás relaciones debajo.
+          pantalla estrecha, el mapa del concepto se pone de pie: lo anterior arriba, el
+          concepto en medio, lo posterior debajo y las demás relaciones al final.
         </Paragraph>
       </Block>
 

@@ -5,9 +5,9 @@ and the job is one of the method's rules:
 
 - the subject's context says what is being taught (the role and its scope);
 - each focus concept carries its unit, its definition from the notes and the passages the
-  graph anchored to it — what the reply leans on, and the places shown under it;
-- its direct prerequisites, each with where the notes explain it — what the reply takes as
-  known, and the place shown to a student the reply sends back to one;
+  graph anchored to it — what the reply leans on, told in its own words;
+- its direct prerequisites — what the reply takes as known, and what it sends a student back
+  to when their message shows one is missing;
 - its direct dependents — what comes later and must not be introduced, which the checks then
   enforce on the reply;
 - its closest concepts of the same unit — something to contrast it with when the student
@@ -22,7 +22,11 @@ What a kind of message does not need stays off its card: a greeting carries no n
 fixed answer has no card at all.
 
 The card also says when a concept map will be shown under the reply (`map_of`), so the reply
-can lean on it instead of describing in prose what the student is about to see drawn.
+can lean on it instead of describing in prose what the student is about to see drawn, and
+which prerequisites of the focus the message itself names (`named_before`): the one turn where
+the method's send-back may apply is pointed out on its card, since a rule in the method's list
+alone was not followed — measured, 3 replies of 16 to a student saying one was missing sent
+them back, and the rest explained it.
 """
 
 import re
@@ -44,13 +48,6 @@ _ANCHOR_CHARS = 900
 _STATEMENT_CHARS = 700
 _NEIGHBOURS = 2
 
-# How many places a reply that names none of the card's shows under it.
-_SHOWN = 2
-
-# A part of a heading path shorter than this («Introducción», «Ejemplos») names too many
-# sections to say which one a reply meant.
-_PART_MIN_CHARS = 8
-
 
 @dataclass(frozen=True)
 class Quote:
@@ -64,11 +61,9 @@ class Quote:
 
 @dataclass(frozen=True)
 class Prerequisite:
-    """A concept the focus needs, and where the notes explain it when that is known."""
+    """A concept the focus needs, which a reply takes as known."""
 
     name: str
-    location: str | None = None
-    document: str | None = None
 
 
 @dataclass(frozen=True)
@@ -108,45 +103,12 @@ class Card:
     step_down: BankExercise | None = None
     map_of: str = ""
     chosen: str = ""
+    named_before: tuple[tuple[str, tuple[str, ...]], ...] = ()
     extra: dict = field(default_factory=dict)
 
     def quotes(self) -> list[Quote]:
         """Return every piece of the notes the card carries, anchors first."""
         return [quote for concept in self.focus for quote in concept.anchors] + list(self.passages)
-
-    def references(self, reply: str = "", sent_back: tuple[str, str] | None = None) -> list[dict]:
-        """Return the places of the notes a reply shows under it, drawn from the card alone.
-
-        They are the ONLY place a student reads where something is: the card quotes the notes
-        without their headings and the method forbids a reply to name one, so the reply says
-        «en los apuntes» and the exact section is here, one click from the reader. Drawn from
-        the card, so a place the model invented cannot reach the screen; but CHOSEN by the
-        reply, since the card carries more places than any reply leans on. The places whose
-        own section title the reply's words contain come first — a section is usually titled
-        after what it explains; failing that, those of whose path it contains any part;
-        failing both, the card's first `_SHOWN`. A prerequisite's place is shown only under
-        the reply that sends the student back to it (`sent_back`), and leads. A place with no
-        section is dropped when its document has one that has.
-        """
-        places = _distinct(
-            {"document": quote.document, "location": quote.location} for quote in self.quotes()
-        )
-        if not reply:
-            return places
-        said = f" {_plain(reply)} "
-        chosen = places[:_SHOWN]
-        for named in (_last_part, _any_part):
-            found = [place for place in places if named(place["location"], said)]
-            if found:
-                chosen = found
-                break
-        review = [
-            {"document": p.document, "location": p.location}
-            for concept in self.focus
-            for p in concept.prerequisites
-            if sent_back and p.name == sent_back[1] and p.document and p.location
-        ][:1]
-        return _distinct(review + chosen)
 
     def sent_back(self, reply: str, review: str, wording=None) -> tuple[str, str] | None:
         """Return the focus concept and the prerequisite of it a reply sends the student to.
@@ -200,6 +162,7 @@ class Card:
             "step_down": self.step_down.id if self.step_down else None,
             "map_of": self.map_of or None,
             "chosen": self.chosen or None,
+            "named_before": [[concept, list(names)] for concept, names in self.named_before] or None,
             **self.extra,
         }
 
@@ -216,11 +179,14 @@ def assemble(
     exercise_id: str | None = None,
     map_of: str = "",
     chosen: str = "",
+    message: str = "",
+    wording=None,
 ) -> Card:
     """Write the card one reply of this kind is answered with.
 
     `map_of` is the concept whose map will be shown under the reply, when one will; `chosen`
-    the concept the student picked for this message, when they picked one.
+    the concept the student picked for this message, when they picked one; `message` the
+    student's message, read for the prerequisites it names.
     """
     concepts = () if kind == SOCIAL else tuple(_focus_concept(n, context, sources) for n in focus)
     anchored = {text_key(q.text) for concept in concepts for q in concept.anchors}
@@ -258,7 +224,29 @@ def assemble(
         step_down=step_down,
         map_of=map_of,
         chosen=chosen,
+        named_before=_named_before(concepts, message, wording),
     )
+
+
+def _named_before(
+    concepts: tuple[FocusConcept, ...], message: str, wording
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return, per focus concept, the prerequisites of it the student's message names.
+
+    Naming one is not saying it is missing — «¿el parámetro formal y el real comparten la
+    memoria?» names one and lacks nothing — so the card only points the case out, and the
+    reply judges it. A concept of the focus is never one of them.
+    """
+    own = {concept.name for concept in concepts}
+    found = []
+    for concept in concepts:
+        names = tuple(
+            p.name for p in concept.prerequisites
+            if p.name not in own and mentions(message, p.name, wording)
+        )
+        if names:
+            found.append((concept.name, names))
+    return tuple(found)
 
 
 def _focus_concept(name: str, context, sources: dict) -> FocusConcept:
@@ -287,21 +275,10 @@ def _focus_concept(name: str, context, sources: dict) -> FocusConcept:
             for entry in anchored[: tutor_config.ANCHORS_PER_CONCEPT]
             if isinstance(entry, dict) and entry.get("text")
         ),
-        prerequisites=tuple(
-            Prerequisite(prerequisite, *_first_place(prerequisite, sources))
-            for prerequisite in prerequisites
-        ),
+        prerequisites=tuple(Prerequisite(prerequisite) for prerequisite in prerequisites),
         neighbours=tuple(_neighbours(name, context, set(prerequisites) | set(later))),
         later=tuple(later),
     )
-
-
-def _first_place(name: str, sources: dict) -> tuple[str | None, str | None]:
-    """Return where the notes first explain a concept — section, then document — or Nones."""
-    for entry in (sources.get("concepts") or {}).get(name) or []:
-        if isinstance(entry, dict) and entry.get("location"):
-            return str(entry["location"]), str(entry.get("document") or "") or None
-    return None, None
 
 
 def _neighbours(name: str, context, excluded: set[str]) -> list[str]:
@@ -381,35 +358,3 @@ def _statement(item: dict, context) -> str:
     except (KeyError, ValueError):
         return ""
     return text.strip()[:_STATEMENT_CHARS]
-
-
-def _distinct(places) -> list[dict]:
-    """Return places once each, without the bare document of one that has a located place."""
-    found: list[dict] = []
-    for place in places:
-        if place not in found:
-            found.append(place)
-    located = {place["document"] for place in found if place["location"]}
-    return [place for place in found if place["location"] or place["document"] not in located]
-
-
-def _last_part(location: str, said: str) -> bool:
-    """Say whether a reply names the section a heading path ends in."""
-    parts = _parts(location)
-    return bool(parts) and f" {parts[-1]} " in said
-
-
-def _any_part(location: str, said: str) -> bool:
-    """Say whether a reply names any section of a heading path."""
-    return any(f" {part} " in said for part in _parts(location))
-
-
-def _parts(location: str) -> list[str]:
-    """Return the sections of a heading path as a reply would name them, short ones left out."""
-    parts = [_plain(part) for part in location.split(" > ")]
-    return [part for part in parts if len(part) >= _PART_MIN_CHARS]
-
-
-def _plain(text: str) -> str:
-    """Return text folded, with every run of punctuation read as one space."""
-    return " ".join(re.sub(r"[^\w]+", " ", fold(text)).split())

@@ -11,8 +11,11 @@ rule of the method, and a failure is a code the retry note turns back into the r
 - it draws no diagram: a concept map is read off the graph by code (`tutor.concept_map`),
   where a relation cannot be invented, and a model's own flowchart of an algorithm is its
   solution drawn (`diagram`). A formula between dollar signs is not code and is not counted;
-- it does not copy a passage of its own card for more than a few words running: the notes are
-  pointed to, not pasted (`copied`);
+- it does not copy a passage of its own card for more than a few words running: the material
+  is told, not pasted (`copied`);
+- it sends the student nowhere: no «en los apuntes», no unit, block or slides to go and read
+  (`pointed`, the prompt set's `POINTING_PATTERN`) — what the card holds is the tutor's to
+  tell, and a student who wants the document looks for it on their own;
 - it does not name a concept the card listed as coming later, unless the student brought it
   up (`later`);
 - it does not suggest a statement the subject's criteria rule out: in code at all, in prose
@@ -48,6 +51,7 @@ def check_reply(
     max_code_lines: int,
     copy_max_words: int,
     validation: str | None = None,
+    pointing: str | None = None,
     wording=None,
 ) -> list[tuple[str, dict]]:
     """Return the method's rules this reply breaks, as `(code, data)` for the retry's note."""
@@ -70,6 +74,9 @@ def check_reply(
 
     if any(longest_shared_run(text, quote) > copy_max_words for quote in quotes):
         failures.append(("copied", {}))
+
+    if pointing and re.search(pointing, fold(text)):
+        failures.append(("pointed", {}))
 
     said = "\n".join(student_texts)
     introduced = [

@@ -39,10 +39,21 @@ export function Table({
   );
 }
 
+// While a `TableBulk` is in the head, the other captions keep their cells and lose their
+// ink: the columns are sized by them, and taking them out moved every column under it.
+// Transparent and not `invisible`, which would take the head's rule (their background) too;
+// a screen reader still reads them as the columns' names. The box that ticks all is a block
+// there: inline, it sat on the line's baseline, which an empty box and a ticked one place a
+// pixel apart, and the head grew a pixel on ticking.
 export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={cn("sticky top-0 z-10 bg-card rule-inset-head", className)}
+      className={cn(
+        "sticky top-0 z-10 bg-card rule-inset-head",
+        "[&_tr:has([data-bulk])>th:not(:first-child):not(:has([data-bulk]))]:text-transparent",
+        "[&_th>[role=checkbox]]:flex",
+        className,
+      )}
       {...props}
     />
   );
@@ -204,14 +215,25 @@ export function RowAction({
 }
 
 /**
- * The head of a table while rows are ticked: how many, and the gestures over them, in place of
- * the captions and on the same line, so ticking moves nothing. Written as body text, not as a
- * caption: it is a sentence and its buttons, which keep the 28 px of a row's gestures.
+ * The head of a table while rows are ticked: how many, and the gestures over them, on the
+ * captions' line, so ticking moves nothing (user's report, 2026-10-08: a cell spanning the
+ * captions' columns took their widths away, and the rows under it moved).
+ *
+ * It takes the place of the first caption's text, in that caption's cell, which leaves every
+ * cell of the head where it was: the count is that caption's text now, in its face and on
+ * its line, and the gestures lie at the row's end, over the captions `THead` hides
+ * (`right-0` against the head, which is positioned, being sticky).
  */
-export function TableBulk({ colSpan, children }: { colSpan: number; children: ReactNode }) {
+export function TableBulk({ count, children }: { count: ReactNode; children: ReactNode }) {
   return (
-    <th colSpan={colSpan} scope="colgroup" className="px-3 py-2 text-left font-normal">
-      <span className="flex items-center gap-2 text-small text-foreground">{children}</span>
-    </th>
+    <>
+      <span data-bulk="" className="block truncate">
+        {count}
+      </span>
+      {/* The cell is a caption's; the gestures are not, so their face is reset here. */}
+      <span className="absolute inset-y-0 right-0 flex items-center gap-2 pr-3 text-small font-normal normal-case tracking-normal text-foreground font-stretch-normal">
+        {children}
+      </span>
+    </>
   );
 }

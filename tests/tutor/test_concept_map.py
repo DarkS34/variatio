@@ -120,8 +120,8 @@ def a_card() -> Card:
                 unit="Avanzado",
                 anchors=(Quote("apuntes.pdf", "Tema 2 Avanzado > Recursividad", "Se llama a sí misma."),),
                 prerequisites=(
-                    Prerequisite("Función", "Tema 1 Fundamentos > Funciones", "apuntes.pdf"),
-                    Prerequisite("Iteración", "Tema 2 Avanzado > Bucles", "apuntes.pdf"),
+                    Prerequisite("Función"),
+                    Prerequisite("Iteración"),
                 ),
             ),
         ),

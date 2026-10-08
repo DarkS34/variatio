@@ -1,4 +1,4 @@
-import { Check, FileText, PenLine, Trash2 } from "lucide-react";
+import { BookOpen, Check, FileText, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import type { RawSlot } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCanEdit } from "@/state/auth";
 
-import { DocumentDialog } from "./DocumentDialog";
+import { DocumentReader } from "./DocumentReader";
 import { busyDocument } from "./progress";
 import { useTranscribeRun, useTranscribing, useTranscription } from "./queries";
 import { SlotDropzone, useSlotIntake } from "./SlotIntake";
@@ -167,7 +167,7 @@ function DocumentRow({
               disabled={state === "pending" || busy}
               onClick={onOpen}
             >
-              <PenLine />
+              <BookOpen />
             </Button>
             <Button
               size="icon-sm"
@@ -304,8 +304,9 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
             <THead>
               <tr>
                 {/* The select-all box sits in the column of its rows' boxes, and once
-                    something is picked the head carries the one action over the picks in
-                    place of its captions — the same line, so ticking moves nothing. */}
+                    something is picked the head carries the one action over the picks over
+                    its captions (`TableBulk`, in the first caption's cell) — the same line,
+                    so ticking moves nothing. */}
                 {picking ? (
                   <TH className="w-10 pr-0">
                     <Checkbox
@@ -317,11 +318,10 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
                     />
                   </TH>
                 ) : null}
-                {selected.length > 0 ? (
-                  <TableBulk colSpan={3}>
-                      <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                        {plural("raw.selectedCount", selected.length)}
-                      </span>
+                {/* The list named, with its size: it reads as a list before a row is read. */}
+                <TH className="w-full">
+                  {selected.length > 0 ? (
+                    <TableBulk count={plural("raw.selectedCount", selected.length)}>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -335,17 +335,15 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
                         {intake.removing ? <Spinner /> : <Trash2 />}
                         {t("raw.deleteSelected")}
                       </Button>
-                  </TableBulk>
-                ) : (
-                  <>
-                    {/* The list named, with its size: it reads as a list before a row is read. */}
-                    <TH className="w-full">{plural("raw.col.documents", rows.length)}</TH>
-                    <TH className="whitespace-nowrap text-right">{t("raw.col.state")}</TH>
-                    <TH className="w-20">
-                      <span className="sr-only">{t("raw.col.document")}</span>
-                    </TH>
-                  </>
-                )}
+                    </TableBulk>
+                  ) : (
+                    plural("raw.col.documents", rows.length)
+                  )}
+                </TH>
+                <TH className="whitespace-nowrap text-right">{t("raw.col.state")}</TH>
+                <TH className="w-20">
+                  <span className="sr-only">{t("raw.col.document")}</span>
+                </TH>
               </tr>
             </THead>
             <TBody>
@@ -385,7 +383,7 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
       </div>
 
       {opened ? (
-        <DocumentDialog
+        <DocumentReader
           key={opened}
           kind={slot.kind}
           name={opened}

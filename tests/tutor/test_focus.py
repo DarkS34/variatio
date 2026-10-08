@@ -51,6 +51,22 @@ def test_a_message_about_what_comes_before_the_focus_never_moves_it():
     assert step(["Recursividad"], {"Memoización": 0.8, "Recursividad": 0.6}) == ["Memoización"]
 
 
+def test_a_message_naming_what_comes_before_holds_the_focus_against_a_neighbour_that_scores_higher():
+    eligible = ELIGIBLE | {"Pila"}
+
+    def move(message, scores):
+        return focus.next_focus(
+            ["Recursividad"], scores, threshold=0.55, margin=0.05, eligible=eligible,
+            before={"Función", "Variable"}, named=lambda name: name.lower() in message,
+        )
+
+    assert move("no sé qué es una función", {"Pila": 0.8, "Función": 0.6}) == ["Recursividad"]
+    assert move("ya entiendo la función; háblame de la pila", {"Pila": 0.8}) == ["Pila"]
+    assert move("háblame de la memoria", {"Pila": 0.8, "Función": 0.78}) == ["Pila"], (
+        "a second concept is never one the focus takes as known"
+    )
+
+
 def test_the_state_after_a_reply_is_the_focus_the_trail_and_the_maps_shown():
     state = {"focus": ["Variable"], "trail": ["Variable"], "verified": ["Función"]}
 

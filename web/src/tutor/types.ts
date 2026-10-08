@@ -58,7 +58,6 @@ export interface TutorTurn {
   text: string;
   at: string;
   kind?: string;
-  references?: Place[];
   card?: { concepts?: string[]; [key: string]: unknown } | null;
   /** The concept map shown under this reply, on the few replies the server gives one. */
   concept_map?: ConceptMapData | null;
@@ -118,23 +117,6 @@ export interface CriteriaPayload {
   warnings: string[];
   units: { name: string; concepts: string[] }[];
   job: Job | null;
-}
-
-/** One section of the notes: its heading path, its transcription and the page it starts on. */
-export interface NotesSection {
-  location: string;
-  text: string;
-  page?: number | null;
-}
-
-/**
- * One document of the notes as the reader shows it: its sections, in reading order, and how
- * many pages the document itself has when the server can draw them (`original`).
- */
-export interface NotesDocument {
-  document: string;
-  original?: { pages?: number; version?: string; ratios?: number[] } | null;
-  sections: NotesSection[];
 }
 
 export interface AdminConversationRow extends Omit<ConversationRow, "pending"> {

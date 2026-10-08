@@ -16,7 +16,6 @@ export const tutorKeys = {
   conversations: (ws: string | null) => ["tutor", ws, "conversations"] as const,
   conversation: (ws: string | null, id: string) => ["tutor", ws, "conversation", id] as const,
   criteria: (ws: string | null) => ["tutor", ws, "criteria"] as const,
-  notes: (ws: string | null, document: string) => ["tutor", ws, "notes", document] as const,
   syllabus: (ws: string | null) => ["tutor", ws, "syllabus"] as const,
   admin: (slug: string, author: number | null, offset: number) =>
     ["tutor", "admin", slug, author, offset] as const,
@@ -131,32 +130,6 @@ export function useSyllabus() {
     queryKey: tutorKeys.syllabus(ws),
     queryFn: async () => unitsOf(await tutorApi.syllabus()),
     staleTime: 5 * 60_000,
-  });
-}
-
-/** One document of the notes, for the reader; read once per visit, since notes change rarely. */
-export function useNotes(document: string | null) {
-  const ws = useActiveWorkspace();
-  return useQuery({
-    queryKey: tutorKeys.notes(ws, document ?? ""),
-    queryFn: () => tutorApi.notes(document as string),
-    enabled: document !== null,
-    staleTime: 5 * 60_000,
-  });
-}
-
-/**
- * One page of a document of the notes, as an image of the original. Never stale: the version
- * in the key names the bytes. Asked for only once the page is near the screen (`enabled`),
- * since the reader lays out every page of the document and most are never scrolled to.
- */
-export function useNotesPage(document: string, version: string, page: number, enabled: boolean) {
-  const ws = useActiveWorkspace();
-  return useQuery({
-    queryKey: [...tutorKeys.notes(ws, document), "page", version, page] as const,
-    queryFn: () => tutorApi.notesPage(document, page, version),
-    enabled,
-    staleTime: Infinity,
   });
 }
 

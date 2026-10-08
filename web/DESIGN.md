@@ -44,7 +44,7 @@ by a lighter sheet, not by a border.
 |---|---|---|---|
 | `.surface` (`Card`) | a **block**: stands out of the ground | every group of content on a screen | inside another `.surface` (it goes flat there) |
 | `.raised` | what can be **pressed** inside a block | a choice card (`CARD_CHOICE`), an `lg`/`xl` outline button | for decoration |
-| `.well` | what **holds** something inside a block that is **not a row of data** | the drop zone, the graph canvas/tray, the tutor's box, a diagram, a live status strip, a QR code, a form or a conversation that **unfolds under a row**, a list that **scrolls inside** its block | a table, a list of people/documents/invitations, an empty-state sentence, a form that is the block's only content |
+| `.well` | what **holds** something inside a block that is **not a row of data** | the drop zone, the graph canvas/tray, the tutor's box, a diagram, a live status strip, a QR code, a form or a conversation that **unfolds under a row**, a list that **scrolls inside** its block, the **pages of a document** (images that keep their white in either theme) | a table, a list of people/documents/invitations, an empty-state sentence, a form that is the block's only content |
 
 Hard rules:
 
@@ -139,8 +139,11 @@ else; `check:color` only sees what is in `src/index.css`.
 - A row that unfolds something under it is `joined` (no rule) and the unfolded row holds a
   `.well` (`TD colSpan … pb-3 pt-0` → `div.well p-3/p-4`).
 - **Ticking rows**: the select-all `Checkbox` is the head's first cell (`TH w-10 pr-0`); when
-  something is ticked the head's captions become `TableBulk` — the count and the bulk
-  gestures (`size="sm" className="-my-1.5 h-7"`) on the same line, so nothing moves.
+  something is ticked, `TableBulk` takes the place of the next caption's text, in its cell:
+  the count on that caption's line and in its face, and the bulk gestures (`size="sm"
+  className="-my-1.5 h-7"`) at the row's end, so nothing moves. The other captions keep their
+  cells (`THead` hides their text): never replace them with one cell spanning their columns,
+  since the columns take their widths from them.
 - A name column that must take the free width: `TH className="w-full"`, its `TD` `max-w-0`
   with a `truncate` inside; or `table-fixed` with fixed widths on the other columns.
 - Markdown tables inside model-written content are content, not data tables: leave them.
@@ -298,4 +301,6 @@ Archivo only (Literata only in the tutorial). Six steps, every line a whole numb
 | tabs | `Tabs` (`components/ui/tabs.tsx`), `TabStrip` (`components/TabStrip.tsx`) |
 | states | `Badge`, `Alert`, `EmptyState`, `LoadError`, `Skeleton`, `Spinner`, `Progress`, `Switch`, `Checkbox` (`components/ui/`) |
 | dialogs | `Dialog`, `useConfirm` |
+| a document beside its transcription | `DocumentReader` (`features/raw/`): two columns that scroll page to page, `OriginalPane` and `TextPane` (`features/raw/reader/`) |
+| the tutor's reply and its map | `Reply` (`tutor/`): explanation, `ConceptMap` (a graph of `ConceptChip`s with lines traced over them, in a well, never Mermaid), then the question with `QuestionMark` beside it |
 | ruled list | `.rows` (+ `rows-tight` / `rows-flush`) in `src/index.css` |

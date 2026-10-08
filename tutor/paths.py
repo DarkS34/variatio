@@ -3,8 +3,7 @@
 Derived here and not on `Workspace`: these are the tutor's files, and `variatio` must not
 know the tutor exists. Each path sits where its kind already lives — the criteria beside the
 other artifacts in `instance/` (so `export-instance` and the history treat them alike), the
-passage index under `cache/embeddings/` (so emptying the cache takes it), the originals the
-reader draws under `cache/` too, being regenerable from the raw documents, and the
+passage index under `cache/embeddings/` (so emptying the cache takes it), and the
 conversations in a directory of their own, one per author, as the generated exercises are.
 """
 
@@ -33,11 +32,6 @@ def conversations_dir(ws: Workspace) -> Path:
 def passages_cache_path(ws: Workspace) -> Path:
     """The embedded passages of the notes, regenerable from the page cache."""
     return ws.cache_dir / "embeddings" / "tutor_passages.npz"
-
-
-def originals_dir(ws: Workspace) -> Path:
-    """The notes as PDFs and drawn pages, by the hash of their source."""
-    return ws.cache_dir / "tutor_originals"
 
 
 def corpus_pages_dir(ws: Workspace) -> Path:

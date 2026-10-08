@@ -455,8 +455,8 @@ function Raw() {
         </Paragraph>
         <Paragraph>
           Once there are documents, each one is <strong>one row</strong>: its name, how its
-          reading is going, and the two operations on it — open it to correct its pages, or take
-          it out of the origin.
+          reading is going, and the two operations on it — open it beside its transcription to
+          read and correct it, or take it out of the origin.
         </Paragraph>
         <Paragraph>
           The rows are in the <strong>alphabetical order of their names</strong>, and a number
@@ -557,25 +557,42 @@ function Raw() {
         </p>
       </Alert>
 
-      <Block title="Correcting a page by hand">
+      <Block title="Reading and correcting a document">
         <Steps
           items={[
             <>
-              Press the document's name, or hover over its row and press the pencil. It opens with
-              the index of pages on the left and the markdown of whichever you pick on the right.
-              Under each name you see its type, its size and how many pages were read.
+              Press the document's name, or hover over its row and press the book. A window opens
+              with two columns: on the left, "{t("doc.view.original")}", the document as it is
+              —the pages of the PDF, the slides, the Word document—; on the right,
+              "{t("doc.view.text")}", its transcription page by page, already formatted. Under
+              each name in the row you see its type, its size and how many pages were read.
             </>,
             <>
-              Edit and save. You can also <strong>insert</strong> a blank page right after the
-              one you are looking at, or <strong>delete</strong> it: both renumber the ones that
-              follow, and the screen says so before doing it.
+              The two columns <strong>go page to page</strong>: scrolling one brings the other to
+              the same page. The bar on top turns the page with its arrows, with the number you
+              type or with the keyboard's arrows, and "{t("doc.toReview", { n: "N" })}" jumps to
+              the next flagged page.
             </>,
             <>
-              Leaving with unsaved changes asks before discarding them, and so does switching
-              page.
+              To correct a page, press its pencil: its text becomes the markdown that is saved,
+              and you edit it right there. You can also <strong>insert</strong> a blank page
+              right after one, or <strong>delete</strong> it, with the icons that appear on
+              hover: both renumber the ones that follow, and the screen says so before doing it.
+              While a page is being corrected, inserting and deleting wait.
+            </>,
+            <>
+              Closing with unsaved changes asks before discarding them, and so does opening
+              another page to correct it.
             </>,
           ]}
         />
+        <Paragraph>
+          When the original and the transcription do not match page to page —a Word document is
+          read as one text, or pages were inserted or deleted by hand—, one sentence says so and
+          each column scrolls on its own. A document that cannot be shown in its original form
+          opens with its text alone. On a narrow screen one column shows at a time, and two tabs
+          switch between them.
+        </Paragraph>
         <Paragraph>
           Only two kinds of page are flagged, because they are the only ones that need a person:
         </Paragraph>

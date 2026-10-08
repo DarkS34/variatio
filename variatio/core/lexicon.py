@@ -17,11 +17,16 @@ def mentions(text: str, concept: str, wording=None) -> bool:
     A word-adjacent literal match first; failing that, every stopword-stripped needle of
     the concept must prefix some stem of the text within `KG_MENTION_INFLECTION_SLACK`
     characters. The extractor's naming canon rarely matches verbatim, and a bare `in`
-    test missed most true occurrences.
+    test missed most true occurrences. A name holding a negation (`NEGATIONS`) is matched
+    literally only: its needles drop the short negation, and «recursividad no final» read
+    as mentioned in every text about «recursividad final».
     """
     if re.search(rf"(?<!\w){re.escape(fold(concept))}(?!\w)", fold(text)):
         return True
-    stopwords = (wording or wording_sets.of(None)).STOPWORDS
+    words = wording or wording_sets.of(None)
+    if any(w in words.NEGATIONS for w in re.findall(r"\w+", fold(concept))):
+        return False
+    stopwords = words.STOPWORDS
     needles = [
         _singular(w)
         for w in re.findall(r"\w+", fold(concept))

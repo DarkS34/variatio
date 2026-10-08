@@ -1,4 +1,4 @@
-import { post, request } from "@/lib/api";
+import { post, request, requestBlob } from "@/lib/api";
 import type { Job, RawKind } from "@/lib/types";
 
 import type { DocumentPages, TranscriptionState } from "./types";
@@ -23,4 +23,8 @@ export const rawApi = {
     post<DocumentPages & { index: number }>(documentPath(kind, name), { after, text }),
   deletePage: (kind: RawKind, name: string, index: number) =>
     request<DocumentPages>(`${documentPath(kind, name)}/${index}`, { method: "DELETE" }),
+  originalPage: (kind: RawKind, name: string, page: number, version: string) =>
+    requestBlob(
+      `${documentPath(kind, name)}/original/${page}?${new URLSearchParams({ v: version }).toString()}`,
+    ),
 };

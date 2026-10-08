@@ -19,11 +19,11 @@ def failures(text, **overrides):
 
 
 def test_a_reply_with_one_question_and_no_code_passes():
-    assert failures("Mira el apartado de funciones. ¿Qué devuelve tu función?") == []
+    assert failures("Piensa en lo que hace una función. ¿Qué devuelve la tuya?") == []
 
 
 def test_a_reply_without_a_question_fails_and_so_does_an_interrogation():
-    assert failures("Revisa el apartado de funciones.") == ["no_question"]
+    assert failures("Piensa en lo que devuelve tu función.") == ["no_question"]
     assert failures("¿Uno? ¿Dos? ¿Tres? ¿Cuatro?") == ["too_many_questions"]
 
 
@@ -41,7 +41,7 @@ def test_a_line_of_the_student_s_code_may_be_quoted_but_a_program_may_not():
 
 
 def test_a_formula_is_not_code_and_a_diagram_of_the_model_s_own_is_refused():
-    formula = "Los apuntes lo escriben así: $n! = n \\cdot (n-1)!$. ¿Qué pasa cuando $n = 0$?"
+    formula = "Se escribe así: $n! = n \\cdot (n-1)!$. ¿Qué pasa cuando $n = 0$?"
     drawn = "Míralo así:\n```mermaid\nflowchart LR\n  A --> B\n```\n¿Qué ves?"
 
     assert failures(formula) == []
@@ -52,7 +52,7 @@ def test_copying_a_passage_of_the_card_fails_but_naming_a_few_of_its_words_does_
     passage = "Una función recursiva necesita un caso base y reduce el problema en cada llamada."
 
     assert failures("¿Qué necesita una función recursiva para parar?", quotes=[passage]) == []
-    copied = f"Según los apuntes: «{passage}» ¿Lo aplicas?"
+    copied = f"Fíjate: «{passage}» ¿Lo aplicas?"
     assert failures(copied, quotes=[passage]) == ["copied"]
 
 
@@ -84,6 +84,33 @@ def test_a_sentence_that_opens_by_telling_the_student_they_are_right_fails():
     assert failures("Está bien que preguntes. ¿Qué parte te cuesta?", validation=pattern) == []
     assert failures("¡Eso es! ¿Y qué pasa después?", validation=pattern) == ["validated"]
     assert failures("Eso es un ejemplo de función. ¿Y en general?", validation=pattern) == []
+
+
+def test_a_reply_that_sends_the_student_to_the_notes_fails_and_a_topic_or_a_part_does_not():
+    from tutor import prompts
+
+    pattern = prompts.of("es").POINTING_PATTERN
+
+    def pointed(text):
+        return failures(text, pointing=pattern) == ["pointed"]
+
+    assert pointed("Lo tienes en los apuntes. ¿Qué devuelve tu función?")
+    assert pointed("Según tus apuntes, ¿qué hace un caso base?")
+    assert pointed("Repásalo en el tema 2. ¿Qué devuelve?")
+    assert pointed("Mira las diapositivas del bloque 3. ¿Qué ves?")
+    assert pointed("Vuelve al tema II: ¿qué dice del caso base?")
+    assert pointed("El material indica claramente que es de elección. ¿Por qué?")
+    assert not pointed("¿Qué tema quieres trabajar ahora?")
+    assert not pointed("En el tema de la recursividad, ¿qué detiene las llamadas?")
+    assert not pointed("En el apartado 2 del ejercicio, ¿qué te piden?")
+    assert not pointed("Te conviene que apuntes el valor de cada llamada. ¿Cuál es el primero?")
+    assert not pointed("¿Qué pasa si dos procesos entran a la vez en la sección crítica?")
+    assert not pointed("¿Qué material estéril necesitas para la cura?")
+
+    english = prompts.of("en").POINTING_PATTERN
+    assert failures("It is in the notes. What stops the calls?", pointing=english) == ["pointed"]
+    assert failures("Check the slides of unit 2. What do you see?", pointing=english) == ["pointed"]
+    assert failures("Which topic do you want to work on?", pointing=english) == []
 
 
 def test_the_shared_run_is_counted_in_words_and_ignores_accents_and_case():

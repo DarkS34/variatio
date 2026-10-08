@@ -34,6 +34,10 @@ STOPWORDS: frozenset[str] = frozenset(
     {"the", "a", "an", "of", "in", "on", "and", "or", "to", "for", "with", "by", "from", "at"}
 )
 
+# Words that turn a concept's name into its opposite: «non-tail recursion» is not mentioned by
+# a text about «tail recursion», so a name holding one is matched literally only.
+NEGATIONS: frozenset[str] = frozenset({"no", "not", "non", "without"})
+
 # THE GUARDRAIL'S VERDICT ------------------------------------------------------------------------
 
 GUARDRAIL_LABELS: dict[str, str] = {

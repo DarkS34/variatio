@@ -127,8 +127,8 @@ table and refuses while a row has no file: on an installation that still has the
 - `[dependency-groups] dev` — builders + server.
 - **LibreOffice is a system dependency of the builders** (`soffice`, looked up at call time)
   for rasterising EMF/WMF metafiles in Office files. Without it those pictures read as
-  `[IMAGEN NO LEGIBLE]`. The tutor's reader uses it too, to export a Word file (Writer) or a
-  deck (`libreoffice-impress`) to PDF; without it those documents open as text.
+  `[IMAGEN NO LEGIBLE]`. The document reader of `/raw` uses it too, to export a Word file
+  (Writer) or a deck (`libreoffice-impress`) to PDF; without it those documents open as text.
 
 ### Runtime prerequisites
 
@@ -596,6 +596,28 @@ Both raw slots use the same VLM page route (quality over speed).
   trees → `[figura: …]`).
 - Docling's own escapes are undone on its output only (`markdown.undo_converter_escapes`),
   outside fences; never on a transcribed page or a hand-written `.md`.
+- **A document opens as a reader of two columns** (`features/raw/DocumentReader.tsx`, user's
+  decision of 2026-10-08; the tutor's reader moved here): «Original», the document as its
+  author laid it out, beside «Texto», its transcription page by page, formatted. Every format
+  takes one road (`server/originals.py`): a PDF as it is, an Office file exported to PDF by
+  LibreOffice once (`office.pdf_copy`, a deck with its hidden slides), a page drawn by PDFium
+  (`pages.page_picture`, under `_PDFIUM_LOCK`) as PNG, or JPEG when heavy; both kept under
+  `cache/originals/` by the SOURCE's hash (the tutor's `cache/tutor_originals/` is adopted
+  once per workspace). `GET /api/raw/{kind}/transcription/{name}` adds `original` (`pages`,
+  `version`, `ratios` — each page's height over its width, so the reader lays the document
+  out before a page arrives — `paired` and `unpaired`), and
+  `GET …/transcription/{name}/original/{page}` serves one page as an image, cacheable because
+  the client sends the version. **The columns go page to page where the cache holds one file
+  per page of that very file** (same hash, not `restructured`, equal counts: a PDF, a deck);
+  otherwise `unpaired` says why (`moved`, `source`, `count` — a Word file is one cached page)
+  and each column scrolls on its own. The page read is the one at 25 % of the column
+  (`reader/sync.ts`); a jump's own scroll is never read as the reader's. The bar turns the
+  transcription's pages (the original's when the transcription is one page) and, under
+  `lg`, the column in sight, chosen by a tab. It opens to READ: a page is corrected from its
+  pencil, in place, one at a time; inserting and deleting wait while one is open. No
+  original (plain text, the raw file gone, no LibreOffice, no PDFium) answers `original:
+  null` and the reader shows the text alone, never an error. A document LibreOffice refuses
+  is not asked for again until a restart.
 - Routes under `/api/raw/{kind}/transcription…` are declared ABOVE `/{kind}/{name}`. Names
   from requests are checked against the slot's actual files.
 
@@ -931,13 +953,18 @@ admin's read.
 
 - **A chat and a card.** The interaction is a plain conversation; the advantage is the CARD
   (`tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
-  definition and the graph's anchored passages, its direct prerequisites with where the notes
-  explain them (TAKEN AS KNOWN: the reply neither quizzes the student on them nor steers
-  towards them, and only tells a student who says one is missing to review it — decision of
-  2026-10-03, after a question about recursion was walked back through functions and
-  procedures), its direct dependents (not to be introduced), its closest same-unit concepts
+  definition and the graph's anchored passages, its direct prerequisites (TAKEN AS KNOWN: the
+  reply neither quizzes the student on them nor steers towards them, and only tells a student
+  who says one is missing to review it — decision of 2026-10-03, after a question about
+  recursion was walked back through functions and procedures), its direct dependents (not to be introduced), its closest same-unit concepts
   (by description vectors), the passages of the notes nearest the message (`passages.py`), the
   subject's criteria, the bank exercise the message is and a simpler one of its concept.
+  **The send-back is pointed out on the turn it may apply to** (2026-10-08): when the message
+  names a prerequisite of the focus (`Card.named_before`, read by `lexicon.mentions`), the card
+  says so and asks, if the student lacks it, for one sentence that names it and tells them to
+  review it, never an explanation. The method's rule alone was not followed: measured on 8
+  messages saying a prerequisite was missing, twice, 3 replies of 16 sent the student back
+  before and 12 after; 2 messages that only name one, twice, were sent back 0 times of 4.
 - **A turn** (`tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
   2026-10-03; admissibility rules on commissions) → one query-side embedding (concepts and
   passages) and one document-side one (`classify.bank_match`) → kind → focus → card → reply →
@@ -950,8 +977,10 @@ admin's read.
   of the graph around a focus concept — prerequisites (`before`), dependents (`after`) and the
   other relations (`links`, with the graph's own label and direction) — capped (4/3/3, the
   closest by description vectors kept, the rest counted) and sent as data in the turn's
-  `concept_map`; the client writes the Mermaid (`web/src/tutor/conceptMap.ts`) in the
-  interface language and the palette's tokens. It is shown at TWO moments only: the first
+  `concept_map`; the client draws it as a graph of its own chips with lines traced over
+  them (`web/src/tutor/ConceptMap.tsx`, no Mermaid: user's request of 2026-10-08 for a
+  better look, keeping the graph's shape — every relation drawn, none written as a
+  sentence) in the interface language and the palette's tokens. It is shown at TWO moments only: the first
   time the conversation stands on a concept (one per move of the focus; the card says so,
   `map_of`), and when a reply sends the student back to a prerequisite (`Card.sent_back`: one
   sentence names the prerequisite AND tells the student to go over it, the prompt set's
@@ -967,7 +996,9 @@ admin's read.
   `tutor.focus_threshold` (0.55, measured: content questions 0.61–0.66, a greeting 0.49) and
   moved only past `tutor.focus_margin`, and NEVER to a concept in the prerequisite closure of
   the current focus (a student answering about functions inside a conversation on recursion is
-  still on recursion). Social messages never move it. **The student may choose it**: a message
+  still on recursion), nor when the message names a concept of that closure but not the
+  best-scoring one («¿qué es un registro?» scored «Campo», the record's neighbour, above the
+  record); a second concept is never one of the closure either. Social messages never move it. **The student may choose it**: a message
   may carry one `concept` (validated against the graph, never a generic one; stored on the
   student's turn, never on the job), and then nothing is deduced — the chosen concept leads
   (`focus.with_chosen`), joined by the message's own best concept when that clears the
@@ -977,8 +1008,9 @@ admin's read.
   older records may still carry a `verified` list, which nothing reads.
 - **The method is code, not only prompt.** `tutor/checks.py` verifies what a machine can: at
   least one question and at most `max_questions`, at most `max_code_lines` in fences, no run
-  longer than `copy_max_words` copied from the card's passages, no dependent of the focus the
-  student did not bring up, no forbidden term (in code ever, in prose when unprompted), no
+  longer than `copy_max_words` copied from the card's passages, no sending the student to the
+  notes or naming a place of them (`pointed`, the prompt set's `POINTING_PATTERN`), no
+  dependent of the focus the student did not bring up, no forbidden term (in code ever, in prose when unprompted), no
   sentence opening by telling the student they are right (`VALIDATION_PATTERN`), not empty,
   not cut. A failure is retried ONCE with a note naming it; a second failure sends a fixed
   question built from the card. Replies are shown whole, never streamed.
@@ -1019,36 +1051,17 @@ admin's read.
   conversation starts titled by its first line; the first reply of a substantive kind (not
   social, blocked or a fixed text) asks the classify model for a short title once
   (`tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
-- **Where something is, is written UNDER the reply and never in it** (user's decision of
-  2026-10-03: «tema 2, modularidad» in the prose repeated the line below it). The card quotes
-  the notes without their headings, the method tells the reply to say «en los apuntes» and to
-  name no unit, section or document, and the fallback question points at «el apartado que ves
-  aquí abajo».
-- **Places and the reader**: the places shown under a reply are the card's (`Card.references`):
-  those whose section title the reply's words contain, else any part of their path, else the
-  card's first two; the place of a prerequisite the reply sends the student back to leads.
-  Each opens `GET /api/tutor/notes?document=…` (`auth.VIEW`), which serves
-  only a document of the corpus the tutor searches, cut by whole sections
-  (`passages.read_document`); the client shows one section at a time, formatted.
-- **The reader shows the document itself first** (`tutor/originals.py`, user's decision of
-  2026-10-04): «Original» is the PDF's pages, the deck's slides or the Word document,
-  scrolled freely, and «Texto» is the transcription, which stays the view to select, copy and
-  read aloud. Every format takes one road: a PDF as it is, an Office file exported to PDF by
-  LibreOffice once (`office.pdf_copy`, a deck with its hidden slides), a page drawn by PDFium
-  (`pages.page_picture`, under `_PDFIUM_LOCK`) as PNG, or JPEG when heavy; both kept under
-  `cache/tutor_originals/` by the SOURCE's hash. `/notes` adds `original` (`pages`,
-  `version`, and `ratios`, each page's height over its width, so the reader lays the whole
-  document out before a page arrives) and each section's `page`; `GET /api/tutor/notes/page` serves one page as an
-  image, only of a document of the corpus, cacheable because the client sends the version.
-  **A section's page is counted where the cache holds one file per page of that very file**
-  (same hash, not `restructured`, equal counts: a PDF, a deck): the heading's offset in the
-  joined text against `pages.page_starts`. Otherwise (a Word file is one cached page; pages
-  moved by hand) the title is searched as a line of its own in the PDF's text, in order, a
-  table-of-contents page skipped, and a section not found stays with the one before:
-  approximate, accepted. No original (plain text, the raw file gone, no LibreOffice, no
-  PDFium) answers `original: null` and the reader shows the text alone, never an error.
-  A deck needs `libreoffice-impress` installed; a document LibreOffice refuses is not asked
-  for again until a restart.
+- **The tutor speaks for itself** (user's decision of 2026-10-08): the card is what the tutor
+  KNOWS, not what it cites. Its labels name no source («Definición», «Lo que sabes de él»,
+  «Otras cosas que sabes»: with «En los apuntes» and then «Lo que el material dice» the
+  replies wrote «en los apuntes…» and «el material indica…»), and the method tells the reply
+  to lean on what it knows and say it in its own words, sending the student nowhere — no
+  notes, unit, section or document — and never saying where it comes from. The copy check
+  still forbids pasting it; `pointed` refuses the pointing. A send-back to a prerequisite
+  names the concept and the verb alone («repasa qué es…», `REVIEW_PATTERN`). Nothing is
+  drawn under a reply but its map, and the tutor serves no document: a student who wants the
+  notes looks for them on their own. Measured on a script of 20 messages in two subjects:
+  18 replies of 20 named «apuntes» before, none after.
 - `tutor.message_max_chars` (12 000) is a hidden safety cap, never shown as a counter.
 - **A daily limit per account** (`tutor.daily_messages`, empty = none): counted in the
   database (`tutor_usage`, by UTC day) across every workspace, because the queue is the
@@ -1333,7 +1346,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
   `/variants`) still redirect here.
 - `/raw`: one entry per document, in a flat table (2026-10-07) whose head counts the documents;
-  each entry two lines — the name, which opens its pages, and its type, size and pages read
+  each entry two lines — the name, which opens the reader, and its type, size and pages read
   (user's request, 2026-10-08: one thin line each read as no list at all); each origin as tall as what it
   holds, never stretched to the other (user's request, 2026-10-08); multi-select delete; a finished origin carries a
   filled coral tick and no tint on its card (user's request, 2026-10-05); once both origins hold something, «Continuar» stands to the right of the
@@ -1505,22 +1518,24 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 - Tutor socrático (`web/src/tutor/`, `/tutor`): the conversation list beside the open
   conversation, both one fixed height (`PANEL_HEIGHT`) scrolling inside; a reply polled from
   the author's own route while `pending`, shown whole with its concept map when the server
-  gave one (`ConceptMap`: `Diagram` with `classes` in tokens and `sourceToggle={false}`, since
-  a map the app wrote has no source to show — the concept in `--attention-fill`,
-  or the prerequisite to review; what is known settled, what comes later dashed; on a narrow
-  screen the learning order alone, stacked, the other relations written under it) and its
-  references under it, each opening the notes reader (`NotesReader`: ONE window size
-  whatever it shows, two views switched in the dialog's header and held for the visit —
-  «Original», every page of the document one under another in a `.well`, opened on the
-  section's page and scrolled freely, each page an image asked for only when near the
-  screen, in the place its shape reserves; «Texto», one section at a time; a bar that stays
-  in sight, whose arrows and list move by SECTION in both views, with «Página N de M» under
-  it in the original; the section and the page move together (`tutor/notes.ts`), a jump's
-  own scroll never read as the student's; a document with no original has the text and no
-  switch);
-  a new turn scrolls the panel to its START, since a reply with a map is taller than the panel; the reply on its way is `Thinking`: a question mark written square by square
-  (opacity only, so it stays on under reduced motion) beside one line of what happens and one
-  of why the reply arrives whole — hollow and still, saying «En cola», while queued — with
+  gave one (`ConceptMap`, redrawn 2026-10-08 at the user's request, in two rounds: a graph
+  in a well, read left to right as the learning order — the known concepts as chips with a
+  settled border, each curving into one point short of the concept and one arrow in; the
+  concept an ink pill, with no unit under it; one line out opening into the later concepts
+  as dashed chips; the prerequisite to review is the one coral chip (`ConceptChip
+  tone="attention"`); what a cap left out is «y N más» under its column; every other
+  relation a dotted branch with the graph's label on it, on the side its direction reads
+  from — into the concept on the left, «Caso base se engloba en», the rest on the right,
+  «se engloba en Abstracción». The lines are an SVG traced from the chips' boxes as laid
+  out (`trace`, again on every resize and once the type loads; the geometry is
+  `conceptMap.ts`'s, tested). Below the container's `@xl` the figure stands up — known
+  above, later below, one arrow each — and the other relations go last, reached by a dotted
+  rail down its left. No Mermaid, every colour a token), and nothing else under it (no
+  places, no reader: 2026-10-08); a new turn scrolls the panel to its START, since a reply
+  with a map is taller than the panel; the reply on its way is `Thinking`: the tutor's mark
+  (`QuestionMark`, a question mark of the app's squares) written square by square (opacity
+  only, so it stays on under reduced motion) beside one line of what happens and one of why
+  the reply arrives whole — hollow and still, saying «En cola», while queued — with
   «Detener»; then «Pedir la respuesta otra vez». The box to write in (`Composer`) is two rows in one
   frame: the «Sobre» line — the concept chosen for the message (filled, removable), else the
   conversation's own focus (quiet), with the button that opens the picker and, with nothing
@@ -1529,9 +1544,12 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   chosen and the box empty, the placeholder is the commonest question («Explícame «…»») and
   Tab — or the key drawn beside it — writes it; Tab is taken only then. The two voices are two
   materials, each named above its turn: the student's message is a block of ink on the
-  right, the tutor's reply open text on the left at a reading measure, tied by one ink rule
-  to its map and its places. A reply is drawn in two registers (`Reply`): the explanation as
-  body text and the question(s) it CLOSES with a step larger in the heading's weight. The cut
+  right, the tutor's reply open text on the left at a reading measure, with no rule beside
+  it (2026-10-08). A reply is drawn in two registers (`Reply`): the explanation as body
+  text, then its map when it has one, then the question(s) it CLOSES with — last, right over
+  the box to answer in — a step larger in the heading's weight, with the tutor's mark beside
+  it: the coral dot on the one question open (the last reply's, and only while no newer
+  message waits for its own), settled grey on every question already answered. The cut
   is read off the prose by the client (`reply.splitReply`: the trailing blocks ending in a
   question mark, the first cut again by sentence so its lead-in stays with the explanation;
   never inside code, a formula or an emphasis) and never asked of the model. `TopicPicker` is the
@@ -1748,6 +1766,12 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   formulas.
 - The raw material is its own screen; one row per document; nothing announces completeness
   except the finished origin's filled tick and the line over «Continuar» beside the title.
+- A raw document opens in step 1 as its original beside its transcription, page to page where
+  the transcription holds one page per page of that very file, each column scrolled on its own
+  otherwise with one sentence saying why (2026-10-08; from 2026-10-04 the tutor's reader opened
+  the notes on a section). It opens to read; a page is corrected from its pencil, one at a
+  time. A page of the original is content, like a figure: it keeps its white in either theme,
+  inside a well.
 - A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
   «Quién lo decide» (`decided_by`) came back on 2026-10-05 and left again the same day, at
   the user's request: a build still writes it and the generate form still asks about a
@@ -1798,14 +1822,15 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - Diagrams of the graph are drawn by code from the graph and shown sparingly (a concept's
   first reply, a send-back to a prerequisite); the model draws none. Formulas are the model's,
   between dollar signs, with no cap in code.
-- A reply names no unit, section or document: it says «en los apuntes», and the places are
-  listed under it by code.
+- A reply tells the material in its own words and sends the student nowhere: no «en los
+  apuntes», no unit, section or document, no places under it, and no reader in the tutor
+  (2026-10-08; from 2026-10-03 the places were listed under the reply and opened the
+  original). The document reader is the construction's, in step 1.
 - One typeface in the tutor as everywhere (Archivo); the two voices differ by material and
-  side, not by letter. The concept map cannot be turned into its Mermaid source.
-- The notes open as the original document, scrolled freely from the section's page (a
-  section does not end where its page does), with the transcription as a second view in a
-  window of the same size (2026-10-04). A page is content, like a figure: it keeps its white in either
-  theme, inside a well. The page a Word section opens on is approximate.
+  side, not by letter. The concept map is a graph of the app's chips with traced lines, not a
+  Mermaid diagram, and has no source to show (2026-10-08; until then a Mermaid flowchart).
+  Every relation it holds is drawn; none is written under it as a sentence, and the
+  concept carries no unit (the user's correction of the same day).
 - The tutor screens with the guardrail alone (`screen_message`), not admissibility.
 - A bank exercise's solution never enters the card.
 - No "System One" classifier (Jev, Laya…): the kind is decided by signals and one grammar call.
@@ -1856,4 +1881,8 @@ Each looks like a bug and is intentional:
 - Bank batches overlap by one block and dedupe by folded primary field; ids are claimed after
   the duplicate check.
 - `TRANSCRIBE_SEAM_CHARS` is not in the page fingerprint.
+- `lexicon.mentions` matches a concept name holding a negation (`wording.NEGATIONS`: «no»,
+  «sin», «ni»; «no», «not», «non», «without») literally only: the short negation drops out of
+  the needles, and «Recursividad no final» read as mentioned by every text on «recursividad
+  final», which failed every tutor reply on it as introducing a later concept.
 - `pending_ids()` treats an empty `concepts` list as untagged, so rejections are retried.

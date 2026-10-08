@@ -38,6 +38,10 @@ STOPWORDS: frozenset[str] = frozenset(
     {"de", "del", "la", "el", "los", "las", "en", "y", "o", "a", "un", "una", "por", "con", "para"}
 )
 
+# Words that turn a concept's name into its opposite: «recursividad no final» is not mentioned
+# by a text about «recursividad final», so a name holding one is matched literally only.
+NEGATIONS: frozenset[str] = frozenset({"no", "sin", "ni"})
+
 # THE GUARDRAIL'S VERDICT ------------------------------------------------------------------------
 
 GUARDRAIL_LABELS: dict[str, str] = {

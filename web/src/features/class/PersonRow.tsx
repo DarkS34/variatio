@@ -44,8 +44,8 @@ export function PeopleTable({
   captions: { name: string; how: string; since: string };
   /** The head's box, on a list that acts over several. */
   tick?: { checked: boolean; indeterminate: boolean; label: string; onChange: (on: boolean) => void };
-  /** Shown in place of the captions while somebody is ticked: the count and its gestures. */
-  bulk?: ReactNode;
+  /** In place of the first caption while somebody is ticked: the count and its gestures. */
+  bulk?: { count: ReactNode; gestures: ReactNode };
   children: ReactNode;
 }) {
   return (
@@ -62,18 +62,14 @@ export function PeopleTable({
               />
             </TH>
           ) : null}
-          {bulk ? (
-            <TableBulk colSpan={4}>{bulk}</TableBulk>
-          ) : (
-            <>
-              <TH>{captions.name}</TH>
-              <TH className={PEOPLE_COLUMNS.how}>{captions.how}</TH>
-              <TH className={PEOPLE_COLUMNS.since}>{captions.since}</TH>
-              <TH className={PEOPLE_COLUMNS.gestures}>
-                <span className="sr-only">{label}</span>
-              </TH>
-            </>
-          )}
+          <TH>
+            {bulk ? <TableBulk count={bulk.count}>{bulk.gestures}</TableBulk> : captions.name}
+          </TH>
+          <TH className={PEOPLE_COLUMNS.how}>{captions.how}</TH>
+          <TH className={PEOPLE_COLUMNS.since}>{captions.since}</TH>
+          <TH className={PEOPLE_COLUMNS.gestures}>
+            <span className="sr-only">{label}</span>
+          </TH>
         </tr>
       </THead>
       <TBody>{children}</TBody>

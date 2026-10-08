@@ -37,7 +37,24 @@ export interface DocumentPage {
   failed: boolean;
 }
 
+/** The document itself, when the server can draw its pages. */
+export interface DocumentOriginal {
+  pages: number;
+  /** What a page's address carries, so a replaced document is never read from a cache. */
+  version: string;
+  /** Each page's height over its width: the reader lays the document out before a page arrives. */
+  ratios: number[];
+  /** Whether the transcription holds one page per page of this very file. */
+  paired: boolean;
+  /** Why it does not: pages moved by hand, read from other bytes, or not as many. */
+  unpaired: Unpaired | null;
+}
+
+export type Unpaired = "moved" | "source" | "count";
+
 export interface DocumentPages {
   name: string;
   pages: DocumentPage[];
+  /** Absent from an API older than the bundle; null where the document cannot be drawn. */
+  original?: Partial<DocumentOriginal> | null;
 }

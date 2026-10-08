@@ -18,7 +18,7 @@ from variatio import config as vg_config
 from variatio.builders.source_docs import SUPPORTED_EXTS, name_order
 from variatio.core.workspace import Workspace
 
-from . import approvals
+from . import approvals, originals
 
 CHUNK = 1024 * 1024
 MB = 1024 * 1024
@@ -268,9 +268,26 @@ def transcription(ws: Workspace, kind: str) -> dict:
 
 
 def transcription_document(ws: Workspace, kind: str, name: str) -> dict:
-    """Return one document's transcribed pages, for the correction dialog."""
+    """Return one document's transcribed pages and its original, for the reader of step 1.
+
+    `original` is None where the document cannot be drawn (`originals.original_for`); its
+    `paired` says whether the two views go page to page, and `unpaired` why they do not.
+    """
     safe = document(ws, kind, name)
-    return {"name": safe, "pages": _stage().document_pages_listing(ws, kind, safe)}
+    pages = _stage().document_pages_listing(ws, kind, safe)
+    found = originals.original_for(ws, directory(ws, kind) / safe)
+    summary = None
+    if found is not None:
+        meta = _stage().document_meta(ws, kind, safe)
+        summary = found.summary(originals.unpaired(found, meta, len(pages)))
+    return {"name": safe, "pages": pages, "original": summary}
+
+
+def original_page(ws: Workspace, kind: str, name: str, page: int) -> tuple[bytes, str] | None:
+    """Return one page of a document's original as image bytes and their media type."""
+    safe = document(ws, kind, name)
+    found = originals.original_for(ws, directory(ws, kind) / safe)
+    return originals.page_image(ws, found, page) if found is not None else None
 
 
 def write_page(ws: Workspace, kind: str, name: str, index: int, text: str) -> None:

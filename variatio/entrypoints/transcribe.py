@@ -406,6 +406,11 @@ def document_pages_listing(ws: Workspace, slot: str, name: str) -> list[dict]:
     ]
 
 
+def document_meta(ws: Workspace, slot: str, name: str) -> dict:
+    """Return what one document's page cache records about how its pages were made."""
+    return source_docs.read_meta(_cache_dir_for(ws, _source_for(ws, slot, name)))
+
+
 def write_document_page(
     ws: Workspace, slot: str, name: str, index: int, text: str
 ) -> None:

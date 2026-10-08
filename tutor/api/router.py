@@ -19,7 +19,7 @@ The whole router is also behind `auth.TUTOR`: the tutor is open to nobody, to ev
 to a list, as the administrator set it (`server/features.py`).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
@@ -33,9 +33,8 @@ from variatio.instance.knowledge_graph import KnowledgeGraph
 
 from .. import config as tutor_config
 from .. import criteria as criteria_store
-from .. import originals, paths
+from .. import paths
 from .. import prompts as tutor_prompts_pkg
-from ..passages import in_corpus, read_document
 from . import jobs, store, usage
 
 router = APIRouter(prefix="/api/tutor", tags=["tutor"], dependencies=[auth.VIEW, auth.TUTOR])
@@ -187,43 +186,6 @@ def syllabus(access: auth.Access = auth.VIEW) -> dict:
         for unit in graph.domains
     ]
     return {"units": [unit for unit in units if unit["concepts"]]}
-
-
-@router.get("/notes")
-def notes(document: str, access: auth.Access = auth.VIEW) -> dict:
-    """Answer one document of the notes by sections, for the reader a reply's places open.
-
-    A reader's route like the rest: the notes are what the tutor sends a student to read, and
-    a place it cites has to open. Only a document of the corpus the tutor searches is served
-    (`passages.read_document`); any other name answers 404. `original` and each section's
-    `page` say where the document itself can be read, a page at a time (`/notes/page`).
-    """
-    found = read_document(access.ws, entrypoints.load_concept_sources(access.ws), document)
-    if found is None:
-        raise HTTPException(404, "Ese documento no está en los apuntes de la asignatura.")
-    return {"document": document, **found}
-
-
-@router.get("/notes/page")
-def notes_page(document: str, page: int, access: auth.Access = auth.VIEW) -> Response:
-    """Answer one page of a document of the notes as an image of the original.
-
-    The same documents as `/notes` and nothing else on disk. A page never changes under its
-    address — the reader sends the original's version with it — so the browser may keep it.
-    """
-    sources = entrypoints.load_concept_sources(access.ws)
-    original = (
-        originals.original_for(access.ws, document)
-        if in_corpus(access.ws, sources, document)
-        else None
-    )
-    drawn = originals.page_image(access.ws, original, page) if original else None
-    if drawn is None:
-        raise HTTPException(404, "Esa página no está en los apuntes de la asignatura.")
-    data, media_type = drawn
-    return Response(
-        data, media_type=media_type, headers={"Cache-Control": "private, max-age=604800, immutable"}
-    )
 
 
 @router.get("/conversations/{conversation_id}")

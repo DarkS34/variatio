@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from loguru import logger
 
 from variatio.core import inference, progress
+from variatio.core.lexicon import mentions
 from variatio.runtime import screening
 from variatio import wording as wording_sets
 
@@ -48,7 +49,6 @@ class TurnResult:
     kind: str
     decided_by: str
     state: dict
-    references: list[dict] = field(default_factory=list)
     card: dict | None = None
     concept_map: dict | None = None
     sent_back: tuple[str, str] | None = None
@@ -65,7 +65,6 @@ class TurnResult:
         return {
             "kind": self.kind,
             "decided_by": self.decided_by,
-            "references": self.references,
             "card": self.card,
             "concept_map": self.concept_map,
             # The concept and the prerequisite the reply sent the student back to, read by
@@ -178,6 +177,7 @@ def run_turn(
             eligible=eligible,
             before=before,
             given=given,
+            named=lambda name: mentions(message, name, wording),
         )
 
     the_map = concept_map.opening(
@@ -195,6 +195,8 @@ def run_turn(
         exercise_id=classified.exercise_id,
         map_of=the_map.concept if the_map else "",
         chosen=chosen or "",
+        message=message,
+        wording=wording,
     )
     turns = tutor_config.HISTORY_TURNS
     pairs = [
@@ -212,7 +214,7 @@ def run_turn(
     fallback = bool(failures)
     if fallback:
         first = the_card.focus[0] if the_card.focus else None
-        text = tutor_prompts.fallback_reply(first.name if first else None, bool(the_card.quotes()))
+        text = tutor_prompts.fallback_reply(first.name if first else None)
         logger.warning(
             f"[tutor] Dos respuestas incumplieron el método ({', '.join(c for c, _ in failures)}); "
             "se envía la pregunta de reserva"
@@ -231,7 +233,6 @@ def run_turn(
         classified.kind,
         classified.decided_by,
         next_state=focus.after_reply(state, current, drawn),
-        references=the_card.references(text, sent_back),
         concept_map=the_map.record() if the_map else None,
         sent_back=sent_back,
         card={
@@ -285,6 +286,7 @@ def _reply(
             max_code_lines=tutor_config.MAX_CODE_LINES,
             copy_max_words=tutor_config.COPY_MAX_WORDS,
             validation=tutor_prompts.VALIDATION_PATTERN,
+            pointing=tutor_prompts.POINTING_PATTERN,
             wording=wording,
         )
         attempts.append(failures)

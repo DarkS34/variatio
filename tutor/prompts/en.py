@@ -11,15 +11,14 @@ LANGUAGE = "en"
 METHOD_RULES: tuple[str, ...] = (
     "Asks at least one guiding question in every reply and at most {max_questions}: about "
     "understanding, design or analysis, or one that leads the student to find their own mistake.",
-    "Leans on the notes in every reply: starts from what they say, in its own words («in the "
-    "notes, a function is defined as…»). Names no unit, section or document: the system shows "
-    "under the reply where it is.",
+    "In every reply, leans on what it knows of the subject and tells it in its own words. Does "
+    "not send the student to the notes, a unit, a section or a document, and does not say where "
+    "what it tells comes from.",
     "Takes as known what the syllabus places before the concept the student asks about: does "
     "not quiz them on it nor steer the conversation towards it. Works on the concept the "
     "student asked for. Only when the student says something earlier is missing, or their "
-    "message shows it, tells them in one sentence to review that concept in the notes, naming "
-    "the concept and not the section, without asking about it, and its question goes back to "
-    "what the student asked.",
+    "message shows it, tells them in one sentence to review that concept, naming it, without "
+    "asking about it, and its question goes back to what the student asked.",
     "Writes no complete code and no solution that could be copied. At most, quotes one line of "
     "the student's code to ask about it.",
     "Does not run, simulate or debug code, does not calculate, and never says whether something "
@@ -28,7 +27,8 @@ METHOD_RULES: tuple[str, ...] = (
     "Uses only what is in the notes and on the card. Introduces no concept the syllabus places "
     "after the one being worked on, and no technique, statement or function the material lacks.",
     "Applies the subject's teaching criteria. When the student breaks one, does not correct it: "
-    "asks about it and points to what the notes say.",
+    "asks about it and, if needed, reminds them in its own words what the subject asks for "
+    "there.",
     "When the student insists on the solution, does not give in: acknowledges the effort and "
     "goes back to a smaller question.",
 )
@@ -56,7 +56,8 @@ _KIND_LABELS = {
 _KIND_TASKS = {
     "theory": (
         "The student asks about the theory. Work on the concept they ask about, taking what "
-        "comes before as known, and lead them with a question towards what the notes say about it."
+        "comes before as known, and lead them with a question towards what you know of it, "
+        "told in your own words."
     ),
     "exercise": (
         "The student brings an exercise statement. Help them understand it: what data it gives, "
@@ -65,8 +66,8 @@ _KIND_TASKS = {
     ),
     "attempt": (
         "The student shows their own attempt. Do not say whether it is right or wrong. If it "
-        "breaks a teaching criterion or has a mistake, ask a question that leads them to see it "
-        "and point to what the notes say."
+        "breaks a teaching criterion or has a mistake, ask a question that leads them to see it; "
+        "if it helps, remind them in your own words what you know of it."
     ),
     "solution": (
         "The student asks for the solution. Do not give it. Acknowledge their effort, say in one "
@@ -83,7 +84,8 @@ _FAILURES = {
     "too_many_questions": "it asked more than {max_questions} questions",
     "code": "it carried more than {max_code_lines} lines of code",
     "diagram": "it drew a diagram, and the system adds the maps when they help",
-    "copied": "it copied a passage of the notes instead of saying it in other words",
+    "copied": "it copied a passage of the card instead of saying it in other words",
+    "pointed": "it sent the student to the notes or to a section instead of telling them in its own words",
     "later": "it introduced concepts the syllabus places later: {concepts}",
     "forbidden": "it suggested statements the material does not use: {terms}",
     "validated": "it told the student they were right instead of asking something that lets them check it",
@@ -101,6 +103,18 @@ VALIDATION_PATTERN = (
 # A sentence that sends the student to go over something again, read on folded text. With a
 # prerequisite named in the same sentence, it is what `Card.sent_back` reads as a send-back.
 REVIEW_PATTERN = r"\b(?:review\w*|revisit\w*|re-?read\w*|go(?:ing)? back (?:to|over)|brush(?:ing)? up)\b"
+
+# A reply that sends the student to the notes, names a place of them or says it is quoting
+# them, read on folded text. Two pieces are asked for at once, as in the Spanish set: «the
+# notes» with a determiner; a word that locates or sends to read followed by a place the
+# course is laid out in; or «the material» followed by the verb that quotes it.
+POINTING_PATTERN = (
+    r"\b(?:(?:the|your|my|our|these|those)\s+(?:lecture\s+|course\s+|class\s+)?notes\b"
+    r"|the (?:course )?material (?:says|states|indicates|mentions|explains|describes|defines)\b"
+    r"|(?:in|on|from|see|check|read|re-?read|review|consult|look (?:at|in|through)|go back to|"
+    r"according to)\s+(?:the|your|this|that|these|those)\s+"
+    r"(?:slides?|handouts?|pdf|textbook|course materials?|(?:unit|topic|block)\s+(?:\d+|[ivx]+)\b))"
+)
 
 NORMATIVE_PATTERN = (
     r"\b(?:(?:must|should|do|does|can|may) not|mustn.t|shouldn.t|don.t|never|always|avoid\w*|"
@@ -127,8 +141,8 @@ def method(max_questions: int) -> str:
         "Style: warm and patient, never condescending nor punitive. Short replies, never the same "
         "formula from one turn to the next. Write in English and address the student directly. "
         "The system writes each turn's card and the student never sees it: do not mention it. "
-        "Under your reply the system shows the sections of the notes it comes from, and the "
-        "student opens them from there: so write no name of a unit, a section or a document.\n\n"
+        "What you know of the subject you know yourself: do not say where you got it from nor "
+        "send the student to any document.\n\n"
         "Notation: when what is being worked on is written in mathematical notation (a formula, a "
         "recurrence, a cost), write it between dollar signs, like this: $a^2 + b^2$. Use it only "
         "where it is clearer than the sentence it replaces, once or twice per reply at most, and "
@@ -161,8 +175,8 @@ def card_block(card) -> str:
 
     `card` is a `tutor.card.Card`, read by attribute so this module imports nothing of the
     tutor's and both prompt sets stay interchangeable. The notes are quoted WITHOUT where they
-    are: the places are shown under the reply by the system, and a reply cannot repeat a
-    heading it never read.
+    are, and not as notes: the card is what the tutor knows, which a reply tells in its own
+    words, so it has no heading to repeat and no place to send the student to.
     """
     lines = ["THE TURN'S CARD (written by the system from the subject's materials)", ""]
     if card.subject:
@@ -174,13 +188,13 @@ def card_block(card) -> str:
         for concept in card.focus:
             lines.append(f"- «{concept.name}».")
             if concept.definition:
-                lines.append(f"  Definition in the notes: {concept.definition}")
+                lines.append(f"  Definition: {concept.definition}")
             for passage in concept.anchors:
-                lines.append(f"  In the notes: {passage.text}")
+                lines.append(f"  What you know of it: {passage.text}")
             if concept.prerequisites:
                 lines.append(
                     "  Taken as known (do not ask about it; if the student lacks it, only tell "
-                    "them to review it in the notes): "
+                    "them to review it): "
                     + ", ".join(f"«{p.name}»" for p in concept.prerequisites)
                     + "."
                 )
@@ -207,6 +221,18 @@ def card_block(card) -> str:
             "",
         ]
 
+    for concept, names in card.named_before:
+        listed = " and ".join(f"«{name}»" for name in names)
+        known = "which is taken as known" if len(names) == 1 else "which are taken as known"
+        lacking = "they lack it" if len(names) == 1 else "they lack one of them"
+        lines += [
+            f"The message names {listed}, {known} for «{concept}». If the student says "
+            f"{lacking}, or their message shows it, do not explain it: tell them in one sentence "
+            "to review it, with its name inside that sentence («review what … is»), and bring "
+            f"your question back to «{concept}».",
+            "",
+        ]
+
     if card.map_of:
         lines += [
             f"Under your reply the student will see a map of «{card.map_of}»: what is taken as "
@@ -216,7 +242,7 @@ def card_block(card) -> str:
         ]
 
     if card.passages:
-        lines.append("Passages of the notes related to the message:")
+        lines.append("Other things you know, related to the message:")
         lines += [f"- {passage.text}" for passage in card.passages]
         lines.append("")
 
@@ -265,16 +291,8 @@ def retry_note(failures: list[tuple[str, dict]], max_questions: int, max_code_li
     )
 
 
-def fallback_reply(concept: str | None, placed: bool) -> str:
-    """Return the question sent when the model failed the checks twice.
-
-    `placed` says whether a place of the notes will be shown under it.
-    """
-    if concept and placed:
-        return (
-            f"Let's go step by step. What do you remember about «{concept}»? It is in the notes, "
-            "in the section you see just below: read it and tell me in your own words what it does."
-        )
+def fallback_reply(concept: str | None) -> str:
+    """Return the question sent when the model failed the checks twice."""
     if concept:
         return f"Let's go step by step. What do you remember about «{concept}»? Tell me in your own words."
     return "Let's go step by step. Which part of the subject do you want to work on first?"

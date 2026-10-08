@@ -1,8 +1,8 @@
 """The raw documents an instance is built from, and their page transcriptions.
 
-Declares `auth.EDIT` for the whole router, reads included: the raw documents and their
-transcriptions are the construction's, and a student of the subject (`viewer`) reads the
-notes through the tutor's reader (`/api/tutor/notes`), never here.
+Declares `auth.EDIT` for the whole router, reads included: the raw documents, their
+transcriptions and the reader that shows the two side by side are the construction's, and a
+student of the subject (`viewer`) opens none of them.
 
 Transcribing early is an ACCELERATOR and never a gate: the `transcribe` job writes no
 artifact, nothing is chained after it, and every builder keeps its own conversion phase —
@@ -15,7 +15,7 @@ route nobody meant to call — `DELETE /{kind}/transcription/{name}/{index}` wou
 deleting a document called "transcription". Do not reorder anything in this file.
 """
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from loguru import logger
 from pydantic import BaseModel
 
@@ -98,11 +98,34 @@ def start_transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
 
 @router.get("/{kind}/transcription/{name}")
 def transcription_document(kind: str, name: str, access: auth.Access = auth.EDIT) -> dict:
-    """Answer one document's transcribed pages, each marked failed or empty."""
+    """Answer one document's transcribed pages, each marked failed or empty, and its original.
+
+    The first time an Office document is opened, LibreOffice exports it to PDF inside this
+    request (`originals.EXPORT_TIMEOUT_SECONDS` at most); every later opening reads the copy.
+    """
     try:
         return raw_data.transcription_document(access.ws, kind, name)
     except raw_data.RawError as exc:
         raise _not_found(exc) from exc
+
+
+@router.get("/{kind}/transcription/{name}/original/{page}")
+def original_page(kind: str, name: str, page: int, access: auth.Access = auth.EDIT) -> Response:
+    """Answer one page of a document's original as an image.
+
+    Only a document the slot holds, and only a page it has. A page never changes under its
+    address — the reader sends the original's version with it — so the browser may keep it.
+    """
+    try:
+        drawn = raw_data.original_page(access.ws, kind, name, page)
+    except raw_data.RawError as exc:
+        raise _not_found(exc) from exc
+    if drawn is None:
+        raise HTTPException(404, "Esa página no está en el original del documento.")
+    data, media_type = drawn
+    return Response(
+        data, media_type=media_type, headers={"Cache-Control": "private, max-age=604800, immutable"}
+    )
 
 
 @router.post("/{kind}/transcription/{name}")

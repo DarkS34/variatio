@@ -1,8 +1,8 @@
 import type { CatalogueOf } from "@/lib/i18n";
 
 /**
- * The tutor's strings: the conversation, the concept picker, the notes reader, the
- * subject's criteria and the administrator's reading of the conversations.
+ * The tutor's strings: the conversation, the concept picker, the subject's criteria and the
+ * administrator's reading of the conversations.
  *
  * Only `src/tutor/` reads them, so they travel with its code and not in the catalogue
  * every session loads: `./index.ts` registers them with `lib/i18n` when the first module
@@ -13,7 +13,7 @@ export const es = {
   // THE TUTOR -----------------------------------------------------------------------------
   "tutor.title": "Tutor socrático",
   "tutor.whatIsThis": "Qué es esto",
-  "tutor.whatIsThis.body": "Un tutor socrático no te da la solución: te hace preguntas para que llegues tú a ella. Trabaja con los apuntes, el temario y los ejercicios de esta asignatura, y cada respuesta te dice dónde mirar en los apuntes.",
+  "tutor.whatIsThis.body": "Un tutor socrático no te da la solución: te hace preguntas para que llegues tú a ella. Trabaja con los apuntes, el temario y los ejercicios de esta asignatura, y te lo cuenta con sus propias palabras.",
   "tutor.unreadable": "No se pudo leer el tutor",
   "tutor.blocked": "El tutor necesita la asignatura preparada",
   "tutor.tab.conversation": "Conversaciones",
@@ -27,7 +27,7 @@ export const es = {
   "tutor.list.waiting": "Esperando respuesta",
   "tutor.list.turns": { one: "1 mensaje", other: "{n} mensajes" },
   "tutor.start.title": "¿En qué te ayudo?",
-  "tutor.start.body": "El tutor socrático no te da la solución: te hace preguntas para que la encuentres tú. Pregunta por un concepto de la asignatura, pega el enunciado de un ejercicio o enseña tu intento. Bajo cada respuesta están los apartados de los apuntes de los que sale, y desde ahí se abren.",
+  "tutor.start.body": "El tutor socrático no te da la solución: te hace preguntas para que la encuentres tú. Pregunta por un concepto de la asignatura, pega el enunciado de un ejercicio o enseña tu intento.",
   "tutor.start.fromExercise": "El enunciado del ejercicio ya está en el cuadro de abajo. Añade qué te cuesta y envíalo: el tutor empezará por los conceptos que ese ejercicio practica.",
   "tutor.openedFrom": "Conversación sobre un ejercicio generado.",
   "tutor.composer.label": "Tu mensaje",
@@ -57,19 +57,6 @@ export const es = {
   "tutor.you": "Tú",
   "tutor.tutor": "Tutor",
   "tutor.student": "Alumno",
-  "tutor.references": "En los apuntes:",
-  "tutor.notes.title": "Apuntes",
-  "tutor.notes.open": "Abrir «{place}» en los apuntes",
-  "tutor.notes.section": "Apartado",
-  "tutor.notes.previous": "Apartado anterior",
-  "tutor.notes.next": "Apartado siguiente",
-  "tutor.notes.view.original": "Original",
-  "tutor.notes.view.text": "Texto",
-  "tutor.notes.page": "Página {page} de {pages}",
-  "tutor.notes.pageAlt": "Página {page} de «{document}»",
-  "tutor.notes.pageUnreadable": "No se pudo abrir esta página",
-  "tutor.notes.unreadable": "No se pudieron abrir los apuntes",
-  "tutor.notes.empty": "Este documento no tiene texto que mostrar.",
   "tutor.map.title": "Mapa de «{name}»: dónde está en el temario",
   "tutor.map.review": "Mapa de «{concept}»: lo que conviene repasar es «{name}»",
   "tutor.map.before": "Se da por sabido",
@@ -86,7 +73,7 @@ export const es = {
   "tutor.failed.interrupted": "Este mensaje no tiene respuesta: el servidor se reinició mientras tanto.",
   "tutor.retry": "Pedir la respuesta otra vez",
   "tutor.criteria.title": "Criterios de la asignatura",
-  "tutor.criteria.body": "Lo propio de esta asignatura que el tutor tiene en cuenta: las convenciones que piden los apuntes, los errores que señalan y lo que no usan. Su método —preguntar en vez de resolver y remitir a los apuntes— ya vale en todas las asignaturas y no hace falta escribirlo aquí. El sistema redacta estos criterios y un docente los corrige.",
+  "tutor.criteria.body": "Lo propio de esta asignatura que el tutor tiene en cuenta: las convenciones que piden los apuntes, los errores que señalan y lo que no usan. Su método —preguntar en vez de resolver— ya vale en todas las asignaturas y no hace falta escribirlo aquí. El sistema redacta estos criterios y un docente los corrige.",
   "tutor.criteria.unreadable": "No se pudieron leer los criterios",
   "tutor.criteria.origin.draft": "Borrador del sistema",
   "tutor.criteria.origin.curated": "Corregidos",

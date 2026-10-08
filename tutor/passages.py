@@ -2,15 +2,15 @@
 
 The graph already anchors each concept to up to three passages, and that covers a question
 about a concept. It does not cover a question about a detail that is no concept, a concept
-the build could not anchor, or a message no concept matches — and the method demands a
-reference to the notes in every reply. This index is that second road: the whole corpus, cut
-by its own headings, searched by cosine with the vector the turn already computed.
+the build could not anchor, or a message no concept matches — and the method asks every reply
+to lean on the material. This index is that second road: the whole corpus, cut by its own
+headings, searched by cosine with the vector the turn already computed.
 
 It reads the TRANSCRIPTION the builders left in the page cache and never calls a model to
 read a document: a document without finished pages is skipped and said once, since
 transcribing is the raw-material screen's job and never a tutor turn's. Each passage keeps
-its heading path and the syllabus unit it falls under, which is what lets a reply say
-«Tema II, apartado de funciones» and lets the criteria builder read a unit's notes.
+its heading path and the syllabus unit it falls under, which is what lets the criteria
+builder read a unit's notes.
 
 The index is regenerable and lives under `cache/embeddings/`, keyed by a fingerprint of the
 embedding model, its prefix, the cut and the text, so a corrected page or a new cut rebuilds
@@ -37,7 +37,7 @@ from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
 from variatio.runtime.embedder.vectors import embed_normalized, prefix_for
 
-from . import originals, paths
+from . import paths
 
 _FORMAT = 1
 
@@ -54,10 +54,6 @@ class Passage:
     location: str
     unit: str | None
     text: str
-
-    def place(self) -> dict:
-        """Return the reference a reply shows for it: the document and the heading path."""
-        return {"document": self.document, "location": self.location, "unit": self.unit}
 
 
 class PassageIndex:
@@ -175,47 +171,6 @@ def cut_corpus(ws: Workspace, sources: dict, max_chars: int) -> list[Passage]:
                     )
                 )
     return passages
-
-
-def read_document(ws: Workspace, sources: dict, name: str) -> dict | None:
-    """Return one document of the notes as the reader shows it: its sections, in order.
-
-    None when `name` is not a document of the corpus the tutor reads, so a request can name
-    nothing else on disk. Cut as `cut_corpus` cuts, by heading, but whole: the reader shows a
-    section entire and a reply's place is a section. Navigation paragraphs are dropped, and
-    so is a section left with nothing but its heading — its title is already in the path of
-    the sections under it. `original` says how many pages the document itself has when the
-    reader can show them (`originals`), and each section then carries the `page` it starts
-    on; without one both are None and the transcription is all there is to read.
-    """
-    if not in_corpus(ws, sources, name):
-        return None
-    pages, meta = _document_pages(paths.corpus_pages_dir(ws) / name)
-    seams = source_docs.valid_seams(meta.get("seams"))
-    split = split_sections(source_docs.join_pages(pages, seams))
-    original = originals.original_for(ws, name) if split else None
-    starts = originals.section_pages(original, meta, pages, seams, split) if original else []
-    sections = []
-    for index, (location, _title, body) in enumerate(split):
-        kept = [
-            paragraph.strip()
-            for paragraph in re.split(r"\n\s*\n", body)
-            if paragraph.strip() and not is_navigation(paragraph)
-        ]
-        if kept and not all(_HEADING.match(paragraph) for paragraph in kept):
-            sections.append(
-                {
-                    "location": location,
-                    "text": "\n\n".join(kept),
-                    "page": starts[index] if original else None,
-                }
-            )
-    return {"original": original.summary() if original else None, "sections": sections}
-
-
-def in_corpus(ws: Workspace, sources: dict, name: str) -> bool:
-    """Say whether `name` is a document of the corpus the tutor reads."""
-    return name in _documents(ws, sources)
 
 
 def _documents(ws: Workspace, sources: dict) -> list[str]:

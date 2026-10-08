@@ -14,6 +14,10 @@ export const rawKeys = {
   transcription: (kind: RawKind) => ["raw", "transcription", kind] as const,
   document: (kind: RawKind, name: string) =>
     ["raw", "transcription", kind, name] as const,
+  // Not under `transcription`: a page saved invalidates the slot's reading, and a drawn
+  // page of the original never changes under its version.
+  originalPage: (kind: RawKind, name: string, version: string, page: number) =>
+    ["raw", "original", kind, name, version, page] as const,
 };
 
 export function useTranscribeRun(kind: RawKind): RunView | null {
@@ -169,6 +173,26 @@ export function useDocumentPages(kind: RawKind, name: string | null) {
     queryKey: rawKeys.document(kind, name ?? ""),
     queryFn: () => rawApi.documentPages(kind, name!),
     enabled: Boolean(name),
+  });
+}
+
+/**
+ * One page of a document's original, as an image. Never stale: the version in the key names
+ * the bytes. Asked for only once the page is near the screen (`enabled`), since the reader
+ * lays out every page of the document and most are never scrolled to.
+ */
+export function useOriginalPage(
+  kind: RawKind,
+  name: string,
+  version: string,
+  page: number,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: rawKeys.originalPage(kind, name, version, page),
+    queryFn: () => rawApi.originalPage(kind, name, page, version),
+    enabled,
+    staleTime: Infinity,
   });
 }
 
