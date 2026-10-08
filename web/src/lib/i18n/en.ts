@@ -397,7 +397,7 @@ export const en: Catalogue = {
     "The exercises in your documents have been collected one by one, and each one has automatically been given one or more concepts from the syllabus of the previous step. Check whether the concepts on each exercise are the ones it really practises: press one to read it whole.",
   "stage.what.rated": "At the end you are asked to rate this step.",
   "bank.step.collect": "Collect the bank",
-  "bank.step.recollect": "Collect the bank again",
+  "bank.step.recollect": "Extract the bank again",
   "bank.step.collectTip": "Settles the types of exercise and collects the exercises in your documents with them.",
   "bank.step.recollectTip": "Collects the exercises again with the types and the syllabus as they are now.",
   "bank.step.recollectCaption": "This bank was collected before the latest changes.",

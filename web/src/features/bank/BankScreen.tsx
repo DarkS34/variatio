@@ -566,152 +566,134 @@ function Pager({
 
 function BankMeters({
   listing,
-  offline,
-  submitting,
-  onRetag,
   onShowUntagged,
 }: {
   listing: BankListing | undefined;
-  offline: string | null;
-  submitting: boolean;
-  onRetag: (params: Record<string, unknown>) => void;
   onShowUntagged: () => void;
 }) {
   const { t, plural } = useT();
-  const confirm = useConfirm();
-  const locked = useStageLocked();
-  const lockedHint = useStageLockedHint();
-  const reviewing = useStageLockReason() === "reviewing";
 
   if (!listing) return <Skeleton className="h-24" />;
 
   const { items, tagged, untagged } = listing.totals;
-  const busy = locked || submitting || Boolean(offline);
-  const why = locked ? t(lockedHint) : offline;
 
-  const retagAll = (variant: "ghost" | "outline") => (
-    <Button
-      size="sm"
-      variant={variant}
-      disabled={busy}
-      title={why ?? plural("bank.retagAllHint", items)}
-      onClick={async () => {
-        if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
-          onRetag({ all: true });
-      }}
-    >
-      {t("bank.retagAll")}
-    </Button>
-  );
-
-  // The meter is drawn only while an exercise lacks a concept. With every exercise tagged
-  // there is no card: nothing while the stage is looked at, and the one control left while
-  // it is corrected, which alone in a block read as a block with its content missing.
-  if (untagged === 0 && items > 0)
-    return reviewing ? null : <div className="flex justify-end">{retagAll("outline")}</div>;
+  // Drawn only while some item is still missing a concept: a meter at 120/120 reports that
+  // there is nothing to do. With an EMPTY bank it is drawn, because there "0 of 0" is not
+  // "finished" but "there is no bank". It carries no control: the re-tag verbs are all at
+  // the foot of the table (`TableActions`), so correcting the stage adds nothing above the
+  // table and the rows never move when it opens.
+  if (untagged === 0 && items > 0) return null;
 
   return (
-    <Card className="flex flex-col divide-y divide-border lg:flex-row lg:divide-x lg:divide-y-0">
-      {/* Only while some item is still missing a concept: a meter at 120/120 reports that
-          there is nothing to do. With an EMPTY bank it is drawn, because there "0 of 0" is
-          not "finished" but "there is no bank". */}
-      {untagged > 0 || items === 0 ? (
-        <div className="flex-[1.2] space-y-2 p-5">
-          <div className="flex items-baseline justify-between gap-2 text-body">
-            <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
-            <span className="nums font-medium">
-              {tagged}/{items}
-            </span>
-          </div>
-          <Progress value={tagged} max={items} tone={untagged === 0 ? "settled" : "attention"} />
-          {untagged > 0 ? (
-            <button
-              onClick={onShowUntagged}
-              className="text-small text-attention transition-opacity hover:opacity-80"
-            >
-              {plural("bank.seeUntagged", untagged)}
-            </button>
-          ) : (
-            <p className="text-small text-muted-foreground">{t("bank.emptyBank")}</p>
-          )}
-        </div>
-      ) : null}
-
-      {/* The two global re-tag controls are CORRECTION, and they disappear entirely while
-          the stage is being looked at: they are the only two things on this strip that
-          WRITE. Nothing they say is lost by hiding them — how many exercises have no concept
-          is what the meter beside them reports, and the filter that shows them is still
-          there. The whole column goes with them: empty, it would be a quarter of a card with
-          its border and its padding announcing that something used to be here. */}
-      <Correction>
-        <div className="flex flex-[0.9] flex-col items-start gap-2 p-5">
-          <div className="flex flex-wrap gap-2">
-            {untagged > 0 ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                title={why ?? plural("bank.retagUntaggedHint", untagged)}
-                onClick={() => onRetag({})}
-              >
-                {submitting ? <Spinner /> : <RefreshCw />}
-                {plural("bank.retagUntagged", untagged)}
-              </Button>
-            ) : null}
-            {items > 0 ? retagAll("ghost") : null}
-          </div>
-          {/* The retrieval thresholds are not drawn: they are read here and changed in
-              "Configuración", and whoever prepares a subject decides nothing with them. They
-              are still in the listing's payload. */}
-        </div>
-      </Correction>
+    <Card className="space-y-2 p-5">
+      <div className="flex items-baseline justify-between gap-2 text-body">
+        <span className="text-muted-foreground">{t("bank.taggedItems")}</span>
+        <span className="nums font-medium">
+          {tagged}/{items}
+        </span>
+      </div>
+      <Progress value={tagged} max={items} tone={untagged === 0 ? "settled" : "attention"} />
+      {untagged > 0 ? (
+        <button
+          onClick={onShowUntagged}
+          className="text-small text-attention transition-opacity hover:opacity-80"
+        >
+          {plural("bank.seeUntagged", untagged)}
+        </button>
+      ) : (
+        <p className="text-small text-muted-foreground">{t("bank.emptyBank")}</p>
+      )}
     </Card>
   );
 }
 
 /**
- * What to do with the rows picked by hand, at the foot of the table they were picked from.
+ * The re-tag verbs, at the foot of the table they act on.
  *
- * The one contextual scope of the re-tag verb, so it stays with the rows rather than
- * joining the global ones among the totals.
+ * One place for every scope: with rows picked by hand, the count and what to do with those
+ * rows; with none, the bank's own scopes — the exercises without a concept, then all of
+ * them. The two sets take turns on the same spot, as a selection's gestures do in a
+ * table's head. Every control is 28 px, the pager's height, so the strip keeps one height
+ * whatever it holds.
  */
-function SelectionActions({
+function TableActions({
+  totals,
   selected,
   offline,
   submitting,
   onRetag,
   onClear,
 }: {
+  totals: BankListing["totals"];
   selected: Set<string>;
   offline: string | null;
   submitting: boolean;
-  onRetag: () => void;
+  onRetag: (params: Record<string, unknown>) => void;
   onClear: () => void;
 }) {
   const { t, plural } = useT();
+  const confirm = useConfirm();
   const locked = useStageLocked();
   const lockedHint = useStageLockedHint();
 
-  if (selected.size === 0) return null;
+  const busy = locked || submitting || Boolean(offline);
+  const why = locked ? t(lockedHint) : offline;
+  const icon = submitting ? <Spinner /> : <RefreshCw />;
 
+  if (selected.size > 0)
+    return (
+      <>
+        <span className="text-small font-medium">{plural("bank.selectedCount", selected.size)}</span>
+        <Button
+          size="sm"
+          className="h-7"
+          variant="outline"
+          disabled={busy}
+          title={why ?? plural("bank.retagSelectedHint", selected.size)}
+          onClick={() => onRetag({ ids: [...selected] })}
+        >
+          {icon}
+          {t("bank.retagSelected")}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7" onClick={onClear}>
+          {t("bank.deselect")}
+        </Button>
+      </>
+    );
+
+  const { items, untagged } = totals;
   return (
     <>
-      <span className="text-small font-medium">{plural("bank.selectedCount", selected.size)}</span>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={locked || submitting || Boolean(offline)}
-        title={
-          locked ? t(lockedHint) : (offline ?? plural("bank.retagSelectedHint", selected.size))
-        }
-        onClick={onRetag}
-      >
-        {submitting ? <Spinner /> : <RefreshCw />}
-        {t("bank.retagSelected")}
-      </Button>
-      <Button size="sm" variant="ghost" onClick={onClear}>
-        {t("bank.deselect")}
-      </Button>
+      {untagged > 0 ? (
+        <Button
+          size="sm"
+          className="h-7"
+          variant="outline"
+          disabled={busy}
+          title={why ?? plural("bank.retagUntaggedHint", untagged)}
+          onClick={() => onRetag({})}
+        >
+          {icon}
+          {plural("bank.retagUntagged", untagged)}
+        </Button>
+      ) : null}
+      {items > 0 ? (
+        <Button
+          size="sm"
+          className="h-7"
+          // Outline when it is the strip's one verb; beside the narrower retry it steps back.
+          variant={untagged > 0 ? "ghost" : "outline"}
+          disabled={busy}
+          title={why ?? plural("bank.retagAllHint", items)}
+          onClick={async () => {
+            if (await confirm({ title: plural("bank.confirmRetagAll", items), tone: "danger" }))
+              onRetag({ all: true });
+          }}
+        >
+          {untagged > 0 ? null : icon}
+          {t("bank.retagAll")}
+        </Button>
+      ) : null}
     </>
   );
 }
@@ -867,9 +849,6 @@ export function BankPart({
       <div className="space-y-4">
         <BankMeters
           listing={listing}
-          offline={offline}
-          submitting={submit.isPending}
-          onRetag={(params) => submit.mutate({ kind: "tag", params })}
           onShowUntagged={() => {
             setUntagged(true);
             setPage(1);
@@ -1041,10 +1020,11 @@ export function BankPart({
 
                 There is deliberately no whole-bank "Etiquetar pendientes": extracting and
                 tagging are one job, the extractor tagging each document as it comes out. The
-                scoped retries are the strip above and this one, which re-runs the tagger
-                over items chosen by hand whatever their state. */}
+                scoped retries are all here, beside the rows they reach (`TableActions`).
+                `min-h-7` is the controls' height, so the strip is one height whether they
+                are drawn (correcting) or not (reviewing). */}
             {listing.items.length > 0 ? (
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3 text-body">
+              <div className="mt-3 flex min-h-7 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3 text-body">
                 <Pager
                   page={listing.page}
                   pages={pages}
@@ -1055,11 +1035,12 @@ export function BankPart({
                 <span className="flex-1" />
 
                 <Correction>
-                  <SelectionActions
+                  <TableActions
+                    totals={listing.totals}
                     selected={selected}
                     offline={offline}
                     submitting={submit.isPending}
-                    onRetag={() => submit.mutate({ kind: "tag", params: { ids: [...selected] } })}
+                    onRetag={(params) => submit.mutate({ kind: "tag", params })}
                     onClear={() => setSelected(new Set())}
                   />
                 </Correction>

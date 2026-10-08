@@ -167,8 +167,15 @@ def handle_index(job: Job, control: JobControl) -> dict:
 
 
 def handle_tag(job: Job, control: JobControl) -> dict:
-    """Tag bank items with graph concepts: the ids asked for, all of them, or the pending."""
+    """Tag bank items with graph concepts: the ids asked for, all of them, or the pending.
+
+    A bank that was closed stays closed: tagging is the system's derivation, like the
+    collection that closes it (`chain.CLOSES`), not a teacher's edit, so it seals the new
+    file again instead of sending the step back to «Te toca».
+    """
     deps.require_inference()
+    ws = _workspace(job)
+    sealed = approvals.Approvals(ws).sealed(approvals.EXEMPLARS_BANK)
     context = context_for(job)
     ids = job.params.get("ids") or None
     if job.params.get("all"):
@@ -183,6 +190,8 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     logger.success(
         f"Banco etiquetado: {len(bank) - len(untagged)} con conceptos, {len(untagged)} sin ellos"
     )
+    if sealed:
+        approvals.Approvals(ws).approve(approvals.EXEMPLARS_BANK)
     return {
         "items": len(bank),
         "tagged": len(bank) - len(untagged),

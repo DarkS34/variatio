@@ -14,7 +14,9 @@ import { isQueued } from "@/lib/queue";
  * before the bank, because the bank is tagged with it. Since 2026-10-08 the types of exercise
  * and the bank are ONE step in two parts — the types first, then the exercises collected with
  * them — so a step names the artifact its screen is about (`artifact`) and every artifact it
- * closes (`artifacts`): step 3 is done only with both closed.
+ * closes (`artifacts`): step 3 is done only with both closed. «Recoger el banco» closes the
+ * types, and the collection closes the bank once it is indexed (`server/jobs/chain.CLOSES`),
+ * so the step is done as soon as the bank is ready, with no press after it.
  */
 export const STEPS = [
   { path: "/raw", labelKey: "nav.step.raw", artifact: null, artifacts: [] },

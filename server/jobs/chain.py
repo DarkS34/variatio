@@ -20,6 +20,12 @@ here is what a forced job or a state that moved while queued leaves.
 
 A link that fails or is cancelled cuts the chain: `advance` is only called after a job that
 finished well.
+
+A chain may CLOSE what it built (`CLOSES`). The bank's collection approves the bank once its
+last link has run (2026-10-08, the user's decision: a bank extracted, tagged and indexed is a
+finished step, and the doors open with it; until then it waited for «Generar ejercicios»).
+It closes only behind types and a syllabus still approved, since those are what the bank was
+collected with: types corrected while it ran leave the bank a draft.
 """
 
 from loguru import logger
@@ -37,6 +43,12 @@ CHAINS: dict[str, tuple[str, ...]] = {
 }
 
 
+# What a chain approves once its last link has run, by the kind at its head.
+CLOSES: dict[str, str] = {
+    "review_taggability": approvals.EXEMPLARS_BANK,
+}
+
+
 def links(kind: str) -> tuple[str, ...]:
     """Return what a job of `kind` queues behind it when it heads its chain."""
     return CHAINS.get(kind, ())
@@ -45,6 +57,11 @@ def links(kind: str) -> tuple[str, ...]:
 def remaining(job: Job) -> tuple[str, ...]:
     """Return the links still to come after this job, as it carries them or as its kind does."""
     return tuple(job.params.get("chain") or links(job.kind))
+
+
+def head(job: Job) -> str:
+    """Return the kind at the head of the chain this job belongs to (its own when it heads one)."""
+    return job.params.get("head") or job.kind
 
 
 def _graph_exists(ws: Workspace) -> str | None:
@@ -98,7 +115,7 @@ def advance(runner, job: Job) -> None:
     condition of every link is read when that link's turn comes and not before.
     """
     pending = list(remaining(job))
-    if not pending:
+    if not pending and job.kind == head(job):
         return
 
     ws = installation.workspace_for(job.workspace)
@@ -111,10 +128,37 @@ def advance(runner, job: Job) -> None:
             continue
         runner.submit(
             kind,
-            {"chain": pending},
+            {"chain": pending, "head": head(job)},
             workspace=job.workspace,
             user_id=job.user_id,
             user_name=job.user_name,
         )
         logger.info(f"[cadena] «{label}» encolado tras «{job.label}»")
         return
+    if job.kind != head(job):
+        _close(runner, ws, job)
+
+
+def _close(runner, ws: Workspace, job: Job) -> None:
+    """Approve what the chain just built, when its head says so and its upstreams still hold.
+
+    Only a link that ran AFTER the head ends a chain this way: a head with every link skipped
+    built nothing, and closing then would approve an older artifact nobody looked at.
+    """
+    artifact = CLOSES.get(head(job))
+    if artifact is None:
+        return
+    state = approvals.Approvals(ws)
+    if not state.gate_open(artifact):
+        logger.info(
+            f"[cadena] «{approvals.LABELS[artifact]}» queda sin cerrar: sus etapas previas cambiaron"
+        )
+        return
+    try:
+        state.approve(artifact)
+    except FileNotFoundError:
+        return
+    runner.bus.publish(
+        job.workspace, None, "pipeline.changed", {"artifact": artifact, "action": "approve"}
+    )
+    logger.info(f"[cadena] «{approvals.LABELS[artifact]}» cerrado tras «{job.label}»")

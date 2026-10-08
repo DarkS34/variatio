@@ -39,8 +39,9 @@ describe("readParts", () => {
   it("opens on the bank while it is collected, and once it is there", () => {
     const running = readParts(facts({ profile: "approved", profileHash: true, bank: "building", collecting: true }));
     expect(running).toMatchObject({ types: "done", bank: "building", collected: false, opening: "bank" });
+    // Extracted and tagged is done, closed or not: closing it is the screen's way out.
     const there = readParts(facts({ profile: "approved", profileHash: true, bank: "draft" }));
-    expect(there).toMatchObject({ types: "done", bank: "now", collected: true, opening: "bank" });
+    expect(there).toMatchObject({ types: "done", bank: "done", collected: true, opening: "bank" });
     const closed = readParts(facts({ profile: "approved", profileHash: true, bank: "approved" }));
     expect(closed).toMatchObject({ types: "done", bank: "done", recollect: false });
   });

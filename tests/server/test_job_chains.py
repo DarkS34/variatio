@@ -37,13 +37,18 @@ PROFILE = {
 
 
 class Recorder:
-    """A runner that records what would be queued instead of queueing it."""
+    """A runner that records what would be queued, and what announced, instead of doing it."""
 
     def __init__(self):
         self.submitted: list[tuple[str, dict]] = []
+        self.published: list[tuple[str, dict]] = []
+        self.bus = self
 
     def submit(self, kind, params, **_kwargs):
         self.submitted.append((kind, params))
+
+    def publish(self, _workspace, _job_id, kind, payload=None):
+        self.published.append((kind, payload or {}))
 
 
 def workspace(
@@ -133,7 +138,7 @@ def test_with_no_profile_the_descriptions_still_follow(tmp_path, monkeypatch):
     """Describing needs the GRAPH, so the state a new workspace starts in is not a skip."""
     ws = workspace(tmp_path)
     runner = advance(monkeypatch, ws, Job(kind="build_kg", workspace=ws.slug))
-    assert runner.submitted == [("describe_concepts", {"chain": []})]
+    assert runner.submitted == [("describe_concepts", {"chain": [], "head": "build_kg"})]
 
 
 def test_without_a_graph_nothing_is_described(tmp_path, monkeypatch):
@@ -159,13 +164,21 @@ def test_with_everything_settled_the_review_queues_the_extraction_and_passes_the
     ws = ready(tmp_path)
     runner = advance(monkeypatch, ws, Job(kind="review_taggability", workspace=ws.slug))
     # The remainder travels ON the job, so each condition is read when its own turn comes.
-    assert runner.submitted == [("build_bank", {"chain": ["index"]})]
+    assert runner.submitted == [
+        ("build_bank", {"chain": ["index"], "head": "review_taggability"})
+    ]
 
 
 def test_the_extraction_is_followed_by_the_index(tmp_path, monkeypatch):
     ws = ready(tmp_path, bank=True)
-    job = Job(kind="build_bank", params={"chain": ["index"]}, workspace=ws.slug)
-    assert advance(monkeypatch, ws, job).submitted == [("index", {"chain": []})]
+    job = Job(
+        kind="build_bank",
+        params={"chain": ["index"], "head": "review_taggability"},
+        workspace=ws.slug,
+    )
+    assert advance(monkeypatch, ws, job).submitted == [
+        ("index", {"chain": [], "head": "review_taggability"})
+    ]
 
 
 @pytest.mark.parametrize(
@@ -191,3 +204,48 @@ def test_no_other_job_queues_anything_behind_it(tmp_path, monkeypatch, kind):
     ws = ready(tmp_path, bank=True)
     runner = advance(monkeypatch, ws, Job(kind=kind, params={}, workspace=ws.slug))
     assert runner.submitted == []
+
+
+# WHAT A CHAIN CLOSES ----------------------------------------------------------------------
+
+
+def last_link(ws: Workspace) -> Job:
+    """The index that ends a collection of the bank, as the chain queued it."""
+    return Job(
+        kind="index", params={"chain": [], "head": "review_taggability"}, workspace=ws.slug
+    )
+
+
+def test_the_bank_s_collection_closes_the_bank_once_indexed(tmp_path, monkeypatch):
+    """A bank extracted, tagged and indexed is a finished step: the doors open with it."""
+    ws = ready(tmp_path, bank=True)
+    runner = advance(monkeypatch, ws, last_link(ws))
+    assert approvals.Approvals(ws).state(approvals.EXEMPLARS_BANK)["status"] == "approved"
+    assert runner.published == [
+        ("pipeline.changed", {"artifact": approvals.EXEMPLARS_BANK, "action": "approve"})
+    ]
+
+
+def test_types_reopened_while_it_ran_leave_the_bank_a_draft(tmp_path, monkeypatch):
+    """The bank was collected with the types closed then; corrected since, it is not theirs."""
+    ws = ready(tmp_path, bank=True)
+    approvals.Approvals(ws).reopen(approvals.EXEMPLARS_PROFILE)
+    runner = advance(monkeypatch, ws, last_link(ws))
+    assert approvals.Approvals(ws).state(approvals.EXEMPLARS_BANK)["status"] == "draft"
+    assert runner.published == []
+
+
+@pytest.mark.parametrize(
+    "job",
+    [
+        Job(kind="index", params={}),
+        Job(kind="index", params={"chain": [], "head": "index"}),
+        Job(kind="describe_concepts", params={"chain": [], "head": "build_kg"}),
+    ],
+    ids=["index-alone", "index-heading-itself", "graph-chain"],
+)
+def test_nothing_else_closes_the_bank(tmp_path, monkeypatch, job):
+    ws = ready(tmp_path, bank=True)
+    job.workspace = ws.slug
+    advance(monkeypatch, ws, job)
+    assert approvals.Approvals(ws).state(approvals.EXEMPLARS_BANK)["status"] == "draft"

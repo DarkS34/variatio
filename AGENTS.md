@@ -555,6 +555,13 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   a bank). «Recoger el banco» queues the head; the pipeline's `build_job` of the bank is
   `review_taggability`. The graph no longer chains the review or the index: indexing between
   a graph build and a bank collection embedded concepts nobody had reviewed.
+- **The bank's collection closes the bank** (`chain.CLOSES`, the user's decision of
+  2026-10-08): when the last link that ran after the head ends the chain, the bank is
+  approved and `pipeline.changed` published, so step 3 reads done and the doors open as soon
+  as the bank is extracted, tagged and indexed. Only behind types and a syllabus still
+  approved (`gate_open`): types corrected while it ran leave the bank a draft. Links carry
+  their head in `params.head`; a job outside a chain closes nothing. A retag (`tag`) seals a
+  closed bank again (`handle_tag`, like the review's reseal); a hand edit still withdraws it.
 - **The route checks every link of a chain** before queueing its head
   (`routers/jobs.gate_error`, `transcribing_slot`, both over `chain.links(kind)`): a link the
   runner queues has no route, so a closed gate behind the head would be skipped in silence
@@ -1309,20 +1316,24 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   hidden, so a draft survives the switch. Where each part stands, which may be opened and
   which a visit opens on is `features/bank/parts.readParts`, tested: the bank's card is
   disabled — «Después» with a lock, the reason in place of its sentence — until the types
-  exist, and once they are built it says «Te toca ahora» (at most one part does); a visit
+  exist, and once they are built it says «Te toca ahora» (at most one part does), and «Hecho»
+  once the bank is extracted and tagged, closed or not; a visit
   opens on the bank once both parts are built (the user's request), or while its collection
   runs or where it stopped, else on the types. Under the block the part on screen is headed
   as a step is: «Fase de construcción · Paso 3 de 3 · Parte N de 2», its name as the title,
   what it is, and its way out (`WayOn`) — «Quiero corregir algo» and the coral: on the types
   «Continuar a la Parte 2», which saves their draft and shows the bank without closing them
   (the types are confirmed when the bank is collected or closed, so a bank collected with
-  other types is still offered again); on the bank «Generar ejercicios», which closes both,
-  or «Recoger el banco otra vez» (types changed since, or the bank stale; asked first, the
+  other types is still offered again); on the bank «Generar ejercicios», which closes both
+  (the collection has closed the bank already, so it is the door),
+  or «Extraer el banco otra vez» (types changed since, or the bank stale; asked first, the
   bank's corrections go) beside an outline «Seguir con este banco» where the bank can be
   closed as it is, or «Ir al Paso 2 · Temario» while the syllabus is open. With no bank the
   bank's part is the call in the middle, as every unbuilt stage: «Recoger el banco» — which
   saves the types' draft, closes them and queues the review that heads the collection. ONE
-  coral control on the screen. Only one part is corrected at a time (one sticky bar).
+  coral control on the screen. Only one part is corrected at a time (one sticky bar). The
+  bank's part draws no «Bloqueado» for types still open, since its own moves close them;
+  only an open syllabus blocks it, in the step's words.
   While a collection runs the bank's part shows its three links as ruled rows (each job named
   as every screen names it: «Decidir qué conceptos sirven de etiqueta», «Recoger los ejercicios
   y etiquetarlos», «Preparar el banco para generar»; a skipped review says «Sin cambios desde
@@ -1866,7 +1877,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - View and correct are two moments; «Continuar» closes a stage and stands with «Quiero
   corregir algo» beside the title on every step, never in a block at the foot
   (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift. After the last
-  step it names the door it opens, «Generar ejercicios» (2026-10-08).
+  step it names the door it opens, «Generar ejercicios» (2026-10-08). One exception: the
+  bank's collection closes the bank itself once indexed, so step 3 is done and the doors
+  open without a press (2026-10-08, the user's decision).
 - The guide and the tutorial are hidden behind one flag (`lib/help.HELP_HIDDEN`): no entry,
   no link, no route (2026-10-07). Their copy is not updated while hidden.
 - A queued job is not a running one. No time estimates. No «loading model» signal. No log on

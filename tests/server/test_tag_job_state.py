@@ -52,3 +52,31 @@ def test_a_taggability_review_leaves_the_graph_alone(runner, ws):
 
     assert runner.building_artifacts("aula") == set()
     assert Job(kind="review_taggability").artifact is None
+
+
+@pytest.mark.parametrize("closed", [True, False], ids=["closed", "draft"])
+def test_retagging_keeps_a_closed_bank_closed_and_a_draft_a_draft(monkeypatch, ws, closed):
+    """Tagging is the system's derivation: it seals a closed bank again, never opens one."""
+    from types import SimpleNamespace
+
+    from server.jobs import handlers
+
+    if closed:
+        Approvals(ws).approve(approvals.EXEMPLARS_BANK)
+
+    def tag_bank(_context, ids=None):
+        tagged = {"C001": {**BANK["C001"], "concepts": ["Suma"]}}
+        ws.exemplars_bank_path.write_text(json.dumps(tagged), encoding="utf-8")
+        return tagged
+
+    monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(handlers, "_workspace", lambda _job: ws)
+    monkeypatch.setattr(
+        handlers, "context_for", lambda _job: SimpleNamespace(exemplars_bank=dict(BANK))
+    )
+    monkeypatch.setattr(handlers.entrypoints, "tag_bank", tag_bank)
+
+    handlers.handle_tag(Job(kind="tag", params={"all": True}, workspace="aula"), None)
+
+    status = Approvals(ws).state(approvals.EXEMPLARS_BANK)["status"]
+    assert status == ("approved" if closed else "draft")

@@ -497,7 +497,7 @@ export const es = {
   // closes the types and starts the collection, whose first link — deciding which concepts
   // work as labels — is never a button of its own.
   "bank.step.collect": "Recoger el banco",
-  "bank.step.recollect": "Recoger el banco otra vez",
+  "bank.step.recollect": "Extraer el banco otra vez",
   "bank.step.collectTip": "Da por buenos los tipos de ejercicio y recoge con ellos los ejercicios de tus documentos.",
   "bank.step.recollectTip": "Vuelve a recoger los ejercicios con los tipos y el temario de ahora.",
   "bank.step.recollectCaption": "Este banco se recogió antes de los últimos cambios.",

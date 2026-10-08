@@ -50,10 +50,11 @@ export interface PartReading {
  * Read where each part of step 3 stands, which may be opened, and which a visit opens on.
  *
  * AT MOST ONE PART IS «Te toca ahora», the one the next move is in (the user's request,
- * 2026-10-08: once the types exist, the bank says it is next). The types are «done» as soon
- * as they are built — they are confirmed when the bank is collected or closed, never on
- * their own — and «changed» when they moved after the bank was collected with them, which
- * makes the bank's the move: collect it again or keep it.
+ * 2026-10-08: once the types exist, the bank says it is next). A part is «done» as soon as
+ * it is built (the user's request, the same day, for the bank): closing them is the screen's
+ * way out, «Generar ejercicios», not a part's state. The types are confirmed when the bank is
+ * collected or closed, never on their own, and are «changed» when they moved after the bank
+ * was collected with them, which makes the bank's the move: extract it again or keep it.
  *
  * The bank's part opens only once the types exist (the user's request): without them there
  * is nothing to collect it with. A rebuild of the types keeps their file, so it keeps the
@@ -84,7 +85,7 @@ export function readParts(facts: PartFacts): PartReading {
     ? "building"
     : facts.bankCurating
       ? "curating"
-      : facts.bank === "approved" && !recollect
+      : collected && !recollect
         ? "done"
         : (types === "done" || types === "changed") && facts.graphReady
           ? "now"

@@ -141,6 +141,14 @@ export function BankStep({
   const typesName = artifactName("exemplars_profile", t, profile.label);
   const bankName = artifactName("exemplars_bank", t, bank.label);
   const next = nextStepOf("exemplars_bank");
+  // The bank as its part draws it. The server says it is blocked while the types are open,
+  // and inside this step that is no block: collecting the bank, keeping it or going on to
+  // generate closes them first. What does block it is the syllabus, said in the step's words.
+  const bankShown: StageState = {
+    ...bank,
+    blocked_by: graphReady ? [] : bank.blocked_by,
+    blocked_reason: graphReady ? null : t("bank.step.needsSyllabus"),
+  };
 
   // Why «Recoger el banco» cannot be pressed, the permission first: advice about documents to
   // somebody who could not press the button after following it is no advice.
@@ -428,7 +436,7 @@ export function BankStep({
         {collecting ? (
           <Collection links={links} reviewPhases={reviewPhases} />
         ) : collected ? (
-          <BankPart stage={bank} control={exercises} />
+          <BankPart stage={bankShown} control={exercises} />
         ) : failedCollection ? (
           // A collection that stopped says where, and offers itself again under the rows.
           <Collection links={links} reviewPhases={reviewPhases} action={collectAction} />
