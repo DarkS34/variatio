@@ -486,6 +486,13 @@ body,
   height: 100%;
 }
 
+/* The page's own scrollbar always keeps its room, so moving between a page that scrolls and
+   one that does not shifts nothing. Both edges, so the content stays centred. Not inherited:
+   the scrolling boxes inside the page keep their own behaviour. */
+html {
+  scrollbar-gutter: stable both-edges;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
