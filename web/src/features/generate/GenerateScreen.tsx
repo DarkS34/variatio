@@ -523,8 +523,11 @@ function Results({
   );
 
   return (
-    <div className="space-y-7">
-      <div className="-mb-3 flex flex-wrap items-center gap-2">
+    // The heading sits 16 px over the first card, the cards 28 apart. Tailwind 4's `space-y`
+    // spaces with the bottom margin, so a negative one on the heading pulled the first card
+    // up over it: the heading and its list are two stacks.
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-heading">
           {t("generate.results")}
           <span className="ml-2 font-normal text-muted-foreground nums">
@@ -548,47 +551,49 @@ function Results({
         />
       </div>
 
-      {results.map((result, index) => (
-        <ResultCard
-          key={index}
-          index={index + 1}
-          item={result.item}
-          itemType={result.item_type}
-          checks={result.checks}
-          retried={result.retried}
-          profile={profile}
-          saved={Boolean(result.saved_id)}
-          // Once the file exists, and only for an account the tutor is open to.
-          onTutor={
-            result.saved_id && tutorOpen
-              ? () => {
-                  const spec = itemTypeOf(profile, { item_type: result.item_type });
-                  stashTutorDraft({
-                    message: t("tutor.fromExercise.message", {
-                      statement: spec ? fieldText(result.item[spec.primary_field]) : "",
-                    }),
-                    generationId: String(result.saved_id),
-                  });
-                  navigate("/tutor");
-                }
-              : undefined
-          }
-        />
-      ))}
+      <div className="space-y-7">
+        {results.map((result, index) => (
+          <ResultCard
+            key={index}
+            index={index + 1}
+            item={result.item}
+            itemType={result.item_type}
+            checks={result.checks}
+            retried={result.retried}
+            profile={profile}
+            saved={Boolean(result.saved_id)}
+            // Once the file exists, and only for an account the tutor is open to.
+            onTutor={
+              result.saved_id && tutorOpen
+                ? () => {
+                    const spec = itemTypeOf(profile, { item_type: result.item_type });
+                    stashTutorDraft({
+                      message: t("tutor.fromExercise.message", {
+                        statement: spec ? fieldText(result.item[spec.primary_field]) : "",
+                      }),
+                      generationId: String(result.saved_id),
+                    });
+                    navigate("/tutor");
+                  }
+                : undefined
+            }
+          />
+        ))}
 
-      {savedCount > 0 ? (
-        <p className="text-small text-muted-foreground">
-          {plural("generate.savedNotice", savedCount)}{" "}
-          <button
-            type="button"
-            onClick={onShowMine}
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            {t("generate.tab.mine")}
-          </button>
-          .
-        </p>
-      ) : null}
+        {savedCount > 0 ? (
+          <p className="text-small text-muted-foreground">
+            {plural("generate.savedNotice", savedCount)}{" "}
+            <button
+              type="button"
+              onClick={onShowMine}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              {t("generate.tab.mine")}
+            </button>
+            .
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
