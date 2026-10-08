@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useStageLocked } from "@/components/StageGate";
 import { InfoHint } from "@/components/ui/hint";
@@ -54,6 +55,9 @@ const READING_COLUMNS =
   "grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-center gap-x-2 px-2 " +
   "md:grid-cols-[1.5rem_minmax(0,1fr)_1.25rem] md:px-3";
 
+// Measured: 210 px, the delete item wrapping to two lines.
+const MENU_HEIGHT = 212;
+
 function UnitMenu({
   unit,
   count,
@@ -75,23 +79,42 @@ function UnitMenu({
 }) {
   const { plural, t } = useT();
   const [open, setOpen] = useState(false);
-  const holder = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
 
+  // The menu is fixed against the button's rect and rendered at the document root: the
+  // outline scrolls inside its block, and a menu inside it was cut at the block's edge.
+  // Fixed coordinates go stale when anything scrolls, so it follows the button.
   useEffect(() => {
     if (!open) return;
+    const track = () =>
+      setRect(trigger.current?.getBoundingClientRect() ?? null);
     const away = (event: MouseEvent) => {
-      if (!holder.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!trigger.current?.contains(target) && !menu.current?.contains(target))
+        setOpen(false);
     };
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
+    track();
+    window.addEventListener("scroll", track, true);
+    window.addEventListener("resize", track);
     document.addEventListener("mousedown", away);
     document.addEventListener("keydown", key);
     return () => {
+      window.removeEventListener("scroll", track, true);
+      window.removeEventListener("resize", track);
       document.removeEventListener("mousedown", away);
       document.removeEventListener("keydown", key);
     };
   }, [open]);
+
+  // Without the menu's height of room below the button, it opens upwards.
+  const flip = rect
+    ? rect.bottom + MENU_HEIGHT + 8 > window.innerHeight
+    : false;
 
   const item =
     "flex w-full items-center gap-2 px-3 py-1.5 text-left text-body transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground";
@@ -102,8 +125,9 @@ function UnitMenu({
   };
 
   return (
-    <div className="relative" ref={holder}>
+    <>
       <button
+        ref={trigger}
         type="button"
         onClick={() => setOpen((was) => !was)}
         aria-haspopup="menu"
@@ -117,61 +141,70 @@ function UnitMenu({
         <MoreHorizontal className="size-4" />
       </button>
 
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 top-7 z-30 w-60 overflow-hidden rounded-inner bg-popover py-1.5 shadow-overlay"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={run(onAddConcept)}
-          >
-            <Plus />
-            {t("outline.addConcept")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={run(onRename)}
-          >
-            <Pencil />
-            {t("outline.renameUnit")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            disabled={first}
-            onClick={run(() => onMove(-1))}
-          >
-            <ArrowUp />
-            {t("outline.moveEarlier")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            disabled={last}
-            onClick={run(() => onMove(1))}
-          >
-            <ArrowDown />
-            {t("outline.moveLater")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={cn(item, "text-destructive")}
-            onClick={run(onDelete)}
-          >
-            <Trash2 />
-            {plural("outline.deleteUnit", count)}
-          </button>
-        </div>
-      ) : null}
-    </div>
+      {open && rect
+        ? createPortal(
+            <div
+              ref={menu}
+              role="menu"
+              className="fixed z-50 w-60 overflow-hidden rounded-inner bg-popover py-1.5 shadow-overlay"
+              style={{
+                right: Math.max(8, window.innerWidth - rect.right),
+                top: flip ? undefined : rect.bottom + 4,
+                bottom: flip ? window.innerHeight - rect.top + 4 : undefined,
+              }}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className={item}
+                onClick={run(onAddConcept)}
+              >
+                <Plus />
+                {t("outline.addConcept")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={item}
+                onClick={run(onRename)}
+              >
+                <Pencil />
+                {t("outline.renameUnit")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={item}
+                disabled={first}
+                onClick={run(() => onMove(-1))}
+              >
+                <ArrowUp />
+                {t("outline.moveEarlier")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={item}
+                disabled={last}
+                onClick={run(() => onMove(1))}
+              >
+                <ArrowDown />
+                {t("outline.moveLater")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={cn(item, "text-destructive")}
+                onClick={run(onDelete)}
+              >
+                <Trash2 />
+                {plural("outline.deleteUnit", count)}
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 
