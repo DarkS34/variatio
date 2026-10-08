@@ -378,8 +378,11 @@ export function ConceptOutline({
   }, [concepts, units]);
 
   // A unit the filter emptied is not drawn at all: a header over nothing reads as a unit
-  // whose concepts were deleted.
-  const shown = [...byUnit.entries()].filter(([, items]) => items.length > 0);
+  // whose concepts were deleted. Without a search every unit is drawn, an empty one too:
+  // a unit just added holds nothing yet, and its menu is where its first concept is added.
+  const shown = [...byUnit.entries()].filter(
+    ([, items]) => !filtering || items.length > 0,
+  );
 
   if (shown.length === 0) {
     return (
@@ -417,10 +420,13 @@ export function ConceptOutline({
 
       {shown.map(([unit, items]) => {
         const order = units.indexOf(unit);
-        const colour = domainColour(
-          Math.max(0, groups.indexOf(unit)),
-          Math.max(1, groups.length),
-        );
+        // The map draws only the units that hold a concept, so an empty one has no colour of
+        // its own yet; borrowing the first unit's would say they are one.
+        const group = groups.indexOf(unit);
+        const colour =
+          group < 0
+            ? "var(--border)"
+            : domainColour(group, Math.max(1, groups.length));
         const open =
           overrides.get(unit) ?? (filtering || unit === selectedUnit);
         const undescribed = items.filter(
