@@ -20,12 +20,12 @@
     "promote_b_after_seconds": 90,
     "promote_c_after_seconds": 600
   },
-  "access": {
-    "trusted_networks": []
-  },
   "sampling": {
     "temperature_deterministic": 0.0,
     "temperature_reasoning": 0.2
+  },
+  "access": {
+    "trusted_networks": []
   },
   "builders": {
     "transcribe_dpi": 200,
@@ -115,6 +115,7 @@
     "min_primary_chars": 20,
     "max_items": 20,
     "student_max_items": 5,
+    "student_daily_items": null,
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
@@ -145,6 +146,7 @@
   },
   "tutor": {
     "message_max_chars": 12000,
+    "daily_messages": null,
     "history_turns": 8,
     "reply_max_tokens": 1024,
     "max_questions": 3,
@@ -207,13 +209,13 @@
       },
       "reasoning": {
         "effort": {
-          "ep_consolidate": "medium",
+          "ep_consolidate": "low",
           "kg_clean_merge": "low",
           "kg_clean_drop": "low",
           "kg_link_domain": "low",
           "kg_link_cross_domain": "medium",
-          "kg_taggable": "medium",
-          "concept_tagger": "medium",
+          "kg_taggable": "low",
+          "concept_tagger": "low",
           "ep_scan": "low",
           "kg_units": "low"
         },
