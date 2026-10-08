@@ -23,7 +23,6 @@ import {
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GuideLink } from "@/components/GuideLink";
 import type { GuideSlug } from "@/features/guide/sections";
 import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
@@ -281,9 +280,9 @@ export function useStageControl(stage: StageState | undefined): StageControl {
  * stage IS belongs to the guide, linked under the title; what is wrong with it right now
  * stays on the page, because that is the part you act on.
  *
- * `headless` draws the stage without its header and way out: the bank's step draws one
- * header over two stages, each a part of it (`features/bank/BankStep`). It hands its own
- * `control` in, so the header's buttons reach both parts.
+ * `headless` draws the stage without its header and way out: the bank's step is two stages,
+ * each a part of it, and heads the part on screen itself (`features/bank/BankStep`). It hands
+ * each part's `control` in, so the way out it draws reaches both.
  */
 export function StageGate({
   stage,
@@ -369,10 +368,6 @@ export function StageGate({
   // Moving on CLOSES the stage, or the one control the screen offers would lead to a step
   // that then refuses to build for want of an approval nobody was asked for.
   const advance = { blocked: ctl.blocked, running: ctl.closing, run: ctl.close };
-
-  // The same block a part of the bank's step draws in place of the dashed empty state: the
-  // dashes are a whole screen's with nothing in it yet, and a part sits under a header.
-  const empty = headless ? "block" : "screen";
 
   return (
     <StageScope locked={locked} register={register}>
@@ -506,8 +501,7 @@ export function StageGate({
             blocks for one action. The header's button explains itself: with no corpus it is disabled
             and its tooltip says exactly that. */}
         {missing && rawMissing ? (
-          <EmptyCall
-            as={empty}
+          <EmptyState
             icon={<UploadCloud />}
             title={t("stage.rawMissing")}
             action={
@@ -523,13 +517,13 @@ export function StageGate({
               slot: slotLabelOf(rawMissing, t)!,
               stage: artifactName(stage.artifact, t, stage.label),
             })}
-          </EmptyCall>
+          </EmptyState>
         ) : null}
 
         {/* The one thing to do, in the middle of the screen. With the raw material missing
             the block above takes its place, "Importar" being the only way to make this one
             pressable: still one control per unbuilt stage. */}
-        {missing && !rawMissing ? <BuildCall stage={stage} as={empty} /> : null}
+        {missing && !rawMissing ? <BuildCall stage={stage} /> : null}
 
         {/* A stage that is not built has no content, and asking the screen for it is asking it to
             read a file that does not exist: the bank answered with a 404 and painted it as a red
@@ -747,12 +741,11 @@ export function StaleWarning({ children }: { children: ReactNode }) {
  * and which slot is read to make it, since the stages do not read the same one. The
  * trailing sentence about how long it takes is shared, which is why this is two keys.
  */
-function BuildCall({ stage, as }: { stage: StageState; as: "screen" | "block" }) {
+function BuildCall({ stage }: { stage: StageState }) {
   const { t } = useT();
   const call = buildCall(stage.artifact);
   return (
-    <EmptyCall
-      as={as}
+    <EmptyState
       icon={<Hammer />}
       title={call ? t(call.title) : t("build.callTitle")}
       action={<BuildButton stage={stage} />}
@@ -765,63 +758,29 @@ function BuildCall({ stage, as }: { stage: StageState; as: "screen" | "block" })
       ) : (
         t("build.callBody", { label: artifactName(stage.artifact, t, stage.label) })
       )}
-    </EmptyCall>
+    </EmptyState>
   );
 }
 
-/**
- * What a stage with nothing built offers, drawn for where it stands.
- *
- * A stage of its own fills the screen with it, as the dashed empty state of a screen with
- * nothing in it yet. A part of the bank's step sits under the step's header with another
- * part beside it, so the same call is a block there: the dashes are a whole screen's
- * (`web/DESIGN.md` §3).
- */
-function EmptyCall({
-  as,
-  icon,
-  title,
-  action,
-  children,
-}: {
-  as: "screen" | "block";
-  icon: ReactNode;
-  title: string;
-  action: ReactNode;
-  children: ReactNode;
-}) {
-  if (as === "screen") {
-    return (
-      <EmptyState icon={icon} title={title} action={action}>
-        {children}
-      </EmptyState>
-    );
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{children}</CardDescription>
-      </CardHeader>
-      <CardContent>{action}</CardContent>
-    </Card>
-  );
-}
-
-/** The line over a step's title — and over a part of one — that says where it sits. */
+/** The line over a step's title that says where it sits. */
 export const STAGE_KICKER = "text-micro text-muted-foreground";
 
 /**
  * A step's header: where it sits in the path, its name, what it is, and its way out.
  *
- * The four screens of the construction draw it, so a step cannot be headed one way here and
+ * The screens of the construction draw it, so a step cannot be headed one way here and
  * another there. The way out stands to the right from `lg` and under the title below it
  * (`WayOn`). The guide link goes UNDER the title, on a line of its own: beside it, it is one
  * more chip in a row of chips. No tag of any kind beside the title: the bar already says the
  * state under each step's name, and what a state ASKS is said by the notices below.
+ *
+ * A step drawn in parts (the bank's) is headed by the part on screen: its name is the title,
+ * and its place joins the step's on the one line over it — «Paso 3 de 3 · Parte 1 de 2» —,
+ * so the two places read as one path instead of two headings stacked.
  */
 export function StageHeader({
   number,
+  part,
   title,
   lead,
   guide,
@@ -829,6 +788,8 @@ export function StageHeader({
 }: {
   /** The step's number in the bar, or null for a screen outside the path. */
   number: string | null;
+  /** The part of the step on screen, for a step drawn in parts. */
+  part?: { n: number; total: number };
   title: ReactNode;
   lead?: ReactNode;
   guide?: GuideSlug;
@@ -839,7 +800,10 @@ export function StageHeader({
     <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
       <header className="min-w-0 space-y-1.5">
         {number ? (
-          <p className={STAGE_KICKER}>{t("nav.stepNumber", { n: number, total: STEPS.length })}</p>
+          <p className={STAGE_KICKER}>
+            {t("nav.stepNumber", { n: number, total: STEPS.length })}
+            {part ? ` · ${t("bank.part", part)}` : null}
+          </p>
         ) : null}
         <h1 className="font-display font-expanded text-title">{title}</h1>
         {lead}

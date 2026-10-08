@@ -493,36 +493,35 @@ export const es = {
   // for an account the evaluation is open to, since nobody else has the questionnaire.
   "stage.what.rated": "Al final se te pide una valoración de este paso.",
   // STEP 3 IN TWO PARTS (2026-10-08): the types of exercise, then the bank collected with
-  // them. «Recoger el banco» closes the types and starts the collection, whose first link —
-  // deciding which concepts work as labels — is never a button of its own.
-  "bank.step.lead":
-    "Dos partes, en este orden: primero confirmas cómo son tus tipos de ejercicio, y después se recogen con esa forma los ejercicios de tus documentos, etiquetados con los conceptos del temario.",
+  // them, one on screen at a time and chosen from two cards at the top. «Recoger el banco»
+  // closes the types and starts the collection, whose first link — deciding which concepts
+  // work as labels — is never a button of its own.
   "bank.step.collect": "Recoger el banco",
   "bank.step.recollect": "Recoger el banco otra vez",
   "bank.step.collectTip": "Da por buenos los tipos de ejercicio y recoge con ellos los ejercicios de tus documentos.",
   "bank.step.recollectTip": "Vuelve a recoger los ejercicios con los tipos y el temario de ahora.",
-  "bank.step.collectCaption": "Al recoger el banco, los tipos quedan dados por buenos.",
   "bank.step.recollectCaption": "Este banco se recogió antes de los últimos cambios.",
-  "bank.step.finishCaption": "Cuando el banco esté bien, sigue.",
   "bank.step.keep": "Seguir con este banco",
   "bank.step.keepTip": "Da por bueno el banco tal como está, sin recogerlo otra vez.",
   "bank.step.needsSyllabus": "Antes hay que dar por bueno el «Temario».",
   "bank.part": "Parte {n} de {total}",
+  "bank.parts.label": "Las dos partes del paso",
+  "bank.part.types.note": "Qué formas tienen tus ejercicios y qué partes lleva cada una.",
+  "bank.part.bank.note": "Los ejercicios de tus documentos, etiquetados con los conceptos del temario.",
+  "bank.part.bank.locked": "Se abre cuando estén construidos los tipos de ejercicio.",
+  "bank.part.continue": "Continuar a la Parte 2",
+  "bank.part.continueTip": "Lo que hayas cambiado se guarda al continuar. Los tipos quedan dados por buenos al recoger el banco.",
+  "bank.part.closedTitle": "Esta parte ya está cerrada",
+  "bank.part.types.collecting": "Se está recogiendo el banco con estos tipos.",
+  "bank.step.typesBuilding": "Antes tienen que terminar de construirse los tipos de ejercicio.",
+  "bank.step.typesDrift": "Antes hay que volver a construir los tipos de ejercicio: sus documentos han cambiado.",
   "bank.part.curating": "Corrigiendo",
   "bank.part.changed": "Con cambios",
   "bank.chain.stoppedTitle": "La última recogida se detuvo",
   "bank.chain.stoppedLead": "Se detuvo en el paso marcado. Pulsa otra vez «Recoger el banco» para empezarla de nuevo.",
   "bank.part.otherCurating": "Termina antes la corrección de la otra parte.",
-  "bank.part.types.correct": "Corregir los tipos",
-  "bank.part.types.show": "Ver los tipos",
-  "bank.part.types.hide": "Ocultar los tipos",
-  "bank.part.types.count": { one: "1 tipo de ejercicio", other: "{n} tipos de ejercicio" },
-  "bank.part.fields.count": { one: "1 campo", other: "{n} campos" },
-  "bank.part.bank.correct": "Corregir el banco",
   "bank.part.bank.lead":
-    "Los ejercicios de tus documentos, recogidos uno a uno con esos tipos y etiquetados con los conceptos del temario.",
-  "bank.part.bank.later": "Se recoge cuando confirmes los tipos de ejercicio con «Recoger el banco».",
-  "bank.part.bank.ready": "Todavía no se ha recogido el banco: pulsa «Recoger el banco», arriba a la derecha.",
+    "Los ejercicios de tus documentos, recogidos uno a uno con la forma de tus tipos de ejercicio y etiquetados con los conceptos del temario.",
   "bank.chain.title": "Recogiendo el banco",
   "bank.chain.lead": "Tres pasos seguidos. Puedes salir de esta pantalla: la recogida sigue por su cuenta.",
   "bank.chain.taggabilityWaiting":
@@ -568,7 +567,8 @@ export const es = {
   "build.call.graph.title": "Todavía no hay un temario extraído de tus apuntes",
   "build.call.graph.body": "Al construir, el sistema lee tus apuntes y saca los conceptos de la asignatura, agrupados en unidades y con las dependencias que haya entre ellos.",
   "build.call.bank.title": "Todavía no hay ejercicios recogidos ni etiquetados",
-  "build.call.bank.body": "Al construir, el sistema recoge uno a uno los ejercicios de tus documentos y le pone a cada uno los conceptos del temario que practica.",
+  "build.call.bank.body":
+    "Al recoger el banco, el sistema lee uno a uno los ejercicios de tus documentos, les da la forma de tus tipos de ejercicio y le pone a cada uno los conceptos del temario que practica.",
   "build.callTakesTime": "Tarda un rato: puedes salir de esta pantalla mientras tanto, que la construcción sigue por su cuenta.",
   "build.rebuild": "Volver a construir",
   "build.rebuildTip": "Vuelve a construir «{stage}» con los documentos que hay ahora.{note}",

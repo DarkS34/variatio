@@ -189,7 +189,7 @@ else; `check:color` only sees what is in `src/index.css`.
 - Every tab or screen made of parts is `Sections`: the list of sections beside the section
   open, under `SectionHeader`.
 - **Every row**: a **16 px mark**, the **name**, **one line of detail** (a count or a state in
-  a word). The mark is a lucide icon at `size-4`; where the list is an **order** (the four
+  a word). The mark is a lucide icon at `size-4`; where the list is an **order** (the
   steps, the units) it is `NumberMark`. Never a coloured square, never no mark.
 - The detail line is drawn even while it loads (pass `undefined`, the row keeps 64 px).
   Colour it only when it calls for somebody (`text-attention`, `text-destructive`).
@@ -246,6 +246,10 @@ one pressed in. The generate form's fixed-height cards are `CHOICE_CARD` (same b
 
 - `Tabs` (`components/ui/tabs.tsx`) or `TabStrip` (when the tabs own panels with ids). Both
   are the **sunk pill**; never an underline.
+- **One exception**: the two parts of step 3 are chosen from a block of two choice cards
+  (§7.2) at the top of the step (`features/bank/BankStep.tsx`, `PartPicker`; the user's
+  request, 2026-10-08), because each card says where its part stands — a state badge and a
+  sentence — which a pill has no room for. They are still tabs to a screen reader.
 - A count beside a tab label: a quiet figure (`nums text-small text-muted-foreground`).
 - A filter over a list («Activos 4 / Desactivados 0») is `Tabs` too.
 
@@ -274,8 +278,10 @@ Archivo only (Literata only in the tutorial). Six steps, every line a whole numb
 - **No icon in a block's title.** Icons belong to marks of lists, buttons and doors.
 - A screen header: `h1` (display), its (i) `InfoHint` if needed, and `GuideLink` to its guide
   section under it. An (i) and visible text never say the same thing.
-- A stage header: kicker «Fase de construcción · Paso N de 4», the title in the display face
-  at `text-title`, the lead, `GuideLink`, and `StageGate.WayOn` on the right.
+- A stage header: kicker «Fase de construcción · Paso N de 3», the title in the display face
+  at `text-title`, the lead, `GuideLink`, and `StageGate.WayOn` on the right. A step drawn in
+  parts (step 3) is headed by the part on screen: «Fase de construcción · Paso 3 de 3 · Parte
+  N de 2» over the part's name (`StageHeader`'s `part`).
 
 ## 10. Copy, language and behaviour that the look depends on
 

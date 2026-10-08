@@ -1,25 +1,21 @@
-import { ArrowRight, Check, Circle, Eye, EyeOff, Pencil, RefreshCw, X } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import { ArrowRight, Check, Circle, Hammer, Lock, Pencil, RefreshCw, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { BuildProgress, JobProgress } from "@/components/BuildProgress";
 import { CancelButton } from "@/components/CancelButton";
-import {
-  STAGE_KICKER,
-  StageHeader,
-  WayOn,
-  continueLabel,
-  useStageControl,
-  type StageControl,
-} from "@/components/StageGate";
-import { Badge } from "@/components/ui/badge";
+import { StageHeader, WayOn, continueLabel, useStageControl } from "@/components/StageGate";
+import { tabIds } from "@/components/TabStrip";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CARD_CHOICE, CARD_CHOSEN, ChoiceMark } from "@/components/ui/choice";
 import { useConfirm } from "@/components/ui/confirm";
 import { InfoHint } from "@/components/ui/hint";
-import { Spinner } from "@/components/ui/misc";
+import { EmptyState, Spinner } from "@/components/ui/misc";
+import { useRadioGroup } from "@/components/ui/radio";
 import { ProfilePart, useProfileIntro } from "@/features/profile/ProfileEditor";
 import { useT, type Key } from "@/lib/i18n";
-import { artifactName } from "@/lib/names";
+import { artifactName, buildCall } from "@/lib/names";
 import { isLive } from "@/lib/queue";
 import { rawDriftOf, slotLabelOf } from "@/lib/raw";
 import { Link, useRouter } from "@/lib/router";
@@ -28,16 +24,20 @@ import type { BuildPhase, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAsksStageReview, useCanEdit } from "@/state/auth";
 import {
+  useActiveWorkspace,
   useEngineOffline,
   useJobPhases,
   useJobRun,
-  useProfile,
   useRawMissingFor,
   useSubmitJob,
 } from "@/state/queries";
 import type { RunView } from "@/state/runStore";
 
 import { BankPart } from "./BankScreen";
+import { PARTS, readParts, type Part, type PartState } from "./parts";
+
+/** Ties each card of the parts' block to the panel it shows (`TabStrip.tabIds`). */
+const PICKER = "bank-parts";
 
 /**
  * STEP 3, «Banco de ejercicios»: the types of exercise and the bank, one step in two parts
@@ -48,17 +48,18 @@ import { BankPart } from "./BankScreen";
  * «Recoger el banco» closes the types, decides the labels, extracts and tags the exercises
  * and warms the indices, and none of it is named on its own.
  *
- * ONE PAGE, TWO PARTS, read in order: first the shape of the exercises, then the exercises
- * collected with that shape. They are told apart by space and a rule on the ground, never by
- * a box — a box around blocks would be a third level of depth (`web/DESIGN.md` §1) —, and each
- * part carries its place, its state and its own action. The types fold to one line once a
- * bank exists, since from then on they are what the bank was collected with and not the
- * next thing to do; folded is never dropped, and opening them is one press.
+ * TWO PARTS, ONE ON SCREEN (the user's request, the same day: the two stacked on one page
+ * under a heading of the step read as a long page with two headings). A block of two cards
+ * at the top chooses the part, as the engine's choice does (`PartPicker`), and says where
+ * each stands; the bank's opens once the types exist, and then says it is next. Under it the
+ * part on screen is headed as a step is — its place joined to the step's, «Paso 3 de 3 ·
+ * Parte 1 de 2», its name, what it is, its way out —, and the other part stays mounted and
+ * hidden, so a draft survives the switch.
  *
  * ONE CORAL on the screen, on the move that is next: building the types, rebuilding them
- * when their documents changed, collecting the bank, collecting it again, or going on to
- * generate. The parts' own actions are outline buttons. Only one part may be corrected at a
- * time, because the bar that saves a correction is one.
+ * when their documents changed, going on to the bank, collecting it, collecting it again, or
+ * going on to generate. Only one part may be corrected at a time, because the bar that saves
+ * a correction is one.
  */
 export function BankStep({
   profile,
@@ -80,15 +81,23 @@ export function BankStep({
   const submit = useSubmitJob();
   const confirm = useConfirm();
   const { navigate } = useRouter();
+  const workspace = useActiveWorkspace();
   // The links of the collection and the retagging, which writes the bank without being one.
   const reviewRun = useJobRun("review_taggability");
   const extractRun = useJobRun("build_bank");
   const indexRun = useJobRun("index");
   const tagRun = useJobRun("tag");
   const reviewPhases = useJobPhases("review_taggability");
-  // Opened by hand while folded, for reading. Nothing remembers it past the visit.
-  const [showTypes, setShowTypes] = useState(false);
+  // The part chosen by hand on this visit; until somebody chooses, the one the state points
+  // at. Nothing remembers it past the visit.
+  const [chosen, setChosen] = useState<Part | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  // Another subject is another step: what was chosen in the last one does not carry over.
+  useEffect(() => {
+    setChosen(null);
+    setFailed(null);
+  }, [workspace]);
 
   if (!profile || !bank) {
     return (
@@ -103,26 +112,33 @@ export function BankStep({
   const since = reviewRun?.job?.created_at ?? 0;
   const ofThis = (run: RunView | null) => (run?.job && run.job.created_at >= since ? run : null);
   const links: Links = { review: reviewRun, extract: ofThis(extractRun), index: ofThis(indexRun) };
-  const chainLive = [links.review, links.extract, links.index].some((run) => isLive(run?.job));
+  const chain = [links.review, links.extract, links.index];
   // The pipeline marks the bank as building from the review on; a retagging marks it too and
   // is not a collection — it patches the bank in place, under the bank's own part.
-  const collecting = chainLive || (bank.status === "building" && !isLive(tagRun?.job));
-  const collected = bank.status !== "missing" && !collecting;
+  const collecting =
+    chain.some((run) => isLive(run?.job)) || (bank.status === "building" && !isLive(tagRun?.job));
   const typesBuilt = profile.status !== "missing" && profile.status !== "building";
   const graphReady = graph?.status === "approved";
   const typesDrift = profile.stale_because.some((cause) => rawDriftOf(cause) !== null);
   const bankDrift = bank.stale_because.some((cause) => rawDriftOf(cause) !== null);
-  // A bank collected over types reopened since — an edit withdraws their approval, and
-  // collecting gives it — or stale for any cause: what to do next is to collect it again.
-  const recollect = collected && (profile.status !== "approved" || bank.stale_because.length > 0);
   const failedCollection =
-    bank.status === "missing" &&
-    [links.review, links.extract, links.index].some((run) => run?.job?.status === "failed");
-
-  // The types fold once there is a bank, unless they are being built or corrected, read, or
-  // stale for their documents — whose notice carries the one move left.
-  const foldable = collected || collecting;
-  const typesOpen = !typesBuilt || !foldable || types.curating || showTypes || typesDrift;
+    bank.status === "missing" && chain.some((run) => run?.job?.status === "failed");
+  const parts = readParts({
+    profile: profile.status,
+    profileHash: Boolean(profile.hash),
+    typesDrift,
+    typesCurating: types.curating,
+    typesDirty: Boolean(types.pending?.dirty),
+    bank: bank.status,
+    bankStale: bank.stale_because.length > 0,
+    bankCurating: exercises.curating,
+    collecting,
+    collectionFailed: failedCollection,
+    graphReady,
+  });
+  const { collected, recollect } = parts;
+  const part: Part = parts.bankOpen ? (chosen ?? parts.opening) : "types";
+  const typesName = artifactName("exemplars_profile", t, profile.label);
   const bankName = artifactName("exemplars_bank", t, bank.label);
   const next = nextStepOf("exemplars_bank");
 
@@ -132,15 +148,48 @@ export function BankStep({
     ? t("build.readOnly")
     : !graphReady
       ? t("bank.step.needsSyllabus")
-      : rawMissing
-        ? t("build.rawMissing", { slot: slotLabelOf(rawMissing, t)! })
-        : bank.transcribing_slot
-          ? t("build.transcribing", { slot: slotLabelOf(bank.transcribing_slot, t)! })
-          : offline
-            ? offline
-            : types.blocked;
-  const finishReason = !graphReady ? t("bank.step.needsSyllabus") : exercises.blocked;
-  const busy = submit.isPending || types.closing || exercises.closing;
+      : profile.status === "building"
+        ? t("bank.step.typesBuilding")
+        : typesDrift
+          ? t("bank.step.typesDrift")
+          : rawMissing
+            ? t("build.rawMissing", { slot: slotLabelOf(rawMissing, t)! })
+            : bank.transcribing_slot
+              ? t("build.transcribing", { slot: slotLabelOf(bank.transcribing_slot, t)! })
+              : offline
+                ? offline
+                : types.blocked;
+  // Closing the bank closes the types with it, a draft of theirs included.
+  const finishReason = !graphReady
+    ? t("bank.step.needsSyllabus")
+    : (exercises.blocked ?? types.blocked);
+  const busy = submit.isPending || types.closing || exercises.closing || leaving;
+
+  const choose = (to: Part) => {
+    setFailed(null);
+    setChosen(to);
+  };
+
+  // On to the bank: write what the types' correction holds and end it. The types are
+  // confirmed when the bank is collected or closed, never here, so that a bank collected with
+  // other types before is still offered again (`readParts`).
+  const toBank = async () => {
+    setFailed(null);
+    setLeaving(true);
+    try {
+      if (types.pending?.dirty) {
+        await types.pending.save();
+        types.markWrote();
+      }
+    } catch {
+      setFailed(t("stage.curate.saveFailed"));
+      return;
+    } finally {
+      setLeaving(false);
+    }
+    types.setCurating(false);
+    choose("bank");
+  };
 
   // Close the types — saving what is pending first —, then queue the review that heads the
   // collection. Collecting again replaces the bank, and its corrections with it: asked first.
@@ -159,7 +208,7 @@ export function BankStep({
       types.setCurating(false);
       exercises.setCurating(false);
       await submit.mutateAsync({ kind: "review_taggability" });
-      setShowTypes(false);
+      setChosen("bank");
     } catch (error) {
       setFailed(t("build.failed", { error: (error as Error).message }));
     }
@@ -178,6 +227,10 @@ export function BankStep({
     navigate(next.path);
   };
 
+  // A disabled control says why where a keyboard and a finger reach it too.
+  const whyNot = (reason: string | null) =>
+    reason ? <InfoHint label={t("build.whyNot")}>{reason}</InfoHint> : null;
+
   const collectButton = (
     <Button
       variant="attention"
@@ -192,34 +245,84 @@ export function BankStep({
     </Button>
   );
 
-  // The way out beside the title, by what is next. Nothing while the types are missing or
-  // being built, while the bank is being collected, or while the types' documents changed:
-  // the move then is inside a part (its build button, its progress, its rebuild).
-  const wayOn = ((): ReactNode => {
-    if (!typesBuilt || collecting || typesDrift) return null;
-    // A refusal names the move out of it: nothing here can be collected or closed while the
-    // syllabus is open, so the coral goes to it.
-    if (!graphReady) {
-      return (
-        <WayOn caption={t("bank.step.needsSyllabus")}>
-          <Link to="/prepare/graph" className={cn(buttonVariants({ variant: "attention", size: "xl" }))}>
-            {t("chain.goFix", { n: stepNumberOf("knowledge_graph") ?? "", label: t("nav.step.graph") })}
-            <ArrowRight />
-          </Link>
-        </WayOn>
-      );
-    }
-    if (types.curating || !collected) {
-      return (
-        <WayOn
-          caption={t(types.curating ? "stage.curate.editingTitle" : "bank.step.collectCaption")}
-          error={failed}
+  // A refusal names the move out of it: nothing in the bank can be collected or closed while
+  // the syllabus is open, so the coral goes to it.
+  const toSyllabus = (
+    <Link to="/prepare/graph" className={cn(buttonVariants({ variant: "attention", size: "xl" }))}>
+      {t("chain.goFix", { n: stepNumberOf("knowledge_graph") ?? "", label: t("nav.step.graph") })}
+      <ArrowRight />
+    </Link>
+  );
+
+  // Correcting one part waits for the other's correction to end: one bar saves it.
+  const correct = (which: Part) => {
+    const control = which === "types" ? types : exercises;
+    const other = which === "types" ? exercises : types;
+    const stage = which === "types" ? profile : bank;
+    if (!canEdit || control.curating) return null;
+    return (
+      <Button
+        variant="outline"
+        disabled={other.curating}
+        title={
+          other.curating
+            ? t("bank.part.otherCurating")
+            : stage.status === "approved"
+              ? t("stage.curate.closed")
+              : t(which === "bank" ? "stage.curate.bodyBank" : "stage.curate.body")
+        }
+        onClick={() => {
+          choose(which);
+          control.setCurating(true);
+        }}
+      >
+        <Pencil />
+        {t("stage.curate.start")}
+      </Button>
+    );
+  };
+
+  // The types' way out: correct them, or go on to the bank. Nothing while they are missing or
+  // being built — the build is the move —, or stale for their documents, whose notice carries
+  // the rebuild.
+  const typesWayOn =
+    !typesBuilt || typesDrift ? null : (
+      <WayOn
+        caption={t(
+          types.curating
+            ? "stage.curate.editingTitle"
+            : collecting
+              ? "bank.part.types.collecting"
+              : profile.status === "approved"
+                ? "bank.part.closedTitle"
+                : "stage.curate.title",
+        )}
+        error={failed}
+      >
+        {/* Types corrected while the bank is collected with them would be stale before it
+            ends: they wait for it. */}
+        {collecting ? null : correct("types")}
+        <Button
+          variant="attention"
+          size="xl"
+          disabled={busy || Boolean(types.blocked)}
+          title={types.blocked ?? t("bank.part.continueTip")}
+          onClick={() => void toBank()}
         >
-          {collectButton}
-          {collectReason ? <InfoHint label={t("build.whyNot")}>{collectReason}</InfoHint> : null}
-        </WayOn>
-      );
-    }
+          {busy ? <Spinner /> : null}
+          {t("bank.part.continue")}
+          {busy ? null : <ArrowRight />}
+        </Button>
+        {whyNot(types.blocked)}
+      </WayOn>
+    );
+
+  // The bank's way out, by what is next. Nothing while there is no bank — the call in its
+  // place is the move, or the stopped collection's —, while it is being collected, or while
+  // the types' documents changed: rebuilding the types comes first.
+  const bankWayOn = ((): ReactNode => {
+    if (!collected || typesDrift) return null;
+    if (!graphReady) return <WayOn caption={t("bank.step.needsSyllabus")}>{toSyllabus}</WayOn>;
     if (recollect) {
       return (
         <WayOn caption={t("bank.step.recollectCaption")} error={failed}>
@@ -236,6 +339,7 @@ export function BankStep({
             </Button>
           )}
           {collectButton}
+          {whyNot(collectReason)}
         </WayOn>
       );
     }
@@ -245,11 +349,12 @@ export function BankStep({
           exercises.curating
             ? "stage.curate.editingTitle"
             : bank.status === "approved"
-              ? "stage.curate.closedTitle"
-              : "bank.step.finishCaption",
+              ? "bank.part.closedTitle"
+              : "stage.curate.title",
         )}
         error={failed}
       >
+        {correct("bank")}
         <Button
           variant="attention"
           size="xl"
@@ -261,226 +366,208 @@ export function BankStep({
           {continueLabel(next, t)}
           {busy ? null : <ArrowRight />}
         </Button>
-        {finishReason ? <InfoHint label={t("build.whyNot")}>{finishReason}</InfoHint> : null}
+        {whyNot(finishReason)}
       </WayOn>
     );
   })();
 
-  // Correcting one part waits for the other's correction to end: one bar saves it.
-  const correct = (control: StageControl, other: StageControl, label: Key) =>
-    canEdit && !control.curating ? (
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={other.curating}
-        title={other.curating ? t("bank.part.otherCurating") : undefined}
-        onClick={() => {
-          control.setCurating(true);
-          setShowTypes(false);
-        }}
-      >
-        <Pencil />
-        {t(label)}
-      </Button>
-    ) : null;
-
-  // One part says «Te toca ahora», the one the coral acts on. Types edited since the bank was
-  // collected are not the next move — collecting again is, and it closes them —, so they say
-  // what happened to them.
-  const typesState: PartState =
-    profile.status === "building"
-      ? "building"
-      : types.curating
-        ? "curating"
-        : profile.status === "approved"
-          ? "done"
-          : collected
-            ? "changed"
-            : "now";
-  const bankState: PartState = collecting
-    ? "building"
-    : exercises.curating
-      ? "curating"
-      : bank.status === "approved"
-        ? "done"
-        : collected || profile.status === "approved"
-          ? "now"
-          : "later";
+  // What the bank's part offers while there is no bank: collecting it, or — with the
+  // syllabus open, which refuses that — the way to the syllabus.
+  const collectAction = (
+    <>
+      <span className="inline-flex flex-wrap items-center gap-2">
+        {graphReady ? collectButton : toSyllabus}
+        {graphReady ? whyNot(collectReason) : null}
+      </span>
+      {failed ? <p className="mt-2 text-small text-destructive">{failed}</p> : null}
+    </>
+  );
+  const bankCall = buildCall("exemplars_bank");
 
   return (
-    <div>
+    <div className="flex flex-col gap-7">
+      <PartPicker
+        part={part}
+        onChoose={choose}
+        cards={{
+          types: { title: typesName, note: t("bank.part.types.note"), state: parts.types, locked: null },
+          bank: {
+            title: bankName,
+            // With nothing to collect from yet, the sentence says what it waits for.
+            note: !graphReady && !collected ? t("bank.step.needsSyllabus") : t("bank.part.bank.note"),
+            state: parts.bank,
+            locked: parts.bankOpen ? null : t("bank.part.bank.locked"),
+          },
+        }}
+      />
+
       <StageHeader
         number={stepNumberOf("exemplars_bank")}
-        title={t("nav.step.bank")}
+        part={{ n: PARTS.indexOf(part) + 1, total: PARTS.length }}
+        title={part === "types" ? typesName : bankName}
         lead={
           <p className="max-w-[74ch] text-body text-muted-foreground">
-            {t("bank.step.lead")}
-            {asksReview ? ` ${t("stage.what.rated")}` : null}
+            {part === "types"
+              ? // A profile read before the stage was emptied still names its types: not without one.
+                intro && profile.status !== "missing"
+                ? `${intro} ${t("stage.what.profile.why")}`
+                : t("stage.what.profile")
+              : collected
+                ? `${t("stage.what.bank")}${asksReview ? ` ${t("stage.what.rated")}` : ""}`
+                : t("bank.part.bank.lead")}
           </p>
         }
         guide="bank"
-        wayOn={wayOn}
+        wayOn={part === "types" ? typesWayOn : bankWayOn}
       />
 
-      <Part
-        n={1}
-        title={t("nav.step.profile")}
-        lead={
-          intro
-            ? // What to do with them is said only where they are drawn: folded, it would point
-              // at nothing.
-              typesOpen
-              ? `${intro} ${t("stage.what.profile.why")}`
-              : intro
-            : t("stage.what.profile")
-        }
-        state={typesState}
-        actions={
-          typesBuilt && !collecting ? (
-            <>
-              {foldable && showTypes && !types.curating ? (
-                <Button size="sm" variant="ghost" onClick={() => setShowTypes(false)}>
-                  <EyeOff />
-                  {t("bank.part.types.hide")}
-                </Button>
-              ) : null}
-              {correct(types, exercises, "bank.part.types.correct")}
-            </>
-          ) : null
-        }
-      >
-        {typesOpen ? (
-          <ProfilePart stage={profile} control={types} />
-        ) : (
-          <TypesFolded onOpen={() => setShowTypes(true)} />
-        )}
-      </Part>
-
-      <Part
-        n={2}
-        title={bankName}
-        lead={t(collected ? "stage.what.bank" : "bank.part.bank.lead")}
-        state={bankState}
-        dimmed={bankState === "later"}
-        actions={
-          collected && !recollect && graphReady
-            ? correct(exercises, types, "bank.part.bank.correct")
-            : null
-        }
-      >
+      <PartPanel part="types" shown={part === "types"}>
+        <ProfilePart stage={profile} control={types} />
+      </PartPanel>
+      <PartPanel part="bank" shown={part === "bank"}>
         {collecting ? (
           <Collection links={links} reviewPhases={reviewPhases} />
         ) : collected ? (
           <BankPart stage={bank} control={exercises} />
+        ) : failedCollection ? (
+          // A collection that stopped says where, and offers itself again under the rows.
+          <Collection links={links} reviewPhases={reviewPhases} action={collectAction} />
         ) : (
-          // A collection that stopped says where in its own block; otherwise one sentence says
-          // when the bank comes.
-          failedCollection ? (
-            <Collection links={links} reviewPhases={reviewPhases} />
-          ) : (
-            <p className="text-body text-muted-foreground">
-              {t(profile.status === "approved" ? "bank.part.bank.ready" : "bank.part.bank.later")}
-            </p>
-          )
+          // Nothing collected yet: the call in the middle, as every step's unbuilt stage.
+          <EmptyState
+            icon={<Hammer />}
+            title={bankCall ? t(bankCall.title) : t("build.callTitle")}
+            action={collectAction}
+          >
+            {bankCall ? <p>{t(bankCall.body)}</p> : null}
+            <p className="mt-2">{t("build.callTakesTime")}</p>
+          </EmptyState>
         )}
-      </Part>
+      </PartPanel>
     </div>
   );
 }
 
-type PartState = "done" | "now" | "later" | "building" | "curating" | "changed";
+type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 
-// The words are the bar's under its steps, so a part says what a step would; correcting, and
-// types changed since the bank was collected, are the two states a step never shows.
-const PART_STATE: Record<
-  PartState,
-  { key: Key; variant: "settled" | "default" | "outline"; mark: ReactNode }
-> = {
+// The words are the bar's under its steps, in the bar's tones, so a part says what a step
+// would: «Te toca ahora» in coral marks where the next move is, as it does under the step
+// in the bar — a state, never a control; the screen's one coral control is its way out.
+// Correcting, and types changed since the bank was collected, are the two states a step
+// never shows.
+const PART_STATE: Record<PartState, { key: Key; variant: BadgeVariant; mark: ReactNode }> = {
   done: { key: "nav.state.done", variant: "settled", mark: <Check aria-hidden /> },
-  now: { key: "nav.state.now", variant: "default", mark: null },
+  now: { key: "nav.state.now", variant: "attention", mark: <ArrowRight aria-hidden /> },
   later: { key: "nav.state.later", variant: "outline", mark: null },
   building: { key: "nav.state.building", variant: "default", mark: <Spinner /> },
   curating: { key: "bank.part.curating", variant: "default", mark: <Pencil aria-hidden /> },
   changed: { key: "bank.part.changed", variant: "outline", mark: <Pencil aria-hidden /> },
 };
 
-/**
- * One part of the step: a rule across the ground, its place and name, one sentence, its
- * state and its action, then its blocks.
- *
- * The division is space and a rule: 56 px from what is above, twice the distance between
- * two blocks so it never reads as one more of them. The name is the display face at a
- * block title's size — a group on the ground (`web/DESIGN.md` §3), told apart from the
- * blocks it heads by the width of its letters. A part that is not next yet is dimmed, as
- * what lies ahead is everywhere.
- */
-function Part({
-  n,
-  title,
-  lead,
-  state,
-  actions,
-  dimmed = false,
-  children,
-}: {
-  n: number;
+// A part that cannot be opened yet: later, with the lock as its shape.
+const LOCKED: { key: Key; variant: BadgeVariant; mark: ReactNode } = {
+  key: "nav.state.later",
+  variant: "outline",
+  mark: <Lock aria-hidden />,
+};
+
+interface PartCard {
   title: string;
-  lead: string;
+  /** What the part is, in one sentence. */
+  note: string;
   state: PartState;
-  actions?: ReactNode;
-  dimmed?: boolean;
-  children: ReactNode;
+  /** Why the part cannot be opened yet, or null. Said in place of the sentence. */
+  locked: string | null;
+}
+
+/**
+ * The two parts as two cards in a block at the top, the one on screen pressed in.
+ *
+ * The engine's choice drawn again (`features/admin/EngineChoice`, the user's request of
+ * 2026-10-08): one `CARD_CHOICE` per part with the square of the choice, its name, its state
+ * in the bar's words and one sentence of what it is — or, while it cannot be opened, why.
+ * They work as TABS, each showing its panel, with the keys of a radio group: one stop in the
+ * tab order, the arrows move between them and skip a part that cannot be opened. A tab of the
+ * app is the sunk pill (`web/DESIGN.md` §7.3); these are cards because each says where its
+ * part stands, which a pill has no room for.
+ *
+ * The types take three tenths of the line and the bank seven (the user's request, the same
+ * day). Below `xl` three tenths leave the types' name and state no room on one line, so
+ * there the two halve the line, and on a phone they stack.
+ */
+function PartPicker({
+  part,
+  onChoose,
+  cards,
+}: {
+  part: Part;
+  onChoose: (part: Part) => void;
+  cards: Record<Part, PartCard>;
 }) {
   const { t } = useT();
-  const id = useId();
-  const badge = PART_STATE[state];
+  const keys = useRadioGroup(PARTS, part, onChoose);
   return (
-    <section aria-labelledby={id} className="mt-14 space-y-4 border-t border-border pt-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
-        <div className="min-w-0 space-y-1">
-          <p className={STAGE_KICKER}>{t("bank.part", { n, total: 2 })}</p>
-          <h2 id={id} className="font-display font-expanded text-heading">
-            {title}
-          </h2>
-          <p className="max-w-[74ch] text-small text-muted-foreground">{lead}</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-          <Badge variant={badge.variant} mark={badge.mark}>
-            {t(badge.key)}
-          </Badge>
-          {actions}
-        </div>
+    <Card className="p-5">
+      <div
+        role="tablist"
+        aria-label={t("bank.parts.label")}
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[3fr_7fr]"
+        {...keys.group}
+      >
+        {PARTS.map((key) => {
+          const card = cards[key];
+          const chosen = key === part;
+          const ids = tabIds(PICKER, key);
+          const badge = card.locked ? LOCKED : PART_STATE[card.state];
+          // The tab is named by its part alone; its state and its sentence describe it.
+          return (
+            <button
+              key={key}
+              {...keys.radio(key)}
+              type="button"
+              role="tab"
+              id={ids.tab}
+              aria-controls={ids.panel}
+              aria-selected={chosen}
+              aria-labelledby={`${ids.tab}-name`}
+              aria-describedby={`${ids.tab}-state ${ids.tab}-note`}
+              disabled={Boolean(card.locked)}
+              onClick={() => onChoose(key)}
+              className={cn(CARD_CHOICE, "flex items-start gap-3 p-3", chosen && CARD_CHOSEN)}
+            >
+              <ChoiceMark chosen={chosen} className="mt-1.5" />
+              <span className="min-w-0 flex-1 space-y-0.5">
+                <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span id={`${ids.tab}-name`} className="font-expanded text-heading">
+                    {card.title}
+                  </span>
+                  <Badge id={`${ids.tab}-state`} variant={badge.variant} mark={badge.mark}>
+                    {t(badge.key)}
+                  </Badge>
+                </span>
+                <span id={`${ids.tab}-note`} className="block text-small text-muted-foreground">
+                  {card.locked ?? card.note}
+                </span>
+              </span>
+            </button>
+          );
+        })}
       </div>
-      <div className={cn(dimmed && "opacity-60")}>{children}</div>
-    </section>
+    </Card>
   );
 }
 
 /**
- * The types of exercise folded to one line: how many, and how many fields between them.
- *
- * Counted off the file, never a draft: folded, nothing is being edited.
+ * One part's panel. Hidden and never unmounted while the other part is on screen: a draft of
+ * the types, a page of the bank or a filter survives the switch, and closing the bank still
+ * saves the types' draft (`StageControl.close`), which only a mounted editor holds.
  */
-function TypesFolded({ onOpen }: { onOpen: () => void }) {
-  const { t, plural } = useT();
-  const query = useProfile();
-  const profile = query.data?.exists ? query.data.profile : null;
-  const kinds = profile ? Object.values(profile.item_types) : [];
-  const fields = kinds.reduce((sum, spec) => sum + Object.keys(spec.fields ?? {}).length, 0);
+function PartPanel({ part, shown, children }: { part: Part; shown: boolean; children: ReactNode }) {
+  const ids = tabIds(PICKER, part);
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-5">
-        <p className="text-body">
-          {profile
-            ? `${plural("bank.part.types.count", kinds.length)} · ${plural("bank.part.fields.count", fields)}`
-            : t("stage.loading")}
-        </p>
-        <Button size="sm" variant="ghost" onClick={onOpen}>
-          <Eye />
-          {t("bank.part.types.show")}
-        </Button>
-      </CardContent>
-    </Card>
+    <div role="tabpanel" id={ids.panel} aria-labelledby={ids.tab} hidden={!shown}>
+      {children}
+    </div>
   );
 }
 
@@ -497,9 +584,18 @@ interface Links {
  * A review the server skipped — nothing it reads changed — is done at once and says so. Under
  * the rows, the running link's own progress card (the review's and the extraction's have a
  * phase plan); a link waiting its turn draws none, since a bar over a job that has not
- * started says work is happening that is not.
+ * started says work is happening that is not. A collection that stopped keeps its rows, and
+ * `action` under them offers it again.
  */
-function Collection({ links, reviewPhases }: { links: Links; reviewPhases: BuildPhase[] }) {
+function Collection({
+  links,
+  reviewPhases,
+  action,
+}: {
+  links: Links;
+  reviewPhases: BuildPhase[];
+  action?: ReactNode;
+}) {
   const { t } = useT();
   const stopped = ![links.review, links.extract, links.index].some((run) => isLive(run?.job));
   // Named as every screen names the job — the panel's queue, the progress card under these
@@ -524,7 +620,7 @@ function Collection({ links, reviewPhases }: { links: Links; reviewPhases: Build
             {t(stopped ? "bank.chain.stoppedLead" : "bank.chain.lead")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
           <ol className="rows rows-tight">
             {rows.map((row) => (
               <CollectionRow
@@ -535,6 +631,7 @@ function Collection({ links, reviewPhases }: { links: Links; reviewPhases: Build
               />
             ))}
           </ol>
+          {action ? <div>{action}</div> : null}
         </CardContent>
       </Card>
       {running === "review" ? (

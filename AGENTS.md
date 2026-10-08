@@ -1268,11 +1268,12 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   opens, «Generar ejercicios» (`continueLabel`; until 2026-10-08 «Ya está: crear mi primer
   ejercicio», which said "first" on every visit).
   No «Aprobar» or «Reabrir». No tags or (i) beside a stage's title; the guide link sits
-  under it. The header is `StageHeader` (kicker «Paso N de 3», `STEPS.length`), and a
+  under it. The header is `StageHeader` (kicker «Paso N de 3», `STEPS.length`; for a step
+  drawn in parts, `part` joins the part's place to it, «Paso 3 de 3 · Parte 1 de 2»), and a
   stage's state for the visit — correcting, the pending edit, whether it wrote, closing it —
   is `useStageControl`, which `StageGate` makes for itself or is handed (`control`); with
-  `headless` it draws its body alone. That is how the bank's step draws two stages under one
-  header (*Specific screens*).
+  `headless` it draws its body alone. That is how the bank's step draws two stages, each
+  under the header of its own part (*Specific screens*).
 - The stage questionnaire unfolds under its button at the foot of the artifact, on every
   built stage, for an account the evaluation is open to AND whose role may correct the
   subject (`useAsksStageReview`: editor or owner, because its routes that record are
@@ -1296,28 +1297,37 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 - **Step 3, «Banco de ejercicios»** (`/prepare/bank`, `features/bank/BankStep.tsx`; the
   user's decision of 2026-10-08, which merged the steps «Tipos de ejercicio» and «Banco de
-  ejercicios»; `/prepare/profile` redirects here): ONE page, TWO parts, read in order — the
-  types of exercise (`ProfilePart`, the profile editor under a headless `StageGate`), then
-  the bank (`BankPart`). One `StageHeader` for the step. The parts are told apart by space
-  and a rule on the ground, never a box (that would be a third level of depth): 56 px and a
-  rule over each, a kicker «Parte N de 2», the name in the display face at `text-heading`,
-  one sentence, and on the right its state as a `Badge` in the bar's words («Hecho», «Te toca
-  ahora», «Después», «Construyendo», plus «Corrigiendo» and «Con cambios») and its own action
-  as an outline button («Corregir los tipos», «Corregir el banco»). The types fold to one line
-  («N tipos de ejercicio · M campos», «Ver los tipos») once a bank exists, unless they are
-  being built, corrected, read or are stale for their documents; the bank's part is dimmed,
-  with one sentence, until the types are confirmed. ONE coral, on the move that is next: the
-  types' build button; their rebuild (their documents changed); «Recoger el banco» — which
-  saves the types' draft, closes them and queues the review that heads the collection —;
-  «Recoger el banco otra vez» (types changed since, or the bank stale; asked first, the
+  ejercicios»; `/prepare/profile` redirects here): TWO parts, ONE on screen — the types of
+  exercise (`ProfilePart`, the profile editor under a headless `StageGate`), then the bank
+  (`BankPart`). A block at the top, under the bar, chooses the part (`PartPicker`, the user's
+  request of the same day, drawn as the engine's choice): two `CARD_CHOICE` cards, the types
+  three tenths of the line and the bank seven from `xl` (halves below it, stacked on a
+  phone), each with the square of the choice, its name, its state as a `Badge` in the bar's
+  words and tones («Hecho», «Te toca ahora» in coral, «Después», «Construyendo», plus
+  «Corrigiendo» and «Con cambios») and one sentence of what it is. They are tabs
+  (`role="tab"`, the keys of `useRadioGroup`); the panel not on screen stays mounted and
+  hidden, so a draft survives the switch. Where each part stands, which may be opened and
+  which a visit opens on is `features/bank/parts.readParts`, tested: the bank's card is
+  disabled — «Después» with a lock, the reason in place of its sentence — until the types
+  exist, and once they are built it says «Te toca ahora» (at most one part does); a visit
+  opens on the bank once both parts are built (the user's request), or while its collection
+  runs or where it stopped, else on the types. Under the block the part on screen is headed
+  as a step is: «Fase de construcción · Paso 3 de 3 · Parte N de 2», its name as the title,
+  what it is, and its way out (`WayOn`) — «Quiero corregir algo» and the coral: on the types
+  «Continuar a la Parte 2», which saves their draft and shows the bank without closing them
+  (the types are confirmed when the bank is collected or closed, so a bank collected with
+  other types is still offered again); on the bank «Generar ejercicios», which closes both,
+  or «Recoger el banco otra vez» (types changed since, or the bank stale; asked first, the
   bank's corrections go) beside an outline «Seguir con este banco» where the bank can be
-  closed as it is; «Ir al Paso 2 · Temario» while the syllabus is open; else «Generar
-  ejercicios», which closes both. Only one part is corrected at a time (one sticky bar).
+  closed as it is, or «Ir al Paso 2 · Temario» while the syllabus is open. With no bank the
+  bank's part is the call in the middle, as every unbuilt stage: «Recoger el banco» — which
+  saves the types' draft, closes them and queues the review that heads the collection. ONE
+  coral control on the screen. Only one part is corrected at a time (one sticky bar).
   While a collection runs the bank's part shows its three links as ruled rows (each job named
   as every screen names it: «Decidir qué conceptos sirven de etiqueta», «Recoger los ejercicios
   y etiquetarlos», «Preparar el banco para generar»; a skipped review says «Sin cambios desde
   la última vez») and under them the running link's progress card; a stopped collection
-  keeps the rows with the failure.
+  keeps the rows with the failure and offers «Recoger el banco» under them.
 - **«Clase»** (`/class`, `features/class/ClassScreen.tsx`; decided 2026-10-06): the class of
   the subject in use, its teachers' alone (a student gets «not found», and `/api/members` is
   `auth.EDIT`). Entered from the account menu's «Mi clase», above «Mis asignaturas y
@@ -1846,9 +1856,13 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   (2026-10-04); the steps never fold (2026-10-08); no dashboard; the rail is gone. For a
   student the bar draws «Temario» without a number as the only stage, and `/` leads to the
   first open door or to `SubjectNotReady`; for a teacher nothing changes (2026-10-06).
-- Step 3 is one page of two parts, the types of exercise and then the bank, told apart by
-  space and a rule and never by a box; «Recoger el banco» confirms the types and collects the
-  bank; one coral on the move that is next; one part corrected at a time (2026-10-08).
+- Step 3 is two parts, the types of exercise and then the bank, one on screen, chosen from a
+  block of two choice cards at the top (types 3, bank 7) that says where each stands; the
+  bank's opens once the types exist and is where a visit opens once both are built; the part
+  on screen is headed «Paso 3 de 3 · Parte N de 2»; «Recoger el banco» confirms the types and
+  collects the bank; one coral control on the move that is next; one part corrected at a
+  time (2026-10-08; earlier the same day the two parts were stacked on one page under a
+  heading of the step, told apart by a rule).
 - View and correct are two moments; «Continuar» closes a stage and stands with «Quiero
   corregir algo» beside the title on every step, never in a block at the foot
   (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift. After the last
