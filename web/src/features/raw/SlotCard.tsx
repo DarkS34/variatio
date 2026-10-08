@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, Checkbox, Skeleton, Spinner } from "@/components/ui/misc";
 import { RowGestures, Table, TableBulk, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { bytes } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import { slotLabel, slotPurpose, staleReasons } from "@/lib/raw";
 import type { RawSlot } from "@/lib/types";
@@ -31,7 +30,6 @@ const VISIBLE = 6;
 function DocumentRow({
   name,
   extension,
-  bytes: size,
   pages,
   state,
   reasons,
@@ -46,9 +44,8 @@ function DocumentRow({
   onRemove,
 }: {
   name: string;
-  /** What the file is, how heavy, and how many pages its reading holds: the row's second line. */
+  /** What the file is and how many pages its reading holds: the row's second line. */
   extension: string;
-  bytes: number;
   pages: number;
   state: DocumentState;
   reasons: string[];
@@ -90,7 +87,8 @@ function DocumentRow({
         <TD className="max-w-0 py-2.5">
           {/* Each document an entry of two lines (user's request, 2026-10-08: one thin line
               a document read as a list of nothing): its name — which opens its pages, as the
-              pencil does — and under it what it is, how heavy and how many pages were read. */}
+              pencil does — and under it what it is and how many pages were read. The size went
+              the same day, at the user's request: nobody acts on it. */}
           <span className="flex min-w-0 items-start gap-2.5">
             {busy ? (
               <Spinner className="mt-0.5 size-4 shrink-0" />
@@ -115,7 +113,6 @@ function DocumentRow({
               <span className="nums block truncate text-small text-muted-foreground">
                 {[
                   extension.replace(/^\./, "").toUpperCase(),
-                  bytes(size),
                   pages > 0 ? plural("raw.pages", pages) : null,
                 ]
                   .filter(Boolean)
@@ -232,7 +229,6 @@ export function SlotCard({ slot, extensions }: { slot: RawSlot; extensions: stri
         retryPages: entry?.retry_pages ?? 0,
         unreadableImages: entry?.images_unreadable ?? 0,
         extension: file.extension,
-        bytes: file.bytes,
         pages: entry?.pages ?? 0,
       };
     });

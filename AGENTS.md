@@ -1439,7 +1439,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   «Mis ejercicios» tab shows the subject in use alone. The old routes (`/account/variants`,
   `/variants`) still redirect here.
 - `/raw`: one entry per document, in a flat table (2026-10-07) whose head counts the documents;
-  each entry two lines — the name, which opens the reader, and its type, size and pages read
+  each entry two lines — the name, which opens the reader, and its type and pages read (no size: user's request, 2026-10-08)
   (user's request, 2026-10-08: one thin line each read as no list at all); each origin as tall as what it
   holds, never stretched to the other (user's request, 2026-10-08); multi-select delete; a finished origin carries a
   filled coral tick and no tint on its card (user's request, 2026-10-05); once both origins hold something, «Continuar» stands to the right of the
