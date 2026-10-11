@@ -116,6 +116,10 @@ table and refuses while a row has no file: on an installation that still has the
 
 ### Dependencies
 
+- **Licence**: the code is under the PolyForm Noncommercial License 1.0.0 (`LICENSE`, SPDX
+  `PolyForm-Noncommercial-1.0.0` in `pyproject.toml` and `web/package.json`). A new dependency
+  must allow that: permissive or weak copyleft (MIT, BSD, Apache, ISC, MPL, LGPL, EPL) is
+  fine; GPL or AGPL would bind the whole work to its own terms — ask first.
 - `dependencies` — runtime pipeline only (httpx, loguru, networkx, numpy, ollama, tqdm,
   json-repair, pydantic). Every name there must be imported by the runtime.
 - `[builders]` — Docling (~700 MB), python-pptx, pypdfium2. Imported **lazily**:
@@ -1721,6 +1725,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 Each line is a rule; the reason behind it is in the commit that introduced it.
 
 **Structure**
+- The code is PolyForm Noncommercial 1.0.0 since 2026-10-11 (1.171.0 on `main`, 3.4.0 on
+  `variatio-vanilla`; the user's decision: free for any noncommercial use, never sold); MIT
+  before it, and copies taken then keep MIT.
+  The history is not rewritten to hide the MIT commits.
 - `evaluation/` stays outside `variatio/`; one-way import; not made removable.
 - `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting keys (e.g.
   `models.phases.concept_tagger`) and on-disk names (`.review_state.json`) do not follow

@@ -175,3 +175,12 @@ restart; deleting it is safe — everything falls back to the registry defaults.
 `AGENTS.md` records the design decisions, the
 closed-decisions register and the measurements behind them. The user-facing guide lives
 inside the application itself, at `/guide`.
+
+## License
+
+Since version 1.171.0 Variatio is distributed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE): it may be used, studied, changed and shared
+for any noncommercial purpose — personal study and research, and use by educational
+institutions, public research organisations, charities and government bodies — but no
+commercial use is licensed. Versions up to 1.170.3 were published under the MIT licence, and
+copies obtained then keep it. Any other use needs the author's written permission.
