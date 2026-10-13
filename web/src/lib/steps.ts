@@ -157,19 +157,20 @@ export type StepState = "done" | "now" | "later";
  *
  * The current step is the FIRST one not done and never "every one not done": what makes a
  * path obvious is one next move, not a list of pending chores. Step 1 has no artifact and
- * no approval, so "done" there means both origins hold documents — the condition the three
- * builds behind it actually need; a step of two parts is done with both closed. Being
- * untranscribed is deliberately NOT part of it:
- * transcribing is an accelerator and never a gate, and a step marked pending by something
- * that does not stop you would be a false promise in the one bar everybody reads.
+ * no approval, so whether it is done is handed in (`rawDone`): both origins hold documents
+ * AND every one of them is read (`raw/queries.useTranscriptionSummary.stepDone`, the user's
+ * decision of 2026-10-12 — until then documents in both origins were enough, and the bar
+ * said «Hecho» while step 1's own screen put its coral on reading them). Reading is still
+ * no gate: every build reads the documents by itself and runs either way. A step of two
+ * parts is done with both closed.
  */
-export function stepStates(stages: StageState[], rawStocked: boolean): StepState[] {
+export function stepStates(stages: StageState[], rawDone: boolean): StepState[] {
   const done = STEPS.map((step) =>
     step.artifact
       ? step.artifacts.every(
           (artifact) => stages.find((s) => s.artifact === artifact)?.status === "approved",
         )
-      : rawStocked,
+      : rawDone,
   );
   const now = done.indexOf(false);
   return done.map((isDone, index) => (isDone ? "done" : index === now ? "now" : "later"));
@@ -182,8 +183,8 @@ export function stepStates(stages: StageState[], rawStocked: boolean): StepState
  * left to say from outside a chain that IS the navigation — and because the one question
  * somebody opening this has is "what do I do now", which this answers by doing it.
  */
-export function currentStepPath(stages: StageState[], rawStocked: boolean): string {
-  const states = stepStates(stages, rawStocked);
+export function currentStepPath(stages: StageState[], rawDone: boolean): string {
+  const states = stepStates(stages, rawDone);
   const now = states.indexOf("now");
   return now === -1 ? "/generate" : STEPS[now].path;
 }

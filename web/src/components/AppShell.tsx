@@ -326,7 +326,7 @@ function MainNav({
   stages,
   busy,
   locked,
-  rawStocked,
+  rawDone,
   rawWaiting,
   onOverflow,
   className,
@@ -336,8 +336,8 @@ function MainNav({
   /** One flag per step of `STEPS`: whether work is running on it right now. */
   busy: boolean[];
   locked: string | null;
-  /** Whether both origins hold documents, which is what "paso 1 hecho" means. */
-  rawStocked: boolean;
+  /** Whether both origins hold documents and every one is read: "paso 1 hecho". */
+  rawDone: boolean;
   /** What is still untranscribed, or null. A hint on step 1 and never a gate. */
   rawWaiting: string | null;
   /** Told whether the pills overflow the strip, scrolled or not: what the copy on the
@@ -349,7 +349,7 @@ function MainNav({
   // Only the doors this account may open: a function closed to it is not on the bar at all.
   const doors = usesFor(useFeatures());
   const student = useIsStudent();
-  const states = stepStates(stages, rawStocked);
+  const states = stepStates(stages, rawDone);
 
   // The steps are never folded (2026-10-08): with three of them the bar fits, and where it
   // does not it takes the line under the header whole. It folded into one pill while there
@@ -380,7 +380,7 @@ function MainNav({
       el.removeEventListener("scroll", measure);
       observer.disconnect();
     };
-  }, [stages.length, locked, rawWaiting, rawStocked, doors.length]);
+  }, [stages.length, locked, rawWaiting, rawDone, doors.length]);
 
   // The pill of the screen you are on is brought into the strip: on a phone the doors sit
   // past its right edge, and a bar whose current stop is out of sight does not say where
@@ -519,10 +519,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const rawSummary = useTranscriptionSummary(hasWorkspace ? rawSlots : []);
   const rawWaiting =
     rawSummary.todo > 0 ? t("nav.rawWaiting", { n: rawSummary.todo }) : null;
-  // What "step 1 done" means: both origins hold something. Never the transcription, which
-  // is an accelerator and not a gate.
-  const rawStocked =
-    rawSlots.length > 0 && rawSlots.every((slot) => slot.files.length > 0);
+  // What "step 1 done" means: both origins hold something and every document is read
+  // (`useTranscriptionSummary.stepDone`, 2026-10-12). The builds do not wait for it.
+  const rawDone = rawSummary.stepDone;
 
 
   return (
@@ -569,7 +568,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               busy={busy}
               locked={locked}
               rawWaiting={rawWaiting}
-              rawStocked={rawStocked}
+              rawDone={rawDone}
               onOverflow={setNavCut}
               className={cn("hidden xl:flex", navCut && "invisible")}
             />
@@ -589,7 +588,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             busy={busy}
             locked={locked}
             rawWaiting={rawWaiting}
-            rawStocked={rawStocked}
+            rawDone={rawDone}
             className={cn("flex border-t border-border px-3 py-1.5", !navCut && "xl:hidden")}
           />
         ) : null}

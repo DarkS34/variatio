@@ -50,3 +50,14 @@ export function busyDocument(run: RunView | null): string | null {
   if (run?.job?.status !== "running") return null;
   return documentLoop(run)?.detail ?? null;
 }
+
+/**
+ * Whether step 1 is done: both origins hold documents and every one of them is read (the
+ * user's decision of 2026-10-12; until then documents in both origins were enough). `todo`
+ * counts what is unread, stale or with pages to read again. Until the origins' readings
+ * have landed (`known`) the stocked origins answer, so a subject read long ago does not
+ * flash «Te toca ahora» on every load. No build waits for it: reading stays an accelerator.
+ */
+export function rawStepDone(stocked: boolean, known: boolean, running: boolean, todo: number): boolean {
+  return stocked && (!known || (!running && todo === 0));
+}

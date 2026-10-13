@@ -34,7 +34,7 @@ describe("stepStates", () => {
     expect(states).toEqual(["done", "now", "later"]);
   });
 
-  it("puts the first step in play while an origin has no documents", () => {
+  it("puts the first step in play while an origin has no documents or one is unread", () => {
     expect(stepStates(chain("approved", "approved", "approved"), false)[0]).toBe("now");
   });
 

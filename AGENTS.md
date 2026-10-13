@@ -601,6 +601,8 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 
 **An accelerator, never a gate**: every builder keeps its own conversion phase; `transcribe`
 has no `GATES`/`NEEDS_APPROVED` entry, nothing chains after it, and it writes no artifact.
+What it decides is step 1's state in the bar: done only once every document is read
+(2026-10-12, *Navigation and the three steps*); no build waits for it.
 Both raw slots use the same VLM page route (quality over speed).
 
 - Per document state `done`/`pending`/`stale` **with the reason** (model, DPI, OCR, deck,
@@ -1229,7 +1231,12 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   `usesFor(useFeatures())`, so a function closed to the account has no door, and its route
   draws «not found». The bar no longer captions the two phases (user's request, 2026-10-04):
   a rule sets the groups apart, and the guide and the tutorial still name them. The
-  first not-done step is `now`; done steps show a bare tick, no box. A step names every
+  first not-done step is `now`; done steps show a bare tick, no box. **Step 1 is done with
+  both origins stocked AND every document read** (`raw/progress.rawStepDone`, through
+  `useTranscriptionSummary.stepDone`, read by the bar and by `/`'s redirect; the user's
+  decision of 2026-10-12 — until then documents in both origins were enough, and the bar
+  said «Hecho» over a screen whose one coral control was «Procesarlos todos ahora»). Until
+  the readings land the stocked origins answer, so a subject read long ago never flashes. A step names every
   artifact it closes (`artifacts`): step 3 is done with the types of exercise AND the bank
   closed, and spins while either builds or the review that opens a collection runs. Doors are
   half-dimmed and unclickable until construction is complete. **The steps never fold**
@@ -1751,7 +1758,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   gates of every link before queueing a chain's head.
 - Content context is its own artifact, written by the other two builders; keep the three
   named facts and the single renderer.
-- Transcription is an accelerator and a step of `/raw`, never a gate or a stage; both slots
+- Transcription is an accelerator and a step of `/raw`, never a gate for a build nor a
+  stage; step 1 reads done only with every document read (2026-10-12, the user's decision;
+  until then documents in both origins were enough); both slots
   use the VLM page route; no PDF→DOCX conversion; Office pictures transcribed with the page
   model (no separate setting); metafiles rasterised through LibreOffice PNG export on a copy.
 - A build waits for a live transcription of its slot (a concurrency rule, not a gate).
@@ -1897,7 +1906,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   one row at a time (`features/bank/window.ts`). Zero total ≠ unknown total. KaTeX for
   formulas.
 - The raw material is its own screen; one row per document; nothing announces completeness
-  except the finished origin's filled tick and the line over «Continuar» beside the title.
+  except the finished origin's filled tick, the line over «Continuar» beside the title, and
+  step 1's state in the bar, which waits for every document read (2026-10-12).
 - A raw document opens in step 1 as its original beside its transcription, page to page where
   the transcription holds one page per page of that very file, each column scrolled on its own
   otherwise with one sentence saying why (2026-10-08; from 2026-10-04 the tutor's reader opened

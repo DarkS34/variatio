@@ -11,6 +11,7 @@ import { HELP_HIDDEN, isHelpPath } from "@/lib/help";
 import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
+import { useTranscriptionSummary } from "@/features/raw/queries";
 import { useT, withCatalogues } from "@/lib/i18n";
 
 // Every screen except the panel loads on demand: the router is ours, so the split
@@ -223,9 +224,10 @@ function Redirect({ to }: { to: string }) {
  * Where a session lands: the step that is next, or — for a student, whose subject is ready
  * by the time this is drawn — their first open door.
  *
- * It waits for both readings before deciding — `currentStepPath` over an empty pipeline
+ * It waits for every reading before deciding — `currentStepPath` over an empty pipeline
  * answers "step 1" for every workspace in existence, and redirecting there and then
- * bouncing away is worse than a second of nothing. A student needs neither: the raw
+ * bouncing away is worse than a second of nothing. Step 1 is done only with every document
+ * read, so the origins' readings are waited for too. A student needs none of it: the raw
  * material is not theirs to read.
  */
 function Landing() {
@@ -235,7 +237,9 @@ function Landing() {
   const student = useIsStudent();
   const features = useFeatures();
   const slots = raw.data?.slots ?? [];
-  const ready = student || (pipeline.data !== undefined && raw.data !== undefined);
+  const summary = useTranscriptionSummary(slots);
+  const ready =
+    student || (pipeline.data !== undefined && raw.data !== undefined && summary.known);
 
   useEffect(() => {
     if (!ready) return;
@@ -243,8 +247,7 @@ function Landing() {
       navigate(studentLandingPath(features), { replace: true });
       return;
     }
-    const stocked = slots.length > 0 && slots.every((slot) => slot.files.length > 0);
-    navigate(currentStepPath(pipeline.data!.stages, stocked), { replace: true });
+    navigate(currentStepPath(pipeline.data!.stages, summary.stepDone), { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 

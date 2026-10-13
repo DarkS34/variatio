@@ -6,6 +6,7 @@ import { useJobPhases, useStream } from "@/state/queries";
 import { runStore, type RunView } from "@/state/runStore";
 
 import { rawApi } from "./api";
+import { rawStepDone } from "./progress";
 import type { DocumentPages } from "./types";
 
 export const TRANSCRIBE_JOB: JobKind = "transcribe";
@@ -111,6 +112,12 @@ export function useTranscriptionSummary(slots: RawSlot[]) {
     // Both origins hold something, every document is read and nothing is running: what the
     // next step actually wants, and not merely "nothing is outstanding".
     done: stockedAll && known && !running && stale + pending + retry === 0,
+    // Whether both readings have landed (an origin with nothing in it has none to wait for).
+    known,
+    // Step 1's state in the bar: stocked AND every document read (`progress.rawStepDone`).
+    // Until then the bar said «Hecho» over a screen whose one coral control was still
+    // «Procesarlos todos ahora».
+    stepDone: rawStepDone(stockedAll, known, running, stale + pending + retry),
   };
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { RunView, StepView } from "@/state/runStore";
 
-import { busyDocument, documentLoop, DOCUMENTS_STEP } from "./progress";
+import { busyDocument, documentLoop, DOCUMENTS_STEP, rawStepDone } from "./progress";
 
 function step(id: string, over: Partial<StepView> = {}): StepView {
   return {
@@ -62,5 +62,28 @@ describe("busyDocument", () => {
   it("names nothing once the job is over", () => {
     const view = run([step(DOCUMENTS_STEP, { detail: "examen.pdf" })], "succeeded");
     expect(busyDocument(view)).toBeNull();
+  });
+});
+
+describe("whether step 1 is done", () => {
+  it("is not with an origin empty, read or not", () => {
+    expect(rawStepDone(false, true, false, 0)).toBe(false);
+  });
+
+  it("is not while a document of a stocked origin is unread, stale or has pages to read again", () => {
+    expect(rawStepDone(true, true, false, 4)).toBe(false);
+    expect(rawStepDone(true, true, false, 1)).toBe(false);
+  });
+
+  it("is not while the documents are being read", () => {
+    expect(rawStepDone(true, true, true, 0)).toBe(false);
+  });
+
+  it("is with both origins stocked and every document read", () => {
+    expect(rawStepDone(true, true, false, 0)).toBe(true);
+  });
+
+  it("keeps to the stocked origins until the readings land, so a read subject never flashes", () => {
+    expect(rawStepDone(true, false, false, 0)).toBe(true);
   });
 });
