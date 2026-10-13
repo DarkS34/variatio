@@ -970,6 +970,7 @@ export const en: Catalogue = {
   "auth.missingCode": "The {kind}'s code is missing",
   "auth.missingCodeBody": "Open the whole link exactly as you received it.",
   "auth.login": "Sign in",
+  "auth.backToLanding": "← Back to the home page",
   "auth.byInvitation": "Access is by invitation: there is no open registration.",
   "reset.done": "Password changed",
   "reset.doneBody": "You have signed in with the new one. You have been signed out on every other device.",

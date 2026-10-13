@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import type { es as evaluation } from "@/evaluation/i18n/es";
+import type { es as landing } from "@/landing/i18n/es";
 import type { es as tutor } from "@/tutor/i18n/es";
 
 import { es, type CatalogueOf } from "./es";
@@ -26,7 +27,11 @@ export type { CatalogueOf } from "./es";
  * accepts a tutor key read from core, where it renders as its own name until the tutor has
  * been loaded. `pnpm check:i18n` refuses that one.
  */
-export type Key = keyof typeof es | keyof typeof evaluation | keyof typeof tutor;
+export type Key =
+  | keyof typeof es
+  | keyof typeof evaluation
+  | keyof typeof tutor
+  | keyof typeof landing;
 
 /** One entry of a catalogue: a sentence, or the two forms of a counted one. */
 type Entry = string | { readonly one: string; readonly other: string };

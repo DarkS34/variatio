@@ -1,0 +1,1349 @@
+{
+ "slug": "lorem-ipsum",
+ "units": [
+  {
+   "name": "Lorem ipsum",
+   "concepts": [
+    "Lorem",
+    "Ipsum",
+    "Dolor",
+    "Sit amet",
+    "Consectetur"
+   ]
+  },
+  {
+   "name": "Adipiscing elit",
+   "concepts": [
+    "Adipiscing",
+    "Elit",
+    "Sed do",
+    "Eiusmod",
+    "Tempor"
+   ]
+  },
+  {
+   "name": "Incididunt ut labore",
+   "concepts": [
+    "Incididunt",
+    "Ut labore",
+    "Dolore magna",
+    "Aliqua",
+    "Enim"
+   ]
+  },
+  {
+   "name": "Minim veniam",
+   "concepts": [
+    "Minim",
+    "Veniam",
+    "Quis nostrud",
+    "Exercitation",
+    "Ullamco"
+   ]
+  }
+ ],
+ "nonTaggable": [
+  "Lorem",
+  "Adipiscing"
+ ],
+ "descriptions": {
+  "Lorem": "Est do exercitation esse sit amet sunt duis adipiscing quis in sit anim commodo ut dolor consectetur laboris ullamco.",
+  "Ipsum": "Et consectetur aute laboris sit sunt irure elit est labore velit velit in est sit.",
+  "Dolor": "Sit labore dolor aute qui sed aliqua ullamco do duis elit irure enim aute sunt fugiat tempor adipiscing in irure.",
+  "Sit amet": "Quis adipiscing aute pariatur amet irure sit voluptate ut ea fugiat duis laboris cupidatat ad aliquip in.",
+  "Consectetur": "Quis enim et non tempor nulla cupidatat et consectetur irure enim consequat ea deserunt minim excepteur nisi aliqua reprehenderit amet elit.",
+  "Adipiscing": "Ullamco eiusmod occaecat minim do id ea ullamco dolor laborum cillum amet occaecat aute irure non deserunt sunt ad minim nulla veniam.",
+  "Elit": "In proident aliquip amet culpa consectetur est magna ex nulla cillum amet sit excepteur nulla enim esse irure fugiat sunt nisi.",
+  "Sed do": "Pariatur nostrud deserunt cillum veniam ipsum est aliquip veniam eiusmod voluptate elit ea sit ut cupidatat aliqua sed.",
+  "Eiusmod": "Exercitation exercitation anim officia ea consectetur eiusmod nisi exercitation aute magna deserunt sed sunt laboris officia aute.",
+  "Tempor": "Pariatur ullamco veniam fugiat deserunt nostrud laborum labore do consectetur tempor do labore cillum labore lorem ea culpa.",
+  "Incididunt": "Dolore aliqua lorem do ullamco duis quis voluptate irure ad est sed nulla qui commodo est.",
+  "Ut labore": "Aliquip mollit officia cupidatat est officia fugiat proident aute exercitation exercitation exercitation exercitation adipiscing.",
+  "Dolore magna": "Velit exercitation sit incididunt amet ut nisi eiusmod elit minim reprehenderit sit adipiscing lorem irure do duis adipiscing est quis voluptate.",
+  "Aliqua": "Amet officia ut voluptate nostrud do velit dolore laborum veniam reprehenderit quis ex elit.",
+  "Enim": null,
+  "Minim": "Consequat ipsum ut est est consequat quis do nulla duis anim ipsum occaecat consequat enim esse.",
+  "Veniam": "Nulla qui dolore consequat quis anim eiusmod veniam cupidatat labore duis duis cupidatat commodo minim.",
+  "Quis nostrud": "Voluptate proident non occaecat qui incididunt proident et sunt exercitation sint proident labore incididunt consequat ea veniam.",
+  "Exercitation": "Ipsum non magna ex dolore incididunt nulla reprehenderit laborum veniam nisi proident id excepteur.",
+  "Ullamco": null
+ },
+ "prerequisites": [
+  [
+   "Ipsum",
+   "Lorem"
+  ],
+  [
+   "Dolor",
+   "Ipsum"
+  ],
+  [
+   "Sit amet",
+   "Dolor"
+  ],
+  [
+   "Consectetur",
+   "Sit amet"
+  ],
+  [
+   "Elit",
+   "Adipiscing"
+  ],
+  [
+   "Sed do",
+   "Elit"
+  ],
+  [
+   "Eiusmod",
+   "Sed do"
+  ],
+  [
+   "Tempor",
+   "Eiusmod"
+  ],
+  [
+   "Ut labore",
+   "Incididunt"
+  ],
+  [
+   "Dolore magna",
+   "Ut labore"
+  ],
+  [
+   "Aliqua",
+   "Dolore magna"
+  ],
+  [
+   "Enim",
+   "Aliqua"
+  ],
+  [
+   "Veniam",
+   "Minim"
+  ],
+  [
+   "Quis nostrud",
+   "Veniam"
+  ],
+  [
+   "Exercitation",
+   "Quis nostrud"
+  ],
+  [
+   "Ullamco",
+   "Exercitation"
+  ],
+  [
+   "Adipiscing",
+   "Consectetur"
+  ],
+  [
+   "Incididunt",
+   "Tempor"
+  ],
+  [
+   "Minim",
+   "Enim"
+  ],
+  [
+   "Sed do",
+   "Dolor"
+  ],
+  [
+   "Aliqua",
+   "Eiusmod"
+  ],
+  [
+   "Veniam",
+   "Sit amet"
+  ]
+ ],
+ "hierarchy": [
+  [
+   "Ipsum",
+   "Lorem"
+  ],
+  [
+   "Dolor",
+   "Lorem"
+  ],
+  [
+   "Sit amet",
+   "Lorem"
+  ],
+  [
+   "Consectetur",
+   "Lorem"
+  ],
+  [
+   "Elit",
+   "Adipiscing"
+  ],
+  [
+   "Sed do",
+   "Adipiscing"
+  ],
+  [
+   "Eiusmod",
+   "Adipiscing"
+  ],
+  [
+   "Tempor",
+   "Adipiscing"
+  ],
+  [
+   "Ut labore",
+   "Incididunt"
+  ],
+  [
+   "Dolore magna",
+   "Incididunt"
+  ],
+  [
+   "Aliqua",
+   "Incididunt"
+  ],
+  [
+   "Enim",
+   "Incididunt"
+  ],
+  [
+   "Veniam",
+   "Minim"
+  ],
+  [
+   "Quis nostrud",
+   "Minim"
+  ],
+  [
+   "Exercitation",
+   "Minim"
+  ],
+  [
+   "Ullamco",
+   "Minim"
+  ]
+ ],
+ "related": [
+  [
+   "Dolor",
+   "Sit amet"
+  ],
+  [
+   "Elit",
+   "Tempor"
+  ],
+  [
+   "Ut labore",
+   "Aliqua"
+  ],
+  [
+   "Quis nostrud",
+   "Ullamco"
+  ],
+  [
+   "Ipsum",
+   "Elit"
+  ],
+  [
+   "Dolore magna",
+   "Minim"
+  ]
+ ],
+ "sources": {
+  "Lorem": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 2",
+    "text": "Proident esse consectetur culpa cillum elit anim nostrud non pariatur occaecat incididunt ex. Laboris non velit minim consectetur proident est excepteur exercitation aliquip."
+   }
+  ],
+  "Ipsum": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 5",
+    "text": "Sint est consectetur excepteur eiusmod eiusmod sed ipsum do in mollit aliquip proident esse. Voluptate sunt reprehenderit ex cillum id veniam do aute aute."
+   }
+  ],
+  "Dolor": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 8",
+    "text": "Ipsum lorem proident excepteur esse adipiscing consequat sint id sed. Officia incididunt sunt officia ut ipsum dolore ut aliqua commodo et occaecat in ad."
+   }
+  ],
+  "Sit amet": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 11",
+    "text": "Duis ullamco culpa sed sit anim sint veniam mollit aliquip cillum in. Ullamco sunt anim deserunt commodo sed duis do consequat commodo ipsum officia nisi cupidatat tempor reprehenderit."
+   }
+  ],
+  "Consectetur": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 14",
+    "text": "Cupidatat proident do tempor do ex voluptate excepteur. Aute sit ad fugiat consequat consequat aute ex non."
+   }
+  ],
+  "Adipiscing": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 17",
+    "text": "Deserunt aute sit et incididunt magna dolor cupidatat adipiscing. Nisi aute ipsum occaecat mollit anim amet nisi ad voluptate commodo reprehenderit commodo incididunt nulla magna."
+   }
+  ],
+  "Elit": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 20",
+    "text": "Commodo duis proident ex commodo est et nulla consequat deserunt deserunt est id dolore id. Mollit est incididunt culpa nisi sed ullamco elit exercitation nisi ad amet cillum et laboris amet."
+   }
+  ],
+  "Sed do": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 5",
+    "text": "Cillum enim non elit mollit cupidatat do est pariatur esse cillum. Do dolore deserunt sed laborum aliquip labore sint est adipiscing exercitation deserunt ea."
+   }
+  ],
+  "Eiusmod": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 2",
+    "text": "Cillum culpa labore eiusmod pariatur laboris commodo exercitation minim ullamco. Veniam ad consectetur excepteur quis ipsum minim aute aliquip nisi pariatur."
+   }
+  ],
+  "Tempor": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 11",
+    "text": "Nostrud minim consequat voluptate aliqua commodo laborum amet. Anim non labore deserunt adipiscing consectetur dolore magna dolor."
+   }
+  ],
+  "Incididunt": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 8",
+    "text": "Magna occaecat sed sunt laboris qui anim fugiat sunt est. Exercitation do duis anim commodo irure ea nulla ad consectetur magna sit."
+   }
+  ],
+  "Ut labore": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 17",
+    "text": "Laboris mollit amet magna est ipsum velit consectetur proident dolore. Reprehenderit qui labore amet dolore officia elit aliquip lorem."
+   }
+  ],
+  "Dolore magna": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 14",
+    "text": "Aute ullamco id anim magna voluptate sed dolor consequat pariatur et est elit. Dolore sit tempor incididunt id enim velit enim consequat occaecat."
+   }
+  ],
+  "Aliqua": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 5",
+    "text": "Aliqua nisi commodo fugiat tempor magna veniam proident ipsum dolore dolor. Ipsum excepteur commodo aute incididunt commodo ex et."
+   }
+  ],
+  "Enim": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 20",
+    "text": "Adipiscing cillum sunt esse laboris cillum ea duis culpa deserunt exercitation commodo enim nulla ut. Minim incididunt culpa deserunt pariatur excepteur velit sed exercitation veniam sit."
+   }
+  ],
+  "Minim": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 11",
+    "text": "Lorem amet velit sint deserunt dolore laboris eiusmod sit consectetur. Officia commodo cillum aliqua reprehenderit et nulla aliqua dolor aliquip tempor eiusmod magna nisi."
+   }
+  ],
+  "Veniam": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 2",
+    "text": "Dolore quis laborum minim aute ad et dolor. Ut veniam tempor lorem minim nostrud consectetur ex magna commodo esse incididunt."
+   }
+  ],
+  "Quis nostrud": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 17",
+    "text": "Commodo cupidatat lorem consectetur dolore sunt consectetur do exercitation in dolor. Ipsum enim enim velit labore consectetur in laborum consequat qui occaecat do cillum mollit."
+   }
+  ],
+  "Exercitation": [
+   {
+    "document": "lorem_ipsum_apuntes.pdf",
+    "location": "p. 8",
+    "text": "Occaecat ad excepteur ea do aliqua excepteur voluptate esse do dolor sunt culpa pariatur. Velit laboris excepteur nulla proident commodo sed anim consequat occaecat commodo irure culpa sunt proident ipsum."
+   }
+  ],
+  "Ullamco": [
+   {
+    "document": "dolor_sit_amet_tema_2.pptx",
+    "location": "p. 5",
+    "text": "Consectetur ipsum dolor sed velit quis laborum adipiscing nostrud culpa nisi. Sit velit ipsum velit duis fugiat et ea dolore lorem aliquip proident amet sint id commodo."
+   }
+  ]
+ },
+ "progress": [
+  "Lorem",
+  "Ipsum",
+  "Dolor",
+  "Sit amet",
+  "Consectetur",
+  "Adipiscing",
+  "Elit"
+ ],
+ "profile": {
+  "item_types": {
+   "problema": {
+    "label": "Problema",
+    "description": "Aliqua aliquip aliquip aliquip cupidatat elit mollit aute incididunt enim consectetur id ex ipsum aliqua aliquip.",
+    "primary_field": "enunciado",
+    "embed_fields": [
+     "enunciado"
+    ],
+    "general_generation_rules": [
+     "Amet sunt commodo laborum nisi magna nostrud ut anim est id.",
+     "Ut amet in consectetur do sint consequat dolore est quis sed.",
+     "Reprehenderit sunt velit commodo magna deserunt elit pariatur quis labore ea."
+    ],
+    "fields": {
+     "enunciado": {
+      "schema": {
+       "type": "string"
+      },
+      "label": "Enunciado",
+      "description": "Mollit deserunt ea exercitation ipsum eiusmod lorem est ea fugiat nisi exercitation.",
+      "guidance": {
+       "extraction": "Enim excepteur do ullamco veniam nostrud ad elit culpa minim.",
+       "generation": "Lorem ad occaecat minim culpa exercitation elit est id incididunt."
+      }
+     },
+     "pista": {
+      "schema": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "label": "Pista",
+      "description": "Pariatur lorem mollit sint aliqua dolore quis amet exercitation nostrud officia in.",
+      "guidance": {
+       "extraction": "Amet quis id laboris occaecat magna qui sit magna adipiscing.",
+       "generation": "Sit culpa cillum aliqua velit id do et magna laboris."
+      },
+      "omittable": true
+     },
+     "solucion": {
+      "schema": {
+       "type": "string"
+      },
+      "label": "Solución",
+      "description": "Commodo ad incididunt cupidatat quis non laborum laboris deserunt ipsum proident occaecat.",
+      "guidance": {
+       "extraction": "Velit exercitation anim deserunt est aute aute ut excepteur consectetur.",
+       "generation": "Sit id excepteur ullamco nisi voluptate occaecat sed esse officia."
+      }
+     },
+     "nivel_dificultad": {
+      "schema": {
+       "enum": [
+        "basico",
+        "intermedio",
+        "avanzado"
+       ]
+      },
+      "label": "Nivel de dificultad",
+      "description": "El eje es cuánto encadena el alumno. «basico»: Consectetur cillum consequat amet sint sint ex dolore proident amet qui dolore et. «intermedio»: Occaecat ut labore sint esse aliquip ea qui nostrud amet ex anim fugiat aliqua. «avanzado»: Voluptate velit esse incididunt amet reprehenderit do minim dolore.",
+      "guidance": {
+       "extraction": "Esse sint nulla enim voluptate irure sed lorem ex sit.",
+       "generation": "Ea magna fugiat adipiscing nulla ut fugiat ea aliqua pariatur."
+      },
+      "decided_by": "user"
+     }
+    }
+   },
+   "test": {
+    "label": "Test",
+    "description": "Ea sit anim id aute sed eiusmod ex ullamco minim aliqua enim.",
+    "primary_field": "enunciado",
+    "embed_fields": [
+     "enunciado"
+    ],
+    "general_generation_rules": [
+     "Dolore sint sint esse dolore exercitation esse et enim ex aute.",
+     "Cillum exercitation elit eiusmod esse eiusmod amet ut commodo mollit proident.",
+     "Ea aute labore nisi anim minim occaecat nisi laboris sed aute."
+    ],
+    "fields": {
+     "enunciado": {
+      "schema": {
+       "type": "string"
+      },
+      "label": "Enunciado",
+      "description": "Incididunt et consectetur tempor minim aute consectetur ad et quis dolore proident.",
+      "guidance": {
+       "extraction": "Irure incididunt deserunt ipsum sint officia ullamco nostrud ullamco sint.",
+       "generation": "Consequat ut nostrud magna minim occaecat sit ea magna irure."
+      }
+     },
+     "opciones": {
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      },
+      "label": "Opciones",
+      "description": "Laborum quis sed fugiat commodo consequat velit non officia qui.",
+      "guidance": {
+       "extraction": "Ut consectetur magna mollit et nostrud exercitation esse nisi."
+      }
+     },
+     "respuesta": {
+      "schema": {
+       "type": "string"
+      },
+      "label": "Respuesta correcta",
+      "description": "Laboris laborum enim qui sunt officia laborum ipsum sed dolor laboris pariatur.",
+      "guidance": {
+       "extraction": "Occaecat mollit proident ex laborum in ea lorem amet exercitation.",
+       "generation": "Id id id sunt consequat qui aliquip nisi et non."
+      }
+     },
+     "nivel_dificultad": {
+      "schema": {
+       "enum": [
+        "basico",
+        "intermedio",
+        "avanzado"
+       ]
+      },
+      "label": "Nivel de dificultad",
+      "description": "El eje es cuánto encadena el alumno. «basico»: Consectetur cillum consequat amet sint sint ex dolore proident amet qui dolore et. «intermedio»: Occaecat ut labore sint esse aliquip ea qui nostrud amet ex anim fugiat aliqua. «avanzado»: Voluptate velit esse incididunt amet reprehenderit do minim dolore.",
+      "guidance": {
+       "extraction": "Esse sint nulla enim voluptate irure sed lorem ex sit.",
+       "generation": "Ea magna fugiat adipiscing nulla ut fugiat ea aliqua pariatur."
+      },
+      "decided_by": "user"
+     }
+    }
+   },
+   "caso": {
+    "label": "Caso práctico",
+    "description": "Labore do do consequat fugiat adipiscing est sunt excepteur.",
+    "primary_field": "enunciado",
+    "embed_fields": [
+     "enunciado"
+    ],
+    "general_generation_rules": [
+     "Nulla esse qui occaecat mollit aliquip consectetur aute cupidatat dolor lorem.",
+     "Non sed labore irure anim dolor esse pariatur enim laborum sed.",
+     "Velit dolore consequat velit laboris nulla occaecat elit adipiscing amet enim."
+    ],
+    "fields": {
+     "enunciado": {
+      "schema": {
+       "type": "string"
+      },
+      "label": "Enunciado",
+      "description": "Consequat est in incididunt nostrud dolore labore non reprehenderit lorem lorem duis.",
+      "guidance": {
+       "extraction": "Enim aliquip magna laborum ad esse culpa deserunt et ex.",
+       "generation": "Consequat et aute et ipsum laborum ullamco pariatur esse enim."
+      }
+     },
+     "datos": {
+      "schema": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "label": "Datos",
+      "description": "Sit ipsum incididunt ea deserunt fugiat esse ullamco consectetur dolore labore cillum.",
+      "guidance": {
+       "extraction": "Laboris id quis labore ea dolor nulla minim pariatur ullamco.",
+       "generation": "Quis fugiat exercitation incididunt lorem proident aliqua sint qui commodo."
+      },
+      "omittable": true
+     },
+     "solucion": {
+      "schema": {
+       "type": "string"
+      },
+      "label": "Solución",
+      "description": "Amet ut ea incididunt enim cupidatat sunt incididunt labore aliquip labore dolore.",
+      "guidance": {
+       "extraction": "Occaecat deserunt aliqua adipiscing est voluptate ea voluptate tempor mollit.",
+       "generation": "Labore ea ullamco anim cillum sit est reprehenderit do id."
+      }
+     },
+     "nivel_dificultad": {
+      "schema": {
+       "enum": [
+        "basico",
+        "intermedio",
+        "avanzado"
+       ]
+      },
+      "label": "Nivel de dificultad",
+      "description": "El eje es cuánto encadena el alumno. «basico»: Consectetur cillum consequat amet sint sint ex dolore proident amet qui dolore et. «intermedio»: Occaecat ut labore sint esse aliquip ea qui nostrud amet ex anim fugiat aliqua. «avanzado»: Voluptate velit esse incididunt amet reprehenderit do minim dolore.",
+      "guidance": {
+       "extraction": "Esse sint nulla enim voluptate irure sed lorem ex sit.",
+       "generation": "Ea magna fugiat adipiscing nulla ut fugiat ea aliqua pariatur."
+      },
+      "decided_by": "user"
+     }
+    }
+   }
+  }
+ },
+ "difficulty": {
+  "field": "nivel_dificultad",
+  "levels": [
+   "basico",
+   "intermedio",
+   "avanzado"
+  ]
+ },
+ "bank": [
+  {
+   "id": "C001",
+   "item_type": "problema",
+   "enunciado": "Sit ut ipsum reprehenderit do ullamco sit pariatur sit tempor exercitation nisi mollit pariatur. Excepteur elit consectetur id eiusmod minim incididunt tempor esse id consequat sint aliquip.",
+   "nivel_dificultad": "basico",
+   "source": "ejercicios_lorem_2025",
+   "concepts": [
+    "Ipsum",
+    "Dolor"
+   ],
+   "primary_concept": "Ipsum",
+   "_tagging": {
+    "candidates": [
+     [
+      "Ipsum",
+      0.6232
+     ],
+     [
+      "Dolor",
+      0.5464
+     ],
+     [
+      "Sed do",
+      0.4189
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "pista": null,
+   "solucion": "Minim nisi eiusmod adipiscing lorem consectetur magna consectetur veniam ullamco laborum deserunt elit. Laborum occaecat ut nostrud veniam cupidatat sunt enim sunt proident laboris consectetur sit pariatur ex incididunt."
+  },
+  {
+   "id": "C002",
+   "item_type": "problema",
+   "enunciado": "Duis anim nisi incididunt ad quis sint mollit ex ipsum velit ullamco et. Dolor nostrud dolor aliquip amet proident anim sit dolore incididunt sint amet mollit reprehenderit.",
+   "nivel_dificultad": "intermedio",
+   "source": "examen_ipsum_junio",
+   "concepts": [
+    "Sit amet",
+    "Consectetur"
+   ],
+   "primary_concept": "Sit amet",
+   "_tagging": {
+    "candidates": [
+     [
+      "Sit amet",
+      0.6539
+     ],
+     [
+      "Consectetur",
+      0.5072
+     ],
+     [
+      "Eiusmod",
+      0.4479
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "pista": "Voluptate dolor dolore sint pariatur nulla ad id.",
+   "solucion": "Enim lorem excepteur occaecat reprehenderit anim proident velit est est amet ipsum. Adipiscing ex pariatur laborum aliquip laborum cupidatat nostrud non dolore anim."
+  },
+  {
+   "id": "C003",
+   "item_type": "problema",
+   "enunciado": "Sunt ea sed id ea tempor lorem proident id sint enim sunt nulla cupidatat. Reprehenderit et ad officia ad aliquip quis non non reprehenderit.",
+   "nivel_dificultad": "avanzado",
+   "source": "ejercicios_lorem_2025",
+   "concepts": [
+    "Elit",
+    "Sed do"
+   ],
+   "primary_concept": "Elit",
+   "_tagging": {
+    "candidates": [
+     [
+      "Elit",
+      0.6279
+     ],
+     [
+      "Sed do",
+      0.4997
+     ],
+     [
+      "Tempor",
+      0.4376
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "pista": null,
+   "solucion": "Ullamco amet esse dolor ex aute duis ad eiusmod laboris deserunt. Amet dolore voluptate consectetur ut adipiscing ullamco ea pariatur."
+  },
+  {
+   "id": "C004",
+   "item_type": "problema",
+   "enunciado": "Tempor labore sed ullamco aliquip voluptate mollit fugiat et sint duis qui cupidatat cillum occaecat. Cupidatat culpa aliqua aliqua magna irure magna quis dolore.",
+   "nivel_dificultad": "basico",
+   "source": "examen_ipsum_junio",
+   "concepts": [
+    "Eiusmod",
+    "Tempor"
+   ],
+   "primary_concept": "Eiusmod",
+   "_tagging": {
+    "candidates": [
+     [
+      "Eiusmod",
+      0.6938
+     ],
+     [
+      "Tempor",
+      0.4999
+     ],
+     [
+      "Incididunt",
+      0.4124
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "pista": "Et et do aliqua deserunt anim in incididunt.",
+   "solucion": "Amet exercitation dolore et commodo consequat labore esse proident adipiscing esse aliquip dolor. Lorem ex deserunt sunt labore culpa nisi anim quis."
+  },
+  {
+   "id": "C005",
+   "item_type": "problema",
+   "enunciado": "Deserunt aliqua labore elit sit incididunt reprehenderit sunt. Id amet quis commodo officia tempor nisi reprehenderit dolore cupidatat cupidatat.",
+   "nivel_dificultad": "intermedio",
+   "source": "ejercicios_lorem_2025",
+   "concepts": [
+    "Incididunt",
+    "Ut labore"
+   ],
+   "primary_concept": "Incididunt",
+   "_tagging": {
+    "candidates": [
+     [
+      "Incididunt",
+      0.6865
+     ],
+     [
+      "Ut labore",
+      0.4806
+     ],
+     [
+      "Ut labore",
+      0.4319
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "pista": null,
+   "solucion": "Ut dolor quis minim do dolor ut dolore dolor reprehenderit excepteur esse anim. Sunt lorem sunt ad ullamco fugiat quis tempor voluptate enim amet."
+  },
+  {
+   "id": "C006",
+   "item_type": "problema",
+   "enunciado": "Dolor non ea aute ex amet ullamco adipiscing non exercitation cillum. Do velit duis consectetur esse eiusmod exercitation nulla magna ullamco aliqua cillum enim ullamco laborum sit.",
+   "nivel_dificultad": "avanzado",
+   "source": "examen_ipsum_junio",
+   "concepts": [
+    "Dolore magna",
+    "Aliqua"
+   ],
+   "primary_concept": "Dolore magna",
+   "_tagging": {
+    "candidates": [
+     [
+      "Dolore magna",
+      0.6512
+     ],
+     [
+      "Aliqua",
+      0.5367
+     ],
+     [
+      "Dolore magna",
+      0.4179
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "pista": "Ullamco ipsum officia cupidatat proident quis esse incididunt.",
+   "solucion": "Excepteur exercitation ut est lorem laboris mollit eiusmod laboris elit sunt consectetur exercitation irure. Aliquip cupidatat eiusmod sed lorem sit aute do esse proident anim exercitation consectetur."
+  },
+  {
+   "id": "C007",
+   "item_type": "test",
+   "enunciado": "Sint commodo eiusmod do veniam aliqua eiusmod consequat eiusmod id amet adipiscing nostrud. Occaecat proident non laborum proident incididunt enim sed culpa est dolor anim ex ad sit.",
+   "nivel_dificultad": "basico",
+   "source": "ejercicios_lorem_2025",
+   "concepts": [
+    "Enim",
+    "Ipsum"
+   ],
+   "primary_concept": "Enim",
+   "_tagging": {
+    "candidates": [
+     [
+      "Enim",
+      0.6808
+     ],
+     [
+      "Ipsum",
+      0.5436
+     ],
+     [
+      "Aliqua",
+      0.4043
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "opciones": [
+    "Pariatur voluptate nulla sunt mollit.",
+    "Eiusmod velit non qui labore.",
+    "Voluptate exercitation voluptate qui incididunt.",
+    "Culpa ex tempor irure ut."
+   ],
+   "respuesta": "Voluptate exercitation voluptate qui incididunt."
+  },
+  {
+   "id": "C008",
+   "item_type": "test",
+   "enunciado": "Exercitation est consequat eiusmod nostrud veniam elit do. Excepteur sunt mollit incididunt dolor deserunt aute culpa occaecat fugiat dolor.",
+   "nivel_dificultad": "intermedio",
+   "source": "examen_ipsum_junio",
+   "concepts": [
+    "Dolor",
+    "Sit amet"
+   ],
+   "primary_concept": "Dolor",
+   "_tagging": {
+    "candidates": [
+     [
+      "Dolor",
+      0.6868
+     ],
+     [
+      "Sit amet",
+      0.5124
+     ],
+     [
+      "Enim",
+      0.4195
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "opciones": [
+    "Aliquip aute qui velit cupidatat.",
+    "Enim esse ullamco enim in.",
+    "Et laboris nostrud cillum quis.",
+    "Nisi commodo nisi tempor ipsum."
+   ],
+   "respuesta": "Nisi commodo nisi tempor ipsum."
+  },
+  {
+   "id": "C009",
+   "item_type": "test",
+   "enunciado": "Voluptate ea aliquip et nisi occaecat voluptate cupidatat. Culpa tempor proident ex exercitation adipiscing amet sed veniam laboris quis consectetur proident nisi commodo.",
+   "nivel_dificultad": "avanzado",
+   "source": "ejercicios_lorem_2025",
+   "concepts": [
+    "Consectetur",
+    "Elit"
+   ],
+   "primary_concept": "Consectetur",
+   "_tagging": {
+    "candidates": [
+     [
+      "Consectetur",
+      0.671
+     ],
+     [
+      "Elit",
+      0.4841
+     ],
+     [
+      "Ipsum",
+      0.4318
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "opciones": [
+    "Consectetur id excepteur ad cupidatat.",
+    "Excepteur commodo consectetur sit occaecat.",
+    "Commodo mollit nostrud esse est.",
+    "Non sed ipsum qui amet."
+   ],
+   "respuesta": "Consectetur id excepteur ad cupidatat."
+  },
+  {
+   "id": "C010",
+   "item_type": "caso",
+   "enunciado": "Incididunt sed deserunt ea aliqua laborum proident anim non. Fugiat non excepteur id labore amet culpa veniam voluptate occaecat.",
+   "nivel_dificultad": "basico",
+   "source": "examen_ipsum_junio",
+   "concepts": [
+    "Sed do",
+    "Eiusmod"
+   ],
+   "primary_concept": "Sed do",
+   "_tagging": {
+    "candidates": [
+     [
+      "Sed do",
+      0.6452
+     ],
+     [
+      "Eiusmod",
+      0.5124
+     ],
+     [
+      "Dolor",
+      0.4307
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "datos": "Mollit sunt aliquip do dolore commodo laborum anim ex.",
+   "solucion": "In dolore voluptate commodo et ad quis dolor incididunt tempor exercitation. Velit id magna fugiat ad mollit nostrud eiusmod non non. Elit cupidatat consequat sit velit qui quis laborum officia nisi aute consequat."
+  },
+  {
+   "id": "C011",
+   "item_type": "caso",
+   "enunciado": "Dolore duis velit qui exercitation sint proident quis dolore. Quis irure do quis minim occaecat consectetur nisi labore tempor voluptate sint laborum sit.",
+   "nivel_dificultad": "intermedio",
+   "source": "ejercicios_lorem_2025",
+   "concepts": [
+    "Tempor",
+    "Incididunt"
+   ],
+   "primary_concept": "Tempor",
+   "_tagging": {
+    "candidates": [
+     [
+      "Tempor",
+      0.6496
+     ],
+     [
+      "Incididunt",
+      0.5316
+     ],
+     [
+      "Sit amet",
+      0.4155
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "datos": "Laborum officia in id cillum mollit ad excepteur lorem.",
+   "solucion": "Labore do aliqua voluptate velit laboris ullamco commodo. Mollit sit sed ea labore voluptate esse dolor ipsum sit lorem irure veniam. Adipiscing consequat veniam duis labore ullamco in enim in sed ut quis."
+  },
+  {
+   "id": "C012",
+   "item_type": "caso",
+   "enunciado": "Eiusmod sed lorem id proident et pariatur do nisi adipiscing amet velit do officia cillum. Exercitation proident dolore laborum lorem sit esse sunt aute mollit veniam reprehenderit.",
+   "nivel_dificultad": "avanzado",
+   "source": "examen_ipsum_junio",
+   "concepts": [
+    "Ut labore",
+    "Dolore magna"
+   ],
+   "primary_concept": "Ut labore",
+   "_tagging": {
+    "candidates": [
+     [
+      "Ut labore",
+      0.6846
+     ],
+     [
+      "Dolore magna",
+      0.5244
+     ],
+     [
+      "Consectetur",
+      0.4469
+     ]
+    ],
+    "method": "llm",
+    "model": "qwen3.8:27b-q8_0",
+    "threshold": 0.4
+   },
+   "datos": "Excepteur ea et eiusmod mollit lorem dolor sit duis.",
+   "solucion": "Exercitation tempor et eiusmod sit anim cupidatat adipiscing. Voluptate aute cillum est incididunt do ullamco incididunt. Reprehenderit esse commodo esse esse ullamco sunt voluptate tempor commodo enim amet enim velit sit deserunt."
+  }
+ ],
+ "raw": {
+  "corpus": [
+   {
+    "name": "lorem_ipsum_apuntes.pdf",
+    "bytes": 948211,
+    "extension": ".pdf",
+    "pages": 24
+   },
+   {
+    "name": "dolor_sit_amet_tema_2.pptx",
+    "bytes": 2210441,
+    "extension": ".pptx",
+    "pages": 18
+   }
+  ],
+  "exemplars": [
+   {
+    "name": "ejercicios_lorem_2025.docx",
+    "bytes": 61382,
+    "extension": ".docx",
+    "pages": 1
+   },
+   {
+    "name": "examen_ipsum_junio.pdf",
+    "bytes": 301772,
+    "extension": ".pdf",
+    "pages": 6
+   }
+  ]
+ },
+ "pages": [
+  "Pariatur duis lorem nostrud qui laboris sint anim aliquip consectetur sint esse nisi tempor labore. Dolore labore esse dolor elit minim mollit sint id. Pariatur sit magna velit aute fugiat laboris fugiat non anim consequat dolore. Esse id laborum mollit ut consectetur deserunt commodo lorem eiusmod dolore mollit. Culpa sint incididunt est eiusmod sint anim ad incididunt deserunt nostrud. Reprehenderit et nostrud anim qui velit anim nulla cillum culpa duis ex ex.",
+  "Nulla lorem qui ipsum laboris laborum excepteur labore irure deserunt enim non ut exercitation voluptate in. Irure anim eiusmod do dolor ipsum elit adipiscing voluptate. Veniam do nulla ipsum ipsum dolor sed nulla esse velit. Nulla amet sint dolor amet qui in occaecat. Incididunt sunt laborum sunt duis mollit cillum amet deserunt officia occaecat anim pariatur. Adipiscing et ut ut elit dolor dolor est qui anim proident occaecat velit consectetur.",
+  "Ex adipiscing sed adipiscing non occaecat esse ut aliqua ad minim laboris. Ipsum veniam dolore id aliqua sit pariatur occaecat quis anim ad cupidatat. Ex qui aliqua voluptate sint ipsum non ullamco ipsum laboris consequat cupidatat adipiscing veniam ex pariatur. Duis irure ut pariatur officia sunt consectetur irure. Eiusmod laboris lorem consequat incididunt aliqua occaecat occaecat sit lorem veniam ea. Ea nulla non sunt tempor laborum ea in veniam.",
+  "Dolore irure est eiusmod aliqua sunt ut est nulla labore ea eiusmod elit est velit cupidatat. Ea non nulla aute non adipiscing velit ad veniam. Exercitation id exercitation mollit deserunt sint consectetur laboris deserunt. Quis ut enim dolore laboris mollit duis commodo. Nostrud deserunt velit labore est aliquip sed duis reprehenderit occaecat. Veniam in ad consequat do officia culpa nisi.",
+  "Sint ad eiusmod aliquip nisi nulla cupidatat dolore in labore sed minim aliquip esse deserunt nulla. Commodo incididunt magna enim occaecat pariatur sunt culpa voluptate do excepteur. Et excepteur ad reprehenderit consequat veniam eiusmod et ad laborum. Dolore laborum excepteur adipiscing eiusmod laborum cillum adipiscing incididunt nostrud do. Non enim excepteur enim laboris magna incididunt adipiscing velit anim. Magna ut deserunt nostrud aliquip dolor lorem exercitation qui.",
+  "Nulla labore commodo velit aliqua aliquip ipsum do dolore reprehenderit sint exercitation lorem sint. Anim qui laboris nulla irure in sint esse ullamco qui labore. Fugiat tempor esse elit aliquip laboris ad dolore velit nulla adipiscing. Et non exercitation pariatur pariatur velit eiusmod dolore qui laboris ex aliquip ipsum voluptate. Consequat fugiat cillum id officia tempor mollit esse ad cupidatat lorem nostrud culpa ea. Dolor dolore duis ut eiusmod pariatur non est est.",
+  "Consequat veniam adipiscing qui irure aliquip duis ut pariatur ex commodo. Velit non culpa quis consequat minim ullamco sint. Ut fugiat tempor exercitation commodo occaecat id elit excepteur voluptate veniam velit sit dolore magna. Exercitation sit lorem amet ullamco anim ullamco velit nulla fugiat veniam in dolore adipiscing. Enim sint exercitation est laborum consequat labore proident laborum exercitation aliquip. Eiusmod sed id cupidatat amet proident proident velit incididunt ex esse.",
+  "Excepteur labore sunt laborum do veniam cillum velit culpa sunt non sunt ullamco aliquip aliqua occaecat. Esse sed cupidatat culpa ex veniam non qui labore magna pariatur nostrud fugiat dolore laboris fugiat. Ex lorem proident excepteur proident magna veniam et esse enim. Ex ea laboris voluptate velit consectetur cillum mollit quis do id enim qui. Sit consectetur sunt irure mollit ad non est sed consequat culpa veniam velit in. Cillum lorem ut est amet esse aliqua dolore."
+ ],
+ "context": {
+  "narrative": "In do qui labore tempor cupidatat nisi veniam non. Ut mollit exercitation non duis eiusmod voluptate mollit nulla reprehenderit. Cillum mollit mollit aute non velit culpa enim incididunt.",
+  "facts": {
+   "subject": "Lorem ipsum",
+   "educational_level": "Dolor sit amet",
+   "language_of_instruction": "lorem"
+  }
+ },
+ "scope": {
+  "es": {
+   "slots": [
+    {
+     "key": "ambito",
+     "label": "Ámbito",
+     "example": "que vaya de una panadería"
+    },
+    {
+     "key": "elementos",
+     "label": "Elementos del enunciado",
+     "example": "con una tabla de datos"
+    },
+    {
+     "key": "extension",
+     "label": "Extensión",
+     "example": "un enunciado breve"
+    },
+    {
+     "key": "datos",
+     "label": "Datos concretos",
+     "example": "que la lista tenga al menos 10 elementos"
+    }
+   ],
+   "owners": [
+    {
+     "key": "concepts",
+     "label": "los conceptos objetivo",
+     "where": "elígelos en el paso de conceptos"
+    },
+    {
+     "key": "field:nivel_dificultad",
+     "label": "nivel_dificultad",
+     "where": "elígelo en «¿De qué nivel?»"
+    },
+    {
+     "key": "item_type",
+     "label": "la modalidad del ejercicio",
+     "where": "elígela en el paso de modalidad"
+    }
+   ],
+   "facts": [
+    {
+     "key": "subject",
+     "value": "Lorem ipsum"
+    },
+    {
+     "key": "language_of_instruction",
+     "value": "lorem"
+    }
+   ]
+  },
+  "en": {
+   "slots": [
+    {
+     "key": "ambito",
+     "label": "Setting",
+     "example": "set in a bakery"
+    },
+    {
+     "key": "elementos",
+     "label": "Elements of the statement",
+     "example": "with a table of data"
+    },
+    {
+     "key": "extension",
+     "label": "Length",
+     "example": "a short statement"
+    },
+    {
+     "key": "datos",
+     "label": "Concrete data",
+     "example": "a list of at least 10 elements"
+    }
+   ],
+   "owners": [
+    {
+     "key": "concepts",
+     "label": "the target concepts",
+     "where": "choose them in the concepts step"
+    },
+    {
+     "key": "field:nivel_dificultad",
+     "label": "nivel_dificultad",
+     "where": "choose it under “What level?”"
+    },
+    {
+     "key": "item_type",
+     "label": "the type of exercise",
+     "where": "choose it in the type step"
+    }
+   ],
+   "facts": [
+    {
+     "key": "subject",
+     "value": "Lorem ipsum"
+    },
+    {
+     "key": "language_of_instruction",
+     "value": "lorem"
+    }
+   ]
+  }
+ },
+ "generations": [
+  {
+   "item_type": "problema",
+   "concepts": [
+    "Sit amet"
+   ],
+   "curriculum": [],
+   "fixed": {},
+   "omit": [],
+   "instructions": "",
+   "think": "low",
+   "model": "qwen3.8:27b-q8_0",
+   "item": {
+    "enunciado": "Nulla ut consequat consectetur sint culpa nisi cillum deserunt elit aute elit dolore ullamco labore. Ex ea aute sit ex aliquip mollit do nulla ea.",
+    "pista": "Et ea eiusmod duis reprehenderit officia sint lorem.",
+    "solucion": "Culpa ad aliquip nulla irure ea cillum aliqua culpa aliquip. Laboris ullamco laborum fugiat amet tempor velit quis velit esse ipsum ipsum voluptate.",
+    "nivel_dificultad": "intermedio"
+   },
+   "checks": {
+    "forbidden": [],
+    "similarity": null,
+    "tagger": {
+     "primary": "Sit amet",
+     "concepts": [
+      "Sit amet",
+      "Dolor"
+     ],
+     "method": "llm",
+     "on_target": true,
+     "targets_found": [
+      "Sit amet"
+     ]
+    },
+    "flags": [],
+    "verdict": "accept",
+    "reasons": []
+   }
+  },
+  {
+   "item_type": "problema",
+   "concepts": [
+    "Sit amet"
+   ],
+   "curriculum": [],
+   "fixed": {},
+   "omit": [],
+   "instructions": "",
+   "think": "low",
+   "model": "qwen3.8:27b-q8_0",
+   "item": {
+    "enunciado": "Fugiat sint id minim proident adipiscing commodo ex. Occaecat mollit do dolor ut pariatur ullamco velit sed minim adipiscing officia cillum quis minim.",
+    "pista": "Ex cupidatat consequat aute cupidatat anim ut aliqua.",
+    "solucion": "Minim laboris dolore aute sit sunt aliqua aliqua veniam sunt ea exercitation minim commodo. Officia commodo veniam ut esse ea non elit minim incididunt ad pariatur.",
+    "nivel_dificultad": "avanzado"
+   },
+   "checks": {
+    "forbidden": [],
+    "similarity": null,
+    "tagger": {
+     "primary": "Sit amet",
+     "concepts": [
+      "Sit amet",
+      "Dolor"
+     ],
+     "method": "llm",
+     "on_target": true,
+     "targets_found": [
+      "Sit amet"
+     ]
+    },
+    "flags": [],
+    "verdict": "accept",
+    "reasons": []
+   }
+  }
+ ],
+ "lorem": [
+  "lorem",
+  "ipsum",
+  "dolor",
+  "sit",
+  "amet",
+  "consectetur",
+  "adipiscing",
+  "elit",
+  "sed",
+  "do",
+  "eiusmod",
+  "tempor",
+  "incididunt",
+  "ut",
+  "labore",
+  "et",
+  "dolore",
+  "magna",
+  "aliqua",
+  "enim",
+  "ad",
+  "minim",
+  "veniam",
+  "quis",
+  "nostrud",
+  "exercitation",
+  "ullamco",
+  "laboris",
+  "nisi",
+  "aliquip",
+  "ex",
+  "ea",
+  "commodo",
+  "consequat",
+  "duis",
+  "aute",
+  "irure",
+  "in",
+  "reprehenderit",
+  "voluptate",
+  "velit",
+  "esse",
+  "cillum",
+  "fugiat",
+  "nulla",
+  "pariatur",
+  "excepteur",
+  "sint",
+  "occaecat",
+  "cupidatat",
+  "non",
+  "proident",
+  "sunt",
+  "culpa",
+  "qui",
+  "officia",
+  "deserunt",
+  "mollit",
+  "anim",
+  "id",
+  "est",
+  "laborum"
+ ],
+ "relations": [
+  {
+   "key": "tiene como prerrequisito",
+   "type": "prerrequisito",
+   "directed": true,
+   "acyclic": true,
+   "use_in_embedding": false,
+   "prerequisite": true
+  },
+  {
+   "key": "se engloba en",
+   "type": "se_engloba_en",
+   "directed": true,
+   "acyclic": false,
+   "use_in_embedding": true,
+   "prerequisite": false
+  },
+  {
+   "key": "se relaciona con",
+   "type": "relacionado",
+   "directed": false,
+   "acyclic": false,
+   "use_in_embedding": true,
+   "prerequisite": false
+  }
+ ]
+}

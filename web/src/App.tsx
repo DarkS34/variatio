@@ -134,6 +134,10 @@ export function App() {
       // so it is a destination of its own rather than one more `/prepare/…`.
       case "/raw":
         return <RawScreen />;
+      // Where the landing sends a visitor to log in (`AuthGate.LOGIN_PATH`): with the session
+      // open there is nothing left to do there.
+      case "/login":
+        return <Redirect to="/" />;
       // The types of exercise are the first part of the bank's step since 2026-10-08: an
       // old link to their own step lands on it.
       case "/prepare/profile":

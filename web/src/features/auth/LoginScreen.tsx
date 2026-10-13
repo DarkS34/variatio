@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
+import { Link } from "@/lib/router";
 import { useLogin } from "@/state/auth";
 
 import { AuthLayout, FormError } from "./AuthLayout";
@@ -29,7 +30,15 @@ export function LoginScreen() {
   };
 
   return (
-    <AuthLayout title={t("auth.login")} description={t("auth.byInvitation")}>
+    <AuthLayout
+      title={t("auth.login")}
+      description={t("auth.byInvitation")}
+      footer={
+        <Link to="/" className="text-muted-foreground hover:text-foreground hover:underline">
+          {t("auth.backToLanding")}
+        </Link>
+      }
+    >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="username">{t("auth.username")}</Label>

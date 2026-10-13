@@ -1,0 +1,105 @@
+{
+ "artifacts": {
+  "knowledge_graph": [
+   {
+    "key": "convert",
+    "label": "Reading the corpus documents",
+    "weight": 40
+   },
+   {
+    "key": "extract",
+    "label": "Extracting concepts and relations",
+    "weight": 16
+   },
+   {
+    "key": "clean",
+    "label": "Merging duplicates and normalising names",
+    "weight": 25
+   },
+   {
+    "key": "domains",
+    "label": "Grouping the concepts into domains",
+    "weight": 9
+   },
+   {
+    "key": "link",
+    "label": "Linking concepts and ordering the syllabus",
+    "weight": 26
+   },
+   {
+    "key": "curate",
+    "label": "Typing the relations and breaking cycles",
+    "weight": 1
+   },
+   {
+    "key": "context",
+    "label": "Writing down what subject this is",
+    "weight": 1
+   }
+  ],
+  "exemplars_profile": [
+   {
+    "key": "convert",
+    "label": "Reading the exemplars",
+    "weight": 40
+   },
+   {
+    "key": "scan",
+    "label": "Looking for exercise types",
+    "weight": 40
+   },
+   {
+    "key": "consolidate",
+    "label": "Consolidating the profile",
+    "weight": 19
+   },
+   {
+    "key": "context",
+    "label": "Writing down what subject this is",
+    "weight": 1
+   }
+  ],
+  "exemplars_bank": [
+   {
+    "key": "convert",
+    "label": "Reading the documents",
+    "weight": 30
+   },
+   {
+    "key": "extract",
+    "label": "Extracting and tagging the items",
+    "weight": 70
+   }
+  ]
+ },
+ "jobs": {
+  "review_taggability": [
+   {
+    "key": "taggable",
+    "label": "Reviewing which concepts work as labels",
+    "weight": 100
+   }
+  ],
+  "transcribe": [
+   {
+    "key": "transcribe",
+    "label": "Reading the documents",
+    "weight": 100
+   }
+  ],
+  "describe_concepts": [
+   {
+    "key": "describe",
+    "label": "Describing the concepts",
+    "weight": 100
+   }
+  ],
+  "index": [
+   {
+    "key": "index",
+    "label": "Indexing the bank",
+    "weight": 100
+   }
+  ]
+ }
+}

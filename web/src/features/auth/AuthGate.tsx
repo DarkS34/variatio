@@ -1,8 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
+import { ApiError, api } from "@/lib/api";
 import { useRouter } from "@/lib/router";
 import { authKeys, useIsUnauthenticated, useSession } from "@/state/auth";
 import { leaveLostWorkspace, useMaintenance, useStream } from "@/state/queries";
@@ -12,7 +13,23 @@ import { AcceptInvite } from "./AcceptInvite";
 import { AuthLayout } from "./AuthLayout";
 import { LoginScreen } from "./LoginScreen";
 import { ResetPassword } from "./ResetPassword";
-import { useT, type Key } from "@/lib/i18n";
+import { useT, withCatalogues, type Key } from "@/lib/i18n";
+
+// The landing is public and is its own module, fetched only by a visitor: its demo draws
+// the real screens over an in-memory server, which is most of the client.
+const LandingScreen = lazy(() =>
+  withCatalogues(import("@/landing/LandingScreen")).then((m) => ({ default: m.LandingScreen })),
+);
+
+const DemoPage = lazy(() =>
+  withCatalogues(import("@/landing/DemoPage")).then((m) => ({ default: m.DemoPage })),
+);
+
+/** Where the login form is reached from the landing, since `/` is the landing for a visitor. */
+export const LOGIN_PATH = "/login";
+
+/** The landing's demo: the application over an in-memory server, public, on a page of its own. */
+export const DEMO_PATH = "/demo";
 
 /**
  * Nothing else in the app renders until this has an answer.
@@ -23,7 +40,10 @@ import { useT, type Key } from "@/lib/i18n";
  * they exist.
  *
  * Two routes are public because they are the ones you reach *without* an account: the
- * invitation link and the password-reset link.
+ * invitation link and the password-reset link. `/demo` is public too, and answered before
+ * the session is asked for: while it is on screen the demo answers every request of the
+ * client, and no live query of the page may meet it. And `/` is the landing for whoever
+ * has no session (`Front`).
  */
 export function AuthGate({ children }: { children: ReactNode }) {
   const { path } = useRouter();
@@ -39,8 +59,73 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (path === "/reset") {
     return token ? <ResetPassword token={token} /> : <MissingToken kind="auth.kindLink" />;
   }
+  if (path === DEMO_PATH) {
+    return (
+      <Suspense fallback={<Waiting />}>
+        <DemoPage />
+      </Suspense>
+    );
+  }
 
-  return <Guarded>{children}</Guarded>;
+  return (
+    <Front>
+      <Guarded>{children}</Guarded>
+    </Front>
+  );
+}
+
+/**
+ * `/` is the landing for a visitor and the application for an account.
+ *
+ * Decided by ONE reading of the session and of the door, taken before anything else mounts
+ * and never kept live. That is the point: while the landing is on screen its demo answers
+ * every request of the client (`lib/api.setTransport`), and a live session query out here
+ * would be answered by it — the visitor would find themselves logged in as the demo's
+ * teacher. A closed installation is still a closed one (`Guarded` draws the door), and an
+ * account the cache already knows skips the reading, so the bar's own link to `/` never
+ * remounts the application.
+ */
+function Front({ children }: { children: ReactNode }) {
+  const { path } = useRouter();
+  const client = useQueryClient();
+  const asks = path === "/" && client.getQueryData(authKeys.me) === undefined;
+  const [visitor, setVisitor] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!asks) {
+      setVisitor(null);
+      return;
+    }
+    let live = true;
+    void Promise.allSettled([api.me(), api.maintenance()]).then(([session, door]) => {
+      if (!live) return;
+      const refused =
+        session.status === "rejected" &&
+        session.reason instanceof ApiError &&
+        session.reason.status === 401;
+      const closed = door.status === "fulfilled" && door.value.active;
+      setVisitor(refused && !closed);
+    });
+    return () => {
+      live = false;
+    };
+  }, [asks]);
+
+  if (!asks || visitor === false) return <>{children}</>;
+  if (visitor === null) return <Waiting />;
+  return (
+    <Suspense fallback={<Waiting />}>
+      <LandingScreen />
+    </Suspense>
+  );
+}
+
+function Waiting() {
+  return (
+    <div className="flex min-h-full items-center justify-center">
+      <Spinner className="size-6 text-muted-foreground" />
+    </div>
+  );
 }
 
 function Guarded({ children }: { children: ReactNode }) {

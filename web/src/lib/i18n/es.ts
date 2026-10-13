@@ -1086,6 +1086,7 @@ export const es = {
   "auth.missingCode": "Falta el código de la {kind}",
   "auth.missingCodeBody": "Abre el enlace completo tal y como lo recibiste.",
   "auth.login": "Entra",
+  "auth.backToLanding": "← Volver a la portada",
   "auth.byInvitation": "El acceso es por invitación: no hay registro abierto.",
   "reset.done": "Contraseña cambiada",
   "reset.doneBody": "Has entrado con la nueva. Se ha cerrado la sesión en los demás dispositivos.",

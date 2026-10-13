@@ -25,7 +25,10 @@ const SRC = resolve(WEB, "src");
 const GRAPH = resolve(WEB, "dist", ".vite", "chunks.json");
 
 /** The folders whose code reaches a browser only when the function is open, relative to `src/`. */
-const LAZY = ["evaluation", "tutor"];
+// The landing is not an optional function, and it is listed for the same reason: a public
+// page with a demo of the whole client, fetched by a visitor at `/` and by nobody
+// who logs in.
+const LAZY = ["evaluation", "tutor", "landing"];
 
 const inLazy = (pathFromSrc) =>
   LAZY.some((folder) => pathFromSrc === folder || pathFromSrc.startsWith(`${folder}/`));

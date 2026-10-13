@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { useModalFocus } from "@/components/ui/focus";
 import { SearchInput } from "@/components/ui/input";
+import { useOverlayRoot } from "@/components/ui/overlay";
 import { hasExemplars } from "@/lib/concepts";
 import { domainColours } from "@/lib/domains";
 import type { GraphView, KgConcept } from "@/lib/types";
@@ -90,6 +91,7 @@ export function ConceptSelector({
   const [cursor, setCursor] = useState(0);
   const [scope, setScope] = useState<Scope>("exemplars");
   const panel = useRef<HTMLDivElement>(null);
+  const overlay = useOverlayRoot();
 
   // The default is the bank's side every time: what a person opens onto is the concepts
   // with something to imitate, and lifting the scope is a decision for one visit, not a
@@ -406,6 +408,6 @@ export function ConceptSelector({
         hidden={hiddenByExemplars}
       />
     </div>,
-    document.body,
+    overlay,
   );
 }

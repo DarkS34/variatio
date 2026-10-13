@@ -1,0 +1,16 @@
+{
+ "transcribe": "Reading the documents",
+ "build": "Building: {name}",
+ "convert": "Reading the documents",
+ "extract": "Extracting and tagging the items",
+ "describe": "Describing the concepts",
+ "taggable": "Reviewing which concepts work as labels",
+ "index_concepts": "Embedding the concept descriptions",
+ "index_items": "Embedding the bank's items",
+ "tagging": "Tagging the bank with the graph's concepts",
+ "context": "Loading the subject",
+ "guardrail": "Checking the instructions",
+ "admissibility": "Checking the scope of the commission",
+ "generate": "Writing the items",
+ "check": "Checking the item"
+}

@@ -204,6 +204,8 @@ class RunStore {
   private notifyScheduled = false;
   /** Which workspace the open socket is subscribed to, so a switch can be noticed. */
   private subscribedTo: string | null = null;
+  /** Fed by `ingest` alone: no socket is opened while this is on (the landing's demo). */
+  private driven = false;
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -229,7 +231,22 @@ class RunStore {
 
   /* CONNECTION ------------------------------------------------------------------- */
 
+  /**
+   * Switch between the socket and `ingest` as the source of events.
+   *
+   * The landing's demo draws the real screens, and the shell they sit in connects the
+   * socket as it always does; driven, the store answers that with nothing and keeps what the
+   * demo's simulated jobs hand it. Switching off drops what the demo put here.
+   */
+  drive(on: boolean) {
+    // Forgotten both ways: what the socket held is not the demo's, and what the demo put
+    // here is not the session's. `forget` also closes the socket and stops its retries.
+    this.forget();
+    this.driven = on;
+  }
+
   connect() {
+    if (this.driven) return;
     const workspace = activeWorkspace();
     if (this.socket && this.socket.readyState <= WebSocket.OPEN) {
       if (this.subscribedTo === workspace) return;

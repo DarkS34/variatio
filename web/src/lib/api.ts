@@ -122,6 +122,22 @@ export interface RequestOptions extends RequestInit {
   workspace?: string | null;
 }
 
+/**
+ * What carries a request to the server: `fetch`, unless something installs another.
+ *
+ * ONE seam, for the one caller that needs it: the landing's demo (`landing/demo/`) draws the
+ * real screens over an in-memory server, and that server answers here. Nothing else sets
+ * it; `null` puts `fetch` back. The upload goes through it too, as a `FormData` body, so a
+ * file dropped on the demo lands in the demo and never on the wire.
+ */
+type Transport = (path: string, init: RequestInit) => Promise<Response>;
+
+let transport: Transport | null = null;
+
+export function setTransport(next: Transport | null): void {
+  transport = next;
+}
+
 export async function request<T>(path: string, init?: RequestOptions): Promise<T> {
   const response = await send(path, init);
   if (response.status === 204) return undefined as T;
@@ -135,7 +151,7 @@ export async function requestBlob(path: string, init?: RequestOptions): Promise<
 
 async function send(path: string, init?: RequestOptions): Promise<Response> {
   const { workspace, ...rest } = init ?? {};
-  const response = await fetch(path, {
+  const response = await (transport ?? fetch)(path, {
     ...rest,
     // The session is an httpOnly cookie, so nothing here ever reads or sends a token by
     // hand. Stated rather than left to the default because it is the whole auth scheme.
@@ -188,6 +204,10 @@ const patch = <T>(path: string, body: unknown) =>
 function upload(path: string, files: File[], onProgress?: (fraction: number) => void) {
   const form = new FormData();
   for (const file of files) form.append("files", file, file.name);
+
+  // An installed transport takes the upload whole: it reports no progress, and the demo
+  // behind it has no wire to report the progress of.
+  if (transport) return request<RawUpload>(path, { method: "POST", body: form });
 
   return new Promise<RawUpload>((resolve, reject) => {
     const xhr = new XMLHttpRequest();

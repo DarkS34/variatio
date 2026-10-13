@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { useModalFocus } from "./focus";
+import { useOverlayRoot } from "./overlay";
 import { useT } from "@/lib/i18n";
 
 export function Dialog({
@@ -34,6 +35,7 @@ export function Dialog({
 
   useModalFocus(open, panel, onClose);
 
+  const root = useOverlayRoot();
   if (!open) return null;
 
   return createPortal(
@@ -78,6 +80,6 @@ export function Dialog({
         ) : null}
       </div>
     </div>,
-    document.body,
+    root,
   );
 }
