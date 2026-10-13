@@ -1827,6 +1827,9 @@ English. The names the application already has (steps, door, phases) are the cor
   A panel that cannot load says so.
 - `index.html` revalidates, `/assets` is immutable; a stale-chunk error reloads once.
 - `pnpm check:ui`: no raw Tailwind scale sizes, no unlabelled control, no raw `<table>`.
+- **What can be pressed shows the hand** (2026-10-13, the user's request): Tailwind 4 left
+  buttons with the arrow, so a base rule in `index.css` gives `button`, `role="button"` and
+  `role="tab"` the pointer, enabled ones only; a utility still overrides it.
 - A `role="radiogroup"` of buttons takes its keyboard from `components/ui/radio.ts`
   (`useRadioGroup`: one tab stop, arrows choose and move the focus, Home/End).
 - **`src/evaluation/` and `src/tutor/` reach a browser only through `import()`**, behind

@@ -213,6 +213,10 @@ else; `check:color` only sees what is in `src/index.css`.
 Never mix heights on one line. Labels over a line of controls (`Label`) sit at one height
 because the controls do.
 
+What can be pressed shows the hand: a base rule in `src/index.css` gives every enabled
+`button`, `role="button"` and `role="tab"` the pointer. Do not add `cursor-pointer` to them;
+add it only to something else that is pressed (a clickable row is already `cursor-pointer`).
+
 ### 6.2 Fields
 
 - Every field has a label: `<Label htmlFor>` + id, or `aria-label` (`check:ui` enforces it).

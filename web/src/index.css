@@ -357,6 +357,15 @@
   * {
     border-color: var(--border);
   }
+  /* WHAT CAN BE PRESSED SHOWS THE HAND (2026-10-13, the user's request: «que los elementos
+     clicables se reconozcan»). Tailwind 4 left buttons with the arrow, so a link showed the
+     hand and the button beside it did not — tabs, the language's two codes, every `Button`.
+     In `base`, so `cursor-not-allowed` and the like still win where a control says so. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }
 
 /* THE DEPTH SCALE: three classes, and nothing else casts a shadow.
