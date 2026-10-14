@@ -654,6 +654,12 @@ export interface Features {
  */
 export interface Openings extends Features {
   generate: boolean;
+  /**
+   * The class page of the subject in use («Mi clase», `/class`), still its teachers' alone.
+   * No server sends it: only the landing's demo closes it (`false`), since its sample
+   * subject has nobody to show (the user's request, 2026-10-13).
+   */
+  class: boolean;
 }
 
 /**
@@ -672,6 +678,7 @@ export function featuresOf(session: Pick<Session, "features"> | null | undefined
     evaluation: value("evaluation") === true,
     tutor: value("tutor") === true,
     generate: value("generate") !== false,
+    class: value("class") !== false,
   };
 }
 

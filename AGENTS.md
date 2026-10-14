@@ -1802,8 +1802,12 @@ English. The names the application already has (steps, door, phases) are the cor
   descriptions 2.3 s, the types 1.0 s, the bank's whole collection 1.9 s, three exercises
   1.9 s (from 5.1, 11.6, 3.6, 9.5 and 13.2 s); `pace.test.ts` pins upper bounds. A job starts
   120 ms after it is queued and every answer takes 20 ms (`api.ts` `LATENCY`).
-- The features are closed in the demo's session (no tutor, no evaluation); a route the
-  demo does not answer is a 404, as an older API would be.
+- The features are closed in the demo's session (no tutor, no evaluation), and so is the
+  class page (`features.class: false`, read by `featuresOf` — only a literal `false` closes
+  it and no server sends one: «Mi clase» leaves the menu, `/class` is «not found», and the
+  demo's listing sends no `people`, so a subject row offers no «Clase · N alumnos»; the
+  user's request, 2026-10-13). A route the demo does not answer is a 404, as an older API
+  would be.
 
 ### Client rules
 

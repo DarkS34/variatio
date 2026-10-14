@@ -204,6 +204,13 @@ describe("usesFor", () => {
       usesFor(featuresOf({ features: { generate: false, tutor: true } })).map((door) => door.key),
     ).toEqual(["tutor"]);
   });
+
+  it("keeps the class page open unless the session closes it, as the demo's does", () => {
+    expect(featuresOf({}).class).toBe(true);
+    expect(featuresOf({ features: { class: false } }).class).toBe(false);
+    // It is no door of the bar either way.
+    expect(usesFor(featuresOf({ features: { class: false } })).map((door) => door.key)).toEqual(["generate"]);
+  });
 });
 
 describe("a student's bar", () => {

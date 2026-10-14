@@ -161,7 +161,7 @@ export function App() {
         return <TutorScreen />;
       // The class of the subject in use: its teachers' alone, whatever its construction.
       case "/class":
-        return teaches ? <ClassScreen /> : <NotFound />;
+        return teaches && features.class ? <ClassScreen /> : <NotFound />;
       // The account of whoever is looking: their data, and the subjects they can open with
       // the exercises they generated in each. Each tab is a route so that it stays a link
       // that can be bookmarked.

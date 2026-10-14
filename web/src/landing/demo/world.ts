@@ -275,7 +275,8 @@ export class World {
       active_workspace: this.slug,
       role: "owner",
       mail_configured: false,
-      features: { generate: true, evaluation: false, tutor: false },
+      // «Mi clase» closed too: the sample subject has no class to show.
+      features: { generate: true, evaluation: false, tutor: false, class: false },
     };
   }
 
@@ -290,7 +291,7 @@ export class World {
           prompt_language: "es",
           as_admin: false,
           exercises: this.generations.length,
-          people: { students: 0, disabled: 0, teachers: 1 },
+          // No `people`: without a count, the row offers no way into the class.
           disabled: false,
         } as WorkspaceListing["workspaces"][number],
       ],

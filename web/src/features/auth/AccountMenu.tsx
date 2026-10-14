@@ -18,7 +18,7 @@ import { useRadioGroup } from "@/components/ui/radio";
 import { HELP_HIDDEN } from "@/lib/help";
 import { useRouter } from "@/lib/router";
 import { useT, type Key } from "@/lib/i18n";
-import { ROLE_LABEL_KEYS, useCanEdit, useLogout, useSession } from "@/state/auth";
+import { ROLE_LABEL_KEYS, useCanEdit, useFeatures, useLogout, useSession } from "@/state/auth";
 import { runStore } from "@/state/runStore";
 import { themeStore, type ThemePreference } from "@/state/theme";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,8 @@ export function AccountMenu() {
   const session = useSession();
   const logout = useLogout();
   // The class of the subject in use is its teachers' own page: offered where the account teaches.
-  const teaches = useCanEdit();
+  const features = useFeatures();
+  const teaches = useCanEdit() && features.class;
   const { navigate } = useRouter();
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
