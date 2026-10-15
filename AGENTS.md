@@ -173,7 +173,8 @@ table and refuses while a row has no file: on an installation that still has the
 The hard line: **`artifacts/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
 `apps/` (the functions the system is used through: `generation/`, `evaluation/` — the TFM's
-study —, `tutor/`, `chat/`, and what the last two share, `conversations/`; see *`apps/`*),
+study —, `tutor/` and `chat/`; see *`apps/`*; what the last two share is
+`server/conversations/`),
 `web/` (React client), `migrations/`.
 
 ### `variatio/` layout
@@ -1230,15 +1231,17 @@ admin's read.
   (`PRIVATE_KINDS`). One reply on its way per conversation and per account in the workspace
   (409).
 - The store of conversations, the daily count, the quiet stream of a turn's job and the
-  routes' common half are the free chat's too, kept once in `apps/conversations/` (see
+  routes' common half are the free chat's too, kept once in `server/conversations/` (see
   below); `apps/tutor/api/store.py` and `usage.py` bind them to the tutor's folder, role
   (`tutor`), initial state (`focus`, `trail`) and limit (`tutor_daily_limit`). The files did
   not move.
 - Logs in Spanish with `[tutor]`; never the message text.
 
-### `apps/conversations/` — what the tutor and the chat share
+### `server/conversations/` — what the tutor and the chat share
 
-Decided 2026-10-14 with the chat («nothing copied»). `store.Store` keeps one function's
+Decided 2026-10-14 with the chat («nothing copied»); in `apps/conversations/` until 2026-10-16,
+when the user moved it out: `apps/` keeps the functions that work on the artifacts, and this
+is no function (no route, job, setting or `install`). `store.Store` keeps one function's
 conversations under `<workspace>/<folder>/user_<id>/<id>.json` (folder, reply role, initial
 state and log scope are the function's), one lock per file, `pending` naming the job.
 `usage.Limit` counts an account's turns per UTC day and function in `tutor_usage` (migration
@@ -1247,8 +1250,8 @@ function). `jobs.QuietEmitter` lets only a turn's steps reach the stream and `jo
 frees a conversation whose job died. `routes.Function` describes a function for the shared
 route half — `require` (one's own or the same 404), `admit` (one reply per account in the
 workspace, then the day's limit, 429 with the function's code and `Retry-After`),
-`queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. The server half of
-the two functions, like their `api` packages: it imports `server` and the database.
+`queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. It imports
+`server` and the database, never `apps`; only the two functions' `api` packages import it.
 
 ### `apps/chat/` — «Chat libre»
 
@@ -1276,7 +1279,7 @@ solves and writes code, as the student asks, within the subject and education.
   class A, private and a student's kind.
 - **Its routes** (`/api/chat`, `auth.VIEW` + `auth.CHAT`): one's conversations, open (with a
   `generation_id` of one's own or a `bank_id` one reads), read, send, ask again, stop, delete
-  — the tutor's, through `apps/conversations/routes`. An exercise is checked before the
+  — the tutor's, through `server/conversations/routes`. An exercise is checked before the
   queue, and `opened_from.exercise` keeps it as labels and texts: every field of one's own
   generated exercise, only the fields shown of the bank's (the level always) — a hidden field
   never reaches the model.
@@ -2102,7 +2105,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   before it, and copies taken then keep MIT.
   The history is not rewritten to hide the MIT commits.
 - The functions live in `apps/` (2026-10-14, the user's request), outside `variatio/` and
-  `server/`; one-way import; the evaluation is not made removable.
+  `server/`; one-way import; the evaluation is not made removable. `apps/` holds functions
+  on the artifacts alone: what the tutor and the chat share is `server/conversations/`
+  (2026-10-16).
 - `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting keys (e.g.
   `models.phases.concept_tagger`) and on-disk names (`.review_state.json`) do not follow
   module renames. Renames are done per importer, never with a global `sed`.

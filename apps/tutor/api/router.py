@@ -23,7 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from apps.conversations import routes as shared
+from server.conversations import routes as shared
 
 from server import approvals, auth, singletons, storage
 from server import generations as generations_store

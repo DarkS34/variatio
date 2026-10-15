@@ -6,6 +6,7 @@ conversation, under its author's directory, written whole under a lock per file,
 day the same way. Both live here once (`store.Store`, `usage.Limit`), each function naming its
 folder and its name (the user's decision, 2026-10-14: nothing copied).
 
-The server half of those functions, like their `api` packages: it imports `server` and the
-database, and no library module imports it.
+Kept in `server/`, not in `apps/`: it is no function of its own (no route, job, setting or
+`install`), only what two functions' `api` packages share. It imports `server` and the
+database, never `apps`, and no library module imports it.
 """

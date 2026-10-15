@@ -5,7 +5,7 @@ queue is the installation's and the jobs are the tutor's. Both go through the qu
 reason every model call does — the idle unloader reads the queue's clock, and a call outside
 it would have the GPU released under it.
 
-WHAT A TURN'S JOB SAYS IN PUBLIC IS NOTHING (`apps.conversations.jobs`, shared with the free
+WHAT A TURN'S JOB SAYS IN PUBLIC IS NOTHING (`server.conversations.jobs`, shared with the free
 chat): the job names the conversation and the turn and carries no text either way. The
 student's message is read from the author's own file, and the reply is written back to it,
 where only the author's routes read it — and so is the title the first substantive reply
@@ -15,7 +15,7 @@ the stream.
 
 from loguru import logger
 
-from apps.conversations.jobs import QuietEmitter, release
+from server.conversations.jobs import QuietEmitter, release
 from server import deps, installation, storage
 from server.jobs.catalogue import Job
 from server.jobs.handlers import context_for

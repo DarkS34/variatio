@@ -3,7 +3,7 @@
 Declares `auth.VIEW` and `auth.CHAT` for the whole router: the chat is the subject's to open
 to its students (`server.features`, closed until a teacher opens it), and its teachers always
 have it. Every conversation route is scoped to the account that asks
-(`apps.conversations.routes`); a message is answered by a job of the queue, one reply at a
+(`server.conversations.routes`); a message is answered by a job of the queue, one reply at a
 time per account in the workspace, under the installation's daily limit of the chat.
 
 A conversation may open on an exercise: one of the author's generated exercises, or one of the
@@ -16,8 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from apps.conversations import routes as shared
-from apps.conversations import store as shared_store
+from server.conversations import routes as shared
+from server.conversations import store as shared_store
 from server import approvals, auth, singletons
 from server import generations as generations_store
 from server.editors import bank_edit

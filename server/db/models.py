@@ -706,7 +706,7 @@ class TutorUsage(Base):
     Across every workspace. A row and not a count of the conversation files: a conversation
     can be deleted, and a limit somebody resets by deleting is none. The day is UTC.
     `feature` is the function counted — the tutor's, or the free chat's since 2026-10-15
-    (`apps/conversations/usage.py`); the table keeps the tutor's name.
+    (`server/conversations/usage.py`); the table keeps the tutor's name.
     """
 
     __tablename__ = "tutor_usage"

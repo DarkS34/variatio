@@ -2,7 +2,7 @@
 
 Registered on `server.jobs.handlers.HANDLERS` by `apps.chat.api.install`. It goes through the
 queue for the reason every model call does — the idle unloader reads the queue's clock — and
-says nothing in public (`apps.conversations.jobs`): it names the conversation and the turn,
+says nothing in public (`server.conversations.jobs`): it names the conversation and the turn,
 reads the message from the author's own file and writes the reply back to it.
 
 It needs no runtime context: the guardrail reads the workspace's prompt set, and the reply the
@@ -12,7 +12,7 @@ graph of a subject.
 
 from loguru import logger
 
-from apps.conversations.jobs import QuietEmitter, release
+from server.conversations.jobs import QuietEmitter, release
 from server import deps, installation
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
