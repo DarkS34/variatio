@@ -7,9 +7,9 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
 > **This branch, `main`, is the complete system**: the library, the FastAPI + PostgreSQL
-> API, the React front end, the study's blind evaluation and the Socratic tutor. The
-> **`variatio-vanilla`** branch carries the library and its command line alone, with no API,
-> no database and no front end.
+> API, the React front end, the study's blind evaluation and the Socratic tutor. The library
+> and its command line alone, with no API, no database and no front end, were the
+> `variatio-vanilla` branch until 2026-10-16, when it was retired.
 
 ## What it does
 

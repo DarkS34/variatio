@@ -55,19 +55,13 @@ education is out of scope; hardcoding a subject is equally a regression.
   `web/src/apps/chat/`, the `chat_turn` job). Production serves a separate
   worktree, `/home/deploy/variatio-prod`. Until 2026-10-03 this was three branches
   (`variatio-web`, `variatio-web-eval`, `variatio-web-tutor`); this one replaces them.
-- **`variatio-vanilla`**: the library and its CLI alone (the branch `main` named until
-  2026-10-03). No worktree at present (`git worktree add ../variatio-vanilla variatio-vanilla`
-  to recreate).
-- **The database never moves**: `evaluation_sessions`, `stage_evaluations` and
-  `users.evaluator_profile` keep their migrations and ORM models on every branch.
-- **`variatio-vanilla` is brought forward by MERGING `main` and re-removing what it does not
-  carry** (never by cherry-picking). After the merge: `git rm` the server, the client and
-  `apps/` again (the functions moved there on 2026-10-14); `README.md` conflicts and the HEAD side is right (each branch
-  describes itself); `version` in `pyproject.toml` and `uv.lock` conflicts — keep the branch's
-  own line, then bump it; read `len(REGISTRY)` and `len(BY_NAME)` off the branch before
-  writing `tests/settings/test_settings_registry.py`.
-- `AGENTS.md` is tracked and travels with every branch; on `variatio-vanilla` the server,
-  client and `apps/` sections describe code that branch does not carry.
+- **`main` is the only branch** (the user's decision, 2026-10-16). `variatio-vanilla`, the
+  library and its CLI alone (the branch `main` named until 2026-10-03, version line 3.x), was
+  retired that day, 60 commits behind `main`: nobody installed it, and `main` already keeps
+  the library apart (`import variatio` reaches neither `server/` nor `apps/`; `uv sync --no-dev`
+  without the `server` and `builders` extras installs the library and its CLI). No tag keeps
+  its last commit (3.4.0), by the user's choice. Do not bring the branch back to publish the
+  library alone; ask first.
 
 ## Commands
 
