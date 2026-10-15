@@ -8,13 +8,19 @@ import { useT } from "@/lib/i18n";
 import type { ActivityStudentRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** What a page of the activity counts: the exercises generated, or the messages to the tutor. */
-export type Measure = "exercises" | "messages";
+/** What a page of the activity counts: the exercises generated, the messages to the tutor, or to the chat. */
+export type Measure = "exercises" | "messages" | "chat";
 
 const WORDS = {
   exercises: { title: "activity.who.exercises", lead: "activity.who.exercisesLead", count: "activity.exercisesN" },
   messages: { title: "activity.who.tutor", lead: "activity.who.tutorLead", count: "activity.messages" },
+  chat: { title: "activity.who.chat", lead: "activity.who.chatLead", count: "activity.messages" },
 } as const;
+
+/** How much of a page's measure one student's row counts. */
+export function countOf(row: ActivityStudentRow, measure: Measure): number {
+  return measure === "chat" ? (row.chat_messages ?? 0) : row[measure];
+}
 
 /**
  * «Quién genera» or «Quién usa el tutor»: one row per student of the class, whoever did least
@@ -37,8 +43,8 @@ export function WhoWorks({
   const words = WORDS[measure];
   // An older API sends the days summed; read them as they come.
   const daysOf = (row: ActivityStudentRow) =>
-    (measure === "messages" ? row.message_days : row.exercise_days) ?? row.days;
-  const sorted = [...rows].sort((a, b) => a[measure] - b[measure] || a.name.localeCompare(b.name));
+    (measure === "messages" ? row.message_days : measure === "chat" ? row.chat_days : row.exercise_days) ?? row.days;
+  const sorted = [...rows].sort((a, b) => countOf(a, measure) - countOf(b, measure) || a.name.localeCompare(b.name));
   const top = Math.max(1, ...sorted.flatMap(daysOf));
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
 
@@ -82,7 +88,7 @@ export function WhoWorks({
                 ))}
               </span>
               <span className="nums w-28 shrink-0 text-right text-small text-muted-foreground">
-                {plural(words.count, row[measure])}
+                {plural(words.count, countOf(row, measure))}
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
             </button>

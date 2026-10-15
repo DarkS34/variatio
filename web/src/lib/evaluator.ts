@@ -6,7 +6,7 @@ import type { Key } from "@/lib/i18n";
  * a student does not, and the invitation decides which an account is.
  *
  * What the evaluation ASKS each one is deliberately not here: the wording is the instrument,
- * it lives in `evaluation/api/instruments.py` and it arrives with the listing. These are
+ * it lives in `apps/evaluation/api/instruments.py` and it arrives with the listing. These are
  * labels for the screens that show or set the profile, which is a property of the account —
  * the same reason the Python keeps `EVALUATOR_PROFILES` in `server/db/models.py`.
  */

@@ -10,6 +10,7 @@ export type JobKind =
   | "describe_concepts"
   | "index"
   | "tag"
+  | "tag_item"
   | "review_taggability"
   | "generate"
   | "evaluate"
@@ -87,6 +88,9 @@ export interface StageState {
   /** The raw slot this stage's build reads, while a transcription of it is live: the
    *  build waits for it. Absent on an API older than the bundle, which reads as "none". */
   transcribing_slot?: RawKind | null;
+  /** Whether a hand edit leaves the stage closed (the bank's exercises, since 2026-10-14).
+   *  Absent on an older API, where every edit reopens it. */
+  edits_keep_closed?: boolean;
 }
 
 export interface Pipeline {
@@ -391,6 +395,9 @@ export interface CurriculumState {
   concepts: string[];
   updated_at: string | null;
   dropped: string[];
+  /** For a group: whether it follows its own progress (true) or the subject's. Absent on an
+   *  older API, and for the subject's own. */
+  own?: boolean;
 }
 
 /* Class activity ------------------------------------------------------------------ */
@@ -410,6 +417,8 @@ export interface ActivityWeekSummary {
   start: string;
   messages: number;
   exercises: number;
+  /** Messages to the free chat; absent on an API without it. */
+  chat?: number;
   active: number;
   digest: boolean;
 }
@@ -421,10 +430,12 @@ export interface ActivityHistory {
   students: ActivityStudent[];
   /** Whether the tutor is installed: without it there is nothing of the tutor to count. */
   tutor: boolean;
+  /** Whether the free chat is installed; absent on an older API, which has none. */
+  chat?: boolean;
 }
 
 /** The page of «Actividad» a finding belongs to; an older API sends none. */
-export type ActivityArea = "tutor" | "exercises";
+export type ActivityArea = "tutor" | "exercises" | "chat";
 
 /** What a teacher should read first about a week, typed: the screen words it. */
 export type ActivityFinding = { area?: ActivityArea } & (
@@ -480,11 +491,21 @@ export interface ActivityDigest {
 export interface ActivityStudentRow extends ActivityStudent {
   messages: number;
   exercises: number;
+  /** Messages to the free chat; absent on an API without it. */
+  chat_messages?: number;
   /** Messages and exercises per day, Monday first. */
   days: number[];
   /** The same days, the messages and the exercises apart; an older API sends neither. */
   message_days?: number[];
   exercise_days?: number[];
+  chat_days?: number[];
+}
+
+/** A week of the free chat: how many messages, from how many students, day by day. */
+export interface ActivityChat {
+  messages: number;
+  students: number;
+  per_day: number[];
 }
 
 /** `GET /api/activity/weeks/{week}`: one week of the class, or of one student. */
@@ -497,6 +518,8 @@ export interface ActivityWeek {
   class_size: number;
   tutor: ActivityTutor | null;
   exercises: ActivityExercises;
+  /** Null where the chat is not installed; absent on an older API. */
+  chat?: ActivityChat | null;
   digest: ActivityDigest | null;
   digest_ready: boolean;
   digest_running?: boolean;
@@ -505,13 +528,20 @@ export interface ActivityWeek {
   /** The class's reading only. */
   students?: ActivityStudentRow[];
   /** One student's reading only: the class's median, the idle included. */
-  median?: { messages: number; exercises: number };
+  median?: { messages: number; exercises: number; chat?: number };
 }
 
 /** What a subject's teachers let its students use (`GET /api/members/uses`). */
+/** A tool a group of the class has open (true), closed (false), or as the subject (null). */
+export type GroupTool = boolean | null;
+
 export interface StudentUses {
   generate: boolean;
   tutor: boolean;
+  /** The free chat's switch, once the chat exists (`chat`); absent before it. */
+  chat?: boolean;
+  /** Read for one group (`?group=`): its own three values beside the subject's. */
+  group?: { id: number; name: string; generate: GroupTool; tutor: GroupTool; chat: GroupTool };
   /** Whether the tutor is installed: without it there is no switch of it to draw. An older
    *  API sends none, and then the switch is drawn only where the tutor is offered. */
   tutor_installed?: boolean;
@@ -538,6 +568,16 @@ export interface TaggingTrace {
   threshold?: number;
 }
 
+/** Where an exercise of the bank comes from: the documents, a teacher, or a generated one. */
+export type BankOrigin = "extracted" | "manual" | "generated";
+
+/** The account that added an exercise, as the bank names it; null when it no longer exists. */
+export interface BankAdder {
+  id: number;
+  name: string;
+  username: string;
+}
+
 export interface BankItem {
   id: string;
   source?: string;
@@ -545,7 +585,76 @@ export interface BankItem {
   concepts?: string[];
   primary_concept?: string | null;
   _tagging?: TaggingTrace;
+  /** Absent on an API older than 2026-10-14, which drew no origin. */
+  origin?: BankOrigin;
+  added_by?: BankAdder | null;
+  /** ISO 8601, UTC. */
+  added_at?: string;
+  /** What the subject's students see of it: nothing (null), all of it, or the fields chosen,
+   *  the statement always among them. Absent on an older API. */
+  visibility?: BankVisibility | null;
+  /** Whether it is one of the asking teacher's stars. */
+  favourite?: boolean;
   [field: string]: unknown;
+}
+
+/** Who sees an exercise of the bank: the level chosen and the fields it shows. */
+export interface BankVisibility {
+  level: "full" | "fields";
+  fields: string[];
+  /** The groups of the class that see it; null (or absent, on an older API) is the whole
+   *  class. */
+  groups?: number[] | null;
+}
+
+/**
+ * An exercise of the bank as the class reads it (`GET /api/exercises`): the fields its
+ * teacher showed, named in `shown` in the type's order, its level and its concepts, and
+ * nothing else of it.
+ */
+export interface ReadableExercise {
+  id: string;
+  item_type: string;
+  shown: string[];
+  concepts: string[];
+  primary_concept: string | null;
+  [field: string]: unknown;
+}
+
+/** The bank as the class reads it: the shape of `BankListing`, without a teacher's figures. */
+export interface ExerciseListing {
+  items: ReadableExercise[];
+  total: number;
+  page: number;
+  page_size: number;
+  item_types: BankItemType[];
+  difficulties: { value: string; count: number }[];
+  default_type: string | null;
+  /** The concepts the exercises read carry, each with its unit, in the syllabus' order:
+   *  what the concept filter offers. */
+  concepts?: { name: string; unit: string | null }[];
+}
+
+/** One exercise a re-extraction could not keep: it no longer fits its type. */
+export interface SetAsideItem {
+  key: string;
+  /** The id it had in the bank. */
+  id: string;
+  at: string | null;
+  item: Record<string, unknown>;
+}
+
+/** What `POST /api/bank` takes: an exercise written by hand, and who decides its concepts. */
+export interface NewBankItem {
+  item_type: string | null;
+  fields: Record<string, unknown>;
+  tag: "auto" | "manual";
+  concepts?: string[];
+  primary_concept?: string | null;
+  /** An exercise a re-extraction put aside, brought back as it was. */
+  set_aside?: string;
+  /** What the class sees of it from the start; hidden when absent. */
+  visibility?: { level: "hidden" | "full" | "fields"; fields: string[]; groups?: number[] | null };
 }
 
 export interface BankItemType {
@@ -582,7 +691,14 @@ export interface BankListing {
    *  declared and not gathered, so a rung nobody has written is still selectable. */
   difficulties: { value: string; count: number }[];
   default_type: string;
+  /** The documents the collected exercises came from. */
   sources: string[];
+  /** How many exercises of each origin; absent on an older API, and with it this whole
+   *  phase's controls (the origin badges and filter, «Añadir ejercicio»). */
+  origins?: Record<BankOrigin, number>;
+  /** How many the students see, how many carry the asking teacher's star, and how many
+   *  collected ones carry either. Absent on an older API, and with it the marks' controls. */
+  marks?: { visible: number; favourites: number; extracted: number };
   totals: { items: number; tagged: number; untagged: number };
   thresholds: { similarity: number; top_k: number };
 }
@@ -655,6 +771,11 @@ export interface Features {
 export interface Openings extends Features {
   generate: boolean;
   /**
+   * The free chat (2026-10-15): a subject's teachers open it to their students, and it starts
+   * closed; its teachers always have it. An API that does not send it has no chat.
+   */
+  chat: boolean;
+  /**
    * The class page of the subject in use («Mi clase», `/class`), still its teachers' alone.
    * No server sends it: only the landing's demo closes it (`false`), since its sample
    * subject has nobody to show (the user's request, 2026-10-13).
@@ -667,8 +788,9 @@ export interface Openings extends Features {
  *
  * Anything but a literal `true` is closed: an API that does not send the field, or sends it
  * malformed, degrades to the product without the two functions rather than to a bar drawing
- * doors that answer 403. Generating is the other way round: only a literal `false` closes
- * it, because an older API never sends it and generating was always open.
+ * doors that answer 403 — and so does the chat. Generating is the other way round: only a
+ * literal `false` closes it, because an older API never sends it and generating was always
+ * open.
  */
 export function featuresOf(session: Pick<Session, "features"> | null | undefined): Openings {
   const raw: unknown = session?.features;
@@ -678,6 +800,7 @@ export function featuresOf(session: Pick<Session, "features"> | null | undefined
     evaluation: value("evaluation") === true,
     tutor: value("tutor") === true,
     generate: value("generate") !== false,
+    chat: value("chat") === true,
     class: value("class") !== false,
   };
 }
@@ -772,10 +895,22 @@ export interface Member {
   invited_by: string | null;
   /** When a teacher paused their access; null while it is open. */
   disabled_at: string | null;
+  /** The group of the class they are in; absent on an older API. */
+  group?: { id: number; name: string } | null;
 }
 
-/** One gesture over several people. */
-export type MemberAction = "disable" | "enable" | "remove";
+/** A group of the class: its name, its active students, and what it uses (null = as the subject). */
+export interface ClassGroup {
+  id: number;
+  name: string;
+  students: number;
+  generate: GroupTool;
+  tutor: GroupTool;
+  chat: GroupTool;
+}
+
+/** One gesture over several people; `group` puts them in a group or takes them out. */
+export type MemberAction = "disable" | "enable" | "remove" | "group";
 
 /** What a gesture over several people did, and what it refused and why. */
 export interface MembersBulkResult {
@@ -856,8 +991,23 @@ export interface GenerationRow {
   model: string | null;
   author: GenerationAuthor;
   promoted_item_id: string | null;
+  /** The bank's id while the exercise passed into it is still there: a teacher's reading.
+   *  Absent on an older API, which said only `promoted_item_id`. */
+  in_bank?: string | null;
+  /** Whether this account may pass it into the bank: a teacher's own, not in it. Absent on
+   *  an older API (the demo's), where «Pasar al banco» is not drawn. */
+  promotable?: boolean;
   item: Record<string, unknown>;
   checks?: ItemChecks | null;
+}
+
+/** How a generated exercise goes into the bank (`POST /api/generations/{id}/promote`). */
+export interface PromoteBody {
+  fields?: Record<string, unknown>;
+  tag: "auto" | "manual";
+  concepts?: string[];
+  primary_concept?: string | null;
+  visibility?: { level: "hidden" | "full" | "fields"; fields: string[]; groups?: number[] | null };
 }
 
 export interface GenerationListing {
@@ -1113,6 +1263,8 @@ export interface ClassLinkView {
   created_by: string | null;
   /** Whether its link can be read again; false only when the sealing key was missing. */
   link_stored: boolean;
+  /** The group it brings into; null for the class as a whole. */
+  group_id?: number | null;
 }
 
 /** A class link just minted or renewed: its terms and the link itself. */
@@ -1140,6 +1292,8 @@ export interface MemberInvite {
   created_by: string | null;
   state?: InviteState;
   link_stored?: boolean;
+  /** The group it brings into, if any. */
+  group_id?: number | null;
 }
 
 /** A personal invitation a teacher has just minted: its row and the link that IS it. */
@@ -1156,6 +1310,8 @@ export interface AdminClassLink {
   id: number;
   workspace: string;
   workspace_name: string;
+  /** The group of the class it brings into; null for the whole class. */
+  group?: string | null;
   uses: number;
   max_uses: number;
   expires_at: string;

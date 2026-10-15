@@ -80,7 +80,7 @@ def test_a_function_nobody_has_set_is_off_for_everybody(db):
     ana = _user(db, "ana")
 
     assert features.mode(db, features.TUTOR) == features.OFF
-    assert features.for_user(db, ana) == {"generate": True, "evaluation": False, "tutor": False}
+    assert features.for_user(db, ana) == {"generate": True, "chat": True, "evaluation": False, "tutor": False}
 
 
 def test_all_opens_a_function_to_every_account_and_only_that_function(db):
@@ -88,7 +88,7 @@ def test_all_opens_a_function_to_every_account_and_only_that_function(db):
 
     features.set_mode(db, features.TUTOR, features.ALL)
 
-    assert features.for_user(db, ana) == {"generate": True, "evaluation": False, "tutor": True}
+    assert features.for_user(db, ana) == {"generate": True, "chat": True, "evaluation": False, "tutor": True}
 
 
 def test_selected_opens_a_function_to_the_listed_accounts_alone(db):
@@ -143,9 +143,9 @@ def test_the_administrator_gets_no_bypass(db):
 
 
 def test_the_routers_of_both_functions_declare_their_dependency():
-    from evaluation.api import router as evaluation_router
-    from evaluation.api import stages as stages_router
-    from tutor.api import router as tutor_router
+    from apps.evaluation.api import router as evaluation_router
+    from apps.evaluation.api import stages as stages_router
+    from apps.tutor.api import router as tutor_router
 
     def declared(router):
         return [dependency.dependency for dependency in router.dependencies]
@@ -172,7 +172,7 @@ def test_the_session_says_which_functions_are_open_to_the_account(db):
     ana = _user(db, "ana")
     features.set_mode(db, features.EVALUATION, features.ALL)
 
-    assert _me(db, ana)["features"] == {"generate": True, "evaluation": True, "tutor": False}
+    assert _me(db, ana)["features"] == {"generate": True, "chat": True, "evaluation": True, "tutor": False}
 
 
 # THE PANEL'S ROUTES ------------------------------------------------------------------------------
@@ -249,7 +249,7 @@ def test_an_invitation_lists_the_new_account_for_the_functions_it_names(db):
     assert minted["invite"]["features"] == ["tutor"]
     ana = _redeem(db, minted["link"], "ana")
 
-    assert features.for_user(db, ana) == {"generate": True, "evaluation": False, "tutor": True}
+    assert features.for_user(db, ana) == {"generate": True, "chat": True, "evaluation": False, "tutor": True}
 
 
 def test_an_invitation_that_names_nothing_lists_nobody(db):

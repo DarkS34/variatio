@@ -62,6 +62,7 @@ _COMPONENT_MODELS: dict[str, tuple[str, ...]] = {
     "describe_concepts": ("DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
     "index": ("DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
     "tag": ("CONCEPT_TAGGER_LLM", "DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
+    "tag_item": ("CONCEPT_TAGGER_LLM", "DESCRIPTION_GENERATION_LLM", "REPAIR_LLM"),
     "review_taggability": ("KG_TAGGABLE_MODEL", "REPAIR_LLM"),
     # The writer is deliberately absent: a generate job runs the model its COMMISSION
     # chose, which `models_for` puts at the head of this list. Naming the installation's
@@ -165,11 +166,11 @@ def _writer(params: dict | None) -> str:
 def _evaluation_writer() -> str:
     """Return the model an evaluation's two local proposals are written with.
 
-    The evaluation's own setting, read through `evaluation.config` at dispatch time like everything
+    The evaluation's own setting, read through `apps.evaluation.config` at dispatch time like everything
     else here — the panel edits it hot. Imported inside the function: the evaluation is mounted
     from `server/app.py` and nothing else under `server/` names it at module scope.
     """
-    from evaluation import config as evaluation_config
+    from apps.evaluation import config as evaluation_config
 
     return evaluation_config.LOCAL_MODEL
 

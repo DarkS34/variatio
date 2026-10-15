@@ -12,7 +12,7 @@ administrator's, all under `/api/admin/` — and those must all be the administr
 
 The levels: `public` (nothing asked), `session` (an account; any membership is checked inside
 the route), `viewer`/`editor`/`owner` (the membership, `auth.VIEW`/`EDIT`/`MANAGE`), and
-`+evaluation`/`+tutor` for the optional function's own door beside it. Several routes decide
+`+evaluation`/`+tutor`/`+chat` for a function's own door beside it. Several routes decide
 more inside — `POST /api/jobs` lets a student queue only a commission or a comparison — and
 their own tests pin that; this one pins what each route declares.
 """
@@ -58,6 +58,11 @@ LEVELS = {
     ("DELETE", "/api/members/{user_id:int}"): "editor",
     # A teacher's links: the class link and the subject's personal invitations.
     ("GET", "/api/members/uses"): "editor",
+    # The groups of the class: made, renamed and deleted by its teachers.
+    ("GET", "/api/members/groups"): "editor",
+    ("POST", "/api/members/groups"): "editor",
+    ("PATCH", "/api/members/groups/{group_id:int}"): "editor",
+    ("DELETE", "/api/members/groups/{group_id:int}"): "editor",
     ("GET", "/api/activity/weeks"): "editor",
     ("GET", "/api/activity/weeks/{week}"): "editor",
     ("POST", "/api/activity/weeks/{week}/digest"): "editor",
@@ -111,9 +116,21 @@ LEVELS = {
     # are closed to a student, reads included.
     ("GET", "/api/bank"): "editor",
     ("GET", "/api/bank/coverage"): "editor",
+    # A teacher adds an exercise by hand and queues the tagger on what they wrote.
+    ("POST", "/api/bank"): "editor",
+    ("POST", "/api/bank/tag"): "editor",
+    # Who sees which exercise, a teacher's stars, and what a re-extraction put aside.
+    ("PUT", "/api/bank/visibility"): "editor",
+    ("PUT", "/api/bank/{item_id}/favourite"): "editor",
+    ("DELETE", "/api/bank/{item_id}/favourite"): "editor",
+    ("GET", "/api/bank/set-aside"): "editor",
+    ("DELETE", "/api/bank/set-aside/{key}"): "editor",
     ("PATCH", "/api/bank/{item_id}"): "editor",
     ("PUT", "/api/bank/{item_id}/concepts"): "editor",
     ("DELETE", "/api/bank/{item_id}"): "editor",
+    # The bank as the class reads it: what a teacher showed, cut to it (2026-10-14).
+    ("GET", "/api/exercises"): "viewer",
+    ("GET", "/api/exercises/{item_id}"): "viewer",
     ("GET", "/api/raw"): "editor",
     ("GET", "/api/raw/{kind}/transcription"): "editor",
     ("POST", "/api/raw/{kind}/transcription"): "editor",
@@ -164,6 +181,14 @@ LEVELS = {
     ("POST", "/api/tutor/conversations/{conversation_id}/retry"): "viewer+tutor",
     ("DELETE", "/api/tutor/conversations/{conversation_id}/turn"): "viewer+tutor",
     ("DELETE", "/api/tutor/conversations/{conversation_id}"): "viewer+tutor",
+    # The free chat (2026-10-15): a student's where the subject opened it, a teacher's always.
+    ("GET", "/api/chat/conversations"): "viewer+chat",
+    ("POST", "/api/chat/conversations"): "viewer+chat",
+    ("GET", "/api/chat/conversations/{conversation_id}"): "viewer+chat",
+    ("POST", "/api/chat/conversations/{conversation_id}/messages"): "viewer+chat",
+    ("POST", "/api/chat/conversations/{conversation_id}/retry"): "viewer+chat",
+    ("DELETE", "/api/chat/conversations/{conversation_id}/turn"): "viewer+chat",
+    ("DELETE", "/api/chat/conversations/{conversation_id}"): "viewer+chat",
     # The built client, which knows nothing a session has not given it.
     ("GET", "/{path:path}"): "public",
 }
@@ -174,7 +199,11 @@ _MEMBERSHIP = {
     auth.MANAGE.dependency: "owner",
 }
 _RANK = {"viewer": 1, "editor": 2, "owner": 3}
-_FUNCTIONS = {auth.EVALUATION.dependency: "evaluation", auth.TUTOR.dependency: "tutor"}
+_FUNCTIONS = {
+    auth.EVALUATION.dependency: "evaluation",
+    auth.TUTOR.dependency: "tutor",
+    auth.CHAT.dependency: "chat",
+}
 
 
 def _routes():

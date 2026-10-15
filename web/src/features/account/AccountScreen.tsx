@@ -25,7 +25,7 @@ import { RowAction, RowGestures } from "@/components/ui/table";
 import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
 import { FormError } from "@/features/auth/AuthLayout";
-import { SubjectExercises } from "@/features/generations/GenerationsPanel";
+import { SubjectExercises } from "@/apps/generation/GenerationsPanel";
 import { PeopleWhoLoseAccess } from "@/features/workspaces/PeopleWhoLoseAccess";
 import { LANGUAGES, LANGUAGE_NAMES, useT, type Key, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";

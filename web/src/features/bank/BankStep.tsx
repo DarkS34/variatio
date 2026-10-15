@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, Circle, Hammer, Lock, Pencil, RefreshCw, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -14,6 +15,7 @@ import { InfoHint } from "@/components/ui/hint";
 import { EmptyState, Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { ProfilePart, useProfileIntro } from "@/features/profile/ProfileEditor";
+import { api } from "@/lib/api";
 import { useT, type Key } from "@/lib/i18n";
 import { artifactName, buildCall } from "@/lib/names";
 import { isLive } from "@/lib/queue";
@@ -70,7 +72,7 @@ export function BankStep({
   bank: StageState | undefined;
   graph: StageState | undefined;
 }) {
-  const { t } = useT();
+  const { t, plural } = useT();
   const types = useStageControl(profile);
   const exercises = useStageControl(bank);
   const intro = useProfileIntro(profile);
@@ -82,6 +84,13 @@ export function BankStep({
   const confirm = useConfirm();
   const { navigate } = useRouter();
   const workspace = useActiveWorkspace();
+  // What a re-extraction keeps and may lose, told in its confirmation: one row of the bank's
+  // listing carries the counts. A student's step never asks: the bank is a teacher's.
+  const summary = useQuery({
+    queryKey: ["bank", workspace, "summary"],
+    queryFn: () => api.bank({ page_size: 1 }),
+    enabled: canEdit && bank?.status !== "missing" && bank?.status !== undefined,
+  });
   // The links of the collection and the retagging, which writes the bank without being one.
   const reviewRun = useJobRun("review_taggability");
   const extractRun = useJobRun("build_bank");
@@ -204,9 +213,22 @@ export function BankStep({
   const collect = async () => {
     setFailed(null);
     if (collected) {
+      const slot = slotLabelOf("exemplars", t)!;
+      const origins = summary.data?.origins;
+      const kept = origins ? origins.manual + origins.generated : 0;
+      const marked = summary.data?.marks?.extracted ?? 0;
       const ok = await confirm({
         title: t("build.rebuildTitle", { stage: bankName }),
-        body: t("build.rebuildBody", { slot: slotLabelOf("exemplars", t)! }),
+        // What is kept and what is lost, where the server keeps what a person added.
+        body: origins ? (
+          <>
+            <p>{t("bank.step.recollectBody", { slot })}</p>
+            {kept > 0 ? <p>{plural("bank.step.recollectKeeps", kept)}</p> : null}
+            {marked > 0 ? <p>{plural("bank.step.recollectMarks", marked)}</p> : null}
+          </>
+        ) : (
+          t("build.rebuildBody", { slot })
+        ),
         confirmLabel: t("bank.step.recollect"),
       });
       if (!ok) return;
@@ -276,7 +298,7 @@ export function BankStep({
           other.curating
             ? t("bank.part.otherCurating")
             : stage.status === "approved"
-              ? t("stage.curate.closed")
+              ? t(stage.edits_keep_closed ? "bank.curate.closed" : "stage.curate.closed")
               : t(which === "bank" ? "stage.curate.bodyBank" : "stage.curate.body")
         }
         onClick={() => {

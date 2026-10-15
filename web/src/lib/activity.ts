@@ -80,16 +80,19 @@ export function weekBefore(weeks: ActivityWeekSummary[], week: string): Activity
 const IDLE_KEYS = {
   exercises: { open: "activity.finding.idle.exercisesOpen", closed: "activity.finding.idle.exercises" },
   tutor: { open: "activity.finding.idle.tutorOpen", closed: "activity.finding.idle.tutor" },
+  chat: { open: "activity.finding.idle.chatOpen", closed: "activity.finding.idle.chat" },
 } as const;
 
 const TREND_KEYS = {
   exercises: { down: "activity.finding.trend.exercisesDown", up: "activity.finding.trend.exercisesUp" },
   tutor: { down: "activity.finding.trend.tutorDown", up: "activity.finding.trend.tutorUp" },
+  chat: { down: "activity.finding.trend.chatDown", up: "activity.finding.trend.chatUp" },
 } as const;
 
 const QUIET_KEYS = {
   exercises: { open: "activity.finding.quiet.exercisesOpen", closed: "activity.finding.quiet.exercises" },
   tutor: { open: "activity.finding.quiet.tutorOpen", closed: "activity.finding.quiet.tutor" },
+  chat: { open: "activity.finding.quiet.chatOpen", closed: "activity.finding.quiet.chat" },
 } as const;
 
 /** A finding as the screen says it: the figure it leads with, its sentence, and whether to act. */

@@ -3,7 +3,7 @@ from variatio.runtime.screening import admissibility
 
 
 def test_the_commission_accepts_a_ruling():
-    from evaluation import Commission
+    from apps.evaluation import Commission
 
     commission = Commission(
         concepts=["Recursividad"],
@@ -19,14 +19,14 @@ def test_the_commission_accepts_a_ruling():
 def test_the_recorded_session_never_carries_the_ruling():
     import inspect
 
-    from evaluation import EvaluationSession
+    from apps.evaluation import EvaluationSession
 
     source = inspect.getsource(EvaluationSession.to_dict)
     assert "ruling" not in source
 
 
 def test_the_system_arm_reuses_the_ruling_instead_of_rescreening(monkeypatch):
-    from evaluation.arms import system
+    from apps.evaluation.arms import system
 
     calls = []
     monkeypatch.setattr(admissibility, "screen", lambda *a, **k: calls.append(1))
@@ -39,7 +39,7 @@ def test_the_system_arm_reuses_the_ruling_instead_of_rescreening(monkeypatch):
     class _Context:
         generator = _Generator()
 
-    from evaluation import Commission
+    from apps.evaluation import Commission
 
     commission = Commission(
         concepts=["Recursividad"],

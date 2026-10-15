@@ -671,7 +671,7 @@ function Raw() {
  * account the questionnaire is asked of (`useAsksStageReview`).
  */
 const StageReviewGuide = lazy(() =>
-  withCatalogues(import("@/evaluation/guide/es")).then((tree) => ({
+  withCatalogues(import("@/apps/evaluation/guide/es")).then((tree) => ({
     default: tree.StageReviewGuide,
   })),
 );

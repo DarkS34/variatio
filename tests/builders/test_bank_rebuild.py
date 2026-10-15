@@ -143,3 +143,29 @@ def test_an_extraction_that_produced_nothing_leaves_the_bank_alone(builder, ws, 
     assert run(builder, ws) == {}
     assert saved(ws.exemplars_bank_path) == OLD_BANK
     assert not ws.exemplars_bank_building_path.exists()
+
+
+# WHAT A PERSON ADDED SURVIVES (2026-10-14) ---------------------------------------------------
+
+
+def test_a_rebuild_starts_from_what_a_person_added_and_drops_its_repeats(builder, ws, monkeypatch):
+    kept = {
+        "M001": {"enunciado": "Recorre la lista", "origin": "manual", "concepts": ["Bucles"]},
+        "G001": {"enunciado": "Ordena el vector", "origin": "generated", "concepts": []},
+    }
+    # Each document gives back one of the teacher's statements, folded otherwise, and one new.
+    monkeypatch.setattr(
+        builder,
+        "_extract_batch",
+        lambda batch, tag: [{"enunciado": "RECORRE  la lísta"}, {"enunciado": f"nuevo {tag}"}],
+    )
+
+    bank = builder.build(
+        ws.raw_exemplars_dir, ws.exemplars_bank_path, ws.exemplars_bank_building_path, keep=kept
+    )
+
+    assert bank["M001"] == kept["M001"] and bank["G001"] == kept["G001"]
+    extracted = {item_id: item for item_id, item in bank.items() if item_id.startswith("C")}
+    assert len(extracted) == 2
+    assert all(item["enunciado"].startswith("nuevo") for item in extracted.values())
+    assert saved(ws.exemplars_bank_path) == bank

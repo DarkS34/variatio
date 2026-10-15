@@ -1,17 +1,19 @@
 import {
   Activity,
   GraduationCap,
+  MessageCircle,
   MessagesSquare,
   Play,
   SlidersHorizontal,
   Spline,
   UserCheck,
+  UserMinus,
   UserPlus,
   UserRoundCog,
-  UserMinus,
   UserX,
+  Users,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { GuideLink } from "@/components/GuideLink";
 import { Badge } from "@/components/ui/badge";
@@ -32,29 +34,31 @@ import {
   studentsOf,
   type MemberFilter,
 } from "@/lib/members";
-import type { Member, MemberAction } from "@/lib/types";
+import type { ClassGroup, Member, MemberAction } from "@/lib/types";
 import { useSession } from "@/state/auth";
 import {
   useActiveWorkspace,
   useActivityWeeks,
   useClassLink,
-  useCurriculum,
   useMemberActions,
   useMemberInvites,
   useMembers,
+  useScopedCurriculum,
   useStudentUses,
 } from "@/state/queries";
 
 import { ActivitySection, activityDetail, type ActivityView } from "./ActivitySection";
+import { GroupScope } from "./GroupScope";
+import { GroupsSection, MoveDialog, groupsDetail } from "./GroupsSection";
 import { InviteSection, inviteDetail } from "./InviteSection";
 import { PeopleTable, PersonRow } from "./PersonRow";
 import { ProgressSection, progressDetail } from "./ProgressSection";
 import { TeachersSection, teachersOf } from "./TeachersSection";
 import { UsesSection, usesDetail } from "./UsesSection";
 
-type ClassSection = ActivityView | "students" | "teachers" | "invite" | "progress" | "uses";
+type ClassSection = ActivityView | "students" | "groups" | "teachers" | "invite" | "progress" | "uses";
 
-const ACTIVITY_VIEWS: readonly string[] = ["exercises", "tutor"] satisfies ActivityView[];
+const ACTIVITY_VIEWS: readonly string[] = ["exercises", "tutor", "chat"] satisfies ActivityView[];
 
 /**
  * The class of the subject in use: its people, for whoever teaches it.
@@ -75,11 +79,16 @@ export function ClassScreen() {
   const { t, plural } = tr;
   const session = useSession();
   const members = useMembers();
-  const classLink = useClassLink();
-  const invites = useMemberInvites();
-  const progress = useCurriculum();
-  const uses = useStudentUses();
-  const activity = useActivityWeeks(null);
+  // The groups of the class (absent on an older API), and which of them the sections act on:
+  // the whole class (null) or one group, kept while moving between sections.
+  const groups: ClassGroup[] | undefined = members.data?.groups;
+  const [pickedScope, setScope] = useState<number | null>(null);
+  const scope = groups?.some((group) => group.id === pickedScope) ? pickedScope : null;
+  const classLink = useClassLink(scope);
+  const invites = useMemberInvites(scope);
+  const progress = useScopedCurriculum(scope);
+  const uses = useStudentUses(scope);
+  const activity = useActivityWeeks(null, scope);
   // The student the activity reads, or the whole class, and the week open: kept here so the
   // activity's two pages share them and «Alumnos» can open them on one student.
   const [activityOf, setActivityOf] = useState<number | null>(null);
@@ -94,8 +103,16 @@ export function ClassScreen() {
   const teachers = teachersOf(members.data?.members ?? []);
   const paused = students.filter((member) => member.disabled_at !== null).length;
   const tutorInstalled = activity.data?.tutor === true;
+  const chatInstalled = activity.data?.chat === true;
   const fallback: ClassSection = students.length === 0 ? "invite" : "students";
-  const section: ClassSection = picked === "tutor" && !tutorInstalled ? fallback : (picked ?? fallback);
+  const section: ClassSection =
+    (picked === "tutor" && !tutorInstalled) || (picked === "chat" && !chatInstalled) ? fallback : (picked ?? fallback);
+
+  // A student of another group is no reading of this one: the activity forgets them.
+  const changeScope = (next: number | null) => {
+    setScope(next);
+    setActivityOf(null);
+  };
 
   const items: SectionEntry[] = [
     {
@@ -107,6 +124,16 @@ export function ClassScreen() {
         ? `${plural("class.studentCount", students.length - paused)} · ${plural("class.pausedCount", paused)}`
         : plural("class.studentCount", students.length),
     },
+    ...(groups
+      ? [
+          {
+            key: "groups",
+            label: t("class.groups"),
+            mark: <Users className="size-4" />,
+            detail: groupsDetail(groups, plural),
+          },
+        ]
+      : []),
     {
       key: "teachers",
       label: t("class.teachers"),
@@ -140,6 +167,17 @@ export function ClassScreen() {
           },
         ]
       : []),
+    // The free chat's page, where the chat is installed (2026-10-15).
+    ...(chatInstalled
+      ? [
+          {
+            key: "chat",
+            label: t("class.activity.chat"),
+            mark: <MessageCircle className="size-4" />,
+            detail: activityDetail(activity.data, "chat", tr),
+          },
+        ]
+      : []),
     {
       key: "progress",
       group: t("class.group.course"),
@@ -151,7 +189,7 @@ export function ClassScreen() {
       key: "uses",
       label: t("class.uses"),
       mark: <SlidersHorizontal className="size-4" />,
-      detail: usesDetail(uses.data, t),
+      detail: usesDetail(uses.data, { t, plural }),
     },
   ];
 
@@ -188,18 +226,42 @@ export function ClassScreen() {
               onStudent={setActivityOf}
               week={activityWeek}
               onWeek={setActivityWeek}
+              scope={<GroupScope groups={groups ?? []} value={scope} onChange={changeScope} />}
+              group={scope}
             />
           ) : section === "invite" ? (
-            <InviteSection subject={subject} slug={slug} />
+            <InviteSection
+              subject={subject}
+              slug={slug}
+              group={scope}
+              scope={<GroupScope groups={groups ?? []} value={scope} onChange={changeScope} />}
+            />
+          ) : section === "groups" && groups ? (
+            <GroupsSection
+              groups={groups}
+              onOpen={(id) => {
+                setScope(id);
+                setPicked("students");
+              }}
+            />
           ) : section === "teachers" ? (
             <TeachersSection teachers={teachers} />
           ) : section === "progress" ? (
-            <ProgressSection />
+            <ProgressSection
+              group={scope}
+              scope={<GroupScope groups={groups ?? []} value={scope} onChange={changeScope} />}
+            />
           ) : section === "uses" ? (
-            <UsesSection />
+            <UsesSection
+              group={scope}
+              scope={<GroupScope groups={groups ?? []} value={scope} onChange={changeScope} />}
+            />
           ) : (
             <StudentsSection
               students={students}
+              groups={groups}
+              group={scope}
+              scope={<GroupScope groups={groups ?? []} value={scope} onChange={changeScope} />}
               onActivity={(id) => {
                 setActivityOf(id);
                 setPicked("exercises");
@@ -225,10 +287,18 @@ export function ClassScreen() {
  * about; what the server refuses comes back person by person.
  */
 function StudentsSection({
-  students,
+  students: everyone,
+  groups,
+  group,
+  scope,
   onActivity,
 }: {
   students: Member[];
+  /** The groups of the class; absent on an older API, with no group gesture then. */
+  groups: ClassGroup[] | undefined;
+  /** The group the section is scoped to, or null for the whole class. */
+  group: number | null;
+  scope: ReactNode;
   onActivity: (id: number) => void;
 }) {
   const { t, plural } = useT();
@@ -239,6 +309,12 @@ function StudentsSection({
   const [query, setQuery] = useState("");
   const [ticked, setTicked] = useState<Set<number>>(new Set());
   const [removing, setRemoving] = useState<Member[] | null>(null);
+  const [moving, setMoving] = useState<Member[] | null>(null);
+  // A group's students, when the section is scoped to one; the whole class otherwise.
+  const students = useMemo(
+    () => (group === null ? everyone : everyone.filter((member) => member.group?.id === group)),
+    [everyone, group],
+  );
 
   const counts = useMemo(
     () => ({
@@ -259,7 +335,7 @@ function StudentsSection({
       return next;
     });
 
-  const run = (action: MemberAction, people: Member[]) =>
+  const run = (action: Exclude<MemberAction, "group">, people: Member[]) =>
     many.mutate(
       { action, userIds: people.map((member) => member.user_id) },
       {
@@ -309,7 +385,7 @@ function StudentsSection({
 
   return (
     <>
-      <SectionHeader title={t("class.students")} description={t("class.students.lead")} />
+      <SectionHeader title={t("class.students")} description={t("class.students.lead")} action={scope} />
 
       <section className="surface space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -366,6 +442,18 @@ function StudentsSection({
                           {filter === "active" ? <UserX /> : <UserCheck />}
                           {t(filter === "active" ? "class.pauseN" : "class.openN", { n: chosen.length })}
                         </Button>
+                        {groups ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="-my-1.5 h-7"
+                            disabled={many.isPending}
+                            onClick={() => setMoving(chosen)}
+                          >
+                            <Users />
+                            {t("class.groups.moveN", { n: chosen.length })}
+                          </Button>
+                        ) : null}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -390,11 +478,18 @@ function StudentsSection({
                   member={member}
                   tick={{ checked: ticked.has(member.user_id), onChange: (on) => tick(member, on) }}
                   badges={
-                    paused ? (
-                      <Badge variant="outline" className="shrink-0">
-                        {t("class.pausedSince", { date: when(member.disabled_at) })}
-                      </Badge>
-                    ) : null
+                    <>
+                      {member.group && group === null ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          {member.group.name}
+                        </Badge>
+                      ) : null}
+                      {paused ? (
+                        <Badge variant="outline" className="shrink-0">
+                          {t("class.pausedSince", { date: when(member.disabled_at) })}
+                        </Badge>
+                      ) : null}
+                    </>
                   }
                   actions={
                     <>
@@ -404,6 +499,15 @@ function StudentsSection({
                         icon={<Activity />}
                         onClick={() => onActivity(member.user_id)}
                       />
+                      {groups ? (
+                        <RowAction
+                          label={t("class.groups.moveOne", { name: member.name })}
+                          title={t("class.groups.move")}
+                          icon={<Users />}
+                          disabled={many.isPending}
+                          onClick={() => setMoving([member])}
+                        />
+                      ) : null}
                       <RowAction
                         label={t(paused ? "class.openOne" : "class.pauseOne", { name: member.name })}
                         title={t(paused ? "class.open" : "class.pause")}
@@ -427,6 +531,17 @@ function StudentsSection({
           </PeopleTable>
         )}
       </section>
+
+      {moving && groups ? (
+        <MoveDialog
+          people={moving}
+          groups={groups}
+          onClose={() => {
+            setMoving(null);
+            setTicked(new Set());
+          }}
+        />
+      ) : null}
 
       <RemoveDialog
         people={removing}

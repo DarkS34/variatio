@@ -362,7 +362,7 @@ function DifficultyEdit({
  * The parts an exercise of this type is made of, as they are READ.
  *
  * Correcting a field — its identifier, its type, whether it is obligatory — is the most
- * technical question of the whole path, and it stays behind "Quiero corregir algo". What each
+ * technical question of the whole path, and it stays behind "Modificar". What each
  * part IS does not: it is the answer to "¿qué lleva un ejercicio de este tipo?", and somebody
  * reviewing the type could not see it at all. So the static view lists every field in the
  * order the type declares it, with no control: the name it goes by, whether it is the

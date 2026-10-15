@@ -63,6 +63,9 @@ export const USES = [
   { key: "generate", path: "/generate", labelKey: "nav.create", feature: null },
   { key: "compare", path: "/evaluate", labelKey: "nav.compare", feature: "evaluation" },
   { key: "tutor", path: "/tutor", labelKey: "nav.tutor", feature: "tutor" },
+  // The free chat (2026-10-15): no optional function of the administrator's, so no tone, as
+  // generating; the subject opens it (`Openings.chat`).
+  { key: "chat", path: "/chat", labelKey: "nav.chat", feature: null },
 ] as const satisfies readonly {
   key: string;
   path: string;
@@ -75,12 +78,13 @@ export const USES = [
 export type Door = (typeof USES)[number];
 
 /**
- * A STUDENT'S WHOLE CONSTRUCTION PHASE: the syllabus, read and never corrected.
+ * A STUDENT'S WHOLE CONSTRUCTION PHASE: the syllabus and the bank, read and never corrected.
  *
- * The bar draws it alone and WITHOUT a number — a number says "a stop you walk to after the
- * one before", and a student walks no path: the subject's teacher builds it. The rest of the
- * construction is not theirs to see (`STUDENT_HIDDEN`). It is not a door either: the doors
- * stay three at most.
+ * The bar draws them alone and WITHOUT a number — a number says "a stop you walk to after the
+ * one before", and a student walks no path: the subject's teacher builds it. The bank is read
+ * as its teachers showed it (`/api/exercises`; the user's decision, 2026-10-14: until then
+ * the syllabus was a student's only stage). The rest of the construction is not theirs to see
+ * (`STUDENT_HIDDEN`). They are not doors either.
  */
 export const SYLLABUS = {
   key: "syllabus",
@@ -89,20 +93,39 @@ export const SYLLABUS = {
   feature: null,
 } as const satisfies { key: string; path: string; labelKey: Key; feature: null };
 
-/** The construction's screens a student does not see — every step but the syllabus. */
-export const STUDENT_HIDDEN: readonly string[] = STEPS.map((step) => step.path).filter(
-  (path) => path !== SYLLABUS.path,
-);
+export const BANK_READING = {
+  key: "bank",
+  path: "/prepare/bank",
+  labelKey: "nav.step.bank",
+  feature: null,
+} as const satisfies { key: string; path: string; labelKey: Key; feature: null };
 
-// Where a student lands, door by door: generating first, then the tutor, then the evaluation.
-const LANDING_ORDER: readonly Door["key"][] = ["generate", "tutor", "compare"];
+/** What a student reads of the construction, in the bar's order. */
+export const STUDENT_READS = [SYLLABUS, BANK_READING] as const;
+
+export type Reading = (typeof STUDENT_READS)[number];
+
+/**
+ * The construction's screens a student does not see: the raw material, and the types of
+ * exercise, whose old address leads to the bank and would land a student on it.
+ */
+export const STUDENT_HIDDEN: readonly string[] = [
+  ...STEPS.map((step) => step.path).filter(
+    (path) => !STUDENT_READS.some((reading) => reading.path === path),
+  ),
+  "/prepare/profile",
+];
+
+// Where a student lands, door by door: generating first, then the tutor, the chat, then the
+// evaluation.
+const LANDING_ORDER: readonly Door["key"][] = ["generate", "tutor", "chat", "compare"];
 
 /**
  * Where "/" lands a student once the subject is ready: their first open door, or the
  * syllabus when none is open. Before the subject is ready there is nowhere to land
  * (`SubjectNotReady`), which is the caller's to decide.
  */
-export function studentLandingPath(features: Features & { generate?: boolean }): string {
+export function studentLandingPath(features: Features & { generate?: boolean; chat?: boolean }): string {
   const open = usesFor(features);
   const first = LANDING_ORDER.map((key) => open.find((door) => door.key === key)).find(Boolean);
   return first?.path ?? SYLLABUS.path;
@@ -115,12 +138,15 @@ export function featureLabelKey(feature: keyof Features): Key {
 
 /**
  * The doors this account sees, in `USES` order: a function closed to it has no door at all,
- * and neither has generating where a subject's teachers closed it to its students.
+ * and neither has generating where a subject's teachers closed it to its students, nor the
+ * chat where they have not opened it.
  */
-export function usesFor(features: Features & { generate?: boolean }): Door[] {
-  return USES.filter((door) =>
-    door.feature === null ? door.key !== "generate" || features.generate !== false : features[door.feature],
-  );
+export function usesFor(features: Features & { generate?: boolean; chat?: boolean }): Door[] {
+  return USES.filter((door) => {
+    if (door.key === "generate") return features.generate !== false;
+    if (door.key === "chat") return features.chat === true;
+    return door.feature === null || features[door.feature];
+  });
 }
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */

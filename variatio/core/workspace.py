@@ -199,6 +199,34 @@ class Workspace:
         return self.artifacts_dir / ".exemplars_bank.building.json"
 
     @property
+    def exemplars_bank_seed_path(self) -> Path:
+        """The exercises a re-extraction starts from: the ones a person added to the bank.
+
+        Host state that lives as long as a bank build does: the server writes it before the
+        build and removes it after, and the builder keeps those exercises, ids and all.
+        """
+        return self.artifacts_dir / ".exemplars_bank.seed.json"
+
+    @property
+    def bank_set_aside_path(self) -> Path:
+        """The exercises a person added that a re-extraction could not keep.
+
+        Host state: one that no longer fits the types of exercise it was written for is put
+        here instead of being lost, for its teacher to correct and bring back.
+        """
+        return self.artifacts_dir / ".bank_set_aside.json"
+
+    @property
+    def bank_visibility_path(self) -> Path:
+        """Which exercises of the bank the subject's students see, and which of their fields.
+
+        Host state beside `.curriculum.json`, and for its reason: a teaching decision about the
+        workspace, which no builder produces. Keyed by each exercise's content, so a
+        re-extraction keeps it.
+        """
+        return self.artifacts_dir / ".bank_visibility.json"
+
+    @property
     def curriculum_path(self) -> Path:
         """The concepts this instance considers covered.
 

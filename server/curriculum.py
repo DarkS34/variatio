@@ -8,6 +8,10 @@ silent shrink.
 It is the subject's «Avance del curso», which its teachers set in «Clase» (2026-10-06). It
 bounds nobody (2026-10-07: a student may run ahead of the class): a commission that sends
 its own list replaces it, and the generate form offers it as one press that fills the list.
+
+A GROUP OF THE CLASS may follow its own (2026-10-14): `class_groups.progress`, None while it
+follows the subject's. Validated on read the same way; a student of such a group reads it in
+place of the subject's.
 """
 
 import json
@@ -74,6 +78,30 @@ def _read(ws: Workspace) -> dict:
         "concepts": stored if isinstance(stored, list) else [],
         "updated_at": data.get("updated_at"),
     }
+
+
+def of_group(ws: Workspace, group, graph: KnowledgeGraph) -> dict:
+    """Read the progress a group follows: its own, or the subject's while it has none.
+
+    `own` says which: a group with its own list says so even when the list is empty.
+    """
+    if group is None or group.progress is None:
+        return {**load(ws, graph), "own": False}
+    existing = set(graph.all_concepts)
+    stored = [c for c in group.progress if isinstance(c, str)]
+    return {
+        "concepts": sorted({c for c in stored if c in existing}),
+        "updated_at": None,
+        "dropped": sorted({c for c in stored if c not in existing}),
+        "own": True,
+    }
+
+
+def save_group(ws: Workspace, group, concepts: list[str] | None, graph: KnowledgeGraph) -> dict:
+    """Give a group its own progress, or None to follow the subject's again; the caller commits."""
+    existing = set(graph.all_concepts)
+    group.progress = None if concepts is None else sorted({c for c in concepts if c in existing})
+    return of_group(ws, group, graph)
 
 
 def closure(concepts: list[str], graph: KnowledgeGraph, relation: str | None) -> list[str]:

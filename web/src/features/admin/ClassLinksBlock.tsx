@@ -39,7 +39,12 @@ export function ClassLinksBlock({ names }: { names: Record<string, string> }) {
       ) : (
         <ul className="rows">
           {links.map((link) => (
-            <ClassLinkRow key={link.id} link={link} name={names[link.workspace] ?? link.workspace_name} />
+            <ClassLinkRow
+              key={link.id}
+              link={link}
+              // A group's link is named with its group: a subject may have several live.
+              name={`${names[link.workspace] ?? link.workspace_name}${link.group ? ` · ${link.group}` : ""}`}
+            />
           ))}
         </ul>
       )}

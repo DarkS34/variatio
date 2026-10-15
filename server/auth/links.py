@@ -65,6 +65,7 @@ def mint(
     token: str | None = None,
     features: list[str] | None = None,
     profile: str = STUDENT,
+    group_id: int | None = None,
 ) -> tuple[Invite, str]:
     """Insert one invitation and return it with its token, a fresh one unless one is given.
 
@@ -84,6 +85,7 @@ def mint(
         token_sealed=seal(token),
         features=features,
         profile=profile,
+        group_id=group_id,
     )
     return invite, token
 
@@ -95,11 +97,13 @@ def mint_class_link(
     expires_at: datetime,
     max_uses: int,
     created_by: int | None = None,
+    group_id: int | None = None,
 ) -> tuple[ClassLink, str]:
     """Insert a class link with a fresh token, sealed like an invitation's, and return both.
 
-    The one writer of a class link. The subject's live one, if any, is the caller's to revoke
-    first: one live link per subject is the rule renewing keeps.
+    The one writer of a class link. The live one of its destination — the class, or one of
+    its groups — is the caller's to revoke first: one live link per destination is the rule
+    renewing keeps.
     """
     token = tokens.new_token()
     link = identity.create_class_link(
@@ -110,6 +114,7 @@ def mint_class_link(
         max_uses=max_uses,
         created_by=created_by,
         token_sealed=seal(token),
+        group_id=group_id,
     )
     return link, token
 

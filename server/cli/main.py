@@ -13,7 +13,7 @@ from variatio.core.paths import PROJECT_ROOT
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-from . import accounts, diagnostics, generations, instances
+from . import accounts, diagnostics, generations, instances, usage
 from .common import PROG, guarded
 from .serve import serve
 
@@ -77,6 +77,13 @@ def build_parser():
         "--dry-run", action="store_true", help="dice qué escribiría, sin escribir nada"
     )
     generated.set_defaults(func=guarded(generations.export_generations))
+
+    spent = subparsers.add_parser(
+        "usage", help="resume lo que han gastado en tokens los trabajos de una asignatura"
+    )
+    spent.add_argument("--workspace", required=True, metavar="SLUG", help="la asignatura")
+    spent.add_argument("--days", type=int, default=None, help="solo los últimos N días")
+    spent.set_defaults(func=usage.show_usage)
 
     listing = subparsers.add_parser("workspaces", help="lista las asignaturas de la base de datos")
     listing.set_defaults(func=guarded(instances.list_workspaces))

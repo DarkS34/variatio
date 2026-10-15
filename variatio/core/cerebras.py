@@ -13,7 +13,7 @@ import httpx
 from loguru import logger
 
 from .. import config
-from . import cerebras_budget, progress, repetition
+from . import cerebras_budget, progress, repetition, usage
 from .inference import (
     GenerationResponse,
     InferenceError,
@@ -226,6 +226,7 @@ class CerebrasEngine:
                 ledger.record(
                     model, phase, prompt_tokens, completion_tokens, response.headers, claim=claim
                 )
+                usage.record(self.name, model, prompt_tokens, completion_tokens)
         except httpx.HTTPError as e:
             raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
         finally:
@@ -384,6 +385,7 @@ class CerebrasEngine:
             raise InferenceError(f"Cerebras generation failed for model '{model}': {e}") from e
         prompt_tokens, completion_tokens = _usage(response)
         ledger.record(model, phase, prompt_tokens, completion_tokens, response.headers, claim=claim)
+        usage.record(self.name, model, prompt_tokens, completion_tokens)
         return response
 
     def embed(self, model: str, text: str) -> list[float]:

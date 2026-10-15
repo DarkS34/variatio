@@ -1,5 +1,5 @@
-import { ListChecks, Undo2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ListChecks, Split, Undo2 } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { ConceptSelector } from "@/components/ConceptSelector";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,13 @@ import { useConfirm } from "@/components/ui/confirm";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader } from "@/features/admin/Sections";
-import { adjacency, priors } from "@/features/generate/prerequisites";
+import { adjacency, priors } from "@/apps/generation/prerequisites";
 import { domainColours } from "@/lib/domains";
 import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { progressByUnit } from "@/lib/courseProgress";
 import type { CurriculumState } from "@/lib/types";
-import { useCurriculum, useKg, useKgGraph, useSaveCurriculum } from "@/state/queries";
+import { useKg, useKgGraph, useMembers, useSaveCurriculum, useScopedCurriculum } from "@/state/queries";
 
 /** The line under «Avance de la asignatura» in the section list: how much of the syllabus is covered. */
 export function progressDetail(
@@ -36,15 +36,18 @@ export function progressDetail(
  * Read unit by unit, in the syllabus' order, because «Tema 3 · 2 de 7» is the reading a
  * teacher has of a course.
  */
-export function ProgressSection() {
+export function ProgressSection({ group = null, scope }: { group?: number | null; scope?: ReactNode }) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
-  const state = useCurriculum();
+  const state = useScopedCurriculum(group);
   const kg = useKg();
   const graph = useKgGraph();
-  const save = useSaveCurriculum();
+  const save = useSaveCurriculum(group);
   const [draft, setDraft] = useState<string[] | null>(null);
+  // A group follows the subject's progress until it is given its own (`own`).
+  const groupName = useMembers().data?.groups?.find((row) => row.id === group)?.name ?? null;
+  const following = group !== null && state.data?.own === false;
 
   const adj = useMemo(() => adjacency(graph.data), [graph.data]);
   const implied = useMemo(
@@ -62,7 +65,7 @@ export function ProgressSection() {
     toast({ title: t("class.failed"), description: error.message, tone: "danger" });
 
   const store = (concepts: string[]) =>
-    save.mutate(concepts, {
+    save.mutate({ concepts }, {
       onSuccess: (saved) =>
         toast({
           title: saved.concepts.length > 0 ? t("class.progress.saved") : t("class.progress.lifted"),
@@ -79,8 +82,17 @@ export function ProgressSection() {
     if (asked) store([]);
   };
 
+  const followSubject = async () => {
+    const asked = await confirm({
+      title: t("class.progress.followConfirm"),
+      body: t("class.progress.followConfirmBody"),
+      confirmLabel: t("class.progress.followSubject"),
+    });
+    if (asked) save.mutate({ concepts: [], followSubject: true }, { onError: failed });
+  };
+
   const header = (
-    <SectionHeader title={t("class.progress")} description={t("class.progress.lead")} />
+    <SectionHeader title={t("class.progress")} description={t("class.progress.lead")} action={scope} />
   );
 
   if (state.isError || kg.isError) {
@@ -117,6 +129,29 @@ export function ProgressSection() {
           one line under it and its control on the right. */}
       <section className="surface p-5" aria-label={t("class.progress")}>
         <ul className="rows">
+          {group !== null && groupName ? (
+            <li className="flex flex-wrap items-center justify-between gap-4">
+              <p className="min-w-0 text-body">
+                {t(following ? "class.progress.groupFollows" : "class.progress.groupOwn", { name: groupName })}
+              </p>
+              {following ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={save.isPending || total === 0}
+                  onClick={() => setDraft([...covered])}
+                >
+                  <Split />
+                  {t("class.progress.giveOwn")}
+                </Button>
+              ) : (
+                <Button size="sm" variant="ghost" disabled={save.isPending} onClick={followSubject}>
+                  <Undo2 />
+                  {t("class.progress.followSubject")}
+                </Button>
+              )}
+            </li>
+          ) : null}
           <li className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 space-y-0.5">
               <p className="font-medium">
@@ -128,7 +163,7 @@ export function ProgressSection() {
                   : t("class.progress.noLimitBody")}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-1">
+            <div className={following ? "hidden" : "flex flex-wrap items-center gap-1"}>
               {save.isPending ? <Spinner /> : null}
               <Button
                 size="sm"

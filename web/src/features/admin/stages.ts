@@ -1,4 +1,4 @@
-import { MessagesSquare, Play, Scale, type LucideIcon } from "lucide-react";
+import { MessageCircle, MessagesSquare, Play, Scale, type LucideIcon } from "lucide-react";
 
 import type { Key } from "@/lib/i18n";
 import { STEPS, USES, stepNumber, type Door } from "@/lib/steps";
@@ -68,6 +68,9 @@ export const CONFIG_STAGES: ConfigStage[] = [
   door("generate", "generation", Play, "cfg.stage.generation"),
   door("compare", "evaluation", Scale, "cfg.stage.evaluation"),
   door("tutor", "tutoring", MessagesSquare, "cfg.stage.tutoring"),
+  // The free chat is no optional function of the administrator's: its screen is here, in
+  // «Configuración», after generating.
+  door("chat", "chat", MessageCircle, "cfg.stage.chat"),
 ];
 
 /** The stage an optional function's tab draws, by the function's name. */

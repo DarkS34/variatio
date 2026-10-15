@@ -1,7 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
+  Library,
   Loader2,
+  MessageCircle,
   MessagesSquare,
   Network,
   Play,
@@ -26,12 +28,13 @@ import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import {
   STEPS,
-  SYLLABUS,
+  STUDENT_READS,
   stepBusy,
   stepNumber,
   stepStates,
   usesFor,
   type Door,
+  type Reading,
   type StepState,
 } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
@@ -209,8 +212,9 @@ function DoorPill({
   open,
   disabledReason,
 }: {
-  /** A door of `USES`, or a student's syllabus, which is drawn the same way and is no door. */
-  door: Door | typeof SYLLABUS;
+  /** A door of `USES`, or what a student reads of the construction, drawn the same way and
+   *  no door. */
+  door: Door | Reading;
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   active: boolean;
   /** Whether the whole construction is closed, which is what opens every door at once. */
@@ -302,6 +306,12 @@ function NavRule() {
 const FADE_PX = 32;
 
 /** The icon each door of «Fase de pruebas» carries where a step carries its number. */
+// What a student reads of the construction carries an icon where a step carries its number.
+const READING_ICONS: Record<Reading["key"], ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  syllabus: Network,
+  bank: Library,
+};
+
 const DOOR_ICONS: Record<
   Door["key"],
   ComponentType<{ className?: string; strokeWidth?: number }>
@@ -309,6 +319,7 @@ const DOOR_ICONS: Record<
   generate: Play,
   compare: Scale,
   tutor: MessagesSquare,
+  chat: MessageCircle,
 };
 
 /**
@@ -416,15 +427,18 @@ function MainNav({
     >
       <PhaseGroup>
         {student ? (
-          // A student's construction is the syllabus alone, read: no number, since they walk
-          // no path, and closed like the doors until the subject is ready.
-          <DoorPill
-            door={SYLLABUS}
-            icon={Network}
-            active={path === SYLLABUS.path}
-            open={locked === null}
-            disabledReason={locked === null ? null : t("nav.subjectNotReady")}
-          />
+          // A student's construction is the syllabus and the bank, read: no number, since
+          // they walk no path, and closed like the doors until the subject is ready.
+          STUDENT_READS.map((reading) => (
+            <DoorPill
+              key={reading.key}
+              door={reading}
+              icon={READING_ICONS[reading.key]}
+              active={path === reading.path}
+              open={locked === null}
+              disabledReason={locked === null ? null : t("nav.subjectNotReady")}
+            />
+          ))
         ) : (
           STEPS.map((step, index) => (
             <StepPill

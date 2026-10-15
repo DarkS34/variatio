@@ -8,7 +8,9 @@ model when a teacher asks for it here, and checked by code before anybody reads 
 
 A week travels as `2026-W41`; a future week does not exist yet. `?student=<id>` narrows a
 reading to one student of the subject, active or paused; anybody else is the same 404 as an
-id that names nobody.
+id that names nobody. `?group=<id>` narrows the class to one of its groups (2026-10-14):
+everything is counted over its students, its progress is the one the findings read, and its
+digest is its own, or the class's cut to its students until it has one.
 """
 
 import json
@@ -19,13 +21,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import inference
 
-from .. import activity, auth, curriculum, features, singletons
+from .. import activity, auth, curriculum, features, groups, singletons
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
 
 router = APIRouter(prefix="/api/activity", tags=["activity"], dependencies=[auth.EDIT])
 
-# The tutor's job that writes a week's digest (`tutor/api/digest.py`).
+# The tutor's job that writes a week's digest (`apps/tutor/api/digest.py`).
 DIGEST_KIND = "activity_digest"
 DIGEST_BUSY = "digest_busy"
 
@@ -33,16 +35,20 @@ DIGEST_BUSY = "digest_busy"
 @router.get("/weeks")
 def weeks(
     student: int | None = Query(None),
+    group: int | None = None,
     access: auth.Access = auth.EDIT,
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Answer the class's weeks, the newest first, with their figures, and who is in the class."""
-    students = activity.students_of(db, access.workspace)
+    """Answer the class's weeks, or a group's, the newest first, with their figures, and who
+    is in it."""
+    chosen_group = _group(db, access, group)
+    students = _students(db, access, chosen_group)
     scope = activity.read_scope(access.ws, students, _chosen(students, student))
     return {
-        **activity.history(scope, activity.digested_weeks(access.ws)),
+        **activity.history(scope, activity.digested_weeks(access.ws, group)),
         "students": [_named(s) for s in students],
         "tutor": scope.tutor,
+        "chat": scope.chat,
     }
 
 
@@ -50,35 +56,43 @@ def weeks(
 def week(
     week: str,
     student: int | None = Query(None),
+    group: int | None = None,
     access: auth.Access = auth.EDIT,
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Answer one week of the class, or of one student: figures, findings and the digest."""
+    """Answer one week of the class, of a group, or of one student: figures, findings and the
+    digest."""
     key = _week(week)
-    students = activity.students_of(db, access.workspace)
+    chosen_group = _group(db, access, group)
+    students = _students(db, access, chosen_group)
     scope = activity.read_scope(access.ws, students, _chosen(students, student))
     graph = _graph(access)
-    progress = curriculum.load(access.ws, graph)["concepts"] if graph else None
-    answer = activity.week(scope, key, graph, progress, _digest(access, key))
+    progress = curriculum.of_group(access.ws, chosen_group, graph)["concepts"] if graph else None
+    answer = activity.week(scope, key, graph, progress, _digest(access, key, group))
     answer["tutor_offered"] = features.offered_to_students(db, access.workspace)
-    answer["digest_running"] = _live_digest(access.ws.slug, key) is not None
+    answer["digest_running"] = _live_digest(access.ws.slug, key, group) is not None
     return answer
 
 
 @router.post("/weeks/{week}/digest", status_code=201)
 def write_digest(
-    week: str, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+    week: str,
+    group: int | None = None,
+    access: auth.Access = auth.EDIT,
+    db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Queue the digest of one week: what the class asked the tutor, in a few themes per concept.
+    """Queue the digest of one week: what the class, or a group, asked the tutor, in a few
+    themes per concept.
 
-    Only with enough messages about the subject to sum up, one at a time per week, and on the
-    engine the installation has; a closed week's digest may be written again (the screen
-    offers it quietly, for one that came out wrong).
+    Only with enough messages about the subject to sum up, one at a time per week and group,
+    and on the engine the installation has; a closed week's digest may be written again (the
+    screen offers it quietly, for one that came out wrong).
     """
     if activity.TUTOR_READER is None or DIGEST_KIND not in singletons.runner.handlers:
         raise HTTPException(404, "El tutor no está instalado.")
     key = _week(week)
-    students = activity.students_of(db, access.workspace)
+    chosen_group = _group(db, access, group)
+    students = _students(db, access, chosen_group)
     scope = activity.read_scope(access.ws, students)
     about = sum(1 for m in scope.messages if m.on_subject and activity.week_of(m.at) == key)
     if about < activity.DIGEST_MIN_MESSAGES:
@@ -87,7 +101,7 @@ def write_digest(
             f"Esa semana hay {about} mensaje(s) sobre la asignatura: hacen falta al menos "
             f"{activity.DIGEST_MIN_MESSAGES} para resumirlos.",
         )
-    if _live_digest(access.ws.slug, key) is not None:
+    if _live_digest(access.ws.slug, key, group) is not None:
         raise HTTPException(
             409,
             "La síntesis de esa semana ya se está escribiendo.",
@@ -100,16 +114,17 @@ def write_digest(
         )
     job = singletons.runner.submit(
         DIGEST_KIND,
-        {"week": key},
+        {"week": key, **({"group": chosen_group.id} if chosen_group is not None else {})},
         workspace=access.ws.slug,
         user_id=access.user.id,
         user_name=access.user.name,
     )
     logger.info(
-        "[asignatura] «{}» pidió la síntesis de la semana {} de «{}»",
+        "[asignatura] «{}» pidió la síntesis de la semana {} de «{}»{}",
         access.user.username,
         key,
         access.ws.slug,
+        f", grupo «{chosen_group.name}»" if chosen_group is not None else "",
     )
     return {
         "job": job.to_dict(),
@@ -127,6 +142,25 @@ def _week(text: str) -> str:
     if key > activity.current_week():
         raise HTTPException(404, "Esa semana todavía no ha llegado.")
     return key
+
+
+def _group(db: DbSession, access: auth.Access, group_id: int | None):
+    """Return the group of this subject a reading narrows to, None for the class, or 404."""
+    if group_id is None:
+        return None
+    try:
+        return groups.get(db, access.workspace, group_id)
+    except groups.Refusal as refusal:
+        raise HTTPException(refusal.status, refusal.message) from None
+
+
+def _students(db: DbSession, access: auth.Access, group) -> list[activity.Student]:
+    """Return the students a reading counts: the class's, or one group's."""
+    students = activity.students_of(db, access.workspace)
+    if group is None:
+        return students
+    inside = groups.member_ids(db, group)
+    return [student for student in students if student.id in inside]
 
 
 def _chosen(students: list[activity.Student], student: int | None) -> activity.Student | None:
@@ -157,9 +191,14 @@ def _graph(access: auth.Access):
         return None
 
 
-def _digest(access: auth.Access, key: str) -> dict | None:
-    """Read a week's stored digest, or None when none was written or it cannot be read."""
-    path = activity.digest_path(access.ws, key)
+def _digest(access: auth.Access, key: str, group_id: int | None = None) -> dict | None:
+    """Read a week's stored digest, or None when none was written or it cannot be read.
+
+    A group's own when it has one, else the class's, which the reading cuts to its students.
+    """
+    path = activity.digest_path(access.ws, key, group_id)
+    if group_id is not None and not path.is_file():
+        path = activity.digest_path(access.ws, key)
     if not path.is_file():
         return None
     try:
@@ -171,10 +210,16 @@ def _digest(access: auth.Access, key: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
-def _live_digest(slug: str, key: str):
-    """Return the digest job of this week of this subject that is queued or running, if any."""
+def _live_digest(slug: str, key: str, group_id: int | None = None):
+    """Return the digest job of this week of this subject, or of one group, that is live."""
     live = [*singletons.runner.running(slug), *singletons.runner.pending(slug)]
     return next(
-        (job for job in live if job.kind == DIGEST_KIND and job.params.get("week") == key),
+        (
+            job
+            for job in live
+            if job.kind == DIGEST_KIND
+            and job.params.get("week") == key
+            and job.params.get("group") == group_id
+        ),
         None,
     )

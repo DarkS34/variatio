@@ -1,8 +1,9 @@
 """What a router imports to protect itself.
 
 `VIEW`, `EDIT` and `MANAGE` are the three membership levels as FastAPI dependencies, and
-`EVALUATION` and `TUTOR` the two optional functions (`server/features.py`); the rest is
-re-exported from `deps`, `rate_limit` and `tokens`.
+`EVALUATION` and `TUTOR` the two optional functions (`server/features.py`), and `CHAT` the
+free chat, which a subject opens to its students; the rest is re-exported from `deps`,
+`rate_limit` and `tokens`.
 """
 
 from fastapi import Depends
@@ -47,8 +48,12 @@ MANAGE = Depends(require_member(OWNER))
 # whether the account may enter the workspace, these whether the function is open to it.
 EVALUATION = Depends(require_feature(features.EVALUATION))
 TUTOR = Depends(require_feature(features.TUTOR))
+# The free chat is no optional function of the administrator's, but the same dependency reads
+# what the subject's teachers decided (`features.refusal`).
+CHAT = Depends(require_feature(features.CHAT))
 
 __all__ = [
+    "CHAT",
     "EDIT",
     "EVALUATION",
     "MANAGE",

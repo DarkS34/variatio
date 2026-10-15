@@ -7,7 +7,7 @@ from variatio.settings.registry.reasoning import Phase
 PHASES = [phase for lane in PIPELINE for phase in lane.phases]
 
 # The pipeline's own calls, without a mounted package's lane: the tutor declares its switches
-# in its own group and reads them through its own config, and `tests/tutor` pins those.
+# in its own group and reads them through its own config, and `tests/apps/tutor` pins those.
 OWN_PHASES = [phase for lane in reasoning.PIPELINE for phase in lane.phases]
 
 # The three transcription nodes are the step the three builders share, so they are one lane

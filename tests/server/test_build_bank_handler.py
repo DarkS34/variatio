@@ -46,7 +46,7 @@ def _snapshots(ws, artifact=approvals.EXEMPLARS_BANK):
 
 
 def test_the_bank_is_snapshotted_before_the_build_starts(handler, ws, monkeypatch):
-    monkeypatch.setattr(handler, "run_build", lambda artifact, control: {"artifact": artifact})
+    monkeypatch.setattr(handler, "run_build", lambda artifact, control, keep=None: {"artifact": artifact})
 
     handler.HANDLERS["build_bank"](_job(), None)
 
@@ -56,7 +56,7 @@ def test_the_bank_is_snapshotted_before_the_build_starts(handler, ws, monkeypatc
 def test_a_cancelled_build_takes_its_working_file_with_it(handler, ws, monkeypatch):
     ws.exemplars_bank_building_path.write_text('{"C001": {}}', encoding="utf-8")
 
-    def cancel(artifact, control):
+    def cancel(artifact, control, keep=None):
         raise progress.Cancelled("cancelado")
 
     monkeypatch.setattr(handler, "run_build", cancel)
@@ -70,7 +70,7 @@ def test_a_cancelled_build_takes_its_working_file_with_it(handler, ws, monkeypat
 
 def test_the_artifacts_with_a_draft_are_not_snapshotted_here(handler, ws, monkeypatch):
     ws.kg_path.write_text('{"concepts_by_domains": {}}', encoding="utf-8")
-    monkeypatch.setattr(handler, "run_build", lambda artifact, control: {"artifact": artifact})
+    monkeypatch.setattr(handler, "run_build", lambda artifact, control, keep=None: {"artifact": artifact})
 
     handler.HANDLERS["build_kg"](_job("build_kg"), None)
 

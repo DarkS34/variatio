@@ -113,3 +113,8 @@ export function Tabs({
     </div>
   );
 }
+
+/** A count beside a tab's label: a quiet figure (DESIGN.md 7.3). Nothing while unknown. */
+export function TabCount({ n }: { n: number | null | undefined }) {
+  return typeof n === "number" ? <span className="nums text-small text-muted-foreground">{n}</span> : null;
+}

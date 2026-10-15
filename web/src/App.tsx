@@ -28,6 +28,9 @@ const AdminScreen = lazy(() =>
 const BankStep = lazy(() =>
   import("@/features/bank/BankStep").then((m) => ({ default: m.BankStep })),
 );
+const BankReader = lazy(() =>
+  import("@/features/bank/BankReader").then((m) => ({ default: m.BankReader })),
+);
 const ClassScreen = lazy(() =>
   import("@/features/class/ClassScreen").then((m) => ({ default: m.ClassScreen })),
 );
@@ -35,7 +38,7 @@ const GuideScreen = lazy(() =>
   import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
 );
 const EvaluationScreen = lazy(() =>
-  withCatalogues(import("@/evaluation/EvaluationScreen")).then((m) => ({
+  withCatalogues(import("@/apps/evaluation/EvaluationScreen")).then((m) => ({
     default: m.EvaluationScreen,
   })),
 );
@@ -43,13 +46,16 @@ const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
 );
 const GenerateScreen = lazy(() =>
-  import("@/features/generate/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
+  import("@/apps/generation/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
 );
 const RawScreen = lazy(() =>
   import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),
 );
+const ChatScreen = lazy(() =>
+  import("@/apps/chat/ChatScreen").then((m) => ({ default: m.ChatScreen })),
+);
 const TutorScreen = lazy(() =>
-  withCatalogues(import("@/tutor/TutorScreen")).then((m) => ({ default: m.TutorScreen })),
+  withCatalogues(import("@/apps/tutor/TutorScreen")).then((m) => ({ default: m.TutorScreen })),
 );
 const TutorialScreen = lazy(() =>
   import("@/features/tutorial/TutorialScreen").then((m) => ({ default: m.TutorialScreen })),
@@ -68,6 +74,7 @@ const NEEDS_WORKSPACE = [
   "/generate",
   "/evaluate",
   "/tutor",
+  "/chat",
   "/class",
 ];
 
@@ -108,6 +115,8 @@ export function App() {
     // Generating closed to the subject's students: their exercises are still read from «Mis
     // asignaturas y ejercicios».
     if (path === "/generate" && !features.generate) return <NotFound />;
+    // The free chat where the subject has not opened it to its students.
+    if (path === "/chat" && !features.chat) return <NotFound />;
 
     // One message rather than six 403s. It is drawn as the panel whatever the route was,
     // because the panel is where the one thing to do here lives.
@@ -145,6 +154,8 @@ export function App() {
       case "/prepare/graph":
         return <KgScreen stage={stage("knowledge_graph")} />;
       case "/prepare/bank":
+        // A student reads the bank as its teachers showed it; the step is theirs.
+        if (student) return <BankReader />;
         return (
           <BankStep
             profile={stage("exemplars_profile")}
@@ -159,6 +170,8 @@ export function App() {
         return <EvaluationScreen />;
       case "/tutor":
         return <TutorScreen />;
+      case "/chat":
+        return <ChatScreen />;
       // The class of the subject in use: its teachers' alone, whatever its construction.
       case "/class":
         return teaches && features.class ? <ClassScreen /> : <NotFound />;

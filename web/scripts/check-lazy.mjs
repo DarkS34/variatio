@@ -2,7 +2,8 @@
 // Whether the evaluation's and the tutor's client code stays out of what every session loads.
 //
 // Both are optional functions the administrator opens per account (`server/features.py`), and
-// an account they are closed to must fetch no module of `src/evaluation/` or `src/tutor/`. The
+// an account they are closed to must fetch no module of `src/apps/evaluation/` or
+// `src/apps/tutor/`. The
 // app keeps that by importing them only through `import()` behind the account's `features`;
 // one static import from core undoes it silently — the page works, it only ships code nobody
 // asked for. Two rules, because each misses what the other sees:
@@ -28,7 +29,10 @@ const GRAPH = resolve(WEB, "dist", ".vite", "chunks.json");
 // The landing is not an optional function, and it is listed for the same reason: a public
 // page with a demo of the whole client, fetched by a visitor at `/` and by nobody
 // who logs in.
-const LAZY = ["evaluation", "tutor", "landing"];
+const LAZY = ["apps/evaluation", "apps/tutor", "landing"];
+
+// The folders named in a report, every one a negative: `src/apps/evaluation/, … ni src/landing/`.
+const NAMED = `${LAZY.slice(0, -1).map((folder) => `src/${folder}/`).join(", ")} ni src/${LAZY.at(-1)}/`;
 
 const inLazy = (pathFromSrc) =>
   LAZY.some((folder) => pathFromSrc === folder || pathFromSrc.startsWith(`${folder}/`));
@@ -179,18 +183,18 @@ function skipRegex(source, start) {
 // What the scanner must get right, checked on every run: a check that hides an import
 // because it misread a string passes for ever, and nothing else would notice.
 const SELF_TESTS = [
-  ['const glob = "src/*";\nimport { X } from "@/tutor/X";\nconst end = "*/";', true],
-  ["const s = 'a/*b';\nimport { X } from \"@/tutor/X\";\nconst t = '*/';", true],
-  ["const t = `a ${'/*'} b`;\nimport { X } from \"@/tutor/X\";\nconst u = `*/`;", true],
-  ["const r = text.replace(/\\/\\*/g, '');\nimport { X } from \"@/tutor/X\";\n// */", true],
-  ["const r = /[/*]/;\nimport { X } from \"@/tutor/X\";\nconst k = 1; /* */", true],
-  ["<p>don't /* here</p>\nimport { X } from \"@/tutor/X\";\n<p>*/</p>", true],
-  ["<p>don't won't /* x</p>\nimport { X } from \"@/tutor/X\";\n<p>*/</p>", true],
-  ["<div>\n  {/*\nimport { X } from \"@/tutor/X\";\n  */}\n</div>", false],
-  ["const half = a / b; /* import { X } from \"@/tutor/X\"; */", false],
-  ["/*\nimport { X } from \"@/tutor/X\";\n*/", false],
-  ['// import { X } from "@/tutor/X";', false],
-  ['const url = "http://x"; // import { X } from "@/tutor/X";', false],
+  ['const glob = "src/*";\nimport { X } from "@/apps/tutor/X";\nconst end = "*/";', true],
+  ["const s = 'a/*b';\nimport { X } from \"@/apps/tutor/X\";\nconst t = '*/';", true],
+  ["const t = `a ${'/*'} b`;\nimport { X } from \"@/apps/tutor/X\";\nconst u = `*/`;", true],
+  ["const r = text.replace(/\\/\\*/g, '');\nimport { X } from \"@/apps/tutor/X\";\n// */", true],
+  ["const r = /[/*]/;\nimport { X } from \"@/apps/tutor/X\";\nconst k = 1; /* */", true],
+  ["<p>don't /* here</p>\nimport { X } from \"@/apps/tutor/X\";\n<p>*/</p>", true],
+  ["<p>don't won't /* x</p>\nimport { X } from \"@/apps/tutor/X\";\n<p>*/</p>", true],
+  ["<div>\n  {/*\nimport { X } from \"@/apps/tutor/X\";\n  */}\n</div>", false],
+  ["const half = a / b; /* import { X } from \"@/apps/tutor/X\"; */", false],
+  ["/*\nimport { X } from \"@/apps/tutor/X\";\n*/", false],
+  ['// import { X } from "@/apps/tutor/X";', false],
+  ['const url = "http://x"; // import { X } from "@/apps/tutor/X";', false],
 ];
 
 /** Where a specifier lands, relative to `src/`, or null for a package. */
@@ -249,7 +253,7 @@ for (const full of walk(SRC)) {
 
 report(
   imports.length === 0,
-  "Ningún import estático de src/evaluation/ ni de src/tutor/ fuera de sus carpetas",
+  `Ningún import estático de ${NAMED} fuera de sus carpetas`,
   [
     ...imports,
     ...(imports.length
@@ -315,17 +319,17 @@ if (!existsSync(GRAPH)) {
   report(entries.length > 0 && everywhere > 0, "El grafo de chunks del bundle mide algo", [
     entries.length === 0
       ? `${relative(WEB, GRAPH)} no tiene ningún chunk de entrada.`
-      : `${relative(WEB, GRAPH)} no lista ningún módulo de src/evaluation/ ni de src/tutor/.`,
+      : `${relative(WEB, GRAPH)} no lista ningún módulo de ${NAMED}.`,
     "Vuelve a ejecutar pnpm build, y si sigue, lee vite/chunk-graph.ts.",
   ]);
   report(
     leaked.length === 0,
-    `Lo que carga toda sesión (${loaded.size} chunk(s) estáticos) no contiene src/evaluation/ ni src/tutor/`,
+    `Lo que carga toda sesión (${loaded.size} chunk(s) estáticos) no contiene ${NAMED}`,
     leaked,
   );
   report(
     screenLeaks.length === 0,
-    `Ninguna de las ${screens.length} pantallas del producto cargadas a demanda arrastra src/evaluation/ ni src/tutor/`,
+    `Ninguna de las ${screens.length} pantallas del producto cargadas a demanda arrastra ${NAMED}`,
     screenLeaks,
   );
 }

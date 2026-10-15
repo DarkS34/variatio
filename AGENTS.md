@@ -48,9 +48,11 @@ education is out of scope; hardcoding a subject is equally a regression.
 ## Branches
 
 - **`main`** (this tree, `/home/deploy/variatio-dev`): the complete system — the library,
-  the API, the client, the study (`evaluation/`, `web/src/evaluation/`, the `evaluate` job,
-  evaluator profiles, the stage questionnaires) and the Socratic tutor (`tutor/`,
-  `web/src/tutor/`, the `tutor_turn`, `tutor_criteria` and `activity_digest` jobs). Production serves a separate
+  the API, the client and the functions under `apps/`: generating, the study
+  (`apps/evaluation/`, `web/src/apps/evaluation/`, the `evaluate` job, evaluator profiles, the
+  stage questionnaires), the Socratic tutor (`apps/tutor/`, `web/src/apps/tutor/`, the
+  `tutor_turn`, `tutor_criteria` and `activity_digest` jobs) and the free chat (`apps/chat/`,
+  `web/src/apps/chat/`, the `chat_turn` job). Production serves a separate
   worktree, `/home/deploy/variatio-prod`. Until 2026-10-03 this was three branches
   (`variatio-web`, `variatio-web-eval`, `variatio-web-tutor`); this one replaces them.
 - **`variatio-vanilla`**: the library and its CLI alone (the branch `main` named until
@@ -59,13 +61,13 @@ education is out of scope; hardcoding a subject is equally a regression.
 - **The database never moves**: `evaluation_sessions`, `stage_evaluations` and
   `users.evaluator_profile` keep their migrations and ORM models on every branch.
 - **`variatio-vanilla` is brought forward by MERGING `main` and re-removing what it does not
-  carry** (never by cherry-picking). After the merge: `git rm` the server, the client, the
-  study and the tutor again; `README.md` conflicts and the HEAD side is right (each branch
+  carry** (never by cherry-picking). After the merge: `git rm` the server, the client and
+  `apps/` again (the functions moved there on 2026-10-14); `README.md` conflicts and the HEAD side is right (each branch
   describes itself); `version` in `pyproject.toml` and `uv.lock` conflicts — keep the branch's
   own line, then bump it; read `len(REGISTRY)` and `len(BY_NAME)` off the branch before
   writing `tests/settings/test_settings_registry.py`.
 - `AGENTS.md` is tracked and travels with every branch; on `variatio-vanilla` the server,
-  client, evaluation and tutor sections describe code that branch does not carry.
+  client and `apps/` sections describe code that branch does not carry.
 
 ## Commands
 
@@ -78,9 +80,10 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   chained by anything; `build` creates missing artifacts; `init` loads, tags, warms indices;
   `generate` (`-n`, `--concepts`, `--item-type`, `--fixed FIELD=VALUE`, `--omit FIELD`,
   `--curriculum`, `--instructions`); `all` = build missing + init + generate.
-- `uv run system [serve|import-instance|export-instance|export-generations|workspaces|create-workspace|db-check|create-user|users|grant|invite|class-link]`
+- `uv run system [serve|import-instance|export-instance|export-generations|usage|workspaces|create-workspace|db-check|create-user|users|grant|invite|class-link]`
   — API and admin ([server/cli/](server/cli/)). No subcommand means `serve`. `guarded()` wraps
-  every command except `db-check` and `serve`. `PROG = "system"` matches `pyproject.toml`.
+  every command except `db-check`, `serve` and `usage` (which reads a file, not the database).
+  `PROG = "system"` matches `pyproject.toml`.
 - `uv run pytest` — default `-m 'not corpus and not model'`. Suite split by subsystem under
   `tests/<subsystem>/`, each runnable alone; `conftest.py` and `fixtures/` at the root.
   - **Autouse fixtures exist because the suite runs inside the installation**: they redirect
@@ -175,7 +178,8 @@ table and refuses while a row has no file: on an installation that still has the
 
 The hard line: **`artifacts/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
-`evaluation/` (the TFM's study), `tutor/` (the Socratic tutor),
+`apps/` (the functions the system is used through: `generation/`, `evaluation/` — the TFM's
+study —, `tutor/`, `chat/`, and what the last two share, `conversations/`; see *`apps/`*),
 `web/` (React client), `migrations/`.
 
 ### `variatio/` layout
@@ -233,7 +237,7 @@ names exist). A tree renamed so is no longer readable by a version from before t
   `transcription, graph, bank, generation` since 2026-10-08: the profile's calls and the
   taggability review are the bank's lane, in the order they run before the extraction.
   The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
-  reads is `evaluation/settings.READS`, never a stamp inside `variatio/`.
+  reads is `apps/evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
   **`config.json` stores every non-secret value and beats the registry**, so bumping a
   registry default alone changes nothing on an installation — edit `config.json` too.
@@ -260,12 +264,12 @@ names exist). A tree renamed so is no longer readable by a version from before t
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
-  `READS` are declared in `evaluation/settings.py`, picked up by an optional import — the one
-  place `variatio/` names the evaluation.
-- The tutor's are declared the same way in `tutor/settings.py` (`LANE` «Tutor», stage
+  `READS` are declared in `apps/evaluation/settings.py`, picked up by an optional import — the
+  one place `variatio/` names the evaluation.
+- The tutor's are declared the same way in `apps/tutor/settings.py` (`LANE` «Tutor», stage
   `tutoring`, last; `READS`; `MODEL_KEYS`), picked up by an optional import that switches off
-  only on `ModuleNotFoundError` for `tutor` itself. Their names are empty: they are read through
-  `tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
+  only on `ModuleNotFoundError` for `apps.tutor` itself. Their names are empty: they are read
+  through `apps/tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
   only there the context cap (`derived`) and the deletion guard (`required_models`).
 
 ### Database (`server/db/`)
@@ -321,8 +325,11 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `X-Error-Code`: `not_member` (no row for the workspace named) or `role_too_low`.
 - **The three roles are a class** (decided 2026-10-06): `viewer` is a student of the subject,
   `editor` a teacher, `owner` the teacher who answers for it; `ROLE_RANK` stays linear. A
-  student reads the syllabus (the `/api/kg` reads), the subject's description and its types
-  of exercise, and queues only `catalogue.STUDENT_KINDS` (`generate`, `evaluate`, and
+  student reads the syllabus (the `/api/kg` reads), the subject's description, its types
+  of exercise and, since 2026-10-14, the bank as its teachers showed it (`GET /api/exercises`,
+  `auth.VIEW`: the exercises shown to the class or to their group, each cut to the fields
+  shown, with its type, level and concepts, never its origin, author or the tagger's trace;
+  `bank_edit.reading`), and queues only `catalogue.STUDENT_KINDS` (`generate`, `evaluate`, and
   `tutor_turn` joined at the tutor's install), each behind its own permission. The bank
   (`/api/bank`, its coverage included), the raw documents and their transcriptions
   (`/api/raw`), the graph's document verbatim (`GET /api/kg/raw`) and a stage's history
@@ -387,8 +394,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `PUT /api/admin/features/tutor` takes `workspaces` (slugs; replaced only when sent, like
   `accounts`), the snapshot lists them, and «Permisos de uso» draws «Asignaturas elegidas»
   above «Cuentas elegidas», its state sentence naming the three things.
-- **What a subject lets its students use** (decided 2026-10-06; migration 0019): two switches
-  of the subject, `workspaces.student_generate` and `student_tutor` (open by default), that
+- **What a subject lets its students use** (decided 2026-10-06; migration 0019): switches
+  of the subject, `workspaces.student_generate` and `student_tutor` (open by default) and,
+  since 2026-10-15, `student_chat` (closed by default, migration 0023), that
   its teachers set in «Clase → Funcionalidades permitidas» (`GET`/`PATCH /api/members/uses`,
   `auth.EDIT`; the answer says `tutor_installed` and `tutor_offered`, whether the
   administrator opened the tutor to one of its students: the tutor's switch is drawn wherever
@@ -403,7 +411,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   literal `false` closes it), `usesFor` drops its door and `/generate` draws «not found»; a
   student's exercises stay in «Mis asignaturas y ejercicios».
 - **A teacher's links** (decided 2026-10-06; `/api/members`): a subject has at most ONE live
-  class link (`class_links`, revoked = dead; the rule is code, not an index) — seats (40 by
+  class link per destination (`class_links`, revoked = dead; the rule is code, not an index;
+  the destinations are the class and, since 2026-10-14, each of its groups:
+  `class_links.group_id`, `identity.live_class_link(session, workspace_id, group_id)`) — seats (40 by
   default, `CLASS_LINK_MAX_SEATS` 300), a required expiry (30 days by default, at most
   `TEACHER_LINK_MAX_DAYS` 180), a pause — minted sealed like an invitation
   (`links.mint_class_link`) and renewed by revoking it; its seats never drop below those
@@ -428,6 +438,25 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   «Enlaces de clase» block under the table of «Asignaturas» («Pausar»/«Reanudar», «Revocar»
   asked first); their seats and dates stay the teachers'.
   `system class-link --workspace S [--seats N] [--days D] [--renew]` prints or mints it.
+- **The groups of a class** (decided 2026-10-14; migration 0022, `server/groups.py`): parts
+  of a subject's class its teachers treat apart, and **with a group they do what they do with
+  the class**. `class_groups` (unique name per subject) and `class_group_members`, whose
+  `membership_id` is unique: a student is in ONE group at most, for now (lifting it is
+  dropping that constraint and deciding which group wins); a teacher is in none (409
+  `not_a_student`). A paused student keeps their group; a removed one loses it with the
+  membership. Routes under `/api/members/groups` (`auth.EDIT`: list, create, rename, delete —
+  its students stay with no group and its live link dies); moving is the `group` action of
+  `POST /api/members/bulk` (`group: null` takes out), refusals person by person; a member's
+  view says `group`. Each of the class's readings and gestures takes `?group=` (another
+  subject's group is a 404): the tools (`GET`/`PATCH /api/members/uses?group=`, a group's
+  `generate`/`tutor`/`chat` being `true`, `false` or `null` = as the subject), the link and
+  the invitations (`class-link?group=`, `invites.group_id`: who comes in through them lands
+  in the group, `groups.place_on_entry`, at `/accept` and `/join`), the progress
+  (*Curriculum*) and the activity (*Class activity*). `features.refusal` reads the
+  administrator's mode, then the student's group's switch when it says something, then the
+  subject's, the refusal naming which closed it. `members.end_course` pauses every live link
+  of the subject, the groups' included. The administrator's «Enlaces de clase» names each
+  link's group.
 - Invitations are the admin's alone (`routers/admin.py`): chosen expiry (floor, no ceiling),
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
@@ -454,7 +483,8 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - A `Job` carries workspace and author; events are stamped by the bus; `/api/jobs/{id}` 404s
   across workspaces.
 - **A private job is its author's alone** (decided 2026-10-06): `catalogue.PRIVATE_KINDS` is
-  `generate` and `evaluate`, and `tutor_turn` joins at the tutor's install. The bus stamps a
+  `generate`, `evaluate` and `tag_item` (2026-10-14), and `tutor_turn` and `chat_turn` join
+  at their functions' install. The bus stamps a
   private job's events with its author (`publish_job`; `Event.private`/`user_id`, never in
   `to_dict()`) and `bus.visible` lets them reach that account's socket only; a subscriber
   naming no account, or an event with no author, sees nothing of it. Every job route of the
@@ -479,8 +509,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   both). A `generate` job's writer lane comes from the commission's model; an `evaluate`
   job's from `evaluation.local_model`.
 - **What waits goes out by class, then by arrival** (`jobs/priority.py`, decided 2026-10-06):
-  A a tutor's turn (~30 s, somebody waits in a chat), B a commission or a comparison
-  (minutes, somebody watches the bar), C everything else (`catalogue.JOB_CLASS`, a kind with
+  A a tutor's or a chat's turn (~30 s, somebody waits in a chat), B a commission, a comparison or the
+  tagging of the exercises a teacher just wrote (`tag_item`; somebody watches the bar or the
+  concepts arrive), C everything else (`catalogue.JOB_CLASS`, a kind with
   no row is C; the tutor classes its two kinds at install). The class is the kind's, never
   the role's. AGING: B counts as A after `QUEUE_PROMOTE_B_AFTER_SECONDS` (90) and C as B after
   `QUEUE_PROMOTE_C_AFTER_SECONDS` (600), then as A after B's term (690 s). On the local lane
@@ -491,11 +522,13 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   waiting moves positions with no event. The runner reads its clock from `_clock` (a test
   ages a job at will). The order does not pre-empt: a build already running on Ollama keeps
   the tutor waiting until it ends, so builds go outside class hours.
-- **A commission's bounds** (`routers/jobs.submit`, under one lock with the queueing): one
+- **A commission's bounds** (`apps/generation/api/limits.admit`, which `POST /api/jobs` hands
+  a `generate` through `routers/jobs.ADMISSIONS`, under one lock with the queueing): one
   live `generate` per account and subject (409 `generation_busy`, every role); a student's
   count at most `GENERATION_STUDENT_MAX_ITEMS` (5, never above `GENERATION_MAX_ITEMS`; 422)
   and the day's exercises at most `GENERATION_STUDENT_DAILY_ITEMS` (empty = none) across
-  every subject, counted as asked at queueing in `generation_usage` (migration 0018; a batch
+  every subject, counted as asked at queueing in `generation_usage` (`limits`' `usage`,
+  migration 0018; a batch
   cancelled or failed gives nothing back): nothing left is 429 `generation_daily_limit` with
   `Retry-After`, some left is 422 naming how many. A teacher has neither bound.
   `GET /api/jobs/allowance` tells the form (`max_items`, `daily_items`, `used_today`); its
@@ -533,7 +566,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   from the retired table: what it never kept is null, never reconstructed. A student (role
   `viewer`) reads their own exercise whole, solution included, but not the bank it was made
   from: `GET /api/generations/{id}` answers them with `provenance.prompt` null and
-  `resolved.few_shot` as ids and origins (`routers/generations.without_bank`), and a revealed
+  `resolved.few_shot` as ids and origins (`apps/generation/api/router.without_bank`), and a revealed
   comparison card answers them without `prompt` and `raw_response`.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
@@ -544,6 +577,18 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `BatchMode=yes`, watchdog with backoff).
 - Job logs are **files**, `logs/<slug>/jobs.log` (one shared sink per workspace, filtered by
   thread; the build worker writes the same file). No `log` event on the bus, no log viewer.
+- **What a job's model calls cost is measured** (2026-10-15, the plan's phase 9;
+  `variatio/core/usage.py`): the runner opens a meter around every handler, and every call of
+  the engine boundary counts on the meters open on its thread — the prompt's tokens and the
+  answer's, exact (Ollama's last chunk, `prompt_eval_count`/`eval_count`; Cerebras' `usage`),
+  under its phase (`progress.current_activity()`, the ledger's name), engine and model; a
+  stream left before its end is a call of no tokens. Meters nest. A build's worker measures
+  its own and sends the summary with `worker.result` (`build_process` cleans it and adds it to
+  the job's). The job's result carries `usage` (only when it called a model), and
+  `logs/<slug>/usage.jsonl` keeps one line per job that called one — kind, end, status and
+  tokens by phase, failed and stopped jobs included, never a text or an author
+  (`server/jobs/usage_log.py`). `system usage --workspace S [--days N]` sums it by kind and
+  engine; `docs/coste-medido.md` is the page of costs it feeds. Embeddings are not counted.
 
 ### Build chain and approvals
 
@@ -565,7 +610,8 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   as the bank is extracted, tagged and indexed. Only behind types and a syllabus still
   approved (`gate_open`): types corrected while it ran leave the bank a draft. Links carry
   their head in `params.head`; a job outside a chain closes nothing. A retag (`tag`) seals a
-  closed bank again (`handle_tag`, like the review's reseal); a hand edit still withdraws it.
+  closed bank again (`handle_tag`, like the review's reseal), and so does a hand edit of its
+  exercises (see below).
 - **The route checks every link of a chain** before queueing its head
   (`routers/jobs.gate_error`, `transcribing_slot`, both over `chain.links(kind)`): a link the
   runner queues has no route, so a closed gate behind the head would be skipped in silence
@@ -593,9 +639,22 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   because both write the same page cache. `singletons.transcribing(slug, slot)` is the one
   reading. This is not a gate on transcription having happened.
 - Every hand edit withdraws the stage's approval on the server; the client never reopens.
+  **One exception: an exercise of a closed bank** (the user's decision, 2026-10-14). Editing,
+  retagging, adding or deleting one seals the bank again (`bank_edit._persist`) when it was
+  closed behind closed types and syllabus and stale for nothing, so a teacher correcting an
+  erratum mid-course does not close generating and the tutor to the class. A draft stays a
+  draft; editing the types still withdraws them and closes the doors.
 - The bank checkpoints per document into `artifacts/.exemplars_bank.building.json` and writes
   `exemplars_bank.json` once at the end, starting empty (`C001`); cancelling loses the run;
-  the parent sweeps the working file.
+  the parent sweeps the working file. **What a person added survives a re-extraction**
+  (2026-10-14): the handler hands the build the bank's `manual` and `generated` exercises as
+  a seed (`bank_edit.seed`, `artifacts/.exemplars_bank.seed.json`, `build_worker --keep`),
+  the builder starts from them with their ids and tags and drops an extracted exercise that
+  repeats one (`ExemplarsBankBuilder.build(keep=)`). One that no longer fits its type is put
+  aside once the new bank is in place (`artifacts/.bank_set_aside.json`), and the bank's page
+  offers it back, corrected through «Nuevo ejercicio» as it was (`POST /api/bank`
+  `set_aside`), or lets it go. The confirmation of «Extraer el banco otra vez» says what is
+  kept and how many collected exercises carry marks that only an identical statement keeps.
 
 ### Transcription (`server/raw_data.py`, `entrypoints/transcribe.py`)
 
@@ -681,7 +740,11 @@ form starts with no curriculum and offers the progress as one press, «Usar lo v
 while it is what is ticked; it ticks the progress's frontier (`prerequisites.frontier`), so
 the selector marks the rest instead of drawing every prerequisite as a pick. `GenerateForm`'s
 `assumedKnown`/`notYetTaught` mirror `variatio.assumed_known`/`forbidden` — edit the Python
-first.
+first. **A group may follow its own** (2026-10-14): `class_groups.progress`, null while it
+follows the subject's, validated on read the same way (`curriculum.of_group`, which says
+`own`). `GET`/`PUT /api/kg/curriculum` take `group` (`follow_subject` hands it back); a
+student reads their group's when it has its own, so «Usar lo visto en clase» offers it; the
+activity's «sin practicar» reads the scope's.
 
 ### Class activity (`server/activity.py`)
 
@@ -691,13 +754,18 @@ the unit**: ISO weeks, Monday to Sunday, UTC (`server/daily.py`); a past week is
 message and exercise is dated, so its figures do not move — and the present one is open. The
 history is the strip of weeks from the first with activity to now, an empty week kept.
 `?student=<id>` narrows to one student (active or paused; anybody else is 404); a removed
-student counts for nothing, a teacher's own files are not the class's.
+student counts for nothing, a teacher's own files are not the class's. `?group=<id>` narrows
+the class to one of its groups (2026-10-14): every figure, finding, week and «Quién …» row is
+counted over its students, and «de la clase» reads «del grupo». A group's digest is its own
+(`POST …/digest` with `group`, the job reading that group's messages alone, one per week and
+group at a time, `analytics/digest/<week>.group-<id>.json`); without one the reading shows the
+class's cut to the group's students, as for one student.
 
 - **Counted by code, never read**: of a conversation, each student turn's date, its reply's
   kind (`on_subject` for theory/exercise/attempt/solution), the concept (chosen, else the
   reply's first focus) and `sent_back`; of an exercise, its date, type, level (the workspace's
   difficulty field, `locale.difficulty`) and concepts, and whether a conversation was opened on
-  it. The tutor's half comes through `activity.TUTOR_READER`, which `tutor.api.install` sets
+  it. The tutor's half comes through `activity.TUTOR_READER`, which `apps.tutor.api.install` sets
   (the server never opens the tutor's files); every file goes through `activity.cached`, keyed
   by modification time and size.
 - **Findings** are typed by the server, each of one page (`area`: `tutor` — `asked`,
@@ -720,7 +788,7 @@ student counts for nothing, a teacher's own files are not the class's.
   three themes per concept, one sentence of 20 words at most, with the numbers of the messages
   they cover. **Paraphrase only**: a theme that copies more than 8 running words of a message,
   names a student (whole name, username, or a part of 4 letters or more), is too long or covers
-  nothing is asked again once with a note, then dropped (`tutor/digest.clean_themes`). Only
+  nothing is asked again once with a note, then dropped (`apps/tutor/digest.clean_themes`). Only
   step events cross the stream, the log says counts, and the file —
   `<workspace>/analytics/digest/<week>.json` — keeps the themes and REFERENCES to the messages
   (author, conversation, turn), never a message. One digest per week, of the class: a theme's
@@ -732,7 +800,9 @@ student counts for nothing, a teacher's own files are not the class's.
   `SectionHeader wide`),
   one for each thing a student uses (`ActivityView`; user's requests, 2026-10-07: one page
   stacked five blocks, then a page of the week in general read as neither): «Ejercicios
-  generados» and «Tutor socrático» (only where the tutor is installed). Both carry the scope
+  generados», «Tutor socrático» (only where the tutor is installed) and «Chat libre» (only
+  where the chat is: its two figures, its findings and «Quién usa el chat»; nothing of what it
+  was asked). Both carry the scope
   in the header and the strip of weeks (`WeekStrip`, counting the page's own figure; a dot
   for a digest on the tutor's page; an empty week dimmed; arrows from week to week), both
   held by `ClassScreen` so they survive a move between the pages, and answer three questions
@@ -771,6 +841,11 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
   `acyclic` relations. The builder only writes `knowledge_graph_autogenerated.json`; curation
   into the curated file is manual; `initialize` falls back to the draft with a warning.
 - `exemplars_bank.json` — example items, plus the tagger's `concepts`/`primary_concept`.
+  Each says where it comes from (`origin`, 2026-10-14): `extracted` from the documents
+  (`C###`), `manual`, written by a teacher (`M###`), or `generated`, a generated exercise
+  passed into the bank (`G###`); the last two with `added_by` (an account id) and `added_at`.
+  An exercise without the field is read by its id (`bank_edit.origin_of`). `origin`,
+  `added_by` and `added_at` are reserved field names of the profile.
 - `exemplars_profile.json` — the content schema (`fields`, `general_generation_rules`,
   `primary_field`, `embed_fields`); validated into a runtime Pydantic `ContentItem`. This is
   how a use case is instantiated. The profile builder is a draft generator and unstable.
@@ -930,7 +1005,7 @@ Take objects, return data, know no `Workspace`, write no files.
 ### Logging
 
 loguru configured once in `variatio/__init__.py`. **`variatio/` logs in English; `server/`
-and `evaluation/` in Spanish.** Format `[scope] Message`, no counters in the bracket, `«…»`
+and `apps/` in Spanish.** Format `[scope] Message`, no counters in the bracket, `«…»`
 around user text, `'…'` around models/paths. Nothing inside a per-element loop logs at INFO —
 use `progress.step(...).tick(detail=…)` or `debug`. A fact is logged by one layer. Only
 `docling` is silenced.
@@ -942,13 +1017,38 @@ Components never persist; every write goes through `json_io.write_json` (the onl
 persisted JSON: mkdir, `ensure_ascii=False, indent=2`, atomic `.tmp` replace — approval hashes
 are hashes of these bytes).
 
-## `evaluation/` — the TFM's study, outside the system it measures
+## `apps/` — the functions the system is used through
 
-A top-level package, always mounted. **`evaluation` imports `variatio`, never the reverse**
-(one exception: the settings registry's optional import); pinned by
-`tests/evaluation/test_evaluation_boundary.py`. `evaluation/__init__.py` never imports
-`evaluation/api/`, so `import evaluation` stays free of FastAPI/SQLAlchemy. It is attached in
-`server/app.py` (`evaluation.api.install(app)`), never from `server/routers/__init__.py`.
+Since 2026-10-14 (the user's request: the functions grouped in one directory) every door of
+«Fase de pruebas» is a package of `apps/`, an application in Django's sense: its routes, its
+jobs, its settings, its prompts and an `install(app)` in its `api` package that
+`server/app.py` calls, and nothing else does. **`apps` imports `variatio` and `server`; neither
+imports `apps` back** but for the settings registry's optional imports and the four reads of
+the evaluation older than the move (`jobs/lanes`, `jobs/handlers`, `raw_data`,
+`routers/admin`), each named in `tests/apps/test_apps_boundary.py`, which also pins that a
+function's library half imports neither FastAPI nor SQLAlchemy. On-disk names, setting keys,
+job kinds and log scopes did not move with the code (`<workspace>/tutor/`, `tutor.*`,
+`evaluation.*`, `tutor_turn`, `[tutor]`). The client mirrors it: `web/src/apps/<function>/`.
+Tests live in `tests/apps/<function>/`.
+
+### `apps/generation/` — «Generar ejercicios»
+
+Generating is no optional function and is always installed, FIRST: its
+`GET /api/jobs/allowance` must be matched before the queue's `/api/jobs/{job_id}`. It holds
+the author's routes (`/api/generations`, `api/router.py`), the `generate` job (`api/jobs.py`,
+registered in `HANDLERS`) and a commission's bounds (`api/limits.py` and the day's count,
+`api/usage.py`, registered in `routers/jobs.ADMISSIONS`). The generator is the library's and
+the exercise files are the server's (`server/generations.py`, with `row_view`, read by the
+panel, the activity and the tutor too). Its client is `web/src/apps/generation/` (the form,
+the run, «Mis ejercicios»), loaded like any screen: every account generates.
+
+### `apps/evaluation/` — the TFM's study, outside the system it measures
+
+Always mounted. **`apps.evaluation` imports `variatio`, never the reverse** (one exception:
+the settings registry's optional import); `apps/evaluation/__init__.py` never imports
+`apps/evaluation/api/`, so `import apps.evaluation` stays free of FastAPI/SQLAlchemy. It is
+attached in `server/app.py` (`apps.evaluation.api.install(app)`), never from
+`server/routers/__init__.py`.
 
 - **Arms**: `naive` (commercial chain `gemini → mistral → groq`, no `response_format`, no
   retries — the chain is the retry; provider and model id are stored per session), `rag`
@@ -975,7 +1075,7 @@ A top-level package, always mounted. **`evaluation` imports `variatio`, never th
   positions (df 1), and **Scott's π** (not Cohen's κ) over evaluator pairs sharing a set.
 - **Every fixed route is declared above `/evaluations/{session_id}`** (FastAPI matches in
   order); `test_route_order.py` checks every router.
-- `evaluation/api/instruments.py` and `stage_instruments.py` are the single homes of what is
+- `apps/evaluation/api/instruments.py` and `stage_instruments.py` are the single homes of what is
   asked. The **stage questionnaire** (one per construction step, keyed by artifact hash
   resolved server-side, `stage_evaluations`) is a Likert form: five statements on shared axes
   (`precision`, `recall`, `function`, `effort`, `overall`), 1-5 agreement, 5 is best,
@@ -989,19 +1089,18 @@ A top-level package, always mounted. **`evaluation` imports `variatio`, never th
   version and arm configuration produced each result; there is no version column, so change
   dates are boundaries.
 
-## `tutor/` — the Socratic tutor, beside the system it reads
+### `apps/tutor/` — the Socratic tutor, beside the system it reads
 
-A top-level package, mounted like the evaluation: **`tutor` imports
-`variatio` and never the reverse** (the registry's optional import is the exception);
-`tutor/__init__.py` never imports `tutor/api/`, so `import tutor` stays free of
-FastAPI/SQLAlchemy (pinned by `tests/tutor/test_tutor_boundary.py`). `server/app.py` calls
-`tutor.api.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
+Mounted like the evaluation: **`apps.tutor` imports `variatio` and never the reverse** (the
+registry's optional import is the exception); `apps/tutor/__init__.py` never imports
+`apps/tutor/api/`, so `import apps.tutor` stays free of FastAPI/SQLAlchemy.
+`server/app.py` calls `apps.tutor.api.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
 which is what `POST /api/jobs` accepts: a turn comes through the tutor's routes or not at
 all), their models in `server/jobs/lanes.EXTRA_MODELS`, and mounts `/api/tutor` and the
 admin's read.
 
 - **A chat and a card.** The interaction is a plain conversation; the advantage is the CARD
-  (`tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
+  (`apps/tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
   definition and the graph's anchored passages, its direct prerequisites (TAKEN AS KNOWN: the
   reply neither quizzes the student on them nor steers towards them, and only tells a student
   who says one is missing to review it — decision of 2026-10-03, after a question about
@@ -1014,7 +1113,7 @@ admin's read.
   review it, never an explanation. The method's rule alone was not followed: measured on 8
   messages saying a prerequisite was missing, twice, 3 replies of 16 sent the student back
   before and 12 after; 2 messages that only name one, twice, were sent back 0 times of 4.
-- **A turn** (`tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
+- **A turn** (`apps/tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
   2026-10-03; admissibility rules on commissions) → one query-side embedding (concepts and
   passages) and one document-side one (`classify.bank_match`) → kind → focus → card → reply →
   checks. Seven kinds (`theory exercise attempt solution social administrative off_topic`);
@@ -1022,12 +1121,12 @@ admin's read.
   (bank match ≥ `tutor.bank_match_threshold`, a conversation opened on a generated exercise),
   then one grammar call to the classify model, failing open to `theory`; the graph overrules
   an `off_topic` verdict on a message whose best concept clears `tutor.focus_threshold`.
-- **The concept map** (`tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
+- **The concept map** (`apps/tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
   of the graph around a focus concept — prerequisites (`before`), dependents (`after`) and the
   other relations (`links`, with the graph's own label and direction) — capped (4/3/3, the
   closest by description vectors kept, the rest counted) and sent as data in the turn's
   `concept_map`; the client draws it as a graph of its own chips with lines traced over
-  them (`web/src/tutor/ConceptMap.tsx`, no Mermaid: user's request of 2026-10-08 for a
+  them (`web/src/apps/tutor/ConceptMap.tsx`, no Mermaid: user's request of 2026-10-08 for a
   better look, keeping the graph's shape — every relation drawn, none written as a
   sentence) in the interface language and the palette's tokens. It is shown at TWO moments only: the first
   time the conversation stands on a concept (one per move of the focus; the card says so,
@@ -1055,8 +1154,14 @@ admin's read.
   message is answered as theory (`decided_by: "chosen"`), an administrative one stays.
   `GET /api/tutor/syllabus` (`auth.VIEW`) lists the units and their non-generic concepts. The state is the focus and the trail;
   older records may still carry a `verified` list, which nothing reads.
-- **The method is code, not only prompt.** `tutor/checks.py` verifies what a machine can: at
-  least one question and at most `max_questions`, at most `max_code_lines` in fences, no run
+- **The method is code, not only prompt.** `apps/tutor/checks.py` verifies what a machine can: at
+  least one question and at most `max_questions`, at most `max_code_lines` in fences, no name
+  of the student's exercise in its code that the card's notes do not use (`code_specific`,
+  2026-10-15, a colleague's rule: a generic fragment of how a construct is used yes, code the
+  student takes to the exercise by changing one name no; a line quoted from the student's own
+  code is skipped, names of three characters at least, no language named — its vocabulary is
+  the notes'; the method's code rule says the same, «lo mejor es no dar código»; unmeasured,
+  as the engine was down), no run
   longer than `copy_max_words` copied from the card's passages, no sending the student to the
   notes or naming a place of them (`pointed`, the prompt set's `POINTING_PATTERN`), no
   dependent of the focus the student did not bring up, no forbidden term (in code ever, in prose when unprompted), no
@@ -1090,7 +1195,7 @@ admin's read.
   author (the same 404 for others' and malformed ids); the installation administrator reads
   every account's, read-only, at `/api/admin/workspaces/{slug}/tutor`. A subject's teachers
   read what their students asked as figures and a weekly digest in paraphrase, never a
-  conversation (`tutor/api/activity.read`, `tutor/digest.py`; see *Class activity*). Every
+  conversation (`apps/tutor/api/activity.read`, `apps/tutor/digest.py`; see *Class activity*). Every
   reply keeps `sent_back` — the concept and the prerequisite it sent the student back to, or
   null — which the weekly counts read; an older turn says it only through its map's `review`. A file is written whole
   under a per-file lock; the job reads it under that lock too (the route holds it until
@@ -1099,7 +1204,7 @@ admin's read.
   `failed` and frees the conversation; «Pedir la respuesta otra vez» is `/retry`. A
   conversation starts titled by its first line; the first reply of a substantive kind (not
   social, blocked or a fixed text) asks the classify model for a short title once
-  (`tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
+  (`apps/tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
 - **The tutor speaks for itself** (user's decision of 2026-10-08): the card is what the tutor
   KNOWS, not what it cites. Its labels name no source («Definición», «Lo que sabes de él»,
   «Otras cosas que sabes»: with «En los apuntes» and then «Lo que el material dice» the
@@ -1117,15 +1222,80 @@ admin's read.
   installation's and a count of files could be reset by deleting a conversation. Only a turn
   that enters the queue counts, a reply asked again included. The refusal is a 429 with
   `X-Error-Code: tutor_daily_limit`, `Retry-After` and the wait in words. The client builds
-  its own sentence from the code and `Retry-After` (`tutor/limit.ts`; the server's only
+  its own sentence from the code and `Retry-After` (`apps/tutor/limit.ts`; the server's only
   without the header) and shows it alone where the conversation reports a failure, never
   under «No se pudo enviar»; the next send or retry clears it.
+- **A conversation may open on an exercise** (`opened_from`): a generated one of the author's
+  (`generation_id`) or, since 2026-10-14, one of the bank this account reads (`bank_id`,
+  refused like a missing one when hidden from it; `opened_from` keeps `bank_id`, the content
+  `key` that survives a re-extraction, its concepts — the primary first — and its type), so a
+  reading per exercise is possible later. Either gives the turn its concepts as the focus.
 - **A turn's job carries no text**: params and result name the conversation and the turn
   only, because a job is read where its conversation is not (the panel's queue) and a
   conversation is its author's; its events reach its author alone
   (`PRIVATE_KINDS`). One reply on its way per conversation and per account in the workspace
   (409).
+- The store of conversations, the daily count, the quiet stream of a turn's job and the
+  routes' common half are the free chat's too, kept once in `apps/conversations/` (see
+  below); `apps/tutor/api/store.py` and `usage.py` bind them to the tutor's folder, role
+  (`tutor`), initial state (`focus`, `trail`) and limit (`tutor_daily_limit`). The files did
+  not move.
 - Logs in Spanish with `[tutor]`; never the message text.
+
+### `apps/conversations/` — what the tutor and the chat share
+
+Decided 2026-10-14 with the chat («nothing copied»). `store.Store` keeps one function's
+conversations under `<workspace>/<folder>/user_<id>/<id>.json` (folder, reply role, initial
+state and log scope are the function's), one lock per file, `pending` naming the job.
+`usage.Limit` counts an account's turns per UTC day and function in `tutor_usage` (migration
+0023 added `feature`; the rows before it are the tutor's; the unique key is account, day and
+function). `jobs.QuietEmitter` lets only a turn's steps reach the stream and `jobs.release`
+frees a conversation whose job died. `routes.Function` describes a function for the shared
+route half — `require` (one's own or the same 404), `admit` (one reply per account in the
+workspace, then the day's limit, 429 with the function's code and `Retry-After`),
+`queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. The server half of
+the two functions, like their `api` packages: it imports `server` and the database.
+
+### `apps/chat/` — «Chat libre»
+
+An assistant without the tutor's method (the user's decision, 2026-10-14): it explains,
+solves and writes code, as the student asks, within the subject and education.
+
+- **A turn** (`apps/chat/turn.py`): the guardrail (`screening.screen_message`; a refusal is a
+  fixed text, kind `blocked`, and reaches no model), then ONE call (`chat_reply`) with the
+  system prompt — its role, its scope, refusing in one sentence a request for its
+  instructions or another role and what is dangerous or out of place, and the subject's
+  `content_context.prompt_block()` — the last `chat.history_turns` exchanges and, when the
+  conversation was opened on an exercise, that exercise. No classification, no card, no
+  checks, no map. Its job (`chat_turn`) needs no runtime context: it never warms a subject's
+  embedder or graph.
+- **The model**: `chat.models.reply`, empty = `VARIANT_GENERATION_LLM` (the generation's, the
+  user's choice; the tutor falls back to the same); its reasoning switch and effort, its
+  sampling triple, `chat.reply_max_tokens` (2048), `chat.message_max_chars`,
+  `chat.daily_messages` (empty = none; counted apart from the tutor's, `chat_daily_limit`).
+  Declared in `apps/chat/settings.py` (stage `chat`, after the tutor's; `MODEL_KEYS` join
+  `registry.EXTRA_MODEL_KEYS`), picked up by the registry's optional import, and drawn in
+  «Configuración» — it is no optional function of the administrator's.
+- **Who uses it**: a subject's switch, `workspaces.student_chat` (migration 0023), CLOSED by
+  default, and the group's (`class_groups.chat`); its teachers always have it
+  (`features.CHAT`, `auth.CHAT` on its router; `/api/auth/me`'s `features.chat`). The job is
+  class A, private and a student's kind.
+- **Its routes** (`/api/chat`, `auth.VIEW` + `auth.CHAT`): one's conversations, open (with a
+  `generation_id` of one's own or a `bank_id` one reads), read, send, ask again, stop, delete
+  — the tutor's, through `apps/conversations/routes`. An exercise is checked before the
+  queue, and `opened_from.exercise` keeps it as labels and texts: every field of one's own
+  generated exercise, only the fields shown of the bank's (the level always) — a hidden field
+  never reaches the model.
+- **The class's week** counts its messages by student and day (`activity.CHAT_READER`,
+  `ChatMessage`): the week's `chat` block, `chat_days`/`chat_messages` per row, `chat` in the
+  strip, the median, and the `chat` area's `idle`/`trend`/`quiet` findings. Nothing of what a
+  message was about.
+- Its client is `web/src/apps/chat/` (`ChatScreen`: the tutor's layout — the list beside the
+  conversation, the two voices, the box — without the map, the question set apart or the
+  concept picker), its strings in core (`chat.*`). «Llevar al chat libre» (`lib/chatDraft.ts`)
+  on a saved result, a card of «Mis ejercicios», and the rows of a student's bank and
+  generated exercises, each where the chat is open.
+- Logs in Spanish with `[chat]`; never the message text.
 
 ## The web interface (`web/`)
 
@@ -1225,9 +1395,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 - [lib/steps.ts](web/src/lib/steps.ts) is the single home of the path: `STEPS` (raw
   material, graph, bank, numbered 1-3: the «Fase de construcción»; until 2026-10-08 four, the
-  types of exercise a step of their own before the syllabus) and `USES` (the three
-  unnumbered doors of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema» and
-  «Tutor socrático»). Each door names its `feature`; the bar and the guide draw
+  types of exercise a step of their own before the syllabus) and `USES` (the unnumbered doors
+  of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema», «Tutor socrático» and,
+  since 2026-10-15, «Chat libre», which has no tone and opens with the session's
+  `features.chat`). Each door names its `feature`; the bar and the guide draw
   `usesFor(useFeatures())`, so a function closed to the account has no door, and its route
   draws «not found». The bar no longer captions the two phases (user's request, 2026-10-04):
   a rule sets the groups apart, and the guide and the tutorial still name them. The
@@ -1250,14 +1421,15 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   that sends them to their teacher's link. Creating — there and in the switcher — is offered
   to a teacher only (`useCanCreate`, the session's profile).
 - **A student's path** (role `viewer`, `useIsStudent`; decided 2026-10-06): the bar draws
-  `SYLLABUS` — «Temario», with an icon where a step has its number — as the whole
-  construction, then the rule and the doors open to them; all of it half off until the
-  construction is closed, the reason «Tu docente todavía está preparando esta asignatura».
-  `STUDENT_HIDDEN` (`/raw`, `/prepare/bank`) draw «not found» (`/prepare/profile` redirects to
-  `/prepare/bank`, so it is «not found» for them too); every other
+  `STUDENT_READS` — «Temario» and, since 2026-10-14, «Banco de ejercicios», each with an icon
+  where a step has its number — as the whole construction, then the rule and the doors open
+  to them; all of it half off until the construction is closed, the reason «Tu docente
+  todavía está preparando esta asignatura». `STUDENT_HIDDEN` (`/raw`, and `/prepare/profile`,
+  whose redirect would land them on the bank) draw «not found»; `/prepare/bank` draws
+  `BankReader` for them (*Specific screens*); every other
   route of the subject draws `SubjectNotReady` (no button) until `generation_unlocked`; `/`
-  lands a student on `studentLandingPath` — generating, then the tutor, then the evaluation,
-  else the syllabus. `useRaw` and `useCoverage` are never asked for a student.
+  lands a student on `studentLandingPath` — generating, then the tutor, the chat, then the
+  evaluation, else the syllabus. `useRaw` and `useCoverage` are never asked for a student.
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
 - Vocabulary seen by teachers: «Apuntes y ejercicios», «Temario» (the step, with no article;
   «concepto» for a node; «grafo» only for the structure), «Banco de ejercicios» (the step)
@@ -1276,7 +1448,8 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
 
 - An unbuilt stage shows its header and one central `xl` «Comenzar construcción» block
   (`BuildButton` decides every reason not to offer it; there is no rebuild except a
-  document-stale stage). A stage opens in a read-only **review** state; «Quiero corregir algo»
+  document-stale stage). A stage opens in a read-only **review** state; «Modificar» (until
+  2026-10-15 «Quiero corregir algo»; the user's request: one plain verb, on every step)
   unlocks correction, with a sticky bottom bar carrying the save state and «Guardar los
   cambios»; «Continuar» (big, `--attention`) saves-and-approves and moves on. **Both stand
   to the right of the title** (under it below `lg`), under one line of state and with no
@@ -1299,7 +1472,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   built stage, for an account the evaluation is open to AND whose role may correct the
   subject (`useAsksStageReview`: editor or owner, because its routes that record are
   `auth.EDIT`; a viewer could fill it in and never save it). All of it is
-  `evaluation/StageReviewSlot`, which `StageGate` loads lazily; the stage reports only whether
+  `apps/evaluation/StageReviewSlot`, which `StageGate` loads lazily; the stage reports only whether
   this visit wrote. Its save button is ink, never `--attention`: «Continuar» is on screen.
 - A rebuild hides the old artifact without deleting it. A queued job draws no progress bar.
   «Pasos» of a build start folded, and nothing remembers the fold.
@@ -1325,7 +1498,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   three tenths of the line and the bank seven from `xl` (halves below it, stacked on a
   phone), each with the square of the choice, its name, its state as a `Badge` in the bar's
   words and tones («Hecho», «Te toca ahora» in coral, «Después», «Construyendo», plus
-  «Corrigiendo» and «Con cambios») and one sentence of what it is. They are tabs
+  «Modificando» and «Con cambios») and one sentence of what it is. They are tabs
   (`role="tab"`, the keys of `useRadioGroup`); the panel not on screen stays mounted and
   hidden, so a draft survives the switch. Where each part stands, which may be opened and
   which a visit opens on is `features/bank/parts.readParts`, tested: the bank's card is
@@ -1335,7 +1508,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   opens on the bank once both parts are built (the user's request), or while its collection
   runs or where it stopped, else on the types. Under the block the part on screen is headed
   as a step is: «Fase de construcción · Paso 3 de 3 · Parte N de 2», its name as the title,
-  what it is, and its way out (`WayOn`) — «Quiero corregir algo» and the coral: on the types
+  what it is, and its way out (`WayOn`) — «Modificar» and the coral: on the types
   «Continuar a la Parte 2», which saves their draft and shows the bank without closing them
   (the types are confirmed when the bank is collected or closed, so a bank collected with
   other types is still offered again); on the bank «Generar ejercicios», which closes both
@@ -1363,8 +1536,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   one subject of its own so a page is read without scrolling past another (user's requests,
   2026-10-07), the subject's name read off the TAB's slug, never the session's `active` flag.
   The list goes in three groups captioned with `SectionEntry.group`, in this order:
-  «Miembros» («Alumnos», «Docentes», «Invitar»), «Actividad» («Ejercicios generados»,
-  «Tutor socrático» — the last only where the tutor is installed) and «Curso» («Avance de la
+  «Miembros» («Alumnos», «Grupos» — drawn where the API sends `groups` —, «Docentes»,
+  «Invitar»), «Actividad» («Ejercicios generados», «Tutor socrático» and «Chat libre» — each
+  of the last two only where it is installed) and «Curso» («Avance de la
   asignatura», «Funcionalidades permitidas»). Ending a course is not here: it is the
   administrator's, from «Administración → Asignaturas». It opens
   on «Alumnos», or on «Invitar» while there is no student. «Alumnos», «Docentes» and the
@@ -1414,9 +1588,22 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   (`ProgressSection`: how many concepts are covered, unit by unit in the syllabus' order —
   `lib/courseProgress.ts` — the selector of a commission's coverage to change it, saved on
   its confirm, and «Borrar el avance», asked first) and «Funcionalidades permitidas»
-  (`UsesSection`: two switches that act at once — the two «Curso» blocks are drawn alike,
+  (`UsesSection`: switches that act at once — generating, the tutor and, since 2026-10-15, the
+  chat, drawn off until a teacher opens it; the two «Curso» blocks are drawn alike,
   ruled rows of a name, one line under it and its control on the right; the tutor's drawn wherever the tutor is
   installed, off and still with the reason until the administrator offers it).
+  **Groups in «Clase»** (2026-10-14): every section that acts on the class — «Alumnos»,
+  «Invitar», the two activity pages, «Avance de la asignatura», «Funcionalidades
+  permitidas» — carries a scope in its header (`GroupScope`: «Toda la clase» and the groups
+  as tabs up to three, a select past them; nothing while the class has none), held by
+  `ClassScreen` so it survives a move between sections, and every reading of those sections
+  is the scope's. «Grupos» lists them with their active students and «Nuevo grupo» on the
+  title's line, renaming and deleting (asked first) as row icons; a group's row opens
+  «Alumnos» on it. «Alumnos» names a student's group as a badge in the class's scope, moves
+  one or the ticked ones with «Cambiar de grupo» (`MoveDialog`: «Sin grupo» or a group).
+  A group's tools are three pills each, «Como la asignatura» / «Abierto» / «Cerrado», with
+  what the subject says under the name; its progress says whether it follows the subject's,
+  with «Darle su propio avance» or the way back to the subject's.
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
   2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
   «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,
@@ -1478,7 +1665,69 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   bounded cells, `table-fixed`, filters (search, modality, source, level, «Sin concepto»),
   no ordering control, no similarity scores, primary concept as a filled badge placed first.
   `ConceptBadge`/`ConceptChip` are the two ways to draw a concept; badges truncate with a
-  `title`.
+  `title`. Where an exercise comes from (2026-10-14, the user's request): «Manual» or
+  «Generado» beside its id, with who added it and when in the `title`; collected from the
+  documents is the ordinary case and says nothing. The source filter opens with «Manuales»
+  and «Generados» over the documents. **A teacher writes exercises** with «Añadir
+  ejercicio» at the end of the filters, in either moment of the stage
+  (`features/bank/AddExercise.tsx`, `POST /api/bank`): a dialog of two numbered steps —
+  «El ejercicio» (type, level with its rung's clause, the fields in the profile's order,
+  the statement first, each helped by the profile's description, «Vista previa» drawn as
+  the exercise is read) and «Sus conceptos» (two choice cards: «Que lo etiquete el sistema»,
+  chosen at the start, or «Los elijo yo» with the concept picker) —; saving does not close it:
+  it shows the exercise and its concepts as they arrive (queued, being tagged, chosen;
+  «Elegirlos yo» when the tagger found none), with «Añadir otro», which keeps the type and
+  the level, and «Cerrar», after which the table opens on «Manuales» at its last page. The
+  system tags it with `tag_item` (queued by the route, the gates of `tag` checked before
+  anything is written; class B, its author's), whose concepts are merged into the bank as it
+  is when they arrive (`bank_edit.apply_tags`): the teacher goes on adding meanwhile. A row
+  the tagger is on says «Etiquetando». Editing the statement of a tagged exercise offers
+  «Guardar y volver a etiquetar» (`POST /api/bank/tag`). All of it is drawn only when the
+  listing says `origins`, which the demo's does not. **Two tabs over the table** (the same
+  day): «Banco», what the generator learns from, and «Generados», the exercises THIS teacher
+  generated in the subject (`features/bank/GeneratedList.tsx`, `GET /api/generations` with
+  `bank=in|out` and `difficulty`), opening on «Fuera del banco» beside «En el banco» and
+  «Todos»; two tabs and not three by origin, because an exercise passed in is both. Each row
+  keeps its one gesture in sight: «Pasar al banco» (`features/bank/Promote.tsx`, the same
+  dialog opened on the exercise as read, with «Corregir antes de pasarlo»; a field the
+  commission left out opens it to write it, since an exemplar carries every field of its
+  type; the correction goes to the bank and never to the generated file), or «En el banco ·
+  G012», which shows that row in «Banco». The rows say `in_bank` (the bank's id while it is
+  still there) and `promotable` (a teacher's own, out of the bank); a student is told
+  neither. «Pasar al banco» is offered the same way on a teacher's saved results of
+  «Generar ejercicios» and on «Mis ejercicios» of the subject in use. **Marks** (the same
+  day; `server/bank_marks.py`): what the class sees of each exercise — nothing (every
+  exercise starts hidden), all of it, or the fields chosen among the type's own but the
+  difficulty, the statement always — and one teacher's stars. Neither is content of the
+  bank: no hash, no approval moved. Both name an exercise by its CONTENT (`bank_marks.keys`:
+  type and folded statement, `~2`, `~3` for the repeats of one statement in the bank's
+  order), never by its id, so a re-extraction keeps them and editing a statement carries
+  them (`routers/bank.patch`). Who sees what is the subject's
+  (`artifacts/.bank_visibility.json`, exported with the instance); a star is a row
+  (`bank_favourites`, migration 0021). On screen: «Visible» or «Visible: N campos» beside
+  the id, an eye on hover that opens «Lo que ve la clase de …» (`features/bank/Visibility.tsx`:
+  «Nada» / «Todo el ejercicio» / «Algunos campos» and the fields), the same for the rows
+  ticked («Qué ve la clase (n)» at the table's foot; rows may be ticked in either moment of
+  the stage, since this is no correction), a star that stays filled with an ink edge down
+  its row, and «Todos» / «Visibles para la clase» / «Mis favoritos» before the filters.
+  «Nuevo ejercicio» and «Pasar al banco» ask «¿Qué ve la clase?» too. **Who sees it**
+  (2026-10-14, after the groups): where the class has groups, the same dialog asks «¿Quién
+  lo ve?» — «Toda la clase» or «Algunos grupos» and the groups ticked, saving none refused
+  (422, and the button waits) — the entry keeping `groups` (`bank_marks.seen_by`), the badge
+  naming them («Visible · Grupo A»). Deleting a group takes it out of every entry and hides
+  again what it alone saw (`bank_marks.forget_group`, from the route: SQLite gives a deleted
+  id again).
+- **A student's «Banco de ejercicios»** (`features/bank/BankReader.tsx`, the user's decision
+  of 2026-10-14): the page a teacher works on with nothing that writes — its header with no
+  number, two tabs, «Banco» (`GET /api/exercises`, opened when it holds something) and «Mis
+  ejercicios generados» (`GeneratedList reading`: theirs, with no question about the bank),
+  under `ReadingScope`. The table is the bank's — statement clamped, concepts, level — with
+  the filters a reader asks (search, type, level, and the concepts the exercises read carry,
+  under their units, `concepts` in the answer), no origin, star, eye or tick. A row unfolds
+  into what was shown (`ItemFields`) and keeps its two gestures in sight, each where its
+  function is open to the student: «Generar más como este» (`exercise.commissionLike`: its
+  type, level and concepts, the primary first) and «Trabajar con el tutor», which carries
+  the statement and the exercise's id (`bank_id`) and nothing hidden.
 - Generate: numbered steps; after «¿De qué nivel?» and before the other decisions, «¿Qué
   partes lleva?» — one switch per `omittable` field of the type, all on at the start, drawn
   only when the type has one and never in the evaluation's form; a part switched off is
@@ -1526,11 +1775,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   student's sends them to `/`, never `/raw` — with no header, edge rails
   for navigation, justified prose from `sm` up; it draws the app as it is. Slides 1–4 hold
   with the evaluation open or closed, so they never ask for a part in a study; that request
-  lives on 5–6, which are the evaluation's code (`evaluation/tutorial.tsx`, its figures and
+  lives on 5–6, which are the evaluation's code (`apps/evaluation/tutorial.tsx`, its figures and
   strings with it), fetched only for an account the evaluation is open to. What correcting a
   step means is said on slide 3, every account's.
 - The guide's sections on the evaluation and the tutor live in their folders
-  (`evaluation/guide/`, `tutor/guide/`, one file per language), and so does the
+  (`apps/evaluation/guide/`, `apps/tutor/guide/`, one file per language), and so does the
   questionnaire's part of how a building step closes (`StageReviewGuide`); the registry
   (`features/guide/sections.tsx`) leaves a closed function's section out of the index, the
   search and the routing. Each section declares its `audience` (`teacher`, `student`,
@@ -1633,7 +1882,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
   `cfg.hint.<key>`; a key missing there draws nothing.
 
-- Tutor socrático (`web/src/tutor/`, `/tutor`): the conversation list beside the open
+- Tutor socrático (`web/src/apps/tutor/`, `/tutor`): the conversation list beside the open
   conversation, both one fixed height (`PANEL_HEIGHT`) scrolling inside; a reply polled from
   the author's own route while `pending`, shown whole with its concept map when the server
   gave one (`ConceptMap`, redrawn 2026-10-08 at the user's request, in two rounds: a graph
@@ -1680,18 +1929,19 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   as a numbered index, each row opening the picker on itself.
   A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: a review of plain
   sentences (the subject's open, each unit folded; concepts and sources only when
-  correcting), «Quiero corregir algo», and a rebuild that asks first when there is a
+  correcting), «Modificar», and a rebuild that asks first when there is a
   correction. The correction is the admin panel's list (`features/admin/Sections`) beside the
   part open (user's request, 2026-10-04: stacked down one page the parts could not be told
   apart): the three parts of the subject whole lead — «Para toda la asignatura», «Lo que el
   tutor nunca sugiere», «Consultas administrativas» — and one per unit follows under a
   caption (`SectionEntry.group`), numbered; a row counts what its part holds and its rows
-  changed and not saved (`tutor/criteria.changes`, counted as sets); a criterion is a ruled
-  row with no caption per control; the bar is the stage screens' (state, «Dejar de corregir»
+  changed and not saved (`apps/tutor/criteria.changes`, counted as sets); a criterion is a ruled
+  row with no caption per control; the bar is the stage screens' (state, «Dejar de modificar»
   asking first when dirty, the save) and saves every part at once. «Trabajar con el tutor» on a saved exercise — in «Mis
   asignaturas y ejercicios» and Generate's «Mis ejercicios», and on a result card once its
   file exists, only with the tutor open — stashes the statement and the generation id
-  (`lib/tutorDraft.ts`, in core because those screens are). The admin reads conversations
+  (`lib/tutorDraft.ts`, in core because those screens are); on an exercise of the bank a
+  student reads, its `bankId` instead (2026-10-14). The admin reads conversations
   from «Asignaturas» (`AdminConversations`).
 
 ### The landing (`web/src/landing/`)
@@ -1701,7 +1951,7 @@ system is, how it works, a demo of the application, and the way in — registrat
 entry by invitation, «Entrar» leading to the login form at `/login` (`AuthGate.LOGIN_PATH`;
 with a session `/login` redirects to `/`, and the login form has «Volver a la portada»).
 With a session `/` is still the application's redirect to the current step: no dashboard.
-A module of its own, like `evaluation/` and `tutor/`: its strings in `landing/i18n/`
+A module of its own, like `apps/evaluation/` and `apps/tutor/`: its strings in `landing/i18n/`
 (`landing.*`), fetched only by a visitor (`check:lazy` lists it in `LAZY`), in Spanish and
 English. The names the application already has (steps, door, phases) are the core's keys.
 
@@ -1815,9 +2065,9 @@ English. The names the application already has (steps, door, phases) are the cor
   eager and `en` lazy. `pnpm check:i18n` catches untranslated literals and missing guide
   sections. **Delete catalogue keys nobody reads** (prove it, delete from both, let `tsc`
   answer). Strings the server sends by stable key are translated client-side
-  (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`, `tutor/limit.ts`) with the server string
+  (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`, `apps/tutor/limit.ts`) with the server string
   as fallback.
-- **A key read only inside `src/evaluation/` or only inside `src/tutor/` lives in that
+- **A key read only inside `src/apps/evaluation/` or only inside `src/apps/tutor/` lives in that
   folder's `i18n/{es,en}.ts`**, same shape and typing; `i18n/index.ts` registers it
   (`registerCatalogue`: Spanish at once, the reader's language fetched), and every module
   core loads lazily from the folder imports it FIRST. Core wraps those `import()`s in
@@ -1836,7 +2086,7 @@ English. The names the application already has (steps, door, phases) are the cor
   `role="tab"` the pointer, enabled ones only; a utility still overrides it.
 - A `role="radiogroup"` of buttons takes its keyboard from `components/ui/radio.ts`
   (`useRadioGroup`: one tab stop, arrows choose and move the focus, Home/End).
-- **`src/evaluation/` and `src/tutor/` reach a browser only through `import()`**, behind
+- **`src/apps/evaluation/` and `src/apps/tutor/` reach a browser only through `import()`**, behind
   `useFeatures()` or inside the administrator's panel (whose reads ignore the mode): nothing
   outside them imports them statically (`import type` aside).
   `pnpm check:lazy` checks the sources and, after `pnpm build`, the chunk graph
@@ -1857,7 +2107,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   `variatio-vanilla`; the user's decision: free for any noncommercial use, never sold); MIT
   before it, and copies taken then keep MIT.
   The history is not rewritten to hide the MIT commits.
-- `evaluation/` stays outside `variatio/`; one-way import; not made removable.
+- The functions live in `apps/` (2026-10-14, the user's request), outside `variatio/` and
+  `server/`; one-way import; the evaluation is not made removable.
 - `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting keys (e.g.
   `models.phases.concept_tagger`) and on-disk names (`.review_state.json`) do not follow
   module renames. Renames are done per importer, never with a global `sed`.
@@ -1956,11 +2207,18 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   as a school's: from them only the account is counted (2026-10-06; it had none).
 - A subject's teachers decide whether its students generate exercises and use the tutor (two
   switches of the subject, after the administrator's mode); teachers are never bound by them
-  (2026-10-06).
+  (2026-10-06). A group's switch, when it says something, wins over the subject's for its
+  students (2026-10-14).
+- A class may have groups, and with a group its teachers do what they do with the class: its
+  tools, its progress, its link and invitations, its activity and digest (the user's decision,
+  2026-10-14). A student is in one group at most, for now; teachers are in none. One live
+  class link per destination: the class and each group.
 - `viewer` is «Alumno» (2026-10-06; it was «Lector», who saw everything and changed
-  nothing): a student sees the syllabus without editing it and generates, evaluates or uses
-  the tutor by their permissions; the rest of the construction — the bank, the raw material,
-  the types of exercise as a step — is not theirs to see. No fourth role.
+  nothing): a student sees the syllabus without editing it, and the bank as its teachers
+  show it (2026-10-14: every exercise hidden until shown, whole or by fields, to the class or
+  to groups), and generates, evaluates or uses the tutor by their permissions; the rest of
+  the construction — the bank as a teacher works it, the raw material, the types of exercise
+  as a step — is not theirs to see. No fourth role.
 - Invitations and membership managed by the admin alone; links sealed, not stored in clear.
   Since 2026-10-06 a teacher also brings their class in: a class link of many uses (seats,
   expiry, pause, renewal) and personal invitations of their subject; an owner invites teachers.
@@ -2001,10 +2259,11 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The bar is the path: three numbered steps — «Apuntes y ejercicios», «Temario», «Banco de
   ejercicios», the types of exercise being the first part of the third (2026-10-08; four
   steps until then, the types before the syllabus) — and the unnumbered doors open to the
-  account (up to three), the two groups set apart by a rule and with no phase captions
+  account (as many as are open to it, since 2026-10-14), the two groups set apart by a rule and with no phase captions
   (2026-10-04); the steps never fold (2026-10-08); no dashboard; the rail is gone. For a
-  student the bar draws «Temario» without a number as the only stage, and `/` leads to the
-  first open door or to `SubjectNotReady`; for a teacher nothing changes (2026-10-06).
+  student the bar draws «Temario» and «Banco de ejercicios» without a number (2026-10-14;
+  from 2026-10-06 «Temario» alone), and `/` leads to the first open door or to
+  `SubjectNotReady`; for a teacher nothing changes.
 - Step 3 is two parts, the types of exercise and then the bank, one on screen, chosen from a
   block of two choice cards at the top (types 3, bank 7) that says where each stands; the
   bank's opens once the types exist and is where a visit opens once both are built; the part
@@ -2012,9 +2271,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   collects the bank; one coral control on the move that is next; one part corrected at a
   time (2026-10-08; earlier the same day the two parts were stacked on one page under a
   heading of the step, told apart by a rule).
-- View and correct are two moments; «Continuar» closes a stage and stands with «Quiero
-  corregir algo» beside the title on every step, never in a block at the foot
-  (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift. After the last
+- View and correct are two moments; «Continuar» closes a stage and stands with
+  «Modificar» (2026-10-15, the user's request; it was «Quiero corregir algo») beside the
+  title on every step, never in a block at the foot (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift. After the last
   step it names the door it opens, «Generar ejercicios» (2026-10-08). One exception: the
   bank's collection closes the bank itself once indexed, so step 3 is done and the doors
   open without a press (2026-10-08, the user's decision).
@@ -2066,9 +2325,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 - The exemplars profile is edited through the form alone.
 
 **Tutor (decided 2026-10-03)**
-- Three doors at most after the construction: «Generar ejercicios» for everybody, «Evaluar el
-  sistema» and «Tutor socrático» where the administrator opens them (the two-door rule ended
-  with the single branch, 2026-10-03); no fourth door.
+- As many doors after the construction as functions open to the account (the user's decision,
+  2026-10-14: the user never wanted them capped): «Generar ejercicios», «Evaluar el sistema»,
+  «Tutor socrático» and «Chat libre». Until then «three doors at most… no fourth door».
 - The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
   after the checks, never streamed.
 - Conversations are private to their author; the administrator reads them read-only. A

@@ -14,11 +14,14 @@ recorded stays readable while it is off.
 The list of a function is kept whatever its mode: switching to everybody and back to the list
 finds the list as it was, and an invitation can list its holder before the mode is `selected`.
 
-WHAT A SUBJECT LETS ITS STUDENTS USE (2026-10-06). Inside a subject its teachers decide two
-more things for its students alone: whether they generate exercises and whether they use the
-tutor (`workspaces.student_generate`, `student_tutor`; «Clase → Qué usan los alumnos»).
-`refusal` is the one reading of all of it — the administrator's mode, the role and the
-subject's switch — and `for_user` answers it for the subject an account is in.
+WHAT A SUBJECT LETS ITS STUDENTS USE (2026-10-06). Inside a subject its teachers decide more
+things for its students alone: whether they generate exercises, whether they use the tutor
+and, since 2026-10-15, whether they use the free chat, closed until they open it
+(`workspaces.student_generate`, `student_tutor`, `student_chat`; «Clase → Funcionalidades
+permitidas»), and since 2026-10-14 the same for each group of the class
+(`class_groups.generate`, `tutor`, `chat`), where None is «as the subject says». `refusal` is
+the one reading of all of it — the administrator's mode, the role, the group's switch, the
+subject's — and `for_user` answers it for the subject an account is in.
 
 A FUNCTION FOR A WHOLE SUBJECT (the class plan's phase 15): under `selected`, beside the
 accounts on its list, a function may list subjects (`SUBJECT_LISTED`: the tutor alone), and then
@@ -28,6 +31,7 @@ everybody in a listed subject uses it there — not in their other subjects.
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from .db import identity
 from .db.models import (
     VIEWER,
     FeatureAccess,
@@ -51,8 +55,19 @@ SUBJECT_LISTED: tuple[str, ...] = (TUTOR,)
 # an optional function: it has no mode and no row in `feature_access`.
 GENERATE = "generate"
 
+# The free chat (2026-10-14) is neither: a subject's teachers OPEN it to its students, since it
+# starts closed, and its teachers always have it.
+CHAT = "chat"
+
 # What a subject's teachers may close to its students, and the column that says it is open.
-SUBJECT_SWITCHES: dict[str, str] = {GENERATE: "student_generate", TUTOR: "student_tutor"}
+SUBJECT_SWITCHES: dict[str, str] = {
+    GENERATE: "student_generate",
+    TUTOR: "student_tutor",
+    CHAT: "student_chat",
+}
+
+# What each switch says when a subject's row cannot tell (a row from before its column).
+_OPEN_BY_DEFAULT = {GENERATE: True, TUTOR: True, CHAT: False}
 
 OFF = "off"
 ALL = "all"
@@ -72,20 +87,28 @@ REFUSALS = {
 CLOSED_HERE = {
     GENERATE: "Tu docente ha cerrado la generación de ejercicios en esta asignatura.",
     TUTOR: "Tu docente ha cerrado el tutor en esta asignatura.",
+    CHAT: "Tu docente no ha abierto el chat libre en esta asignatura.",
+}
+
+# And when they closed it to the student's group alone.
+CLOSED_GROUP = {
+    GENERATE: "Tu docente ha cerrado la generación de ejercicios a tu grupo.",
+    TUTOR: "Tu docente ha cerrado el tutor a tu grupo.",
+    CHAT: "Tu docente ha cerrado el chat libre a tu grupo.",
 }
 
 
 def for_user(
     session: Session, user: User, workspace: Workspace | None = None, role: str | None = None
 ) -> dict[str, bool]:
-    """Answer, for generating and every function, whether it is open to this account here.
+    """Answer, for generating, the chat and every function, whether it is open here.
 
     `workspace` and `role` are the subject the account is in and its role there; without
     them only the administrator's modes are read, which is what an account in no subject has.
     """
     return {
         feature: refusal(session, user, feature, workspace, role) is None
-        for feature in (GENERATE, *FEATURES)
+        for feature in (GENERATE, CHAT, *FEATURES)
     }
 
 
@@ -99,20 +122,27 @@ def refusal(
     """Return why `feature` is closed to this account in this subject, or None when it is open.
 
     The administrator's mode first, for the optional functions; then, for a student of the
-    subject, the switch its teachers set. A teacher, and an administrator entering through the
-    bypass (who holds the owner's role), never meets a subject's switch.
+    subject, the switch of their group when it says something, else the subject's. A teacher,
+    and an administrator entering through the bypass (who holds the owner's role), never meets
+    either.
     """
     if feature in FEATURES and not enabled(session, user, feature, workspace):
         return REFUSALS[feature]
     column = SUBJECT_SWITCHES.get(feature)
-    if column and workspace is not None and role == VIEWER and not getattr(workspace, column, True):
-        return CLOSED_HERE[feature]
-    return None
+    if not column or workspace is None or role != VIEWER:
+        return None
+    group = identity.group_of(session, workspace.id, user.id) if isinstance(workspace.id, int) else None
+    said = getattr(group, feature, None) if group is not None else None
+    open_here = said if said is not None else getattr(workspace, column, _OPEN_BY_DEFAULT[feature])
+    return None if open_here else (CLOSED_GROUP[feature] if said is False else CLOSED_HERE[feature])
 
 
 def subject_uses(workspace: Workspace) -> dict[str, bool]:
     """Answer what a subject's teachers let its students use."""
-    return {feature: bool(getattr(workspace, column)) for feature, column in SUBJECT_SWITCHES.items()}
+    return {
+        feature: bool(getattr(workspace, column, _OPEN_BY_DEFAULT[feature]))
+        for feature, column in SUBJECT_SWITCHES.items()
+    }
 
 
 def set_subject_uses(session: Session, workspace: Workspace, changes: dict[str, bool]) -> None:

@@ -19,7 +19,17 @@ from pydantic import BaseModel, Field, create_model
 
 ITEM_TYPE_KEY = "item_type"
 
-RESERVED_FIELD_NAMES = (ITEM_TYPE_KEY, "id", "source", "concepts", "primary_concept")
+# What every exercise of the bank carries beside its fields: where it comes from and its tags.
+RESERVED_FIELD_NAMES = (
+    ITEM_TYPE_KEY,
+    "id",
+    "source",
+    "concepts",
+    "primary_concept",
+    "origin",
+    "added_by",
+    "added_at",
+)
 
 DRIFT_ASPECTS = ("type", "enum", "decided_by")
 

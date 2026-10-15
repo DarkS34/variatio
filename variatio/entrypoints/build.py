@@ -49,12 +49,14 @@ def build_knowledge_graph(ws: Workspace) -> dict:
 def build_exemplars_bank(
     ws: Workspace,
     exemplars_profile: ExemplarsProfile | None = None,
+    keep: dict[str, dict] | None = None,
 ) -> dict:
     """Extract the exemplars bank, tagging each document as it leaves the extractor.
 
     Extracting and tagging are one job: an untagged bank is useless for generating and for
     indexing alike. Tagging per document also gives the warm start its within-build form —
-    document 3's items are tagged against an index already holding 1 and 2.
+    document 3's items are tagged against an index already holding 1 and 2. `keep` is what the
+    new bank starts from (`ExemplarsBankBuilder.build`).
     """
     if exemplars_profile is None:
         path = _artifacts.exemplars_profile_path(ws)
@@ -72,6 +74,7 @@ def build_exemplars_bank(
         ws.exemplars_bank_path,
         ws.exemplars_bank_building_path,
         on_items=_tagging_hook(ws, exemplars_profile, ws.exemplars_bank_building_path),
+        keep=keep,
     )
     if not bank:
         raise RuntimeError(f"Could not build an exemplars bank from {ws.raw_exemplars_dir}")
@@ -193,10 +196,14 @@ def build_missing(ws: Workspace) -> list[str]:
     return missing
 
 
-def build_artifact(artifact: str, ws: Workspace) -> dict:
-    """Build one artifact, with its phase plan installed so progress is a percentage."""
+def build_artifact(artifact: str, ws: Workspace, keep: dict[str, dict] | None = None) -> dict:
+    """Build one artifact, with its phase plan installed so progress is a percentage.
+
+    `keep` is the bank's alone: the exercises a re-extraction starts from.
+    """
     if artifact not in _BUILDERS:
         raise ValueError(f"Unknown artifact '{artifact}'; expected one of {list(_BUILDERS)}")
 
+    options = {"keep": keep} if artifact == _artifacts.EXEMPLARS_BANK and keep else {}
     with progress.step(f"build_{artifact}", f"Building: {_LABELS[artifact]}"), progress.overall(_PHASES[artifact]):
-        return _BUILDERS[artifact](ws=ws)
+        return _BUILDERS[artifact](ws=ws, **options)

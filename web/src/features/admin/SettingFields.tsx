@@ -12,8 +12,8 @@ import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { bytes } from "@/lib/format";
 import { settingHint } from "@/features/admin/hints";
-import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/features/generate/effort";
-import { familyOf } from "@/features/generate/models";
+import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/apps/generation/effort";
+import { familyOf } from "@/apps/generation/models";
 import { useT, type Key, type Translate } from "@/lib/i18n";
 import type {
   ConfigImpact,
@@ -167,7 +167,7 @@ export function isModelSetting(setting: ConfigSetting): boolean {
 
 /**
  * The model settings of the two optional functions, and what each one's null resolves to
- * (`evaluation/config.derive`, `tutor/config.derive`): the evaluation's writer and the tutor's reply
+ * (`apps/evaluation/config.derive`, `apps/tutor/config.derive`): the evaluation's writer and the tutor's reply
  * take the first offered generation model, and the tutor's two other calls take the reply's.
  * A phase of the pipeline keeps "follow the main" (`cfg.followMain`).
  */

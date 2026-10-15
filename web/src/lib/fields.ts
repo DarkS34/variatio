@@ -53,3 +53,12 @@ export function hasBrokenText(value: unknown): boolean {
   if (value && typeof value === "object") return Object.values(value).some(hasBrokenText);
   return false;
 }
+
+// Field names come from the profile and are subject-specific, so "is this code?" can only
+// ever be a guess; it decides presentation only, and guessing wrong costs a plain <p>.
+export function isCodeField(field: string): boolean {
+  const name = field.toLowerCase();
+  return ["soluc", "codigo", "code", "solution", "material"].some((hint) =>
+    name.includes(hint),
+  );
+}

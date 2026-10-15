@@ -1,4 +1,4 @@
-import { FileText, MessageSquare } from "lucide-react";
+import { FileText, MessageCircle, MessageSquare } from "lucide-react";
 import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import { weekLabel } from "@/lib/activity";
@@ -33,8 +33,8 @@ export function WeekStrip({
 }) {
   const tr = useT();
   const { t, plural } = tr;
-  const Icon = measure === "messages" ? MessageSquare : FileText;
-  const countKey = measure === "messages" ? "activity.messages" : "activity.exercisesN";
+  const Icon = measure === "messages" ? MessageSquare : measure === "chat" ? MessageCircle : FileText;
+  const countKey = measure === "exercises" ? "activity.exercisesN" : "activity.messages";
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const present = weeks.find((week) => week.week === current) ?? null;
 
@@ -64,7 +64,7 @@ export function WeekStrip({
       <ul className="thin-scroll flex gap-1 overflow-x-auto">
         {weeks.map((week, index) => {
           const chosen = week.week === value;
-          const count = week[measure];
+          const count = (measure === "chat" ? week.chat : week[measure]) ?? 0;
           const empty = count === 0;
           const digest = measure === "messages" && week.digest;
           return (

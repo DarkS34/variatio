@@ -77,6 +77,8 @@ class ExemplarsBankBuilder:
         self._types_block = self._build_types_block(exemplars_profile, self._wording)
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)
         self._id_counter = 0
+        # The identities of the exercises a build keeps, so their repeats are not extracted.
+        self._kept: set[str] = set()
 
     @staticmethod
     def _build_extraction_schema(exemplars_profile: ExemplarsProfile) -> dict:
@@ -124,6 +126,7 @@ class ExemplarsBankBuilder:
         output_file_path: str,
         working_file_path: str | Path,
         on_items: Callable[[dict, list[str]], dict] | None = None,
+        keep: dict[str, dict] | None = None,
     ) -> dict[str, dict]:
         """Read every document into a NEW bank and, once it is whole, put it in place.
 
@@ -138,6 +141,10 @@ class ExemplarsBankBuilder:
         whole bank right after a document's items are written and returns that same bank
         annotated. The builder knows neither the graph nor the tagger — `entrypoints/build.py`
         wires it, being the layer whose job is to orchestrate.
+
+        `keep` is what the new bank starts from: exercises a person added, which no document
+        holds and which a re-extraction must not lose. They keep their ids and their tags, and
+        an extracted exercise that repeats one of them is dropped — the person's wins.
         """
         self.bootstrap()
 
@@ -152,9 +159,12 @@ class ExemplarsBankBuilder:
         # half a bank would only extract every document over it again.
         working.unlink(missing_ok=True)
 
-        bank: dict[str, dict] = {}
+        bank: dict[str, dict] = dict(keep or {})
+        self._kept = {key for key in (self._identity(item) for item in bank.values()) if key}
         self._id_counter = 0
         logger.info(f"{len(files)} document(s) to read")
+        if bank:
+            logger.info(f"{len(bank)} item(s) kept from the bank in use")
 
         try:
             text_by_file = self._convert(files)
@@ -291,7 +301,7 @@ class ExemplarsBankBuilder:
                     key = self._identity(raw)
                     # The id is claimed AFTER the duplicate check: a repeat that consumed
                     # one would leave a gap in the numbering for an item nobody kept.
-                    if key and key in seen:
+                    if key and (key in seen or key in self._kept):
                         repeated += 1
                         continue
                     if key:

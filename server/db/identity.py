@@ -20,6 +20,8 @@ from .models import (
     INVITE_LABEL_MAX,
     OWNER,
     STUDENT,
+    ClassGroup,
+    ClassGroupMember,
     ClassLink,
     Invite,
     Membership,
@@ -241,6 +243,20 @@ def grant(
     return existing
 
 
+def group_of(session: Session, workspace_id: int, user_id: int) -> ClassGroup | None:
+    """Return the group of the class this account is in, in this subject, or None.
+
+    Here and not in `server/groups.py` because `features.refusal` reads it, and the groups'
+    gestures import what imports `features`.
+    """
+    return session.scalar(
+        select(ClassGroup)
+        .join(ClassGroupMember, ClassGroupMember.group_id == ClassGroup.id)
+        .join(Membership, Membership.id == ClassGroupMember.membership_id)
+        .where(Membership.workspace_id == workspace_id, Membership.user_id == user_id)
+    )
+
+
 def revoke_membership(session: Session, workspace_id: int, user_id: int) -> None:
     """Remove this account's membership of this workspace, if it has one."""
     existing = membership(session, workspace_id, user_id)
@@ -449,11 +465,12 @@ def create_invite(
     token_sealed: str | None = None,
     features: list[str] | None = None,
     profile: str = STUDENT,
+    group_id: int | None = None,
 ) -> Invite:
     """Insert an invitation for this token digest, expiring at a moment or after a `ttl`.
 
     `profile` is what the account it creates will be; absent, a student's, which is the way
-    a forgotten argument fails closed.
+    a forgotten argument fails closed. `group_id` is the group of the class it brings into.
     """
     if expires_at is None:
         if ttl is None:
@@ -469,6 +486,7 @@ def create_invite(
         profile=profile,
         created_by=created_by,
         expires_at=expires_at,
+        group_id=group_id,
     )
     session.add(invite)
     session.flush()
@@ -599,6 +617,7 @@ def create_class_link(
     max_uses: int,
     created_by: int | None = None,
     token_sealed: str | None = None,
+    group_id: int | None = None,
 ) -> ClassLink:
     """Insert a class link for this token digest. The caller has revoked any live one first."""
     link = ClassLink(
@@ -608,22 +627,39 @@ def create_class_link(
         created_by=created_by,
         expires_at=expires_at,
         max_uses=max_uses,
+        group_id=group_id,
     )
     session.add(link)
     session.flush()
     return link
 
 
-def live_class_link(session: Session, workspace_id: int) -> ClassLink | None:
-    """Return the subject's class link that has not been revoked, paused or not, expired or not.
+def live_class_link(
+    session: Session, workspace_id: int, group_id: int | None = None
+) -> ClassLink | None:
+    """Return the live class link of the class, or of one of its groups, paused or not.
 
-    A subject has one at most: the rule lives in the code and not in a partial index, so SQLite
-    and Postgres say the same.
+    One live link per destination (2026-10-14: the class, and each group): the rule lives in
+    the code and not in a partial index, so SQLite and Postgres say the same.
     """
+    destination = (
+        ClassLink.group_id.is_(None) if group_id is None else ClassLink.group_id == group_id
+    )
     return session.scalar(
         select(ClassLink)
-        .where(ClassLink.workspace_id == workspace_id, ClassLink.revoked_at.is_(None))
+        .where(ClassLink.workspace_id == workspace_id, ClassLink.revoked_at.is_(None), destination)
         .order_by(ClassLink.id.desc())
+    )
+
+
+def live_class_links(session: Session, workspace_id: int) -> list[ClassLink]:
+    """Return every live link of a subject: the class's and its groups'."""
+    return list(
+        session.scalars(
+            select(ClassLink).where(
+                ClassLink.workspace_id == workspace_id, ClassLink.revoked_at.is_(None)
+            )
+        )
     )
 
 
@@ -678,7 +714,7 @@ def revoke_class_link(session: Session, link: ClassLink) -> None:
 
 
 def class_links(session: Session) -> list[ClassLink]:
-    """Return every class link not revoked, one per subject at most, newest first."""
+    """Return every class link not revoked, one per destination at most, newest first."""
     return list(
         session.scalars(
             select(ClassLink).where(ClassLink.revoked_at.is_(None)).order_by(ClassLink.id.desc())

@@ -21,9 +21,9 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from variatio.core import progress
+from variatio.core import progress, usage
 
-from . import joblog, lanes, priority
+from . import joblog, lanes, priority, usage_log
 from .bus import EventBus
 from .catalogue import SUBPROCESS_KINDS, Job
 
@@ -418,29 +418,31 @@ class JobRunner:
         self.bus.publish_job(job, "job.started", {"job": job.to_dict()})
         joblog.attach(job.workspace)
         token = progress.set_emitter(control)
-        try:
-            result = self.handlers[job.kind](job, control)
-            if control.should_cancel():
-                self._settle(job, "cancelled")
-            else:
-                job.result = result
-                # The next link is queued BEFORE this one is announced finished, so no
-                # reading between the two finds the chain gone: the bank's step would offer
-                # «Recoger el banco» again for the instant between its review and its build.
-                self._chain(job)
-                self._settle(job, "succeeded")
-        except progress.Cancelled:
-            self._settle(job, "cancelled")
-        except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
-            logger.exception(f"El trabajo «{job.kind}» falló")
-            job.error = f"{type(exc).__name__}: {exc}"
-            code = getattr(exc, "code", None)
-            job.error_code = code if isinstance(code, str) else None
-            self._settle(job, "failed")
-        finally:
-            progress.reset_emitter(token)
-            joblog.detach(job.workspace)
-            self._release(job)
+        # What the job's model calls cost, whatever its end: a failed or stopped job spent too.
+        with usage.metering() as meter:
+            try:
+                result = self.handlers[job.kind](job, control)
+                if control.should_cancel():
+                    self._settle(job, "cancelled", meter)
+                else:
+                    job.result = _with_usage(result, meter)
+                    # The next link is queued BEFORE this one is announced finished, so no
+                    # reading between the two finds the chain gone: the bank's step would offer
+                    # «Recoger el banco» again for the instant between its review and its build.
+                    self._chain(job)
+                    self._settle(job, "succeeded", meter)
+            except progress.Cancelled:
+                self._settle(job, "cancelled", meter)
+            except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
+                logger.exception(f"El trabajo «{job.kind}» falló")
+                job.error = f"{type(exc).__name__}: {exc}"
+                code = getattr(exc, "code", None)
+                job.error_code = code if isinstance(code, str) else None
+                self._settle(job, "failed", meter)
+            finally:
+                progress.reset_emitter(token)
+                joblog.detach(job.workspace)
+                self._release(job)
 
     def _release(self, job: Job) -> None:
         """Give back every lane slot this job held and wake the dispatcher."""
@@ -454,11 +456,13 @@ class JobRunner:
             self._restamp()
         self._wake.set()
 
-    def _settle(self, job: Job, status: str) -> None:
-        """Close a job in one of the three terminal states and announce it."""
+    def _settle(self, job: Job, status: str, meter: usage.Meter | None = None) -> None:
+        """Close a job in one of the three terminal states, keep what it cost, and announce it."""
         job.status = status
         job.queue_position = 0
         job.finished_at = time.time()
+        if meter and job.workspace:
+            usage_log.append(job.workspace, job.kind, status, meter.summary(), job.finished_at)
         with self._lock:
             self._last_activity = job.finished_at
         kind = {
@@ -480,6 +484,15 @@ class JobRunner:
             self.after_success(self, job)
         except Exception as exc:  # noqa: BLE001 - el trabajo ya terminó bien
             logger.warning(f"No se pudo encadenar nada tras «{job.label}»: {exc}")
+
+def _with_usage(result, meter: usage.Meter):
+    """Return a job's result with what its calls cost, when it made any (`usage`)."""
+    if not meter:
+        return result
+    if result is None:
+        return {"usage": meter.summary()}
+    return {**result, "usage": meter.summary()} if isinstance(result, dict) else result
+
 
 def uses_subprocess(kind: str) -> bool:
     """Whether this kind of job runs out of process."""

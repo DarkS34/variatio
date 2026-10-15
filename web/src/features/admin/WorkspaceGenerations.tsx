@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { EmptyState, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { SectionHeader } from "@/features/admin/Sections";
-import { GenerationCard } from "@/features/generations/GenerationsPanel";
+import { GenerationCard } from "@/apps/generation/GenerationsPanel";
 import { useT } from "@/lib/i18n";
 import type { AdminWorkspace } from "@/lib/types";
 import { useAdminWorkspaceGenerations } from "@/state/queries";

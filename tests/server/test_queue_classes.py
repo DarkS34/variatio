@@ -18,6 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from apps.generation.api import limits
 from server import installation, singletons
 from server.auth.deps import Access
 from server.db.models import EDITOR, VIEWER, Base
@@ -245,7 +246,8 @@ def queue(monkeypatch, runner):
     monkeypatch.setattr(jobs_router.inference, "is_available", lambda: True)
     monkeypatch.setattr(jobs_router, "gate_error", lambda ws, kind: None)
     monkeypatch.setattr(jobs_router, "transcription_error", lambda ws, kind: None)
-    monkeypatch.setattr(jobs_router.entrypoints, "resolve_generation_model", lambda name: "m")
+    monkeypatch.setitem(jobs_router.ADMISSIONS, "generate", limits.admit)
+    monkeypatch.setattr(limits.entrypoints, "resolve_generation_model", lambda name: "m")
     monkeypatch.setattr(config, "GENERATION_MAX_ITEMS", 20)
     monkeypatch.setattr(config, "GENERATION_STUDENT_MAX_ITEMS", 5)
     monkeypatch.setattr(config, "GENERATION_STUDENT_DAILY_ITEMS", None)
@@ -342,12 +344,12 @@ def test_the_allowance_says_what_the_form_may_offer(queue, db, monkeypatch):
     monkeypatch.setattr(config, "GENERATION_STUDENT_DAILY_ITEMS", 10)
     _finish(queue, _commission(db, VIEWER, 4))
 
-    assert jobs_router.allowance(access=_access(VIEWER), db=db) == {
+    assert limits.allowance(access=_access(VIEWER), db=db) == {
         "max_items": 5,
         "daily_items": 10,
         "used_today": 4,
     }
-    assert jobs_router.allowance(access=_access(EDITOR), db=db) == {
+    assert limits.allowance(access=_access(EDITOR), db=db) == {
         "max_items": 20,
         "daily_items": None,
         "used_today": 0,
@@ -357,4 +359,4 @@ def test_the_allowance_says_what_the_form_may_offer(queue, db, monkeypatch):
 def test_a_students_ceiling_never_passes_everybodys(queue, db, monkeypatch):
     monkeypatch.setattr(config, "GENERATION_STUDENT_MAX_ITEMS", 50)
 
-    assert jobs_router.max_items(student=True) == 20
+    assert limits.max_items(student=True) == 20

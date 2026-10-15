@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useMemo } from "react";
+import { useEffect, useId, useMemo, type ReactNode } from "react";
 
 import { Label, Select } from "@/components/ui/input";
 import { LoadError, Skeleton } from "@/components/ui/misc";
@@ -26,7 +26,7 @@ import { TutorAsks, TutorWays } from "./activity/TutorBlock";
 import { WeekStrip } from "./activity/WeekStrip";
 import { WhoWorks, type Measure } from "./activity/WhoWorks";
 
-/** The line under «Ejercicios generados» or «Tutor socrático» in the section list: this week's count. */
+/** The line under each page of «Actividad» in the section list: this week's count. */
 export function activityDetail(
   history: ActivityHistory | undefined,
   view: ActivityView,
@@ -34,28 +34,35 @@ export function activityDetail(
 ): string | null {
   const present = history?.weeks.find((week) => week.week === history.current);
   if (!present) return null;
+  if (view === "chat") return tr.plural("class.activity.chatDetail", present.chat ?? 0);
   return view === "tutor"
     ? tr.plural("class.activity.tutorDetail", present.messages)
     : tr.plural("class.activity.exercisesDetail", present.exercises);
 }
 
-/** The two pages of «Actividad», one for each thing a student uses: the exercises and the tutor. */
-export type ActivityView = "exercises" | "tutor";
+/** The pages of «Actividad», one for each thing a student uses: the exercises, the tutor, the chat. */
+export type ActivityView = "exercises" | "tutor" | "chat";
 
 const TITLE_KEYS = {
   exercises: "class.activity.exercises",
   tutor: "class.activity.tutor",
+  chat: "class.activity.chat",
 } as const;
 
 const LEAD_KEYS = {
   exercises: "activity.exercises.lead",
   tutor: "activity.tutor.lead",
+  chat: "activity.chat.lead",
 } as const;
 
-const MEASURE: Record<ActivityView, Measure> = { exercises: "exercises", tutor: "messages" };
+const MEASURE: Record<ActivityView, Measure> = { exercises: "exercises", tutor: "messages", chat: "chat" };
 
 /**
  * «Actividad»: what the class does, week by week, for its teachers (decided 2026-10-07).
+ *
+ * Since 2026-10-15 a third page, «Chat libre», where the chat is installed: its turns are not
+ * classified, so it says how many messages, from whom and on which days, and nothing of what
+ * they were about.
  *
  * Two pages, one for each thing a student uses (user's request, 2026-10-07: a page of the week
  * in general read as neither): «Ejercicios generados» and «Tutor socrático». Each answers the
@@ -77,25 +84,34 @@ export function ActivitySection({
   onStudent,
   week: picked,
   onWeek,
+  scope,
+  group = null,
 }: {
   view: ActivityView;
   student: number | null;
   onStudent: (id: number | null) => void;
   week: string | null;
   onWeek: (week: string) => void;
+  /** The class or one of its groups, chosen over the screen's sections. */
+  scope?: ReactNode;
+  group?: number | null;
 }) {
   const tr = useT();
   const { t } = tr;
   const toast = useToast();
   const client = useQueryClient();
   const pickerId = useId();
-  const history = useActivityWeeks(student);
+  const history = useActivityWeeks(student, group);
   const weekKey = picked ?? history.data?.current ?? null;
-  const week = useActivityWeek(weekKey, student);
+  const week = useActivityWeek(weekKey, student, group);
   const profile = useProfile();
   const write = useWriteDigest();
   const cancel = useCancelJob();
-  const run = useOwnJobRun("activity_digest", (candidate) => candidate.job?.params?.week === weekKey);
+  const run = useOwnJobRun(
+    "activity_digest",
+    (candidate) =>
+      candidate.job?.params?.week === weekKey && (candidate.job?.params?.group ?? null) === group,
+  );
   const live = isLive(run?.job);
 
   // The digest's job ending is the moment to read the week again: its themes have landed.
@@ -110,7 +126,7 @@ export function ActivitySection({
 
   const writeDigest = () =>
     weekKey &&
-    write.mutate(weekKey, {
+    write.mutate({ week: weekKey, group }, {
       onSuccess: () => toast({ title: t("activity.digest.started") }),
       onError: (error: Error) =>
         toast({ title: t("class.failed"), description: error.message, tone: "danger" }),
@@ -128,7 +144,7 @@ export function ActivitySection({
         className="w-full sm:w-64"
         onChange={(event) => onStudent(event.target.value ? Number(event.target.value) : null)}
       >
-        <option value="">{t("activity.scope.class")}</option>
+        <option value="">{t(group === null ? "activity.scope.class" : "activity.scope.group")}</option>
         {students.map((row) => (
           <option key={row.id} value={row.id}>
             {row.disabled ? t("activity.scope.paused", { name: row.name }) : row.name}
@@ -139,7 +155,7 @@ export function ActivitySection({
   );
 
   const header = (
-    <SectionHeader title={t(TITLE_KEYS[view])} description={t(LEAD_KEYS[view])} action={picker} />
+    <SectionHeader title={t(TITLE_KEYS[view])} description={t(LEAD_KEYS[view])} action={<>{scope}{picker}</>} />
   );
 
   if (history.isError) {
@@ -179,13 +195,13 @@ export function ActivitySection({
       ) : (
         <>
           <Findings
-            findings={findingsIn(data.findings, view === "tutor" ? "tutor" : "exercises").filter(
+            findings={findingsIn(data.findings, view).filter(
               // Nobody writing to a tutor the class may not use is no news.
               (finding) => view !== "tutor" || data.tutor_offered !== false || finding.kind !== "idle",
             )}
             figures={figuresOf(view, data, history.data, tr)}
           />
-          {view === "exercises" ? (
+          {view === "chat" ? null : view === "exercises" ? (
             <ExercisesBlock week={data} profile={profile.data?.profile ?? null} colours={colours} />
           ) : data.tutor ? (
             <>
@@ -224,6 +240,33 @@ function figuresOf(view: ActivityView, week: ActivityWeek, history: ActivityHist
   };
   const student = week.scope === "student";
   const figures: WeekFigure[] = [];
+  if (view === "chat") {
+    // A chat turn is not classified: how many, and by how many (or the class's median).
+    const chat = week.chat;
+    if (!chat) return figures;
+    figures.push({
+      key: "count",
+      label: t("activity.fig.messages"),
+      value: number(chat.messages),
+      note: trend(chat.messages, before?.chat),
+    });
+    figures.push(
+      student
+        ? {
+            key: "median",
+            label: t("activity.fig.median"),
+            value: number(week.median?.chat ?? 0),
+            note: t("activity.fig.medianNote"),
+          }
+        : {
+            key: "who",
+            label: t("activity.fig.chatting"),
+            value: number(chat.students),
+            note: t("activity.fig.ofClass", { n: week.class_size }),
+          },
+    );
+    return figures;
+  }
   if (view === "exercises") {
     const block = week.exercises;
     figures.push({

@@ -96,7 +96,7 @@ def test_a_teacher_reads_the_people_and_how_they_came_in(db, aula, stage):
     assert by_name["carla"]["joined_at"]
     # Who and how, never what they did and never where to write to them.
     assert set(by_name["carla"]) == {
-        "user_id", "name", "username", "role", "joined_at", "via", "invited_by", "disabled_at"
+        "user_id", "name", "username", "role", "joined_at", "via", "invited_by", "disabled_at", "group"
     }
 
 

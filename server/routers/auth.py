@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
-from .. import features, installation
+from .. import features, groups, installation
 from ..auth import deps, mail, passwords, tokens
 from ..auth.rate_limit import forgive, throttle
 from ..db import identity
@@ -501,6 +501,10 @@ def join(
         identity.grant(session, workspace_id, user.id, role, via=via, invited_by=inviter)
     elif ROLE_RANK[role] > ROLE_RANK[row.role]:
         row.role = role
+    # A link of a group puts the student in it, moving them from the one they were in.
+    groups.place_on_entry(
+        session, workspace_id, user.id, invite.group_id if invite is not None else link.group_id
+    )
     user.active_workspace_id = workspace_id
     session.flush()
     logger.info(
@@ -553,6 +557,7 @@ def _accept_class(
         via=VIA_CLASS_LINK,
         invited_by=link.created_by,
     )
+    groups.place_on_entry(session, link.workspace_id, user.id, link.group_id)
     user.active_workspace_id = link.workspace_id
     _issue_session(session, user, request, response)
     return _me(session, user)
@@ -719,6 +724,7 @@ def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:
         via=VIA_INVITE,
         invited_by=invite.created_by,
     )
+    groups.place_on_entry(session, invite.workspace_id, user.id, invite.group_id)
 
 
 def _profile_of(invite: Invite) -> str:

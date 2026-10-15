@@ -22,6 +22,7 @@ import argparse
 import json
 import signal
 import sys
+from pathlib import Path
 
 from .protocol import MARKER
 
@@ -31,12 +32,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="build-worker")
     parser.add_argument("artifact", choices=["exemplars_profile", "knowledge_graph", "exemplars_bank"])
     parser.add_argument("--workspace", required=True, help="Workspace slug")
+    parser.add_argument(
+        "--keep", default=None, help="The bank's: a JSON of the exercises the new bank starts from"
+    )
     args = parser.parse_args(argv)
 
     from loguru import logger
 
     from variatio import entrypoints
-    from variatio.core import inference, paths, progress
+    from variatio.core import inference, paths, progress, usage
 
     from . import joblog
 
@@ -54,7 +58,10 @@ def main(argv: list[str] | None = None) -> int:
     progress.set_emitter(emitter)
     try:
         inference.require_engine()
-        result = entrypoints.build_artifact(args.artifact, paths.workspace(args.workspace))
+        keep = json.loads(Path(args.keep).read_text(encoding="utf-8")) if args.keep else None
+        # What the build's calls cost, sent with its result: the parent's job keeps it.
+        with usage.metering() as meter:
+            result = entrypoints.build_artifact(args.artifact, paths.workspace(args.workspace), keep=keep)
     except progress.Cancelled:
         send("worker.cancelled")
         return 2
@@ -68,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     size = len(result) if isinstance(result, dict) else None
-    send("worker.result", artifact=args.artifact, size=size)
+    send("worker.result", artifact=args.artifact, size=size, usage=meter.summary())
     return 0
 
 

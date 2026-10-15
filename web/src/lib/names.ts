@@ -52,6 +52,7 @@ const JOB_KEYS: Record<string, Key> = {
   describe_concepts: "job.describe_concepts.label",
   index: "job.index.label",
   tag: "job.tag.label",
+  tag_item: "job.tag_item.label",
   review_taggability: "job.review_taggability.label",
   generate: "job.generate.label",
   evaluate: "job.evaluate.label",

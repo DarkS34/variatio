@@ -14,7 +14,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from .. import config
-from . import progress, repetition
+from . import progress, repetition, usage
 
 TokenSink = Callable[[str, str], None]
 ProgressSink = Callable[[int, int], None]
@@ -143,9 +143,10 @@ class OllamaEngine:
                 **self._format_option(format),
                 **self._context_option(model, self._sampling(sampling), max_output_tokens),
             )
-            answer, thinking, truncated, loop = _drain(stream, stop_on_loop)
+            answer, thinking, truncated, loop, counts = _drain(stream, stop_on_loop)
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
+        usage.record(self.name, model, *counts)
         return split_thinking(answer, thinking or None, truncated, loop)
 
     def generate_stream(
@@ -175,6 +176,7 @@ class OllamaEngine:
                 (thinking if channel == "thinking" else answer).append(text)
                 on_token(text, channel)
 
+        counts: tuple[int | None, int | None] = (None, None)
         try:
             for chunk in self._client.generate(
                 model=model,
@@ -188,10 +190,13 @@ class OllamaEngine:
                     thinking.append(thought)
                     on_token(thought, "thinking")
                 take(splitter.feed(chunk.response or ""))
+                counts = _counts(chunk, counts)
                 progress.checkpoint()
             take(splitter.flush())
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
+        finally:
+            usage.record(self.name, model, *counts)
 
         return GenerationResponse(
             response="".join(answer).strip(), thinking="".join(thinking).strip() or None
@@ -450,7 +455,9 @@ class OllamaEngine:
         logger.info(f"Model '{model}' deleted from the engine's disk")
 
 
-def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | None]:
+def _drain(
+    stream, stop_on_loop: bool = False
+) -> tuple[str, str, bool, str | None, tuple[int | None, int | None]]:
     """Read a streamed answer whole, checking between chunks whether to stop.
 
     The counterpart of `progress.checkpoint()` inside every per-item loop: without it the
@@ -463,7 +470,9 @@ def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | No
     only that chunk carries a `done_reason`, and "length" there is the engine reporting
     a truncation that the text alone cannot show. The fourth is the unit the answer was
     repeating when `stop_on_loop` made the read stop: the same abandonment as a
-    cancellation, for a model that has stopped saying anything new.
+    cancellation, for a model that has stopped saying anything new. The fifth is what the
+    last chunk says the call cost, the prompt's tokens and the answer's (`usage`); a stream
+    left before its end says nothing.
     """
     answer: list[str] = []
     thinking: list[str] = []
@@ -471,6 +480,7 @@ def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | No
     loop: str | None = None
     tail = ""
     unchecked = 0
+    counts: tuple[int | None, int | None] = (None, None)
     try:
         for chunk in stream:
             thought = getattr(chunk, "thinking", None)
@@ -478,6 +488,7 @@ def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | No
                 thinking.append(thought)
             piece = chunk.response or ""
             answer.append(piece)
+            counts = _counts(chunk, counts)
             if getattr(chunk, "done_reason", None) == "length":
                 truncated = True
             if stop_on_loop and piece:
@@ -494,7 +505,16 @@ def _drain(stream, stop_on_loop: bool = False) -> tuple[str, str, bool, str | No
         close = getattr(stream, "close", None)
         if close is not None:
             close()
-    return "".join(answer), "".join(thinking), truncated, loop
+    return "".join(answer), "".join(thinking), truncated, loop, counts
+
+
+def _counts(chunk, held: tuple[int | None, int | None]) -> tuple[int | None, int | None]:
+    """Return the tokens a chunk says the call cost, or what was held: only the last says."""
+    prompt = getattr(chunk, "prompt_eval_count", None)
+    answer = getattr(chunk, "eval_count", None)
+    if prompt is None and answer is None:
+        return held
+    return (prompt if isinstance(prompt, int) else held[0], answer if isinstance(answer, int) else held[1])
 
 
 def split_thinking(

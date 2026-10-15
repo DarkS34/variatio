@@ -1,8 +1,8 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
-Nothing inside `server` may import this module. It is also the only place the evaluation and
-the tutor are mounted, because `evaluation.api` and `tutor.api` import `server.auth` and the
-job runner back and mounting them from the router package would close a cycle.
+Nothing inside `server` may import this module. It is also the only place the functions under
+`apps/` are mounted, because each `apps.<function>.api` imports `server.auth` and the job
+runner back and mounting them from the router package would close a cycle.
 """
 
 import asyncio
@@ -23,21 +23,30 @@ from .routers import ROUTERS
 # Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
 WORKER_THREADS = 200
 
+from apps.generation import api as generation_api
+
 try:
-    from evaluation import api as evaluation_api
+    from apps.evaluation import api as evaluation_api
 except ImportError:
     evaluation_api = None
 
 try:
-    from tutor import api as tutor_api
+    from apps.tutor import api as tutor_api
 except ModuleNotFoundError as missing:
-    if missing.name != "tutor":
+    if missing.name not in ("apps", "apps.tutor"):
         raise
     tutor_api = None
 
+try:
+    from apps.chat import api as chat_api
+except ModuleNotFoundError as missing:
+    if missing.name not in ("apps", "apps.chat"):
+        raise
+    chat_api = None
+
 
 def create_app() -> FastAPI:
-    """Assemble the whole application: middleware, routers, the evaluation, the tutor and the bundle."""
+    """Assemble the whole application: middleware, routers, the functions and the bundle."""
     app = FastAPI(
         title="Graph-Guided Variant Generator",
         description="Pipeline por etapas con revisión humana en cada eslabón.",
@@ -62,15 +71,21 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    # Generating goes first: its `/api/jobs/allowance` must be matched before the queue's
+    # `/api/jobs/{job_id}`, which would read "allowance" as a job id.
+    generation_api.install(app)
+
     for router in ROUTERS:
         app.include_router(router)
 
-    # The evaluation and the tutor register their own routers, jobs and lanes here, and only
-    # here: importing them from the router package would close a cycle.
+    # The evaluation, the tutor and the chat register their own routers, jobs and lanes here,
+    # and only here: importing them from the router package would close a cycle.
     if evaluation_api is not None:
         evaluation_api.install(app)
     if tutor_api is not None:
         tutor_api.install(app)
+    if chat_api is not None:
+        chat_api.install(app)
 
     _mount_web(app)
     return app

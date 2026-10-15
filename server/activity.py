@@ -17,10 +17,12 @@ WHO COUNTS: the subject's students (`viewer`), active and paused, a paused one m
 student removed from the subject is no longer of the class and counts for nothing, though
 their files stay. A teacher's own exercises and conversations are not the class's.
 
-The tutor's half is the tutor's to read: `tutor.api.install` sets `TUTOR_READER`, which turns
-the conversations into `Message`s, and without it the activity has no tutor block. Every file
-is read once and kept by its modification time, so a hundred students' directories cost a
-listing per request and a parse per changed file.
+The tutor's half is the tutor's to read: `apps.tutor.api.install` sets `TUTOR_READER`, which turns
+the conversations into `Message`s, and without it the activity has no tutor block. The free
+chat's the same way (`CHAT_READER`, 2026-10-15), and less: a chat turn is not classified, so
+it is counted by student and day and nothing else. Every file is read once and kept by its
+modification time, so a hundred students' directories cost a listing per request and a parse
+per changed file.
 """
 
 import re
@@ -105,8 +107,18 @@ class Exercise:
     concepts: tuple[str, ...]
 
 
-# The tutor's reader of its conversations, set by `tutor.api.install`; None without a tutor.
+@dataclass(frozen=True)
+class ChatMessage:
+    """One message a student sent the free chat: who and when, and nothing else."""
+
+    user_id: int
+    at: datetime
+
+
+# The tutor's reader of its conversations, set by `apps.tutor.api.install`; None without a tutor.
 TUTOR_READER: Callable[[Workspace, list[int]], TutorReading] | None = None
+# The chat's, set by `apps.chat.api.install`; None without the chat.
+CHAT_READER: Callable[[Workspace, list[int]], list[ChatMessage]] | None = None
 
 
 # THE WEEK ------------------------------------------------------------------------------
@@ -207,6 +219,11 @@ def tutor_installed() -> bool:
     return TUTOR_READER is not None
 
 
+def chat_installed() -> bool:
+    """Say whether the free chat is installed."""
+    return CHAT_READER is not None
+
+
 def tutor_reading(ws: Workspace, user_ids: list[int]) -> TutorReading | None:
     """Return the students' messages to the tutor, or None where the tutor is not installed."""
     if TUTOR_READER is None:
@@ -266,6 +283,8 @@ class _Scope:
     exercises: list[Exercise] = field(default_factory=list)
     taken: frozenset[str] = frozenset()
     tutor: bool = True
+    chats: list[ChatMessage] = field(default_factory=list)
+    chat: bool = False
 
     @property
     def ids(self) -> set[int]:
@@ -284,6 +303,8 @@ def read_scope(ws: Workspace, students: list[Student], student: Student | None =
         exercises=exercises(ws, ids),
         taken=reading.taken if reading else frozenset(),
         tutor=reading is not None,
+        chats=list(CHAT_READER(ws, ids)) if CHAT_READER else [],
+        chat=CHAT_READER is not None,
     )
 
 
@@ -294,18 +315,20 @@ def history(scope: _Scope, digests: set[str], now: datetime | None = None) -> di
     opens where it began; a student's strip is the class's weeks, with that student's figures.
     """
     present = current_week(now)
-    weeks = [week_of(m.at) for m in scope.messages] + [week_of(e.at) for e in scope.exercises]
+    weeks = (
+        [week_of(m.at) for m in scope.messages]
+        + [week_of(e.at) for e in scope.exercises]
+        + [week_of(c.at) for c in scope.chats]
+    )
     first = min(weeks) if weeks else present
     mine = scope.ids
     messages = Counter(week_of(m.at) for m in scope.messages if m.user_id in mine)
     made = Counter(week_of(e.at) for e in scope.exercises if e.user_id in mine)
+    chats = Counter(week_of(c.at) for c in scope.chats if c.user_id in mine)
     active: dict[str, set[int]] = defaultdict(set)
-    for m in scope.messages:
-        if m.user_id in mine:
-            active[week_of(m.at)].add(m.user_id)
-    for e in scope.exercises:
-        if e.user_id in mine:
-            active[week_of(e.at)].add(e.user_id)
+    for done in (*scope.messages, *scope.exercises, *scope.chats):
+        if done.user_id in mine:
+            active[week_of(done.at)].add(done.user_id)
     return {
         "current": present,
         "weeks": [
@@ -314,6 +337,7 @@ def history(scope: _Scope, digests: set[str], now: datetime | None = None) -> di
                 "start": monday(week).isoformat(),
                 "messages": messages.get(week, 0),
                 "exercises": made.get(week, 0),
+                "chat": chats.get(week, 0),
                 "active": len(active.get(week, ())),
                 "digest": week in digests,
             }
@@ -348,6 +372,7 @@ def week(
 
     tutor = _tutor_block(messages, order, unit_of, start) if scope.tutor else None
     exercises_block = _exercises_block(made, scope.taken, order, unit_of, graph, progress, start)
+    chats = [c for c in scope.chats if c.user_id in mine and week_of(c.at) == week_key]
     on_subject = sum(1 for m in class_messages if m.on_subject)
     answer = {
         "week": week_key,
@@ -358,18 +383,42 @@ def week(
         "class_size": len(scope.students),
         "tutor": tutor,
         "exercises": exercises_block,
+        "chat": _chat_block(chats, start) if scope.chat else None,
         "digest": _digest_view(digest, class_messages, class_ids, scope.student),
         "digest_ready": on_subject >= DIGEST_MIN_MESSAGES,
     }
     if scope.student:
         answer["median"] = _medians(scope, week_key)
         answer["findings"] = _student_findings(messages, made, week_key < present, unit_of, scope.tutor)
+        if scope.chat and not chats:
+            answer["findings"].append({"kind": "quiet", "open": week_key >= present, "area": "chat"})
     else:
         answer["students"] = _students_rows(scope, week_key, start)
         answer["findings"] = _class_findings(
             scope, messages, made, exercises_block, graph, progress, week_key, week_key < present
         )
+        if scope.chat:
+            before = previous_week(week_key)
+            answer["findings"] += [
+                {**f, "area": "chat"}
+                for f in _attendance(
+                    {c.user_id for c in chats},
+                    {c.user_id for c in scope.chats if week_of(c.at) == before},
+                    [s for s in scope.students if not s.disabled],
+                    {s.id for s in scope.students},
+                    week_key < present,
+                )
+            ][:MAX_FINDINGS]
     return answer
+
+
+def _chat_block(chats: list[ChatMessage], start: date) -> dict:
+    """Count a week's messages to the chat: how many, from how many students, day by day."""
+    return {
+        "messages": len(chats),
+        "students": len({c.user_id for c in chats}),
+        "per_day": _per_day((c.at for c in chats), start),
+    }
 
 
 def _tutor_block(messages: list[Message], order: dict[str, int], unit_of: dict, start: date) -> dict:
@@ -478,19 +527,25 @@ def _students_rows(scope: _Scope, week_key: str, start: date) -> list[dict]:
     for student in scope.students:
         sent = [m for m in scope.messages if m.user_id == student.id and week_of(m.at) == week_key]
         made = [e for e in scope.exercises if e.user_id == student.id and week_of(e.at) == week_key]
+        chatted = [c for c in scope.chats if c.user_id == student.id and week_of(c.at) == week_key]
         message_days = _per_day((m.at for m in sent), start)
         exercise_days = _per_day((e.at for e in made), start)
+        chat_days = _per_day((c.at for c in chatted), start)
         rows.append(
             {
                 **_student_view(student),
                 "messages": len(sent),
                 "exercises": len(made),
+                "chat_messages": len(chatted),
                 "message_days": message_days,
                 "exercise_days": exercise_days,
-                "days": [a + b for a, b in zip(message_days, exercise_days)],
+                "chat_days": chat_days,
+                "days": [a + b + c for a, b, c in zip(message_days, exercise_days, chat_days)],
             }
         )
-    rows.sort(key=lambda row: (row["messages"] + row["exercises"], row["name"].lower()))
+    rows.sort(
+        key=lambda row: (row["messages"] + row["exercises"] + row["chat_messages"], row["name"].lower())
+    )
     return rows
 
 
@@ -498,12 +553,14 @@ def _medians(scope: _Scope, week_key: str) -> dict:
     """Return the class's median of messages and of exercises this week, the idle included."""
     sent = Counter(m.user_id for m in scope.messages if week_of(m.at) == week_key)
     made = Counter(e.user_id for e in scope.exercises if week_of(e.at) == week_key)
+    chatted = Counter(c.user_id for c in scope.chats if week_of(c.at) == week_key)
     ids = [s.id for s in scope.students if not s.disabled] or [s.id for s in scope.students]
     if not ids:
-        return {"messages": 0, "exercises": 0}
+        return {"messages": 0, "exercises": 0, **({"chat": 0} if scope.chat else {})}
     return {
         "messages": statistics.median(sent.get(i, 0) for i in ids),
         "exercises": statistics.median(made.get(i, 0) for i in ids),
+        **({"chat": statistics.median(chatted.get(i, 0) for i in ids)} if scope.chat else {}),
     }
 
 
@@ -630,17 +687,29 @@ def _student_findings(
 # THE DIGEST ----------------------------------------------------------------------------
 
 
-def digest_path(ws: Workspace, week_key: str) -> Path:
-    """Return where the digest of one week of the subject is kept."""
-    return ws.root / "analytics" / "digest" / f"{week_key}.json"
+def digest_path(ws: Workspace, week_key: str, group_id: int | None = None) -> Path:
+    """Return where the digest of one week of the subject, or of one of its groups, is kept."""
+    name = f"{week_key}.json" if group_id is None else f"{week_key}.group-{group_id}.json"
+    return ws.root / "analytics" / "digest" / name
 
 
-def digested_weeks(ws: Workspace) -> set[str]:
-    """Return the weeks of the subject that have a digest written."""
+def digested_weeks(ws: Workspace, group_id: int | None = None) -> set[str]:
+    """Return the weeks of the subject that have a digest written, of the class or of a group.
+
+    A group reads its own digest, or the class's cut to its students: either is a digest.
+    """
     directory = ws.root / "analytics" / "digest"
     if not directory.is_dir():
         return set()
-    return {path.stem for path in directory.glob("*.json") if WEEK_PATTERN.match(path.stem)}
+    weeks = {path.stem for path in directory.glob("*.json") if WEEK_PATTERN.match(path.stem)}
+    if group_id is not None:
+        suffix = f".group-{group_id}"
+        weeks |= {
+            path.stem[: -len(suffix)]
+            for path in directory.glob(f"*{suffix}.json")
+            if WEEK_PATTERN.match(path.stem[: -len(suffix)])
+        }
+    return weeks
 
 
 def _digest_view(

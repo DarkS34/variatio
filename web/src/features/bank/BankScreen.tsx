@@ -1,12 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  ChevronLeft,
   ChevronRight,
+  Eye,
+  Plus,
+  Star,
   RefreshCw,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
 import { Diagram } from "@/components/Diagram";
@@ -18,6 +20,11 @@ import {
   useStageLockedHint,
   type StageControl,
 } from "@/components/StageGate";
+import { AddExerciseDialog } from "./AddExercise";
+import { GeneratedList } from "./GeneratedList";
+import { VisibilityBadge, VisibilityDialog } from "./Visibility";
+import { Pager } from "./Pager";
+import { SetAside } from "./SetAside";
 import { TagLive } from "./TagLive";
 import { Badge } from "@/components/ui/badge";
 import { ConceptBadge, ConceptChip } from "@/components/ui/concept-chip";
@@ -28,28 +35,36 @@ import { InfoHint } from "@/components/ui/hint";
 import { Label, SearchInput, Select, Textarea } from "@/components/ui/input";
 import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { TabCount, Tabs } from "@/components/ui/tabs";
+import { useExerciseTotal } from "@/apps/generation/GenerationsPanel";
 import { diagramSource } from "@/lib/diagram";
 import { api } from "@/lib/api";
-import { fieldText, hasBrokenText, fieldToInput, inputToField, isEmptyField } from "@/lib/fields";
-import { truncate } from "@/lib/format";
+import { fieldText, fieldToInput, hasBrokenText, inputToField, isCodeField, isEmptyField } from "@/lib/fields";
+import { dayMonth, truncate } from "@/lib/format";
+import { isLive } from "@/lib/queue";
 import { fieldLabel } from "@/lib/profile";
 import { readableValue } from "@/lib/text";
 import type {
   BankItem,
   BankItemType,
   BankListing,
+  ClassGroup,
   KgConcept,
   StageState,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   useActiveWorkspace,
+  useClassGroups,
   useEngineOffline,
   useInvalidateChain,
   useJobRun,
   useKg,
+  useProfile,
+  useStream,
   useSubmitJob,
 } from "@/state/queries";
+import { useSession } from "@/state/auth";
 import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";
 
@@ -61,6 +76,11 @@ import { useT } from "@/lib/i18n";
  */
 function Correction({ children }: { children: ReactNode }) {
   return useStageLockReason() === "reviewing" ? null : <>{children}</>;
+}
+
+/** What is drawn only while the stage is being looked at: `Correction`'s other half. */
+function Reviewing({ children }: { children: ReactNode }) {
+  return useStageLockReason() === "reviewing" ? <>{children}</> : null;
 }
 
 /** An item's temas with the primary one first. It is the tagging's own answer, and the row
@@ -76,6 +96,8 @@ interface ItemDialogProps {
   fields: string[];
   primaryField: string;
   concepts: KgConcept[];
+  /** Whether the API can tag one exercise again (`POST /api/bank/tag`); not the demo's. */
+  canRetag: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -168,6 +190,7 @@ function ItemEditor({
   fields,
   primaryField,
   concepts,
+  canRetag,
   onClose,
   onSaved,
 }: ItemDialogProps) {
@@ -200,12 +223,21 @@ function ItemEditor({
   const saveConcepts = useMutation({
     mutationFn: () => api.setConcepts(item.id, selected, primary),
   });
+  const retag = useMutation({ mutationFn: () => api.tagItems([item.id]) });
 
-  const submit = async () => {
+  // The statement of a tagged exercise rewritten: its concepts were decided on the old one,
+  // so the save may hand it back to the tagger instead of keeping the concepts below.
+  const restated =
+    canRetag &&
+    (item.concepts ?? []).length > 0 &&
+    (values[primaryField] ?? "") !== fieldToInput(item[primaryField]);
+
+  const submit = async (again = false) => {
     setError(null);
     try {
       await saveFields.mutateAsync();
-      await saveConcepts.mutateAsync();
+      if (again) await retag.mutateAsync();
+      else await saveConcepts.mutateAsync();
       onSaved();
       onClose();
     } catch (e) {
@@ -213,7 +245,7 @@ function ItemEditor({
     }
   };
 
-  const pending = saveFields.isPending || saveConcepts.isPending;
+  const pending = saveFields.isPending || saveConcepts.isPending || retag.isPending;
 
   return (
     <Dialog
@@ -227,7 +259,18 @@ function ItemEditor({
           <Button variant="ghost" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={submit} disabled={pending}>
+          {restated ? (
+            <Button
+              variant="outline"
+              onClick={() => submit(true)}
+              disabled={pending}
+              title={t("bank.saveAndRetagHint")}
+            >
+              <RefreshCw />
+              {t("bank.saveAndRetag")}
+            </Button>
+          ) : null}
+          <Button onClick={() => submit()} disabled={pending}>
             {pending ? <Spinner /> : null}
             {t("common.save")}
           </Button>
@@ -238,12 +281,13 @@ function ItemEditor({
         <div className="space-y-3">
           {fields.map((field) => (
             <div key={field} className="space-y-1">
-              <Label>
+              <Label htmlFor={`bank-item-${field}`}>
                 {field}
                 {field === primaryField ? t("bank.primaryField") : ""}
                 {listFields.has(field) ? ` · ${t("bank.listField")}` : ""}
               </Label>
               <Textarea
+                id={`bank-item-${field}`}
                 value={values[field] ?? ""}
                 onChange={(event) =>
                   setValues((current) => ({ ...current, [field]: event.target.value }))
@@ -278,12 +322,25 @@ function ItemEditor({
   );
 }
 
-// Field names come from the profile and are subject-specific, so "is this code?" can only
-// ever be a guess; it decides presentation only, and guessing wrong costs a plain <p>.
-export function isCodeField(field: string): boolean {
-  const name = field.toLowerCase();
-  return ["soluc", "codigo", "code", "solution", "material"].some((hint) =>
-    name.includes(hint),
+/**
+ * «Manual» or «Generado» before an exercise a person put in the bank, with who did and when.
+ *
+ * Nothing for one collected from the documents, which is the ordinary case, nor on an API
+ * that sends no origin (the demo's).
+ */
+function OriginBadge({ item }: { item: BankItem }) {
+  const { t } = useT();
+  if (item.origin !== "manual" && item.origin !== "generated") return null;
+  const date = item.added_at ? dayMonth(item.added_at) : null;
+  const title = !date
+    ? undefined
+    : item.added_by
+      ? t("bank.origin.addedBy", { name: item.added_by.name, date })
+      : t("bank.origin.addedOn", { date });
+  return (
+    <Badge variant="outline" className="py-0" title={title}>
+      {t(item.origin === "manual" ? "bank.origin.manual" : "bank.origin.generated")}
+    </Badge>
   );
 }
 
@@ -292,23 +349,37 @@ function ItemRow({
   primaryField,
   secondaryFields,
   typeLabel,
+  groups,
   difficulty,
   showDifficulty,
   selected,
+  tagging,
+  selectable,
   onToggle,
   onEdit,
   onDelete,
+  onVisibility,
+  onStar,
 }: {
   item: BankItem;
   primaryField: string;
   secondaryFields: string[];
   typeLabel: string | null;
+  /** The class's groups, to name the ones an exercise is shown to. */
+  groups: ClassGroup[];
   difficulty: string | null;
   showDifficulty: boolean;
   selected: boolean;
+  /** The tagger is on it now: a job of this teacher's names it (`tag_item`). */
+  tagging: boolean;
+  /** Whether rows may be ticked outside correcting: what the class sees is chosen for several. */
+  selectable: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Opens what the class sees of it; absent on an API with no marks (the demo's). */
+  onVisibility?: () => void;
+  onStar?: () => void;
 }) {
   const { t } = useT();
   const locked = useStageLocked();
@@ -317,7 +388,7 @@ function ItemRow({
   // whose cause is off screen reads as the table having decided something.
   const reviewing = useStageLockReason() === "reviewing";
   const [open, setOpen] = useState(false);
-  const untagged = !item.concepts || item.concepts.length === 0;
+  const untagged = !tagging && (!item.concepts || item.concepts.length === 0);
   const text = fieldText(item[primaryField]);
   // Extracted before the grammar was dropped from remote bank extraction, so the statement
   // holds control characters where its accents were. Only a re-extraction repairs it; this
@@ -340,7 +411,7 @@ function ItemRow({
           only exists under a mouse pointer does not exist for a keyboard. The chevron is
           NOT in that group — see the cell at the end of the row. */}
       <TR
-        selected={selected && !reviewing}
+        selected={selected && (selectable || !reviewing)}
         className={cn(
           // The chevron may not move when it is pressed, and a row GROWS on opening. `TR`'s
           // own `align-top` reaches no cell — `vertical-align` is not inherited and `TD`
@@ -354,12 +425,15 @@ function ItemRow({
           // own 21 px, two clamped lines at 23.25, `py-2` either side and the border.
           !open && "h-[5.5rem]",
           untagged && "bg-[color-mix(in_oklch,var(--attention)_8%,transparent)]",
+          // A teacher's star marks its row twice: the filled star at its end and an ink edge
+          // down its start. Not a ground: a ground is what a ticked row already has.
+          item.favourite && "[&>td:first-child]:shadow-[inset_3px_0_0_var(--primary)]",
         )}
       >
-        {/* The box goes with what it is a handle for. Selecting rows has exactly one
-            consumer, "Re-etiquetar selección", so with that hidden the column would be a
-            control down every row that does nothing at all. */}
-        <Correction>
+        {/* The box goes with what it is a handle for: re-tagging while correcting, and what
+            the class sees, which is no correction and is chosen in either moment. Without
+            a consumer the column would be a control down every row that does nothing. */}
+        {selectable ? (
           <TD className="py-2 pl-3">
             <Checkbox
               checked={selected}
@@ -368,12 +442,30 @@ function ItemRow({
               className="mt-1"
             />
           </TD>
-        </Correction>
+        ) : (
+          <Correction>
+            <TD className="py-2 pl-3">
+              <Checkbox
+                checked={selected}
+                onCheckedChange={onToggle}
+                label={t("bank.selectItem", { id: item.id })}
+                className="mt-1"
+              />
+            </TD>
+          </Correction>
+        )}
         <TD className="min-w-0 py-2 pl-2 pr-3">
           {/* The id rides above the statement instead of holding a column of its own: it is
-              how you name an item when talking about it, not something anybody scans down. */}
-          <span className="font-mono text-micro tracking-normal text-muted-foreground">
-            {item.id}
+              how you name an item when talking about it, not something anybody scans down.
+              Beside it, where the exercise came from when a person put it there; collected
+              from the documents is the ordinary case and says nothing. The line keeps the
+              id's own 21 px, so the row keeps its measured height. */}
+          <span className="flex h-[1.3125rem] items-center gap-1.5">
+            <span className="font-mono text-micro tracking-normal text-muted-foreground">
+              {item.id}
+            </span>
+            <OriginBadge item={item} />
+            <VisibilityBadge visibility={item.visibility} groups={groups} />
           </span>
           <button
             onClick={onEdit}
@@ -428,7 +520,12 @@ function ItemRow({
                 {t("bank.brokenText")}
               </Badge>
             ) : null}
-            {untagged ? (
+            {tagging ? (
+              <Badge variant="outline">
+                <Spinner />
+                {t("bank.tagging")}
+              </Badge>
+            ) : untagged ? (
               <Badge variant="attention">
                 <TriangleAlert />
                 {t("bank.noConcept")}
@@ -471,6 +568,38 @@ function ItemRow({
         ) : null}
         <TD className="whitespace-nowrap py-2 pr-3 text-right">
           <div className="inline-flex">
+            {/* What the class sees and the star are no correction of the bank: they are in
+                either moment of the stage. The eye on hover; the star always once it is on,
+                since a favourite says so down the column. */}
+            {onVisibility ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                onClick={onVisibility}
+                title={t("bank.visibility.change", { id: item.id })}
+                aria-label={t("bank.visibility.change", { id: item.id })}
+              >
+                <Eye />
+              </Button>
+            ) : null}
+            {onStar ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  item.favourite
+                    ? "text-primary"
+                    : "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
+                )}
+                onClick={onStar}
+                aria-pressed={Boolean(item.favourite)}
+                title={t(item.favourite ? "bank.unstar" : "bank.star", { id: item.id })}
+                aria-label={t(item.favourite ? "bank.unstar" : "bank.star", { id: item.id })}
+              >
+                <Star fill={item.favourite ? "currentColor" : "none"} />
+              </Button>
+            ) : null}
             {/* The chevron is always drawn and the delete is not. Per-row chrome repeated
                 forty times is furniture — true of the bin, false of this: opening a row is
                 how the rest of an exercise is read, which is the task of the whole step, and
@@ -513,56 +642,13 @@ function ItemRow({
  *  where they are read. */
 const PAGE_SIZE = 7;
 
+/** How the origin filter tells an origin a person adds from the name of a document. */
+const ORIGIN_FILTER = "origin:";
+
 /** How many concepts a row draws before the rest become "+N". Three of ~10 characters is
  *  what fits in two rows of the column, measured over the two reference banks (219 items,
  *  median name 10 characters, 90th percentile 19). */
 const MAX_ROW_CONCEPTS = 3;
-
-/** Which page of the bank, and the two steps either side of it. */
-function Pager({
-  page,
-  pages,
-  total,
-  onPage,
-}: {
-  page: number;
-  pages: number;
-  total: number;
-  onPage: (next: number) => void;
-}) {
-  const { t, plural } = useT();
-  return (
-    <>
-      <span className="text-small nums text-muted-foreground">
-        {plural("bank.pageOf", total, { page, pages })}
-      </span>
-      {pages > 1 ? (
-        <div className="flex gap-1">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("common.previous")}
-            title={t("common.previous")}
-            disabled={page <= 1}
-            onClick={() => onPage(page - 1)}
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t("common.next")}
-            title={t("common.next")}
-            disabled={page >= pages}
-            onClick={() => onPage(page + 1)}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
-      ) : null}
-    </>
-  );
-}
 
 function BankMeters({
   listing,
@@ -623,6 +709,7 @@ function TableActions({
   submitting,
   onRetag,
   onClear,
+  onShow,
 }: {
   totals: BankListing["totals"];
   selected: Set<string>;
@@ -630,6 +717,8 @@ function TableActions({
   submitting: boolean;
   onRetag: (params: Record<string, unknown>) => void;
   onClear: () => void;
+  /** Opens what the class sees of the ticked rows; absent on an API with no marks. */
+  onShow?: () => void;
 }) {
   const { t, plural } = useT();
   const confirm = useConfirm();
@@ -644,6 +733,7 @@ function TableActions({
     return (
       <>
         <span className="text-small font-medium">{plural("bank.selectedCount", selected.size)}</span>
+        {onShow ? <ShowButton count={selected.size} onClick={onShow} /> : null}
         <Button
           size="sm"
           className="h-7"
@@ -698,6 +788,35 @@ function TableActions({
   );
 }
 
+/** «Qué ve la clase (n)»: what the class sees of the rows ticked. */
+function ShowButton({ count, onClick }: { count: number; onClick: () => void }) {
+  const { plural } = useT();
+  return (
+    <Button size="sm" className="h-7" variant="outline" onClick={onClick}>
+      <Eye />
+      {plural("bank.visibility.bulk", count)}
+    </Button>
+  );
+}
+
+/**
+ * The ticked rows while the stage is being looked at: what the class sees of them is chosen
+ * in either moment, and re-tagging is a correction's (`TableActions`).
+ */
+function Selection({ count, onShow, onClear }: { count: number; onShow: () => void; onClear: () => void }) {
+  const { t, plural } = useT();
+  if (count === 0) return null;
+  return (
+    <>
+      <span className="text-small font-medium">{plural("bank.selectedCount", count)}</span>
+      <ShowButton count={count} onClick={onShow} />
+      <Button size="sm" variant="ghost" className="h-7" onClick={onClear}>
+        {t("bank.deselect")}
+      </Button>
+    </>
+  );
+}
+
 /**
  * The bank as the second part of its step (`BankStep`): the stage without a header of its
  * own, its state handed in by the step that draws both parts. Its stale notice carries no
@@ -725,6 +844,17 @@ export function BankPart({
   const [difficulty, setDifficulty] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<BankItem | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState<"bank" | "generated">("bank");
+  const [markFilter, setMarkFilter] = useState<"all" | "visible" | "favourite">("all");
+  const [showing, setShowing] = useState<BankItem[] | null>(null);
+  // Every exercise read so far, so the rows ticked on other pages can be shown too.
+  const known = useRef(new Map<string, BankItem>());
+  const generatedTotal = useExerciseTotal(useActiveWorkspace());
+  // After adding, the table opens on «Manuales» at the page of the last one added: set when
+  // the dialog closes, spent when the listing filtered so arrives.
+  const jump = useRef(false);
+  const profile = useProfile();
 
   const workspace = useActiveWorkspace();
   useEffect(() => {
@@ -743,7 +873,20 @@ export function BankPart({
   const tagStatus = tagRun?.job?.status;
   const tagging = tagStatus === "running" || tagStatus === "queued";
 
-  const params = { q: query, item_type: itemType, source, untagged, difficulty, page, page_size: PAGE_SIZE };
+  // The origin filter holds a document's name, or one of the two origins a person adds.
+  const origin = source.startsWith(ORIGIN_FILTER) ? source.slice(ORIGIN_FILTER.length) : undefined;
+  const params = {
+    q: query,
+    item_type: itemType,
+    source: origin ? undefined : source,
+    origin,
+    untagged,
+    difficulty,
+    visible: markFilter === "visible" ? true : undefined,
+    favourite: markFilter === "favourite" ? true : undefined,
+    page,
+    page_size: PAGE_SIZE,
+  };
   const bank = useQuery({
     queryKey: ["bank", workspace, params],
     queryFn: () => api.bank(params as never),
@@ -761,11 +904,49 @@ export function BankPart({
 
   const concepts = kg.data?.concepts ?? [];
   const listing = bank.data;
+  // What this API answers about where exercises come from; none on an older one (the demo),
+  // and with it go the origin badges, the two origins of the filter and «Añadir ejercicio».
+  const origins = listing?.origins;
+  // And who sees what, and the stars: the same, read off `marks`.
+  const marks = listing?.marks;
+  // The class's groups, to name the ones an exercise is shown to; asked only where marks are.
+  const classGroups = useClassGroups(Boolean(marks)).data ?? [];
+  for (const item of listing?.items ?? []) known.current.set(item.id, item);
+  const star = useMutation({
+    mutationFn: (item: BankItem) => api.star(item.id, !item.favourite),
+    onSuccess: () => bank.refetch(),
+  });
+  const showTicked = () =>
+    setShowing([...selected].map((id) => known.current.get(id) ?? ({ id } as BankItem)));
+
+  // The exercises the tagger is on for this teacher (`tag_item`, its own jobs), and the
+  // table read again each time one of those jobs ends, since its concepts land in the file.
+  const me = useSession().data?.user.id;
+  const stream = useStream();
+  const taggingIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const run of Object.values(stream.runs)) {
+      if (run.job?.kind !== "tag_item" || !isLive(run.job) || run.job.user_id !== me) continue;
+      for (const id of (run.job.params?.items as string[] | undefined) ?? []) ids.add(id);
+    }
+    return ids;
+  }, [stream, me]);
+  const taggingKey = [...taggingIds].sort().join(",");
+  const lastTagging = useRef(taggingKey);
+  useEffect(() => {
+    if (lastTagging.current !== taggingKey && lastTagging.current !== "") bank.refetch();
+    lastTagging.current = taggingKey;
+  }, [taggingKey, bank]);
 
   const pages = useMemo(
     () => (listing ? Math.max(1, Math.ceil(listing.total / listing.page_size)) : 1),
     [listing],
   );
+  useEffect(() => {
+    if (!jump.current || !listing || bank.isPlaceholderData || origin !== "manual") return;
+    jump.current = false;
+    if (page !== pages) setPage(pages);
+  }, [listing, bank.isPlaceholderData, origin, page, pages]);
 
   // Which field carries an item's text is a property of its modality, not of the bank:
   // two modalities can name their primary differently, so every row resolves its own.
@@ -827,6 +1008,14 @@ export function BankPart({
       else pageIds.forEach((id) => next.add(id));
       return next;
     });
+  const pageBox = (
+    <Checkbox
+      checked={pageSelected}
+      indeterminate={someSelected}
+      onCheckedChange={togglePage}
+      label={pageSelected ? t("bank.deselectPage") : t("bank.selectPage")}
+    />
+  );
 
   // Whether the bank may be written to is NOT read here and cannot be: `reviewing` is
   // `StageGate`'s own state and this component is the one that renders it, so the hooks that
@@ -846,211 +1035,340 @@ export function BankPart({
       staleAction={null}
       livePreview={livePreview}
     >
-      <div className="space-y-4">
-        <BankMeters
-          listing={listing}
-          onShowUntagged={() => {
-            setUntagged(true);
+      {/* «Banco» is what the generator learns from; «Generados» is where candidates come from:
+          this teacher's own exercises, to pass in the ones worth it. Two tabs and not three
+          by origin, because an exercise passed in is both, and the bank is read whole. */}
+      {origins ? (
+        <Tabs
+          className="mb-4"
+          items={[
+            { value: "bank", label: t("bank.tab.bank"), badge: <TabCount n={listing?.totals.items} /> },
+            { value: "generated", label: t("bank.tab.generated"), badge: <TabCount n={generatedTotal} /> },
+          ]}
+          value={tab}
+          onChange={(next) => setTab(next as "bank" | "generated")}
+        />
+      ) : null}
+      {tab === "generated" && origins ? (
+        <GeneratedList
+          itemTypes={itemTypes}
+          onToBank={(id) => {
+            setTab("bank");
+            setQuery(id);
+            setSource("");
+            setItemType("");
+            setDifficulty("");
+            setUntagged(undefined);
             setPage(1);
           }}
         />
-
-
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchInput
-            className="min-w-56 flex-1"
-            aria-label={t("bank.search")}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
+      ) : (
+        <div className="space-y-4">
+          {origins ? (
+            <SetAside
+              itemTypes={itemTypes}
+              profile={profile.data?.profile ?? null}
+              concepts={concepts}
+              onBack={() => {
+                invalidate();
+                bank.refetch();
+              }}
+            />
+          ) : null}
+          <BankMeters
+            listing={listing}
+            onShowUntagged={() => {
+              setUntagged(true);
               setPage(1);
             }}
-            placeholder={t("bank.search")}
           />
-          {severalDeclared ? (
-            <Select
-              aria-label={t("bank.filterByModality")}
-              value={itemType}
+
+
+          <div className="flex flex-wrap items-center gap-2">
+            {marks ? (
+              <Tabs
+                items={[
+                  { value: "all", label: t("bank.marks.all") },
+                  { value: "visible", label: t("bank.marks.visible"), badge: <TabCount n={marks.visible} /> },
+                  { value: "favourite", label: t("bank.marks.favourites"), badge: <TabCount n={marks.favourites} /> },
+                ]}
+                value={markFilter}
+                onChange={(next) => {
+                  setMarkFilter(next as "all" | "visible" | "favourite");
+                  setPage(1);
+                }}
+              />
+            ) : null}
+            <SearchInput
+              className="min-w-56 flex-1"
+              aria-label={t("bank.search")}
+              value={query}
               onChange={(event) => {
-                setItemType(event.target.value);
+                setQuery(event.target.value);
                 setPage(1);
               }}
-              className="max-w-56"
-            >
-              <option value="">{t("bank.allModalities")}</option>
-              {itemTypes.map((type) => (
-                <option key={type.key} value={type.key}>
-                  {type.label || type.key} ({type.count})
-                </option>
-              ))}
-            </Select>
-          ) : null}
-          <Select
-            aria-label={t("bank.filterBySource")}
-            value={source}
-            onChange={(event) => {
-              setSource(event.target.value);
-              setPage(1);
-            }}
-            className="max-w-48"
-          >
-            <option value="">{t("bank.allSources")}</option>
-            {(listing?.sources ?? []).map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </Select>
-          {/* The difficulty is a FILTER and not an order: the rungs are three, so ordering
-              by them only groups the list, where "enséñame los avanzados" is the question
-              somebody actually asks. The list is by id, which is extraction order.
-
-              Offered only where a modality declares rungs: a filter with one option filters
-              nothing. */}
-          {rungs.length > 0 ? (
+              placeholder={t("bank.search")}
+            />
+            {severalDeclared ? (
+              <Select
+                aria-label={t("bank.filterByModality")}
+                value={itemType}
+                onChange={(event) => {
+                  setItemType(event.target.value);
+                  setPage(1);
+                }}
+                className="max-w-56"
+              >
+                <option value="">{t("bank.allModalities")}</option>
+                {itemTypes.map((type) => (
+                  <option key={type.key} value={type.key}>
+                    {type.label || type.key} ({type.count})
+                  </option>
+                ))}
+              </Select>
+            ) : null}
             <Select
-              aria-label={t("bank.filterByDifficulty")}
-              value={difficulty}
+              aria-label={t("bank.filterBySource")}
+              value={source}
               onChange={(event) => {
-                setDifficulty(event.target.value);
+                setSource(event.target.value);
                 setPage(1);
               }}
               className="max-w-48"
             >
-              <option value="">{t("bank.allDifficulties")}</option>
-              {rungs.map((rung) => (
-                <option key={rung.value} value={rung.value}>
-                  {readableValue(rung.value)} ({rung.count})
-                </option>
-              ))}
-            </Select>
-          ) : null}
-          {/* Last of the row: the only one of the four that is not a property of an item
-              but a state of the WORK, and a toggle among selects, so it reads as the end of
-              the row rather than as a dropdown that lost its label. */}
-          <Button
-            variant={untagged === true ? "default" : "outline"}
-            onClick={() => {
-              setUntagged(untagged === true ? undefined : true);
-              setPage(1);
-            }}
-          >
-            <TriangleAlert />
-            {t("bank.untagged")}
-          </Button>
-        </div>
-
-        {bank.isError ? (
-          <LoadError title={t("bank.unreadable")} error={bank.error} onRetry={bank.refetch} />
-        ) : null}
-
-        {listing ? (
-          <div className="surface p-5">
-            {/* FIXED LAYOUT, or an open row widens the table. Under the auto algorithm a
-                cell is never narrower than its longest unbreakable line, and a code block
-                with one such line in it — measured: 376 characters — pushed the table to
-                3 419 px inside a 1 406 px wrapper, with the chevron that closes the row
-                two screens to the right. Fixed, the columns are the header's widths, the
-                statement takes what is left, and the `<pre>` scrolls inside its own cell
-                as it was always meant to. */}
-            <Table minWidth="48rem" className="table-fixed">
-              <THead>
-                <TR>
-                  <Correction>
-                    <TH className="w-8">
-                      <Checkbox
-                        checked={pageSelected}
-                        indeterminate={someSelected}
-                        onCheckedChange={togglePage}
-                        label={
-                          pageSelected
-                            ? t("bank.deselectPage")
-                            : t("bank.selectPage")
-                        }
-                      />
-                    </TH>
-                  </Correction>
-                  <TH>{primaryHeader}</TH>
-                  {/* 15rem and not 10, and the number is measured: the nine type names of
-                      the two reference subjects run from 142 to 262 px drawn as a badge, so
-                      at 10rem every one of them was cut. At 15 eight of the nine fit whole
-                      and the ellipsis goes back to being the exception, which is what
-                      justifies solving it with a `title`. The statement pays for it — it is
-                      clamped to two lines and had 766 px — and `minWidth` rises with it, or
-                      in a narrow window the statement column is left with nothing. */}
-                  {manyTypes ? <TH className="w-60">{t("bank.column.modality")}</TH> : null}
-                  <TH className="w-72">{t("bank.column.concepts")}</TH>
-                  {difficultyField ? (
-                    <TH className="w-28">{t("bank.column.difficulty")}</TH>
+              <option value="">{t("bank.allSources")}</option>
+              {origins ? (
+                <>
+                  <option value={`${ORIGIN_FILTER}manual`}>
+                    {t("bank.origins.manual")} ({origins.manual})
+                  </option>
+                  <option value={`${ORIGIN_FILTER}generated`}>
+                    {t("bank.origins.generated")} ({origins.generated})
+                  </option>
+                  {(listing?.sources ?? []).length > 0 ? (
+                    <optgroup label={t("bank.origins.documents")}>
+                      {(listing?.sources ?? []).map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </optgroup>
                   ) : null}
-                  <TH className="w-20" />
-                </TR>
-              </THead>
-              <TBody>
-                {listing.items.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    primaryField={primaryFieldFor(item)}
-                    secondaryFields={detailFieldsFor(item)}
-                    typeLabel={manyTypes ? labelFor(item) : null}
-                    difficulty={difficultyField ? difficultyFor(item) : null}
-                    showDifficulty={Boolean(difficultyField)}
-                    selected={selected.has(item.id)}
-                    onToggle={() => toggle(item.id)}
-                    onEdit={() => setEditing(item)}
-                    onDelete={async () => {
-                      if (await confirm({ title: t("bank.confirmDelete", { id: item.id }), tone: "danger" }))
-                        remove.mutate(item.id);
-                    }}
-                  />
+                </>
+              ) : (
+                (listing?.sources ?? []).map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))
+              )}
+            </Select>
+            {/* The difficulty is a FILTER and not an order: the rungs are three, so ordering
+                by them only groups the list, where "enséñame los avanzados" is the question
+                somebody actually asks. The list is by id, which is extraction order.
+
+                Offered only where a modality declares rungs: a filter with one option filters
+                nothing. */}
+            {rungs.length > 0 ? (
+              <Select
+                aria-label={t("bank.filterByDifficulty")}
+                value={difficulty}
+                onChange={(event) => {
+                  setDifficulty(event.target.value);
+                  setPage(1);
+                }}
+                className="max-w-48"
+              >
+                <option value="">{t("bank.allDifficulties")}</option>
+                {rungs.map((rung) => (
+                  <option key={rung.value} value={rung.value}>
+                    {readableValue(rung.value)} ({rung.count})
+                  </option>
                 ))}
-              </TBody>
-            </Table>
-            {listing.items.length === 0 ? (
-              <p className="p-8 text-center text-body text-muted-foreground">
-                {t("bank.noneWithFilters")}
-              </p>
+              </Select>
             ) : null}
-
-            {/* The foot of the table, and both things it says are about the table: where
-                you are in the bank and what you have picked out of it belong on one line,
-                inside the card they describe. There is no second pager at the top — for a
-                page of seven rows the whole list is in view.
-
-                There is deliberately no whole-bank "Etiquetar pendientes": extracting and
-                tagging are one job, the extractor tagging each document as it comes out. The
-                scoped retries are all here, beside the rows they reach (`TableActions`).
-                `min-h-7` is the controls' height, so the strip is one height whether they
-                are drawn (correcting) or not (reviewing). */}
-            {listing.items.length > 0 ? (
-              <div className="mt-3 flex min-h-7 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3 text-body">
-                <Pager
-                  page={listing.page}
-                  pages={pages}
-                  total={listing.total}
-                  onPage={setPage}
-                />
-
-                <span className="flex-1" />
-
-                <Correction>
-                  <TableActions
-                    totals={listing.totals}
-                    selected={selected}
-                    offline={offline}
-                    submitting={submit.isPending}
-                    onRetag={(params) => submit.mutate({ kind: "tag", params })}
-                    onClear={() => setSelected(new Set())}
-                  />
-                </Correction>
-              </div>
+            {/* Last of the row: the only one of the four that is not a property of an item
+                but a state of the WORK, and a toggle among selects, so it reads as the end of
+                the row rather than as a dropdown that lost its label. */}
+            <Button
+              variant={untagged === true ? "default" : "outline"}
+              onClick={() => {
+                setUntagged(untagged === true ? undefined : true);
+                setPage(1);
+              }}
+            >
+              <TriangleAlert />
+              {t("bank.untagged")}
+            </Button>
+            {/* Writing an exercise by hand is a move of its own and not a correction of what
+                the bank holds, so it is here in either moment of the stage. An outline: the
+                step's coral is its way out. */}
+            {origins ? (
+              <Button variant="outline" onClick={() => setAdding(true)}>
+                <Plus />
+                {t("bank.add")}
+              </Button>
             ) : null}
           </div>
-        ) : (
-          <Skeleton className="h-96" />
-        )}
-      </div>
+
+          {bank.isError ? (
+            <LoadError title={t("bank.unreadable")} error={bank.error} onRetry={bank.refetch} />
+          ) : null}
+
+          {listing ? (
+            <div className="surface p-5">
+              {/* FIXED LAYOUT, or an open row widens the table. Under the auto algorithm a
+                  cell is never narrower than its longest unbreakable line, and a code block
+                  with one such line in it — measured: 376 characters — pushed the table to
+                  3 419 px inside a 1 406 px wrapper, with the chevron that closes the row
+                  two screens to the right. Fixed, the columns are the header's widths, the
+                  statement takes what is left, and the `<pre>` scrolls inside its own cell
+                  as it was always meant to. */}
+              <Table minWidth="48rem" className="table-fixed">
+                <THead>
+                  <TR>
+                    {marks ? (
+                      <TH className="w-8">{pageBox}</TH>
+                    ) : (
+                      <Correction>
+                        <TH className="w-8">{pageBox}</TH>
+                      </Correction>
+                    )}
+                    <TH>{primaryHeader}</TH>
+                    {/* 15rem and not 10, and the number is measured: the nine type names of
+                        the two reference subjects run from 142 to 262 px drawn as a badge, so
+                        at 10rem every one of them was cut. At 15 eight of the nine fit whole
+                        and the ellipsis goes back to being the exception, which is what
+                        justifies solving it with a `title`. The statement pays for it — it is
+                        clamped to two lines and had 766 px — and `minWidth` rises with it, or
+                        in a narrow window the statement column is left with nothing. */}
+                    {manyTypes ? <TH className="w-60">{t("bank.column.modality")}</TH> : null}
+                    <TH className="w-72">{t("bank.column.concepts")}</TH>
+                    {difficultyField ? (
+                      <TH className="w-28">{t("bank.column.difficulty")}</TH>
+                    ) : null}
+                    {/* The eye and the star join the chevron and the bin where the marks exist. */}
+                    <TH className={marks ? "w-32" : "w-20"} />
+                  </TR>
+                </THead>
+                <TBody>
+                  {listing.items.map((item) => (
+                    <ItemRow
+                      key={item.id}
+                      item={item}
+                      primaryField={primaryFieldFor(item)}
+                      secondaryFields={detailFieldsFor(item)}
+                      typeLabel={manyTypes ? labelFor(item) : null}
+                      groups={classGroups}
+                      difficulty={difficultyField ? difficultyFor(item) : null}
+                      showDifficulty={Boolean(difficultyField)}
+                      selected={selected.has(item.id)}
+                      tagging={taggingIds.has(item.id)}
+                      selectable={Boolean(marks)}
+                      onVisibility={marks ? () => setShowing([item]) : undefined}
+                      onStar={marks ? () => star.mutate(item) : undefined}
+                      onToggle={() => toggle(item.id)}
+                      onEdit={() => setEditing(item)}
+                      onDelete={async () => {
+                        if (await confirm({ title: t("bank.confirmDelete", { id: item.id }), tone: "danger" }))
+                          remove.mutate(item.id);
+                      }}
+                    />
+                  ))}
+                </TBody>
+              </Table>
+              {listing.items.length === 0 ? (
+                <p className="p-8 text-center text-body text-muted-foreground">
+                  {t("bank.noneWithFilters")}
+                </p>
+              ) : null}
+
+              {/* The foot of the table, and both things it says are about the table: where
+                  you are in the bank and what you have picked out of it belong on one line,
+                  inside the card they describe. There is no second pager at the top — for a
+                  page of seven rows the whole list is in view.
+
+                  There is deliberately no whole-bank "Etiquetar pendientes": extracting and
+                  tagging are one job, the extractor tagging each document as it comes out. The
+                  scoped retries are all here, beside the rows they reach (`TableActions`).
+                  `min-h-7` is the controls' height, so the strip is one height whether they
+                  are drawn (correcting) or not (reviewing). */}
+              {listing.items.length > 0 ? (
+                <div className="mt-3 flex min-h-7 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3 text-body">
+                  <Pager
+                    page={listing.page}
+                    pages={pages}
+                    total={listing.total}
+                    onPage={setPage}
+                  />
+
+                  <span className="flex-1" />
+
+                  <Correction>
+                    <TableActions
+                      totals={listing.totals}
+                      selected={selected}
+                      offline={offline}
+                      submitting={submit.isPending}
+                      onRetag={(params) => submit.mutate({ kind: "tag", params })}
+                      onClear={() => setSelected(new Set())}
+                      onShow={marks ? showTicked : undefined}
+                    />
+                  </Correction>
+                  {marks ? (
+                    <Reviewing>
+                      <Selection
+                        count={selected.size}
+                        onShow={showTicked}
+                        onClear={() => setSelected(new Set())}
+                      />
+                    </Reviewing>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <Skeleton className="h-96" />
+          )}
+        </div>
+      )}
+
+      {showing && listing ? (
+        <VisibilityDialog
+          items={showing}
+          itemTypes={itemTypes}
+          profile={profile.data?.profile ?? null}
+          onClose={(saved) => {
+            setShowing(null);
+            if (saved) bank.refetch();
+          }}
+        />
+      ) : null}
+
+      {adding && listing ? (
+        <AddExerciseDialog
+          itemTypes={itemTypes}
+          profile={profile.data?.profile ?? null}
+          concepts={concepts}
+          title={t("bank.add.title")}
+          description={t("bank.add.description")}
+          saveLabel={t("bank.add.save")}
+          canShow={Boolean(marks)}
+          save={(body) => api.addItem(body)}
+          onClose={(added) => {
+            setAdding(false);
+            if (added.length === 0) return;
+            invalidate();
+            jump.current = true;
+            setSource(`${ORIGIN_FILTER}manual`);
+            setQuery("");
+            setItemType("");
+            setDifficulty("");
+            setUntagged(undefined);
+            bank.refetch();
+          }}
+        />
+      ) : null}
 
       {editing && listing ? (
         <ItemDialog
@@ -1058,6 +1376,7 @@ export function BankPart({
           fields={fieldsFor(editing)}
           primaryField={primaryFieldFor(editing)}
           concepts={concepts}
+          canRetag={Boolean(origins)}
           onClose={() => setEditing(null)}
           onSaved={() => {
             invalidate();

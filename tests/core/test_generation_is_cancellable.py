@@ -154,7 +154,7 @@ def test_a_failure_mid_stream_still_closes_it(engine):
 
 def test_the_drain_survives_a_stream_that_cannot_be_closed():
     """A fake, a replay or a plain list has no `close`; that is not an error."""
-    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False, None)
+    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False, None, (None, None))
 
 
 # A REPETITION LOOP -------------------------------------------------------------------------------

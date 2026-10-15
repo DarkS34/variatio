@@ -9,7 +9,10 @@ import type {
   AdminJobQueue,
   AdminOverview,
   ArtifactName,
+  BankItem,
   BankListing,
+  ExerciseListing,
+  ClassGroup,
   ClassLinkTerms,
   ClassLinkView,
   BuildPlans,
@@ -40,12 +43,14 @@ import type {
   MemberInvite,
   MembersBulkResult,
   MintedClassLink,
+  NewBankItem,
   StudentUses,
   ActivityHistory,
   ActivityWeek,
   MintedMemberInvite,
   MintedInvite,
   Pipeline,
+  PromoteBody,
   TunnelStatus,
   ProfilePayload,
   RawKind,
@@ -54,6 +59,7 @@ import type {
   RawUpload,
   Role,
   Session,
+  SetAsideItem,
   WorkspaceListing,
   WorkspaceRow,
   WorkspaceSummary,
@@ -251,11 +257,26 @@ function upload(path: string, files: File[], onProgress?: (fraction: number) => 
 export const getCurriculum = (workspace?: string | null) =>
   request<CurriculumState>("/api/kg/curriculum", { workspace });
 
-export const putCurriculum = (concepts: string[], closePrerequisites: boolean) =>
+export const putCurriculum = (
+  concepts: string[],
+  closePrerequisites: boolean,
+  group?: { id: number; followSubject?: boolean } | null,
+) =>
   put<CurriculumState>("/api/kg/curriculum", {
     concepts,
     close_prerequisites: closePrerequisites,
+    ...(group ? { group: group.id, follow_subject: Boolean(group.followSubject) } : {}),
   });
+
+// One group's progress, for its teachers: its own, or the subject's while it follows that.
+export const getGroupCurriculum = (group: number) =>
+  request<CurriculumState>(`/api/kg/curriculum?group=${group}`);
+
+/** A path of «Clase» scoped to one group of the class, or to the class when there is none. */
+function inGroup(path: string, group: number | null | undefined): string {
+  if (group === null || group === undefined) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}group=${group}`;
+}
 
 // Named for the same reason: the generation form imports it directly. It 404s until the
 // graph and the profile are built, which is what keeps the block off a fresh workspace.
@@ -297,53 +318,78 @@ export const api = {
   workspaces: () => request<WorkspaceListing>("/api/workspaces"),
 
   // The people of the subject in use, for its teachers (`server/routers/members.py`).
-  members: () => request<{ members: Member[] }>("/api/members"),
+  members: () => request<{ members: Member[]; groups?: ClassGroup[] }>("/api/members"),
   memberAction: (userId: number, action: MemberAction) =>
     action === "remove"
       ? request<{ members: Member[] }>(`/api/members/${userId}`, { method: "DELETE" })
       : post<{ members: Member[] }>(`/api/members/${userId}/${action}`),
-  membersBulk: (action: MemberAction, userIds: number[]) =>
-    post<MembersBulkResult>("/api/members/bulk", { action, user_ids: userIds }),
-  // The subject's class link. Its terms travel without the link; the link is a read of its
-  // own, and the server logs who made it.
-  classLink: () => request<{ class_link: ClassLinkView | null }>("/api/members/class-link"),
-  classLinkUrl: () => request<{ link: string }>("/api/members/class-link/link"),
+  // `group` puts the people in a group, or takes them out of theirs with null.
+  membersBulk: (action: MemberAction, userIds: number[], group: number | null = null) =>
+    post<MembersBulkResult>("/api/members/bulk", {
+      action,
+      user_ids: userIds,
+      ...(action === "group" ? { group_id: group } : {}),
+    }),
+  // The groups of the class.
+  memberGroups: () => request<{ groups: ClassGroup[] }>("/api/members/groups"),
+  createGroup: (name: string) => post<{ groups: ClassGroup[] }>("/api/members/groups", { name }),
+  renameGroup: (id: number, name: string) =>
+    patch<{ groups: ClassGroup[] }>(`/api/members/groups/${id}`, { name }),
+  deleteGroup: (id: number) =>
+    request<{ groups: ClassGroup[] }>(`/api/members/groups/${id}`, { method: "DELETE" }),
+  // The class link, or a group's. Its terms travel without the link; the link is a read of
+  // its own, and the server logs who made it.
+  classLink: (group: number | null = null) =>
+    request<{ class_link: ClassLinkView | null }>(inGroup("/api/members/class-link", group)),
+  classLinkUrl: (group: number | null = null) =>
+    request<{ link: string }>(inGroup("/api/members/class-link/link", group)),
   // Mints the link, or renews it: the live one stops working, and whoever entered stays.
-  mintClassLink: (terms: { max_uses: number; expires_at: string | null }) =>
-    post<MintedClassLink>("/api/members/class-link", terms),
-  editClassLink: (changes: ClassLinkTerms) =>
-    patch<{ class_link: ClassLinkView }>("/api/members/class-link", changes),
+  mintClassLink: (terms: { max_uses: number; expires_at: string | null }, group: number | null = null) =>
+    post<MintedClassLink>(inGroup("/api/members/class-link", group), terms),
+  editClassLink: (changes: ClassLinkTerms, group: number | null = null) =>
+    patch<{ class_link: ClassLinkView }>(inGroup("/api/members/class-link", group), changes),
   // Retires the live link without a new one: it stops working, and whoever entered stays.
-  revokeClassLink: () =>
-    request<{ revoked: boolean }>("/api/members/class-link", { method: "DELETE" }),
-  // What the subject's students do, week by week, for its teachers; `student` narrows it.
-  activityWeeks: (student: number | null) =>
-    request<ActivityHistory>(`/api/activity/weeks${student ? `?student=${student}` : ""}`),
-  activityWeek: (week: string, student: number | null) =>
+  revokeClassLink: (group: number | null = null) =>
+    request<{ revoked: boolean }>(inGroup("/api/members/class-link", group), { method: "DELETE" }),
+  // What the subject's students do, week by week, for its teachers; `student` narrows it, and
+  // `group` narrows the class to one of its groups.
+  activityWeeks: (student: number | null, group: number | null = null) =>
+    request<ActivityHistory>(
+      inGroup(`/api/activity/weeks${student ? `?student=${student}` : ""}`, group),
+    ),
+  activityWeek: (week: string, student: number | null, group: number | null = null) =>
     request<ActivityWeek>(
-      `/api/activity/weeks/${encodeURIComponent(week)}${student ? `?student=${student}` : ""}`,
+      inGroup(
+        `/api/activity/weeks/${encodeURIComponent(week)}${student ? `?student=${student}` : ""}`,
+        group,
+      ),
     ),
-  // Queues the week's digest: what the class asked the tutor, in a few themes per concept.
-  writeDigest: (week: string) =>
+  // Queues the week's digest: what the class, or a group, asked the tutor, in a few themes.
+  writeDigest: (week: string, group: number | null = null) =>
     post<{ job: Job; queue_position: number }>(
-      `/api/activity/weeks/${encodeURIComponent(week)}/digest`,
+      inGroup(`/api/activity/weeks/${encodeURIComponent(week)}/digest`, group),
     ),
-  // What the subject's students may use; a teacher closes generating or the tutor to them.
-  studentUses: () => request<StudentUses>("/api/members/uses"),
-  setStudentUses: (changes: Partial<Pick<StudentUses, "generate" | "tutor">>) =>
-    patch<StudentUses>("/api/members/uses", changes),
+  // What the subject's students may use, or a group's; a teacher closes a tool to them.
+  studentUses: (group: number | null = null) =>
+    request<StudentUses>(inGroup("/api/members/uses", group)),
+  setStudentUses: (
+    changes: Partial<Record<"generate" | "tutor" | "chat", boolean | null>>,
+    group: number | null = null,
+  ) => patch<StudentUses>(inGroup("/api/members/uses", group), changes),
   // The subject's personal invitations, a student's each, one per name.
   // An owner gives a member another role, their own included: how ownership is handed over.
   changeMemberRole: (userId: number, role: Role) =>
     patch<{ member: Member }>(`/api/members/${userId}`, { role }),
-  memberInvites: () => request<{ invites: MemberInvite[] }>("/api/members/invites"),
+  memberInvites: (group: number | null = null) =>
+    request<{ invites: MemberInvite[] }>(inGroup("/api/members/invites", group)),
   // A student's each, or — an owner's to mint — a teacher's; `emails` beside the names where
-  // the installation sends mail.
+  // the installation sends mail; `group_id` the group a student's brings into.
   mintMemberInvites: (body: {
     names: string[];
     expires_at: string | null;
     role?: Role;
     emails?: (string | null)[];
+    group_id?: number | null;
   }) => post<{ invites: MintedMemberInvite[] }>("/api/members/invites", { role: "viewer", ...body }),
   memberInviteLink: (id: number) => request<{ link: string }>(`/api/members/invites/${id}/link`),
   revokeMemberInvite: (id: number) =>
@@ -464,6 +510,34 @@ export const api = {
     }),
   deleteItem: (id: string) =>
     request<{ pipeline: Pipeline }>(`/api/bank/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  // A teacher's own exercise; with `tag: "auto"` the answer carries the tagging's job.
+  addItem: (body: NewBankItem) =>
+    post<{ item: BankItem; job: Job | null; pipeline: Pipeline }>("/api/bank", body),
+  tagItems: (items: string[]) => post<{ job: Job }>("/api/bank/tag", { items }),
+  // `groups` names the groups of the class that see them; null is the whole class.
+  setVisibility: (
+    items: string[],
+    level: "hidden" | "full" | "fields",
+    fields: string[] = [],
+    groups: number[] | null = null,
+  ) => put<{ items: string[] }>("/api/bank/visibility", { items, level, fields, groups }),
+  // The bank as the class reads it: what a teacher showed, cut to it.
+  exercises: (params: Record<string, string | number | boolean | undefined>) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "" && value !== null) search.set(key, String(value));
+    }
+    return request<ExerciseListing>(`/api/exercises?${search.toString()}`);
+  },
+  star: (id: string, on: boolean) =>
+    request<{ favourite: boolean }>(`/api/bank/${encodeURIComponent(id)}/favourite`, {
+      method: on ? "PUT" : "DELETE",
+    }),
+  setAside: () => request<{ items: SetAsideItem[] }>("/api/bank/set-aside"),
+  dropSetAside: (key: string) =>
+    request<{ deleted: string }>(`/api/bank/set-aside/${encodeURIComponent(key)}`, {
+      method: "DELETE",
+    }),
 
   submitJob: (kind: string, params: Record<string, unknown> = {}, force = false) =>
     post<{ job: Job; since: number }>("/api/jobs", { kind, params, force }),
@@ -486,6 +560,9 @@ export const api = {
       q?: string;
       limit?: number;
       offset?: number;
+      /** A teacher's: the ones in the bank now, or out of it. */
+      bank?: "in" | "out";
+      difficulty?: string;
     },
     workspace?: string | null,
   ) => {
@@ -497,6 +574,11 @@ export const api = {
   },
   generation: (id: string) =>
     request<GenerationDetail>(`/api/generations/${encodeURIComponent(id)}`),
+  promote: (id: string, body: PromoteBody) =>
+    post<{ item: BankItem; job: Job | null; pipeline: Pipeline }>(
+      `/api/generations/${encodeURIComponent(id)}/promote`,
+      body,
+    ),
   deleteGeneration: (id: string, workspace?: string | null) =>
     request<{ deleted: string }>(`/api/generations/${encodeURIComponent(id)}`, {
       method: "DELETE",

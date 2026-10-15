@@ -290,7 +290,7 @@ Archivo only (Literata only in the tutorial). Six steps, every line a whole numb
 ## 10. Copy, language and behaviour that the look depends on
 
 - Spanish is the source catalogue (`src/lib/i18n/es.ts`), English typed against it. A key
-  read only by `src/evaluation/` or `src/tutor/` lives in that folder's catalogue.
+  read only by `src/apps/evaluation/` or `src/apps/tutor/` lives in that folder's catalogue.
 - Vocabulary for teachers: «asignatura», «Temario», «Tipos de ejercicio», «Banco de
   ejercicios», «ejercicio(s) generado(s)». The app never speaks of itself in the first person.
 - No time estimates anywhere. A queued job is not a running one.
@@ -312,5 +312,5 @@ Archivo only (Literata only in the tutorial). Six steps, every line a whole numb
 | states | `Badge`, `Alert`, `EmptyState`, `LoadError`, `Skeleton`, `Spinner`, `Progress`, `Switch`, `Checkbox` (`components/ui/`) |
 | dialogs | `Dialog`, `useConfirm` |
 | a document beside its transcription | `DocumentReader` (`features/raw/`): two columns that scroll page to page, `OriginalPane` and `TextPane` (`features/raw/reader/`) |
-| the tutor's reply and its map | `Reply` (`tutor/`): explanation, `ConceptMap` (a graph of `ConceptChip`s with lines traced over them, in a well, never Mermaid), then the question with `QuestionMark` beside it |
+| the tutor's reply and its map | `Reply` (`apps/tutor/`): explanation, `ConceptMap` (a graph of `ConceptChip`s with lines traced over them, in a well, never Mermaid), then the question with `QuestionMark` beside it |
 | ruled list | `.rows` (+ `rows-tight` / `rows-flush`) in `src/index.css` |

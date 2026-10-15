@@ -11,12 +11,15 @@ opt-in on the WRITE path only: materialising the closure at save time is what ke
 stored list meaning exactly what it says when it is read back.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session as DbSession
 
 from variatio.loaders import locale
 
-from .. import auth, curriculum, kg_view
+from .. import auth, curriculum, groups, kg_view
+from ..db import identity
+from ..db.models import VIEWER
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
 from .pipeline import pipeline_payload
@@ -70,10 +73,16 @@ class GraphBody(BaseModel):
 
 
 class CurriculumBody(BaseModel):
-    """The concepts a course has covered, and whether to close them upwards."""
+    """The concepts a course has covered, and whether to close them upwards.
 
-    concepts: list[str]
+    With `group`, one group's own progress; `follow_subject` gives that group the subject's
+    again.
+    """
+
+    concepts: list[str] = []
     close_prerequisites: bool = False
+    group: int | None = None
+    follow_subject: bool = False
 
 
 def _handle(access: auth.Access, action):
@@ -247,7 +256,9 @@ def remove_edge(body: EdgeBody, access: auth.Access = auth.VIEW) -> dict:
 
 
 @router.get("/curriculum")
-def read_curriculum(access: auth.Access = auth.VIEW) -> dict:
+def read_curriculum(
+    access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db), group: int | None = None
+) -> dict:
     """Answer what the course has covered, partitioned against the current graph.
 
     404 and not 500 when there is no graph yet, which is the same answer its two sibling
@@ -260,16 +271,40 @@ def read_curriculum(access: auth.Access = auth.VIEW) -> dict:
         graph = kg_edit.load_graph(access.ws)
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
-    return curriculum.load(access.ws, graph)
+    # A student reads the progress of their group when it follows one of its own; a teacher
+    # names the group they read.
+    workspace_id = getattr(getattr(access, "workspace", None), "id", None)
+    if not isinstance(db, DbSession) or not isinstance(workspace_id, int):
+        return curriculum.of_group(access.ws, None, graph)
+    if access.role == VIEWER:
+        return curriculum.of_group(access.ws, identity.group_of(db, workspace_id, access.user.id), graph)
+    return curriculum.of_group(access.ws, _group(db, access, group), graph)
 
 
 @router.put("/curriculum", dependencies=[auth.EDIT])
-def write_curriculum(body: CurriculumBody, access: auth.Access = auth.VIEW) -> dict:
-    """Save what the course has covered, closing prerequisites when asked."""
+def write_curriculum(
+    body: CurriculumBody, access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Save what the course, or one group of it, has covered, closing prerequisites when asked."""
     graph = kg_edit.load_graph(access.ws)
     concepts = body.concepts
     if body.close_prerequisites:
         concepts = curriculum.closure(
             concepts, graph, locale.prerequisite_relation(access.ws)
         )
-    return curriculum.save(access.ws, concepts, graph)
+    if body.group is None:
+        return curriculum.save(access.ws, concepts, graph)
+    group = _group(db, access, body.group)
+    answer = curriculum.save_group(access.ws, group, None if body.follow_subject else concepts, graph)
+    db.commit()
+    return answer
+
+
+def _group(db: DbSession, access: auth.Access, group_id: int | None):
+    """Return the group of this subject a request names, None for the subject, or 404."""
+    if group_id is None:
+        return None
+    try:
+        return groups.get(db, access.workspace, group_id)
+    except groups.Refusal as refusal:
+        raise HTTPException(refusal.status, refusal.message) from None

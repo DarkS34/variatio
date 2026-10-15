@@ -23,7 +23,7 @@ An unreadable file is warned about once and skipped: it never empties a listing.
 
 import json
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -115,10 +115,17 @@ def list_for(
     query: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    keep: Callable[[dict], bool] | None = None,
 ) -> tuple[list[dict], int]:
-    """Return one page of this account's exercises, newest first, and the total matched."""
+    """Return one page of this account's exercises, newest first, and the total matched.
+
+    `keep` is a filter of the caller's own — whether an exercise is in the bank, its level —,
+    applied before the page is cut so the total counts what it keeps.
+    """
     records = [
-        r for r in _newest_first(ws, user_id) if _matches(r, concept, item_type, query)
+        r
+        for r in _newest_first(ws, user_id)
+        if _matches(r, concept, item_type, query) and (keep is None or keep(r))
     ]
     return records[offset : offset + limit], len(records)
 
@@ -288,6 +295,46 @@ def _searchable(record: dict) -> str:
 
 
 # THE RECORD ----------------------------------------------------------------------------
+
+
+def row_view(record: dict, user) -> dict:
+    """Render one stored exercise with its commission and the item itself.
+
+    `concepts` is what was ASKED for, which is what «Generar más como este» reopens;
+    `targets` is what ran — the bank's most frequent concepts when nothing was asked.
+    `think` is the commission's too, a level or a bool. The author is the account asking on
+    the author's own routes (`apps.generation`); on the administrator's it is whoever wrote
+    it, and None for an exercise whose account no longer exists. One rendering for both.
+    """
+    commission = record.get("commission") or {}
+    resolved = record.get("resolved") or {}
+    job = record.get("job") or {}
+    curriculum = resolved.get("curriculum")
+    return {
+        "id": record.get("id"),
+        "created_at": created_at(record),
+        "job_id": job.get("id"),
+        "item_type": item_type_of(record),
+        "concepts": list(commission.get("concepts") or []),
+        "targets": concepts_of(record),
+        "curriculum": list(curriculum if isinstance(curriculum, list) else []),
+        "fixed": dict(commission.get("fixed") or {}),
+        "omit": list(commission.get("omit") or []),
+        "instructions": commission.get("instructions") or "",
+        "think": commission.get("think", True),
+        "effort": resolved.get("effort"),
+        # Null for every exercise written before a commission could choose its model: the
+        # screen says nothing rather than naming today's default, which did not write it.
+        "model": resolved.get("model") or None,
+        "author": {
+            "id": getattr(user, "id", None),
+            "name": getattr(user, "name", None),
+            "username": getattr(user, "username", None),
+        },
+        "promoted_item_id": record.get("promoted_item_id"),
+        "item": item_of(record),
+        "checks": (record.get("output") or {}).get("checks"),
+    }
 
 
 def item_of(record: dict) -> dict:

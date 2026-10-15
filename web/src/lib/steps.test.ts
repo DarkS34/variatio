@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   STEPS,
   STUDENT_HIDDEN,
+  STUDENT_READS,
   SYLLABUS,
   USES,
   currentStepPath,
@@ -184,7 +185,20 @@ describe("usesFor", () => {
   });
 
   it("keeps the order of USES with everything open", () => {
-    expect(keysOf(true, true)).toEqual(USES.map((door) => door.key));
+    expect(usesFor({ evaluation: true, tutor: true, chat: true }).map((door) => door.key)).toEqual(
+      USES.map((door) => door.key),
+    );
+  });
+
+  it("draws the chat only where the session says it is open", () => {
+    // A subject opens it to its students and it starts closed; an older API never sends it.
+    expect(featuresOf({}).chat).toBe(false);
+    expect(featuresOf({ features: { chat: true } }).chat).toBe(true);
+    expect(keysOf(true, true)).not.toContain("chat");
+    expect(usesFor(featuresOf({ features: { chat: true } })).map((door) => door.key)).toEqual([
+      "generate",
+      "chat",
+    ]);
   });
 
   it("draws no optional door for a session that does not say", () => {
@@ -214,17 +228,21 @@ describe("usesFor", () => {
 });
 
 describe("a student's bar", () => {
-  it("draws the syllabus alone of the construction, at the graph step's own path", () => {
+  it("draws the syllabus and the bank of the construction, at their steps' own paths", () => {
     const graph = STEPS.find((step) => step.artifact === "knowledge_graph")!;
-    expect(SYLLABUS.path).toBe(graph.path);
-    expect(SYLLABUS.labelKey).toBe(graph.labelKey);
-    // Not a door: the doors stay the three of USES.
-    expect(USES.map((door) => door.key)).not.toContain(SYLLABUS.key);
+    const bank = STEPS.find((step) => step.artifact === "exemplars_bank")!;
+    expect(STUDENT_READS.map((reading) => reading.path)).toEqual([graph.path, bank.path]);
+    expect(STUDENT_READS.map((reading) => reading.labelKey)).toEqual([graph.labelKey, bank.labelKey]);
+    expect(STUDENT_READS[0]).toBe(SYLLABUS);
+    // Not doors.
+    for (const reading of STUDENT_READS) {
+      expect(USES.map((door) => door.key)).not.toContain(reading.key);
+    }
   });
 
-  it("hides every other step of the construction, the raw material included", () => {
-    expect([...STUDENT_HIDDEN].sort()).toEqual(["/prepare/bank", "/raw"]);
-    expect(STUDENT_HIDDEN).not.toContain(SYLLABUS.path);
+  it("hides the raw material, and the types' old address that leads to the bank", () => {
+    expect([...STUDENT_HIDDEN].sort()).toEqual(["/prepare/profile", "/raw"]);
+    for (const reading of STUDENT_READS) expect(STUDENT_HIDDEN).not.toContain(reading.path);
   });
 });
 
@@ -239,5 +257,10 @@ describe("studentLandingPath", () => {
     expect(studentLandingPath({ evaluation: false, tutor: false, generate: false })).toBe(
       "/prepare/graph",
     );
+  });
+
+  it("tries the chat after the tutor", () => {
+    expect(studentLandingPath({ evaluation: true, tutor: false, generate: false, chat: true })).toBe("/chat");
+    expect(studentLandingPath({ evaluation: false, tutor: true, generate: false, chat: true })).toBe("/tutor");
   });
 });

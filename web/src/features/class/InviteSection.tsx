@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Download, Link2, Maximize2, Pause, Play, QrCode, RefreshCw, Settings2, Trash2, UserPlus } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { createContext, useContext, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ import {
   useClassLinkUrl,
   useMemberInviteActions,
   useMemberInvites,
+  useMembers,
 } from "@/state/queries";
 
 import { PEOPLE_COLUMNS, PeopleTable } from "./PersonRow";
@@ -70,16 +71,38 @@ const PRESET_KEYS: Record<ExpiryPreset, Key> = {
  * drawn as the people of the class are; «Nuevas invitaciones» opens the form in a dialog, which
  * then hands over what it made.
  */
-export function InviteSection({ subject, slug }: { subject: string; slug: string | null }) {
+export function InviteSection({
+  subject,
+  slug,
+  group = null,
+  scope,
+}: {
+  subject: string;
+  slug: string | null;
+  /** The group of the class this page invites into, or null for the class as a whole. */
+  group?: number | null;
+  scope?: ReactNode;
+}) {
   const { t } = useT();
+  const name = useMembers().data?.groups?.find((row) => row.id === group)?.name;
   return (
-    <>
-      <SectionHeader title={t("class.invite")} description={t("class.invite.lead")} />
+    <InviteGroup.Provider value={group}>
+      <SectionHeader
+        title={t("class.invite")}
+        description={name ? t("class.invite.groupLead", { name }) : t("class.invite.lead")}
+        action={scope}
+      />
       <GeneralInvite subject={subject} />
       <PersonalInvites slug={slug} />
-    </>
+    </InviteGroup.Provider>
   );
 }
+
+/**
+ * The group the page invites into, read by every block of it: each group has its own live link
+ * and its own personal invitations, the class has its own (2026-10-14).
+ */
+const InviteGroup = createContext<number | null>(null);
 
 /** The line under «Invitar» in the section list: the general invitation's state, and the unused. */
 export function inviteDetail(link: ClassLinkView | null | undefined, rows: MemberInvite[], tr: Translate): string {
@@ -97,7 +120,8 @@ export function inviteDetail(link: ClassLinkView | null | undefined, rows: Membe
 /** «Invitación general»: the subject's class link, or the form that creates it. */
 function GeneralInvite({ subject }: { subject: string }) {
   const { t } = useT();
-  const read = useClassLink();
+  const group = useContext(InviteGroup);
+  const read = useClassLink(group);
   const link = read.data?.class_link ?? null;
   return (
     <section className="surface space-y-4 p-5" aria-labelledby="class-general-title">
@@ -106,7 +130,9 @@ function GeneralInvite({ subject }: { subject: string }) {
           <h3 id="class-general-title" className="text-heading">
             {t("class.link.title")}
           </h3>
-          <p className="text-small text-muted-foreground">{t("class.link.lead")}</p>
+          <p className="text-small text-muted-foreground">
+            {t(group === null ? "class.link.lead" : "class.link.groupLead")}
+          </p>
         </div>
         {link ? (
           <Badge variant={link.expired || link.paused ? "outline" : "settled"}>
@@ -135,8 +161,9 @@ function LiveLink({ link, subject }: { link: ClassLinkView; subject: string }) {
   const { t, plural } = useT();
   const confirm = useConfirm();
   const toast = useToast();
-  const url = useClassLinkUrl(link.link_stored);
-  const { mint, edit, revoke } = useClassLinkActions();
+  const group = useContext(InviteGroup);
+  const url = useClassLinkUrl(link.link_stored, group);
+  const { mint, edit, revoke } = useClassLinkActions(group);
   const [editing, setEditing] = useState(false);
   const [projecting, setProjecting] = useState(false);
   const text = url.data?.link ?? null;
@@ -304,7 +331,7 @@ function LiveLink({ link, subject }: { link: ClassLinkView; subject: string }) {
 function LinkTerms({ link, onDone }: { link?: ClassLinkView; onDone?: () => void }) {
   const { t } = useT();
   const toast = useToast();
-  const { mint, edit } = useClassLinkActions();
+  const { mint, edit } = useClassLinkActions(useContext(InviteGroup));
   const initialDate = toLocalInput(link ? new Date(link.expires_at) : inDays(CLASS_LINK_DEFAULT_DAYS));
   const [seats, setSeats] = useState(String(link?.max_uses ?? CLASS_LINK_DEFAULT_SEATS));
   const [expires, setExpires] = useState(initialDate);
@@ -479,7 +506,7 @@ const INVITE_ROLES: Role[] = ["viewer", "editor"];
  */
 function PersonalInvites({ slug }: { slug: string | null }) {
 const { t } = useT();
-const read = useMemberInvites();
+const read = useMemberInvites(useContext(InviteGroup));
 const rows = read.data?.invites ?? [];
 const [creating, setCreating] = useState(false);
 return (
@@ -565,6 +592,7 @@ const toast = useToast();
 const owner = useIsOwner();
 const mailing = useSession().data?.mail_configured === true;
 const { mint } = useMemberInviteActions();
+const group = useContext(InviteGroup);
 const [text, setText] = useState("");
 const [role, setRole] = useState<Role>("viewer");
 const radios = useRadioGroup(INVITE_ROLES, role, setRole);
@@ -602,6 +630,8 @@ const submit = (event: FormEvent) => {
       expires_at: moment.toISOString(),
       role: owner ? role : "viewer",
       ...(addressed.length > 0 ? { emails: recipients.map((recipient) => recipient.email) } : {}),
+      // A student's invitation of a group's page brings into the group; a teacher's never.
+      ...(group !== null && (!owner || role === "viewer") ? { group_id: group } : {}),
     },
     {
       onSuccess: ({ invites }) => {

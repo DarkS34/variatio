@@ -254,7 +254,7 @@ def _prepare_raw_text(ws: Workspace, kind: str) -> None:
     it. An upload or a deletion must not fail because it did.
     """
     try:
-        from evaluation import raw_text
+        from apps.evaluation import raw_text
 
         raw_text.prepare_slot(ws, kind)
     except Exception as exc:  # noqa: BLE001 - the request matters more than the reading

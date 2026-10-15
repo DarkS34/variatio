@@ -52,7 +52,7 @@ import { artifactName, buildCall, jobName } from "@/lib/names";
 // account it is asked of (`useAsksStageReview`), and everything it needs is behind this one
 // component.
 const StageReviewSlot = lazy(() =>
-  withCatalogues(import("@/evaluation/StageReviewSlot")).then((m) => ({
+  withCatalogues(import("@/apps/evaluation/StageReviewSlot")).then((m) => ({
     default: m.StageReviewSlot,
   })),
 );
@@ -170,7 +170,7 @@ function StageScope({
  *
  * Every control that only corrects reads the lock and hides under it, exactly as while a
  * teacher looks at a stage before correcting — but nothing above lifts it: there is no
- * «Quiero corregir algo», since nothing a student could write would be accepted.
+ * «Modificar», since nothing a student could write would be accepted.
  */
 export function ReadingScope({ children }: { children: ReactNode }) {
   return <StageLock.Provider value="reading">{children}</StageLock.Provider>;
@@ -351,7 +351,7 @@ export function StageGate({
   const missing = stage.status === "missing";
   const ready = !building && !missing;
   const approved = stage.status === "approved";
-  // Closed or not, the same door: "Quiero corregir algo" unlocks a closed stage too, and the
+  // Closed or not, the same door: "Modificar" unlocks a closed stage too, and the
   // first write withdraws the approval on the server (see `StageLockReason`).
   const locked: StageLockReason = curating ? null : "reviewing";
   // "Building" covers a job that has not started, so a queued build is told apart here: a
@@ -581,7 +581,7 @@ export function StageGate({
         )}
 
         {/* The stage questionnaire, at the FOOT of the artifact: its button and the form
-            that unfolds under it (`evaluation/StageReviewSlot`). Not drawn with the stage
+            that unfolds under it (`apps/evaluation/StageReviewSlot`). Not drawn with the stage
             unbuilt, since there would be nothing to judge, nor for an account it is not
             asked of: the evaluation closed to it, or a role that cannot correct the subject
             and that the server would refuse the answers of. Its own boundary, so the screen

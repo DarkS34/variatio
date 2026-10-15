@@ -101,12 +101,12 @@ const TREES: Record<Home, Record<Language, ComponentType<{ slug: string }>>> = {
     en: tree(() => import("./en/sections")),
   },
   evaluation: {
-    es: tree(() => import("@/evaluation/guide/es")),
-    en: tree(() => import("@/evaluation/guide/en")),
+    es: tree(() => import("@/apps/evaluation/guide/es")),
+    en: tree(() => import("@/apps/evaluation/guide/en")),
   },
   tutor: {
-    es: tree(() => import("@/tutor/guide/es")),
-    en: tree(() => import("@/tutor/guide/en")),
+    es: tree(() => import("@/apps/tutor/guide/es")),
+    en: tree(() => import("@/apps/tutor/guide/en")),
   },
 };
 

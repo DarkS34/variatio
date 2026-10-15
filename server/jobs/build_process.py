@@ -3,10 +3,11 @@
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 from loguru import logger
 
-from variatio.core import paths, progress
+from variatio.core import paths, progress, usage
 
 from .protocol import MARKER
 from .runner import JobControl
@@ -43,9 +44,10 @@ TERMINAL_KINDS = frozenset({"worker.result", "worker.failed", "worker.cancelled"
 RESULT_FIELDS = frozenset({"artifact", "size"})
 
 
-def run_build(artifact: str, control: JobControl) -> dict:
+def run_build(artifact: str, control: JobControl, keep: Path | None = None) -> dict:
     """Spawn the worker, pump its pipe, and return its result or raise what went wrong.
 
+    `keep` is the file of the exercises a bank's re-extraction starts from, when there are any.
     Raises `progress.Cancelled` when the job was stopped and `RuntimeError` with the
     worker's own message when it failed.
     """
@@ -56,6 +58,8 @@ def run_build(artifact: str, control: JobControl) -> dict:
     if not control.job.workspace:
         raise ValueError("El trabajo no dice en qué asignatura construir.")
     command += ["--workspace", control.job.workspace]
+    if keep is not None:
+        command += ["--keep", str(keep)]
     process = subprocess.Popen(
         command,
         cwd=str(paths.PROJECT_ROOT),
@@ -136,6 +140,8 @@ def _settle(kind: str, event: dict, result: dict, settled: set[str]) -> str | No
     settled.add(kind)
     if kind == "worker.result":
         result.update({k: v for k, v in event.items() if k in RESULT_FIELDS})
+        # What the child's calls cost, cleaned and counted on the job's own meter here.
+        usage.add(event.get("usage"))
         return None
     if kind == "worker.failed":
         error = event.get("error")

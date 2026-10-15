@@ -95,8 +95,10 @@ def _access(aula, user, role):
 def test_a_subject_opens_both_to_its_students_until_a_teacher_closes_one(db, aula):
     features.set_mode(db, features.TUTOR, features.ALL)
 
+    # The free chat is the one a subject opens, rather than closes (2026-10-15).
     assert features.for_user(db, aula.sara, aula.workspace, VIEWER) == {
         "generate": True,
+        "chat": False,
         "evaluation": False,
         "tutor": True,
     }
@@ -161,6 +163,7 @@ def test_the_tutor_switch_is_offered_only_where_a_student_may_use_the_tutor(db, 
     assert member_routes.uses(access=teacher, db=db) == {
         "generate": True,
         "tutor": True,
+        "chat": False,
         "tutor_installed": activity.tutor_installed(),
         "tutor_offered": True,
     }

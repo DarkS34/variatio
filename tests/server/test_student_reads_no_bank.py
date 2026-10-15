@@ -13,12 +13,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from evaluation import EvaluationSession
-from evaluation.api import router as evaluation_router
+from apps.evaluation import EvaluationSession
+from apps.evaluation.api import router as evaluation_router
+from apps.generation.api.router import router as generations_router
 from server import auth
 from server import generations as store
 from server.auth.deps import Access
-from server.routers.generations import router as generations_router
 from variatio.core.workspace import Workspace
 
 ANA = 1

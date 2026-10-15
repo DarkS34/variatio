@@ -79,8 +79,8 @@ class Workspace(Base):
     the command line with no database, so a build reads the file, and the column is here
     so the panel can list the instances without touching disk.
 
-    `student_generate` and `student_tutor` are what its teachers let its students use
-    (`features.refusal`); they bind students alone.
+    `student_generate`, `student_tutor` and `student_chat` are what its teachers let its
+    students use (`features.refusal`); they bind students alone. The chat's starts closed.
     """
 
     __tablename__ = "workspaces"
@@ -95,6 +95,7 @@ class Workspace(Base):
         Boolean, default=True, server_default=text("true")
     )
     student_tutor: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    student_chat: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
     artifacts: Mapped[list["Artifact"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
@@ -355,6 +356,11 @@ class Invite(Base):
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
 
+    # The group of the class the invited student joins; None when it names none.
+    group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("class_groups.id", ondelete="SET NULL"), default=None
+    )
+
     workspace: Mapped[Workspace | None] = relationship()
 
 
@@ -384,6 +390,10 @@ class ClassLink(Base):
     uses: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # The group of the class whoever enters through it joins; None is the class as a whole.
+    group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("class_groups.id", ondelete="SET NULL"), index=True, default=None
+    )
 
     workspace: Mapped[Workspace] = relationship()
 
@@ -625,17 +635,85 @@ class GenerationUsage(Base):
     items: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
-class TutorUsage(Base):
-    """How many turns of the tutor one account queued on one day, across every workspace.
+class ClassGroup(Base):
+    """A group of a subject's students, with which its teachers do what they do with the class.
 
-    A row and not a count of the conversation files: a conversation can be deleted, and a
-    limit somebody resets by deleting is none. The day is UTC.
+    Open or close each tool to it (`generate`, `tutor`, `chat`; None is «as the subject says»),
+    follow its own progress (`progress`, a list of concepts; None is the subject's), invite into
+    it and read its activity. Teachers are in no group.
+    """
+
+    __tablename__ = "class_groups"
+    __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_class_group_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    generate: Mapped[bool | None] = mapped_column(Boolean, default=None)
+    tutor: Mapped[bool | None] = mapped_column(Boolean, default=None)
+    chat: Mapped[bool | None] = mapped_column(Boolean, default=None)
+    progress: Mapped[list | None] = mapped_column(Json, default=None)
+
+
+class ClassGroupMember(Base):
+    """One student's place in a group: one group at most (`membership_id` is unique), for now.
+
+    A row and not a column of the membership, so letting a student be in several groups is
+    dropping the constraint rather than moving data. Both sides go with what they belong to.
+    """
+
+    __tablename__ = "class_group_members"
+    __table_args__ = (UniqueConstraint("membership_id", name="uq_class_group_member"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("class_groups.id", ondelete="CASCADE"), index=True
+    )
+    membership_id: Mapped[int] = mapped_column(ForeignKey("memberships.id", ondelete="CASCADE"))
+
+
+class BankFavourite(Base):
+    """One exercise of a subject's bank that one teacher marked with the star.
+
+    The exercise is named by its CONTENT (`item_key`, `server/bank_marks.fingerprint`) and not
+    by its id, which a re-extraction renumbers. A mark of one account in one subject, so a row:
+    both go with it. It changes nothing but a filter and the look of the row.
+    """
+
+    __tablename__ = "bank_favourites"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "user_id", "item_key", name="uq_bank_favourite"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item_key: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TutorUsage(Base):
+    """How many turns of one conversational function an account queued on one day.
+
+    Across every workspace. A row and not a count of the conversation files: a conversation
+    can be deleted, and a limit somebody resets by deleting is none. The day is UTC.
+    `feature` is the function counted — the tutor's, or the free chat's since 2026-10-15
+    (`apps/conversations/usage.py`); the table keeps the tutor's name.
     """
 
     __tablename__ = "tutor_usage"
-    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_tutor_usage_day"),)
+    __table_args__ = (UniqueConstraint("user_id", "day", "feature", name="uq_tutor_usage_day"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     day: Mapped[date] = mapped_column(Date)
     turns: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    feature: Mapped[str] = mapped_column(String(16), default="tutor", server_default="tutor")

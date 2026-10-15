@@ -28,6 +28,12 @@ WHAT THE STUDENTS USE is the teachers' too: whether the subject's students gener
 and use the tutor (`/uses`, the two switches `server/features.py` reads), closed during an
 exam, say. The tutor's switch matters only where the administrator opened the tutor to one of
 them, and the answer says whether that is so.
+
+GROUPS OF THE CLASS (2026-10-14, the user's decision: with a group a teacher does what they do
+with the class). `/groups` makes, renames and deletes them; the bulk gesture `group` puts
+students in one or takes them out; `?group=<id>` scopes what the students use, the class link
+and the personal invitations to one group, each group with its own live link. The gestures
+are `server/groups.py`'s.
 """
 
 import re
@@ -38,7 +44,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import activity, auth, features, installation, members
+from .. import activity, auth, bank_marks, features, groups, installation, members
 from ..auth import links, mail
 from ..auth.rate_limit import throttle
 from ..db import identity
@@ -60,6 +66,8 @@ router = APIRouter(prefix="/api/members", tags=["members"], dependencies=[auth.E
 
 DISABLE = "disable"
 REMOVE = "remove"
+# The bulk gesture that puts students in a group, or takes them out of theirs.
+GROUP = "group"
 
 _ACTIONS = {
     DISABLE: members.disable_member,
@@ -75,10 +83,20 @@ class RoleBody(BaseModel):
 
 
 class BulkBody(BaseModel):
-    """One gesture over several people: `disable`, `enable` or `remove`."""
+    """One gesture over several people: `disable`, `enable`, `remove`, or `group`.
+
+    `group` puts each in `group_id`, or takes them out of theirs when it is None.
+    """
 
     action: str
     user_ids: list[int]
+    group_id: int | None = None
+
+
+class GroupBody(BaseModel):
+    """A group's name."""
+
+    name: str
 
 
 class ClassLinkBody(BaseModel):
@@ -97,10 +115,14 @@ class ClassLinkEditBody(BaseModel):
 
 
 class UsesBody(BaseModel):
-    """What the subject's students may use; only the fields sent change."""
+    """What the subject's students may use; only the fields sent change.
+
+    For a group (`?group=<id>`) a field sent as null hands the tool back to the subject's switch.
+    """
 
     generate: bool | None = None
     tutor: bool | None = None
+    chat: bool | None = None
 
 
 class InvitesBody(BaseModel):
@@ -114,15 +136,20 @@ class InvitesBody(BaseModel):
     role: str = VIEWER
     expires_at: datetime | None = None
     emails: list[str | None] | None = None
+    group_id: int | None = None
 
 
 @router.get("")
 def listing(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
-    """Answer the subject's people, the paused ones included, by username."""
+    """Answer the subject's people, the paused ones included, by username, and its groups."""
     rows = identity.members_of(db, access.workspace.id, include_disabled=True)
     inviters = {row.invited_by for row, _ in rows if row.invited_by is not None}
     names = {user_id: _display(db, user_id) for user_id in inviters}
-    return {"members": [_view(row, user, names) for row, user in rows]}
+    placed = groups.placed(db, access.workspace)
+    return {
+        "members": [_view(row, user, names, placed.get(user.id)) for row, user in rows],
+        "groups": _groups_view(db, access),
+    }
 
 
 @router.post("/bulk")
@@ -131,18 +158,83 @@ def bulk(body: BulkBody, access: auth.Access = auth.EDIT, db: DbSession = Depend
 
     Person by person, each under the rules of a single one: a refusal stops nobody else's.
     """
-    if body.action not in _ACTIONS:
+    if body.action not in _ACTIONS and body.action != GROUP:
         raise HTTPException(422, f"Gesto desconocido: '{body.action}'.")
+    group = None
+    if body.action == GROUP and body.group_id is not None:
+        try:
+            group = groups.get(db, access.workspace, body.group_id)
+        except Refusal as refusal:
+            raise _http(refusal) from None
     done: list[int] = []
     refused: list[dict] = []
     for user_id in dict.fromkeys(body.user_ids):
         try:
-            _act(db, access, user_id, body.action)
+            if body.action == GROUP:
+                _place(db, access, user_id, group)
+            else:
+                _act(db, access, user_id, body.action)
         except Refusal as refusal:
             refused.append({"user_id": user_id, "code": refusal.code, "reason": refusal.message})
         else:
             done.append(user_id)
+    if body.action == GROUP and done:
+        logger.info(
+            "[asignatura] «{}» {} a {} alumno(s) {} en «{}»",
+            access.user.username,
+            "movió" if group else "sacó",
+            len(done),
+            f"al grupo «{group.name}»" if group else "de su grupo",
+            access.ws.slug,
+        )
     return {"done": done, "refused": refused}
+
+
+# THE GROUPS -------------------------------------------------------------------------------------
+#
+# Fixed paths: no `{user_id:int}` matches a word.
+
+
+@router.get("/groups")
+def group_listing(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
+    """Answer the subject's groups, each with how many active students it holds."""
+    return {"groups": _groups_view(db, access)}
+
+
+@router.post("/groups", status_code=201)
+def create_group(body: GroupBody, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
+    """Make a new group of the class."""
+    try:
+        groups.create(db, access.workspace, body.name, access.user)
+    except Refusal as refusal:
+        raise _http(refusal) from None
+    return {"groups": _groups_view(db, access)}
+
+
+@router.patch("/groups/{group_id:int}")
+def rename_group(
+    group_id: int, body: GroupBody, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Give a group another name."""
+    try:
+        groups.rename(db, access.workspace, groups.get(db, access.workspace, group_id), body.name)
+    except Refusal as refusal:
+        raise _http(refusal) from None
+    return {"groups": _groups_view(db, access)}
+
+
+@router.delete("/groups/{group_id:int}")
+def delete_group(group_id: int, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
+    """Delete a group: its students stay with no group, and its live link stops working.
+
+    What of the bank it alone saw is hidden again (`bank_marks.forget_group`).
+    """
+    try:
+        groups.delete_group(db, access.workspace, groups.get(db, access.workspace, group_id), access.user)
+    except Refusal as refusal:
+        raise _http(refusal) from None
+    bank_marks.forget_group(access.ws, group_id)
+    return {"groups": _groups_view(db, access)}
 
 
 @router.patch("/{user_id:int}", dependencies=[auth.MANAGE])
@@ -184,55 +276,86 @@ def remove(user_id: int, access: auth.Access = auth.EDIT, db: DbSession = Depend
 
 
 @router.get("/uses")
-def uses(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
-    """Answer what the subject's students may use, and whether the tutor is theirs to use at all."""
-    return _uses_view(db, access)
+def uses(
+    group: int | None = None, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Answer what the subject's students may use, or one group's, and whether the tutor is
+    theirs to use at all."""
+    return _uses_view(db, access, _group(db, access, group))
 
 
 @router.patch("/uses")
 def change_uses(
-    body: UsesBody, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+    body: UsesBody,
+    group: int | None = None,
+    access: auth.Access = auth.EDIT,
+    db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Open or close generating and the tutor to the subject's students; teachers keep both."""
-    changes = body.model_dump(exclude_none=True)
-    features.set_subject_uses(db, access.workspace, changes)
+    """Open or close each tool to the subject's students, or to one group; teachers keep all.
+
+    For a group a tool sent as null goes back to what the subject says.
+    """
+    scoped = _group(db, access, group)
+    if scoped is not None:
+        changes = {name: getattr(body, name) for name in body.model_fields_set if name in groups.TOOLS}
+        groups.set_tools(db, scoped, changes)
+    else:
+        changes = {
+            name: value
+            for name, value in body.model_dump(exclude_none=True).items()
+            if name in features.SUBJECT_SWITCHES
+        }
+        features.set_subject_uses(db, access.workspace, changes)
     for feature, value in changes.items():
         logger.info(
-            "[asignatura] «{}» {} {} a los alumnos de «{}»",
+            "[asignatura] «{}» {} {} a {} de «{}»",
             access.user.username,
-            "abrió" if value else "cerró",
-            "la generación" if feature == features.GENERATE else "el tutor",
+            "abrió" if value else ("cerró" if value is False else "devolvió a la asignatura"),
+            _TOOL_NAMES.get(feature, feature),
+            f"el grupo «{scoped.name}»" if scoped is not None else "los alumnos",
             access.ws.slug,
         )
-    return _uses_view(db, access)
+    return _uses_view(db, access, scoped)
 
 
-def _uses_view(db: DbSession, access: auth.Access) -> dict:
-    """Render the two switches, whether the tutor is installed, and whether it is offered here.
+# What a log line calls each tool.
+_TOOL_NAMES = {"generate": "la generación", "tutor": "el tutor", "chat": "el chat libre"}
+
+
+def _uses_view(db: DbSession, access: auth.Access, group=None) -> dict:
+    """Render the switches, whether the tutor is installed, and whether it is offered here.
 
     A teacher reads the tutor's switch wherever the tutor is installed; it switches something
-    only once the administrator opened the tutor to one of the subject's students.
+    only once the administrator opened the tutor to one of the subject's students. For a group,
+    `group` says its own three values (None is «as the subject») beside the subject's.
     """
     return {
         **features.subject_uses(access.workspace),
         "tutor_installed": activity.tutor_installed(),
         "tutor_offered": features.offered_to_students(db, access.workspace),
+        **({"group": {"id": group.id, "name": group.name, **groups.tools(group)}} if group else {}),
     }
 
 
 @router.get("/class-link")
-def class_link(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
-    """Answer the subject's live class link — seats, expiry, pause, who minted it — never the link."""
-    link = identity.live_class_link(db, access.workspace.id)
+def class_link(
+    group: int | None = None, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Answer the live link of the class, or of one group — seats, expiry, pause, who minted
+    it — never the link."""
+    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     return {"class_link": _link_view(db, link) if link is not None else None}
 
 
 @router.get("/class-link/link")
 def class_link_url(
-    request: Request, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+    request: Request,
+    group: int | None = None,
+    access: auth.Access = auth.EDIT,
+    db: DbSession = Depends(auth.db),
 ) -> dict:
     """Answer the live class link itself, opened from its sealed copy, and say who read it."""
-    link = identity.live_class_link(db, access.workspace.id)
+    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     if link is None:
         raise HTTPException(404, "Esta asignatura no tiene enlace de clase.")
     token = links.unseal(link.token_sealed, link.token_hash)
@@ -252,15 +375,17 @@ def class_link_url(
 def mint_class_link(
     body: ClassLinkBody,
     request: Request,
+    group: int | None = None,
     access: auth.Access = auth.EDIT,
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Mint the subject's class link, or renew it: the live one stops working, and whoever
-    entered through it stays."""
+    """Mint the class link, or one group's, or renew it: the live one of that destination stops
+    working, and whoever entered through it stays."""
+    group_id = _group_id(db, access, group)
     seats = _seats(body.max_uses, installation.CLASS_LINK_DEFAULT_SEATS)
     expires_at = _expiry(body.expires_at, installation.CLASS_LINK_DEFAULT_DAYS)
     throttle("teacher_invite", request, access.user.username)
-    previous = identity.live_class_link(db, access.workspace.id)
+    previous = identity.live_class_link(db, access.workspace.id, group_id)
     if previous is not None:
         identity.revoke_class_link(db, previous)
     link, token = links.mint_class_link(
@@ -269,11 +394,13 @@ def mint_class_link(
         expires_at=expires_at,
         max_uses=seats,
         created_by=access.user.id,
+        group_id=group_id,
     )
     logger.info(
-        "[asignatura] «{}» {} el enlace de clase de «{}» · {} plazas",
+        "[asignatura] «{}» {} el enlace {} de «{}» · {} plazas",
         access.user.username,
         "renovó" if previous is not None else "creó",
+        "de un grupo" if group_id is not None else "de clase",
         access.ws.slug,
         seats,
     )
@@ -286,13 +413,16 @@ def mint_class_link(
 
 @router.patch("/class-link")
 def edit_class_link(
-    body: ClassLinkEditBody, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+    body: ClassLinkEditBody,
+    group: int | None = None,
+    access: auth.Access = auth.EDIT,
+    db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Pause or resume the live class link, or change its seats or its expiry.
+    """Pause or resume the live class link, or a group's, or change its seats or its expiry.
 
     Its seats never go below the ones already taken: whoever entered stays in.
     """
-    link = identity.live_class_link(db, access.workspace.id)
+    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     if link is None:
         raise HTTPException(404, "Esta asignatura no tiene enlace de clase.")
     sent = body.model_fields_set
@@ -316,9 +446,12 @@ def edit_class_link(
 
 
 @router.delete("/class-link")
-def revoke_class_link(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
-    """Retire the live class link: it stops working at once, and whoever entered stays."""
-    link = identity.live_class_link(db, access.workspace.id)
+def revoke_class_link(
+    group: int | None = None, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Retire the live class link, or a group's: it stops working at once, and whoever entered
+    stays."""
+    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     if link is None:
         return {"revoked": False}
     identity.revoke_class_link(db, link)
@@ -330,10 +463,16 @@ def revoke_class_link(access: auth.Access = auth.EDIT, db: DbSession = Depends(a
 
 
 @router.get("/invites")
-def invites(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
-    """Answer the subject's personal invitations nobody has used yet, live and expired alike."""
+def invites(
+    group: int | None = None, access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)
+) -> dict:
+    """Answer the subject's personal invitations nobody has used yet, live and expired alike;
+    with `group`, only the ones that bring into that group."""
     moment = identity.now()
+    group_id = _group_id(db, access, group)
     rows = identity.unused_invites(db, access.workspace.id)
+    if group_id is not None:
+        rows = [row for row in rows if row.group_id == group_id]
     return {"invites": [_invite_view(db, row, moment) for row in rows]}
 
 
@@ -384,6 +523,9 @@ def mint_invites(
             "Solo quien es propietario de la asignatura invita a otros docentes.",
             headers={"X-Error-Code": auth.ROLE_TOO_LOW},
         )
+    group_id = _group_id(db, access, body.group_id)
+    if group_id is not None and body.role != VIEWER:
+        raise HTTPException(422, "Los grupos son de alumnos: una invitación de docente no lleva grupo.")
     expires_at = _expiry(body.expires_at, installation.TEACHER_INVITE_DEFAULT_DAYS)
     throttle("teacher_invite", request, access.user.username, cost=len(names))
     base = auth.base_url(request)
@@ -397,6 +539,7 @@ def mint_invites(
             created_by=access.user.id,
             label=name,
             profile=TEACHER if body.role == EDITOR else STUDENT,
+            group_id=group_id,
         )
         link = links.url_for(base, token)
         row = {
@@ -469,6 +612,39 @@ def revoke_invite(
     return {"revoked": identity.revoke_invite(db, invite.id)}
 
 
+def _group(db: DbSession, access: auth.Access, group_id: int | None):
+    """Return the group of this subject a request scopes to, None for the class, or 404."""
+    if group_id is None:
+        return None
+    try:
+        return groups.get(db, access.workspace, group_id)
+    except Refusal as refusal:
+        raise _http(refusal) from None
+
+
+def _group_id(db: DbSession, access: auth.Access, group_id: int | None) -> int | None:
+    """Return the id of the group a request scopes to, checked against this subject."""
+    group = _group(db, access, group_id)
+    return group.id if group is not None else None
+
+
+def _groups_view(db: DbSession, access: auth.Access) -> list[dict]:
+    """Render the subject's groups: name, how many active students, and what they use."""
+    counts = groups.sizes(db, access.workspace)
+    return [
+        {"id": group.id, "name": group.name, "students": counts.get(group.id, 0), **groups.tools(group)}
+        for group in groups.all_of(db, access.workspace)
+    ]
+
+
+def _place(db: DbSession, access: auth.Access, user_id: int, group) -> None:
+    """Put one student in a group, or take them out of theirs."""
+    member = identity.get_user_by_id(db, user_id)
+    if member is None:
+        raise Refusal(404, "not_found", "Esa persona no está en esta asignatura.")
+    groups.place(db, access.workspace, member, group)
+
+
 def _single(db: DbSession, access: auth.Access, user_id: int, action: str) -> dict:
     """Do one gesture to one person and answer the list as it now stands."""
     try:
@@ -510,8 +686,8 @@ def _http(refusal: Refusal) -> HTTPException:
     return HTTPException(refusal.status, refusal.message, headers={"X-Error-Code": refusal.code})
 
 
-def _view(row: Membership, user: User, names: dict[int, str]) -> dict:
-    """Render one person as the class list shows them: who, as what, since when, how."""
+def _view(row: Membership, user: User, names: dict[int, str], group=None) -> dict:
+    """Render one person as the class list shows them: who, as what, since when, how, where."""
     return {
         "user_id": user.id,
         "name": user.name,
@@ -521,6 +697,7 @@ def _view(row: Membership, user: User, names: dict[int, str]) -> dict:
         "via": row.via,
         "invited_by": names.get(row.invited_by) if row.invited_by is not None else None,
         "disabled_at": _iso(row.disabled_at),
+        "group": {"id": group.id, "name": group.name} if group is not None else None,
     }
 
 
@@ -577,6 +754,7 @@ def _link_view(db: DbSession, link: ClassLink) -> dict:
         "created_at": _iso(link.created_at),
         "created_by": _display(db, link.created_by) if link.created_by is not None else None,
         "link_stored": link.token_sealed is not None,
+        "group_id": link.group_id,
     }
 
 
@@ -593,6 +771,7 @@ def _invite_view(db: DbSession, invite: Invite, moment: datetime | None = None) 
         "created_by": _display(db, invite.created_by) if invite.created_by is not None else None,
         "state": "pending" if invite.expires_at > moment else "expired",
         "link_stored": invite.token_sealed is not None,
+        "group_id": invite.group_id,
     }
 
 

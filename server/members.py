@@ -128,7 +128,7 @@ def end_course(session: Session, workspace: Workspace, by: User | None, action: 
     The administrator's alone (2026-10-07; it was the owner's). The teachers stay, and so do
     the files: what each student produced is still theirs, and a paused course reopens by
     opening its students again. A student the gesture refuses is counted out, never a reason
-    to stop half way.
+    to stop half way. The groups' links are paused with the class's.
     """
     gesture = {"disable": disable_member, "remove": remove_member}[action]
     students = [user for row, user in identity.members_of(session, workspace.id) if row.role == VIEWER]
@@ -139,10 +139,12 @@ def end_course(session: Session, workspace: Workspace, by: User | None, action: 
         except Refusal:
             continue
         done += 1
-    link = identity.live_class_link(session, workspace.id)
-    paused = link is not None and link.paused_at is None
-    if paused:
-        identity.edit_class_link(session, link, paused_at=identity.now())
+    # Every live link of the subject: the class's and each group's.
+    paused = False
+    for link in identity.live_class_links(session, workspace.id):
+        if link.paused_at is None:
+            identity.edit_class_link(session, link, paused_at=identity.now())
+            paused = True
     return {"action": action, "students": done, "class_link_paused": paused}
 
 

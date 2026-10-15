@@ -66,7 +66,8 @@ def test_a_promoted_variant_lands_tagged_and_marked(ws):
     stored = _bank(ws)["G001"]
     assert stored["enunciado"] == "recorre la lista"
     assert stored[ITEM_TYPE_KEY] == "ejercicio"
-    assert stored["source"] == bank_edit.PROMOTED_SOURCE
+    assert stored["origin"] == bank_edit.GENERATED
+    assert "source" not in stored
     assert stored["concepts"] == ["Bucles"]
     assert stored["primary_concept"] == "Bucles"
     assert stored["_tagging"]["method"] == "promoted"

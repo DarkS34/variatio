@@ -26,7 +26,8 @@ describe("the configuration's stages and the functions' tabs", () => {
       "graph",
       "bank",
       "generation",
+      "chat",
     ]);
-    expect(product.map((stage) => stage.number)).toEqual(["1", "2", "3", null]);
+    expect(product.map((stage) => stage.number)).toEqual(["1", "2", "3", null, null]);
   });
 });

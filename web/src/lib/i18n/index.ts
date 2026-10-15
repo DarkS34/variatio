@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from "react";
 
-import type { es as evaluation } from "@/evaluation/i18n/es";
+import type { es as evaluation } from "@/apps/evaluation/i18n/es";
 import type { es as landing } from "@/landing/i18n/es";
-import type { es as tutor } from "@/tutor/i18n/es";
+import type { es as tutor } from "@/apps/tutor/i18n/es";
 
 import { es, type CatalogueOf } from "./es";
 import { DEFAULT, type Language, localeStore } from "./locale";
