@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { ItemFields } from "@/consumers/generation/ResultCard";
 import { itemTypeOf } from "@/lib/profile";
 import type { ExemplarsProfile } from "@/lib/types";

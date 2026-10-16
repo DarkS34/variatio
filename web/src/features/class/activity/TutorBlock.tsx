@@ -2,7 +2,7 @@ import { PenLine, RefreshCw, Square } from "lucide-react";
 import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { Segments } from "@/components/charts";
 import { kindShares } from "@/lib/activity";
 import { dateTime } from "@/lib/format";

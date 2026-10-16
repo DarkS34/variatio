@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CARD_CHOICE, CARD_CHOSEN, ChoiceMark } from "@/components/ui/choice";
 import { useConfirm } from "@/components/ui/confirm";
 import { InfoHint } from "@/components/ui/hint";
-import { EmptyState, Spinner } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 import { useRadioGroup } from "@/components/ui/radio";
 import { ProfilePart, useProfileIntro } from "@/features/profile/ProfileEditor";
 import { api } from "@/lib/api";

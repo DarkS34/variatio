@@ -1,7 +1,7 @@
 import { Ban } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 import type { RunView } from "@/state/runStore";
 import { useCancelJob } from "@/state/queries";

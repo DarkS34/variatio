@@ -4,7 +4,9 @@ import { useState } from "react";
 
 import { ChainGate } from "@/components/ChainGate";
 import { InfoHint } from "@/components/ui/hint";
-import { Alert, LoadError, Skeleton } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n";
 import { useEngineOffline, usePipeline } from "@/state/queries";

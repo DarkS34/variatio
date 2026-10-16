@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/misc";
+import { Separator } from "@/components/ui/separator";
 import { LANGUAGES, LANGUAGE_NAMES, useT } from "@/lib/i18n";
 import { ROLE_LABEL_KEYS, useCanCreate } from "@/state/auth";
 import { useCreateWorkspace, useSwitchWorkspace, useWorkspaces } from "@/state/queries";

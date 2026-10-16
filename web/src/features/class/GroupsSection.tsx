@@ -6,7 +6,7 @@ import { ChoicePill } from "@/components/ui/choice";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useRadioGroup } from "@/components/ui/radio";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";

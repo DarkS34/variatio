@@ -284,3 +284,5 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-191 — The mark is three equal squares (settled, attention, outline).
 - D-192, D-193 — Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - D-194 — The exemplars profile is edited through the form alone.
+- D-229 — The API types (`lib/types/`) and the data hooks (`state/queries/`) are one module per
+  area behind an `index.ts`; a primitive of `components/ui/` is one file, named as shadcn names it.

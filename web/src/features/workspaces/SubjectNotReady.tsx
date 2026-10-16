@@ -1,6 +1,6 @@
 import { Hourglass } from "lucide-react";
 
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useT } from "@/lib/i18n";
 
 /**

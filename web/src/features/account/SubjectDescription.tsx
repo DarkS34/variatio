@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/misc";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useT, type Key } from "@/lib/i18n";
 import { useContentContext } from "@/state/queries";
 

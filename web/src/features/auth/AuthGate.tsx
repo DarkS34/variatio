@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { ApiError, api } from "@/lib/api";
 import { useRouter } from "@/lib/router";
 import { authKeys, useIsUnauthenticated, useSession } from "@/state/auth";

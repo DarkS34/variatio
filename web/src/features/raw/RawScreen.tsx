@@ -2,7 +2,10 @@ import { ArrowRight, ScanText } from "lucide-react";
 
 import { continueLabel, STAGE_KICKER, WayOn } from "@/components/StageGate";
 import { Button } from "@/components/ui/button";
-import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
 import { STEPS, nextStepOf, stepNumber } from "@/lib/steps";

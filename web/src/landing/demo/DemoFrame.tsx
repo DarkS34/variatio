@@ -6,7 +6,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { App } from "@/App";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConfirmProvider } from "@/components/ui/confirm";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { OverlayRoot } from "@/components/ui/overlay";
 import { ToastProvider } from "@/components/ui/toast";
 import { setTransport } from "@/lib/api";

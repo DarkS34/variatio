@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect } from "react";
 
 import { AppShell } from "@/AppShell";
-import { EmptyState, Spinner } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";

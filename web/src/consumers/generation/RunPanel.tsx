@@ -2,7 +2,7 @@ import { RunTimeline } from "@/components/RunTimeline";
 import { TechnicalDetails } from "@/components/TechnicalDetails";
 import { TokenStream } from "@/components/TokenStream";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/misc";
+import { Separator } from "@/components/ui/separator";
 import type { ExemplarsProfile } from "@/lib/types";
 import { useIsStudent } from "@/state/auth";
 import type { RunView } from "@/state/runStore";

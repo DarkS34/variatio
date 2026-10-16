@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConceptChip } from "@/components/ui/concept-chip";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 
 import type { SyllabusUnit } from "./syllabus";

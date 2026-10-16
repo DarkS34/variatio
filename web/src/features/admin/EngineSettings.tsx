@@ -4,7 +4,9 @@ import { Save, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { FormError } from "@/components/ui/form-error";
 import {
   canReset,

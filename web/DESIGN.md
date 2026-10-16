@@ -308,7 +308,7 @@ Archivo only. Six steps, every line a whole number of pixels:
 | fields | `Input`, `SearchInput`, `Select`, `Textarea`, `Label` (`components/ui/input.tsx`); a form's error, `FormError` (`components/ui/form-error.tsx`) |
 | choices | `ChoicePill`, `ChoiceMark`, `CARD_CHOICE`, `CARD_CHOSEN` (`components/ui/choice.tsx`), `useRadioGroup` |
 | tabs | `Tabs` (`components/ui/tabs.tsx`), `TabStrip` (`components/TabStrip.tsx`) |
-| states | `Badge`, `Alert`, `EmptyState`, `LoadError`, `Skeleton`, `Spinner`, `Progress`, `Switch`, `Checkbox` (`components/ui/`) |
+| states | `Badge` (`badge.tsx`), `Alert` (`alert.tsx`), `EmptyState` (`empty-state.tsx`), `LoadError` (`load-error.tsx`), `Skeleton` (`skeleton.tsx`), `Spinner` (`spinner.tsx`), `Progress` and `PhaseBar` (`progress.tsx`), `Switch` (`switch.tsx`), `Checkbox` (`checkbox.tsx`), `Separator` (`separator.tsx`), all in `components/ui/`, one primitive per file |
 | dialogs | `Dialog`, `useConfirm` |
 | a document beside its transcription | `DocumentReader` (`features/raw/`): two columns that scroll page to page, `OriginalPane` and `TextPane` (`features/raw/reader/`) |
 | the tutor's reply and its map | `Reply` (`consumers/tutor/`): explanation, `ConceptMap` (a graph of `ConceptChip`s with lines traced over them, in a well, never Mermaid), then the question with `QuestionMark` beside it |

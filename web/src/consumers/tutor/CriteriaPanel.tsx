@@ -7,7 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ConceptChip } from "@/components/ui/concept-chip";
 import { useConfirm } from "@/components/ui/confirm";
 import { Input, Select, Textarea } from "@/components/ui/input";
-import { Alert, EmptyState, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
 import { when } from "@/lib/format";

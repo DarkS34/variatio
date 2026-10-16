@@ -10,7 +10,7 @@ import { ConceptChip } from "@/components/ui/concept-chip";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
 import { Label, Select, Textarea } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useRadioGroup } from "@/components/ui/radio";
 import { ItemFields } from "@/consumers/generation/ResultCard";
 import { api } from "@/lib/api";

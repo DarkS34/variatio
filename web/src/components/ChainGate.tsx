@@ -1,6 +1,6 @@
 import { ArrowRight, Lock } from "lucide-react";
 
-import { Alert } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";

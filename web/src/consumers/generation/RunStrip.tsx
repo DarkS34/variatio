@@ -1,7 +1,7 @@
 import { ChevronRight, Clock, Hourglass, RotateCcw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { Progress } from "@/components/ui/misc";
+import { Progress } from "@/components/ui/progress";
 import { JOB_STATUS, duration } from "@/lib/format";
 import { queuedLabel, type Wait } from "@/lib/queue";
 import { cn } from "@/lib/utils";

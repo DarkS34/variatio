@@ -3,7 +3,10 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { EMPTY_FORM, type FormState } from "@/consumers/generation/commission";
 import { Count, GenerateForm } from "@/consumers/generation/GenerateForm";

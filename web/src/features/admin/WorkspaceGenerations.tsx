@@ -3,7 +3,10 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
-import { EmptyState, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { SectionHeader } from "@/components/Sections";
 import { GenerationCard } from "@/consumers/generation/GenerationsPanel";
 import { useT } from "@/lib/i18n";

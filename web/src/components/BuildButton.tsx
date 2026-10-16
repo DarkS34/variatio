@@ -2,7 +2,7 @@ import { Hammer, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { isQueued, prospectNote, waitOf, waitReason } from "@/lib/queue";
 import { rawDriftOf, slotLabelOf } from "@/lib/raw";
 import type { StageState } from "@/lib/types";

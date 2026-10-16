@@ -2,7 +2,9 @@ import { BarChart3, KeyRound, ShieldCheck, SlidersHorizontal } from "lucide-reac
 import { lazy, Suspense, useRef, useState, type ReactNode } from "react";
 
 import { InfoHint } from "@/components/ui/hint";
-import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
 import { featureAccessOf, type AdminOverview, type FeatureName } from "@/lib/types";

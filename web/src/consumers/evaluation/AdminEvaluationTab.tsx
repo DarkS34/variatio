@@ -7,7 +7,9 @@ import { BarRows, Segments, ShareMeter, StatTile, type BarRow } from "@/componen
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice";
 import { Select } from "@/components/ui/input";
-import { Checkbox, LoadError, Skeleton } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useRadioGroup } from "@/components/ui/radio";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";

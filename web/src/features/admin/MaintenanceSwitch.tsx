@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/hint";
 import { Textarea } from "@/components/ui/input";
-import { Switch } from "@/components/ui/misc";
+import { Switch } from "@/components/ui/switch";
 import { when } from "@/lib/format";
 import { useAdminMaintenance, useSetMaintenance } from "@/state/queries";
 import { useT } from "@/lib/i18n";

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Checkbox } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RowGestures, Table, TableBulk, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { when } from "@/lib/format";
 import { PersonName } from "@/components/ui/person";

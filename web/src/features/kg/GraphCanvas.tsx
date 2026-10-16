@@ -2,7 +2,7 @@ import { Maximize2, Network, RotateCw, Tag, Waypoints, ZoomIn, ZoomOut } from "l
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/lib/i18n";
 import type { GraphView } from "@/lib/types";
 import { cn } from "@/lib/utils";

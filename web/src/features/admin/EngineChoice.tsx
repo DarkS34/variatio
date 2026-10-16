@@ -1,7 +1,7 @@
 import { CARD_CHOICE, CARD_CHOSEN, ChoiceMark } from "@/components/ui/choice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/hint";
-import { Skeleton } from "@/components/ui/misc";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useRadioGroup } from "@/components/ui/radio";
 import type { EngineSettings } from "@/features/admin/EngineSettings";
 import { ENGINE_KINDS } from "@/features/admin/engineState";

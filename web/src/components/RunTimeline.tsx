@@ -3,7 +3,7 @@ import { Fragment, type ReactNode } from "react";
 
 import { InfoHint } from "@/components/ui/hint";
 import { StatusMark } from "@/components/ui/status";
-import { Progress } from "@/components/ui/misc";
+import { Progress } from "@/components/ui/progress";
 import { stepExplain } from "@/lib/explain";
 import { duration } from "@/lib/format";
 import { stepName } from "@/lib/names";

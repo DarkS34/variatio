@@ -11,7 +11,7 @@ import {
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/misc";
+import { Separator } from "@/components/ui/separator";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useRouter } from "@/lib/router";
 import { useT, type Key } from "@/lib/i18n";

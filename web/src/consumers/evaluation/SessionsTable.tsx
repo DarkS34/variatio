@@ -2,7 +2,8 @@ import { Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox, EmptyState } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";

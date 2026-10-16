@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useResetPassword } from "@/state/auth";
 
 import { FormError } from "@/components/ui/form-error";

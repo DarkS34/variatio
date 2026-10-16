@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 
-import { LoadError } from "@/components/ui/misc";
+import { LoadError } from "@/components/ui/load-error";
 import { useT } from "@/lib/i18n";
 import type { RawKind } from "@/lib/types";
 import { cn } from "@/lib/utils";

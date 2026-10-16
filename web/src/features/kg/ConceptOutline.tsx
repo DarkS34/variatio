@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 
 import { useStageLocked } from "@/components/StageGate";
 import { InfoHint } from "@/components/ui/hint";
-import { Switch } from "@/components/ui/misc";
+import { Switch } from "@/components/ui/switch";
 import { domainColour } from "@/lib/format";
 import type { KgConcept } from "@/lib/types";
 import { cn } from "@/lib/utils";

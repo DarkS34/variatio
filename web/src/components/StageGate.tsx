@@ -23,7 +23,9 @@ import {
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
 import { Button } from "@/components/ui/button";
-import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";

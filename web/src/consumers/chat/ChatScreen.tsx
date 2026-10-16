@@ -4,7 +4,10 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
-import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api";
 import { takeChatDraft, type ChatDraft } from "@/lib/chatDraft";
 import { relative, when } from "@/lib/format";

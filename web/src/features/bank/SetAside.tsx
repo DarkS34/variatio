@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
-import { Alert } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
 import { api } from "@/lib/api";
 import { fieldText } from "@/lib/fields";
 import { truncate } from "@/lib/format";

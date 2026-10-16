@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UploadCloud } from "lucide-react";
 import { useRef, useState, type DragEvent } from "react";
 
-import { Progress } from "@/components/ui/misc";
+import { Progress } from "@/components/ui/progress";
 import { api } from "@/lib/api";
 import { useConfirm } from "@/components/ui/confirm";
 import { useT } from "@/lib/i18n";

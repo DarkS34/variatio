@@ -57,3 +57,6 @@ f8d705090b2226ea27c3bbcf8f1ec0bef639abc3
 
 # refactor(web): the shared pieces of the client go down to their layer
 3f1973f73a82574618a0314e076637107fa10af3
+
+# refactor(web): the API types and the data hooks, one module per area
+ae5734a574fd0c60b8e5f8a8675060d210ce46d3

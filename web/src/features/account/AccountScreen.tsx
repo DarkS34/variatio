@@ -19,7 +19,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog } from "@/components/ui/dialog";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
-import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";

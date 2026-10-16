@@ -3,7 +3,8 @@ import { useId, useState } from "react";
 
 import { RunTimeline } from "@/components/RunTimeline";
 import { Card, CardContent } from "@/components/ui/card";
-import { PhaseBar, Progress, Spinner } from "@/components/ui/misc";
+import { PhaseBar, Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { duration } from "@/lib/format";
 import { isRebuild, stepPercent } from "@/lib/progress";
 import type { ArtifactName, BuildPhase } from "@/lib/types";

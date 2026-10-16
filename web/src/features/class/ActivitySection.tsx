@@ -2,7 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useMemo, type ReactNode } from "react";
 
 import { Label, Select } from "@/components/ui/input";
-import { LoadError, Skeleton } from "@/components/ui/misc";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader } from "@/components/Sections";
 import { findingsIn, weekBefore } from "@/lib/activity";

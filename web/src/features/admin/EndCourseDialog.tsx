@@ -5,7 +5,7 @@ import { CARD_CHOICE, CARD_CHOSEN, ChoiceMark } from "@/components/ui/choice";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
 import { useT, type Key } from "@/lib/i18n";

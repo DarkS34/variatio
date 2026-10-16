@@ -1,7 +1,7 @@
 import { ArrowRight, Inbox } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/empty-state";
 import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 

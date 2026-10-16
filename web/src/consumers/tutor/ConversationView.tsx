@@ -2,7 +2,9 @@ import { ChevronRight, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Alert, LoadError, Skeleton } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import { when } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";

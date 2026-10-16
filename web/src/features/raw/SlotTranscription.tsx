@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 
 import { JobProgress } from "@/components/BuildProgress";
 import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import type { RawSlot } from "@/lib/types";
 
 import { useTranscribePhases, useTranscribeRun, useTranscribing, useTranscription } from "./queries";

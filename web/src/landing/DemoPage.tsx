@@ -5,7 +5,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/misc";
+import { Spinner } from "@/components/ui/spinner";
 import { localeStore, useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
 import { cn } from "@/lib/utils";

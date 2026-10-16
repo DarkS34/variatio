@@ -2,7 +2,8 @@ import { Pause, Play, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/confirm";
-import { LoadError, Skeleton } from "@/components/ui/misc";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { dateTime } from "@/lib/format";

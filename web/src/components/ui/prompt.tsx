@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
 import { Input } from "./input";
-import { Spinner } from "./misc";
+import { Spinner } from "./spinner";
 import { useT } from "@/lib/i18n";
 
 /**

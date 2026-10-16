@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 
 import { ChoicePill } from "@/components/ui/choice";
-import { LoadError, Skeleton, Switch } from "@/components/ui/misc";
+import { LoadError } from "@/components/ui/load-error";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader } from "@/components/Sections";
