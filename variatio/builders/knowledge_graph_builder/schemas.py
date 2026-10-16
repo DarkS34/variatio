@@ -57,7 +57,7 @@ MERGE_SCHEMA = {
     "required": ["merges"],
 }
 
-# `drop`, `domains` and `non_taggable` are open-ended maps — the keys are concept or domain
+# `drop` and `domains` are open-ended maps — the keys are concept or domain
 # names the model writes — so what the schema pins is the ENVELOPE: the top-level key and
 # the value type. The `drop` parser also accepts a bare list, for the unconstrained path.
 DROP_SCHEMA = {
@@ -102,12 +102,4 @@ UNITS_SCHEMA = {
         }
     },
     "required": ["units"],
-}
-
-TAGGABLE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "non_taggable": {"type": "object", "additionalProperties": {"type": "string"}}
-    },
-    "required": ["non_taggable"],
 }

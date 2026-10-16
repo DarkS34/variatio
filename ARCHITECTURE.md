@@ -136,14 +136,14 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
   `Workspace` only to resolve their own paths. `runtime/`, `prompts/`, `wording/` and
   `settings/` do not import it.
 - **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `core/` import
-  `core.inference`.** `core/repair.py` calls it on behalf of `builders/` and `runtime/`.
+  `core.inference`.** `core/repair.py` and `core/vectors.py` call it on behalf of `builders/`
+  and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `entrypoints`, `builders | runtime`,
-  `loaders`, `prompts | wording`, then `core`, `settings` and `config`. Three crossings are
-  named in it: `runtime/taggability.py` imports parts of `builders/knowledge_graph_builder/`,
-  `builders/knowledge_graph_builder/cleaning.py` imports `runtime/embedder/vectors.py`, and
-  `core/lexicon.py` imports `wording/`. The two rules above and «only `core/inference.py`
+  `loaders`, `prompts | wording`, then `core`, `settings` and `config`. Two crossings are
+  named in it: `runtime/taggability.py` imports the graph builder's node block and parser
+  (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and «only `core/inference.py`
   imports the Ollama SDK» are contracts too.
 
 ## 5. Code map
@@ -155,7 +155,7 @@ One line per folder: what it holds, and the file to open first.
 | Folder | Holds | Start at |
 |---|---|---|
 | `variatio/` (root) | `cli.py`, `config.py`, `__init__.py` (logging) and nothing else | `cli.py` |
-| `core/` | engines (`inference.py`, `cerebras.py`, `cerebras_budget.py`), paths, `Workspace`, progress, JSON I/O, repair, usage meters | `workspace.py`, then `inference.py` |
+| `core/` | engines (`inference.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), paths, `Workspace`, progress, JSON I/O, repair, usage meters | `workspace.py`, then `inference.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `loaders/` | readers of the artifacts: graph, profile, context, relations, locale | `knowledge_graph.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, and `marks.py`, shared by both; each function keeps its own in `consumers/<function>/prompts/` | `prompts/__init__.py` |

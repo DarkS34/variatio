@@ -1,8 +1,12 @@
-"""Cutting a document into the pieces one model call is handed."""
+"""Cutting a document into the pieces a model call is handed, and spotting its index lines."""
 
 import re
 
+from ... import config
 from .markdown import HEADING_RE, mask_fences, restore_fences, strip_page_marks
+
+# A run of dot leaders, the mark of an index line.
+_LEADER = re.compile(r"\.{4,}|·{4,}|…{2,}")
 
 
 def chunk_markdown(text: str, max_chars: int) -> list[tuple[str, str]]:
@@ -124,3 +128,15 @@ def common_path(paths: list[str]) -> str:
         if not common:
             break
     return " > ".join(common)
+
+
+def is_navigation(paragraph: str) -> bool:
+    """Say whether a paragraph is a table of contents rather than material.
+
+    It keys on DOT-LEADER RUNS and not on punctuation density or line length, which mis-fire
+    on real prose; `KG_MIN_LEADER_RUNS` is what separates an index from a sentence with an
+    ellipsis.
+    """
+    if not paragraph.strip():
+        return True
+    return len(_LEADER.findall(paragraph)) >= config.KG_MIN_LEADER_RUNS

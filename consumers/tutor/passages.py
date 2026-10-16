@@ -30,12 +30,12 @@ from loguru import logger
 
 from variatio import config as pipeline_config
 from variatio.builders import source_docs
-from variatio.builders.knowledge_graph_builder.extraction import is_navigation
+from variatio.builders.source_docs.chunking import is_navigation
 from variatio.builders.source_docs.chunking import split_sections
 from variatio.core import progress
 from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
-from variatio.runtime.embedder.vectors import embed_normalized, prefix_for
+from variatio.core.vectors import embed_normalized, prefix_for
 
 from . import paths
 

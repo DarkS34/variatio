@@ -8,7 +8,7 @@ from dataclasses import replace
 
 from ..types import STAGES as PIPELINE_STAGES
 from ..types import Setting
-from . import access, builders, generation, inference, logging, reasoning, retrieval, sampling, tunnel
+from . import access, builders, engine, generation, logging, reasoning, retrieval, sampling, tunnel
 
 # The one place `variatio` names the evaluation, the tutor and the chat, and optional on purpose:
 # they import `variatio` and never the reverse, so the registry reaches them by name, not by
@@ -64,7 +64,7 @@ def _with_reader_stages(setting: Setting) -> Setting:
 
 REGISTRY: tuple[Setting, ...] = tuple(
     _with_reader_stages(setting)
-    for setting in inference.SETTINGS
+    for setting in engine.SETTINGS
     + tunnel.SETTINGS
     + access.SETTINGS
     + reasoning.SETTINGS

@@ -103,8 +103,3 @@ def node_line(name: str, definitions: dict[str, str] | None) -> str:
     """One node as a bullet, with its definition when the extraction wrote one."""
     definition = (definitions or {}).get(name)
     return f"- {name} — {definition}" if definition else f"- {name}"
-
-
-def concepts_block(concepts: list[str]) -> str:
-    """A plain bullet list of concept names."""
-    return "\n".join(f"- {c}" for c in concepts)

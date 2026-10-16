@@ -8,10 +8,10 @@ from loguru import logger
 
 from ... import config
 from ...core import inference, progress
+from ...core.vectors import l2_normalize, prefix_for
 from ...loaders.knowledge_graph import KnowledgeGraph
 from . import cache
 from .descriptions import ConceptDescriber
-from .vectors import l2_normalize, prefix_for
 
 
 class Embedder:

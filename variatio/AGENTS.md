@@ -56,8 +56,8 @@ Two rules (rewritten 2026-10-16: the earlier wording, «only `entrypoints/` take
 **`entrypoints/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
 only to resolve their own paths, and `runtime/`, `prompts/`, `wording/` and `settings/` do
 not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `core/`
-import `core.inference`** — `core/repair.py` calls it on behalf of `builders/` and
-`runtime/`. `runtime/__init__.py` and `core/__init__.py`
+import `core.inference`** — `core/repair.py` and `core/vectors.py` call it on behalf of
+`builders/` and `runtime/`. `runtime/__init__.py` and `core/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
 put a component back at the root.
@@ -65,7 +65,9 @@ put a component back at the root.
 - `core/`: `inference` (engine boundary: all model traffic via `generate()`/`embed()`/
   `embed_batch()`; never call an SDK from business logic), `cerebras`, `cerebras_budget`,
   `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `repair`
-  (`parse_with_repair`, requires an explicit `shape`), `repetition`.
+  (`parse_with_repair`, requires an explicit `shape`), `repetition`, `vectors` (L2
+  normalisation, batched embedding, the query/document prefixes; shared by the builders,
+  the embedder and the tutor).
 - `loaders/`: `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`, `locale`
   (the package was `instance/` until 2026-10-08, the directory's old name).
   The bank has no loader module; `entrypoints/initialize.py` reads it inline.

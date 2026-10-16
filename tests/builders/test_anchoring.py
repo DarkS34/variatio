@@ -1,6 +1,7 @@
 import json
 
 from variatio.builders.knowledge_graph_builder import extraction
+from variatio.builders.source_docs import chunking
 
 from ..conftest import ES
 
@@ -59,38 +60,38 @@ MULTILINE_INDEX = "\n".join(
 
 
 def test_navigation_detects_a_table_of_contents_line():
-    assert extraction.is_navigation(TOC_LINE)
+    assert chunking.is_navigation(TOC_LINE)
 
 
 def test_navigation_detects_a_multiline_index():
-    assert extraction.is_navigation(MULTILINE_INDEX)
+    assert chunking.is_navigation(MULTILINE_INDEX)
 
 
 def test_navigation_detects_a_realistic_single_line_toc():
     toc = "Tema ................ 4  " * 3
-    assert extraction.is_navigation(toc)
+    assert chunking.is_navigation(toc)
 
 
 def test_navigation_detects_middle_dot_leaders():
     toc = "Tema ····· 4  " * 3
-    assert extraction.is_navigation(toc)
+    assert chunking.is_navigation(toc)
 
 
 def test_navigation_detects_ellipsis_character_leaders():
     toc = "Tema …… 4  " * 3
-    assert extraction.is_navigation(toc)
+    assert chunking.is_navigation(toc)
 
 
 def test_navigation_keeps_real_prose():
-    assert not extraction.is_navigation("Un bucle for recorre una secuencia de valores.")
+    assert not chunking.is_navigation("Un bucle for recorre una secuencia de valores.")
 
 
 def test_navigation_keeps_prose_with_an_ellipsis():
-    assert not extraction.is_navigation("El bucle sigue... hasta agotar la secuencia.")
+    assert not chunking.is_navigation("El bucle sigue... hasta agotar la secuencia.")
 
 
 def test_navigation_keeps_prose_with_a_stray_dot_run():
-    assert not extraction.is_navigation(
+    assert not chunking.is_navigation(
         "Esto es una frase normal con .... cuatro puntos raros en medio de la explicacion."
     )
 

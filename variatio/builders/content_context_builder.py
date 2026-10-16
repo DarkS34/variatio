@@ -1,6 +1,6 @@
 """Writing `content_context.json`: what subject an instance is about, in prose.
 
-The artifact has no builder of its own — the graph builder and the profile builder each
+The artifact has no build job of its own — the graph builder and the profile builder each
 synthesise it from what their own artifact knows about the subject, in a `context` phase at
 the end of their plan. Both come through here.
 """

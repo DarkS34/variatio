@@ -23,7 +23,7 @@ from ..loaders import content_context, locale
 from ..loaders.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
 from .. import wording as wording_sets
-from . import _context, source_docs
+from . import content_context_builder, source_docs
 
 
 BUILD_PHASES = (
@@ -191,7 +191,7 @@ class ExemplarsProfileBuilder:
             lines.append("Ejemplares literales del material:")
             lines.extend(f"---\n{excerpt}" for excerpt in excerpts)
 
-        _context.synthesize(
+        content_context_builder.synthesize(
             self.workspace,
             "\n".join(lines),
             self._wording.CONTEXT_SOURCE_PROFILE,

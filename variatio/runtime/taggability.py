@@ -3,19 +3,28 @@
 Taggability is not a property of the graph: a concept is useless as a label only relative
 to the shapes of item the exemplars profile declares, so the review is made per domain
 against the profile's modalities and real statements from the bank. It imports the KG
-builder's prompt blocks because the review left the build and kept its prompt — a second
-copy of the renderers would desynchronise this block format from the graph's own.
+builder's node block and its parser because the review left the build and kept its prompt —
+a second copy of them would desynchronise this block format from the graph's own.
 """
 
 from loguru import logger
 
 from .. import config
 from ..builders.knowledge_graph_builder import blocks, parsing
-from ..builders.knowledge_graph_builder.schemas import TAGGABLE_SCHEMA
 from ..core import inference, progress
 from ..loaders.content_context import ContentContext
 
 BUILD_PHASES = (("taggable", "Reviewing which concepts work as labels", 100),)
+
+# An open-ended map — the keys are the concept names the model writes — so what the schema
+# pins is the envelope: the top-level key and the value type.
+TAGGABLE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "non_taggable": {"type": "object", "additionalProperties": {"type": "string"}}
+    },
+    "required": ["non_taggable"],
+}
 
 
 def review(
@@ -116,7 +125,7 @@ def _judge_domain(
     """
     prompt = prompts.review_taggable_concepts_prompt(
         domain,
-        blocks.concepts_block(domains),
+        _concepts_block(domains),
         blocks.nodes_block(members, relations, {}),
         content_context.prompt_block(),
         modalities,
@@ -147,6 +156,11 @@ def _judge_domain(
             excluded.append(concept)
             logger.debug(f"[{domain}] «{concept}» is no use as a label: {reason}")
     return excluded
+
+
+def _concepts_block(concepts: list[str]) -> str:
+    """A plain bullet list of concept names."""
+    return "\n".join(f"- {c}" for c in concepts)
 
 
 def _samples_block(exemplars_profile, exemplars_bank, domain_concepts: list[str]) -> str:

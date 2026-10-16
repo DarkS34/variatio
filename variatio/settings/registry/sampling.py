@@ -9,7 +9,7 @@ top-p by the model, by not being sent.
 """
 
 from ..types import Impact, Setting
-from . import inference
+from . import engine
 from .reasoning import PIPELINE
 
 GROUP = "Muestreo"
@@ -133,7 +133,7 @@ def phase_sampling(
     ]
 
 
-_MODELS = {setting.key: setting for setting in inference.SETTINGS}
+_MODELS = {setting.key: setting for setting in engine.SETTINGS}
 
 SETTINGS: list[Setting] = [
     setting for lane in PIPELINE for phase in lane.phases for setting in _declare(phase)

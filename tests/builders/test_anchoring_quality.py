@@ -6,6 +6,7 @@ import pytest
 
 from variatio import config
 from variatio.builders.knowledge_graph_builder import extraction
+from variatio.builders.source_docs import chunking
 
 # WHICH INSTANCE IS MEASURED. `workspaces/` is gitignored in full, so a checkout has
 # whatever its owner built under whatever they called it; the reference slug stays the
@@ -36,7 +37,7 @@ def test_almost_every_passage_contains_its_concept():
 
 @pytest.mark.corpus
 def test_no_passage_is_a_table_of_contents():
-    offenders = [name for name, e in entries(load()) if extraction.is_navigation(e["text"])]
+    offenders = [name for name, e in entries(load()) if chunking.is_navigation(e["text"])]
     assert offenders == []
 
 
