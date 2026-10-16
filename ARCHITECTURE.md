@@ -295,8 +295,8 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 
 ## 9. Where to go next
 
-- `AGENTS.md`: the rules for working in this repository, the closed decisions and the
-  measurements behind them.
+- `AGENTS.md`: the rules for working in this repository and the measurements behind them.
+- `DECISIONS.md`: the register of closed decisions, each with its date, commit and reason.
 - `web/DESIGN.md`: the rulebook for every element of the interface.
 - The docstring of each package's `__init__.py`: what it holds and its modules.
 - `README.md`: what the system does and how to start it.

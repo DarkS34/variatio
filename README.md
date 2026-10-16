@@ -165,8 +165,9 @@ restart; deleting it is safe — everything falls back to the registry defaults.
 
 ## Internal documentation
 
-`ARCHITECTURE.md` is the map of the code. `AGENTS.md` records the design decisions, the
-closed-decisions register and the measurements behind them. `web/DESIGN.md` is the rulebook
+`ARCHITECTURE.md` is the map of the code. `AGENTS.md` records the design decisions and the
+measurements behind them, and `DECISIONS.md` is the register of the closed decisions, each
+with its date, commit and reason. `web/DESIGN.md` is the rulebook
 of the interface.
 
 ## License

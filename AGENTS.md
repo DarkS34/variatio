@@ -5,8 +5,8 @@ Guidance for coding agents working in this repository.
 **How to read this file.** It states how things work and what must not be undone. The
 *Closed decisions* section is authoritative: if a request would reverse one, push back and
 ask before implementing. Numbers quoted are measurements; re-measure before changing
-what they justify. When a decision's reason is only summarised here, look for it in the
-commit that introduced it (`git log -S`) before changing it.
+what they justify. Each closed decision has an entry in [`DECISIONS.md`](DECISIONS.md) with its
+date, commit and reason; read it before changing the rule.
 
 ## Writing to the user
 
@@ -2108,265 +2108,206 @@ English. The names the application already has (steps, door, phases) are the cor
 
 ## Closed decisions (do not revert without explicit user request)
 
-Each line is a rule; the reason behind it is in the commit that introduced it.
+One line per rule in force, with its numbers in [`DECISIONS.md`](DECISIONS.md), which keeps
+the date, the commit, the reason and what each rule replaced. If a request would reverse one,
+push back and ask; to change one, follow «How to change a decision» there.
 
 **Structure**
-- The code is PolyForm Noncommercial 1.0.0 since 2026-10-11 (1.171.0 on `main`, 3.4.0 on
-  `variatio-vanilla`; the user's decision: free for any noncommercial use, never sold); MIT
-  before it, and copies taken then keep MIT.
-  The history is not rewritten to hide the MIT commits.
-- The functions live in `consumers/` (2026-10-14, the user's request; named `apps/` until
-  2026-10-16, renamed at the user's request because they consume the artifacts), outside
-  `variatio/` and `server/`; one-way import; the evaluation is not made removable. `consumers/` holds functions
-  on the artifacts alone: what the tutor and the chat share is `server/conversations/`
-  (2026-10-16).
-- `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting keys (e.g.
-  `models.phases.concept_tagger`) and on-disk names (`.review_state.json`) do not follow
-  module renames. Renames are done per importer, never with a global `sed`.
-- No default workspace; no reserved slug; a path is never a defaulted argument.
-- A workspace's artifacts live in `artifacts/` and their loaders in `variatio/loaders/`
-  (2026-10-08, the user's decision: both were `instance`). It is a renaming of its own and
-  not one that followed a module's; an old tree is renamed the first time it is opened.
-- Settings in the registry + `config.json`; one writer (`store.write_file` → `json_io`);
-  dotenv loader lives in `core/dotenv.py`.
-- One writer of persisted JSON: `json_io.write_json`.
-- Knowledge-graph extraction lives in this repo; no `kg-builder` dependency; the web app is
-  the only graph viewer.
-- A build writes only its final artifact; draft and curated stay two files. The bank's
-  building file is the one exception.
-- Taggability is not part of the builder; it heads the bank's collection at the job layer
-  (`review_taggability → build_bank → index`, 2026-10-08; until then the graph build chained
-  it), skipped when the profile, the syllabus and the context did not change, and sealing the
-  graph's approval again; no `GATES` or `JOB_ARTIFACT` entry for it. The route checks the
-  gates of every link before queueing a chain's head.
-- Content context is its own artifact, written by the other two builders; keep the three
-  named facts and the single renderer.
-- Transcription is an accelerator and a step of `/raw`, never a gate for a build nor a
-  stage; step 1 reads done only with every document read (2026-10-12, the user's decision;
-  until then documents in both origins were enough); both slots
-  use the VLM page route; no PDF→DOCX conversion; Office pictures transcribed with the page
-  model (no separate setting); metafiles rasterised through LibreOffice PNG export on a copy.
-- A build waits for a live transcription of its slot (a concurrency rule, not a gate).
-- Strings whose language must match the workspace live in `wording/`.
-- Screening is one package with two calls in fixed order (guardrail first); the sequence
-  exists once.
+- D-001, D-003 — The code is PolyForm Noncommercial 1.0.0 (from 1.171.0); the history is not
+  rewritten to hide the MIT commits, and copies taken then keep MIT.
+- D-004, D-007 — The functions live in `consumers/`, outside `variatio/` and `server/`;
+  one-way import; the evaluation is not made removable. What the tutor and the chat share is
+  `server/conversations/`.
+- D-008, D-009 — `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting
+  keys and on-disk names do not follow module renames. Renames go per importer, never `sed`.
+- D-010 — No default workspace; no reserved slug; a path is never a defaulted argument.
+- D-011 — A workspace's artifacts live in `artifacts/` and their loaders in
+  `variatio/loaders/`; an old tree is renamed the first time it is opened.
+- D-013, D-014 — Settings in the registry + `config.json`; one writer (`store.write_file` →
+  `json_io`); the dotenv loader lives in `core/dotenv.py`.
+- D-015 — One writer of persisted JSON: `json_io.write_json`.
+- D-016 — Knowledge-graph extraction lives in this repo; no `kg-builder`; the web app is the
+  only graph viewer.
+- D-017, D-018 — A build writes only its final artifact; draft and curated stay two files. The
+  bank's building file is the one exception.
+- D-019, D-020, D-022, D-023 — Taggability is not part of the builder: it heads the bank's
+  collection (`review_taggability → build_bank → index`), is skipped when the profile, the
+  syllabus and the context did not change, and seals the graph's approval again; no `GATES` or
+  `JOB_ARTIFACT` entry. The route checks the gates of every link before queueing a head.
+- D-024 — Content context is its own artifact, written by the other two builders; three named
+  facts and one renderer.
+- D-025, D-026, D-028…D-031 — Transcription is an accelerator and a step of `/raw`, never a
+  gate or a stage; step 1 reads done only with every document read; both slots use the VLM
+  page route; no PDF→DOCX; Office pictures read with the page model; metafiles rasterised
+  through LibreOffice PNG export on a copy.
+- D-032 — A build waits for a live transcription of its slot (concurrency, not a gate).
+- D-033 — Strings whose language must match the workspace live in `wording/`.
+- D-034, D-035 — Screening is one package with two calls in fixed order (guardrail first); the
+  sequence exists once.
 
 **Prompts and the graph**
-- Two prompt sets per workspace; JSON keys never translated; sets interchangeable.
-- UI language belongs to the account, prompt language to the workspace, and
-  `language_of_instruction` to the corpus — three different axes.
-- Every modality carries a difficulty; shared ladder, local criterion; the criterion's
-  `«rung»:` shape is legislated by the prompt.
-- `guidance.generation` is hand-written only; modality rules carry generation.
-- Prerequisite lists are transitive closures bounded by the curriculum, with opposite set
-  operations; without a curriculum, later concepts may be used but not practised.
-- The subject's curriculum is its course's progress, set by its teachers in «Clase». It is a
-  suggestion the generate form offers in one press, never a bound: a student may practise
-  what the class has not covered (2026-10-07; from 2026-10-06 it bounded a student's
-  commission, and until then no screen edited it).
-- The units of the syllabus are written in the order they are taught: the documents are read
-  in the natural order of their names, and the prompt that finds the units orders them
-  (numbering first, then the logic of the subject); code keeps that order and never sorts it
-  back by chunk or by median position (2026-10-05).
-- The hierarchy is one relation (`se_engloba_en`); `relacionado` stays in embeddings; don't
-  wholesale-regenerate descriptions without benchmarking retrieval.
-- No anchoring beats a false one. Descriptions are impersonal and grammar-constrained.
-- The free-text field is a four-slot catalogue, judged after the guardrail, failing open,
-  verified against derived owners.
-- Diagrams are transcribed as Mermaid; the merge prompt treats grammatical variants as one
-  concept; the profile may declare one variant decision field per modality.
+- D-036 — Two prompt sets per workspace; JSON keys never translated; sets interchangeable.
+- D-037 — UI language is the account's, prompt language the workspace's,
+  `language_of_instruction` the corpus's: three axes.
+- D-038, D-039 — Every modality carries a difficulty; shared ladder, local criterion; the
+  criterion's `«rung»:` shape is legislated by the prompt.
+- D-040 — `guidance.generation` is hand-written only; modality rules carry generation.
+- D-041, D-042 — Prerequisite lists are transitive closures bounded by the curriculum, with
+  opposite set operations; without a curriculum, later concepts may be used, not practised.
+- D-043 — The curriculum is the course's progress, set by its teachers in «Clase»: a
+  suggestion the generate form offers in one press, never a bound.
+- D-046 — Syllabus units are in teaching order: documents read in the natural order of their
+  names, units ordered by the prompt; code never sorts them back.
+- D-048, D-049, D-050 — One hierarchy relation (`se_engloba_en`); `relacionado` stays in
+  embeddings; no wholesale regeneration of descriptions without benchmarking retrieval.
+- D-051, D-052 — No anchoring beats a false one. Descriptions are impersonal and
+  grammar-constrained.
+- D-053 — The free-text field is a four-slot catalogue, judged after the guardrail, failing
+  open, verified against derived owners.
+- D-054, D-055, D-056 — Diagrams are transcribed as Mermaid; grammatical variants are one
+  concept; a profile may declare one variant decision field per modality.
 
 **Models and inference**
-- Open weights only; the optional `cerebras+ollama` engine is the one hosted exception and
-  is per-installation. No other hosted providers without asking. No fallback to Ollama when
-  the Cerebras budget runs out.
-- Nothing is warmed; `ensure_models` only checks and pulls.
-- No main model; every phase names its own.
-- Judging/generating default `qwen3.8:27b-q8_0`, reasoning default `low`; `max` is `high` on
-  that model; `qwen3.6:35b-a3b-q4_K_M` is broken (illegal memory access) — never re-add.
-- The domains naming call runs without reasoning; the phase context window is 65536.
-- Embedding model fixed at `qwen3-embedding:4b`.
-- The Cerebras throttle is a hard cap no header may raise; the gate books claims.
-- The Cerebras ledger lives outside the tree and is shared by default: the quota is the
-  account's, and one ledger per installation let each spend all of it.
-- No grammar to a remote model on the bank extraction (or its repair).
-- The commission chooses its writing model from the offered list; rows record it.
-- Every model call has its own temperature, top-k and top-p; empty inherits, so adding a
-  phase never changes how an existing one samples.
-- Queue per backend lane; local capacity 1 forever; remote capacity safe only with the
-  ledger's lock and claims. Inside a lane, three classes by duration and by who waits (the
-  tutor's turns, then commissions, then the background), aging so nobody waits for ever, and
-  a cap of background jobs on the local lane that aging does not lift (2026-10-06; it was
-  first come, first served).
-- `inference.generate()` streams internally and is interruptible; the stream is closed on
-  abandon; waits are sliced.
-- The idle unload clock counts every lane; not replaced by a shorter keep-alive.
-- A transcription answer at the output cap or in a repetition loop is a failed page (after
+- D-057, D-058 — Open weights only; `cerebras+ollama` is the one hosted exception, per
+  installation. No other hosted providers without asking. No fallback to Ollama when the
+  Cerebras budget runs out.
+- D-059 — Nothing is warmed; `ensure_models` only checks and pulls.
+- D-060 — No main model; every phase names its own.
+- D-061…D-064 — Judging/generating default `qwen3.8:27b-q8_0`, reasoning default `low`; `max`
+  is `high` on that model; `qwen3.6:35b-a3b-q4_K_M` is broken — never re-add.
+- D-065, D-066 — The domains naming call runs without reasoning; the phase context window is
+  65536.
+- D-067 — Embedding model fixed at `qwen3-embedding:4b`.
+- D-068, D-069 — The Cerebras throttle is a hard cap no header may raise; the gate books claims.
+- D-070 — The Cerebras ledger lives outside the tree, shared by default: the quota is the
+  account's.
+- D-072 — No grammar to a remote model on the bank extraction or its repair.
+- D-073 — The commission chooses its writing model from the offered list; rows record it.
+- D-074 — Every model call has its own temperature, top-k and top-p; empty inherits.
+- D-075, D-076, D-077 — Queue per backend lane; local capacity 1 forever; remote capacity safe
+  only with the ledger's claims. Three classes inside a lane, with aging, and a cap of
+  background jobs on the local lane that aging does not lift.
+- D-079 — `inference.generate()` streams internally and is interruptible; the stream is closed
+  on abandon; waits are sliced.
+- D-080, D-081 — The idle unload clock counts every lane; no shorter keep-alive instead.
+- D-082, D-084 — A transcription answer at the output cap or in a loop is a failed page (after
   one noted retry, salvaged up to the loop); there is no prompt version.
-- gpt-oss is not used; no code names it.
+- D-086 — gpt-oss is not used; no code names it.
 
 **Identity and access**
-- Invitation-only sign-up — single-use invitations, the seats of a teacher's class link, or
-  `create-user`; never open registration — own auth; no JWT; username identity, email
-  optional. Nobody adds an account by its username: an account enters a subject with a link.
-- The account's profile («Docente» / «Alumno») is the invitation's, never the registrant's
-  answer; only the administrator raises it, and nothing lowers it; it decides one thing,
-  creating subjects, and authorises nothing inside one (2026-10-06; it was a variable of the
-  evaluation the registrant chose).
-- Membership checked on every route; admin bypass in one place.
-- The per-address limit on attempts has one exception, the networks the administrator lists
-  as a school's: from them only the account is counted (2026-10-06; it had none).
-- A subject's teachers decide whether its students generate exercises and use the tutor (two
-  switches of the subject, after the administrator's mode); teachers are never bound by them
-  (2026-10-06). A group's switch, when it says something, wins over the subject's for its
-  students (2026-10-14).
-- A class may have groups, and with a group its teachers do what they do with the class: its
-  tools, its progress, its link and invitations, its activity and digest (the user's decision,
-  2026-10-14). A student is in one group at most, for now; teachers are in none. One live
-  class link per destination: the class and each group.
-- `viewer` is «Alumno» (2026-10-06; it was «Lector», who saw everything and changed
-  nothing): a student sees the syllabus without editing it, and the bank as its teachers
-  show it (2026-10-14: every exercise hidden until shown, whole or by fields, to the class or
-  to groups), and generates, evaluates or uses the tutor by their permissions; the rest of
-  the construction — the bank as a teacher works it, the raw material, the types of exercise
-  as a step — is not theirs to see. No fourth role.
-- Invitations and membership managed by the admin alone; links sealed, not stored in clear.
-  Since 2026-10-06 a teacher also brings their class in: a class link of many uses (seats,
-  expiry, pause, renewal) and personal invitations of their subject; an owner invites teachers.
-  Since 2026-10-06 a teacher also pauses, opens and removes the students of their subjects,
-  and the owner its teachers too; the administrator keeps everything it had. A subject with
-  people keeps an active owner at every door; pausing is reversible and removing is not;
-  neither moves what the person produced.
-- No «forgot password» on the login screen; no password generator; no session list.
-- The evaluator never sees the evaluation's score; blind instruments come before the reveal.
-- A session shows the system's proposal and one seed-drawn rival.
-- Deleting workspaces/artifacts is the admin's and takes the files; a last-member deletion
-  takes the tree; `.history/` is never emptied by it. CORS off.
-- Exercises are private to their author; the installation administrator alone reads every
-  account's, read-only, from the panel (never through `/api/generations`). A subject's
-  teachers read figures of their students' exercises (type, level, concept, day), never an
-  exercise (2026-10-07; until then they saw no figure of use per student).
-- A private job's events and job routes are its author's alone (`PRIVATE_KINDS`: commissions,
-  comparisons, tutor turns); a build's are the subject's. A student's job says nothing of the
-  bank while it runs, and a student reads no prompt or exemplar body afterwards (2026-10-06).
-- The evaluation and the tutor are switched by the administrator for nobody, everybody or a
-  list of accounts — the tutor also for a list of subjects (2026-10-07); both start off; the administrator follows the same rule as any account;
-  an invitation may list its holder; the tutor's daily limit is the account's across the
-  installation (decided 2026-10-03).
-- Generated exercises are files in the workspace, one per exercise in the author's `user_<id>/`;
-  the database keeps none of them. The library returns how an item was made; the server
-  writes it. `uv run variatio generate` (the CLI) saves nothing.
+- D-087, D-088, D-089 — Invitation-only sign-up (single-use invitations, class-link seats,
+  `create-user`), own auth, no JWT, username identity, email optional. An account enters a
+  subject with a link, never by its username.
+- D-090 — The profile («Docente» / «Alumno») is the invitation's; only the administrator
+  raises it, nothing lowers it; it decides one thing, creating subjects.
+- D-092, D-093 — Membership checked on every route; admin bypass in one place.
+- D-094 — The per-address limit skips the networks the administrator lists as a school's:
+  from them only the account is counted.
+- D-096, D-097 — A subject's teachers decide whether its students generate or use the tutor
+  (after the administrator's mode); a group's switch, when set, wins.
+- D-098, D-099 — A class may have groups, and with a group its teachers do what they do with
+  the class; a student is in one group at most, teachers in none. One live class link per
+  destination.
+- D-100, D-102 — `viewer` is «Alumno»: reads the syllabus, and the bank as its teachers show
+  it; generates, evaluates or uses the tutor by permission; sees nothing else of the
+  construction. No fourth role.
+- D-104, D-105, D-107 — Links are sealed, never stored in clear. The administrator keeps every
+  power; a teacher also brings their class in (class link, personal invitations; an owner
+  invites teachers) and pauses, opens and removes its students. A subject with people keeps
+  an active owner; pausing is reversible, removing is not; neither moves what a person made.
+- D-108, D-109, D-110 — No «forgot password» on the login screen; no password generator; no
+  session list.
+- D-111, D-112 — The evaluator never sees the score; blind instruments come before the reveal.
+- D-113 — A session shows the system's proposal and one seed-drawn rival.
+- D-114, D-115, D-116 — Deleting workspaces/artifacts is the admin's and takes the files; a
+  last-member deletion takes the tree; `.history/` is never emptied by it. CORS off.
+- D-117, D-118, D-119 — Exercises are private to their author; the administrator alone reads
+  every account's, read-only, from the panel. A subject's teachers read figures, never an
+  exercise.
+- D-121, D-122 — A private job's events and routes are its author's (`PRIVATE_KINDS`); a
+  build's are the subject's. A student's job says nothing of the bank.
+- D-123, D-124, D-125 — The evaluation and the tutor are switched by the administrator for
+  nobody, everybody or a list of accounts (the tutor also of subjects); both start off; no
+  exemption for the administrator; the tutor's daily limit is the account's.
+- D-126, D-127 — Generated exercises are files in the workspace, one per exercise in the
+  author's `user_<id>/`; the library returns how an item was made, the server writes it; the
+  CLI saves nothing.
 
 **Interface**
-- The material is Atlas in clay (2026-10-04, reopening the grid, `--radius: 0` and the ink
-  `--primary`): no white, two levels of depth, small things flat, careful edges; the palette
-  is measured; arm colours fixed; theme three-state.
-- One base for blocks, tables, lists, lists of sections, controls on a line, choices and tabs
-  (2026-10-07, the user's request after an inventory with screenshots): tables and lists of
-  data lie flat on their block — `.well` holds what is not a row of data, and a list that
-  scrolls inside its block —; row gestures show on hover except the one that opens; every
-  list of sections leads with a 16 px mark; one tab, one pill, one choice card; whole-pixel
-  lines. See *Material and tokens*.
-- The bar is the path: three numbered steps — «Apuntes y ejercicios», «Temario», «Banco de
-  ejercicios», the types of exercise being the first part of the third (2026-10-08; four
-  steps until then, the types before the syllabus) — and the unnumbered doors open to the
-  account (as many as are open to it, since 2026-10-14), the two groups set apart by a rule and with no phase captions
-  (2026-10-04); the steps never fold (2026-10-08); no dashboard; the rail is gone. For a
-  student the bar draws «Temario» and «Banco de ejercicios» without a number (2026-10-14;
-  from 2026-10-06 «Temario» alone), and `/` leads to the first open door or to
-  `SubjectNotReady`; for a teacher nothing changes.
-- Step 3 is two parts, the types of exercise and then the bank, one on screen, chosen from a
-  block of two choice cards at the top (types 3, bank 7) that says where each stands; the
-  bank's opens once the types exist and is where a visit opens once both are built; the part
-  on screen is headed «Paso 3 de 3 · Parte N de 2»; «Recoger el banco» confirms the types and
-  collects the bank; one coral control on the move that is next; one part corrected at a
-  time (2026-10-08; earlier the same day the two parts were stacked on one page under a
-  heading of the step, told apart by a rule).
-- View and correct are two moments; «Continuar» closes a stage and stands with
-  «Modificar» (2026-10-15, the user's request; it was «Quiero corregir algo») beside the
-  title on every step, never in a block at the foot (2026-10-05); no «Aprobar»/«Reabrir»; no rebuild except for document drift. After the last
-  step it names the door it opens, «Generar ejercicios» (2026-10-08). One exception: the
-  bank's collection closes the bank itself once indexed, so step 3 is done and the doors
-  open without a press (2026-10-08, the user's decision).
-- The guide and the tutorial are hidden behind one flag (`lib/help.HELP_HIDDEN`): no entry,
-  no link, no route (2026-10-07). Their copy is not updated while hidden.
-- A queued job is not a running one. No time estimates. No «loading model» signal. No log on
-  screen. No run drawer.
-- Generate screen belongs to the visit; its «Mis ejercicios» tab lists the subject in use
-  and switching tabs never clears the run or its results. Live feed window of ten admitting
-  one row at a time (`features/bank/window.ts`). Zero total ≠ unknown total. KaTeX for
-  formulas.
-- The raw material is its own screen; one row per document; nothing announces completeness
-  except the finished origin's filled tick, the line over «Continuar» beside the title, and
-  step 1's state in the bar, which waits for every document read (2026-10-12).
-- A raw document opens in step 1 as its original beside its transcription, page to page where
-  the transcription holds one page per page of that very file, each column scrolled on its own
-  otherwise with one sentence saying why (2026-10-08; from 2026-10-04 the tutor's reader opened
-  the notes on a section). It opens to read; a page is corrected from its pencil, one at a
-  time. A page of the original is content, like a figure: it keeps its white in either theme,
-  inside a well.
-- A control a teacher cannot decide is not offered (artifact fields and endpoints remain).
-  «Quién lo decide» (`decided_by`) came back on 2026-10-05 and left again the same day, at
-  the user's request: a build still writes it and the generate form still asks about a
-  `decided_by: "user"` field, but no screen edits it (a field that becomes the statement, a
-  list or an object still loses the mark). In its place stands «Se elige al generar»
-  (`omittable`): the second row of a field in «Campos de …» with «Obligatoriedad» — one
-  grid, so the two start at one height under the name and the type — with «Activado» /
-  «Desactivado», not drawn for the statement; a field with it on carries a badge. The
-  chosen option is the type picker's ink border over the ink tint (`--muted` and `--sunk`
-  are one value, so a sunk pill on a muted ground told nothing). «Campos que se indexan» (`embed_fields`)
-  stays out: it came back the same day and the user removed it again on reading why the
-  default is the statement alone (measured, a solution in the index tags worse).
-- No (i) beside a stage title; an (i) and visible text never say the same thing.
-- Settings show no «Por qué este valor»: the measured `doc` is not on screen; an (i) only where needed.
-- Every tab of «Administración» is one list of its sections beside the section open, the
-  same list on all of them (2026-10-04); a tab with one section has none; no tiles of totals
-  above the tabs; a list inside a block is ruled rows, never framed ones.
-- «Mis asignaturas y ejercicios» shows an account its own subjects and its own exercises
-  only, the administrator's included (2026-10-04); others' are read from the panel. The
-  subjects are a list and the exercises open beside it, never folded under their subject.
-- «Cuentas» is one table per kind of account, each kind a section of the tab's list with
-  one search over the list across them all, and a row carries no figure of what the account
-  produced (2026-10-04).
-- «Configuración» is one screen per stage, as the bar names them; a shared setting is one value,
-  drawn on every stage that reads it and unfolded only on its owner's. An optional function's
-  stage lives in that function's own admin tab, under who may use it, not in «Configuración».
-- The mark is three equal squares (settled, attention, outline).
-- Every URL path is English. A refusal names the move out of it (`ChainGate`).
-- The exemplars profile is edited through the form alone.
+- D-128 — The material is Atlas in clay: no white, two levels of depth, small things flat,
+  careful edges; the palette measured; arm colours fixed; theme three-state.
+- D-130 — One base for blocks, tables, lists, lists of sections, controls, choices and tabs.
+- D-131, D-133, D-135, D-137, D-139, D-140 — The bar is the path: three numbered steps and the unnumbered doors open to
+  the account, set apart by a rule, with no phase captions; the steps never fold; no
+  dashboard; no rail. A student's bar draws «Temario» and «Banco de ejercicios» unnumbered.
+- D-142 — Step 3 is two parts (types, then bank), one on screen, chosen from two cards at the
+  top; «Paso 3 de 3 · Parte N de 2»; one part corrected at a time.
+- D-144…D-147, D-149, D-151, D-153 — View and correct are two moments: «Modificar» and «Continuar» stand beside
+  the title on every step; no «Aprobar»/«Reabrir»; no rebuild except for document drift;
+  after the last step «Continuar» is «Generar ejercicios». The bank's collection closes the
+  bank itself.
+- D-154 — The guide and the tutorial are hidden behind `lib/help.HELP_HIDDEN` until D-225
+  deletes them.
+- D-155…D-159 — A queued job is not a running one. No time estimates, no «loading model»
+  signal, no log on screen, no run drawer.
+- D-160…D-164 — The generate screen belongs to the visit; its «Mis ejercicios» tab lists the
+  subject in use; switching tabs keeps the run. Live feed of ten rows. Zero total ≠ unknown
+  total. KaTeX for formulas.
+- D-165, D-166, D-168 — The raw material is its own screen, one row per document; completeness
+  is announced only by the finished origin's tick, the line over «Continuar» and step 1's
+  state, which waits for every document read.
+- D-170 — A raw document opens in step 1 as its original beside its transcription, page to
+  page where it can; it opens to read; a page of the original keeps its white.
+- D-172, D-173, D-175, D-176, D-177 — A control a teacher cannot decide is not offered: no
+  screen edits `decided_by` or `embed_fields`; «Se elige al generar» (`omittable`) is the
+  field's second row; the chosen option is the ink border over the ink tint.
+- D-179, D-180 — No (i) beside a stage title; an (i) and visible text never say the same thing.
+- D-181 — Settings show no «Por qué este valor»; an (i) only where needed.
+- D-182 — Every tab of «Administración» is one list of its sections beside the one open; no
+  tiles of totals; lists inside a block are ruled rows.
+- D-183, D-184 — «Mis asignaturas y ejercicios» shows an account its own subjects and
+  exercises only; the exercises open beside the list, never folded under their subject.
+- D-186, D-187 — «Cuentas» is one table per kind of account, each a section, one search across
+  them; no figure of what an account produced.
+- D-189, D-190 — «Configuración» is one screen per stage; a shared setting is one value; an
+  optional function's stage lives in that function's admin tab.
+- D-191 — The mark is three equal squares (settled, attention, outline).
+- D-192, D-193 — Every URL path is English. A refusal names the move out of it (`ChainGate`).
+- D-194 — The exemplars profile is edited through the form alone.
 
-**Tutor (decided 2026-10-03)**
-- As many doors after the construction as functions open to the account (the user's decision,
-  2026-10-14: the user never wanted them capped): «Generar ejercicios», «Evaluar el sistema»,
-  «Tutor socrático» and «Chat libre». Until then «three doors at most… no fourth door».
-- The tutor's replies wait in the queue like any job and say «en cola»; they are shown whole,
+**Tutor**
+- D-195 — As many doors after the construction as functions open to the account.
+- D-197 — The tutor's replies wait in the queue like any job and say «en cola»; shown whole,
   after the checks, never streamed.
-- Conversations are private to their author; the administrator reads them read-only. A
-  subject's teachers read, of the class and of each student, figures and a weekly digest
-  written in paraphrase — never a student's sentence, never a name, never a conversation —
-  which the teacher asks for; the students are not told (the user's decision, 2026-10-07).
-- The subject's criteria are generated by the system and curated by a teacher (edit role);
-  a student never sees or changes them. The method's rules are fixed, not editable, and live
-  in the prompt alone (not listed on any screen).
-- What the syllabus places before the concept asked about is taken as known; the focus never
-  moves back to it.
-- The student may say what a message is about by choosing ONE concept beside the box; choosing
-  is optional, units organise the choice and are never themselves chosen.
-- Diagrams of the graph are drawn by code from the graph and shown sparingly (a concept's
-  first reply, a send-back to a prerequisite); the model draws none. Formulas are the model's,
-  between dollar signs, with no cap in code.
-- A reply tells the material in its own words and sends the student nowhere: no «en los
-  apuntes», no unit, section or document, no places under it, and no reader in the tutor
-  (2026-10-08; from 2026-10-03 the places were listed under the reply and opened the
-  original). The document reader is the construction's, in step 1.
-- One typeface in the tutor as everywhere (Archivo); the two voices differ by material and
-  side, not by letter. The concept map is a graph of the app's chips with traced lines, not a
-  Mermaid diagram, and has no source to show (2026-10-08; until then a Mermaid flowchart).
-  Every relation it holds is drawn; none is written under it as a sentence, and the
-  concept carries no unit (the user's correction of the same day).
-- The tutor screens with the guardrail alone (`screen_message`), not admissibility.
-- A bank exercise's solution never enters the card.
-- No "System One" classifier (Jev, Laya…): the kind is decided by signals and one grammar call.
+- D-198, D-199 — Conversations are private to their author; the administrator reads them
+  read-only; teachers read figures and a weekly paraphrased digest they ask for, never a
+  sentence, a name or a conversation; students are not told.
+- D-201, D-202 — Criteria are generated and curated by a teacher; a student never sees them.
+  The method's rules are fixed and live in the prompt alone.
+- D-203 — What the syllabus places before the concept asked about is taken as known; the focus
+  never moves back to it.
+- D-204 — A student may choose ONE concept for a message; optional; units are never chosen.
+- D-205, D-206 — Concept maps are drawn by code from the graph, sparingly; the model draws
+  none. Formulas are the model's, between dollar signs.
+- D-207 — A reply tells the material in its own words and sends the student nowhere; no reader
+  in the tutor.
+- D-210, D-211 — One typeface (Archivo); the two voices differ by material and side. The map is
+  the app's chips with traced lines, every relation drawn, no unit on the concept.
+- D-213 — The tutor screens with the guardrail alone, not admissibility.
+- D-214 — A bank exercise's solution never enters the card.
+- D-215 — No "System One" classifier: the kind is decided by signals and one grammar call.
+
+**Documentation and layout**
+- D-216, D-218 — `entrypoints/` is the library's door; `builders/` and `loaders/` take a
+  `Workspace` only for their own paths. Inside `variatio/` only `cli.py`, `builders/`,
+  `runtime/` and `core/` import `core.inference`.
+- D-220 — Closed decisions are entries of `DECISIONS.md`; this section keeps the rule and its
+  number.
+- D-222 — Work plans go in `plans/` (git-ignored); there is no `docs/`.
+- Decided on 2026-10-16, not yet applied (the refactor plan): D-223 one `AGENTS.md` per folder,
+  D-225 the guide and tutorial deleted, D-226 import-linter, D-227 the server by areas, D-228
+  `variatio/documents/`, D-229 the client's types, hooks and primitives split.
+  Until D-223 applies, D-224 holds: narrative belongs in this file.
 
 ## Code conventions
 
