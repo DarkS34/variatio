@@ -23,8 +23,6 @@ import {
 import { BuildButton } from "@/components/BuildButton";
 import { BuildProgress } from "@/components/BuildProgress";
 import { Button } from "@/components/ui/button";
-import { GuideLink } from "@/components/GuideLink";
-import type { GuideSlug } from "@/features/guide/sections";
 import { Alert, EmptyState, Spinner } from "@/components/ui/misc";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
@@ -76,14 +74,6 @@ const RATED_AFTER_WHAT = new Set(["knowledge_graph", "exemplars_bank"]);
 // what every generated exercise is copied from.
 const CURATE_WHY: Record<string, Key> = {
   exemplars_bank: "stage.curate.bodyBank",
-};
-
-// Which page of the guide explains each stage. One map rather than a prop, because all
-// three stage screens render through this header and none of them should have to remember.
-const GUIDE: Record<string, GuideSlug> = {
-  exemplars_profile: "profile",
-  knowledge_graph: "graph",
-  exemplars_bank: "bank",
 };
 
 /**
@@ -276,9 +266,8 @@ export function useStageControl(stage: StageState | undefined): StageControl {
 /**
  * A stage is visible before it is available, and says exactly why it is not.
  *
- * A disabled control with no explanation is the thing this screen exists to avoid. What the
- * stage IS belongs to the guide, linked under the title; what is wrong with it right now
- * stays on the page, because that is the part you act on.
+ * A disabled control with no explanation is the thing this screen exists to avoid: what is
+ * wrong with the stage right now stays on the page, because that is the part you act on.
  *
  * `headless` draws the stage without its header and way out: the bank's step is two stages,
  * each a part of it, and heads the part on screen itself (`features/bank/BankStep`). It hands
@@ -387,7 +376,6 @@ export function StageGate({
               </p>
             ) : null)
           }
-          guide={GUIDE[stage.artifact]}
           // Correcting is optional, and moving on asks nobody to understand the word
           // "aprobar". The build button is never here: it is the one thing to do on an
           // unbuilt stage, so it is drawn in the middle of the emptiness at a size that says
@@ -770,8 +758,7 @@ export const STAGE_KICKER = "text-micro text-muted-foreground";
  *
  * The screens of the construction draw it, so a step cannot be headed one way here and
  * another there. The way out stands to the right from `lg` and under the title below it
- * (`WayOn`). The guide link goes UNDER the title, on a line of its own: beside it, it is one
- * more chip in a row of chips. No tag of any kind beside the title: the bar already says the
+ * (`WayOn`). No tag of any kind beside the title: the bar already says the
  * state under each step's name, and what a state ASKS is said by the notices below.
  *
  * A step drawn in parts (the bank's) is headed by the part on screen: its name is the title,
@@ -783,7 +770,6 @@ export function StageHeader({
   part,
   title,
   lead,
-  guide,
   wayOn,
 }: {
   /** The step's number in the bar, or null for a screen outside the path. */
@@ -792,7 +778,6 @@ export function StageHeader({
   part?: { n: number; total: number };
   title: ReactNode;
   lead?: ReactNode;
-  guide?: GuideSlug;
   wayOn?: ReactNode;
 }) {
   const { t } = useT();
@@ -807,7 +792,6 @@ export function StageHeader({
         ) : null}
         <h1 className="font-display font-expanded text-title">{title}</h1>
         {lead}
-        {guide ? <GuideLink slug={guide} /> : null}
       </header>
       {wayOn}
     </div>

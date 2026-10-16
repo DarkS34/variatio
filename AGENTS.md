@@ -30,7 +30,7 @@ reading. The language stays Spanish; the STE rules apply to the Spanish text.
 «80%» means that the rules guide the text but STE's dictionary does not bind it: when a
 rule and precision conflict, precision wins. The rule covers what is said to the user in the
 conversation (answers, summaries, plans, questions). It does not change code, commit
-messages, UI copy, the in-app guide or this file, which keep their own conventions.
+messages, UI copy or this file, which keep their own conventions.
 
 ## Project
 
@@ -1391,9 +1391,9 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   pair as any `-foreground`.
 - Theme: three-state (`system`/`light`/`dark`), dark tokens only under
   `:root[data-theme="dark"]`.
-- Typography: Archivo only, roles by width axis and weight; six ordered steps. Tutorial alone
-  uses Literata (self-hosted — the CSP forbids external fonts). The tutor read in Literata
-  for one afternoon and the user took it back: one face across the system.
+- Typography: Archivo only, roles by width axis and weight; six ordered steps. One face across
+  the system: the tutor read in Literata for one afternoon and the user took it back, and
+  the tutorial, the last screen in Literata, was deleted with its font (2026-10-16).
 - **Global `*` rules in `index.css` go in `@layer base`** or they silently override every
   Tailwind utility (this once disabled every `border-<colour>`).
 - `vertical-align` on a `<tr>` does nothing; select the cells (`[&>td]:align-top`).
@@ -1406,11 +1406,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   types of exercise a step of their own before the syllabus) and `USES` (the unnumbered doors
   of «Fase de pruebas»: «Generar ejercicios», «Evaluar el sistema», «Tutor socrático» and,
   since 2026-10-15, «Chat libre», which has no tone and opens with the session's
-  `features.chat`). Each door names its `feature`; the bar and the guide draw
+  `features.chat`). Each door names its `feature`; the bar draws
   `usesFor(useFeatures())`, so a function closed to the account has no door, and its route
   draws «not found». The bar no longer captions the two phases (user's request, 2026-10-04):
-  a rule sets the groups apart, and the guide and the tutorial still name them. The
-  first not-done step is `now`; done steps show a bare tick, no box. **Step 1 is done with
+  a rule sets the groups apart. The first not-done step is `now`; done steps show a bare tick, no box. **Step 1 is done with
   both origins stocked AND every document read** (`raw/progress.rawStepDone`, through
   `useTranscriptionSummary.stepDone`, read by the bar and by `/`'s redirect; the user's
   decision of 2026-10-12 — until then documents in both origins were enough, and the bar
@@ -1448,7 +1447,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   and never lowercases it: the names carry no article to lean on.
   Identifiers, routes and keys keep their names. The app never narrates itself in the first
   person; the reader's own answers may be first person.
-- Every URL path and guide slug is English.
+- Every URL path is English.
 - `/` is the landing for a visitor without a session and the application's redirect for an
   account; the login form is `/login` and the demo `/demo`, both public (*The landing*).
 
@@ -1469,8 +1468,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   is the `title` of the button it explains. After the last step «Continuar» is the door it
   opens, «Generar ejercicios» (`continueLabel`; until 2026-10-08 «Ya está: crear mi primer
   ejercicio», which said "first" on every visit).
-  No «Aprobar» or «Reabrir». No tags or (i) beside a stage's title; the guide link sits
-  under it. The header is `StageHeader` (kicker «Paso N de 3», `STEPS.length`; for a step
+  No «Aprobar» or «Reabrir». No tags or (i) beside a stage's title. The header is `StageHeader` (kicker «Paso N de 3», `STEPS.length`; for a step
   drawn in parts, `part` joins the part's place to it, «Paso 3 de 3 · Parte 1 de 2»), and a
   stage's state for the visit — correcting, the pending edit, whether it wrote, closing it —
   is `useStageControl`, which `StageGate` makes for itself or is handed (`control`); with
@@ -1766,39 +1764,10 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   AND bundled (`web/vite/mermaid-subset.ts` fails the build if Mermaid's shape moves). One
   KaTeX version is forced via `pnpm-workspace.yaml`.
 - `Progress`: total zero reads empty, unknown total sweeps (`barFill`).
-- **The guide and the tutorial are hidden** (the user's decision, 2026-10-07): one flag,
-  `lib/help.HELP_HIDDEN`. No entry in the account menu, `GuideLink` draws nothing, a new
-  account lands on `/` instead of `/tutorial`, and `/guide`, `/guide/*`, `/tutorial` and
-  `/tutorial/*` draw «not found» before anything else (`isHelpPath`), so neither chunk is
-  fetched. Their code and copy stay as they were and speak of four steps; they are not
-  updated while hidden, so the rule that a behaviour change ends with its guide section is
-  suspended — and resumes the day the flag goes. The server has no route of either.
-- The tutorial is two decks of full-window slides (2026-10-06): a teacher's opens on the
-  construction (s1–s4), a student's on what is to hand (st1–st4: welcome, the syllabus,
-  generating, and the tutor only with it open), and both end on the study's two when the
-  evaluation is open. Whose deck it is is `useSpeaksToStudent` — a student of the subject in
-  use, or in no subject an account whose profile is not a teacher's — which the guide reads
-  too. `features/tutorial/slides.ts` (`deckFor`, `slideCount`, each taking that flag) is the
-  one count `App` and `AppShell` read, and the outro closes the last slide drawn — a
-  student's sends them to `/`, never `/raw` — with no header, edge rails
-  for navigation, justified prose from `sm` up; it draws the app as it is. Slides 1–4 hold
-  with the evaluation open or closed, so they never ask for a part in a study; that request
-  lives on 5–6, which are the evaluation's code (`consumers/evaluation/tutorial.tsx`, its figures and
-  strings with it), fetched only for an account the evaluation is open to. What correcting a
-  step means is said on slide 3, every account's.
-- The guide's sections on the evaluation and the tutor live in their folders
-  (`consumers/evaluation/guide/`, `consumers/tutor/guide/`, one file per language), and so does the
-  questionnaire's part of how a building step closes (`StageReviewGuide`); the registry
-  (`features/guide/sections.tsx`) leaves a closed function's section out of the index, the
-  search and the routing. Each section declares its `audience` (`teacher`, `student`,
-  `all`, absent is `all`; 2026-10-06): a student reads «all» and «student» and opens on «Empezar
-  como alumno» (`student-start`); a teacher reads every section, opening on their own start.
-  «Tu clase» (`class`) is a teacher's; a section may carry a `studentLabelKey` (the syllabus
-  is «El temario» to a student, never «Paso 3 · Temario»). A hyphenated slug is a quoted
-  key of `BODIES`, which `check:i18n` reads.
-- The in-app guide (`/guide`) is user-facing copy: a behaviour change is not finished until
-  its section is — while it is hidden (above), the rule waits. Every screen links its section
-  via `GuideLink` typed by `GuideSlug`.
+- **There is no guide and no tutorial** (deleted 2026-10-16, D-225; hidden behind a flag
+  since 2026-10-07). `/guide` and `/tutorial` are «not found» like any path with no route, a
+  new account lands on `/`, and the server has none of them. Their text is in git history
+  (before `5604d5c`).
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   Six tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off, one per
   optional function in its own tone — «Evaluaciones» (`--evaluation`) and «Tutor»
@@ -2070,8 +2039,7 @@ English. The names the application already has (steps, door, phases) are the cor
 ### Client rules
 
 - i18n: `es.ts` is the source, `en.ts` is typed against it (missing key = `tsc` error), `es`
-  eager and `en` lazy. `pnpm check:i18n` catches untranslated literals and missing guide
-  sections. **Delete catalogue keys nobody reads** (prove it, delete from both, let `tsc`
+  eager and `en` lazy. `pnpm check:i18n` catches untranslated literals. **Delete catalogue keys nobody reads** (prove it, delete from both, let `tsc`
   answer). Strings the server sends by stable key are translated client-side
   (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`, `consumers/tutor/limit.ts`) with the server string
   as fallback.
@@ -2246,8 +2214,6 @@ push back and ask; to change one, follow «How to change a decision» there.
   the title on every step; no «Aprobar»/«Reabrir»; no rebuild except for document drift;
   after the last step «Continuar» is «Generar ejercicios». The bank's collection closes the
   bank itself.
-- D-154 — The guide and the tutorial are hidden behind `lib/help.HELP_HIDDEN` until D-225
-  deletes them.
 - D-155…D-159 — A queued job is not a running one. No time estimates, no «loading model»
   signal, no log on screen, no run drawer.
 - D-160…D-164 — The generate screen belongs to the visit; its «Mis ejercicios» tab lists the
@@ -2304,8 +2270,9 @@ push back and ask; to change one, follow «How to change a decision» there.
 - D-220 — Closed decisions are entries of `DECISIONS.md`; this section keeps the rule and its
   number.
 - D-222 — Work plans go in `plans/` (git-ignored); there is no `docs/`.
+- D-225 — There is no guide and no tutorial; their text is in git history.
 - Decided on 2026-10-16, not yet applied (the refactor plan): D-223 one `AGENTS.md` per folder,
-  D-225 the guide and tutorial deleted, D-226 import-linter, D-227 the server by areas, D-228
+  D-226 import-linter, D-227 the server by areas, D-228
   `variatio/documents/`, D-229 the client's types, hooks and primitives split.
   Until D-223 applies, D-224 holds: narrative belongs in this file.
 

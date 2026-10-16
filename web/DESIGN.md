@@ -259,7 +259,7 @@ one pressed in. The generate form's fixed-height cards are `CHOICE_CARD` (same b
 
 ## 8. Type
 
-Archivo only (Literata only in the tutorial). Six steps, every line a whole number of pixels:
+Archivo only. Six steps, every line a whole number of pixels:
 
 | Class | Use |
 |---|---|
@@ -280,10 +280,10 @@ Archivo only (Literata only in the tutorial). Six steps, every line a whole numb
 - lucide icons. 16 px (`size-4`) in rows, marks and buttons (buttons size them for you);
   14 px inside `icon-sm` buttons (automatic).
 - **No icon in a block's title.** Icons belong to marks of lists, buttons and doors.
-- A screen header: `h1` (display), its (i) `InfoHint` if needed, and `GuideLink` to its guide
-  section under it. An (i) and visible text never say the same thing.
+- A screen header: `h1` (display) and its (i) `InfoHint` if needed. An (i) and visible text
+  never say the same thing.
 - A stage header: kicker «Fase de construcción · Paso N de 3», the title in the display face
-  at `text-title`, the lead, `GuideLink`, and `StageGate.WayOn` on the right. A step drawn in
+  at `text-title`, the lead, and `StageGate.WayOn` on the right. A step drawn in
   parts (step 3) is headed by the part on screen: «Fase de construcción · Paso 3 de 3 · Parte
   N de 2» over the part's name (`StageHeader`'s `part`).
 
@@ -295,7 +295,6 @@ Archivo only (Literata only in the tutorial). Six steps, every line a whole numb
   ejercicios», «ejercicio(s) generado(s)». The app never speaks of itself in the first person.
 - No time estimates anywhere. A queued job is not a running one.
 - Fold, never drop; never fold the only copy of something.
-- A behaviour change is not finished until its guide section says so (`features/guide/`).
 
 ## 11. Where each primitive lives
 

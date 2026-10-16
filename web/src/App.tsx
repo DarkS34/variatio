@@ -5,9 +5,7 @@ import { EmptyState, Spinner } from "@/components/ui/misc";
 import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";
-import { slideCount, slideOf } from "@/features/tutorial/slides";
-import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent, useSpeaksToStudent } from "@/state/auth";
-import { HELP_HIDDEN, isHelpPath } from "@/lib/help";
+import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
 import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
@@ -34,9 +32,6 @@ const BankReader = lazy(() =>
 const ClassScreen = lazy(() =>
   import("@/features/class/ClassScreen").then((m) => ({ default: m.ClassScreen })),
 );
-const GuideScreen = lazy(() =>
-  import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
-);
 const EvaluationScreen = lazy(() =>
   withCatalogues(import("@/consumers/evaluation/EvaluationScreen")).then((m) => ({
     default: m.EvaluationScreen,
@@ -57,13 +52,10 @@ const ChatScreen = lazy(() =>
 const TutorScreen = lazy(() =>
   withCatalogues(import("@/consumers/tutor/TutorScreen")).then((m) => ({ default: m.TutorScreen })),
 );
-const TutorialScreen = lazy(() =>
-  import("@/features/tutorial/TutorialScreen").then((m) => ({ default: m.TutorialScreen })),
-);
 
 // Which destinations need an instance to mean anything. Everything not listed here is
-// about the person or the installation and works with no workspace at all: the guide is
-// reading, "Mi perfil" is the account, and administration is where an administrator hands
+// about the person or the installation and works with no workspace at all: "Mi perfil" is
+// the account, and administration is where an administrator hands
 // out access in the first place — locking them behind a workspace would leave the state
 // with no way out of itself.
 const NEEDS_WORKSPACE = [
@@ -92,24 +84,10 @@ export function App() {
   const hasWorkspace = useHasWorkspace();
   const features = useFeatures();
   const student = useIsStudent();
-  // Whose deck the tutorial is: `TutorialScreen` and `AppShell` count it the same way.
-  const studentDeck = useSpeaksToStudent();
   const teaches = useCanEdit();
   const stage = (artifact: string) => pipeline.data?.stages.find((s) => s.artifact === artifact);
 
   const screen = () => {
-    // Hidden at the user's decision: «not found» before anything, so neither chunk loads.
-    if (HELP_HIDDEN && isHelpPath(path)) return <NotFound />;
-
-    // The tutorial runs inside the shell, and the shell reads its slide from the PATH,
-    // which is why there is one route per slide. `AppShell` reads it with the same count.
-    const slide = slideOf(path, slideCount(features, studentDeck));
-    if (slide !== null) return <TutorialScreen at={slide} />;
-
-    if (path === "/guide" || path.startsWith("/guide/")) {
-      return <GuideScreen slug={path.slice("/guide/".length)} />;
-    }
-
     const feature = FEATURE_OF[path];
     if (feature && !features[feature]) return <NotFound />;
     // Generating closed to the subject's students: their exercises are still read from «Mis

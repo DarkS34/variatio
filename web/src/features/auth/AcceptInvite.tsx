@@ -10,7 +10,6 @@ import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { LANGUAGES, LANGUAGE_NAMES, localeStore, useLanguage, type Language } from "@/lib/i18n";
-import { HELP_HIDDEN } from "@/lib/help";
 import { useRouter } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
@@ -64,8 +63,7 @@ export function AcceptInvite({ token }: { token: string }) {
   const joined = join.data ?? loginAndJoin.data;
 
   useEffect(() => {
-    // The tutorial opened a new account until it was hidden (`lib/help.ts`).
-    if (accept.isSuccess) navigate(HELP_HIDDEN ? "/" : "/tutorial", { replace: true });
+    if (accept.isSuccess) navigate("/", { replace: true });
   }, [accept.isSuccess, navigate]);
 
   useEffect(() => {

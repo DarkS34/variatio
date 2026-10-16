@@ -302,7 +302,7 @@ if (!existsSync(GRAPH)) {
   const loaded = closure(entries.map((chunk) => chunk.fileName));
   const leaked = leaks(loaded);
 
-  // The product's own screens loaded on demand — every route, the guide's trees, the panel's
+  // The product's own screens loaded on demand — every route and the panel's
   // tabs — open for every account, so what they fetch with them is fetched by everybody. A
   // chunk is one when an `import()` names a module of it outside the two folders.
   const screens = chunks.flatMap((chunk) =>

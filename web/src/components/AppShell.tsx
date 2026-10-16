@@ -22,8 +22,6 @@ import {
 import { Lockup } from "@/components/ui/logo";
 import { DOOR_TONE } from "@/components/ui/tone";
 import { AccountMenu } from "@/features/auth/AccountMenu";
-import { slideCount, slideOf } from "@/features/tutorial/slides";
-import { HELP_HIDDEN } from "@/lib/help";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import {
@@ -39,7 +37,7 @@ import {
 } from "@/lib/steps";
 import type { StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useFeatures, useHasWorkspace, useIsStudent, useSpeaksToStudent } from "@/state/auth";
+import { useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
 import {
   keys,
   useHealth,
@@ -483,16 +481,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasWorkspace = useHasWorkspace();
   const invalidate = useInvalidateChain();
   const queryClient = useQueryClient();
-  const features = useFeatures();
-  const studentDeck = useSpeaksToStudent();
   // Whether the bar overflows the header's centre line. Measured on that copy, which stays
   // laid out — only hidden — while the bar is drawn on the line underneath, so it is also
   // what says when the bar fits there again.
   const [navCut, setNavCut] = useState(false);
-
-  // The tutorial's slide, read from the path with the count `App` routes by; null everywhere else.
-  const tutorialAt = HELP_HIDDEN ? null : slideOf(path, slideCount(features, studentDeck));
-  const deck = tutorialAt !== null;
 
   // Not opened while the account is in no workspace: the handshake resolves a membership
   // like every route does, so it would only be refused — and a refusal reads as "la
@@ -539,13 +531,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 
   return (
-    // The deck is the one screen that is a fixed layout — a head, a scrolling column and
-    // a foot — so under it the wrapper is a definite height and `main` a flex column with
-    // no padding, where the two rails can reach the edges.
-    <div className={cn("flex flex-col", deck ? "h-full" : "min-h-full")}>
-      {/* Nothing but the slides under the deck: the header is not drawn at all while the
-          tutorial runs. What it explains, it explains in words and in its own figures. */}
-      {deck ? null : (
+    <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 bg-background/95 shadow-[0_12px_24px_-18px_var(--shadow-dark)] backdrop-blur">
         {/* No line under the bar: a soft sea shadow says where the page slides under it. */}
         {/* Three columns, and the middle one is the centre of the header: the flanks are
@@ -629,15 +615,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
       </header>
-      )}
 
-      <main
-        className={cn(
-          deck
-            ? "flex min-h-0 flex-1 flex-col"
-            : "mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-5 sm:px-7 sm:pt-7",
-        )}
-      >
+      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-5 sm:px-7 sm:pt-7">
         {children}
       </main>
 

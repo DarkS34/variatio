@@ -807,7 +807,7 @@ what each decision replaced.
 
 ### D-154. Guide and tutorial hidden by one flag
 - **Rule:** The guide and the tutorial are hidden behind `lib/help.HELP_HIDDEN`: no menu entry, no link and no route; their copy is not updated while hidden.
-- **Date:** 2026-10-07 · **Commit:** `5dd6f74` · **Status:** in force until D-225 applies
+- **Date:** 2026-10-07 · **Commit:** `5dd6f74` · **Status:** superseded by D-225
 - **Why:** The user's decision; no further reason recorded.
 
 ### D-155. A queued job is not running
@@ -1141,7 +1141,7 @@ what each decision replaced.
 
 ### D-220. One register of decisions
 - **Rule:** Every closed decision is an entry of `DECISIONS.md`, with a number, date, commit, reason and status; `AGENTS.md` keeps the one-line rule and its number.
-- **Date:** 2026-10-16 · **Commit:** this file's first commit · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `5604d5c` · **Status:** in force
 - **Why:** In `AGENTS.md` a decision had no number, its commit was not named and its history sat in parentheses; the Explore and Plan agents, which do not load `AGENTS.md`, could not see the decisions at all.
 
 ### D-221. Closed decisions as a section of AGENTS.md
@@ -1166,7 +1166,7 @@ what each decision replaced.
 
 ### D-225. The guide and the tutorial are deleted
 - **Rule:** The hidden guide and tutorial, their routes, their catalogue keys and `lib/help` are deleted; their text stays in git history.
-- **Date:** 2026-10-16 · **Commit:** — · **Status:** decided; applies in plan phase F3
+- **Date:** 2026-10-16 · **Commit:** the commit after `5604d5c` that deletes `web/src/features/guide/` · **Status:** in force
 - **Why:** 8 009 lines (10 % of `web/src`) and 80 keys per language describing four steps when the application has three, kept behind a flag nobody turns on.
 
 ### D-226. Import boundaries checked by import-linter

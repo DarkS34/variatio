@@ -366,35 +366,6 @@ export const es = {
   "reveal.tagging.cleanPractised": "Practica lo pedido",
   "reveal.rubricSection.title": "Ahora, unas preguntas sobre el ejercicio del sistema",
   "reveal.rubricSection.body": "Da igual cuál eligieras: lo que sigue describe únicamente ese ejercicio, no la comparación.",
-
-  // THE TUTORIAL'S TWO SLIDES ------------------------------------------------------------
-  // Drawn only for an account the evaluation is open to, and fetched with its code
-  // (`evaluation/tutorial.tsx`). The four beats are the close figure's: how every step
-  // goes for somebody taking part, «lo valoras» being the one asked of them.
-  "tutorial.fig.build": "Se construye",
-  "tutorial.fig.review": "Lo lees",
-  "tutorial.fig.rate": "Lo valoras",
-  "tutorial.fig.next": "Corriges o continúas",
-
-  "tutorial.s5.title": "Fase de pruebas: evaluar el sistema",
-  "tutorial.s5.body":
-    "La segunda cosa que puedes hacer. En «Evaluar el sistema» se te dan dos versiones del mismo ejercicio: una generada con el sistema de Variatio y otra con un método distinto, sin decir cuál es cuál. Te pediremos que las leas y nos digas cuál te serviría mejor a tus propósitos. Solo al final se revela de dónde salía cada una.",
-  // The difference from generating is the FIRST point: both write exercises, so without
-  // saying it evaluating reads as "generating two instead of one". It also needs nothing
-  // generated beforehand.
-  "tutorial.s5.b1":
-    "Esta evaluación es independiente de si has generado ejercicios o no: eso no lo evaluaremos, y da igual que no hayas generado ninguno. En «Generar ejercicios» pides uno para usarlo en clase; aquí se escriben dos del mismo encargo, con dos métodos distintos, para que digas cuál te gusta más o consideras mejor, y lo que se guarda es tu juicio.",
-  "tutorial.s5.b3":
-    "«No tengo criterio para juzgar esto» es una respuesta válida y no cuenta como preferencia. Si el ejercicio no es de lo tuyo, decirlo vale más que elegir al azar.",
-  "tutorial.s5.aside":
-    "Esta es la parte que sostiene el estudio: sin comparaciones a ciegas no hay forma de saber si el sistema escribe mejores ejercicios que las alternativas.",
-
-  // From explaining the product to asking for the evaluation, and from there to the door.
-  // The figure draws the four beats of every step, so the prose does not walk them again;
-  // what correcting means is the construction's slide (`tutorial.s3.b1`), every account's.
-  "tutorial.s6.title": "Y ahora, tu parte en el estudio",
-  "tutorial.s6.body":
-    "Hasta aquí, qué hace y cómo se usa. Lo que se te pide ahora es que lo prepares con una asignatura tuya y contestes en cada paso unas pocas preguntas sobre los resultados que el sistema te ha ido proporcionando: esas respuestas nos ayudarán a mejorar el sistema, por lo que te pedimos rigor. ¡Muchas gracias por tu tiempo!",
 } as const;
 
 export type Catalogue = CatalogueOf<typeof es>;

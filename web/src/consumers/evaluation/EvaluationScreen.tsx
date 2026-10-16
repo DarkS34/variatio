@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
-import { GuideLink } from "@/components/GuideLink";
 import { TabStrip, type TabStripItem } from "@/components/TabStrip";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Progress, Skeleton, Spinner } from "@/components/ui/misc";
@@ -308,16 +307,13 @@ export function EvaluationScreen() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        {/* The (i) rides on the TITLE and the guide link comes after it: the hint is one
-            sentence about this screen, and a destination reads as the end of a line rather
-            than as something with a glyph hanging off it. */}
+        {/* The (i) rides on the TITLE: the hint is one sentence about this screen. */}
         <h1 className="w-full font-display font-expanded text-display">
           {t("eval.title")}
           <InfoHint className="ml-2 align-middle" label={t("eval.whatFor")}>
             {t("eval.whatFor.body")}
           </InfoHint>
         </h1>
-        <GuideLink slug="evaluate" />
         {/* The button is named after where it LANDS: closing a session leaves you on the
             tab you came from, and with the form as the default that was the one control on
             the screen reading "Volver a la lista" while returning to the form. */}

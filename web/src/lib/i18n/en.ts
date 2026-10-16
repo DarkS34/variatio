@@ -30,7 +30,7 @@ export const en: Catalogue = {
 
   // LANGUAGE ----------------------------------------------------------------------------
   "language.title": "Interface language",
-  "language.help": "The language the screens, the guide and the error messages are shown in.",
+  "language.help": "The language the screens and the error messages are shown in.",
   "language.notPrompts":
     "It does not change the language of the prompts: each subject declares that when it is created, and it is fixed into the artifacts it builds.",
   "language.changed": "Language changed to {name}",
@@ -256,7 +256,6 @@ export const en: Catalogue = {
   "subject.notReady": "Your teacher is still preparing this subject",
   "subject.notReady.body": "When they finish, you will see it here.",
   "nav.step.raw": "Notes and exercises",
-  "nav.step.profile": "Exercise types",
   "nav.step.graph": "Syllabus",
   "nav.step.bank": "Exercise bank",
   "nav.state.done": "Done",
@@ -269,94 +268,8 @@ export const en: Catalogue = {
   "nav.tutor": "Socratic tutor",
   "nav.chat": "Free chat",
 
-  "nav.phase.build": "Construction phase",
-  "nav.phase.test": "Testing phase",
   "nav.stepNumber": "Construction phase · Step {n} of {total}",
-  "tutorial.skip": "Skip the explanation",
-  "tutorial.of": "{n} of {total}",
-  "tutorial.back": "Back",
-  "tutorial.next": "Next",
-  "tutorial.railStart": "Start",
-  "tutorial.start": "Start with step 1",
-  "tutorial.again": "See the explanation again",
-  "tutorial.railCreate": "Create",
-  "tutorial.slides": "Slides",
-  "tutorial.goTo": "Go to slide {n}",
 
-  "tutorial.fig.yours": "You provide your notes and your exercises",
-  "tutorial.fig.learns": "The system analyses your subject and learns it",
-  "tutorial.fig.new": "You ask it for as many exercises as you want",
-  "tutorial.fig.notes":
-    "Handouts, slides, the course book. From these the system pulls out the syllabus: the concepts your subject covers and how they relate to one another.",
-  "tutorial.fig.exercises":
-    "Exams and worked exercises. The system uses them to understand what problems look like in this area and how the concepts are assessed.",
-  "tutorial.fig.youAsk": "You say",
-  "tutorial.fig.written": "And it writes the exercise",
-
-  "tutorial.s1.title": "Variatio is an application that generates exercises for your subject",
-  "tutorial.s1.body":
-    "It runs on artificial intelligence, but it does not search the internet for the exercises or make them up from nothing: it generates them from your notes and from your own exercises, following the format and the spirit of the ones you set. Next you will see how one of your own subjects is prepared and what you can do with it afterwards.",
-
-  "tutorial.s2.title": "Before you start, gather your files",
-  "tutorial.s2.body":
-    "The route has not begun yet. For now the only thing you have to do is find material about your subject: notes and exercises you already have in PDF, Word or PowerPoint, however they are.",
-  "tutorial.s2.b1":
-    "The system is built to take a whole subject, but a couple of topics is enough to start with: you can upload the rest later.",
-  "tutorial.s2.b2":
-    "It reads every document in full, page by page, and that takes time, above all with PDFs. There is no need to sit watching while it works through your material: you can leave it running and come back later.",
-
-  "tutorial.s3.title": "Construction phase: preparing the subject",
-  "tutorial.s3.body":
-    "Before you ask it for anything, the system has to learn the subject: it works through the material you provide and pulls out what it needs. There are four steps and they go in this order, each one resting on the one before it.",
-  "tutorial.s3.step1":
-    "You upload your documents: the subject's notes on one side and the exercises on the other.",
-  "tutorial.s3.step2":
-    "From the exercises, the system analyses their structure and classifies them by type — multiple choice, problems, essay questions… — so that it can write similar ones later.",
-  "tutorial.s3.step3":
-    "From the notes, internally it builds the syllabus's knowledge graph: the concepts it covers, with their dependencies and relations. That is what makes it possible, when the time comes, to decide what can be taken as known and what cannot — when writing a new exercise, for instance.",
-  "tutorial.s3.step4":
-    "With what comes out of the two previous steps, the exercises are tagged with the concepts of the syllabus each of them practises or assesses. That way your own examples serve as the model when new exercises are generated.",
-  "tutorial.s3.b1":
-    "Whenever the system produces something — the syllabus, the exercise types… — you are offered the chance to correct or change it. It is entirely optional and you do not have to in order to carry on. If you do correct something, what you fix by hand always wins, over what the system understood and over any later rebuild.",
-
-  "tutorial.s4.title": "Testing phase: generating exercises",
-  "tutorial.s4.body":
-    "With the construction finished, the system knows everything it needs about your subject and none of it has to be prepared again. The testing phase begins, where you use what was built. The first thing you can do is generate exercises: under «Generate exercises» you ask for as many as you want and keep the ones that serve you. If the phase holds more tasks, none needs another and you can do them in whichever order you like.",
-  "tutorial.s4.b1":
-    "You can also tell it how far the class has got: the exercise will rest only on what you have already covered and use nothing you have not explained yet.",
-  "tutorial.s4.b2":
-    "Every exercise is saved automatically inside its subject, together with what you asked for to get it: you find it in the «My exercises» tab of «Generate exercises», and those of all your subjects under «My subjects and exercises» in your account menu. You do not have to copy it anywhere.",
-  "tutorial.s4.b3":
-    "You can go back to any step of the construction whenever you like. If you change something, you are told which later steps have gone stale.",
-
-  "tutorial.outro.create":
-    "You do not have a subject yet: the first thing to do is create your own, and until it exists there is nothing to prepare. When this explanation ends the application appears, with the four steps and the testing phase to hand; in your account menu are «My subjects and exercises», the guide and this explanation in case you want to see it again.",
-  "tutorial.outro.choose":
-    "When this explanation ends the application appears: you pick your subject there — or create another one — and start at step 1. In your account menu are «My subjects and exercises», the guide and this explanation in case you want to see it again.",
-  "tutorial.st1.title": "Variatio helps you practise your subject",
-  "tutorial.st1.body":
-    "Your teacher has prepared the subject with their notes and their exercises. With that, Variatio writes new exercises for you, on what you want to practise and at the level you choose. Next you will see what you have to hand.",
-  "tutorial.st2.title": "The syllabus",
-  "tutorial.st2.body":
-    "In «Syllabus» you see the subject's concepts grouped by unit, and what you need to know before each one. Your teacher prepares it: you read it, and it helps you choose what to practise.",
-  "tutorial.st2.b1":
-    "If the subject is not ready yet, you will see a notice: your teacher is still preparing it, and it will appear when they finish.",
-  "tutorial.st3.title": "Generating exercises",
-  "tutorial.st3.body":
-    "In «Generate exercises» you choose the type of exercise, the concepts you want to practise and how many exercises you want. The system writes them for you and saves them in «My exercises».",
-  "tutorial.st3.b1":
-    "You ask for a few exercises at a time, and there may be a daily maximum. The form tells you how many are left.",
-  "tutorial.st3.b2":
-    "While a batch is being written, wait for it to end before asking for another. You can close the tab: you find it where it was when you come back.",
-  "tutorial.st4.title": "Working with the tutor",
-  "tutorial.st4.body":
-    "The «Socratic tutor» stays with you on a topic: you ask, and it answers with questions so that you reach the answer yourself. Under each reply it tells you where in the notes is what you need.",
-  "tutorial.st4.b1": "There may be a number of messages per day; if you reach it, it tells you when you can write again.",
-  "tutorial.studentStart": "Go to my subject",
-  "tutorial.outro.student":
-    "When this explanation ends, your subject appears. Your account's menu holds «My subjects and exercises», the guide and this explanation, in case you want to see it again.",
-  "tutorial.outro.studentNone":
-    "You are in no subject yet: open the link your teacher gave you, or paste it on the start screen. Your account's menu holds the guide and this explanation, in case you want to see it again.",
   "shell.maintenance": "The installation is in maintenance: nobody else can get in.",
   "shell.engineOffline": "The inference engine is not answering: any job will fail to start, but what is already built goes on being read.",
   "shell.missingModels": "Some models are not installed: the jobs that use them will fail, the rest of the chain works.",
@@ -924,7 +837,6 @@ export const en: Catalogue = {
   "class.uses.chatClosed": "Free chat closed",
   "class.uses.someClosed": { one: "1 closed", other: "{n} closed" },
   "class.uses.unreadable": "What students use could not be read",
-  "class.end": "End of course",
   "class.end.lead": "Takes every student out of the subject at once, when the course is over. The teachers stay.",
   "class.end.what": "What happens to the students?",
   "class.end.disable": "Pause the students",
@@ -1018,7 +930,6 @@ export const en: Catalogue = {
   "class.invites.linkHere": "The browser did not let it be copied by itself. Copy it from here:",
   "menu.openAccount": "{name}'s account",
   "menu.admin": "Administration",
-  "menu.guide": "Guide",
   "menu.logout": "Log out",
   "theme.system": "As the system",
   "theme.light": "Light",
@@ -1037,14 +948,11 @@ export const en: Catalogue = {
   "invite.passwordHelp": "At least 12 characters. If you use Google's or your browser's password manager, click the field and choose «Suggest strong password».",
   "reset.singleUse": "The link works only once.",
   "auth.password": "Password",
-  "model.notInstalled": "not installed",
   "context.none": "There is no context yet",
   "context.title": "Context",
   "context.fact.subject": "Subject",
   "context.fact.level": "Level",
   "context.fact.language": "Language",
-  "context.curated": "curated",
-  "context.draft": "draft",
   "transcribe.state.done": "read",
   "transcribe.state.pending": "unread",
   "transcribe.state.stale": "needs rereading",
@@ -2364,36 +2272,6 @@ export const en: Catalogue = {
   "cfg.pending": "Pending changes ({n})",
   "cfg.beforeSaving": "Before saving",
 
-  // THE GUIDE'S NAVIGATION ---------------------------------------------------------------
-  "guide.linkTo": "Guide: {section}",
-  "guide.title": "Guide",
-  "guide.intro": "What each part of the system does, in what order they are used, and what to look at when something does not come out. Nothing here changes the state of your instance: it is reading.",
-  "guide.search": "Search for a section",
-  "guide.nav": "Sections of the guide",
-  "guide.sectionsOf": "Sections · {label}",
-  "guide.noMatch": "Nothing matches that search.",
-  "guide.next": "Next",
-  "guide.group.start": "Getting started",
-  "guide.group.prepare": "Construction phase",
-  "guide.group.use": "Testing phase",
-  "guide.group.daily": "Day to day",
-  "guide.sec.start": "What it is and how you move through it",
-  "guide.sec.studentStart": "Starting as a student",
-  "guide.sec.graph.student": "The syllabus",
-  "guide.sec.class": "Your class",
-  "guide.sec.workspace": "Each subject, on its own",
-  "guide.sec.raw": "Step 1 · Notes and exercises",
-  "guide.sec.profile": "Step 2 · Exercise types",
-  "guide.sec.graph": "Step 3 · Syllabus",
-  "guide.sec.bank": "Step 4 · Exercise bank",
-  "guide.sec.generate": "Generate exercises",
-  "guide.sec.evaluate": "Evaluate the system",
-  "guide.sec.tutor": "Socratic tutor",
-
-  "guide.sec.runs": "Following a run",
-  "guide.sec.account": "Your account and the installation",
-  "guide.sec.admin": "Administering the installation",
-  "guide.sec.troubleshooting": "When something goes wrong",
   // THE TUTOR -----------------------------------------------------------------------------
   "tutor.fromExercise": "Work on it with the tutor",
   "tutor.fromExercise.hint": "Opens a conversation with the tutor about this exercise",

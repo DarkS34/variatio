@@ -12,7 +12,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { JobProgress } from "@/components/BuildProgress";
-import { GuideLink } from "@/components/GuideLink";
 import {
   ReadingScope,
   StageGate,
@@ -924,7 +923,6 @@ function SyllabusReader() {
       <header className="min-w-0 space-y-1.5">
         <h1 className="font-display font-expanded text-title">{t("nav.step.graph")}</h1>
         <p className="max-w-[74ch] text-body text-muted-foreground">{t("kg.reading.title")}</p>
-        <GuideLink slug="graph" />
       </header>
       <ReadingScope>
         <GraphExplorer reading />

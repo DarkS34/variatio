@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChainGate } from "@/components/ChainGate";
-import { GuideLink } from "@/components/GuideLink";
 import { TabStrip, tabIds } from "@/components/TabStrip";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, Skeleton } from "@/components/ui/misc";
@@ -345,7 +344,6 @@ export function GenerateScreen() {
             {t("generate.howItWorks.body")}
           </InfoHint>
         </div>
-        <GuideLink slug="generate" />
       </header>
 
       {/* Cleared of the sticky header, which takes a second row of navigation below `xl`. */}

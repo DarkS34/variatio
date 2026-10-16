@@ -3,7 +3,6 @@ import "./i18n";
 import { useState } from "react";
 
 import { ChainGate } from "@/components/ChainGate";
-import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Alert, LoadError, Skeleton } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -41,7 +40,6 @@ export function TutorScreen() {
         <h1 className="font-display font-expanded text-display">{t("tutor.title")}</h1>
         <InfoHint label={t("tutor.whatIsThis")}>{t("tutor.whatIsThis.body")}</InfoHint>
       </div>
-      <GuideLink slug="tutor" />
     </header>
   );
 

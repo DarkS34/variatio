@@ -447,7 +447,6 @@ export function BankStep({
                 : t("bank.part.bank.lead")}
           </p>
         }
-        guide="bank"
         wayOn={part === "types" ? typesWayOn : bankWayOn}
       />
 

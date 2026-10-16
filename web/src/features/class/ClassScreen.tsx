@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { GuideLink } from "@/components/GuideLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
@@ -200,8 +199,6 @@ export function ClassScreen() {
         <p className="max-w-[74ch] text-body text-muted-foreground">
           {t("class.lead", { subject })}
         </p>
-        {/* Every screen links its section of the guide under its title. */}
-        <GuideLink slug="class" />
       </header>
 
       {members.isError ? (

@@ -46,7 +46,7 @@ export const es = {
   // LANGUAGE ----------------------------------------------------------------------------
   "language.title": "Idioma de la interfaz",
   "language.help":
-    "En qué idioma se te muestran las pantallas, la guía y los mensajes de error.",
+    "En qué idioma se te muestran las pantallas y los mensajes de error.",
   "language.notPrompts":
     "No cambia el idioma en el que se escriben los ejercicios: eso lo declara cada asignatura al crearse y ya no se mueve.",
   "language.changed": "Idioma cambiado a {name}",
@@ -288,7 +288,6 @@ export const es = {
   // opening this for the first time does not know what an "exemplars profile" is, and knows
   // perfectly well what the types of exercise they set are.
   "nav.step.raw": "Apuntes y ejercicios",
-  "nav.step.profile": "Tipos de ejercicio",
   "nav.step.graph": "Temario",
   "nav.step.bank": "Banco de ejercicios",
   // Under the name, in one line: where you are. It is what turns four destinations into a
@@ -307,130 +306,9 @@ export const es = {
   "nav.tutor": "Tutor socrático",
   "nav.chat": "Chat libre",
 
-  // Two phases, named and not numbered: the construction, whose three steps do go in order
-  // and are numbered, and the testing phase, whose doors have no order between them.
-  // Numbering those would claim one comes after another.
-  "nav.phase.build": "Fase de construcción",
-  "nav.phase.test": "Fase de pruebas",
   // The kicker over a step's title; `total` is the path's own count (`lib/steps.STEPS`).
   "nav.stepNumber": "Fase de construcción · Paso {n} de {total}",
-  // THE TUTORIAL IS THE MANUAL, not a greeting. Whoever has just redeemed an invitation
-  // has never seen this and does not even know what the thing is called, so the first
-  // sentence is a definition — name, category, what it is for — and every negation comes
-  // after it. Leaving here they have to be able to use the whole thing without asking
-  // anybody: what it is, what it wants from them before they start, and then the phases in
-  // the order they happen — preparing a subject in four steps, asking for exercises — and,
-  // only with the evaluation open to the account (`slides.DECK`), comparing two versions
-  // blind and what is asked of them as an evaluator. Slides 1–4 are true either way, so they
-  // ask for no part in a study. The guide stays as the per-screen reference; this is the
-  // route end to end.
-  //
-  // The keys are numbered BY SLIDE, `s1` to `s6`, and the four steps live in `s3.step*`
-  // because the index is the only pass over them — a slide per step said the same thing
-  // again with one sentence added. Every sentence is short enough to be read on a slide:
-  // a lead of two or three lines, points of one or two, and nothing a figure already says.
-  "tutorial.skip": "Saltar la explicación",
-  "tutorial.of": "{n} de {total}",
-  "tutorial.back": "Atrás",
-  "tutorial.next": "Siguiente",
-  "tutorial.railStart": "Empezar",
-  "tutorial.start": "Empezar por el Paso 1",
-  "tutorial.again": "Ver la explicación otra vez",
-  "tutorial.railCreate": "Crear",
-  "tutorial.slides": "Diapositivas",
-  "tutorial.goTo": "Ir a la diapositiva {n}",
 
-  // The figures' own labels, and whatever a figure says the prose beside it does not
-  // repeat: a drawing that enumerates over a paragraph enumerating the same things is one
-  // thing said twice. The flow's three are full sentences with a subject, because the
-  // question they answer is who is expected to do what. The study's two slides keep their
-  // figures' labels in the evaluation's catalogue (`consumers/evaluation/i18n/`).
-  "tutorial.fig.yours": "Tú aportas tus apuntes y tus ejercicios",
-  "tutorial.fig.learns": "El sistema analiza tu asignatura y aprende",
-  "tutorial.fig.new": "Le pides todos los ejercicios que quieras",
-  "tutorial.fig.notes":
-    "Guiones, transparencias, el libro de la asignatura. Con esto el sistema extraerá el temario: los conceptos que aborda tu asignatura y cómo se relacionan.",
-  "tutorial.fig.exercises":
-    "Exámenes y ejercicios resueltos. El sistema los utiliza para entender cómo son los problemas en esta área y cómo se evalúan los conceptos.",
-  "tutorial.fig.youAsk": "Tú le dices",
-  "tutorial.fig.written": "Y te escribe el ejercicio",
-
-  "tutorial.s1.title": "Variatio es una aplicación que genera ejercicios para tu asignatura",
-  "tutorial.s1.body":
-    "Funciona con inteligencia artificial, pero no busca los ejercicios en internet ni se los inventa de cero: los genera a partir de tus apuntes y de tus propios ejercicios, siguiendo el formato y el espíritu de los que tú planteas. A continuación verás cómo se prepara una de tus asignaturas y qué puedes hacer después con ella.",
-
-  "tutorial.s2.title": "Antes de empezar, reúne tus archivos",
-  "tutorial.s2.body":
-    "El recorrido todavía no ha empezado. Por ahora lo único que tienes que hacer es buscar material sobre tu asignatura: apuntes y ejercicios que ya tengas en PDF, en Word o en PowerPoint, tal y como estén.",
-  // "Upload just a couple of units" and "this takes a while" belong here, right before
-  // somebody goes looking for the files, which is where they are worth anything.
-  "tutorial.s2.b1":
-    "Aunque el sistema está preparado para procesar una asignatura completa, con un par de temas basta para empezar: más adelante puedes subir el resto.",
-  "tutorial.s2.b2":
-    "El sistema lee cada documento entero, página a página, y eso lleva su tiempo, sobre todo si son PDF. No hace falta que te quedes mirando mientras procesa tus contenidos: puedes dejarlo trabajando y volver más tarde.",
-
-  "tutorial.s3.title": "Fase de construcción: preparar la asignatura",
-  "tutorial.s3.body":
-    "Antes de pedirle nada, el sistema tiene que aprender la asignatura: procesa los materiales que aportes y extrae lo que necesita. Son cuatro pasos y van en este orden, cada uno apoyado en el anterior.",
-  "tutorial.s3.step1":
-    "Subes tus documentos: los apuntes de la asignatura por un lado y los ejercicios por otro.",
-  "tutorial.s3.step2":
-    "Con los ejercicios, el sistema analiza su estructura y los clasifica por tipo —de test, de problemas, de desarrollo…— para poder escribir después ejercicios parecidos.",
-  "tutorial.s3.step3":
-    "Con los apuntes, internamente crea el grafo de conocimiento del temario: los conceptos que aborda, con sus dependencias y relaciones. Permite determinar, llegado el caso, qué se puede dar por sabido y qué no (por ejemplo, a la hora de crear un ejercicio nuevo).",
-  "tutorial.s3.step4":
-    "Con lo que sale de los dos pasos anteriores, se etiquetan los ejercicios con los conceptos del temario que se practican o evalúan en cada uno. Así tus ejemplos sirven de modelo al generar ejercicios nuevos.",
-  // What correcting a step means, on the slide every account is shown: it closed the
-  // study's last slide once, and an account the study is closed to never read it.
-  "tutorial.s3.b1":
-    "Siempre que el sistema genera algo —el temario, los tipos de ejercicio…— te da la opción de corregirlo o modificarlo. Es totalmente opcional y no hace falta hacerlo para continuar. Si corriges algo, lo que arregles a mano gana siempre sobre lo que el sistema entendió y sobre cualquier reconstrucción posterior.",
-
-  // The hinge is the FIRST SENTENCE of the testing phase and not a slide of its own: "with
-  // this it is ready" followed by "ask for exercises" is one turn told twice. The
-  // commission's three questions are drawn by the figure, so they are not listed here.
-  "tutorial.s4.title": "Fase de pruebas: generar ejercicios",
-  "tutorial.s4.body":
-    "Con la construcción terminada, el sistema ya sabe de tu asignatura todo lo que necesita y no hay que volver a prepararlo. Empieza la fase de pruebas, donde usas lo construido. Lo primero que puedes hacer es generar ejercicios: en «Generar ejercicios» le pides tantos como quieras y te quedas con los que te sirvan. Si la fase tiene más tareas, ninguna necesita a otra y puedes hacerlas en el orden que quieras.",
-  "tutorial.s4.b1":
-    "Puedes decirle también hasta dónde ha llegado la clase: el ejercicio se apoyará solo en lo que ya has dado y no usará nada que todavía no hayas explicado.",
-  "tutorial.s4.b2":
-    "Cada ejercicio queda guardado automáticamente dentro de su asignatura, junto con lo que pediste para obtenerlo: lo encuentras en la pestaña «Mis ejercicios» de «Generar ejercicios», y los de todas tus asignaturas en «Mis asignaturas y ejercicios», en el menú de tu cuenta. No hace falta copiarlo a ningún sitio.",
-  "tutorial.s4.b3":
-    "Puedes volver a cualquier paso de la construcción cuando quieras. Si cambias algo, se te avisa de qué pasos posteriores se han quedado desfasados.",
-
-  // Two ways out, depending on whether the reader has a subject: somebody who has just
-  // accepted an invitation cannot be told to "choose" one. Neither points at a place on the
-  // screen — the deck draws no header, so they say what to do and not where to press. Not
-  // numbered by slide: they close whichever slide is the account's last (`slides.deckFor`).
-  "tutorial.outro.create":
-    "Todavía no tienes ninguna asignatura: lo primero es crear la tuya, y hasta que exista no hay nada que preparar. Al terminar esta explicación aparece la aplicación, con los cuatro pasos y la fase de pruebas a mano; en el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación por si quieres volver a verla.",
-  "tutorial.outro.choose":
-    "Al terminar esta explicación aparece la aplicación: eliges ahí tu asignatura —o creas otra— y empiezas por el Paso 1. En el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación por si quieres volver a verla.",
-  // A STUDENT'S DECK: what is to hand, never how the subject was built (`slides.DECK`).
-  "tutorial.st1.title": "Variatio te ayuda a practicar tu asignatura",
-  "tutorial.st1.body":
-    "Tu docente ha preparado la asignatura con sus apuntes y sus ejercicios. Con eso, Variatio escribe ejercicios nuevos para ti, sobre lo que quieras practicar y al nivel que elijas. A continuación verás lo que tienes a mano.",
-  "tutorial.st2.title": "El temario",
-  "tutorial.st2.body":
-    "En «Temario» ves los conceptos de la asignatura agrupados por unidades, y lo que hace falta saber antes de cada uno. Lo prepara tu docente: tú lo lees, y te sirve para elegir qué practicar.",
-  "tutorial.st2.b1":
-    "Si la asignatura todavía no está lista, verás un aviso: tu docente aún la está preparando, y aparecerá cuando termine.",
-  "tutorial.st3.title": "Generar ejercicios",
-  "tutorial.st3.body":
-    "En «Generar ejercicios» eliges el tipo de ejercicio, los conceptos que quieres practicar y cuántos ejercicios quieres. El sistema los escribe para ti y los guarda en «Mis ejercicios».",
-  "tutorial.st3.b1":
-    "Pides pocos ejercicios de una vez, y puede haber un máximo al día. El formulario te dice cuántos te quedan.",
-  "tutorial.st3.b2":
-    "Mientras se escribe un lote, espera a que termine antes de pedir otro. Puedes cerrar la pestaña: al volver lo encuentras donde estaba.",
-  "tutorial.st4.title": "Trabajar con el tutor",
-  "tutorial.st4.body":
-    "El «Tutor socrático» te acompaña en un tema: le preguntas, y te responde con preguntas para que llegues tú a la respuesta. Debajo de cada respuesta te dice en qué parte de los apuntes está lo que necesitas.",
-  "tutorial.st4.b1": "Puede haber un número de mensajes al día; si llegas a él, te dice cuándo puedes volver a escribir.",
-  "tutorial.studentStart": "Ir a mi asignatura",
-  "tutorial.outro.student":
-    "Al terminar esta explicación aparece tu asignatura. En el menú de tu cuenta están «Mis asignaturas y ejercicios», la guía y esta explicación, por si quieres volver a verla.",
-  "tutorial.outro.studentNone":
-    "Todavía no estás en ninguna asignatura: abre el enlace que te dio tu docente, o pégalo en la pantalla de inicio. En el menú de tu cuenta están la guía y esta explicación, por si quieres volver a verla.",
   "shell.maintenance": "La instalación está en mantenimiento: nadie más puede entrar.",
   "shell.engineOffline": "El motor de inferencia no responde: cualquier trabajo fallará al arrancar, pero lo ya construido se sigue leyendo.",
   "shell.missingModels": "Faltan modelos por instalar: los trabajos que los usen fallarán, el resto de la cadena funciona.",
@@ -1040,7 +918,6 @@ export const es = {
   "class.uses.chatClosed": "Chat libre cerrado",
   "class.uses.someClosed": { one: "1 cerrada", other: "{n} cerradas" },
   "class.uses.unreadable": "No se pudo leer qué usan los alumnos",
-  "class.end": "Fin de curso",
   "class.end.lead": "Saca de la asignatura a todos los alumnos de una vez, cuando el curso termina. Los docentes se quedan.",
   "class.end.what": "¿Qué pasa con los alumnos?",
   "class.end.disable": "Desactivar a los alumnos",
@@ -1134,7 +1011,6 @@ export const es = {
   "class.invites.linkHere": "El navegador no dejó copiarlo solo. Cópialo desde aquí:",
   "menu.openAccount": "Cuenta de {name}",
   "menu.admin": "Administración",
-  "menu.guide": "Guía",
   "menu.logout": "Salir",
   "theme.system": "Como el sistema",
   "theme.light": "Claro",
@@ -1153,14 +1029,11 @@ export const es = {
   "invite.passwordHelp": "Al menos 12 caracteres. Si usas el gestor de contraseñas de Google o del navegador, pulsa en el campo y elige «Sugerir contraseña segura».",
   "reset.singleUse": "El enlace solo sirve una vez.",
   "auth.password": "Contraseña",
-  "model.notInstalled": "sin instalar",
   "context.none": "Todavía no hay contexto",
   "context.title": "Contexto",
   "context.fact.subject": "Materia",
   "context.fact.level": "Nivel",
   "context.fact.language": "Idioma",
-  "context.curated": "curado",
-  "context.draft": "borrador",
   "transcribe.state.done": "leído",
   "transcribe.state.pending": "sin leer",
   "transcribe.state.stale": "hay que releerlo",
@@ -2499,38 +2372,6 @@ export const es = {
   "cfg.pending": "Cambios pendientes ({n})",
   "cfg.beforeSaving": "Antes de guardar",
 
-  // THE GUIDE'S NAVIGATION ---------------------------------------------------------------
-  "guide.linkTo": "Guía: {section}",
-  "guide.title": "Guía",
-  "guide.intro": "Qué hace cada parte del sistema, en qué orden se usan y qué mirar cuando algo no sale. Nada de lo que hay aquí cambia el estado de tu instancia: es lectura.",
-  "guide.search": "Buscar una sección",
-  "guide.nav": "Secciones de la guía",
-  "guide.sectionsOf": "Secciones · {label}",
-  "guide.noMatch": "Nada coincide con esa búsqueda.",
-  "guide.next": "Siguiente",
-  "guide.group.start": "Primeros pasos",
-  "guide.group.prepare": "Fase de construcción",
-  "guide.group.use": "Fase de pruebas",
-  "guide.group.daily": "Día a día",
-  "guide.sec.start": "Qué es y cómo se recorre",
-  "guide.sec.studentStart": "Empezar como alumno",
-  "guide.sec.graph.student": "El temario",
-  "guide.sec.class": "Tu clase",
-  "guide.sec.workspace": "Cada asignatura, por separado",
-  // The guide's index names the steps as the bar names them: a guide that calls things
-  // something else is a guide about another program.
-  "guide.sec.raw": "Paso 1 · Apuntes y ejercicios",
-  "guide.sec.profile": "Paso 2 · Tipos de ejercicio",
-  "guide.sec.graph": "Paso 3 · Temario",
-  "guide.sec.bank": "Paso 4 · Banco de ejercicios",
-  "guide.sec.generate": "Generar ejercicios",
-  "guide.sec.evaluate": "Evaluar el sistema",
-  "guide.sec.tutor": "Tutor socrático",
-
-  "guide.sec.runs": "Seguir una ejecución",
-  "guide.sec.account": "Tu cuenta y la instalación",
-  "guide.sec.admin": "Administrar la instalación",
-  "guide.sec.troubleshooting": "Cuando algo va mal",
   // THE TUTOR -----------------------------------------------------------------------------
   "tutor.fromExercise": "Trabajar con el tutor",
   "tutor.fromExercise.hint": "Abre una conversación con el tutor sobre este ejercicio",

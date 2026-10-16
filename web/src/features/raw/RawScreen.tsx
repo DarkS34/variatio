@@ -1,6 +1,5 @@
 import { ArrowRight, ScanText } from "lucide-react";
 
-import { GuideLink } from "@/components/GuideLink";
 import { continueLabel, STAGE_KICKER, WayOn } from "@/components/StageGate";
 import { Button } from "@/components/ui/button";
 import { Alert, EmptyState, Skeleton, Spinner } from "@/components/ui/misc";
@@ -77,7 +76,7 @@ export function RawScreen() {
           title, still above the origins. */}
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
         <header className="min-w-0 space-y-2">
-          {/* The same header as the other three: ordinal, title, explanation, guide link.
+          {/* The same header as the other steps: ordinal, title, explanation.
               This screen does not go through `StageGate` — it writes no artifact and nobody
               approves it — so it repeats the shape by hand, and the ORDINAL is what puts it
               on the path: it is step 1 even though it is not a stage. The title is
@@ -86,7 +85,6 @@ export function RawScreen() {
           <p className={STAGE_KICKER}>{t("nav.stepNumber", { n: stepNumber(0), total: STEPS.length })}</p>
           <h1 className="font-display font-expanded text-title">{t("nav.step.raw")}</h1>
           <p className="max-w-[74ch] text-body text-muted-foreground">{t("raw.screenIntro")}</p>
-          <GuideLink slug="raw" />
         </header>
 
         {/* `stocked` holds back until both readings have landed, so this does not flash

@@ -1,7 +1,6 @@
 import { BarChart3, KeyRound, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { lazy, Suspense, useRef, useState, type ReactNode } from "react";
 
-import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -117,7 +116,6 @@ export function AdminScreen() {
             <h1 className="font-display font-expanded text-display">{t("admin.title")}</h1>
             <InfoHint label={t("admin.whatIsThis")}>{t("admin.whatIsThis.body")}</InfoHint>
           </div>
-          <GuideLink slug="admin" />
         </div>
         <MaintenanceSwitch />
       </header>

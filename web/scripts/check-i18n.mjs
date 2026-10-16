@@ -9,7 +9,7 @@
 // So this measures ONE thing: user-visible text that is not going through `t()`. The
 // `exempt` list WAS the mechanism of the migration — a screen task started by deleting its
 // file from the list so the script went red, and it was done when the script went green
-// again. The migration is over, and the three entries left are not leftovers: each is a
+// again. The migration is over, and the one entry left is not a leftover: it is a
 // file that must NOT go through the catalogue, and says why in its own comment.
 //
 // It also checks where each key may be read. The strings only an optional function reads
@@ -19,12 +19,6 @@
 // or built from a prefix. Nor can it see a key in a table typed `string`, which exists in no
 // catalogue at all, or a module of a function loaded from core without registering that
 // function's catalogue first.
-//
-// And the two things the guide puts beyond a text scan: that its two prose trees
-// answer for the same set of sections, and that every section the registry ANNOUNCES has a
-// body, in the file the registry reads it from. The second is not a refinement of the
-// first — two trees that agree on not having a section satisfy it perfectly, which is how a
-// blank page shipped green.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, relative, sep } from "node:path";
@@ -149,23 +143,7 @@ const EXEMPT = new Set([
   "components/ErrorBoundary.tsx",
 ]);
 
-// THE GUIDE'S BODIES ARE A TREE PER LANGUAGE, NOT A CATALOGUE ENTRY PER PARAGRAPH — see
-// `features/guide/sections.tsx` for why. So `guide/es/` really is written in Spanish and
-// `guide/en/` really is written in English, and both are correct: what makes that checkable
-// is not this script but that `useGuideBody` picks one by the reader's language, and that
-// `BODIES` in the two languages has to hold the same slugs. The sections of an optional
-// function live in that function's folder (`consumers/evaluation/guide/`,
-// `consumers/tutor/guide/`), one file per language, so the guide fetches them only for an account
-// the function is open to.
-const EXEMPT_TREES = [
-  "features/guide/es/",
-  "features/guide/en/",
-  "consumers/evaluation/guide/",
-  "consumers/tutor/guide/",
-];
-
-const exempt = (path) =>
-  EXEMPT.has(path) || EXEMPT_TREES.some((prefix) => path.startsWith(prefix));
+const exempt = (path) => EXEMPT.has(path);
 
 // The core's catalogue and each optional function's: `lib/i18n/`, `consumers/evaluation/i18n/`,
 // `consumers/tutor/i18n/`, the landing's. Every file in them is the catalogue's own machinery or
@@ -424,135 +402,9 @@ if (unregistered.length) {
   process.exit(1);
 }
 
-// The guide is prose per language rather than keys, so nothing above can see it. What can
-// be checked is that the two languages answer for the same sections: a section written in
-// one and not the other renders nothing at all for half the readers.
-//
-// A language's bodies are the `BODIES` maps of every home it has: the guide's own tree
-// (`features/guide/<lang>/sections.tsx`) and one file per optional function
-// (`consumers/<function>/guide/<lang>.tsx`). Found by walking, so a new home is read without being
-// listed here; a slug answered by two homes of one language is a failure of its own, since
-// the registry would only ever read one of them.
-const GUIDE_HOME = /(?:^|\/)guide\/(es|en)(?:\/sections)?\.tsx$/;
-const homes = walk(SRC)
-  .map((full) => relative(SRC, full).split(sep).join("/"))
-  .filter((path) => GUIDE_HOME.test(path));
-const twice = [];
-// The body of a file's `BODIES` map and nothing else: a two-space `name: Value,` line
-// elsewhere in the file — a destructured prop such as `icon: Icon,` — is not a section.
-const BODIES_MAP = /^export const BODIES\b[\s\S]*?=\s*\{\n([\s\S]*?)^\};/m;
-// Slug → the file of this language whose `BODIES` answers for it.
-const bodiesOf = (language) => {
-  const slugs = new Map();
-  for (const file of homes.filter((path) => GUIDE_HOME.exec(path)[1] === language)) {
-    const map = BODIES_MAP.exec(readFileSync(resolve(SRC, file), "utf8"))?.[1] ?? "";
-    // A slug with a hyphen is a quoted key (`"student-start": StudentStart,`).
-    for (const match of map.matchAll(/^\s{2}(?:"([\w-]+)"|(\w+)):\s*\w+,$/gm)) {
-      const slug = match[1] ?? match[2];
-      if (slugs.has(slug)) twice.push(`${slug} — en ${slugs.get(slug)} y en ${file}`);
-      else slugs.set(slug, file);
-    }
-  }
-  return slugs;
-};
-const esBodies = bodiesOf("es");
-const enBodies = bodiesOf("en");
-const esSlugs = new Set(esBodies.keys());
-const enSlugs = new Set(enBodies.keys());
-const onlyEs = [...esSlugs].filter((slug) => !enSlugs.has(slug));
-const onlyEn = [...enSlugs].filter((slug) => !esSlugs.has(slug));
-
-if (twice.length) {
-  console.error("✗ Una sección de la guía tiene cuerpo en dos sitios del mismo idioma:\n");
-  for (const line of twice) console.error(`  ${line}`);
-  process.exit(1);
-}
-
-if (onlyEs.length || onlyEn.length) {
-  console.error("✗ Las dos versiones de la guía no cubren las mismas secciones:\n");
-  for (const slug of onlyEs) console.error(`  ${slug} — solo en español`);
-  for (const slug of onlyEn) console.error(`  ${slug} — solo en inglés`);
-  process.exit(1);
-}
-
-// COMPARAR LOS DOS ÁRBOLES ENTRE SÍ NO BASTA, Y ESTE ES EL AGUJERO POR EL QUE SE COLÓ UNA
-// PÁGINA EN BLANCO EN PRODUCCIÓN. `GUIDE_SECTIONS` es lo que dibuja el índice, la búsqueda y
-// el enlace «Siguiente», y una entrada suya sin cuerpo en NINGUNO de los dos árboles pasaba
-// la comprobación de arriba sin despeinarse: los dos árboles coincidían perfectamente en no
-// tenerla. El resultado es una entrada de navegación que existe, un `GuideLink` que apunta a
-// ella, y una ruta que renderiza `null` — que es exactamente lo que este proyecto se niega a
-// hacer en cualquier otra pantalla.
-//
-// El registro es la fuente: el cuerpo se busca a partir de él y no al revés. Una sección
-// sin cuerpo en uno solo de los dos idiomas ya la ha parado la comprobación de arriba.
-const REGISTRY = readFileSync(resolve(SRC, "features/guide/sections.tsx"), "utf8");
-// Each entry of `GUIDE_SECTIONS` with the function it names, if any: one object literal,
-// none of whose fields holds a brace.
-const registry = [...REGISTRY.matchAll(/\{[^{}]*?\bslug:\s*"([\w-]+)"[^{}]*\}/g)].map((match) => ({
-  slug: match[1],
-  feature: /\bfeature:\s*"(\w+)"/.exec(match[0])?.[1] ?? null,
-}));
-const registrySlugs = registry.map((entry) => entry.slug);
-const bodyless = registrySlugs.filter((slug) => !esSlugs.has(slug) && !enSlugs.has(slug));
-
-if (bodyless.length) {
-  console.error("✗ La guía anuncia secciones que no tienen texto en ningún idioma:\n");
-  for (const slug of bodyless) console.error(`  ${slug} — está en GUIDE_SECTIONS, no en BODIES`);
-  console.error(
-    `\nCada una es una entrada del índice que abre una página en blanco.\n` +
-      `Escribe su componente en src/features/guide/es/sections.tsx y en en/sections.tsx\n` +
-      `(o, si explica una función opcional, en src/consumers/<función>/guide/es.tsx y en.tsx),\n` +
-      `y añádelo al mapa BODIES de los dos.`,
-  );
-  process.exit(1);
-}
-
-// HAVING A BODY IS NOT ENOUGH: IT HAS TO BE WHERE THE REGISTRY LOOKS. `useGuideBody` reads a
-// section from ONE place, `TREES[section.feature ?? "guide"]`: the guide's own tree, or the
-// file of the function the section names. A body moved back into the common guide while
-// the registry still says `feature`, or a section given a `feature` whose body stayed where
-// it was, passes the three checks above and opens a blank page.
-//
-// A function's home is `consumers/<function>/guide/<lang>.tsx`, and the registry must import it
-// under that name: checked too, so the convention does not live in this file alone.
-const homeOf = (feature, language) =>
-  feature === null
-    ? `features/guide/${language}/sections.tsx`
-    : `consumers/${feature}/guide/${language}.tsx`;
-const misplaced = [];
-for (const feature of new Set(registry.map((entry) => entry.feature).filter(Boolean))) {
-  for (const language of ["es", "en"]) {
-    if (!REGISTRY.includes(`import("@/consumers/${feature}/guide/${language}")`)) {
-      misplaced.push(`${feature} — TREES no importa @/consumers/${feature}/guide/${language}`);
-    }
-  }
-}
-for (const { slug, feature } of registry) {
-  for (const [language, bodies] of [["es", esBodies], ["en", enBodies]]) {
-    const file = bodies.get(slug);
-    const home = homeOf(feature, language);
-    if (file !== undefined && file !== home) {
-      misplaced.push(`${slug} — su cuerpo está en ${file}, y el registro lo lee de ${home}`);
-    }
-  }
-}
-
-if (misplaced.length) {
-  console.error("✗ La guía tiene cuerpos donde el registro no los busca:\n");
-  for (const line of misplaced) console.error(`  ${line}`);
-  console.error(
-    `\nCada una es una página en blanco. Una sección sin \`feature\` va en\n` +
-      `src/features/guide/<idioma>/sections.tsx; una con \`feature: "x"\`, en ` +
-      `src/consumers/x/guide/<idioma>.tsx.`,
-  );
-  process.exit(1);
-}
-
 console.log(
   `✓ ${migrated} fichero(s) sin texto de interfaz fuera del catálogo; ` +
     `${catalogueOf.size} claves en ${catalogues.length} catálogos, ` +
     `cada una leída donde se carga; ` +
-    `${esSlugs.size} secciones de guía en los dos idiomas, ` +
-    `las ${registrySlugs.length} del registro con cuerpo; ` +
-    `${EXEMPT.size + EXEMPT_TREES.length} exclusión(es) deliberada(s).`,
+    `${EXEMPT.size} exclusión(es) deliberada(s).`,
 );

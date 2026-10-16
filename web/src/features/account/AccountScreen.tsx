@@ -17,7 +17,6 @@ import { WorkspaceContext } from "@/features/context/WorkspaceContext";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
-import { GuideLink } from "@/components/GuideLink";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
@@ -75,16 +74,13 @@ export function AccountScreen({ tab }: { tab: AccountTab }) {
 
   return (
     <div className="space-y-5">
-      {/* Three lines, and who you are is the third: the title, its (i) and the guide link
-          are about the SCREEN, while the username and the administrator badge are about the
-          ACCOUNT it is showing. In one flow the identity wraps onto the guide link's line
-          and reads as part of it. */}
+      {/* Two lines: the title and its (i) are about the SCREEN, while the username and the
+          administrator badge are about the ACCOUNT it is showing. */}
       <header className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
           <h1 className="font-display font-expanded text-display">{t("account.title")}</h1>
           <InfoHint label={t("account.whatIsHere")}>{t("account.whatIsHere.body")}</InfoHint>
         </div>
-        <GuideLink slug="account" />
         <div className="flex flex-wrap items-center gap-2 pt-1.5">
           <span className="font-mono text-body text-muted-foreground">{user.username}</span>
           {user.is_admin ? <Badge variant="secondary">{t("account.admin")}</Badge> : null}
