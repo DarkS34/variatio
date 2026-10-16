@@ -12,7 +12,6 @@ from pathlib import Path
 
 from ... import config
 
-
 # PDFium is not thread-safe and this process calls it from two threads at once: the job
 # thread rendering a page and the request thread counting pages for `/raw`. Interleaved,
 # the library's global state corrupts and EVERY later load in the process answers

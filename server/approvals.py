@@ -25,9 +25,9 @@ from pathlib import Path
 from loguru import logger
 
 from variatio import entrypoints
-from variatio.documents import SUPPORTED_EXTS
 from variatio.core import json_io
 from variatio.core.workspace import Workspace
+from variatio.documents import SUPPORTED_EXTS
 
 from . import storage
 from .db import mirror

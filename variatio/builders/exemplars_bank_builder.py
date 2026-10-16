@@ -14,7 +14,7 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import ValidationError
 
-from .. import config
+from .. import config, documents
 from .. import prompts as prompts_pkg
 from .. import wording as wording_sets
 from ..core import inference, progress
@@ -26,7 +26,6 @@ from ..core.workspace import Workspace
 from ..loaders import locale
 from ..loaders.content_context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from .. import documents
 
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
 # plus a short one per seam, and `extract` also tags each document as it comes out.

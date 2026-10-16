@@ -13,7 +13,6 @@ property the split exists to keep checkable; `office` talks to LibreOffice and t
 """
 
 from . import chunking, files, markdown, office, pages
-from .office import slide_count
 from .chunking import chunk_markdown, chunk_sections, chunk_text
 from .files import (
     CONVERTED_EXTS,
@@ -34,9 +33,10 @@ from .markdown import (
     tidy_markdown,
     to_markdown,
 )
+from .office import slide_count
 from .pages import (
-    PARAGRAPH,
     FAILED_PAGE_PREFIXES,
+    PARAGRAPH,
     adopt_pages,
     document_cache_dir,
     document_markdown,

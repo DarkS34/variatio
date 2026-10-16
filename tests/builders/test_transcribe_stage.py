@@ -1,8 +1,8 @@
 import pytest
 
 from variatio import config
-from variatio.documents import pages
 from variatio.core.workspace import Workspace
+from variatio.documents import pages
 from variatio.entrypoints import transcribe
 from variatio.wording import es as ES_WORDING
 

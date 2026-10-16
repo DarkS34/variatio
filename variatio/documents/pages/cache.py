@@ -7,13 +7,13 @@ import json
 import re
 from pathlib import Path
 
-from ... import config, wording as wording_sets
+from ... import config
+from ... import wording as wording_sets
 from ...core import inference, languages, repetition
 from ...core.json_io import write_json
 from .. import office
 from ..files import source_hash
 from .seams import seams_failed, seams_merged, valid_seams
-
 
 PAGE_FILE_RE = re.compile(r"^(\d{3})\.md$")
 

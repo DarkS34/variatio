@@ -15,7 +15,12 @@ from loguru import logger
 from ... import config
 from ...core import inference, progress
 from ...core.lexicon import mentions
-from ...documents import chunk_sections, document_markdown, headings_by_level, list_source_files
+from ...documents import (
+    chunk_sections,
+    document_markdown,
+    headings_by_level,
+    list_source_files,
+)
 from ...documents.chunking import is_navigation
 from . import parsing
 from .schemas import EXTRACT_SCHEMA

@@ -3,8 +3,8 @@ import ollama
 import pytest
 
 from variatio import config
-from variatio.core.cerebras import CerebrasEngine
 from variatio.core import ollama as local
+from variatio.core.cerebras import CerebrasEngine
 from variatio.core.inference import InferenceError
 from variatio.core.ollama import OllamaEngine
 

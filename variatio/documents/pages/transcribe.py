@@ -6,10 +6,10 @@ import re
 
 from loguru import logger
 
-from ... import config, wording as wording_sets
+from ... import config
+from ... import wording as wording_sets
 from ...core import inference, repetition
 from ...prompts.marks import EMPTY_PAGE_MARK
-
 
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)
 

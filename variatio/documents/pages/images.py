@@ -15,7 +15,6 @@ from .cache import sampling_record
 from .render import encode_page
 from .transcribe import _ask_twice, _cause, _unfinished, _unwrap_markdown_fence
 
-
 # Left where a picture stood when nothing could be read off it — a metafile Pillow cannot
 # open, or a call that failed after its retries. Visible on purpose, like the failed page:
 # a formula that silently vanished from an exercise is worse than one that says it is gone.

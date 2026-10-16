@@ -13,8 +13,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio.documents import office, pages
 from variatio.core import inference
+from variatio.documents import office, pages
 from variatio.wording import en as EN_WORDING
 from variatio.wording import es as ES_WORDING
 

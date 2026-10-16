@@ -27,8 +27,8 @@ from pathlib import Path
 from loguru import logger
 
 from variatio import documents
-from variatio.documents.files import source_hash
 from variatio.core.workspace import Workspace
+from variatio.documents.files import source_hash
 
 # Twice a reading column on a dense screen; a page is drawn once and kept.
 PAGE_WIDTH_PX = 1600

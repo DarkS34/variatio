@@ -12,8 +12,8 @@ from server import auth, originals, raw_data
 from server.auth.deps import Access
 from server.routers.raw import router as raw_router
 from variatio import documents
-from variatio.documents.files import source_hash
 from variatio.core.workspace import Workspace
+from variatio.documents.files import source_hash
 
 
 def blank_pdf(path, pages: int) -> None:

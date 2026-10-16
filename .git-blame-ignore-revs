@@ -21,3 +21,6 @@ ed3abf7a0172f00f8e203bf320a26c1b0fff2e0d
 
 # refactor(server): routing.py and the registries a function plugs into
 15223cfffe72cc5edf1ba7def2f7e8492a5f68f0
+
+# refactor(server): server/core/, what every area stands on
+2cd7d5ced6c8d95e600c4542f500302e7c1bc9ba

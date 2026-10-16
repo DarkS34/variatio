@@ -15,8 +15,8 @@ from fastapi import UploadFile
 from loguru import logger
 
 from variatio import config as vg_config
-from variatio.documents import SUPPORTED_EXTS, name_order
 from variatio.core.workspace import Workspace
+from variatio.documents import SUPPORTED_EXTS, name_order
 
 from . import approvals, originals
 

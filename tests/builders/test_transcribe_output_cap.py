@@ -11,8 +11,8 @@ was read before the loop under `FAILED_PAGE_PREFIX`: counted in `failed_pages`, 
 """
 
 from variatio import config
-from variatio.documents import pages
 from variatio.core.inference import GenerationResponse
+from variatio.documents import pages
 from variatio.prompts import of as prompts_of
 from variatio.wording import es as ES_WORDING
 

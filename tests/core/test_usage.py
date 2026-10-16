@@ -2,8 +2,8 @@
 
 from types import SimpleNamespace
 
-from variatio.core import progress, usage
 from variatio.core import ollama as local
+from variatio.core import progress, usage
 
 
 def test_a_call_counts_on_every_open_meter_under_its_phase(monkeypatch):

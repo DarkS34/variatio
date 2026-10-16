@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio.documents import chunking, markdown, pages
 from variatio.core import inference
+from variatio.documents import chunking, markdown, pages
 from variatio.prompts import SEAM_SEPARATORS
 
 from ..conftest import ES

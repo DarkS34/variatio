@@ -24,7 +24,6 @@ from ..markdown import (
 from .images import _encode_image, _read_image_cache, _transcribe_image, _write_image_cache
 from .seams import PARAGRAPH
 
-
 # THE PICTURES AND THE NOTES OF AN OFFICE DOCUMENT --------------------------------------------------
 #
 # Docling translates a `.docx` or `.pptx` faithfully — it declares its structure, so there is

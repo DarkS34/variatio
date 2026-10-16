@@ -10,12 +10,12 @@ import json
 from loguru import logger
 
 from .. import config
+from .. import prompts as prompts_pkg
 from ..core import inference
 from ..core.repair import parse_with_repair
 from ..core.workspace import Workspace
 from ..loaders import locale
 from ..loaders.content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
-from .. import prompts as prompts_pkg
 
 CONTENT_CONTEXT_SCHEMA = {
     "type": "object",

@@ -9,12 +9,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from .. import config
+from .. import config, documents
 from .. import prompts as prompts_pkg
-from .. import documents
-from ..documents.pages import META_NAME
 from ..core import paths, progress
 from ..core.workspace import Workspace
+from ..documents.pages import META_NAME
 from ..loaders import locale
 
 CORPUS = "corpus"
