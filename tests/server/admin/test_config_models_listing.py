@@ -1,4 +1,4 @@
-from server.routers import config as config_router
+from server.admin import settings as config_router
 from variatio import config as vg_config
 from variatio.core import cerebras, inference
 

@@ -48,3 +48,6 @@ c9990ef8fb910044247fc7965ad0315f7b4c6799
 
 # refactor(server): server/bank/, step 3, and editors/ is gone
 5c768887aa45765d3b1a9d5351836d73edacf0aa
+
+# refactor(server): server/classroom/, «Clase» and its four route modules
+66ff69d89f1f946cd7844545f7df8515cc397443

@@ -15,7 +15,7 @@ hash so the two also take the same time, and `/forgot` always answers 202.
 Authorisation is per route rather than on the router: `/login`, `/forgot`, `/reset` and
 the two halves of an invitation are reached without an account and cannot live behind
 one, while everything else depends on `deps.current_user`. Handing out invitations and
-moving people between workspaces is not here at all — that is `routers/admin.py`, behind
+moving people between workspaces is not here at all — that is `admin/accounts.py`, behind
 `require_admin`. What is left is what an account does to itself.
 """
 

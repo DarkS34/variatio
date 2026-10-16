@@ -5,8 +5,9 @@ Rules for the server outside its subpackages: the database, how a request finds 
 and the generated exercises. What every area stands on is `core/AGENTS.md`, identity
 `auth/AGENTS.md`, the subjects of an account `workspaces/AGENTS.md`, the build chain
 `pipeline/AGENTS.md`, step 1 `raw/AGENTS.md`, step 2 `kg/AGENTS.md`, step 3 `bank/AGENTS.md`,
-«Clase» `classroom/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
-`conversations/AGENTS.md`, and the transcription `variatio/documents/AGENTS.md`.
+«Clase» `classroom/AGENTS.md`, the panel `admin/AGENTS.md`, the queue `jobs/AGENTS.md`, what
+the tutor and the chat share `conversations/AGENTS.md`, and the transcription
+`variatio/documents/AGENTS.md`.
 
 
 ## Routes and where a function plugs in
@@ -16,11 +17,10 @@ and the generated exercises. What every area stands on is `core/AGENTS.md`, iden
   function reads an area's services, never its routes). The route comparison of a phase reads
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`, `cli/`),
-  `routers/`, `bank/`, `kg/` and `raw/`, `classroom/`, `pipeline/`, `auth/` and `workspaces/`
-  (no two of one group import each other), then `conversations/` and `generations.py`, then
+  `admin/`, `bank/`, `kg/` and `raw/`, `classroom/`, `pipeline/`, `auth/` and `workspaces/` (no
+  two of one group import each other), then `conversations/` and `generations.py`, then
   `core/`, then `jobs/`, then `db/`; each imports only what is below it. A route module is a
-  leaf and may import any layer; the modules still at the root are outside the order until
-  their area exists.
+  leaf and may import any layer, and so are the construction's jobs (`pipeline/jobs.py`).
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
   `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
   construction's handlers join `HANDLERS` at `pipeline/jobs.install()`, which `app.py` calls
@@ -88,6 +88,10 @@ The chain of the three steps, its approvals and gates, and the construction's jo
 One line per rule in force; the date, commit and reason of each are in
 the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 
+- D-227 — `server/` is organised by areas (`core/`, `auth/`, `workspaces/`, `pipeline/`,
+  `raw/`, `kg/`, `bank/`, `classroom/`, `admin/`), each with its routes, services,
+  `AGENTS.md` and tests in `tests/server/<area>/`; only `routing.py` imports a route module,
+  and the areas' layers are an import contract.
 - D-114, D-116 — Deleting workspaces/artifacts from the panel is the admin's and takes the
   files; `.history/` is never emptied by it. CORS off. D-115, a last-member deletion taking
   the tree, is `workspaces/AGENTS.md`'s.

@@ -1,8 +1,8 @@
 """The evaluation's own tab of the installation panel.
 
-Same prefix and same `require_admin` as `server/routers/admin.py`, and mounted beside it
-by `consumers.evaluation.api.install`: the routes are the administrator's, the arithmetic behind
-them is the evaluation's, and this is the seam between the two.
+Same prefix and same `require_admin` as the panel's own routes (`server/admin/`), and mounted
+beside them by `consumers.evaluation.api.install`: the routes are the administrator's, the
+arithmetic behind them is the evaluation's, and this is the seam between the two.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Response

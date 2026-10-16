@@ -20,6 +20,8 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth
 from server import generations as store
+from server.admin import accounts as admin_routes
+from server.admin import workspaces as admin_workspaces
 from server.auth import links, queries
 from server.auth import router as auth_routes
 from server.auth.deps import FORBIDDEN, Access
@@ -34,7 +36,6 @@ from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
-from server.routers import admin as admin_routes
 from server.workspaces import router as workspace_routes
 from server.workspaces import trees
 
@@ -421,7 +422,7 @@ def _root(db):
 
 
 def _end(db, admin, action="disable"):
-    return admin_routes.end_course("aula", admin_routes.EndCourseBody(action=action), admin=admin, db=db)
+    return admin_workspaces.end_course("aula", admin_workspaces.EndCourseBody(action=action), admin=admin, db=db)
 
 
 def test_ending_the_course_pauses_every_student_and_the_link_and_keeps_the_teachers(db, aula, stage):
@@ -461,8 +462,8 @@ def test_ending_it_by_removing_takes_the_students_out_and_leaves_their_files(db,
 def test_ending_the_course_names_a_known_end_and_a_subject_that_exists(db, aula, stage):
     root = _root(db)
     assert _refused(lambda: _end(db, root, "olvidar")).status_code == 422
-    missing = lambda: admin_routes.end_course(  # noqa: E731
-        "nada", admin_routes.EndCourseBody(), admin=root, db=db
+    missing = lambda: admin_workspaces.end_course(  # noqa: E731
+        "nada", admin_workspaces.EndCourseBody(), admin=root, db=db
     )
     assert _refused(missing).status_code == 404
 

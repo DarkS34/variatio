@@ -4,7 +4,7 @@ Read the root `AGENTS.md` first. The closed decisions are numbered in the root `
 Rules for accounts, sessions, invitations, roles, memberships, the optional functions and what
 a subject lets its students use. The code is `server/auth/` (with its queries,
 `queries.py`, the optional functions, `features.py`, and its routes, `router.py`) and the
-invitations of `server/routers/admin.py`. The people of a subject, a teacher's links and the
+invitations of `server/admin/invites.py`. The people of a subject, a teacher's links and the
 groups of a class are `server/classroom/AGENTS.md`.
 
 ## Identity (`server/auth/`)
@@ -99,7 +99,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   function (no mode, no tone, no admin tab): the client reads it with `featuresOf` (only a
   literal `false` closes it), `usesFor` drops its door and `/generate` draws «not found»; a
   student's exercises stay in «Mis asignaturas y ejercicios».
-- Invitations are the admin's alone (`routers/admin.py`): chosen expiry (floor, no ceiling),
+- Invitations are the admin's alone (`admin/invites.py`): chosen expiry (floor, no ceiling),
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
   via `GET /{id}/link`, and pastable back after deletion. The sealed copy dies with the use.

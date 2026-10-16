@@ -2,8 +2,8 @@
 
 from types import SimpleNamespace
 
+from server.admin import engine as admin_engine
 from server.core import process
-from server.routers import admin_engine
 
 
 def _job(job_id: str, status: str, finished_at: float | None) -> SimpleNamespace:

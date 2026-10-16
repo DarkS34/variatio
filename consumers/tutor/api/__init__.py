@@ -1,7 +1,7 @@
 """The tutor's server side, mounted by the composition root and nowhere else.
 
 `server/app.py` is the one module of the installation that knows both halves, so it is where
-the tutor is attached, as the evaluation was: importing it from `server/routers/__init__.py`
+the tutor is attached, as the evaluation was: importing it from `server/routing.py`
 would close a cycle, since these routers import `server.auth` back.
 
 Nothing here is imported until `install` runs, and `consumers/tutor/__init__.py` never reaches this

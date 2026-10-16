@@ -53,7 +53,7 @@ The interface speaks Spanish; the code speaks English. One word per thing on eac
 | alumno / docente / propietario | role `viewer` / `editor` / `owner` | `server/auth/deps.py` |
 | perfil de la cuenta (Docente / Alumno) | `users.evaluator_profile` | `server/db/models.py` |
 | carril | lane: `local` (Ollama) or `remote` (Cerebras) | `server/jobs/lanes.py` |
-| «Administración» | the admin panel | `server/routers/admin.py`, `web/src/features/admin/` |
+| «Administración» | the admin panel | `server/admin/`, `web/src/features/admin/` |
 
 ## 3. Context and containers
 
@@ -76,7 +76,7 @@ flowchart LR
 flowchart TB
   browser[React client<br/>web/src] -->|HTTP + WebSocket| api
   subgraph api[API process: uv run system]
-    routes[FastAPI routes<br/>server/routers, consumers/*/api]
+    routes[FastAPI routes<br/>each area of server/, consumers/*/api]
     queue[Job queue and bus<br/>server/jobs]
   end
   queue -->|one subprocess per build| worker[Build worker<br/>server/jobs/build_worker.py]
@@ -109,14 +109,14 @@ variatio/       the library          imports neither
   `pyproject.toml`, `uv run lint-imports`): the settings registry's optional imports of each
   function's `settings.py`, and four reads of the evaluation older than `consumers/`
   (`server/jobs/lanes.py`, `server/pipeline/jobs.py`, `server/raw/documents.py`,
-  `server/routers/admin.py`). No function imports another.
+  `server/admin/accounts.py`). No function imports another.
   `tests/consumers/test_consumers_boundary.py` pins that a function's library half imports
   neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
   `core.inference` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
-- **Only `server/routing.py` imports a route module** (`server/routers/`,
-  `server/core/routes/`), and the route modules do not import each other, but for the
-  exceptions each contract names: the functions still use four routes as libraries.
+- **Only `server/routing.py` imports a route module** (an area's `router.py` or `routes/`, and
+  the panel's modules), and the route modules do not import each other. Neither contract has
+  an exception: a function reads an area's services, never its routes.
 - `import server` works with no database (`server/__init__.py`).
 - The client reaches a function's code (`web/src/consumers/evaluation/`,
   `web/src/consumers/tutor/`) and the landing (`web/src/landing/`) only through `import()`;
@@ -151,7 +151,7 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
 
 ```text
 app.py  routing.py  cli/                  composition
-routers/                                  the routes, which only routing.py imports
+admin/                                    the panel: one route module per tab
 bank/  kg/  raw/                          step 3, the bank; step 2, the syllabus; step 1, the raw documents
 classroom/                                «Clase»: people, groups, progress, activity
 pipeline/                                 the chain of the three steps
@@ -163,9 +163,9 @@ db/                                       models, session, mirror
 ```
 
 - The order is an import contract («The server's layers»). A route module is a leaf wherever
-  it lives (an area's `router.py` or `routes/`, `routers/`, `conversations/routes.py`), and
-  so are the construction's jobs (`pipeline/jobs.py`): what they import is out of the order.
-  The modules still at the server's root are outside it until their areas exist (D-227).
+  it lives (an area's `router.py` or `routes/`, the panel's modules,
+  `conversations/routes.py`), and so are the construction's jobs (`pipeline/jobs.py`): what
+  they import is out of the order. Every module of the server is in it (D-227).
 
 ## 5. Code map
 
@@ -192,9 +192,9 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and `generations.py`, the store of the generated exercises | `app.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order the areas' routes are mounted in; `app.py` mounts the generation's before them and the other functions' after them) and `generations.py`, the store of the generated exercises | `routing.py`, then `app.py` |
 | `core/` | what every area stands on: the process's live pieces (`process.py`: the bus, the queue, the tunnel, the downloads), the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
-| `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
+| `admin/` | the administration panel, one route module per tab or section: accounts and the front page, invitations, class links, subjects, the queue, the door, the optional functions, the engine, the settings | `accounts.py` |
 | `classroom/` | «Clase»: the people of a subject (`members.py`), its groups (`groups.py`), the course's progress (`curriculum.py`), the activity (`activity.py`); `routes/` holds `/api/members` (people, groups, uses, links) and `/api/activity` | `members.py` |
 | `bank/` | step 3: editing the bank (`edit.py`), the class's reading (`reading.py`), its marks (`marks.py`), the tagger (`tagging.py`), the types (`profile_edit.py`); `routes/` holds `/api/bank`, `/api/exercises` and `/api/profile` | `edit.py` |
 | `kg/` | step 2: the graph as the canvas reads it (`view.py`), its edits (`edit.py`) and `/api/kg` (`router.py`) | `edit.py` |
@@ -256,8 +256,8 @@ there.
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
-| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/test_invite_management.py` |
-| Administration | `features/admin/`, `features/maintenance/` | `routers/admin.py`, `routers/admin_engine.py`, `routers/config.py`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/test_admin_*`, `tests/settings/` |
+| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
+| Administration | `features/admin/`, `features/maintenance/` | `admin/`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/admin/`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
 
 Client paths are under `web/src/`; server paths under `server/` unless they start with

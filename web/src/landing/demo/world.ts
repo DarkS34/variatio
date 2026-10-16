@@ -44,7 +44,7 @@ import { simulate } from "./jobs";
  *
  * The landing draws the real client over this — the shell, the three steps and «Generar
  * ejercicios» — so what the visitor sees is the application and not a drawing of it. The
- * shapes answered here are the server's (`server/routers/*`), read off a real installation
+ * shapes answered here are the server's (the server's routes), read off a real installation
  * on 2026-10-12; the contents are lorem ipsum, by the user's request. Nothing here reaches
  * the wire, and nothing of the real session is read or written: the transport is swapped
  * (`lib/api.setTransport`) and the run store is driven (`runStore.drive`) while a demo is

@@ -16,11 +16,11 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
+from server.admin.invites import InviteBody, create_invite
 from server.auth import passwords, queries, rate_limit
 from server.auth.router import AcceptBody, LanguageBody, accept_invite, change_language
 from server.db import repository
 from server.db.models import Base
-from server.routers.admin import InviteBody, create_invite
 
 
 @pytest.fixture

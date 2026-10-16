@@ -15,7 +15,7 @@ artifacts and they consume them (`exploitation` was set aside, a word of abuse a
 in English). **`consumers` imports `variatio` and `server`; neither
 imports `consumers` back** but for the settings registry's optional imports and the four reads of
 the evaluation older than the move (`jobs/lanes`, `pipeline/jobs`, `raw/documents`,
-`routers/admin`), each named in the import contracts of `pyproject.toml`
+`admin/accounts`), each named in the import contracts of `pyproject.toml`
 (`uv run lint-imports`); `tests/consumers/test_consumers_boundary.py` pins that a
 function's library half imports neither FastAPI nor SQLAlchemy. On-disk names, setting keys,
 job kinds and log scopes did not move with the code (`<workspace>/tutor/`, `tutor.*`,

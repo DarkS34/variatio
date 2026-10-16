@@ -18,12 +18,14 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server import auth
+from server.admin import features as admin_features
+from server.admin import invites as admin_invites
+from server.admin.features import FeatureBody
+from server.admin.invites import InviteBody, InviteEditBody
 from server.auth import features, passwords, queries, rate_limit
 from server.auth.deps import require_feature
 from server.auth.router import AcceptBody, _me, accept_invite
 from server.db.models import Base
-from server.routers import admin as admin_routes
-from server.routers.admin import FeatureBody, InviteBody, InviteEditBody
 
 IP = "10.0.0.3"
 
@@ -180,21 +182,21 @@ def test_the_session_says_which_functions_are_open_to_the_account(db):
 def test_the_administrator_sets_a_mode_and_its_list_from_the_panel(db):
     admin, ana = _user(db, "admin", is_admin=True), _user(db, "ana")
 
-    answer = admin_routes.set_feature(
+    answer = admin_features.set_feature(
         "tutor", FeatureBody(mode="selected", accounts=[ana.id]), admin=admin, db=db
     )
 
     assert answer["features"]["tutor"] == {"mode": "selected", "accounts": [ana.id], "workspaces": []}
-    assert admin_routes.read_features(db=db) == answer
+    assert admin_features.read_features(db=db) == answer
 
 
 def test_a_mode_sent_alone_keeps_the_list(db):
     admin, ana = _user(db, "admin", is_admin=True), _user(db, "ana")
-    admin_routes.set_feature(
+    admin_features.set_feature(
         "tutor", FeatureBody(mode="selected", accounts=[ana.id]), admin=admin, db=db
     )
 
-    answer = admin_routes.set_feature("tutor", FeatureBody(mode="off"), admin=admin, db=db)
+    answer = admin_features.set_feature("tutor", FeatureBody(mode="off"), admin=admin, db=db)
 
     assert answer["features"]["tutor"] == {"mode": "off", "accounts": [ana.id], "workspaces": []}
 
@@ -211,7 +213,7 @@ def test_an_unknown_function_mode_or_account_is_refused(db, feature, body, statu
     admin = _user(db, "admin", is_admin=True)
 
     with pytest.raises(HTTPException) as refused:
-        admin_routes.set_feature(feature, FeatureBody(**body), admin=admin, db=db)
+        admin_features.set_feature(feature, FeatureBody(**body), admin=admin, db=db)
 
     assert refused.value.status_code == status
     assert features.snapshot(db)["tutor"] == {"mode": "off", "accounts": [], "workspaces": []}
@@ -222,7 +224,7 @@ def test_an_unknown_function_mode_or_account_is_refused(db, feature, body, statu
 
 def _invite(db, admin, **terms) -> dict:
     terms = {"profile": "student", **terms}
-    return admin_routes.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
+    return admin_invites.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
 
 
 def _redeem(db, link: str, username: str):
@@ -274,7 +276,7 @@ def test_the_functions_of_an_unused_invitation_can_be_changed(db):
     admin = _user(db, "admin", is_admin=True)
     minted = _invite(db, admin, features=["tutor"], expires_at=datetime.now(timezone.utc) + timedelta(days=2))
 
-    edited = admin_routes.edit_invite(
+    edited = admin_invites.edit_invite(
         minted["invite"]["id"], InviteEditBody(features=["evaluation"]), admin=admin, db=db
     )
 

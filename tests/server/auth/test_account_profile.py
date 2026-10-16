@@ -18,12 +18,14 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
+from server.admin import accounts as admin_routes
+from server.admin import invites as admin_invites
+from server.admin.accounts import ProfileBody
+from server.admin.invites import InviteBody, InviteEditBody
 from server.auth import passwords, queries, rate_limit
 from server.auth.router import AcceptBody, accept_invite, preview_invite
 from server.db import repository
 from server.db.models import Base
-from server.routers import admin as admin_routes
-from server.routers.admin import InviteBody, InviteEditBody, ProfileBody
 from server.workspaces import router as workspace_routes
 
 
@@ -71,7 +73,7 @@ def _request() -> Request:
 
 
 def _invite(db, admin, **terms) -> dict:
-    return admin_routes.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
+    return admin_invites.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
 
 
 def _register(db, link: str, username: str, **sent):
@@ -135,7 +137,7 @@ def test_each_row_of_the_panel_shows_the_profile_and_it_can_be_changed_before_us
     minted = _invite(db, admin, profile="student")
     assert minted["invite"]["profile"] == "student"
 
-    edited = admin_routes.edit_invite(
+    edited = admin_invites.edit_invite(
         minted["invite"]["id"], InviteEditBody(profile="teacher"), admin=admin, db=db
     )
 

@@ -15,11 +15,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from server.admin.workspaces import delete_workspace
 from server.auth import deps as auth_deps
 from server.auth import queries
 from server.db import repository
 from server.db.models import Base, EDITOR
-from server.routers.admin import delete_workspace
 from server.workspaces import trees
 
 

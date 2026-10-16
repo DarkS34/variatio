@@ -22,6 +22,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server import auth
+from server.admin import class_links as admin_class_links
 from server.auth import links, passwords, queries, rate_limit
 from server.auth import router as auth_routes
 from server.auth.router import AcceptBody, JoinBody
@@ -30,7 +31,6 @@ from server.core import environment
 from server.db import repository
 from server.db import session as db_session
 from server.db.models import EDITOR, OWNER, VIEWER, Base, ClassLink, Invite
-from server.routers import admin as admin_routes
 
 PASSWORD = "una-contraseña-larga"
 
@@ -463,14 +463,14 @@ def test_the_administrator_sees_pauses_and_retires_a_subjects_link(db, aula):
     admin = queries.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
     token = _mint(db, aula)
 
-    [row] = admin_routes.class_links(db=db)["class_links"]
-    admin_routes.pause_class_link(row["id"], admin_routes.ClassLinkEditBody(paused=True), admin=admin, db=db)
+    [row] = admin_class_links.class_links(db=db)["class_links"]
+    admin_class_links.pause_class_link(row["id"], admin_class_links.ClassLinkEditBody(paused=True), admin=admin, db=db)
     paused = _refused(lambda: _register(db, token, "pausa"))
-    admin_routes.revoke_class_link(row["id"], admin=admin, db=db)
+    admin_class_links.revoke_class_link(row["id"], admin=admin, db=db)
 
     assert (row["workspace"], row["created_by"]) == ("aula", "bruno")
     assert paused.headers == {"X-Error-Code": auth_routes.CLASS_LINK_PAUSED}
-    assert admin_routes.class_links(db=db)["class_links"] == []
+    assert admin_class_links.class_links(db=db)["class_links"] == []
 
 
 def test_the_command_line_prints_the_link_and_renews_it(capsys, monkeypatch):

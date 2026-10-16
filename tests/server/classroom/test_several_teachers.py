@@ -17,6 +17,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 
+from server.admin import features as admin_features
+from server.admin.features import FeatureBody
 from server.auth import features, mail, passwords, queries, rate_limit
 from server.auth.router import _me
 from server.classroom.routes import links as link_routes
@@ -25,8 +27,6 @@ from server.classroom.routes.links import InvitesBody
 from server.classroom.routes.people import RoleBody
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base, Invite
-from server.routers import admin as admin_routes
-from server.routers.admin import FeatureBody
 
 
 @pytest.fixture
@@ -116,7 +116,7 @@ def test_a_teacher_changes_no_role(db, aula):
 
 
 def test_a_listed_subject_opens_the_tutor_to_everybody_in_it_and_only_there(db, aula):
-    admin_routes.set_feature(
+    admin_features.set_feature(
         "tutor", FeatureBody(mode="selected", workspaces=["aula"]), admin=aula.admin, db=db
     )
 
@@ -128,7 +128,7 @@ def test_a_listed_subject_opens_the_tutor_to_everybody_in_it_and_only_there(db, 
 
 
 def test_the_session_says_the_tutor_of_the_subject_the_account_is_in(db, aula):
-    admin_routes.set_feature(
+    admin_features.set_feature(
         "tutor", FeatureBody(mode="selected", workspaces=["aula"]), admin=aula.admin, db=db
     )
 
@@ -141,10 +141,10 @@ def test_the_session_says_the_tutor_of_the_subject_the_account_is_in(db, aula):
 
 
 def test_the_subjects_are_replaced_only_when_sent_and_named_by_slug(db, aula):
-    admin_routes.set_feature(
+    admin_features.set_feature(
         "tutor", FeatureBody(mode="selected", workspaces=["aula", "otra"]), admin=aula.admin, db=db
     )
-    answer = admin_routes.set_feature("tutor", FeatureBody(mode="all"), admin=aula.admin, db=db)
+    answer = admin_features.set_feature("tutor", FeatureBody(mode="all"), admin=aula.admin, db=db)
 
     assert answer["features"]["tutor"]["workspaces"] == ["aula", "otra"]
     assert "workspaces" not in answer["features"]["evaluation"]
@@ -156,7 +156,7 @@ def test_the_subjects_are_replaced_only_when_sent_and_named_by_slug(db, aula):
 )
 def test_the_evaluation_lists_no_subject_and_an_unknown_one_is_refused(db, aula, feature, workspaces):
     with pytest.raises(HTTPException) as refused:
-        admin_routes.set_feature(
+        admin_features.set_feature(
             feature, FeatureBody(mode="selected", workspaces=workspaces), admin=aula.admin, db=db
         )
 

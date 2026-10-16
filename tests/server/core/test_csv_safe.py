@@ -62,7 +62,7 @@ def test_row_covers_every_column_it_is_given():
 # The engine's CSV is the one written for Excel on purpose — semicolons and a BOM — so it is
 # the one where a formula would be opened by hand, by the administrator.
 def test_the_engine_export_defuses_a_phase_name(tmp_path, monkeypatch):
-    from server.routers import admin_engine
+    from server.admin import engine as admin_engine
     from variatio import config
     from variatio.core import cerebras_budget
 

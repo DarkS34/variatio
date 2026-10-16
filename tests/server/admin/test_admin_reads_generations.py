@@ -13,10 +13,10 @@ from fastapi.testclient import TestClient
 
 from server import auth
 from server import generations as store
+from server.admin import workspaces as admin_workspaces
 from server.auth import queries
 from server.core import installation
 from server.db import repository
-from server.routers import admin
 from variatio.core.workspace import Workspace
 
 ANA, BEA, GONE = 1, 2, 3
@@ -59,7 +59,7 @@ def client(ws, monkeypatch):
     monkeypatch.setattr(queries, "list_users", lambda db: users)
     monkeypatch.setattr(installation, "workspace_for", lambda slug: ws)
     app = FastAPI()
-    app.include_router(admin.router)
+    app.include_router(admin_workspaces.router)
     app.dependency_overrides[auth.require_admin] = lambda: None
     app.dependency_overrides[auth.db] = lambda: None
     return TestClient(app)
@@ -103,7 +103,7 @@ def test_an_unknown_workspace_is_a_404(client):
 def test_nothing_here_writes():
     writes = [
         route
-        for route in admin.router.routes
+        for route in admin_workspaces.router.routes
         if "/generations" in route.path and route.methods - {"GET", "HEAD"}
     ]
     assert writes == []

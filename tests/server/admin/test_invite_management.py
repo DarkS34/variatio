@@ -22,14 +22,14 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
+from server.admin import invites as admin_invites
+from server.admin.invites import InviteBody, InviteEditBody, InviteImportBody
 from server.auth import links, passwords, queries, rate_limit, tokens
 from server.auth.rate_limit import RateLimiter
 from server.auth.router import AcceptBody, accept_invite, preview_invite
 from server.core import environment
 from server.db import repository
 from server.db.models import Base, Invite
-from server.routers import admin as admin_routes
-from server.routers.admin import InviteBody, InviteEditBody, InviteImportBody
 
 IP = "10.0.0.2"
 
@@ -99,22 +99,22 @@ def _request() -> Request:
 
 def _create(db, admin, **terms) -> dict:
     terms = {"profile": "teacher", **terms}
-    return admin_routes.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
+    return admin_invites.create_invite(InviteBody(**terms), _request(), admin=admin, db=db)
 
 
 def _import(db, admin, link: str, **terms) -> dict:
     terms = {"profile": "teacher", **terms}
-    return admin_routes.import_invite(
+    return admin_invites.import_invite(
         InviteImportBody(link=link, **terms), _request(), admin=admin, db=db
     )
 
 
 def _read_link(db, admin, invite_id: int) -> str:
-    return admin_routes.invite_link(invite_id, _request(), admin=admin, db=db)["link"]
+    return admin_invites.invite_link(invite_id, _request(), admin=admin, db=db)["link"]
 
 
 def _edit(db, admin, invite_id: int, **changes) -> dict:
-    return admin_routes.edit_invite(invite_id, InviteEditBody(**changes), admin=admin, db=db)
+    return admin_invites.edit_invite(invite_id, InviteEditBody(**changes), admin=admin, db=db)
 
 
 def _token(link: str) -> str:
@@ -261,7 +261,7 @@ def test_the_alias_is_kept_and_never_reaches_whoever_holds_the_link(db, admin, w
 def test_the_listing_never_carries_a_link_sealed_or_not(db, admin):
     created = _create(db, admin, label="Ana")
 
-    listing = json.dumps(admin_routes.invites(db=db))
+    listing = json.dumps(admin_invites.invites(db=db))
 
     assert _token(created["link"]) not in listing
     assert db.get(Invite, created["invite"]["id"]).token_sealed not in listing
@@ -340,7 +340,7 @@ def test_the_ordering_puts_the_newest_batch_first_and_keeps_each_batch_in_order(
             db.get(Invite, item["invite"]["id"]).created_at = when
     db.flush()
 
-    labels = [row["label"] for row in admin_routes.invites(db=db)["invites"]]
+    labels = [row["label"] for row in admin_invites.invites(db=db)["invites"]]
 
     assert labels == ["Nuevo 1", "Nuevo 2", "Viejo 1", "Viejo 2"]
 
@@ -357,7 +357,7 @@ def test_the_link_read_again_is_the_one_handed_over(db, admin):
 def test_an_invitation_minted_before_links_were_kept_says_so(db, admin):
     legacy, _ = _legacy(db)
 
-    listed = admin_routes.invites(db=db)["invites"]
+    listed = admin_invites.invites(db=db)["invites"]
     assert listed[0]["link_stored"] is False
     with pytest.raises(HTTPException) as refused:
         _read_link(db, admin, legacy.id)
@@ -383,7 +383,7 @@ def test_the_link_of_a_deleted_invitation_comes_back_under_the_terms_given(
     db, admin, workspace
 ):
     created = _create(db, admin)
-    admin_routes.revoke_invite(created["invite"]["id"], admin=admin, db=db)
+    admin_invites.revoke_invite(created["invite"]["id"], admin=admin, db=db)
     with pytest.raises(HTTPException):
         preview_invite(_token(created["link"]), session=db)
 
@@ -442,7 +442,7 @@ def test_moving_the_date_brings_an_expired_invitation_back(db, admin):
     db.flush()
 
     assert queries.live_invite(db, digest) is None
-    assert admin_routes.invites(db=db)["invites"][0]["state"] == "expired"
+    assert admin_invites.invites(db=db)["invites"][0]["state"] == "expired"
     # An expired link is still worth reading: it is about to be sent again.
     assert _read_link(db, admin, invite_id) == created["link"]
 
@@ -513,7 +513,7 @@ def test_redeeming_forgets_the_sealed_copy_and_closes_the_row(db, admin):
 
     row = db.get(Invite, invite_id)
     assert row.token_sealed is None and row.label == "Ana"
-    assert admin_routes.invites(db=db)["invites"] == []
+    assert admin_invites.invites(db=db)["invites"] == []
     for attempt in (
         lambda: _read_link(db, admin, invite_id),
         lambda: _edit(db, admin, invite_id, expires_at=_ahead(days=1)),

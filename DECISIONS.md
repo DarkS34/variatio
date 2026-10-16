@@ -1176,7 +1176,7 @@ what each decision replaced.
 
 ### D-227. The server by areas
 - **Rule:** `server/` is organised by areas — `core/`, `auth/`, `workspaces/`, `pipeline/`, `raw/`, `kg/`, `bank/`, `classroom/`, `admin/` (one module per panel tab) — each with its routes, services, `AGENTS.md` and tests in `tests/server/<area>/`; no route is imported by another module.
-- **Date:** 2026-10-16 · **Commit:** — · **Status:** decided; applies in plan phases F10–F20
+- **Date:** 2026-10-16 · **Commit:** the commit that removes `server/routers/` · **Status:** in force
 - **Why:** One area of the product was spread over up to ten files in four folders, and routes were used as libraries. Without those routes, the job handlers and `singletons.py`, the areas' services form no cycle.
 
 ### D-228. Document code outside the builders
