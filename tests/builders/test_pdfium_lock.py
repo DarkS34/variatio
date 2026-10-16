@@ -104,7 +104,7 @@ class _Image:
 def fake(monkeypatch) -> _Fake:
     lock = _Lock()
     fake = _Fake(lock)
-    monkeypatch.setattr(pages, "_PDFIUM_LOCK", lock)
+    monkeypatch.setattr(pages.render, "_PDFIUM_LOCK", lock)
     monkeypatch.setitem(sys.modules, "pypdfium2", fake)
     return fake
 

@@ -161,7 +161,7 @@ One line per folder: what it holds, and the file to open first.
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, and `marks.py`, shared by both; each function keeps its own in `consumers/<function>/prompts/` | `prompts/__init__.py` |
 | `wording/` | strings the code composes in the workspace's language | `wording/__init__.py` |
 | `builders/` | raw → artifacts: the graph, profile and bank builders, the context synthesis | `knowledge_graph_builder/__init__.py` |
-| `builders/source_docs/` | document plumbing: files, markdown, chunking, page transcription, Office | `files.py`, then `pages.py` |
+| `builders/source_docs/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
 | `runtime/` | artifacts → exercises: generator, tagger, taggability, checks | `generator.py` |
 | `runtime/embedder/` | concept descriptions and the two vector indices | `embedder/__init__.py` |
 | `runtime/screening/` | the guardrail and the admissibility judge | `screening/__init__.py` |

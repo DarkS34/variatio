@@ -1,9 +1,12 @@
 # AGENTS.md — `variatio/builders/source_docs/` — reading documents and transcription
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
-Rules for reading a raw document and transcribing it page by page. The server's side is
-`server/raw_data.py` and `server/originals.py` (`server/AGENTS.md`); the reader is
-`web/src/features/raw/AGENTS.md`.
+Rules for reading a raw document and transcribing it page by page. `pages/` is a package by
+step (`document`, `cache`, `render`, `transcribe`, `office_pages`, `images`, `seams`; its
+`__init__.py` is the map) and re-exports every name; a test patches a name in the module that
+LOOKS IT UP, which for `page_images`, `page_count` and `_transcribe_page` is `pages.document`.
+The server's side is `server/raw_data.py` and `server/originals.py` (`server/AGENTS.md`); the
+reader is `web/src/features/raw/AGENTS.md`.
 
 ## Transcription (`server/raw_data.py`, `entrypoints/transcribe.py`)
 
@@ -22,7 +25,7 @@ Both raw slots use the same VLM page route (quality over speed).
 - **A document is its bytes**: the same PDF anywhere in the installation arrives read
   (`pages.reuse_key`, `adopt_pages` copies — never links — pages from a donor with an
   identical fingerprint minus `source`), at upload and at the head of `transcribe_slot`.
-- **All PDFium calls go through `pages._PDFIUM_LOCK`** (process-wide RLock, released between
+- **All PDFium calls go through `pages.render._PDFIUM_LOCK`** (process-wide RLock, released between
   pages, documents closed under the lock). PDFium is not thread-safe and one corruption
   poisons the process.
 - Scanned pages (no text layer) go as JPEG (`TRANSCRIBE_PAGE_JPEG_QUALITY`); renders are capped

@@ -100,7 +100,7 @@ dependency needs `uv sync` and `uv run alembic upgrade head` before the restart.
   json-repair, pydantic). Every name there must be imported by the runtime.
 - `[builders]` — Docling (~700 MB), python-pptx, pypdfium2. Imported **lazily**:
   `source_docs/files.LazyConverter` opens Docling only at `markdown.to_markdown`'s
-  `convert()`, and `pypdfium2` only inside `source_docs/pages.py`. Never move those imports
+  `convert()`, and `pypdfium2` only inside `source_docs/pages/render.py`. Never move those imports
   to module scope. Importing anything under `variatio/` must not import Docling or torch.
 - `[server]` — FastAPI, uvicorn, SQLAlchemy/Alembic/psycopg, argon2-cffi, cryptography
   (`server/auth/links.py` only), pypdf (evaluation RAG reader).

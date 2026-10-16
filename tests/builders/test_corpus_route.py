@@ -28,7 +28,7 @@ def corpus(tmp_path):
 
 def transcribes(monkeypatch, texts: list[str], seam: str = "space"):
     monkeypatch.setattr(
-        pages,
+        pages.document,
         "page_images",
         lambda path, dpi, first=1: (len(texts), iter(range(first - 1, len(texts)))),
     )
@@ -99,7 +99,7 @@ def test_a_second_build_reuses_the_pages_and_calls_no_model(corpus, monkeypatch)
         raise AssertionError("una caché válida no puede volver a llamar al modelo")
 
     monkeypatch.setattr(pages.inference, "generate", boom)
-    monkeypatch.setattr(pages, "page_images", boom)
+    monkeypatch.setattr(pages.document, "page_images", boom)
     documents = extraction.convert_corpus(
         corpus.raw_corpus_dir,
         recursive=False,

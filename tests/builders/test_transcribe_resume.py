@@ -28,7 +28,7 @@ def cache(tmp_path: Path) -> Path:
 
 def _images(monkeypatch, count: int = len(PAGES)) -> None:
     monkeypatch.setattr(
-        pages,
+        pages.document,
         "page_images",
         lambda path, dpi, first=1: (count, iter(range(first - 1, count))),
     )
@@ -44,7 +44,7 @@ def _model(monkeypatch, stop_at: int | None = None) -> list[int]:
         asked.append(index)
         return PAGES[index - 1]
 
-    monkeypatch.setattr(pages, "_transcribe_page", transcribe_page)
+    monkeypatch.setattr(pages.document, "_transcribe_page", transcribe_page)
     monkeypatch.setattr(
         pages.inference,
         "generate",

@@ -1,8 +1,8 @@
 """Reading a source document: files, markdown, chunking and page transcription.
 
 Shared by all three builders — anything about reading a source file belongs here and is
-never duplicated into one of them. `pages` is the only module of the four that talks to a
-model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
+never duplicated into one of them. `pages` (a package, one module per step of a
+transcription) is the only part that talks to a model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
 property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
 
 Not private, despite serving the builders: `entrypoints/transcribe.py`, `server/raw_data.py`,

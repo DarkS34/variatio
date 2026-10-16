@@ -43,8 +43,8 @@ def _images(monkeypatch, count: int = len(PAGES)) -> None:
         wanted = list(numbers) if numbers is not None else list(range(first, count + 1))
         return count, iter(wanted)
 
-    monkeypatch.setattr(pages, "page_images", page_images)
-    monkeypatch.setattr(pages, "page_count", lambda path: count)
+    monkeypatch.setattr(pages.document, "page_images", page_images)
+    monkeypatch.setattr(pages.document, "page_count", lambda path: count)
 
 
 def _model(monkeypatch, failing=()) -> tuple[list[int], list[dict]]:
@@ -66,7 +66,7 @@ def _model(monkeypatch, failing=()) -> tuple[list[int], list[dict]]:
             )
         )
 
-    monkeypatch.setattr(pages, "_transcribe_page", transcribe_page)
+    monkeypatch.setattr(pages.document, "_transcribe_page", transcribe_page)
     monkeypatch.setattr(pages.inference, "generate", generate)
     return asked, seams
 

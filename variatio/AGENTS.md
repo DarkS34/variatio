@@ -182,7 +182,7 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
 ## Builders (`variatio/builders/`)
 
 `entrypoints/build.py` is the only importer. `source_docs/` holds all document plumbing
-(`files`, `markdown`, `chunking`, `pages`, `office`); only `pages.py` talks to a model.
+(`files`, `markdown`, `chunking`, `pages`, `office`); only the `pages/` package talks to a model.
 Builders use `inference.generate()`, never `generate_stream()` (a build runs out of process).
 
 **Knowledge graph** ([knowledge_graph_builder/](variatio/builders/knowledge_graph_builder/)):
