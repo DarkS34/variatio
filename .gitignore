@@ -6,7 +6,7 @@ __pycache__
 /raw*
 /logs/
 
-docs/
+/plans/
 
 web/node_modules
 web/dist

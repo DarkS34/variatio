@@ -7,7 +7,7 @@ The domain is education; **the subject is a parameter**. Prompts reason about le
 Developed as the final thesis (TFM) of a Master's degree in Artificial Intelligence.
 
 > **This branch, `main`, is the complete system**: the library, the FastAPI + PostgreSQL
-> API, the React front end, the study's blind evaluation and the Socratic tutor. The library
+> API, the React front end, the study's blind evaluation, the Socratic tutor and the free chat. The library
 > and its command line alone, with no API, no database and no front end, were the
 > `variatio-vanilla` branch until 2026-10-16, when it was retired.
 
@@ -59,13 +59,13 @@ Every pipeline phase declares its own model, context window and reasoning level,
 A **FastAPI + PostgreSQL 16** API (SQLAlchemy 2 / Alembic) with a **React** front end (Vite, pnpm):
 
 - **Its own accounts, by invitation.** No public sign-up, no OAuth, no JWT: Argon2id, opaque server-side sessions with a sliding and an absolute expiry, enumeration defences and rate limiting keyed by both address and account. Authorisation is a membership row checked on every route (`VIEW` / `EDIT` / `MANAGE`).
-- **A construction in four numbered steps** — the raw documents, the exercise types, the syllabus, the tagging — each with its build, its review, its approval and a restorable history; for an account the evaluation is open to, each also closes with a short questionnaire that is the study's own instrument. The syllabus viewer is a hand-rolled `<canvas>` with a force layout and a view by prerequisite level.
+- **A construction in three numbered steps** — the raw documents, the syllabus, and the bank with its exercise types — each with its build, its review, its approval and a restorable history; for an account the evaluation is open to, each also closes with a short questionnaire that is the study's own instrument. The syllabus viewer is a hand-rolled `<canvas>` with a force layout and a view by prerequisite level.
 - **Raw documents as a destination of their own**: per-origin import, transcription with per-document state (`done` / `pending` / `stale`, with the cause), and a page editor.
 - **A two-lane job queue** (local / remote): a job serialises only against those competing for its machine or its quota. Weighted phase-plan progress, an authenticated WebSocket, cancellation that stops a model call mid-token.
 - **A door per function once the construction is closed** — generating exercises, open to every account; evaluating the system and the Socratic tutor, open to the accounts the administrator chooses; and the free chat, which a subject's teachers open to their students. A commission names concepts, modality, difficulty, fixed fields, curriculum and typed free-text instructions; every validated item is saved the moment it validates, with the whole commission that produced it, and is private to whoever asked for it — the generation screen lists the subject's own in a «My exercises» tab, the account menu every subject's. A conversation with the tutor is private to its author too.
 - **Two optional functions, switched from the administration panel.** The evaluation and the tutor are each open to nobody, to every account or to chosen accounts, from the function's own tab, which also holds its settings — the tutor's include a daily message limit per account, counted across every subject. The administrator is not exempt, and an invitation can put its holder on a function's list. A function's client code is loaded with `import()` only for the accounts it is open to and in the administrator's panel, whose tabs read it in any mode, so the rest never download it.
 - **Administration**: the engine (resident VRAM, Cerebras quota, tunnel, installed models), accounts and access, workspaces (disk usage, export, deletion with explicit rules about the files), the settings registry one screen per stage, one tab per optional function (who it is open to, the evaluation's reading, its settings), and a read-only view of the tutor's conversations.
-- **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation. A thirteen-section user guide lives at `/guide` (a function closed to the account takes its section with it), and a tutorial at `/tutorial`.
+- **Two languages on two axes**: the interface language (`es` / `en`) belongs to the account, the prompt language to the workspace and is fixed at creation.
 
 ## Getting started
 
@@ -112,8 +112,8 @@ uv run variatio init       --workspace <slug>   # load the instance, tag the ban
 uv run variatio generate   --workspace <slug> -n 3 --concepts "Recursividad" --item-type <modality>
 uv run variatio all        --workspace <slug>   # build what is missing, then init and generate
 
-uv run system [serve|import-instance|export-instance|workspaces|create-workspace|
-               create-user|users|grant|invite|db-check]
+uv run system [serve|import-instance|export-instance|export-generations|usage|workspaces|
+               create-workspace|db-check|create-user|users|grant|invite|class-link]
 ```
 
 `--workspace` is required everywhere: there is no default instance.
@@ -133,37 +133,28 @@ measure a real installation rather than the code, so they name the workspace the
 
 In `web/`: `pnpm test` (vitest), `pnpm exec tsc --noEmit` and `pnpm build`, plus four gates
 of its own — `pnpm check:color` (palette contrasts and ΔE, re-derived rather than picked),
-`pnpm check:ui` (structural rules), `pnpm check:i18n` (catalogue and guide coverage) and
+`pnpm check:ui` (structural rules), `pnpm check:i18n` (catalogue coverage) and
 `pnpm check:lazy` (the evaluation's and the tutor's code stays out of what every session
 loads; run it after `pnpm build`).
 
 ## Repository layout
 
 ```
-variatio/       the pipeline
-  core/         inference, progress, paths, JSON I/O, the Cerebras ledger
-  loaders/      the loaders of the four artifacts
-  builders/     raw → artifacts: document plumbing, the three builders
-  runtime/      artifacts → items: generator, tagger, embedder, screening, checks
-  entrypoints/  the library's public API — everything that takes a Workspace
-  prompts/      one set per language (es / en), one module per family
-  wording/      the strings the code composes, in the workspace's language
-  settings/     the settings registry, with the measurement beside each value
+variatio/       the library: builders (raw → artifacts) and runtime (artifacts → items)
 server/         API, database, identity, job queue, the «system» CLI
-consumers/      the functions the system is used through, each with its own API
-  generation/   generating exercises: the commission, its job, its bounds
-  evaluation/   the TFM's evaluation: arms, sessions, statistics
-  tutor/        the Socratic tutor: the card, the turn, the checks
+consumers/      the functions on the artifacts: generation, evaluation, tutor, chat
 web/            the React front end (its functions in web/src/consumers/)
-tests/          one directory per subsystem
-migrations/     Alembic
-workspaces/     the instances, one directory per slug (git-ignored)
+tests/  migrations/  workspaces/ (git-ignored)
 ```
 
-The boundary is strict and pinned by tests: `consumers` imports `variatio` and `server`, never
-the reverse; importing `variatio` pulls in neither Docling nor the server; and secrets live only
-in `.env`, never in `config.json`. Inside `variatio/`, two more rules are one `grep` each:
-only `entrypoints/` takes a `Workspace`, and only `builders/` and `runtime/` call the model.
+[`ARCHITECTURE.md`](ARCHITECTURE.md) is the map: what each folder holds, where each area of
+the product lives, and the invariants with the test that pins each one. The import direction
+is pinned by `tests/consumers/test_consumers_boundary.py`: `consumers` imports `variatio` and
+`server`, never the reverse. Importing `variatio` pulls in neither Docling nor the server
+(measured, not yet pinned by a test), and secrets live only in `.env`, never in `config.json`.
+Inside `variatio/`, `entrypoints/` is the public door (`builders/` and `loaders/` take a
+`Workspace` only for their own paths), and only `cli.py`, `builders/`, `runtime/` and `core/`
+import the engine boundary.
 
 ## Configuration
 
@@ -174,9 +165,9 @@ restart; deleting it is safe — everything falls back to the registry defaults.
 
 ## Internal documentation
 
-`AGENTS.md` records the design decisions, the
-closed-decisions register and the measurements behind them. The user-facing guide lives
-inside the application itself, at `/guide`.
+`ARCHITECTURE.md` is the map of the code. `AGENTS.md` records the design decisions, the
+closed-decisions register and the measurements behind them. `web/DESIGN.md` is the rulebook
+of the interface.
 
 ## License
 

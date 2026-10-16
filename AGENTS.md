@@ -170,6 +170,9 @@ table and refuses while a row has no file: on an installation that still has the
 
 ## Architecture
 
+[`ARCHITECTURE.md`](ARCHITECTURE.md) is the short map for a person new to the code (code map,
+area map, invariants); keep it true when the tree changes. This section is the long form.
+
 The hard line: **`artifacts/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
 `consumers/` (the functions the system is used through: `generation/`, `evaluation/` — the TFM's
@@ -187,8 +190,13 @@ of three kinds:
   `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
 - **The door**: `entrypoints/`.
 
-Two rules, each one grep: **only `entrypoints/` takes a `Workspace`**, and **only
-`builders/` and `runtime/` call the model**. `runtime/__init__.py` and `core/__init__.py`
+Two rules (rewritten 2026-10-16: the earlier wording, «only `entrypoints/` takes a
+`Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
+**`entrypoints/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
+only to resolve their own paths, and `runtime/`, `prompts/`, `wording/` and `settings/` do
+not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `core/`
+import `core.inference`** — `core/repair.py` calls it on behalf of `builders/` and
+`runtime/`. `runtime/__init__.py` and `core/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
 put a component back at the root.
@@ -583,7 +591,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `logs/<slug>/usage.jsonl` keeps one line per job that called one — kind, end, status and
   tokens by phase, failed and stopped jobs included, never a text or an author
   (`server/jobs/usage_log.py`). `system usage --workspace S [--days N]` sums it by kind and
-  engine; `docs/coste-medido.md` is the page of costs it feeds. Embeddings are not counted.
+  engine. Embeddings are not counted.
 
 ### Build chain and approvals
 
@@ -2379,7 +2387,8 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
 
 ## Notes for working in this repo
 
-- Gitignored: `/raw*`, `web/node_modules`, `web/dist`, `/workspaces/` in full (the repo ships no
+- Gitignored: `/raw*`, `/plans/` (private work plans; there is no `docs/`), `web/node_modules`,
+  `web/dist`, `/workspaces/` in full (the repo ships no
   instance), `logs/`, `/.maintenance.json`, `/.invite_link_key` (a secret; back it up
   beside `.env`).
 - `config.json` at the root is versioned and holds no secrets; deleting it falls back to
