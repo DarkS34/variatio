@@ -143,8 +143,8 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
 - The layers above are an import contract: `cli`, `entrypoints`, `builders | runtime`,
   `loaders`, `prompts | wording`, then `core`, `settings` and `config`. Two crossings are
   named in it: `runtime/taggability.py` imports the graph builder's node block and parser
-  (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and «only `core/inference.py`
-  imports the Ollama SDK» are contracts too.
+  (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and
+  «only `core/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
 ## 5. Code map
 
@@ -155,7 +155,7 @@ One line per folder: what it holds, and the file to open first.
 | Folder | Holds | Start at |
 |---|---|---|
 | `variatio/` (root) | `cli.py`, `config.py`, `__init__.py` (logging) and nothing else | `cli.py` |
-| `core/` | engines (`inference.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), paths, `Workspace`, progress, JSON I/O, repair, usage meters | `workspace.py`, then `inference.py` |
+| `core/` | the engine boundary (`inference.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), paths, `Workspace`, progress, JSON I/O, repair, usage meters | `workspace.py`, then `inference.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `loaders/` | readers of the artifacts: graph, profile, context, relations, locale | `knowledge_graph.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, and `marks.py`, shared by both; each function keeps its own in `consumers/<function>/prompts/` | `prompts/__init__.py` |
@@ -294,9 +294,10 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   administrator's bypass lives there alone. An optional function adds its own guard
   (`server/features.py`).
 - **Model calls.** One boundary, `variatio/core/inference.py` (`generate()`, `embed()`,
-  `embed_batch()`). Business code never calls an SDK; the evaluation's naive arm alone calls
-  commercial APIs over `httpx`, outside the boundary, because it measures them. Every call has its own model, reasoning
-  and sampling per phase. `variatio/core/usage.py` counts the tokens of every job.
+  `embed_batch()`), over two engines: `core/ollama.py` (local) and `core/cerebras.py` (hybrid).
+  Business code never calls an SDK; the evaluation's naive arm alone calls commercial APIs
+  over `httpx`, outside the boundary, because it measures them. Every call has its own model,
+  reasoning and sampling per phase. `variatio/core/usage.py` counts the tokens of every job.
 - **Logging.** loguru, configured once in `variatio/__init__.py`. `variatio/` logs in
   English; `server/` and `consumers/` in Spanish. Format `[scope] Message`. A job logs to
   `logs/<slug>/jobs.log`.

@@ -2,7 +2,8 @@
 
 from types import SimpleNamespace
 
-from variatio.core import inference, progress, usage
+from variatio.core import progress, usage
+from variatio.core import ollama as local
 
 
 def test_a_call_counts_on_every_open_meter_under_its_phase(monkeypatch):
@@ -31,7 +32,7 @@ def test_ollama_s_last_chunk_says_what_the_call_cost():
         SimpleNamespace(response="la", thinking=None, done_reason="stop", prompt_eval_count=12, eval_count=3),
     ]
 
-    *_, counts = inference._drain(iter(chunks))
+    *_, counts = local._drain(iter(chunks))
 
     assert counts == (12, 3)
 

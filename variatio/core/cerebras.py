@@ -17,11 +17,11 @@ from . import cerebras_budget, progress, repetition, usage
 from .inference import (
     GenerationResponse,
     InferenceError,
-    OllamaEngine,
     Sampling,
     TokenSink,
     split_thinking,
 )
+from .ollama import OllamaEngine
 
 STRICT_SCHEMA_MAX_CHARS = 5000
 _WRAPPER_NAME = "lista"
@@ -444,7 +444,7 @@ def _consume_stream(response: httpx.Response, on_token: TokenSink) -> tuple[str,
 def _remote_error(status: int, model: str, body: str) -> str:
     """Phrase a remote failure for the panel: the status and the endpoint, not the body.
 
-    Same rule as `inference._upstream_error` — what a remote API answers is its text, not
+    Same rule as `ollama._upstream_error` — what a remote API answers is its text, not
     ours, and these messages travel to the panel as the job's failure.
     """
     logger.debug(f"[cerebras] Body of error {status} for '{model}': {body[:300]}")

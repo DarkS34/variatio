@@ -3,9 +3,10 @@ import ollama
 import pytest
 
 from variatio import config
-from variatio.core import inference
 from variatio.core.cerebras import CerebrasEngine
-from variatio.core.inference import InferenceError, OllamaEngine
+from variatio.core import ollama as local
+from variatio.core.inference import InferenceError
+from variatio.core.ollama import OllamaEngine
 
 # What an engine answers is ITS text and not ours: `ollama.ResponseError` carries the raw
 # response body, and those messages reach the panel — so whatever the host `OLLAMA_HOST`
@@ -32,7 +33,7 @@ class _Client:
 
 def test_the_helper_keeps_the_status_and_drops_the_body(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
-    message = inference._upstream_error("Falló algo", ollama.ResponseError(BODY, 404))
+    message = local._upstream_error("Falló algo", ollama.ResponseError(BODY, 404))
     assert "404" in message
     assert "localhost:13434" in message
     assert BODY not in message
@@ -40,7 +41,7 @@ def test_the_helper_keeps_the_status_and_drops_the_body(monkeypatch):
 
 def test_the_helper_says_it_could_not_reach_the_engine_when_there_is_no_status(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
-    message = inference._upstream_error("Falló algo", httpx.ConnectError(BODY))
+    message = local._upstream_error("Falló algo", httpx.ConnectError(BODY))
     assert "ConnectError" in message
     assert BODY not in message
 

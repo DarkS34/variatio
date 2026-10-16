@@ -63,7 +63,8 @@ job becomes a package named after itself whose `__init__` re-exports the public 
 put a component back at the root.
 
 - `core/`: `inference` (engine boundary: all model traffic via `generate()`/`embed()`/
-  `embed_batch()`; never call an SDK from business logic), `cerebras`, `cerebras_budget`,
+  `embed_batch()`; never call an SDK from business logic), `ollama` (the local engine, the one
+  importer of the `ollama` SDK; `inference` reaches it lazily), `cerebras`, `cerebras_budget`,
   `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `repair`
   (`parse_with_repair`, requires an explicit `shape`), `repetition`, `vectors` (L2
   normalisation, batched embedding, the query/document prefixes; shared by the builders,

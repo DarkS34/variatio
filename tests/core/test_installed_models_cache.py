@@ -1,6 +1,6 @@
 import pytest
 
-from variatio.core import inference
+from variatio.core import ollama as local
 
 
 class FakeClient:
@@ -22,7 +22,7 @@ class FakeClient:
 
 @pytest.fixture
 def engine():
-    engine = inference.OllamaEngine()
+    engine = local.OllamaEngine()
     engine._client = FakeClient()
     return engine
 
@@ -36,7 +36,7 @@ def test_the_listing_is_read_once_inside_the_ttl(engine):
 
 def test_the_listing_is_read_again_once_the_ttl_is_over(engine, monkeypatch):
     engine.installed_models()
-    monkeypatch.setattr(inference, "_INSTALLED_TTL_SECONDS", 0.0)
+    monkeypatch.setattr(local, "_INSTALLED_TTL_SECONDS", 0.0)
     engine.installed_models()
     assert engine._client.listings == 2
 

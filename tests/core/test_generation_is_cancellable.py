@@ -12,7 +12,9 @@ import pytest
 
 from variatio import config
 from variatio.core import inference, progress
-from variatio.core.inference import OllamaEngine, Sampling
+from variatio.core import ollama as local
+from variatio.core.inference import Sampling
+from variatio.core.ollama import OllamaEngine
 
 
 class _Chunk:
@@ -154,7 +156,7 @@ def test_a_failure_mid_stream_still_closes_it(engine):
 
 def test_the_drain_survives_a_stream_that_cannot_be_closed():
     """A fake, a replay or a plain list has no `close`; that is not an error."""
-    assert inference._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False, None, (None, None))
+    assert local._drain(iter([_Chunk("a"), _Chunk("b")])) == ("ab", "", False, None, (None, None))
 
 
 # A REPETITION LOOP -------------------------------------------------------------------------------
