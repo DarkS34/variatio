@@ -23,8 +23,8 @@ from server.auth.router import AcceptBody, accept_invite, preview_invite
 from server.db import repository
 from server.db.models import Base
 from server.routers import admin as admin_routes
-from server.routers import workspaces as workspace_routes
 from server.routers.admin import InviteBody, InviteEditBody, ProfileBody
+from server.workspaces import router as workspace_routes
 
 
 @pytest.fixture

@@ -86,7 +86,8 @@ def create_workspace(args) -> int:
     from ..db.repository import create_workspace as insert, get_workspace
     from variatio.loaders import locale
 
-    from ..core.installation import provision, slug_error, workspace_for
+    from ..core.installation import slug_error, workspace_for
+    from ..workspaces.trees import provision
 
     error = slug_error(args.slug)
     if error:

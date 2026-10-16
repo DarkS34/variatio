@@ -36,6 +36,7 @@ from ..auth import queries
 from ..core import contexts, installation
 from ..db import repository
 from ..db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
+from . import trees
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
 
@@ -153,7 +154,7 @@ def create(
     # The directory tree before the row is usable: every screen of a brand-new workspace
     # reads files, and an empty chain with nowhere to upload into is a dead end.
     ws = installation.workspace_for(slug)
-    installation.provision(ws)
+    trees.provision(ws)
     # The file is what a build reads — the pipeline never touches the database — so the
     # row written above is the mirror and this is the truth.
     locale.set_prompt_language(ws, workspace.prompt_language)
@@ -231,7 +232,7 @@ def remove(
         # Tree before row: this way a failure leaves the row standing and the call
         # retryable, where the other order strands files nobody is on record as owning.
         try:
-            removed = installation.destroy(ws)
+            removed = trees.destroy(ws)
         except (ValueError, OSError) as exc:
             raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
@@ -314,7 +315,7 @@ def leave(
     # Tree before row, as in `remove`: a failure leaves the row and the membership
     # standing and the call retryable.
     try:
-        removed = installation.destroy(ws)
+        removed = trees.destroy(ws)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 

@@ -3,8 +3,8 @@
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for the server outside its subpackages: the database, how a request finds its subject,
 the build chain and approvals, the generated exercises, the curriculum and the class activity.
-What every area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the queue
-`jobs/AGENTS.md`, what the tutor and the chat share `conversations/AGENTS.md`, and the
+What every area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the subjects of an
+account `workspaces/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share `conversations/AGENTS.md`, and the
 transcription `variatio/documents/AGENTS.md`.
 
 
@@ -16,7 +16,7 @@ transcription `variatio/documents/AGENTS.md`.
   exceptions that leave with the server's areas). The route comparison of a phase reads
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`,
-  `cli/`), `routers/`, `auth/`, then `jobs/`, `conversations/` and `generations.py`, then
+  `cli/`), `routers/`, `auth/` and `workspaces/` (neither imports the other), then `jobs/`, `conversations/` and `generations.py`, then
   `core/`, then `db/`; each imports only what is below it. A route module is a leaf and may
   import any layer; the modules still at the root are outside the order until their area
   exists.
@@ -71,11 +71,9 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
   from: `GET /api/generations/{id}` answers them with `provenance.prompt` null and
   `resolved.few_shot` as ids and origins (`consumers/generation/api/router.without_bank`), and a revealed
   comparison card answers them without `prompt` and `raw_response`.
-- Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
-  `core/installation.destroy` refuses any path that is not a direct child of
-  `WORKSPACES_DIR`; the tree goes before the row. **A workspace deletion that leaves no other
-  member takes its tree too; if others remain, the files stay** — the generated exercises
-  with them. Emptying a stage never touches `.history/`.
+- Deleting from the panel is the administrator's (`DELETE /api/admin/workspaces/{slug}`,
+  `.../artifacts/...`), and emptying a stage never touches `.history/`. When a subject's
+  deletion takes its tree is `workspaces/AGENTS.md`.
 
 ## Build chain and approvals
 
@@ -229,8 +227,9 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   collection (`review_taggability → build_bank → index`), is skipped when the profile, the
   syllabus and the context did not change, and seals the graph's approval again; no `GATES` or
   `JOB_ARTIFACT` entry. The route checks the gates of every link before queueing a head.
-- D-114, D-115, D-116 — Deleting workspaces/artifacts is the admin's and takes the files; a
-  last-member deletion takes the tree; `.history/` is never emptied by it. CORS off.
+- D-114, D-116 — Deleting workspaces/artifacts from the panel is the admin's and takes the
+  files; `.history/` is never emptied by it. CORS off. D-115, a last-member deletion taking
+  the tree, is `workspaces/AGENTS.md`'s.
 - D-117, D-118, D-119 — Exercises are private to their author; the administrator alone reads
   every account's, read-only, from the panel. A subject's teachers read figures, never an
   exercise.

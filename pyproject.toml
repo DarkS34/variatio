@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.16"
+version = "1.174.17"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -213,13 +213,19 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "Only server/routing.py imports a route module"
 type = "protected"
-protected_modules = ["server.routers.*", "server.core.routes.*", "server.auth.router"]
+protected_modules = [
+    "server.routers.*",
+    "server.core.routes.*",
+    "server.auth.router",
+    "server.workspaces.router",
+]
 # What one route module imports of another is the next contract's.
 allowed_importers = [
     "server.routing",
     "server.routers.*",
     "server.core.routes.*",
     "server.auth.router",
+    "server.workspaces.router",
 ]
 ignore_imports = [
     # Routes used as libraries by the functions; they leave with the server's areas.
@@ -233,7 +239,12 @@ ignore_imports = [
 [[tool.importlinter.contracts]]
 name = "The server's route modules do not import each other"
 type = "independence"
-modules = ["server.routers.*", "server.core.routes.*", "server.auth.router"]
+modules = [
+    "server.routers.*",
+    "server.core.routes.*",
+    "server.auth.router",
+    "server.workspaces.router",
+]
 ignore_imports = [
     "server.routers.bank -> server.routers.jobs",
     "server.routers.bank -> server.routers.pipeline",
@@ -249,7 +260,7 @@ containers = ["server"]
 layers = [
     "__main__ : app : cli : routing",
     "routers",
-    "auth",
+    "auth | workspaces",
     "jobs | conversations | generations",
     "core",
     "db",
@@ -258,5 +269,6 @@ ignore_imports = [
     # A route is a leaf: it calls the services of any area, and only routing.py imports it.
     "server.core.routes.** -> server.**",
     "server.auth.router -> server.**",
+    "server.workspaces.router -> server.**",
     "server.conversations.routes -> server.**",
 ]

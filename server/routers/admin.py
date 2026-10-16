@@ -35,6 +35,7 @@ from ..db import repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace
 from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
+from ..workspaces import trees as workspaces_trees
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
@@ -195,7 +196,7 @@ def _workspace_view(db: DbSession, workspace) -> dict:
         "generations": generations_store.count(installation.workspace_for(workspace.slug)),
         "warm": workspace.slug in contexts.warm_slugs(),
         "stages": _chain(workspace.slug),
-        "disk": installation.disk_usage(installation.workspace_for(workspace.slug)),
+        "disk": workspaces_trees.disk_usage(installation.workspace_for(workspace.slug)),
     }
 
 
@@ -634,7 +635,7 @@ def delete_workspace(
     # Tree before row: this way a failure leaves the row standing and the call retryable,
     # where the other order strands files nobody is on record as owning.
     try:
-        removed = installation.destroy(ws)
+        removed = workspaces_trees.destroy(ws)
     except (ValueError, OSError) as exc:
         raise HTTPException(409, f"No se pudo borrar '{ws.root}': {exc}") from exc
 
@@ -734,7 +735,7 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
     if singletons.runner.running(slug) or singletons.runner.pending(slug):
         raise HTTPException(409, "Esa asignatura tiene trabajo en curso o en cola; espera o cancélalo.")
     ws = installation.workspace_for(slug)
-    result = installation.clear_cache(ws)
+    result = workspaces_trees.clear_cache(ws)
     contexts.invalidate(slug, "caché vaciada desde administración")
     return {"workspace": slug, **result}
 

@@ -31,7 +31,8 @@ from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.routers import admin as admin_routes
 from server.routers import members as member_routes
-from server.routers import workspaces as workspace_routes
+from server.workspaces import router as workspace_routes
+from server.workspaces import trees
 
 
 @pytest.fixture
@@ -213,7 +214,7 @@ def test_handing_over_the_ownership_keeps_an_owner_and_never_none(db, aula, stag
 
 def test_the_last_person_of_all_still_leaves_and_takes_the_subject(db, stage):
     ws = installation.workspace_for("sola")
-    installation.provision(ws)
+    trees.provision(ws)
     workspace = repository.ensure_workspace(db, "sola", "Sola")
     ana = queries.create_user(db, username="ana", name="Ana", password_hash="x")
     queries.grant(db, workspace.id, ana.id, OWNER)

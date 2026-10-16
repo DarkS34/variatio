@@ -17,10 +17,10 @@ from sqlalchemy.pool import StaticPool
 
 from server.auth import deps as auth_deps
 from server.auth import queries
-from server.core import installation
 from server.db import repository
 from server.db.models import Base, EDITOR
 from server.routers.admin import delete_workspace
+from server.workspaces import trees
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def db(monkeypatch):
     session = sessionmaker(bind=engine, expire_on_commit=False)()
     # The tree is a separate decision and has its own test; what is under examination here
     # is which row the account points at afterwards.
-    monkeypatch.setattr(installation, "destroy", lambda ws: False)
+    monkeypatch.setattr(trees, "destroy", lambda ws: False)
     yield session
     session.close()
 

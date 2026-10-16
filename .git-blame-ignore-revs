@@ -27,3 +27,6 @@ ed3abf7a0172f00f8e203bf320a26c1b0fff2e0d
 
 # style: sort the imports the refactor's moves left out of order
 e6c1396cdb73e14f0a0c0b8665f620e5c6532ced
+
+# refactor(server): server/auth/ holds the identity whole
+b698dc95ffc7651154b14e215ff0999866eed944

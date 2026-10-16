@@ -21,7 +21,8 @@ from server.auth import queries
 from server.core import installation
 from server.db import repository
 from server.db.models import Base, EDITOR, OWNER
-from server.routers.workspaces import remove
+from server.workspaces import trees
+from server.workspaces.router import remove
 
 
 @pytest.fixture
@@ -41,7 +42,7 @@ def db(monkeypatch):
 # directory, so this writes nowhere near the installation's own instances.
 def _workspace(db, slug: str):
     ws = installation.workspace_for(slug)
-    installation.provision(ws)
+    trees.provision(ws)
     (ws.raw_corpus_dir / "apuntes.md").write_text("# Apuntes", encoding="utf-8")
     return repository.ensure_workspace(db, slug, slug.capitalize())
 
@@ -169,7 +170,7 @@ def test_a_tree_that_cannot_be_removed_leaves_the_row_standing(db, monkeypatch):
     def refuse(ws):
         raise OSError("dispositivo ocupado")
 
-    monkeypatch.setattr(installation, "destroy", refuse)
+    monkeypatch.setattr(trees, "destroy", refuse)
 
     with pytest.raises(HTTPException) as raised:
         remove("aula", access=_access(ana, aula), db=db)

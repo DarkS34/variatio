@@ -1,6 +1,7 @@
 import pytest
 
 from server.core import installation
+from server.workspaces import trees
 from variatio.core import paths
 from variatio.core.workspace import Workspace
 
@@ -39,7 +40,7 @@ def test_destroy_refuses_a_root_outside_the_workspaces_directory(tmp_path):
     ws = _outside(tmp_path)
     ws.root.mkdir(parents=True)
     with pytest.raises(ValueError):
-        installation.destroy(ws)
+        trees.destroy(ws)
     assert ws.root.is_dir()
 
 
@@ -49,5 +50,5 @@ def test_clear_cache_refuses_a_root_outside_the_workspaces_directory(tmp_path):
     target.mkdir(parents=True)
     (target / "vectores.npz").write_bytes(b"x")
     with pytest.raises(ValueError):
-        installation.clear_cache(ws)
+        trees.clear_cache(ws)
     assert (target / "vectores.npz").exists()

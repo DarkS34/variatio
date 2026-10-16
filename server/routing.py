@@ -23,8 +23,8 @@ from .routers import (
     pipeline,
     profile,
     raw,
-    workspaces,
 )
+from .workspaces import router as workspaces
 
 ROUTERS = [
     auth.router,

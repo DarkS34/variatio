@@ -3,8 +3,8 @@ import json
 import pytest
 
 from server.auth.rate_limit import RateLimiter
-from server.core import installation
 from server.core import tunnel
+from server.workspaces import trees
 from variatio import config
 from variatio import settings
 from variatio.core import paths
@@ -132,7 +132,7 @@ def test_disk_usage_splits_the_tree_by_role(tmp_path):
     (ws.generations_dir / "user_1").mkdir(parents=True)
     (ws.generations_dir / "user_1" / "g.json").write_bytes(b"x" * 3)
 
-    usage = installation.disk_usage(ws)
+    usage = trees.disk_usage(ws)
     assert usage == {
         "raw": 10,
         "artifacts": 20,
@@ -154,7 +154,7 @@ def test_clear_cache_removes_vectors_and_markdown_but_keeps_descriptions(tmp_pat
     (ws.markdown_cache_dir / "doc.md").write_text("hola", encoding="utf-8")
     ws.concept_descriptions_path.write_text("{}", encoding="utf-8")
 
-    result = installation.clear_cache(ws)
+    result = trees.clear_cache(ws)
     assert result == {"files_removed": 2, "bytes_freed": 11}
     assert not (ws.cache_dir / "embeddings").exists()
     assert not ws.markdown_cache_dir.exists()
