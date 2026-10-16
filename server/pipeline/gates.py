@@ -6,9 +6,8 @@ has no route, so a closed gate behind the head would be skipped in silence.
 
 from variatio.core.workspace import Workspace
 
-from .. import raw_data
 from ..jobs.catalogue import JOB_ARTIFACT, SUBPROCESS_KINDS
-from . import approvals, readings
+from . import approvals, readings, slots
 from . import chain as job_chain
 
 # What the chain requires before a job kind is allowed to run.
@@ -88,7 +87,7 @@ def transcribing_slot(slug: str, kind: str) -> str | None:
     for link in (kind, *job_chain.links(kind)):
         if link not in SUBPROCESS_KINDS:
             continue
-        slot = raw_data.slot_feeding(JOB_ARTIFACT.get(link))
+        slot = slots.slot_feeding(JOB_ARTIFACT.get(link))
         if slot is not None and readings.transcribing(slug, slot) is not None:
             return slot
     return None
@@ -99,7 +98,7 @@ def transcription_error(ws: Workspace, kind: str) -> str | None:
     slot = transcribing_slot(ws.slug, kind)
     if slot is None:
         return None
-    label = raw_data.SLOTS[slot]["label"]
+    label = slots.SLOTS[slot]["label"]
     return f"Se está leyendo «{label}»: espera a que termine antes de construir."
 
 

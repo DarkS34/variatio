@@ -4,14 +4,15 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server import auth, raw_data
+from server import auth
 from server.auth.deps import Access
 from server.core import process
-from server.routers.raw import router as raw_router
+from server.raw import documents
+from server.raw.router import router as raw_router
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from ..consumers.evaluation.test_route_order import _wildcard_shadows
+from ...consumers.evaluation.test_route_order import _wildcard_shadows
 
 STATUS = {
     "slot": "exemplars",
@@ -93,7 +94,7 @@ def ws(tmp_path):
 @pytest.fixture
 def stage(monkeypatch):
     fake = FakeStage()
-    monkeypatch.setattr(raw_data, "_stage", lambda: fake)
+    monkeypatch.setattr(documents, "_stage", lambda: fake)
     return fake
 
 
@@ -299,7 +300,7 @@ def test_the_router_hands_out_the_keys_the_real_stage_writes(ws):
     # payload the browser types against pinned to the stage's own shape.
     (ws.raw_exemplars_dir / "apuntes.md").write_text("# Tema 1", encoding="utf-8")
 
-    state = raw_data.transcription(ws, "exemplars")
+    state = documents.transcription(ws, "exemplars")
 
     assert set(state) >= {"slot", "documents", "done", "pending", "stale", "total_pages"}
     assert {entry["name"] for entry in state["documents"]} == {"apuntes.md", "examen.pdf"}

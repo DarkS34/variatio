@@ -7,9 +7,8 @@ runner there is the one they see.
 
 from variatio.core.workspace import Workspace
 
-from .. import raw_data
 from ..core import process
-from . import chain
+from . import chain, slots
 from .approvals import EXEMPLARS_BANK, Approvals
 
 
@@ -41,7 +40,7 @@ def transcribing(slug: str, slot: str):
     cache a build of that slot would read and write.
     """
     for job in process.runner.running(slug) + process.runner.pending(slug):
-        if job.kind == raw_data.TRANSCRIBE_JOB and job.params.get("slot") == slot:
+        if job.kind == slots.TRANSCRIBE_JOB and job.params.get("slot") == slot:
             return job
     return None
 

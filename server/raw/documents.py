@@ -2,9 +2,9 @@
 
 A workspace's `raw/` is the user's own data and lives outside the package, so nothing
 in the pipeline creates its contents. A first-time user therefore has an empty chain and no
-way to start from the UI; this module is that way in — the two slots, what each one
-feeds, a guarded write into them, and the transcription of what they hold into markdown
-pages that a person can then correct by hand.
+way to start from the UI; this module is that way in — a guarded write into the two slots
+(what each one feeds is `pipeline/slots.py`), and the transcription of what they hold into
+markdown pages that a person can then correct by hand.
 """
 
 import re
@@ -18,45 +18,15 @@ from variatio import config as vg_config
 from variatio.core.workspace import Workspace
 from variatio.documents import SUPPORTED_EXTS, name_order
 
+from ..pipeline import approvals
+from ..pipeline.slots import SLOTS
 from . import originals
-from .pipeline import approvals
 
 CHUNK = 1024 * 1024
 MB = 1024 * 1024
 GB = 1024 * MB
 
-CORPUS = "corpus"
-EXEMPLARS = "exemplars"
-
-SLOTS: dict[str, dict] = {
-    CORPUS: {
-        "kind": CORPUS,
-        "label": "Corpus del dominio",
-        "purpose": (
-            "Los apuntes y el material teórico de la asignatura. De aquí se extrae el "
-            "grafo de conocimiento: conceptos, dominios y relaciones."
-        ),
-        "feeds": [a for a, s in approvals.RAW_SOURCE.items() if s == CORPUS],
-    },
-    EXEMPLARS: {
-        "kind": EXEMPLARS,
-        "label": "Ejemplares en bruto",
-        "purpose": (
-            "Ejercicios, exámenes o prácticas ya resueltos. De aquí se infiere el perfil "
-            "de contenido y se extrae el banco de ejemplos."
-        ),
-        "feeds": [a for a, s in approvals.RAW_SOURCE.items() if s == EXEMPLARS],
-    },
-}
-
 _UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-
-TRANSCRIBE_JOB = "transcribe"
-
-
-def slot_feeding(artifact: str | None) -> str | None:
-    """Name the raw slot an artifact is built from, or `None` for one built from no slot."""
-    return approvals.RAW_SOURCE.get(artifact) if artifact else None
 
 
 class RawError(Exception):

@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.19"
+version = "1.174.20"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -124,7 +124,7 @@ ignore_imports = [
     # Four reads of the evaluation older than `consumers/`.
     "server.pipeline.jobs -> consumers.evaluation.raw_text",
     "server.jobs.lanes -> consumers.evaluation.config",
-    "server.raw_data -> consumers.evaluation.raw_text",
+    "server.raw.documents -> consumers.evaluation.raw_text",
     "server.routers.admin -> consumers.evaluation.api.store",
 ]
 
@@ -220,6 +220,7 @@ protected_modules = [
     "server.workspaces.router",
     "server.pipeline.routes.*",
     "server.jobs.router",
+    "server.raw.router",
 ]
 # What one route module imports of another is the next contract's.
 allowed_importers = [
@@ -230,6 +231,7 @@ allowed_importers = [
     "server.workspaces.router",
     "server.pipeline.routes.*",
     "server.jobs.router",
+    "server.raw.router",
 ]
 ignore_imports = [
     # Routes used as libraries by the functions; they leave with the server's areas.
@@ -247,6 +249,7 @@ modules = [
     "server.workspaces.router",
     "server.pipeline.routes.*",
     "server.jobs.router",
+    "server.raw.router",
 ]
 
 [[tool.importlinter.contracts]]
@@ -256,6 +259,7 @@ containers = ["server"]
 layers = [
     "__main__ : app : cli : routing",
     "routers",
+    "raw",
     "pipeline",
     "auth | workspaces",
     "conversations | generations",
@@ -271,6 +275,7 @@ ignore_imports = [
     "server.workspaces.router -> server.**",
     "server.pipeline.routes.** -> server.**",
     "server.jobs.router -> server.**",
+    "server.raw.router -> server.**",
     # The construction's jobs are leaves too: only server/app.py installs them.
     "server.pipeline.jobs -> server.**",
     "server.conversations.routes -> server.**",

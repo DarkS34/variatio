@@ -11,9 +11,8 @@ import os
 
 import pytest
 
-from server import raw_data
 from server.db import mirror
-from server.pipeline import approvals
+from server.pipeline import approvals, slots
 from server.pipeline import jobs as handlers
 from variatio.core.workspace import Workspace
 
@@ -201,8 +200,8 @@ def test_a_corrupt_record_file_reads_as_none(ws):
     assert state(ws)["status"] == "draft"
 
 
-def test_raw_data_derives_its_feeds_from_the_one_table():
-    for kind, slot in raw_data.SLOTS.items():
+def test_the_slots_derive_their_feeds_from_the_one_table():
+    for kind, slot in slots.SLOTS.items():
         assert slot["feeds"] == [a for a, s in approvals.RAW_SOURCE.items() if s == kind]
-    assert raw_data.slot_feeding(approvals.EXEMPLARS_BANK) == "exemplars"
-    assert raw_data.slot_feeding("tag") is None
+    assert slots.slot_feeding(approvals.EXEMPLARS_BANK) == "exemplars"
+    assert slots.slot_feeding("tag") is None

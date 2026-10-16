@@ -5,10 +5,10 @@ Rules for reading a raw document and transcribing it page by page. `pages/` is a
 step (`document`, `cache`, `render`, `transcribe`, `office_pages`, `images`, `seams`; its
 `__init__.py` is the map) and re-exports every name; a test patches a name in the module that
 LOOKS IT UP, which for `page_images`, `page_count` and `_transcribe_page` is `pages.document`.
-The server's side is `server/raw_data.py` and `server/originals.py` (`server/AGENTS.md`); the
-reader is `web/src/features/raw/AGENTS.md`.
+The server's side is `server/raw/documents.py` and `server/raw/originals.py`
+(`server/raw/AGENTS.md`); the reader is `web/src/features/raw/AGENTS.md`.
 
-## Transcription (`server/raw_data.py`, `entrypoints/transcribe.py`)
+## Transcription (`server/raw/documents.py`, `entrypoints/transcribe.py`)
 
 **An accelerator, never a gate**: every builder keeps its own conversion phase; `transcribe`
 has no `GATES`/`NEEDS_APPROVED` entry, nothing chains after it, and it writes no artifact.

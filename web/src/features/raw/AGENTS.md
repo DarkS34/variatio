@@ -9,7 +9,7 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first. The transcription's rules are in
 - **A document opens as a reader of two columns** (`features/raw/DocumentReader.tsx`, user's
   decision of 2026-10-08; the tutor's reader moved here): «Original», the document as its
   author laid it out, beside «Texto», its transcription page by page, formatted. Every format
-  takes one road (`server/originals.py`): a PDF as it is, an Office file exported to PDF by
+  takes one road (`server/raw/originals.py`): a PDF as it is, an Office file exported to PDF by
   LibreOffice once (`office.pdf_copy`, a deck with its hidden slides), a page drawn by PDFium
   (`pages.page_picture`, under `_PDFIUM_LOCK`) as PNG, or JPEG when heavy; both kept under
   `cache/originals/` by the SOURCE's hash (the tutor's `cache/tutor_originals/` is adopted

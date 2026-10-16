@@ -21,9 +21,10 @@ from pydantic import BaseModel
 
 from variatio.core import inference
 
-from .. import auth, raw_data
+from .. import auth
 from ..core import process
-from ..pipeline import readings
+from ..pipeline import readings, slots
+from . import documents
 
 router = APIRouter(prefix="/api/raw", tags=["raw"], dependencies=[auth.EDIT])
 
@@ -41,7 +42,7 @@ class InsertBody(BaseModel):
     text: str = ""
 
 
-def _not_found(exc: raw_data.RawError) -> HTTPException:
+def _not_found(exc: documents.RawError) -> HTTPException:
     """Turn the library's refusal of an unknown slot or document into a 404."""
     return HTTPException(404, str(exc))
 
@@ -54,7 +55,7 @@ def _transcribing(slug: str, kind: str):
 @router.get("")
 def listing(access: auth.Access = auth.EDIT) -> dict:
     """Answer both raw slots with the documents each one holds."""
-    return raw_data.listing(access.ws)
+    return documents.listing(access.ws)
 
 
 # Every fixed transcription path is declared above the `/{kind}/{name}` wildcards below.
@@ -62,8 +63,8 @@ def listing(access: auth.Access = auth.EDIT) -> dict:
 def transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
     """Answer one slot's transcription state, per document and with the reason it is stale."""
     try:
-        return raw_data.transcription(access.ws, kind)
-    except raw_data.RawError as exc:
+        return documents.transcription(access.ws, kind)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
 
 
@@ -71,8 +72,8 @@ def transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
 def start_transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
     """Queue the transcription of one slot, refusing a second one for the same slot."""
     try:
-        raw_data.directory(access.ws, kind)
-    except raw_data.RawError as exc:
+        documents.directory(access.ws, kind)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
 
     if not inference.is_available():
@@ -84,11 +85,11 @@ def start_transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
 
     if _transcribing(access.ws.slug, kind) is not None:
         raise HTTPException(
-            409, f"Ya se está transcribiendo «{raw_data.SLOTS[kind]['label']}»."
+            409, f"Ya se está transcribiendo «{slots.SLOTS[kind]['label']}»."
         )
 
     job = process.runner.submit(
-        raw_data.TRANSCRIBE_JOB,
+        slots.TRANSCRIBE_JOB,
         {"slot": kind},
         workspace=access.ws.slug,
         user_id=access.user.id,
@@ -106,8 +107,8 @@ def transcription_document(kind: str, name: str, access: auth.Access = auth.EDIT
     request (`originals.EXPORT_TIMEOUT_SECONDS` at most); every later opening reads the copy.
     """
     try:
-        return raw_data.transcription_document(access.ws, kind, name)
-    except raw_data.RawError as exc:
+        return documents.transcription_document(access.ws, kind, name)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
 
 
@@ -119,8 +120,8 @@ def original_page(kind: str, name: str, page: int, access: auth.Access = auth.ED
     address — the reader sends the original's version with it — so the browser may keep it.
     """
     try:
-        drawn = raw_data.original_page(access.ws, kind, name, page)
-    except raw_data.RawError as exc:
+        drawn = documents.original_page(access.ws, kind, name, page)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
     if drawn is None:
         raise HTTPException(404, "Esa página no está en el original del documento.")
@@ -136,9 +137,9 @@ def insert_page(
 ) -> dict:
     """Insert a page after the given index, renumbering what follows."""
     try:
-        index = raw_data.insert_page(access.ws, kind, name, body.after, body.text)
-        return {**raw_data.transcription_document(access.ws, kind, name), "index": index}
-    except raw_data.RawError as exc:
+        index = documents.insert_page(access.ws, kind, name, body.after, body.text)
+        return {**documents.transcription_document(access.ws, kind, name), "index": index}
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -154,9 +155,9 @@ def save_page(
     re-reads from disk on purpose, and an edit does not touch the document's fingerprint.
     """
     try:
-        raw_data.write_page(access.ws, kind, name, index, body.text)
-        return raw_data.transcription_document(access.ws, kind, name)
-    except raw_data.RawError as exc:
+        documents.write_page(access.ws, kind, name, index, body.text)
+        return documents.transcription_document(access.ws, kind, name)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -172,9 +173,9 @@ def delete_page(
     `pending`, and the next build would silently throw away every hand correction.
     """
     try:
-        raw_data.delete_page(access.ws, kind, name, index)
-        return raw_data.transcription_document(access.ws, kind, name)
-    except raw_data.RawError as exc:
+        documents.delete_page(access.ws, kind, name, index)
+        return documents.transcription_document(access.ws, kind, name)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -186,10 +187,10 @@ def upload(
 ) -> dict:
     """Add documents to one raw slot and answer the slot as it now stands."""
     try:
-        result = raw_data.save(access.ws, kind, files)
-    except raw_data.RawLimitError as exc:
+        result = documents.save(access.ws, kind, files)
+    except documents.RawLimitError as exc:
         raise HTTPException(413, str(exc)) from exc
-    except raw_data.RawError as exc:
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
 
     if result["added"]:
@@ -199,19 +200,19 @@ def upload(
             access.ws.slug, None, "raw.changed", {"kind": kind, "added": len(result["added"])}
         )
 
-    return {**result, "slot": raw_data.slot(access.ws, kind)}
+    return {**result, "slot": documents.slot(access.ws, kind)}
 
 
 @router.delete("/{kind}/{name}")
 def delete(kind: str, name: str, access: auth.Access = auth.EDIT) -> dict:
     """Remove one raw document. The name is checked against the files the slot holds."""
     try:
-        result = raw_data.delete(access.ws, kind, name)
-    except raw_data.RawError as exc:
+        result = documents.delete(access.ws, kind, name)
+    except documents.RawError as exc:
         raise _not_found(exc) from exc
 
     logger.info(f"[{kind}] documento eliminado: {result['deleted']}")
     process.bus.publish(
         access.ws.slug, None, "raw.changed", {"kind": kind, "deleted": result["deleted"]}
     )
-    return {**result, "slot": raw_data.slot(access.ws, kind)}
+    return {**result, "slot": documents.slot(access.ws, kind)}

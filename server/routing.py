@@ -11,6 +11,7 @@ from .auth import router as auth
 from .core.routes import health, maintenance, stream
 from .jobs import router as jobs
 from .pipeline.routes import context, pipeline
+from .raw import router as raw
 from .routers import (
     activity,
     admin,
@@ -21,7 +22,6 @@ from .routers import (
     kg,
     members,
     profile,
-    raw,
 )
 from .workspaces import router as workspaces
 

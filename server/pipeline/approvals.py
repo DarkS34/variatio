@@ -53,7 +53,7 @@ UPSTREAM: dict[str, tuple[str, ...]] = {
     EXEMPLARS_BANK: (EXEMPLARS_PROFILE, KNOWLEDGE_GRAPH),
 }
 
-# The raw slot each artifact is built from — the one table of it, which `raw_data.SLOTS`
+# The raw slot each artifact is built from — the one table of it, which `slots.SLOTS`
 # derives its `feeds` from. The graph reads the corpus; the profile and the bank both read
 # the exemplars, which is why adding an exercise sheet stales two stages at once.
 RAW_SOURCE: dict[str, str] = {
