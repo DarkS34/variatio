@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
-from .. import groups
+from ..classroom import groups
 from ..core import environment
 from ..db.models import (
     EVALUATOR_PROFILES,

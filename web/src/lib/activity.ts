@@ -6,7 +6,7 @@ import type { ActivityArea, ActivityFinding, ActivityWeekSummary } from "@/lib/t
  * What the class activity screen decides without React: how a week is named on the strip,
  * how the replies' kinds are grouped, and how a finding is said.
  *
- * The server counts and types each finding (`server/activity.py`); the words are the
+ * The server counts and types each finding (`server/classroom/activity.py`); the words are the
  * reader's language's, so they are composed here from the figures it sends.
  */
 

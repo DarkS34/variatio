@@ -67,8 +67,9 @@ class TurnResult:
             "decided_by": self.decided_by,
             "card": self.card,
             "concept_map": self.concept_map,
-            # The concept and the prerequisite the reply sent the student back to, read by
-            # the teachers' weekly counts (`server/activity.py`) whether or not a map was drawn.
+            # The concept and the prerequisite the reply sent the student back to, read by the
+            # teachers' weekly counts (`server/classroom/activity.py`) whether or not a map was
+            # drawn.
             "sent_back": list(self.sent_back) if self.sent_back else None,
             "checks": self.checks,
             "retried": self.retried,

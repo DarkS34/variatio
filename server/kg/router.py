@@ -17,8 +17,9 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.loaders import locale
 
-from .. import auth, curriculum, groups
+from .. import auth
 from ..auth import queries
+from ..classroom import curriculum, groups
 from ..db.models import VIEWER
 from ..pipeline.view import pipeline_payload
 from . import edit as kg_edit

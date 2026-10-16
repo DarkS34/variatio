@@ -26,7 +26,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ...auth import Access, authenticate_socket
 from ...auth.deps import FORBIDDEN, UNAUTHORISED
-from ...members import CLOSED_EVENT
+from ...classroom.members import CLOSED_EVENT
 from .. import middleware, process
 
 router = APIRouter()

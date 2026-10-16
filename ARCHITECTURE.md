@@ -48,8 +48,8 @@ The interface speaks Spanish; the code speaks English. One word per thing on eac
 | función | a package of `consumers/` | `consumers/` |
 | encargo | commission: the parameters of a `generate` job | `consumers/generation/` |
 | ejercicio generado | generation, variant | `server/generations.py` |
-| «Avance de la asignatura» | curriculum | `server/curriculum.py` |
-| «Clase» | members, groups, activity | `server/members.py`, `server/groups.py`, `server/activity.py` |
+| «Avance de la asignatura» | curriculum | `server/classroom/curriculum.py` |
+| «Clase» | members, groups, activity | `server/classroom/` |
 | alumno / docente / propietario | role `viewer` / `editor` / `owner` | `server/auth/deps.py` |
 | perfil de la cuenta (Docente / Alumno) | `users.evaluator_profile` | `server/db/models.py` |
 | carril | lane: `local` (Ollama) or `remote` (Cerebras) | `server/jobs/lanes.py` |
@@ -153,6 +153,7 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
 app.py  routing.py  cli/                  composition
 routers/                                  the routes, which only routing.py imports
 bank/  kg/  raw/                          step 3, the bank; step 2, the syllabus; step 1, the raw documents
+classroom/                                «Clase»: people, groups, progress, activity
 pipeline/                                 the chain of the three steps
 auth/  workspaces/                        identity and permissions; the subjects of an account
 conversations/  generations.py            what the tutor and the chat share; the exercises
@@ -191,9 +192,10 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 5 domain modules: `members`, `groups`, `activity`, `curriculum`, `generations` | `app.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and `generations.py`, the store of the generated exercises | `app.py` |
 | `core/` | what every area stands on: the process's live pieces (`process.py`: the bus, the queue, the tunnel, the downloads), the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
 | `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
+| `classroom/` | «Clase»: the people of a subject (`members.py`), its groups (`groups.py`), the course's progress (`curriculum.py`), the activity (`activity.py`); `routes/` holds `/api/members` (people, groups, uses, links) and `/api/activity` | `members.py` |
 | `bank/` | step 3: editing the bank (`edit.py`), the class's reading (`reading.py`), its marks (`marks.py`), the tagger (`tagging.py`), the types (`profile_edit.py`); `routes/` holds `/api/bank`, `/api/exercises` and `/api/profile` | `edit.py` |
 | `kg/` | step 2: the graph as the canvas reads it (`view.py`), its edits (`edit.py`) and `/api/kg` (`router.py`) | `edit.py` |
 | `raw/` | step 1: the slots' documents (`documents.py`), their originals (`originals.py`) and `/api/raw` (`router.py`) | `documents.py` |
@@ -250,7 +252,7 @@ there.
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `entrypoints/generate.py` | `generate` | `tests/consumers/generation/`, `tests/generation/`, `tests/screening/` |
-| «Clase» | `features/class/` | `members.py`, `groups.py`, `activity.py`, `curriculum.py`, `routers/members.py`, `routers/activity.py`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/test_class_*`, `tests/server/test_course_progress.py` |
+| «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
@@ -312,7 +314,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   mounts the function's routes and adds its kinds to the server's tables, all in
   `server/jobs/catalogue.py`: `HANDLERS`, `FEATURE_OF`, `ADMISSIONS`, `PRIVATE_KINDS`,
   `STUDENT_KINDS` and `JOB_CLASS` (`server/jobs/priority.py` reads the class); its models in `EXTRA_MODELS` (`server/jobs/lanes.py`); and,
-  for the tutor and the chat, the class activity's readers (`server/activity.py`,
+  for the tutor and the chat, the class activity's readers (`server/classroom/activity.py`,
   `TUTOR_READER`, `CHAT_READER`). Its settings come in by the registry's optional import.
 - **Identity and roles.** Own accounts and sessions (`server/auth/`), invitation-only. Every
   route checks a membership row: `auth.VIEW`, `EDIT` or `MANAGE` (`server/auth/deps.py`); the

@@ -45,3 +45,6 @@ c9990ef8fb910044247fc7965ad0315f7b4c6799
 
 # refactor(server): server/kg/, the syllabus as read and as edited
 5c86d82993f1523d84e9c2b243f85662d3b7f9a8
+
+# refactor(server): server/bank/, step 3, and editors/ is gone
+5c768887aa45765d3b1a9d5351836d73edacf0aa

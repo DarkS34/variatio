@@ -8,9 +8,9 @@ from importlib import metadata
 
 from loguru import logger
 
-from server import curriculum as curriculum_store
 from server import generations as generations_store
 from server.auth import queries
+from server.classroom import curriculum as curriculum_store
 from server.core import contexts, installation
 from server.core.contexts import context_for
 from server.db import session_scope

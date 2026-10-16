@@ -9,19 +9,24 @@ after the generation's routes (its `/api/jobs/allowance` must come before the qu
 
 from .auth import router as auth
 from .bank.routes import bank, exercises, profile
+from .classroom.routes import activity, groups, links, people, uses
 from .core.routes import health, maintenance, stream
 from .jobs import router as jobs
 from .kg import router as kg
 from .pipeline.routes import context, pipeline
 from .raw import router as raw
-from .routers import activity, admin, admin_engine, config, members
+from .routers import admin, admin_engine, config
 from .workspaces import router as workspaces
 
 ROUTERS = [
     auth.router,
     maintenance.router,
     workspaces.router,
-    members.router,
+    # `/api/members` in four parts: no fixed path of one is a `{user_id:int}` of another.
+    people.router,
+    groups.router,
+    uses.router,
+    links.router,
     activity.router,
     health.router,
     pipeline.router,

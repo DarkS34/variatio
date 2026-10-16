@@ -15,19 +15,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import activity, curriculum
 from server.auth import features, queries
 from server.auth.deps import require_feature
 from server.auth.router import _me
+from server.classroom import activity, curriculum
+from server.classroom.routes import uses as use_routes
+from server.classroom.routes.uses import UsesBody
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs import router as jobs_routes
-from server.routers import members as member_routes
-from server.routers.members import UsesBody
 from variatio.core.workspace import Workspace
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from ..conftest import CHAIN_GRAPH
+from ...conftest import CHAIN_GRAPH
 
 
 def _subject(tmp_path):
@@ -104,7 +104,7 @@ def test_a_subject_opens_both_to_its_students_until_a_teacher_closes_one(db, aul
         "tutor": True,
     }
 
-    member_routes.change_uses(UsesBody(generate=False), access=_access(aula, aula.bruno, EDITOR), db=db)
+    use_routes.change_uses(UsesBody(generate=False), access=_access(aula, aula.bruno, EDITOR), db=db)
 
     assert features.for_user(db, aula.sara, aula.workspace, VIEWER)["generate"] is False
     assert features.for_user(db, aula.bruno, aula.workspace, EDITOR)["generate"] is True
@@ -112,7 +112,7 @@ def test_a_subject_opens_both_to_its_students_until_a_teacher_closes_one(db, aul
 
 
 def test_a_closed_generation_refuses_a_student_s_commission_and_not_a_teacher_s(db, aula):
-    member_routes.change_uses(UsesBody(generate=False), access=_access(aula, aula.ana, OWNER), db=db)
+    use_routes.change_uses(UsesBody(generate=False), access=_access(aula, aula.ana, OWNER), db=db)
     body = jobs_routes.JobBody(kind="generate", params={"n": 1})
 
     with pytest.raises(HTTPException) as refused:
@@ -126,7 +126,7 @@ def test_a_closed_generation_refuses_a_student_s_commission_and_not_a_teacher_s(
 
 def test_a_closed_tutor_refuses_its_routes_to_a_student_alone(db, aula):
     features.set_mode(db, features.TUTOR, features.ALL)
-    member_routes.change_uses(UsesBody(tutor=False), access=_access(aula, aula.ana, OWNER), db=db)
+    use_routes.change_uses(UsesBody(tutor=False), access=_access(aula, aula.ana, OWNER), db=db)
     check = require_feature(features.TUTOR)
 
     with pytest.raises(HTTPException) as refused:
@@ -137,7 +137,7 @@ def test_a_closed_tutor_refuses_its_routes_to_a_student_alone(db, aula):
 
 
 def test_the_administrator_s_switch_comes_before_the_subject_s(db, aula):
-    member_routes.change_uses(UsesBody(tutor=True), access=_access(aula, aula.ana, OWNER), db=db)
+    use_routes.change_uses(UsesBody(tutor=True), access=_access(aula, aula.ana, OWNER), db=db)
 
     assert features.refusal(db, aula.sara, features.TUTOR, aula.workspace, VIEWER) == (
         features.REFUSALS[features.TUTOR]
@@ -146,7 +146,7 @@ def test_the_administrator_s_switch_comes_before_the_subject_s(db, aula):
 
 def test_the_session_reads_the_switches_of_the_subject_the_account_is_in(db, aula):
     aula.sara.active_workspace_id = aula.workspace.id
-    member_routes.change_uses(UsesBody(generate=False), access=_access(aula, aula.ana, OWNER), db=db)
+    use_routes.change_uses(UsesBody(generate=False), access=_access(aula, aula.ana, OWNER), db=db)
 
     assert _me(db, aula.sara)["features"]["generate"] is False
 
@@ -154,14 +154,14 @@ def test_the_session_reads_the_switches_of_the_subject_the_account_is_in(db, aul
 def test_the_tutor_switch_is_offered_only_where_a_student_may_use_the_tutor(db, aula):
     teacher = _access(aula, aula.ana, OWNER)
 
-    assert member_routes.uses(access=teacher, db=db)["tutor_offered"] is False
+    assert use_routes.uses(access=teacher, db=db)["tutor_offered"] is False
 
     features.set_mode(db, features.TUTOR, features.SELECTED)
     features.set_listed(db, features.TUTOR, [aula.bruno.id])
-    assert member_routes.uses(access=teacher, db=db)["tutor_offered"] is False
+    assert use_routes.uses(access=teacher, db=db)["tutor_offered"] is False
 
     features.set_listed(db, features.TUTOR, [aula.sara.id])
-    assert member_routes.uses(access=teacher, db=db) == {
+    assert use_routes.uses(access=teacher, db=db) == {
         "generate": True,
         "tutor": True,
         "chat": False,
@@ -174,6 +174,6 @@ def test_the_answer_says_whether_the_tutor_is_installed(db, aula, monkeypatch):
     # The screen draws the tutor's switch wherever the tutor is installed, offered or not.
     teacher = _access(aula, aula.ana, OWNER)
     monkeypatch.setattr(activity, "TUTOR_READER", None)
-    assert member_routes.uses(access=teacher, db=db)["tutor_installed"] is False
+    assert use_routes.uses(access=teacher, db=db)["tutor_installed"] is False
     monkeypatch.setattr(activity, "TUTOR_READER", lambda ws, ids: None)
-    assert member_routes.uses(access=teacher, db=db)["tutor_installed"] is True
+    assert use_routes.uses(access=teacher, db=db)["tutor_installed"] is True

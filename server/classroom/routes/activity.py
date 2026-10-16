@@ -2,9 +2,9 @@
 
 Declares `auth.EDIT`: what the students of a subject do is its teachers' to read, and never a
 student's — not even their own (decided 2026-10-07). What it answers is counted by code from
-the files (`server/activity.py`): when, about what, of which kind and level, never a message
-or a statement; the words of what the class asks are the weekly digest's, written by the
-model when a teacher asks for it here, and checked by code before anybody reads them.
+the files (`server/classroom/activity.py`): when, about what, of which kind and level, never a
+message or a statement; the words of what the class asks are the weekly digest's, written by
+the model when a teacher asks for it here, and checked by code before anybody reads them.
 
 A week travels as `2026-W41`; a future week does not exist yet. `?student=<id>` narrows a
 reading to one student of the subject, active or paused; anybody else is the same 404 as an
@@ -21,11 +21,12 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import inference
 
-from .. import activity, auth, curriculum, groups
-from ..auth import features
-from ..core import process
-from ..kg import edit as kg_edit
-from ..kg.edit import KGError
+from ... import auth
+from ...auth import features
+from ...core import process
+from ...kg import edit as kg_edit
+from ...kg.edit import KGError
+from .. import activity, curriculum, groups
 
 router = APIRouter(prefix="/api/activity", tags=["activity"], dependencies=[auth.EDIT])
 

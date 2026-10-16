@@ -123,12 +123,12 @@ that produces and consumes it.** `consumers` imports `variatio` and `server`; ne
 `consumers` back. The rules of each part are beside it:
 
 - `variatio/AGENTS.md` (library), `variatio/documents/AGENTS.md` (transcription).
-- `server/AGENTS.md` (database, subjects, build chain, exercises, curriculum, activity),
-  `server/core/AGENTS.md` (contexts, environment, tunnel, the door), `server/auth/AGENTS.md`
-  (identity, roles, classes), `server/workspaces/AGENTS.md` (a subject's life and tree),
-  `server/pipeline/AGENTS.md` (the build chain, approvals, the construction's jobs),
-  `server/raw/AGENTS.md` (step 1), `server/kg/AGENTS.md` (step 2),
-  `server/bank/AGENTS.md` (step 3),
+- `server/AGENTS.md` (database, subjects, exercises), `server/core/AGENTS.md` (contexts,
+  environment, tunnel, the door), `server/auth/AGENTS.md` (identity, roles),
+  `server/workspaces/AGENTS.md` (a subject's life and tree), `server/pipeline/AGENTS.md` (the
+  build chain, approvals, the construction's jobs), `server/raw/AGENTS.md` (step 1),
+  `server/kg/AGENTS.md` (step 2), `server/bank/AGENTS.md` (step 3),
+  `server/classroom/AGENTS.md` (people, groups, links, progress, activity),
   `server/jobs/AGENTS.md` (the queue), `server/conversations/AGENTS.md`.
 - `consumers/AGENTS.md` and one per function: `generation/`, `evaluation/`, `tutor/`, `chat/`.
 - `web/AGENTS.md` and `web/DESIGN.md` (read before any UI change), plus `src/features/bank/`,

@@ -32,7 +32,8 @@ from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile, ItemType
 
-from .. import auth, groups
+from .. import auth
+from ..classroom import groups
 from ..db.models import BankFavourite
 from ..pipeline import storage
 

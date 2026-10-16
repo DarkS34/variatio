@@ -41,10 +41,10 @@ from variatio.core.workspace import Workspace
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from . import generations
-from .auth import queries
-from .core import daily
-from .db.models import VIEWER, Workspace as WorkspaceRow
+from .. import generations
+from ..auth import queries
+from ..core import daily
+from ..db.models import VIEWER, Workspace as WorkspaceRow
 
 WEEK_PATTERN = re.compile(r"\A(\d{4})-W(\d{2})\Z")
 

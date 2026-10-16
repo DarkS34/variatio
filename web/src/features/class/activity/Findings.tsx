@@ -17,9 +17,9 @@ export interface WeekFigure {
  * «Lo importante»: the week of one page in a glance — its key figures in a row, then what a
  * teacher should read first, at most five sentences, each led by the figure that backs it.
  *
- * The server ranks and types the sentences (`server/activity.py`), each of one page; the
- * words are composed here (`lib/activity.sayFindings`). The first one a teacher can act on is
- * the screen's one `--attention`; the rest are ink. With nothing to point out, one sentence
+ * The server ranks and types the sentences (`server/classroom/activity.py`), each of one page;
+ * the words are composed here (`lib/activity.sayFindings`). The first one a teacher can act on
+ * is the screen's one `--attention`; the rest are ink. With nothing to point out, one sentence
  * says so.
  */
 export function Findings({ findings, figures }: { findings: ActivityFinding[]; figures: WeekFigure[] }) {

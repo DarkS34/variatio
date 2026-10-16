@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 from loguru import logger
 
-from server import activity, groups
+from server.classroom import activity, groups
 from server.core import contexts, installation
 from server.db import repository
 from server.db.session import session_scope

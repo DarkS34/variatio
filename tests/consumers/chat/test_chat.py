@@ -24,11 +24,12 @@ from consumers.chat import turn as chat_turn
 from consumers.chat.api import jobs, router as router_module, usage
 from consumers.chat.api.store import STORE
 from consumers.tutor.api import store as tutor_store
-from server import auth, groups
+from server import auth
 from server.auth import features, queries
 from server.auth.deps import Access
 from server.bank import edit as bank_edit
 from server.bank import marks as bank_marks
+from server.classroom import groups
 from server.core import process
 from server.db import repository
 from server.db.models import OWNER, VIEWER, Base
@@ -270,7 +271,7 @@ def test_a_turn_writes_the_reply_and_says_nothing_in_public(db, aula, monkeypatc
 
 def test_the_class_s_week_counts_the_chat_by_student_and_day(db, aula, monkeypatch):
     from consumers.chat.api import activity as chat_activity
-    from server import activity
+    from server.classroom import activity
 
     monkeypatch.setattr(activity, "CHAT_READER", chat_activity.read)
     moment = datetime(2026, 10, 14, 10, 0)  # a Wednesday

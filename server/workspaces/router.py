@@ -29,10 +29,11 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.core import languages
 from variatio.loaders import locale
 
-from .. import auth, members
+from .. import auth
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import queries
+from ..classroom import members
 from ..core import contexts, installation, process
 from ..db import repository
 from ..db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace

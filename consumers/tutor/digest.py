@@ -1,12 +1,12 @@
 """What a class asked the tutor in one week, in the model's words: a few themes per concept.
 
-The teachers read it in «Clase → Actividad» (`server/activity.py`). The code groups the week's
-messages by the concept their reply stood on, leaves out what is not about the subject, keeps
-the most asked concepts and each one's latest messages, and asks the model, one call per
-concept, for at most `MAX_THEMES` themes: one plain sentence each about what the students do
-not understand, get wrong or ask for, with the numbers of the messages it covers. The model
-never counts and never sees a name: the code counts a theme's messages and students from its
-references.
+The teachers read it in «Clase → Actividad» (`server/classroom/activity.py`). The code groups
+the week's messages by the concept their reply stood on, leaves out what is not about the
+subject, keeps the most asked concepts and each one's latest messages, and asks the model, one
+call per concept, for at most `MAX_THEMES` themes: one plain sentence each about what the
+students do not understand, get wrong or ask for, with the numbers of the messages it covers.
+The model never counts and never sees a name: the code counts a theme's messages and students
+from its references.
 
 PARAPHRASE ONLY (the user's decision, 2026-10-07). A theme that copies more than
 `COPY_MAX_WORDS` running words of one of its messages, that names a student of the subject,

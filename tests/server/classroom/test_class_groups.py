@@ -15,21 +15,31 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import activity, curriculum, groups, members
 from server.auth import features, queries
+from server.classroom import activity, curriculum, groups, members
+from server.classroom.members import Refusal
+from server.classroom.routes import activity as activity_routes
+from server.classroom.routes import (
+    groups as group_routes,
+)
+from server.classroom.routes import (
+    people as member_routes,
+)
+from server.classroom.routes import (
+    uses as use_routes,
+)
+from server.classroom.routes.groups import GroupBody
+from server.classroom.routes.people import BulkBody
+from server.classroom.routes.uses import UsesBody
 from server.core import process
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.kg import router as kg_routes
-from server.members import Refusal
-from server.routers import activity as activity_routes
-from server.routers import members as member_routes
-from server.routers.members import BulkBody, GroupBody, UsesBody
 from variatio.core.workspace import Workspace
 
-from ..conftest import CHAIN_GRAPH
+from ...conftest import CHAIN_GRAPH
 
 
 @pytest.fixture
@@ -138,14 +148,14 @@ def test_the_bulk_gesture_puts_students_in_and_takes_them_out_person_by_person(d
 
 def test_deleting_a_group_leaves_its_students_in_the_class_and_kills_its_link(db, aula):
     access = _access(aula, aula.ana)
-    member_routes.create_group(GroupBody(name="A"), access=access, db=db)
+    group_routes.create_group(GroupBody(name="A"), access=access, db=db)
     group = groups.all_of(db, aula.workspace)[0]
     groups.place(db, aula.workspace, aula.sara, group)
     link = queries.create_class_link(
         db, aula.workspace.id, "h1", datetime(2100, 1, 1), 10, group_id=group.id
     )
 
-    member_routes.delete_group(group.id, access=access, db=db)
+    group_routes.delete_group(group.id, access=access, db=db)
 
     assert queries.group_of(db, aula.workspace.id, aula.sara.id) is None
     assert queries.membership(db, aula.workspace.id, aula.sara.id).active
@@ -155,7 +165,7 @@ def test_deleting_a_group_leaves_its_students_in_the_class_and_kills_its_link(db
 def test_another_subjects_group_is_unknown_here(db, aula):
     elsewhere = groups.create(db, aula.other, "Ajeno", aula.ana)
     with pytest.raises(HTTPException) as refused:
-        member_routes.uses(group=elsewhere.id, access=_access(aula, aula.ana), db=db)
+        use_routes.uses(group=elsewhere.id, access=_access(aula, aula.ana), db=db)
     assert refused.value.status_code == 404
 
 
@@ -186,9 +196,9 @@ def test_a_groups_switch_says_first_and_none_is_the_subjects(db, aula):
 def test_the_uses_route_reads_and_writes_a_group_in_three_states(db, aula):
     group = _group(db, aula, "A")
     access = _access(aula, aula.ana)
-    answer = member_routes.change_uses(UsesBody(tutor=False), group=group.id, access=access, db=db)
+    answer = use_routes.change_uses(UsesBody(tutor=False), group=group.id, access=access, db=db)
     assert answer["group"]["tutor"] is False and answer["tutor"] is True
-    answer = member_routes.change_uses(UsesBody(tutor=None), group=group.id, access=access, db=db)
+    answer = use_routes.change_uses(UsesBody(tutor=None), group=group.id, access=access, db=db)
     assert answer["group"]["tutor"] is None
 
 

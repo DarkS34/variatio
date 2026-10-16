@@ -3,9 +3,9 @@
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for accounts, sessions, invitations, roles, memberships, the optional functions and what
 a subject lets its students use. The code is `server/auth/` (with its queries,
-`queries.py`, the optional functions, `features.py`, and its routes, `router.py`),
-`server/members.py`, `server/groups.py` and the routes of `server/routers/members.py` and
-`admin.py`.
+`queries.py`, the optional functions, `features.py`, and its routes, `router.py`) and the
+invitations of `server/routers/admin.py`. The people of a subject, a teacher's links and the
+groups of a class are `server/classroom/AGENTS.md`.
 
 ## Identity (`server/auth/`)
 
@@ -65,33 +65,6 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   bucket with no account (`reset`) keeps its IP. The list is read on every attempt, stores
   each network as its network address and refuses one wider than /8 (IPv4) or /32 (IPv6)
   (`registry/access.networks`, the setting's `clean`).
-- **The people of a subject** (decided 2026-10-06): `server/members.py` holds the gestures —
-  pause (`disable_member`), open again (`enable_member`), remove (`remove_member`), change a
-  role (`change_role`) — and every door goes through them: `/api/members` (its router), the
-  panel's membership routes (`POST /api/admin/accounts/{id}/memberships/{slug}/enable` opens a
-  paused one), leaving a subject, and ending a course (`members.end_course`, the
-  administrator's alone since 2026-10-07 at the user's request — it was the owner's —:
-  `POST /api/admin/workspaces/{slug}/end-course`; every active student paused — `disable`,
-  the default — or removed, the teachers stay, the class link is paused, the files stay). `members.people_of` counts a subject's
-  people and `owners_of` names its active owners, for the listing and the panel. Closing a membership refuses taking the last
-  active owner from people still active (`queries.would_orphan`, 409 `last_owner`; a
-  subject with no owner to lose, or emptying, is not refused), moves the account's active
-  subject elsewhere, cancels its jobs there, writes the row, COMMITS, then publishes
-  `membership.closed` with `bus.publish_internal` (private with no author: no browser sees
-  it) and logs `[asignatura] «a» desactivó/quitó a «b» en «slug»`. An open socket of that
-  account closes with 4403 on it (`ws._closes`); a handshake refused for its subject is 4403
-  too (`deps.authenticate_socket` returns the close code), a missing session 4401. A paused
-  membership (`memberships.disabled_at`) keeps role, `via` and date, grants nothing (403
-  `membership_disabled` in `access_for`), and counts in no reading but the roster:
-  `memberships_for`/`members_of` leave it out unless `include_disabled`; the delete-the-tree
-  decisions count it (its files are there). An owner is never paused (409
-  `owner_disabled`); nobody pauses or removes themselves there (409 `self`; leaving is
-  `DELETE /api/workspaces/{slug}/membership`); a teacher acts on students and the owner on
-  teachers (`role_too_low`). Leaving with others inside is `remove_member`.
-- The username is the identity; `users.email` is an optional delivery detail, shown only when
-  mail is configured (`mail_configured` on `/api/auth/me`). No «forgot password» link on the
-  login screen; admins hand out reset links. No password generator anywhere.
-- `users.evaluator_profile` authorises nothing inside a subject: the membership does.
 - **The evaluation and the tutor are optional functions** ([features.py](features.py)):
   each is `off`, `all` or `selected` (a list of accounts), set by the administrator
   (`GET /api/admin/features`, `PUT /api/admin/features/{feature}`; the list is replaced only
@@ -126,53 +99,6 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   function (no mode, no tone, no admin tab): the client reads it with `featuresOf` (only a
   literal `false` closes it), `usesFor` drops its door and `/generate` draws «not found»; a
   student's exercises stay in «Mis asignaturas y ejercicios».
-- **A teacher's links** (decided 2026-10-06; `/api/members`): a subject has at most ONE live
-  class link per destination (`class_links`, revoked = dead; the rule is code, not an index;
-  the destinations are the class and, since 2026-10-14, each of its groups:
-  `class_links.group_id`, `queries.live_class_link(session, workspace_id, group_id)`) — seats (40 by
-  default, `CLASS_LINK_MAX_SEATS` 300), a required expiry (30 days by default, at most
-  `TEACHER_LINK_MAX_DAYS` 180), a pause — minted sealed like an invitation
-  (`links.mint_class_link`) and renewed by revoking it; its seats never drop below those
-  taken. A seat is taken by ONE conditional UPDATE (`queries.reserve_seat`: free seat, not
-  paused, not revoked, not expired) AFTER the checks and the password hash, so the row lock is
-  short; an account that cannot be created rolls the seat back with it. `/accept` takes both
-  kinds (a class link: bucket `accept_class`, keyed by the link, a student's account, a
-  `viewer` membership `via=class_link` with `invited_by` its minter), refusing a full link
-  `class_link_full` and a paused one `class_link_paused`; a dead link of either kind is one
-  404 sentence (`DEAD_LINK`). `/join` lets an existing account in with either kind (bucket
-  `join`): a paused membership is refused first and spends nothing; a personal invitation is
-  spent even when the account was in; the higher role wins; the profile never moves. The
-  preview says `kind`, `inviter` and the subject, never the seats left. A teacher mints the
-  subject's personal invitations (one per name, the name as alias; a teacher's — `editor`,
-  profile teacher — only by an owner; no `features`; bucket `teacher_invite` per link), reads
-  their links again (logged) and deletes them; another subject's are 404. Where the
-  installation sends mail (`mail_configured`), a line may be «Nombre <correo>» (`emails`
-  beside `names`, `lib/invites.recipientsOf`): the link is mailed, the answer says `sent` per
-  invitation, and the address is kept nowhere — not in the row, not in the log
-  (`mail.send(shown_as=…)`); without mail an address is a 422. The administrator
-  lists every live class link, pauses and retires one (`/api/admin/class-links`), from the
-  «Enlaces de clase» block under the table of «Asignaturas» («Pausar»/«Reanudar», «Revocar»
-  asked first); their seats and dates stay the teachers'.
-  `system class-link --workspace S [--seats N] [--days D] [--renew]` prints or mints it.
-- **The groups of a class** (decided 2026-10-14; migration 0022, `server/groups.py`): parts
-  of a subject's class its teachers treat apart, and **with a group they do what they do with
-  the class**. `class_groups` (unique name per subject) and `class_group_members`, whose
-  `membership_id` is unique: a student is in ONE group at most, for now (lifting it is
-  dropping that constraint and deciding which group wins); a teacher is in none (409
-  `not_a_student`). A paused student keeps their group; a removed one loses it with the
-  membership. Routes under `/api/members/groups` (`auth.EDIT`: list, create, rename, delete —
-  its students stay with no group and its live link dies); moving is the `group` action of
-  `POST /api/members/bulk` (`group: null` takes out), refusals person by person; a member's
-  view says `group`. Each of the class's readings and gestures takes `?group=` (another
-  subject's group is a 404): the tools (`GET`/`PATCH /api/members/uses?group=`, a group's
-  `generate`/`tutor`/`chat` being `true`, `false` or `null` = as the subject), the link and
-  the invitations (`class-link?group=`, `invites.group_id`: who comes in through them lands
-  in the group, `groups.place_on_entry`, at `/accept` and `/join`), the progress
-  (*Curriculum* in `server/AGENTS.md`) and the activity (*Class activity*, there too). `features.refusal` reads the
-  administrator's mode, then the student's group's switch when it says something, then the
-  subject's, the refusal naming which closed it. `members.end_course` pauses every live link
-  of the subject, the groups' included. The administrator's «Enlaces de clase» names each
-  link's group.
 - Invitations are the admin's alone (`routers/admin.py`): chosen expiry (floor, no ceiling),
   an internal alias never shown to the invitee, batches, link kept **sealed** with Fernet
   (key in `VARIATIO_INVITE_LINK_KEY` or `/.invite_link_key`, never in the DB), readable again
@@ -196,16 +122,11 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   from them only the account is counted.
 - D-096, D-097 — A subject's teachers decide whether its students generate or use the tutor
   (after the administrator's mode); a group's switch, when set, wins.
-- D-098, D-099 — A class may have groups, and with a group its teachers do what they do with
-  the class; a student is in one group at most, teachers in none. One live class link per
-  destination.
 - D-100, D-102 — `viewer` is «Alumno»: reads the syllabus, and the bank as its teachers show
   it; generates, evaluates or uses the tutor by permission; sees nothing else of the
   construction. No fourth role.
-- D-104, D-105, D-107 — Links are sealed, never stored in clear. The administrator keeps every
-  power; a teacher also brings their class in (class link, personal invitations; an owner
-  invites teachers) and pauses, opens and removes its students. A subject with people keeps
-  an active owner; pausing is reversible, removing is not; neither moves what a person made.
+- D-104 — Links are sealed, never stored in clear. The class's links and people (D-105, D-107)
+  are `classroom/AGENTS.md`'s.
 - D-108, D-109, D-110 — No «forgot password» on the login screen; no password generator; no
   session list.
 - D-123, D-124, D-125 — The evaluation and the tutor are switched by the administrator for

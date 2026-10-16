@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from server import auth
-from server import curriculum as curriculum_store
+from server.classroom import curriculum as curriculum_store
 from server.core import process
 from server.db.models import EDITOR, VIEWER, EvalSession
 from server.kg import edit as kg_edit

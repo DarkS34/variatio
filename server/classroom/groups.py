@@ -14,8 +14,8 @@ from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from .auth import queries
-from .db.models import VIEWER, ClassGroup, ClassGroupMember, Membership, User, Workspace
+from ..auth import queries
+from ..db.models import VIEWER, ClassGroup, ClassGroupMember, Membership, User, Workspace
 from .members import Refusal
 
 # The tools a group may open or close, beside the subject's switches (`auth/features.py`).

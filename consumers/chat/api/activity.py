@@ -1,12 +1,12 @@
 """The chat's half of a class's weekly activity: its conversations as dated, wordless messages.
 
-`server/activity.py` reaches the chat's conversations through `read`, which
+`server/classroom/activity.py` reaches the chat's conversations through `read`, which
 `consumers.chat.api.install` sets as its `CHAT_READER`: the server never opens the chat's files
 itself. A chat turn is not classified, so each student turn is a date and nothing else — never
 its text, never what it was about.
 """
 
-from server import activity
+from server.classroom import activity
 from variatio.core.workspace import Workspace
 
 from .store import STORE, STUDENT

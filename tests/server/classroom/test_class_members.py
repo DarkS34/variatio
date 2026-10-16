@@ -18,11 +18,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import auth, members
+from server import auth
 from server import generations as store
 from server.auth import links, queries
 from server.auth import router as auth_routes
 from server.auth.deps import FORBIDDEN, Access
+from server.classroom import members
+from server.classroom.routes import groups as group_routes
+from server.classroom.routes import links as link_routes
+from server.classroom.routes import people as member_routes
+from server.classroom.routes import uses as use_routes
 from server.core import installation, process
 from server.core.routes import stream as ws_routes
 from server.db import repository
@@ -30,7 +35,6 @@ from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.routers import admin as admin_routes
-from server.routers import members as member_routes
 from server.workspaces import router as workspace_routes
 from server.workspaces import trees
 
@@ -465,7 +469,8 @@ def test_ending_the_course_names_a_known_end_and_a_subject_that_exists(db, aula,
 
 def test_a_teacher_has_no_door_to_end_the_course():
     # The administrator's alone since 2026-10-07: the class's routes carry no such gesture.
-    paths = {route.path for route in member_routes.router.routes}
+    class_routes = (member_routes, group_routes, use_routes, link_routes)
+    paths = {route.path for module in class_routes for route in module.router.routes}
     assert not any("end-course" in path for path in paths)
 
 

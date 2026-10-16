@@ -17,16 +17,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import auth, groups
+from server import auth
 from server.auth import queries
 from server.auth.deps import Access
 from server.bank import edit as bank_edit
 from server.bank import marks as bank_marks
 from server.bank.routes import bank as bank_routes
 from server.bank.routes import exercises as exercise_routes
+from server.classroom import groups
+from server.classroom.routes import groups as group_routes
 from server.db import mirror, repository
 from server.db.models import OWNER, VIEWER, Base
-from server.routers import members as member_routes
 from variatio.core.workspace import Workspace
 
 PROFILE = {
@@ -246,7 +247,7 @@ def test_a_deleted_group_takes_what_it_alone_saw(db, aula):
     show(db, aula, ["C002"], level="full", groups=[first.id, second.id])
     access = SimpleNamespace(user=aula.ana, workspace=aula.workspace, role=OWNER, ws=aula.ws)
 
-    member_routes.delete_group(first.id, access=access, db=db)
+    group_routes.delete_group(first.id, access=access, db=db)
 
     marks = bank_marks.visibility(aula.ws)
     named = bank_marks.keys(bank_edit._profile(aula.ws), json.loads(aula.ws.exemplars_bank_path.read_text()))

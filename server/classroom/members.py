@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from .auth import queries
-from .auth.deps import first_membership
-from .core import process
-from .db.models import OWNER, VIEWER, Membership, User, Workspace
+from ..auth import queries
+from ..auth.deps import first_membership
+from ..core import process
+from ..db.models import OWNER, VIEWER, Membership, User, Workspace
 
 CLOSED_EVENT = "membership.closed"
 DISABLED = "disabled"

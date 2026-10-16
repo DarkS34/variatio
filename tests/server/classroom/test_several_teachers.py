@@ -19,12 +19,14 @@ from starlette.requests import Request
 
 from server.auth import features, mail, passwords, queries, rate_limit
 from server.auth.router import _me
+from server.classroom.routes import links as link_routes
+from server.classroom.routes import people as member_routes
+from server.classroom.routes.links import InvitesBody
+from server.classroom.routes.people import RoleBody
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base, Invite
 from server.routers import admin as admin_routes
-from server.routers import members as member_routes
 from server.routers.admin import FeatureBody
-from server.routers.members import InvitesBody, RoleBody
 
 
 @pytest.fixture
@@ -168,7 +170,7 @@ def test_an_address_needs_an_installation_that_sends_mail(db, aula, monkeypatch)
     monkeypatch.setattr(mail, "configured", lambda: False)
 
     with pytest.raises(HTTPException) as refused:
-        member_routes.mint_invites(
+        link_routes.mint_invites(
             InvitesBody(names=["Ana Gil"], emails=["ana@colegio.es"]),
             _request(),
             access=_as(aula, aula.bruno, EDITOR),
@@ -189,7 +191,7 @@ def test_each_invitation_with_an_address_is_sent_and_the_address_kept_nowhere(db
 
     monkeypatch.setattr(mail, "_deliver", deliver)
 
-    answer = member_routes.mint_invites(
+    answer = link_routes.mint_invites(
         InvitesBody(
             names=["Ana Gil", "Pablo Ruiz", "Sin Correo"],
             emails=["ana@colegio.es", "falla@colegio.es", None],
@@ -213,7 +215,7 @@ def test_a_wrong_address_or_a_wrong_count_is_refused(db, aula, monkeypatch, emai
     monkeypatch.setattr(mail, "configured", lambda: True)
 
     with pytest.raises(HTTPException) as refused:
-        member_routes.mint_invites(
+        link_routes.mint_invites(
             InvitesBody(names=["Ana Gil"], emails=emails),
             _request(),
             access=_as(aula, aula.bruno, EDITOR),

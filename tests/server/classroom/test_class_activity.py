@@ -17,11 +17,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import activity, curriculum
 from server.auth import queries
+from server.classroom import activity, curriculum
+from server.classroom.routes import activity as activity_routes
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
-from server.routers import activity as activity_routes
 from consumers.tutor.api import activity as tutor_activity
 from consumers.tutor.api import digest as digest_job
 from consumers.tutor.digest import Asked, clean_themes, names_someone
@@ -29,7 +29,7 @@ from consumers.tutor.turn import TurnResult
 from variatio.core.workspace import Workspace
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from ..conftest import CHAIN_GRAPH
+from ...conftest import CHAIN_GRAPH
 
 # Monday 5 October 2026 opens week 41; Sunday the 11th closes it.
 WEEK = "2026-W41"

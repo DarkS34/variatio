@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from server import auth
-from server import curriculum as curriculum_store
 from server.auth import queries as identity
+from server.classroom import curriculum as curriculum_store
 from server.core import installation, process
 from server.db import repository
 from server.db.models import User

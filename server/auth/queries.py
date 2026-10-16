@@ -246,8 +246,8 @@ def grant(
 def group_of(session: Session, workspace_id: int, user_id: int) -> ClassGroup | None:
     """Return the group of the class this account is in, in this subject, or None.
 
-    Here and not in `server/groups.py` because `features.refusal` reads it, and the groups'
-    gestures import what imports `features`.
+    Here and not in `server/classroom/groups.py` because `features.refusal` reads it, and the
+    groups' gestures import what imports `features`.
     """
     return session.scalar(
         select(ClassGroup)

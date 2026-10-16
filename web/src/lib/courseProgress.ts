@@ -1,8 +1,8 @@
 /**
  * How far a class has got, unit by unit, in the order of the syllabus.
  *
- * The course's progress is a list of concepts (`server/curriculum.py`); what a teacher reads
- * is where it stands in each unit: «Tema 2 · 4 de 6».
+ * The course's progress is a list of concepts (`server/classroom/curriculum.py`); what a
+ * teacher reads is where it stands in each unit: «Tema 2 · 4 de 6».
  */
 export interface UnitProgress {
   name: string;

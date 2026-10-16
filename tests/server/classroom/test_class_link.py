@@ -25,12 +25,12 @@ from server import auth
 from server.auth import links, passwords, queries, rate_limit
 from server.auth import router as auth_routes
 from server.auth.router import AcceptBody, JoinBody
+from server.classroom.routes import links as link_routes
 from server.core import environment
 from server.db import repository
 from server.db import session as db_session
 from server.db.models import EDITOR, OWNER, VIEWER, Base, ClassLink, Invite
 from server.routers import admin as admin_routes
-from server.routers import members as member_routes
 
 PASSWORD = "una-contraseña-larga"
 
@@ -89,8 +89,8 @@ def _access(db, user, workspace):
 
 
 def _mint(db, aula, teacher=None, **terms) -> str:
-    answer = member_routes.mint_class_link(
-        member_routes.ClassLinkBody(**terms),
+    answer = link_routes.mint_class_link(
+        link_routes.ClassLinkBody(**terms),
         _request(),
         access=_access(db, teacher or aula.bruno, aula.workspace),
         db=db,
@@ -134,8 +134,8 @@ def test_three_registrations_fill_three_seats_and_the_fourth_is_told(db, aula):
 
 def test_a_paused_link_says_so(db, aula):
     token = _mint(db, aula)
-    member_routes.edit_class_link(
-        member_routes.ClassLinkEditBody(paused=True), access=_access(db, aula.bruno, aula.workspace), db=db
+    link_routes.edit_class_link(
+        link_routes.ClassLinkEditBody(paused=True), access=_access(db, aula.bruno, aula.workspace), db=db
     )
 
     refused = _refused(lambda: _register(db, token, "alumno"))
@@ -303,8 +303,8 @@ def test_a_link_never_lowers_anybody(db, aula):
 
 
 def test_a_personal_link_used_to_join_is_spent(db, aula, luis):
-    answer = member_routes.mint_invites(
-        member_routes.InvitesBody(names=["Luis"]), _request(), access=_access(db, aula.bruno, aula.workspace), db=db
+    answer = link_routes.mint_invites(
+        link_routes.InvitesBody(names=["Luis"]), _request(), access=_access(db, aula.bruno, aula.workspace), db=db
     )
     token = answer["invites"][0]["link"].split("token=")[1]
 
@@ -325,7 +325,7 @@ def test_a_false_token_is_the_same_404_everywhere(db, aula, luis):
 
 
 def test_a_paused_member_does_not_come_back_with_the_link(db, aula, luis):
-    from server import members
+    from server.classroom import members
 
     token = _mint(db, aula)
     _join(db, luis, token)
@@ -345,11 +345,11 @@ def test_a_paused_member_does_not_come_back_with_the_link(db, aula, luis):
 def test_a_teacher_invites_students_and_not_teachers(db, aula):
     access = _access(db, aula.bruno, aula.workspace)
 
-    answer = member_routes.mint_invites(
-        member_routes.InvitesBody(names=["Ana Gil", "  Pablo  Ruiz "]), _request(), access=access, db=db
+    answer = link_routes.mint_invites(
+        link_routes.InvitesBody(names=["Ana Gil", "  Pablo  Ruiz "]), _request(), access=access, db=db
     )
-    refused = _refused(lambda: member_routes.mint_invites(
-        member_routes.InvitesBody(names=["Otra Docente"], role="editor"), _request(), access=access, db=db
+    refused = _refused(lambda: link_routes.mint_invites(
+        link_routes.InvitesBody(names=["Otra Docente"], role="editor"), _request(), access=access, db=db
     ))
 
     assert [row["invite"]["label"] for row in answer["invites"]] == ["Ana Gil", "Pablo Ruiz"]
@@ -359,8 +359,8 @@ def test_a_teacher_invites_students_and_not_teachers(db, aula):
 
 
 def test_an_owner_invites_a_teacher_whose_account_is_a_teachers(db, aula):
-    answer = member_routes.mint_invites(
-        member_routes.InvitesBody(names=["Nueva Docente"], role="editor"),
+    answer = link_routes.mint_invites(
+        link_routes.InvitesBody(names=["Nueva Docente"], role="editor"),
         _request(),
         access=_access(db, aula.ana, aula.workspace),
         db=db,
@@ -378,9 +378,9 @@ def test_another_subjects_invitations_are_unknown_here(db, aula):
     invite, _ = links.mint(db, expires_at=queries.now() + timedelta(days=1), workspace_id=otra.id)
     access = _access(db, aula.bruno, aula.workspace)
 
-    listed = member_routes.invites(access=access, db=db)["invites"]
-    read = _refused(lambda: member_routes.invite_link(invite.id, _request(), access=access, db=db))
-    deleted = _refused(lambda: member_routes.revoke_invite(invite.id, access=access, db=db))
+    listed = link_routes.invites(access=access, db=db)["invites"]
+    read = _refused(lambda: link_routes.invite_link(invite.id, _request(), access=access, db=db))
+    deleted = _refused(lambda: link_routes.revoke_invite(invite.id, access=access, db=db))
 
     assert listed == []
     assert read.status_code == deleted.status_code == 404
@@ -389,14 +389,14 @@ def test_another_subjects_invitations_are_unknown_here(db, aula):
 
 def test_a_teacher_reads_their_invitations_link_again_and_deletes_one(db, aula):
     access = _access(db, aula.bruno, aula.workspace)
-    minted = member_routes.mint_invites(member_routes.InvitesBody(names=["Una"]), _request(), access=access, db=db)
+    minted = link_routes.mint_invites(link_routes.InvitesBody(names=["Una"]), _request(), access=access, db=db)
     invite_id = minted["invites"][0]["invite"]["id"]
 
-    again = member_routes.invite_link(invite_id, _request(), access=access, db=db)
-    member_routes.revoke_invite(invite_id, access=access, db=db)
+    again = link_routes.invite_link(invite_id, _request(), access=access, db=db)
+    link_routes.revoke_invite(invite_id, access=access, db=db)
 
     assert again["link"] == minted["invites"][0]["link"]
-    assert member_routes.invites(access=access, db=db)["invites"] == []
+    assert link_routes.invites(access=access, db=db)["invites"] == []
 
 
 # THE LINK'S TERMS -------------------------------------------------------------------------------
@@ -404,9 +404,9 @@ def test_a_teacher_reads_their_invitations_link_again_and_deletes_one(db, aula):
 
 def test_a_new_link_has_forty_seats_and_a_month_unless_told(db, aula):
     access = _access(db, aula.bruno, aula.workspace)
-    member_routes.mint_class_link(member_routes.ClassLinkBody(), _request(), access=access, db=db)
+    link_routes.mint_class_link(link_routes.ClassLinkBody(), _request(), access=access, db=db)
 
-    view = member_routes.class_link(access=access, db=db)["class_link"]
+    view = link_routes.class_link(access=access, db=db)["class_link"]
 
     assert (view["uses"], view["max_uses"], view["paused"]) == (0, 40, False)
     expires = datetime.fromisoformat(view["expires_at"])
@@ -435,24 +435,24 @@ def test_its_seats_never_go_below_the_ones_taken(db, aula):
     _register(db, token, "otra")
     access = _access(db, aula.bruno, aula.workspace)
 
-    refused = _refused(lambda: member_routes.edit_class_link(
-        member_routes.ClassLinkEditBody(max_uses=1), access=access, db=db
+    refused = _refused(lambda: link_routes.edit_class_link(
+        link_routes.ClassLinkEditBody(max_uses=1), access=access, db=db
     ))
-    member_routes.edit_class_link(member_routes.ClassLinkEditBody(max_uses=2), access=access, db=db)
+    link_routes.edit_class_link(link_routes.ClassLinkEditBody(max_uses=2), access=access, db=db)
 
     assert refused.status_code == 422
-    assert member_routes.class_link(access=access, db=db)["class_link"]["max_uses"] == 2
+    assert link_routes.class_link(access=access, db=db)["class_link"]["max_uses"] == 2
 
 
 def test_the_live_link_is_read_again_and_revoked(db, aula):
     access = _access(db, aula.bruno, aula.workspace)
     token = _mint(db, aula)
 
-    again = member_routes.class_link_url(_request(), access=access, db=db)["link"]
-    member_routes.revoke_class_link(access=access, db=db)
+    again = link_routes.class_link_url(_request(), access=access, db=db)["link"]
+    link_routes.revoke_class_link(access=access, db=db)
 
     assert again.endswith(token)
-    assert member_routes.class_link(access=access, db=db)["class_link"] is None
+    assert link_routes.class_link(access=access, db=db)["class_link"] is None
     assert _refused(lambda: _register(db, token, "tarde")).status_code == 404
 
 

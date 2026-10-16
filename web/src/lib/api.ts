@@ -317,7 +317,7 @@ export const api = {
 
   workspaces: () => request<WorkspaceListing>("/api/workspaces"),
 
-  // The people of the subject in use, for its teachers (`server/routers/members.py`).
+  // The people of the subject in use, for its teachers (`server/classroom/routes/people.py`).
   members: () => request<{ members: Member[]; groups?: ClassGroup[] }>("/api/members"),
   memberAction: (userId: number, action: MemberAction) =>
     action === "remove"

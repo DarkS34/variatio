@@ -25,12 +25,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from consumers.evaluation.api import store as evaluation_store
 
-from .. import auth, members
+from .. import auth
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import features, links, queries
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..bank import profile_edit
+from ..classroom import members
 from ..core import contexts, environment, installation, maintenance, process
 from ..db import repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace

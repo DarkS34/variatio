@@ -119,7 +119,7 @@ export interface Recipient {
 
 // «Nombre <correo>»: the address between angle brackets closes the line.
 const ADDRESSED = /^(.*?)\s*<\s*([^<>\s]*)\s*>\s*$/;
-// An address as a person writes it, as `server/routers/members._EMAIL` reads it.
+// An address as a person writes it, as `server/classroom/routes/links._EMAIL` reads it.
 const EMAIL = /^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/;
 
 /**
