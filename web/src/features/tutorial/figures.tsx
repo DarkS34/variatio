@@ -39,7 +39,8 @@ export const FIGURE_PROSE = "font-reading text-[1.1875rem] leading-[1.4] sm:text
  * to be — so their labels are full sentences now and the prose beside them is shorter.
  *
  * The study's two figures are drawn out of these same parts in the evaluation's folder
- * (`apps/evaluation/tutorial.tsx`), which is why `Box`, `Chain` and `FIGURE_PROSE` are exported.
+ * (`consumers/evaluation/tutorial.tsx`), which is why `Box`, `Chain` and `FIGURE_PROSE` are
+ * exported.
  */
 
 /**

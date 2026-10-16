@@ -52,7 +52,7 @@ import { artifactName, buildCall, jobName } from "@/lib/names";
 // account it is asked of (`useAsksStageReview`), and everything it needs is behind this one
 // component.
 const StageReviewSlot = lazy(() =>
-  withCatalogues(import("@/apps/evaluation/StageReviewSlot")).then((m) => ({
+  withCatalogues(import("@/consumers/evaluation/StageReviewSlot")).then((m) => ({
     default: m.StageReviewSlot,
   })),
 );
@@ -581,7 +581,7 @@ export function StageGate({
         )}
 
         {/* The stage questionnaire, at the FOOT of the artifact: its button and the form
-            that unfolds under it (`apps/evaluation/StageReviewSlot`). Not drawn with the stage
+            that unfolds under it (`consumers/evaluation/StageReviewSlot`). Not drawn with the stage
             unbuilt, since there would be nothing to judge, nor for an account it is not
             asked of: the evaluation closed to it, or a role that cannot correct the subject
             and that the server would refuse the answers of. Its own boundary, so the screen

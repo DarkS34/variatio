@@ -143,9 +143,9 @@ def test_the_administrator_gets_no_bypass(db):
 
 
 def test_the_routers_of_both_functions_declare_their_dependency():
-    from apps.evaluation.api import router as evaluation_router
-    from apps.evaluation.api import stages as stages_router
-    from apps.tutor.api import router as tutor_router
+    from consumers.evaluation.api import router as evaluation_router
+    from consumers.evaluation.api import stages as stages_router
+    from consumers.tutor.api import router as tutor_router
 
     def declared(router):
         return [dependency.dependency for dependency in router.dependencies]

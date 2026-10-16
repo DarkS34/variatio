@@ -124,7 +124,7 @@ function useStudySlides(open: boolean): Partial<Record<SlideIdOf<"evaluation">, 
   useEffect(() => {
     if (!open) return;
     let live = true;
-    withCatalogues(import("@/apps/evaluation/tutorial"))
+    withCatalogues(import("@/consumers/evaluation/tutorial"))
       .then((module) => {
         if (live) setSlides(module.SLIDES);
       })

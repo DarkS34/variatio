@@ -1,4 +1,4 @@
-import { EMPTY_FORM, type FormState } from "@/apps/generation/commission";
+import { EMPTY_FORM, type FormState } from "@/consumers/generation/commission";
 import { fieldToInput, inputToField } from "@/lib/fields";
 import { difficultyFieldOf, difficultyLevelsOf } from "@/lib/profile";
 import type { BankItemType, ExemplarsProfile, ItemTypeSpec, ReadableExercise } from "@/lib/types";

@@ -1,7 +1,7 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
 Nothing inside `server` may import this module. It is also the only place the functions under
-`apps/` are mounted, because each `apps.<function>.api` imports `server.auth` and the job
+`consumers/` are mounted, because each `consumers.<function>.api` imports `server.auth` and the job
 runner back and mounting them from the router package would close a cycle.
 """
 
@@ -23,24 +23,24 @@ from .routers import ROUTERS
 # Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
 WORKER_THREADS = 200
 
-from apps.generation import api as generation_api
+from consumers.generation import api as generation_api
 
 try:
-    from apps.evaluation import api as evaluation_api
+    from consumers.evaluation import api as evaluation_api
 except ImportError:
     evaluation_api = None
 
 try:
-    from apps.tutor import api as tutor_api
+    from consumers.tutor import api as tutor_api
 except ModuleNotFoundError as missing:
-    if missing.name not in ("apps", "apps.tutor"):
+    if missing.name not in ("consumers", "consumers.tutor"):
         raise
     tutor_api = None
 
 try:
-    from apps.chat import api as chat_api
+    from consumers.chat import api as chat_api
 except ModuleNotFoundError as missing:
-    if missing.name not in ("apps", "apps.chat"):
+    if missing.name not in ("consumers", "consumers.chat"):
         raise
     chat_api = None
 

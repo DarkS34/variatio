@@ -7,7 +7,7 @@ indexing — takes a teacher, and a refusal says `role_too_low`.
 
 A kind's own function may admit it before it is queued (`ADMISSIONS`): a commission's
 bounds — one live batch per account and subject, and a student's size and day — are
-`apps.generation`'s, registered when it is installed.
+`consumers.generation`'s, registered when it is installed.
 
 The chain's gates are enforced here and not merely drawn in the UI, so a stale artifact
 cannot be silently consumed. A job is only ever visible to the workspace it was submitted
@@ -48,11 +48,11 @@ GATES: dict[str, str | None] = {
 # The job kinds that belong to an optional function (`server/features.py`): queued here only
 # by an account the function is open to, and named as a lane's holder only to such an account
 # (`routers/pipeline.py`). The tutor's kinds are not in `JOB_LABELS` at all, so this route
-# never queues them; `apps.tutor.api.install` adds them here for the second use.
+# never queues them; `consumers.tutor.api.install` adds them here for the second use.
 FEATURE_OF: dict[str, str] = {"evaluate": features.EVALUATION}
 
 # What a kind's own function checks before one of its jobs is queued, registered when the
-# function is installed (`apps.generation.api.install` for `generate`). It is handed the
+# function is installed (`consumers.generation.api.install` for `generate`). It is handed the
 # request and the queueing itself, so a check and the queueing it guards can share one lock,
 # and it answers the job queued or refuses with an `HTTPException`.
 Admission = Callable[[DbSession, auth.Access, dict, Callable[[], Job]], Job]

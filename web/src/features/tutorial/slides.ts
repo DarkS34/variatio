@@ -19,8 +19,8 @@ import type { Features } from "@/lib/types";
  * open to them, the tutor). The last two are the study's — what evaluating is, and the part
  * a participant plays in it — shown to either when the evaluation is open to them.
  * `TutorialScreen` keeps one slide per id of the product's, and the study's two are the
- * evaluation's code (`apps/evaluation/tutorial.tsx`), fetched only for an account it is open to;
- * the types check both halves.
+ * evaluation's code (`consumers/evaluation/tutorial.tsx`), fetched only for an account it is open
+ * to; the types check both halves.
  */
 export const DECK = [
   { id: "s1", feature: null, audience: "teacher" },

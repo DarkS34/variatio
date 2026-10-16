@@ -2,8 +2,8 @@
 // Whether the evaluation's and the tutor's client code stays out of what every session loads.
 //
 // Both are optional functions the administrator opens per account (`server/features.py`), and
-// an account they are closed to must fetch no module of `src/apps/evaluation/` or
-// `src/apps/tutor/`. The
+// an account they are closed to must fetch no module of `src/consumers/evaluation/` or
+// `src/consumers/tutor/`. The
 // app keeps that by importing them only through `import()` behind the account's `features`;
 // one static import from core undoes it silently — the page works, it only ships code nobody
 // asked for. Two rules, because each misses what the other sees:
@@ -29,9 +29,10 @@ const GRAPH = resolve(WEB, "dist", ".vite", "chunks.json");
 // The landing is not an optional function, and it is listed for the same reason: a public
 // page with a demo of the whole client, fetched by a visitor at `/` and by nobody
 // who logs in.
-const LAZY = ["apps/evaluation", "apps/tutor", "landing"];
+const LAZY = ["consumers/evaluation", "consumers/tutor", "landing"];
 
-// The folders named in a report, every one a negative: `src/apps/evaluation/, … ni src/landing/`.
+// The folders named in a report, every one a negative: `src/consumers/evaluation/, … ni
+// src/landing/`.
 const NAMED = `${LAZY.slice(0, -1).map((folder) => `src/${folder}/`).join(", ")} ni src/${LAZY.at(-1)}/`;
 
 const inLazy = (pathFromSrc) =>
@@ -183,18 +184,21 @@ function skipRegex(source, start) {
 // What the scanner must get right, checked on every run: a check that hides an import
 // because it misread a string passes for ever, and nothing else would notice.
 const SELF_TESTS = [
-  ['const glob = "src/*";\nimport { X } from "@/apps/tutor/X";\nconst end = "*/";', true],
-  ["const s = 'a/*b';\nimport { X } from \"@/apps/tutor/X\";\nconst t = '*/';", true],
-  ["const t = `a ${'/*'} b`;\nimport { X } from \"@/apps/tutor/X\";\nconst u = `*/`;", true],
-  ["const r = text.replace(/\\/\\*/g, '');\nimport { X } from \"@/apps/tutor/X\";\n// */", true],
-  ["const r = /[/*]/;\nimport { X } from \"@/apps/tutor/X\";\nconst k = 1; /* */", true],
-  ["<p>don't /* here</p>\nimport { X } from \"@/apps/tutor/X\";\n<p>*/</p>", true],
-  ["<p>don't won't /* x</p>\nimport { X } from \"@/apps/tutor/X\";\n<p>*/</p>", true],
-  ["<div>\n  {/*\nimport { X } from \"@/apps/tutor/X\";\n  */}\n</div>", false],
-  ["const half = a / b; /* import { X } from \"@/apps/tutor/X\"; */", false],
-  ["/*\nimport { X } from \"@/apps/tutor/X\";\n*/", false],
-  ['// import { X } from "@/apps/tutor/X";', false],
-  ['const url = "http://x"; // import { X } from "@/apps/tutor/X";', false],
+  ['const glob = "src/*";\nimport { X } from "@/consumers/tutor/X";\nconst end = "*/";', true],
+  ["const s = 'a/*b';\nimport { X } from \"@/consumers/tutor/X\";\nconst t = '*/';", true],
+  ["const t = `a ${'/*'} b`;\nimport { X } from \"@/consumers/tutor/X\";\nconst u = `*/`;", true],
+  [
+    "const r = text.replace(/\\/\\*/g, '');\nimport { X } from \"@/consumers/tutor/X\";\n// */",
+    true,
+  ],
+  ["const r = /[/*]/;\nimport { X } from \"@/consumers/tutor/X\";\nconst k = 1; /* */", true],
+  ["<p>don't /* here</p>\nimport { X } from \"@/consumers/tutor/X\";\n<p>*/</p>", true],
+  ["<p>don't won't /* x</p>\nimport { X } from \"@/consumers/tutor/X\";\n<p>*/</p>", true],
+  ["<div>\n  {/*\nimport { X } from \"@/consumers/tutor/X\";\n  */}\n</div>", false],
+  ["const half = a / b; /* import { X } from \"@/consumers/tutor/X\"; */", false],
+  ["/*\nimport { X } from \"@/consumers/tutor/X\";\n*/", false],
+  ['// import { X } from "@/consumers/tutor/X";', false],
+  ['const url = "http://x"; // import { X } from "@/consumers/tutor/X";', false],
 ];
 
 /** Where a specifier lands, relative to `src/`, or null for a package. */

@@ -12,7 +12,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Label, Select, Textarea } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
-import { ItemFields } from "@/apps/generation/ResultCard";
+import { ItemFields } from "@/consumers/generation/ResultCard";
 import { api } from "@/lib/api";
 import { splitCriterion } from "@/lib/difficulty";
 import { fieldText } from "@/lib/fields";

@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.evaluation.api import router as evaluation_router
+from consumers.evaluation.api import router as evaluation_router
 from server import auth, features, installation, singletons
 from server.auth.deps import Access
 from server.db import identity, repository

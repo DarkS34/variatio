@@ -48,17 +48,17 @@ education is out of scope; hardcoding a subject is equally a regression.
 ## Branches
 
 - **`main`** (this tree, `/home/deploy/variatio-dev`): the complete system — the library,
-  the API, the client and the functions under `apps/`: generating, the study
-  (`apps/evaluation/`, `web/src/apps/evaluation/`, the `evaluate` job, evaluator profiles, the
-  stage questionnaires), the Socratic tutor (`apps/tutor/`, `web/src/apps/tutor/`, the
-  `tutor_turn`, `tutor_criteria` and `activity_digest` jobs) and the free chat (`apps/chat/`,
-  `web/src/apps/chat/`, the `chat_turn` job). Production serves a separate
+  the API, the client and the functions under `consumers/`: generating, the study
+  (`consumers/evaluation/`, `web/src/consumers/evaluation/`, the `evaluate` job, evaluator profiles, the
+  stage questionnaires), the Socratic tutor (`consumers/tutor/`, `web/src/consumers/tutor/`, the
+  `tutor_turn`, `tutor_criteria` and `activity_digest` jobs) and the free chat (`consumers/chat/`,
+  `web/src/consumers/chat/`, the `chat_turn` job). Production serves a separate
   worktree, `/home/deploy/variatio-prod`. Until 2026-10-03 this was three branches
   (`variatio-web`, `variatio-web-eval`, `variatio-web-tutor`); this one replaces them.
 - **`main` is the only branch** (the user's decision, 2026-10-16). `variatio-vanilla`, the
   library and its CLI alone (the branch `main` named until 2026-10-03, version line 3.x), was
   retired that day, 60 commits behind `main`: nobody installed it, and `main` already keeps
-  the library apart (`import variatio` reaches neither `server/` nor `apps/`; `uv sync --no-dev`
+  the library apart (`import variatio` reaches neither `server/` nor `consumers/`; `uv sync --no-dev`
   without the `server` and `builders` extras installs the library and its CLI). No tag keeps
   its last commit (3.4.0), by the user's choice. Do not bring the branch back to publish the
   library alone; ask first.
@@ -172,8 +172,8 @@ table and refuses while a row has no file: on an installation that still has the
 
 The hard line: **`artifacts/` holds the instance definition (data), `variatio/` is the code
 that produces and consumes it.** Top-level packages: `variatio/` (library), `server/` (API),
-`apps/` (the functions the system is used through: `generation/`, `evaluation/` — the TFM's
-study —, `tutor/` and `chat/`; see *`apps/`*; what the last two share is
+`consumers/` (the functions the system is used through: `generation/`, `evaluation/` — the TFM's
+study —, `tutor/` and `chat/`; see *`consumers/`*; what the last two share is
 `server/conversations/`),
 `web/` (React client), `migrations/`.
 
@@ -232,7 +232,7 @@ names exist). A tree renamed so is no longer readable by a version from before t
   `transcription, graph, bank, generation` since 2026-10-08: the profile's calls and the
   taggability review are the bank's lane, in the order they run before the extraction.
   The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
-  reads is `apps/evaluation/settings.READS`, never a stamp inside `variatio/`.
+  reads is `consumers/evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
   **`config.json` stores every non-secret value and beats the registry**, so bumping a
   registry default alone changes nothing on an installation — edit `config.json` too.
@@ -259,12 +259,12 @@ names exist). A tree renamed so is no longer readable by a version from before t
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
-  `READS` are declared in `apps/evaluation/settings.py`, picked up by an optional import — the
+  `READS` are declared in `consumers/evaluation/settings.py`, picked up by an optional import — the
   one place `variatio/` names the evaluation.
-- The tutor's are declared the same way in `apps/tutor/settings.py` (`LANE` «Tutor», stage
+- The tutor's are declared the same way in `consumers/tutor/settings.py` (`LANE` «Tutor», stage
   `tutoring`, last; `READS`; `MODEL_KEYS`), picked up by an optional import that switches off
-  only on `ModuleNotFoundError` for `apps.tutor` itself. Their names are empty: they are read
-  through `apps/tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
+  only on `ModuleNotFoundError` for `consumers.tutor` itself. Their names are empty: they are read
+  through `consumers/tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
   only there the context cap (`derived`) and the deletion guard (`required_models`).
 
 ### Database (`server/db/`)
@@ -517,7 +517,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   waiting moves positions with no event. The runner reads its clock from `_clock` (a test
   ages a job at will). The order does not pre-empt: a build already running on Ollama keeps
   the tutor waiting until it ends, so builds go outside class hours.
-- **A commission's bounds** (`apps/generation/api/limits.admit`, which `POST /api/jobs` hands
+- **A commission's bounds** (`consumers/generation/api/limits.admit`, which `POST /api/jobs` hands
   a `generate` through `routers/jobs.ADMISSIONS`, under one lock with the queueing): one
   live `generate` per account and subject (409 `generation_busy`, every role); a student's
   count at most `GENERATION_STUDENT_MAX_ITEMS` (5, never above `GENERATION_MAX_ITEMS`; 422)
@@ -561,7 +561,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   from the retired table: what it never kept is null, never reconstructed. A student (role
   `viewer`) reads their own exercise whole, solution included, but not the bank it was made
   from: `GET /api/generations/{id}` answers them with `provenance.prompt` null and
-  `resolved.few_shot` as ids and origins (`apps/generation/api/router.without_bank`), and a revealed
+  `resolved.few_shot` as ids and origins (`consumers/generation/api/router.without_bank`), and a revealed
   comparison card answers them without `prompt` and `raw_response`.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
   `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
@@ -760,7 +760,7 @@ class's cut to the group's students, as for one student.
   kind (`on_subject` for theory/exercise/attempt/solution), the concept (chosen, else the
   reply's first focus) and `sent_back`; of an exercise, its date, type, level (the workspace's
   difficulty field, `locale.difficulty`) and concepts, and whether a conversation was opened on
-  it. The tutor's half comes through `activity.TUTOR_READER`, which `apps.tutor.api.install` sets
+  it. The tutor's half comes through `activity.TUTOR_READER`, which `consumers.tutor.api.install` sets
   (the server never opens the tutor's files); every file goes through `activity.cached`, keyed
   by modification time and size.
 - **Findings** are typed by the server, each of one page (`area`: `tutor` — `asked`,
@@ -783,7 +783,7 @@ class's cut to the group's students, as for one student.
   three themes per concept, one sentence of 20 words at most, with the numbers of the messages
   they cover. **Paraphrase only**: a theme that copies more than 8 running words of a message,
   names a student (whole name, username, or a part of 4 letters or more), is too long or covers
-  nothing is asked again once with a note, then dropped (`apps/tutor/digest.clean_themes`). Only
+  nothing is asked again once with a note, then dropped (`consumers/tutor/digest.clean_themes`). Only
   step events cross the stream, the log says counts, and the file —
   `<workspace>/analytics/digest/<week>.json` — keeps the themes and REFERENCES to the messages
   (author, conversation, turn), never a message. One digest per week, of the class: a theme's
@@ -1000,7 +1000,7 @@ Take objects, return data, know no `Workspace`, write no files.
 ### Logging
 
 loguru configured once in `variatio/__init__.py`. **`variatio/` logs in English; `server/`
-and `apps/` in Spanish.** Format `[scope] Message`, no counters in the bracket, `«…»`
+and `consumers/` in Spanish.** Format `[scope] Message`, no counters in the bracket, `«…»`
 around user text, `'…'` around models/paths. Nothing inside a per-element loop logs at INFO —
 use `progress.step(...).tick(detail=…)` or `debug`. A fact is logged by one layer. Only
 `docling` is silenced.
@@ -1012,21 +1012,24 @@ Components never persist; every write goes through `json_io.write_json` (the onl
 persisted JSON: mkdir, `ensure_ascii=False, indent=2`, atomic `.tmp` replace — approval hashes
 are hashes of these bytes).
 
-## `apps/` — the functions the system is used through
+## `consumers/` — the functions the system is used through
 
 Since 2026-10-14 (the user's request: the functions grouped in one directory) every door of
-«Fase de pruebas» is a package of `apps/`, an application in Django's sense: its routes, its
+«Fase de pruebas» is a package of `consumers/`, an application in Django's sense: its routes, its
 jobs, its settings, its prompts and an `install(app)` in its `api` package that
-`server/app.py` calls, and nothing else does. **`apps` imports `variatio` and `server`; neither
-imports `apps` back** but for the settings registry's optional imports and the four reads of
+`server/app.py` calls, and nothing else does. The directory was `apps/` until 2026-10-16, when
+the user asked for a name that says what these functions do: the construction produces the
+artifacts and they consume them (`exploitation` was set aside, a word of abuse and of security
+in English). **`consumers` imports `variatio` and `server`; neither
+imports `consumers` back** but for the settings registry's optional imports and the four reads of
 the evaluation older than the move (`jobs/lanes`, `jobs/handlers`, `raw_data`,
-`routers/admin`), each named in `tests/apps/test_apps_boundary.py`, which also pins that a
+`routers/admin`), each named in `tests/consumers/test_consumers_boundary.py`, which also pins that a
 function's library half imports neither FastAPI nor SQLAlchemy. On-disk names, setting keys,
 job kinds and log scopes did not move with the code (`<workspace>/tutor/`, `tutor.*`,
-`evaluation.*`, `tutor_turn`, `[tutor]`). The client mirrors it: `web/src/apps/<function>/`.
-Tests live in `tests/apps/<function>/`.
+`evaluation.*`, `tutor_turn`, `[tutor]`). The client mirrors it: `web/src/consumers/<function>/`.
+Tests live in `tests/consumers/<function>/`.
 
-### `apps/generation/` — «Generar ejercicios»
+### `consumers/generation/` — «Generar ejercicios»
 
 Generating is no optional function and is always installed, FIRST: its
 `GET /api/jobs/allowance` must be matched before the queue's `/api/jobs/{job_id}`. It holds
@@ -1034,15 +1037,15 @@ the author's routes (`/api/generations`, `api/router.py`), the `generate` job (`
 registered in `HANDLERS`) and a commission's bounds (`api/limits.py` and the day's count,
 `api/usage.py`, registered in `routers/jobs.ADMISSIONS`). The generator is the library's and
 the exercise files are the server's (`server/generations.py`, with `row_view`, read by the
-panel, the activity and the tutor too). Its client is `web/src/apps/generation/` (the form,
+panel, the activity and the tutor too). Its client is `web/src/consumers/generation/` (the form,
 the run, «Mis ejercicios»), loaded like any screen: every account generates.
 
-### `apps/evaluation/` — the TFM's study, outside the system it measures
+### `consumers/evaluation/` — the TFM's study, outside the system it measures
 
-Always mounted. **`apps.evaluation` imports `variatio`, never the reverse** (one exception:
-the settings registry's optional import); `apps/evaluation/__init__.py` never imports
-`apps/evaluation/api/`, so `import apps.evaluation` stays free of FastAPI/SQLAlchemy. It is
-attached in `server/app.py` (`apps.evaluation.api.install(app)`), never from
+Always mounted. **`consumers.evaluation` imports `variatio`, never the reverse** (one exception:
+the settings registry's optional import); `consumers/evaluation/__init__.py` never imports
+`consumers/evaluation/api/`, so `import consumers.evaluation` stays free of FastAPI/SQLAlchemy. It is
+attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never from
 `server/routers/__init__.py`.
 
 - **Arms**: `naive` (commercial chain `gemini → mistral → groq`, no `response_format`, no
@@ -1070,7 +1073,7 @@ attached in `server/app.py` (`apps.evaluation.api.install(app)`), never from
   positions (df 1), and **Scott's π** (not Cohen's κ) over evaluator pairs sharing a set.
 - **Every fixed route is declared above `/evaluations/{session_id}`** (FastAPI matches in
   order); `test_route_order.py` checks every router.
-- `apps/evaluation/api/instruments.py` and `stage_instruments.py` are the single homes of what is
+- `consumers/evaluation/api/instruments.py` and `stage_instruments.py` are the single homes of what is
   asked. The **stage questionnaire** (one per construction step, keyed by artifact hash
   resolved server-side, `stage_evaluations`) is a Likert form: five statements on shared axes
   (`precision`, `recall`, `function`, `effort`, `overall`), 1-5 agreement, 5 is best,
@@ -1084,18 +1087,18 @@ attached in `server/app.py` (`apps.evaluation.api.install(app)`), never from
   version and arm configuration produced each result; there is no version column, so change
   dates are boundaries.
 
-### `apps/tutor/` — the Socratic tutor, beside the system it reads
+### `consumers/tutor/` — the Socratic tutor, beside the system it reads
 
-Mounted like the evaluation: **`apps.tutor` imports `variatio` and never the reverse** (the
-registry's optional import is the exception); `apps/tutor/__init__.py` never imports
-`apps/tutor/api/`, so `import apps.tutor` stays free of FastAPI/SQLAlchemy.
-`server/app.py` calls `apps.tutor.api.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
+Mounted like the evaluation: **`consumers.tutor` imports `variatio` and never the reverse** (the
+registry's optional import is the exception); `consumers/tutor/__init__.py` never imports
+`consumers/tutor/api/`, so `import consumers.tutor` stays free of FastAPI/SQLAlchemy.
+`server/app.py` calls `consumers.tutor.api.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
 which is what `POST /api/jobs` accepts: a turn comes through the tutor's routes or not at
 all), their models in `server/jobs/lanes.EXTRA_MODELS`, and mounts `/api/tutor` and the
 admin's read.
 
 - **A chat and a card.** The interaction is a plain conversation; the advantage is the CARD
-  (`apps/tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
+  (`consumers/tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
   definition and the graph's anchored passages, its direct prerequisites (TAKEN AS KNOWN: the
   reply neither quizzes the student on them nor steers towards them, and only tells a student
   who says one is missing to review it — decision of 2026-10-03, after a question about
@@ -1108,7 +1111,7 @@ admin's read.
   review it, never an explanation. The method's rule alone was not followed: measured on 8
   messages saying a prerequisite was missing, twice, 3 replies of 16 sent the student back
   before and 12 after; 2 messages that only name one, twice, were sent back 0 times of 4.
-- **A turn** (`apps/tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
+- **A turn** (`consumers/tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
   2026-10-03; admissibility rules on commissions) → one query-side embedding (concepts and
   passages) and one document-side one (`classify.bank_match`) → kind → focus → card → reply →
   checks. Seven kinds (`theory exercise attempt solution social administrative off_topic`);
@@ -1116,12 +1119,12 @@ admin's read.
   (bank match ≥ `tutor.bank_match_threshold`, a conversation opened on a generated exercise),
   then one grammar call to the classify model, failing open to `theory`; the graph overrules
   an `off_topic` verdict on a message whose best concept clears `tutor.focus_threshold`.
-- **The concept map** (`apps/tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
+- **The concept map** (`consumers/tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
   of the graph around a focus concept — prerequisites (`before`), dependents (`after`) and the
   other relations (`links`, with the graph's own label and direction) — capped (4/3/3, the
   closest by description vectors kept, the rest counted) and sent as data in the turn's
   `concept_map`; the client draws it as a graph of its own chips with lines traced over
-  them (`web/src/apps/tutor/ConceptMap.tsx`, no Mermaid: user's request of 2026-10-08 for a
+  them (`web/src/consumers/tutor/ConceptMap.tsx`, no Mermaid: user's request of 2026-10-08 for a
   better look, keeping the graph's shape — every relation drawn, none written as a
   sentence) in the interface language and the palette's tokens. It is shown at TWO moments only: the first
   time the conversation stands on a concept (one per move of the focus; the card says so,
@@ -1149,7 +1152,7 @@ admin's read.
   message is answered as theory (`decided_by: "chosen"`), an administrative one stays.
   `GET /api/tutor/syllabus` (`auth.VIEW`) lists the units and their non-generic concepts. The state is the focus and the trail;
   older records may still carry a `verified` list, which nothing reads.
-- **The method is code, not only prompt.** `apps/tutor/checks.py` verifies what a machine can: at
+- **The method is code, not only prompt.** `consumers/tutor/checks.py` verifies what a machine can: at
   least one question and at most `max_questions`, at most `max_code_lines` in fences, no name
   of the student's exercise in its code that the card's notes do not use (`code_specific`,
   2026-10-15, a colleague's rule: a generic fragment of how a construct is used yes, code the
@@ -1190,7 +1193,7 @@ admin's read.
   author (the same 404 for others' and malformed ids); the installation administrator reads
   every account's, read-only, at `/api/admin/workspaces/{slug}/tutor`. A subject's teachers
   read what their students asked as figures and a weekly digest in paraphrase, never a
-  conversation (`apps/tutor/api/activity.read`, `apps/tutor/digest.py`; see *Class activity*). Every
+  conversation (`consumers/tutor/api/activity.read`, `consumers/tutor/digest.py`; see *Class activity*). Every
   reply keeps `sent_back` — the concept and the prerequisite it sent the student back to, or
   null — which the weekly counts read; an older turn says it only through its map's `review`. A file is written whole
   under a per-file lock; the job reads it under that lock too (the route holds it until
@@ -1199,7 +1202,7 @@ admin's read.
   `failed` and frees the conversation; «Pedir la respuesta otra vez» is `/retry`. A
   conversation starts titled by its first line; the first reply of a substantive kind (not
   social, blocked or a fixed text) asks the classify model for a short title once
-  (`apps/tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
+  (`consumers/tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
 - **The tutor speaks for itself** (user's decision of 2026-10-08): the card is what the tutor
   KNOWS, not what it cites. Its labels name no source («Definición», «Lo que sabes de él»,
   «Otras cosas que sabes»: with «En los apuntes» and then «Lo que el material dice» the
@@ -1217,7 +1220,7 @@ admin's read.
   installation's and a count of files could be reset by deleting a conversation. Only a turn
   that enters the queue counts, a reply asked again included. The refusal is a 429 with
   `X-Error-Code: tutor_daily_limit`, `Retry-After` and the wait in words. The client builds
-  its own sentence from the code and `Retry-After` (`apps/tutor/limit.ts`; the server's only
+  its own sentence from the code and `Retry-After` (`consumers/tutor/limit.ts`; the server's only
   without the header) and shows it alone where the conversation reports a failure, never
   under «No se pudo enviar»; the next send or retry clears it.
 - **A conversation may open on an exercise** (`opened_from`): a generated one of the author's
@@ -1232,7 +1235,7 @@ admin's read.
   (409).
 - The store of conversations, the daily count, the quiet stream of a turn's job and the
   routes' common half are the free chat's too, kept once in `server/conversations/` (see
-  below); `apps/tutor/api/store.py` and `usage.py` bind them to the tutor's folder, role
+  below); `consumers/tutor/api/store.py` and `usage.py` bind them to the tutor's folder, role
   (`tutor`), initial state (`focus`, `trail`) and limit (`tutor_daily_limit`). The files did
   not move.
 - Logs in Spanish with `[tutor]`; never the message text.
@@ -1240,7 +1243,7 @@ admin's read.
 ### `server/conversations/` — what the tutor and the chat share
 
 Decided 2026-10-14 with the chat («nothing copied»); in `apps/conversations/` until 2026-10-16,
-when the user moved it out: `apps/` keeps the functions that work on the artifacts, and this
+when the user moved it out: `consumers/` keeps the functions that work on the artifacts, and this
 is no function (no route, job, setting or `install`). `store.Store` keeps one function's
 conversations under `<workspace>/<folder>/user_<id>/<id>.json` (folder, reply role, initial
 state and log scope are the function's), one lock per file, `pending` naming the job.
@@ -1251,14 +1254,14 @@ frees a conversation whose job died. `routes.Function` describes a function for 
 route half — `require` (one's own or the same 404), `admit` (one reply per account in the
 workspace, then the day's limit, 429 with the function's code and `Retry-After`),
 `queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. It imports
-`server` and the database, never `apps`; only the two functions' `api` packages import it.
+`server` and the database, never `consumers`; only the two functions' `api` packages import it.
 
-### `apps/chat/` — «Chat libre»
+### `consumers/chat/` — «Chat libre»
 
 An assistant without the tutor's method (the user's decision, 2026-10-14): it explains,
 solves and writes code, as the student asks, within the subject and education.
 
-- **A turn** (`apps/chat/turn.py`): the guardrail (`screening.screen_message`; a refusal is a
+- **A turn** (`consumers/chat/turn.py`): the guardrail (`screening.screen_message`; a refusal is a
   fixed text, kind `blocked`, and reaches no model), then ONE call (`chat_reply`) with the
   system prompt — its role, its scope, refusing in one sentence a request for its
   instructions or another role and what is dangerous or out of place, and the subject's
@@ -1270,7 +1273,7 @@ solves and writes code, as the student asks, within the subject and education.
   user's choice; the tutor falls back to the same); its reasoning switch and effort, its
   sampling triple, `chat.reply_max_tokens` (2048), `chat.message_max_chars`,
   `chat.daily_messages` (empty = none; counted apart from the tutor's, `chat_daily_limit`).
-  Declared in `apps/chat/settings.py` (stage `chat`, after the tutor's; `MODEL_KEYS` join
+  Declared in `consumers/chat/settings.py` (stage `chat`, after the tutor's; `MODEL_KEYS` join
   `registry.EXTRA_MODEL_KEYS`), picked up by the registry's optional import, and drawn in
   «Configuración» — it is no optional function of the administrator's.
 - **Who uses it**: a subject's switch, `workspaces.student_chat` (migration 0023), CLOSED by
@@ -1287,7 +1290,7 @@ solves and writes code, as the student asks, within the subject and education.
   `ChatMessage`): the week's `chat` block, `chat_days`/`chat_messages` per row, `chat` in the
   strip, the median, and the `chat` area's `idle`/`trend`/`quiet` findings. Nothing of what a
   message was about.
-- Its client is `web/src/apps/chat/` (`ChatScreen`: the tutor's layout — the list beside the
+- Its client is `web/src/consumers/chat/` (`ChatScreen`: the tutor's layout — the list beside the
   conversation, the two voices, the box — without the map, the question set apart or the
   concept picker), its strings in core (`chat.*`). «Llevar al chat libre» (`lib/chatDraft.ts`)
   on a saved result, a card of «Mis ejercicios», and the rows of a student's bank and
@@ -1335,7 +1338,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   the row); radii step down as they nest (`rounded-block` 24, `rounded-inner` 16, controls 12
   and under); blocks keep 28 px apart (`gap-7`/`space-y-7`) so two shadows never meet.
 - **One base for every block, table and list** (the consistency pass of 2026-10-07, at the
-  user's request; the inventory with screenshots is `docs/consistencia-visual/`, untracked):
+  user's request):
   - A block pads 20 px (`p-5`; the list of sections and the strip of weeks 8, their rows
     being tiles). Its head (`CardHeader`) is the title in `text-heading` with no icon, the
     sentence 4 px under it, the content 16 px under that; a head alone closes at 20.
@@ -1469,7 +1472,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   built stage, for an account the evaluation is open to AND whose role may correct the
   subject (`useAsksStageReview`: editor or owner, because its routes that record are
   `auth.EDIT`; a viewer could fill it in and never save it). All of it is
-  `apps/evaluation/StageReviewSlot`, which `StageGate` loads lazily; the stage reports only whether
+  `consumers/evaluation/StageReviewSlot`, which `StageGate` loads lazily; the stage reports only whether
   this visit wrote. Its save button is ink, never `--attention`: «Continuar» is on screen.
 - A rebuild hides the old artifact without deleting it. A queued job draws no progress bar.
   «Pasos» of a build start folded, and nothing remembers the fold.
@@ -1772,11 +1775,11 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   student's sends them to `/`, never `/raw` — with no header, edge rails
   for navigation, justified prose from `sm` up; it draws the app as it is. Slides 1–4 hold
   with the evaluation open or closed, so they never ask for a part in a study; that request
-  lives on 5–6, which are the evaluation's code (`apps/evaluation/tutorial.tsx`, its figures and
+  lives on 5–6, which are the evaluation's code (`consumers/evaluation/tutorial.tsx`, its figures and
   strings with it), fetched only for an account the evaluation is open to. What correcting a
   step means is said on slide 3, every account's.
 - The guide's sections on the evaluation and the tutor live in their folders
-  (`apps/evaluation/guide/`, `apps/tutor/guide/`, one file per language), and so does the
+  (`consumers/evaluation/guide/`, `consumers/tutor/guide/`, one file per language), and so does the
   questionnaire's part of how a building step closes (`StageReviewGuide`); the registry
   (`features/guide/sections.tsx`) leaves a closed function's section out of the index, the
   search and the routing. Each section declares its `audience` (`teacher`, `student`,
@@ -1879,7 +1882,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to
   `cfg.hint.<key>`; a key missing there draws nothing.
 
-- Tutor socrático (`web/src/apps/tutor/`, `/tutor`): the conversation list beside the open
+- Tutor socrático (`web/src/consumers/tutor/`, `/tutor`): the conversation list beside the open
   conversation, both one fixed height (`PANEL_HEIGHT`) scrolling inside; a reply polled from
   the author's own route while `pending`, shown whole with its concept map when the server
   gave one (`ConceptMap`, redrawn 2026-10-08 at the user's request, in two rounds: a graph
@@ -1932,7 +1935,7 @@ button adds an inset ring. Inside the tutor's screen `--attention` stays «act h
   apart): the three parts of the subject whole lead — «Para toda la asignatura», «Lo que el
   tutor nunca sugiere», «Consultas administrativas» — and one per unit follows under a
   caption (`SectionEntry.group`), numbered; a row counts what its part holds and its rows
-  changed and not saved (`apps/tutor/criteria.changes`, counted as sets); a criterion is a ruled
+  changed and not saved (`consumers/tutor/criteria.changes`, counted as sets); a criterion is a ruled
   row with no caption per control; the bar is the stage screens' (state, «Dejar de modificar»
   asking first when dirty, the save) and saves every part at once. «Trabajar con el tutor» on a saved exercise — in «Mis
   asignaturas y ejercicios» and Generate's «Mis ejercicios», and on a result card once its
@@ -1948,7 +1951,7 @@ system is, how it works, a demo of the application, and the way in — registrat
 entry by invitation, «Entrar» leading to the login form at `/login` (`AuthGate.LOGIN_PATH`;
 with a session `/login` redirects to `/`, and the login form has «Volver a la portada»).
 With a session `/` is still the application's redirect to the current step: no dashboard.
-A module of its own, like `apps/evaluation/` and `apps/tutor/`: its strings in `landing/i18n/`
+A module of its own, like `consumers/evaluation/` and `consumers/tutor/`: its strings in `landing/i18n/`
 (`landing.*`), fetched only by a visitor (`check:lazy` lists it in `LAZY`), in Spanish and
 English. The names the application already has (steps, door, phases) are the core's keys.
 
@@ -2062,9 +2065,9 @@ English. The names the application already has (steps, door, phases) are the cor
   eager and `en` lazy. `pnpm check:i18n` catches untranslated literals and missing guide
   sections. **Delete catalogue keys nobody reads** (prove it, delete from both, let `tsc`
   answer). Strings the server sends by stable key are translated client-side
-  (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`, `apps/tutor/limit.ts`) with the server string
+  (`lib/names.ts`, `lib/raw.ts`, `lib/evaluator.ts`, `consumers/tutor/limit.ts`) with the server string
   as fallback.
-- **A key read only inside `src/apps/evaluation/` or only inside `src/apps/tutor/` lives in that
+- **A key read only inside `src/consumers/evaluation/` or only inside `src/consumers/tutor/` lives in that
   folder's `i18n/{es,en}.ts`**, same shape and typing; `i18n/index.ts` registers it
   (`registerCatalogue`: Spanish at once, the reader's language fetched), and every module
   core loads lazily from the folder imports it FIRST. Core wraps those `import()`s in
@@ -2083,7 +2086,7 @@ English. The names the application already has (steps, door, phases) are the cor
   `role="tab"` the pointer, enabled ones only; a utility still overrides it.
 - A `role="radiogroup"` of buttons takes its keyboard from `components/ui/radio.ts`
   (`useRadioGroup`: one tab stop, arrows choose and move the focus, Home/End).
-- **`src/apps/evaluation/` and `src/apps/tutor/` reach a browser only through `import()`**, behind
+- **`src/consumers/evaluation/` and `src/consumers/tutor/` reach a browser only through `import()`**, behind
   `useFeatures()` or inside the administrator's panel (whose reads ignore the mode): nothing
   outside them imports them statically (`import type` aside).
   `pnpm check:lazy` checks the sources and, after `pnpm build`, the chunk graph
@@ -2104,8 +2107,9 @@ Each line is a rule; the reason behind it is in the commit that introduced it.
   `variatio-vanilla`; the user's decision: free for any noncommercial use, never sold); MIT
   before it, and copies taken then keep MIT.
   The history is not rewritten to hide the MIT commits.
-- The functions live in `apps/` (2026-10-14, the user's request), outside `variatio/` and
-  `server/`; one-way import; the evaluation is not made removable. `apps/` holds functions
+- The functions live in `consumers/` (2026-10-14, the user's request; named `apps/` until
+  2026-10-16, renamed at the user's request because they consume the artifacts), outside
+  `variatio/` and `server/`; one-way import; the evaluation is not made removable. `consumers/` holds functions
   on the artifacts alone: what the tutor and the chat share is `server/conversations/`
   (2026-10-16).
 - `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting keys (e.g.

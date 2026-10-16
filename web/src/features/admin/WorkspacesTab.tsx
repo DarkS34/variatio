@@ -35,7 +35,7 @@ import { WorkspaceGenerations } from "./WorkspaceGenerations";
 // The tutor's code, fetched when the administrator opens a subject's conversations. Offered
 // whatever the tutor's mode: the administrator reads them read-only even with it closed.
 const AdminConversations = lazy(() =>
-  withCatalogues(import("@/apps/tutor/AdminConversations")).then((m) => ({
+  withCatalogues(import("@/consumers/tutor/AdminConversations")).then((m) => ({
     default: m.AdminConversations,
   })),
 );

@@ -74,11 +74,11 @@ export const keys = {
 };
 
 /**
- * Every stage questionnaire's form at once: the prefix `apps/evaluation/queries` keys each form
- * under, and what an artifact write invalidates (`useInvalidateChain`).
+ * Every stage questionnaire's form at once: the prefix `consumers/evaluation/queries` keys each
+ * form under, and what an artifact write invalidates (`useInvalidateChain`).
  *
- * Here and not in `apps/evaluation/`, because the chain's invalidation is core and core imports
- * nothing of the evaluation. Invalidating a prefix nothing is cached under costs nothing,
+ * Here and not in `consumers/evaluation/`, because the chain's invalidation is core and core
+ * imports nothing of the evaluation. Invalidating a prefix nothing is cached under costs nothing,
  * so it is the same call with the evaluation closed.
  */
 export const stageReviewKeys = ["stage-review"] as const;

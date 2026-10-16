@@ -21,10 +21,10 @@ from server import activity, curriculum
 from server.db import identity, repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.routers import activity as activity_routes
-from apps.tutor.api import activity as tutor_activity
-from apps.tutor.api import digest as digest_job
-from apps.tutor.digest import Asked, clean_themes, names_someone
-from apps.tutor.turn import TurnResult
+from consumers.tutor.api import activity as tutor_activity
+from consumers.tutor.api import digest as digest_job
+from consumers.tutor.digest import Asked, clean_themes, names_someone
+from consumers.tutor.turn import TurnResult
 from variatio.core.workspace import Workspace
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
@@ -44,7 +44,7 @@ CLASS = [ANA, LUIS, MARTA]
 @pytest.fixture(autouse=True)
 def tutor_reader(monkeypatch):
     # The tutor's reader, and no chat's: an app built by an earlier test leaves its own set,
-    # and the chat's page is `tests/apps/chat`'s to read.
+    # and the chat's page is `tests/consumers/chat`'s to read.
     monkeypatch.setattr(activity, "TUTOR_READER", tutor_activity.read)
     monkeypatch.setattr(activity, "CHAT_READER", None)
     activity._cache.clear()

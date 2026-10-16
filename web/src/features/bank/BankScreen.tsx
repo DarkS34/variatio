@@ -36,7 +36,7 @@ import { Label, SearchInput, Select, Textarea } from "@/components/ui/input";
 import { Checkbox, LoadError, Progress, Skeleton, Spinner } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { TabCount, Tabs } from "@/components/ui/tabs";
-import { useExerciseTotal } from "@/apps/generation/GenerationsPanel";
+import { useExerciseTotal } from "@/consumers/generation/GenerationsPanel";
 import { diagramSource } from "@/lib/diagram";
 import { api } from "@/lib/api";
 import { fieldText, fieldToInput, hasBrokenText, inputToField, isCodeField, isEmptyField } from "@/lib/fields";

@@ -2,9 +2,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronRight, MessageCircle, MessagesSquare, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { stashDraft } from "@/apps/generation/draft";
-import { useExerciseTotal } from "@/apps/generation/GenerationsPanel";
-import { ItemFields } from "@/apps/generation/ResultCard";
+import { stashDraft } from "@/consumers/generation/draft";
+import { useExerciseTotal } from "@/consumers/generation/GenerationsPanel";
+import { ItemFields } from "@/consumers/generation/ResultCard";
 import { ReadingScope } from "@/components/StageGate";
 import { DOOR_TONE } from "@/components/ui/tone";
 import { Badge } from "@/components/ui/badge";

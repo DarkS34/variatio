@@ -27,7 +27,7 @@ from ..editors.kg_edit import KGError
 
 router = APIRouter(prefix="/api/activity", tags=["activity"], dependencies=[auth.EDIT])
 
-# The tutor's job that writes a week's digest (`apps/tutor/api/digest.py`).
+# The tutor's job that writes a week's digest (`consumers/tutor/api/digest.py`).
 DIGEST_KIND = "activity_digest"
 DIGEST_BUSY = "digest_busy"
 

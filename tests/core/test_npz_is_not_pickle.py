@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from apps.evaluation.arms.vector_store import FlatIndex
+from consumers.evaluation.arms.vector_store import FlatIndex
 from variatio.runtime.embedder import cache
 
 FINGERPRINT = "0123456789abcdef0123456789abcdef"

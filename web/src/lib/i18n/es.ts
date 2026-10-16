@@ -11,10 +11,10 @@
  * word-for-word translation.
  *
  * Core means read outside the optional functions. A string that only the evaluation or only
- * the tutor reads lives in that function's folder (`apps/evaluation/i18n/`, `apps/tutor/i18n/`), with
- * the same shape and the same `en` beside it, and arrives with the function's code: an
- * account the function is closed to never downloads it. `Key` in `./index.ts` is every
- * catalogue's keys together.
+ * the tutor reads lives in that function's folder (`consumers/evaluation/i18n/`,
+ * `consumers/tutor/i18n/`), with the same shape and the same `en` beside it, and arrives with the
+ * function's code: an account the function is closed to never downloads it. `Key` in `./index.ts`
+ * is every catalogue's keys together.
  */
 
 export const es = {
@@ -344,7 +344,7 @@ export const es = {
   // repeat: a drawing that enumerates over a paragraph enumerating the same things is one
   // thing said twice. The flow's three are full sentences with a subject, because the
   // question they answer is who is expected to do what. The study's two slides keep their
-  // figures' labels in the evaluation's catalogue (`apps/evaluation/i18n/`).
+  // figures' labels in the evaluation's catalogue (`consumers/evaluation/i18n/`).
   "tutorial.fig.yours": "Tú aportas tus apuntes y tus ejercicios",
   "tutorial.fig.learns": "El sistema analiza tu asignatura y aprende",
   "tutorial.fig.new": "Le pides todos los ejercicios que quieras",

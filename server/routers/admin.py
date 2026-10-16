@@ -23,7 +23,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
-from apps.evaluation.api import store as evaluation_store
+from consumers.evaluation.api import store as evaluation_store
 
 from .. import approvals, auth, deps, features, installation, maintenance, members, singletons, storage
 from .. import generations as generations_store

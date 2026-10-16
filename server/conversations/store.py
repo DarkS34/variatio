@@ -17,7 +17,7 @@ the index of the student turn it answers. A route refuses a second message while
 when its job is gone — failed, cancelled, or lost to a restart — the student turn is marked
 with why, and the conversation is free again.
 
-One `Store` per function (`apps.tutor.api.store`, `apps.chat.api.store`): its folder, the
+One `Store` per function (`consumers.tutor.api.store`, `consumers.chat.api.store`): its folder, the
 role its replies are written under, the state a new conversation starts with, and the scope
 its log lines carry.
 """

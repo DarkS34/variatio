@@ -267,7 +267,7 @@ def tag(body: TagBody, access: auth.Access = auth.EDIT) -> dict:
 def show(access: auth.Access, item_id: str, visibility: Shown | None) -> None:
     """Let the class see an exercise just added, as its author chose; nothing to do if hidden.
 
-    Public because passing a generated exercise in (`apps.generation`) chooses it too. The
+    Public because passing a generated exercise in (`consumers.generation`) chooses it too. The
     groups were checked before anything was written (`checked_groups`).
     """
     if visibility is None or visibility.level == bank_marks.HIDDEN:
@@ -296,7 +296,7 @@ def checked_groups(db: DbSession, access: auth.Access, visibility: Shown | None)
 def refuse_tagging(access: auth.Access) -> None:
     """Refuse a tagging the chain or the engine would make fail: the gates of `tag`.
 
-    Public because passing a generated exercise into the bank (`apps.generation`) asks the
+    Public because passing a generated exercise into the bank (`consumers.generation`) asks the
     same of the same tagger.
     """
     error = gate_error(access.ws, "tag")

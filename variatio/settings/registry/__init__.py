@@ -15,21 +15,21 @@ from . import access, builders, generation, inference, logging, reasoning, retri
 # import. Only the tutor's or the chat's package being absent switches it off; one whose own
 # import breaks fails loudly.
 try:
-    from apps.evaluation.settings import LANE as STUDY_LANE
-    from apps.evaluation.settings import READS as STUDY_READS
-    from apps.evaluation.settings import SETTINGS as STUDY_SETTINGS
+    from consumers.evaluation.settings import LANE as STUDY_LANE
+    from consumers.evaluation.settings import READS as STUDY_READS
+    from consumers.evaluation.settings import SETTINGS as STUDY_SETTINGS
 except ImportError:
     STUDY_LANE = None
     STUDY_READS: tuple[str, ...] = ()
     STUDY_SETTINGS: list[Setting] = []
 
 try:
-    from apps.tutor.settings import LANE as TUTOR_LANE
-    from apps.tutor.settings import MODEL_KEYS as TUTOR_MODEL_KEYS
-    from apps.tutor.settings import READS as TUTOR_READS
-    from apps.tutor.settings import SETTINGS as TUTOR_SETTINGS
+    from consumers.tutor.settings import LANE as TUTOR_LANE
+    from consumers.tutor.settings import MODEL_KEYS as TUTOR_MODEL_KEYS
+    from consumers.tutor.settings import READS as TUTOR_READS
+    from consumers.tutor.settings import SETTINGS as TUTOR_SETTINGS
 except ModuleNotFoundError as missing:
-    if missing.name not in ("apps", "apps.tutor", "apps.tutor.settings"):
+    if missing.name not in ("consumers", "consumers.tutor", "consumers.tutor.settings"):
         raise
     TUTOR_LANE = None
     TUTOR_MODEL_KEYS: tuple[str, ...] = ()
@@ -37,12 +37,12 @@ except ModuleNotFoundError as missing:
     TUTOR_SETTINGS: list[Setting] = []
 
 try:
-    from apps.chat.settings import LANE as CHAT_LANE
-    from apps.chat.settings import MODEL_KEYS as CHAT_MODEL_KEYS
-    from apps.chat.settings import READS as CHAT_READS
-    from apps.chat.settings import SETTINGS as CHAT_SETTINGS
+    from consumers.chat.settings import LANE as CHAT_LANE
+    from consumers.chat.settings import MODEL_KEYS as CHAT_MODEL_KEYS
+    from consumers.chat.settings import READS as CHAT_READS
+    from consumers.chat.settings import SETTINGS as CHAT_SETTINGS
 except ModuleNotFoundError as missing:
-    if missing.name not in ("apps", "apps.chat", "apps.chat.settings"):
+    if missing.name not in ("consumers", "consumers.chat", "consumers.chat.settings"):
         raise
     CHAT_LANE = None
     CHAT_MODEL_KEYS: tuple[str, ...] = ()

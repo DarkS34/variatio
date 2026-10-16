@@ -60,19 +60,19 @@ TAG_ITEM = "tag_item"
 
 # The kinds whose run is its author's alone: a commission and the exercises it writes, a blind
 # comparison, the tagging of the exercises a teacher added, and — added by
-# `apps.tutor.api.install` — a tutor's turn. Their events reach the author's socket and nobody
+# `consumers.tutor.api.install` — a tutor's turn. Their events reach the author's socket and nobody
 # else's, and the workspace's job routes answer another account 404 for them (`Job.seen_by`).
 # Everything else — a build, a transcription, an indexing — is the subject's, and every member
 # watches it.
 PRIVATE_KINDS: set[str] = {"generate", "evaluate", TAG_ITEM}
 
 # The kinds a student of the subject (`viewer`) may queue: a commission, a comparison and —
-# added by `apps.tutor.api.install` — a tutor's turn, each behind its own permission besides. Every
-# other kind is the construction's and takes a teacher (`routers/jobs.submit`).
+# added by `consumers.tutor.api.install` — a tutor's turn, each behind its own permission besides.
+# Every other kind is the construction's and takes a teacher (`routers/jobs.submit`).
 STUDENT_KINDS: set[str] = {"generate", "evaluate"}
 
 # The queue's three classes (`jobs/priority.py`), by how long a kind lasts and who waits for
-# it: A, a person waiting in a chat (a tutor's turn, added by `apps.tutor.api.install`); B, a
+# it: A, a person waiting in a chat (a tutor's turn, added by `consumers.tutor.api.install`); B, a
 # person waiting on a progress bar; C, nobody waiting at that moment. The class is the
 # kind's, never the role's or the account's: a teacher's job does not go before a student's.
 INTERACTIVE = "A"

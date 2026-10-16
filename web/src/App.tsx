@@ -38,7 +38,7 @@ const GuideScreen = lazy(() =>
   import("@/features/guide/GuideScreen").then((m) => ({ default: m.GuideScreen })),
 );
 const EvaluationScreen = lazy(() =>
-  withCatalogues(import("@/apps/evaluation/EvaluationScreen")).then((m) => ({
+  withCatalogues(import("@/consumers/evaluation/EvaluationScreen")).then((m) => ({
     default: m.EvaluationScreen,
   })),
 );
@@ -46,16 +46,16 @@ const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
 );
 const GenerateScreen = lazy(() =>
-  import("@/apps/generation/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
+  import("@/consumers/generation/GenerateScreen").then((m) => ({ default: m.GenerateScreen })),
 );
 const RawScreen = lazy(() =>
   import("@/features/raw/RawScreen").then((m) => ({ default: m.RawScreen })),
 );
 const ChatScreen = lazy(() =>
-  import("@/apps/chat/ChatScreen").then((m) => ({ default: m.ChatScreen })),
+  import("@/consumers/chat/ChatScreen").then((m) => ({ default: m.ChatScreen })),
 );
 const TutorScreen = lazy(() =>
-  withCatalogues(import("@/apps/tutor/TutorScreen")).then((m) => ({ default: m.TutorScreen })),
+  withCatalogues(import("@/consumers/tutor/TutorScreen")).then((m) => ({ default: m.TutorScreen })),
 );
 const TutorialScreen = lazy(() =>
   import("@/features/tutorial/TutorialScreen").then((m) => ({ default: m.TutorialScreen })),

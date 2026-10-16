@@ -7,7 +7,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { SectionHeader } from "@/features/admin/Sections";
-import { adjacency, priors } from "@/apps/generation/prerequisites";
+import { adjacency, priors } from "@/consumers/generation/prerequisites";
 import { domainColours } from "@/lib/domains";
 import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";

@@ -13,8 +13,8 @@
 // file that must NOT go through the catalogue, and says why in its own comment.
 //
 // It also checks where each key may be read. The strings only an optional function reads
-// live in that function's folder (`src/apps/<function>/i18n/`) and arrive with its code, but the
-// `Key` type is every catalogue's keys together, so `tsc` cannot see a tutor key read from
+// live in that function's folder (`src/consumers/<function>/i18n/`) and arrive with its code, but
+// the `Key` type is every catalogue's keys together, so `tsc` cannot see a tutor key read from
 // core — where it renders as its own name until the tutor is loaded, whether written whole
 // or built from a prefix. Nor can it see a key in a table typed `string`, which exists in no
 // catalogue at all, or a module of a function loaded from core without registering that
@@ -154,22 +154,23 @@ const EXEMPT = new Set([
 // `guide/en/` really is written in English, and both are correct: what makes that checkable
 // is not this script but that `useGuideBody` picks one by the reader's language, and that
 // `BODIES` in the two languages has to hold the same slugs. The sections of an optional
-// function live in that function's folder (`apps/evaluation/guide/`, `apps/tutor/guide/`),
-// one file per language, so the guide fetches them only for an account the function is open to.
+// function live in that function's folder (`consumers/evaluation/guide/`,
+// `consumers/tutor/guide/`), one file per language, so the guide fetches them only for an account
+// the function is open to.
 const EXEMPT_TREES = [
   "features/guide/es/",
   "features/guide/en/",
-  "apps/evaluation/guide/",
-  "apps/tutor/guide/",
+  "consumers/evaluation/guide/",
+  "consumers/tutor/guide/",
 ];
 
 const exempt = (path) =>
   EXEMPT.has(path) || EXEMPT_TREES.some((prefix) => path.startsWith(prefix));
 
-// The core's catalogue and each optional function's: `lib/i18n/`, `apps/evaluation/i18n/`,
-// `apps/tutor/i18n/`, the landing's. Every file in them is the catalogue's own machinery or
+// The core's catalogue and each optional function's: `lib/i18n/`, `consumers/evaluation/i18n/`,
+// `consumers/tutor/i18n/`, the landing's. Every file in them is the catalogue's own machinery or
 // its strings.
-const inCatalogue = (path) => /^(?:lib|landing|apps\/[\w-]+)\/i18n\//.test(path);
+const inCatalogue = (path) => /^(?:lib|landing|consumers\/[\w-]+)\/i18n\//.test(path);
 
 const findings = [];
 
@@ -267,7 +268,7 @@ if (findings.length) {
   console.error(
     `\nCada uno es una cadena que se pintará en español haga lo que haga la cuenta.\n` +
       `Muévela a src/lib/i18n/es.ts (o, si solo la lee una función opcional, a\n` +
-      `src/apps/<función>/i18n/es.ts) y tradúcela en el en.ts de al lado.`,
+      `src/consumers/<función>/i18n/es.ts) y tradúcela en el en.ts de al lado.`,
   );
   process.exit(1);
 }
@@ -275,7 +276,7 @@ if (findings.length) {
 // WHERE EACH KEY MAY BE READ ---------------------------------------------------------------
 //
 // A catalogue is every `i18n/es.ts` under `src/`: `lib/i18n/` is the core's, and
-// `<folder>/i18n/` belongs to the folder that holds it — `apps/tutor`, `landing`. Its keys are
+// `<folder>/i18n/` belongs to the folder that holds it — `consumers/tutor`, `landing`. Its keys are
 // read off the source the same way the catalogue writes them, one `"key":` per line.
 const catalogues = walk(SRC)
   .map((full) => relative(SRC, full).split(sep).join("/"))
@@ -429,7 +430,7 @@ if (unregistered.length) {
 //
 // A language's bodies are the `BODIES` maps of every home it has: the guide's own tree
 // (`features/guide/<lang>/sections.tsx`) and one file per optional function
-// (`apps/<function>/guide/<lang>.tsx`). Found by walking, so a new home is read without being
+// (`consumers/<function>/guide/<lang>.tsx`). Found by walking, so a new home is read without being
 // listed here; a slug answered by two homes of one language is a failure of its own, since
 // the registry would only ever read one of them.
 const GUIDE_HOME = /(?:^|\/)guide\/(es|en)(?:\/sections)?\.tsx$/;
@@ -500,7 +501,7 @@ if (bodyless.length) {
   console.error(
     `\nCada una es una entrada del índice que abre una página en blanco.\n` +
       `Escribe su componente en src/features/guide/es/sections.tsx y en en/sections.tsx\n` +
-      `(o, si explica una función opcional, en src/apps/<función>/guide/es.tsx y en.tsx),\n` +
+      `(o, si explica una función opcional, en src/consumers/<función>/guide/es.tsx y en.tsx),\n` +
       `y añádelo al mapa BODIES de los dos.`,
   );
   process.exit(1);
@@ -512,17 +513,17 @@ if (bodyless.length) {
 // the registry still says `feature`, or a section given a `feature` whose body stayed where
 // it was, passes the three checks above and opens a blank page.
 //
-// A function's home is `apps/<function>/guide/<lang>.tsx`, and the registry must import it
+// A function's home is `consumers/<function>/guide/<lang>.tsx`, and the registry must import it
 // under that name: checked too, so the convention does not live in this file alone.
 const homeOf = (feature, language) =>
   feature === null
     ? `features/guide/${language}/sections.tsx`
-    : `apps/${feature}/guide/${language}.tsx`;
+    : `consumers/${feature}/guide/${language}.tsx`;
 const misplaced = [];
 for (const feature of new Set(registry.map((entry) => entry.feature).filter(Boolean))) {
   for (const language of ["es", "en"]) {
-    if (!REGISTRY.includes(`import("@/apps/${feature}/guide/${language}")`)) {
-      misplaced.push(`${feature} — TREES no importa @/apps/${feature}/guide/${language}`);
+    if (!REGISTRY.includes(`import("@/consumers/${feature}/guide/${language}")`)) {
+      misplaced.push(`${feature} — TREES no importa @/consumers/${feature}/guide/${language}`);
     }
   }
 }
@@ -541,7 +542,8 @@ if (misplaced.length) {
   for (const line of misplaced) console.error(`  ${line}`);
   console.error(
     `\nCada una es una página en blanco. Una sección sin \`feature\` va en\n` +
-      `src/features/guide/<idioma>/sections.tsx; una con \`feature: "x"\`, en src/apps/x/guide/<idioma>.tsx.`,
+      `src/features/guide/<idioma>/sections.tsx; una con \`feature: "x"\`, en ` +
+      `src/consumers/x/guide/<idioma>.tsx.`,
   );
   process.exit(1);
 }

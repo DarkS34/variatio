@@ -7,7 +7,7 @@
  * session's storage and taken once, as the generation form's draft is: a reload does not
  * open it a second time.
  *
- * In core and not in `apps/tutor/`, because the screens that stash it are core and import
+ * In core and not in `consumers/tutor/`, because the screens that stash it are core and import
  * nothing of the tutor; they offer the button only when the tutor is open to the account.
  */
 const KEY = "vg.tutor.draft";

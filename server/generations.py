@@ -303,7 +303,7 @@ def row_view(record: dict, user) -> dict:
     `concepts` is what was ASKED for, which is what «Generar más como este» reopens;
     `targets` is what ran — the bank's most frequent concepts when nothing was asked.
     `think` is the commission's too, a level or a bool. The author is the account asking on
-    the author's own routes (`apps.generation`); on the administrator's it is whoever wrote
+    the author's own routes (`consumers.generation`); on the administrator's it is whoever wrote
     it, and None for an exercise whose account no longer exists. One rendering for both.
     """
     commission = record.get("commission") or {}

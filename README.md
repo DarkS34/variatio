@@ -16,8 +16,8 @@ Developed as the final thesis (TFM) of a Master's degree in Artificial Intellige
 - **Builds an instance from real documents.** From lecture notes, exercises and exams (`.pdf`, `.docx`, `.pptx`, `.md`, `.txt`), the builders produce the artifacts that define an instance: the knowledge graph (extraction → cleaning → domains → relations → curation), the exemplars bank and the exemplars profile (the item schema). Documents are transcribed page by page with a vision model and cached by content, so the same document is never read twice; every page can be reviewed and corrected by hand from inside the application, and a corrected page beats the model and survives every later build.
 - **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is not yet taught) and on the course curriculum. A guardrail model and an admissibility judge screen the free-text instructions, every item is validated against the profile's schema, and a batch of checks decides whether an item is returned or asked for again.
 - **Serves several subjects at once.** Each *workspace* is a complete instance — artifacts, cache, raw documents and history — with its own members and roles. Artifacts are versioned in the database, and every step of the construction goes through explicit review and approval.
-- **Tutors from the subject's own material.** The `apps/tutor/` package answers a student the Socratic way: every reply is written from a card that code assembles out of the artifacts — the concept asked about, its prerequisites taken as known, the passages of the notes nearest the message, the subject's criteria — and is checked by code before it is shown. The concept map beside a reply is drawn from the graph, never by the model.
-- **Evaluates itself blind.** The `apps/evaluation/` package compares the full system against one of two alternatives — a commercial model, or retrieval over the teacher's own raw documents — drawn per session, in blind two-card sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
+- **Tutors from the subject's own material.** The `consumers/tutor/` package answers a student the Socratic way: every reply is written from a card that code assembles out of the artifacts — the concept asked about, its prerequisites taken as known, the passages of the notes nearest the message, the subject's criteria — and is checked by code before it is shown. The concept map beside a reply is drawn from the graph, never by the model.
+- **Evaluates itself blind.** The `consumers/evaluation/` package compares the full system against one of two alternatives — a commercial model, or retrieval over the teacher's own raw documents — drawn per session, in blind two-card sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
 
 ## How it works
 
@@ -150,17 +150,17 @@ variatio/       the pipeline
   wording/      the strings the code composes, in the workspace's language
   settings/     the settings registry, with the measurement beside each value
 server/         API, database, identity, job queue, the «system» CLI
-apps/           the functions the system is used through, each with its own API
+consumers/      the functions the system is used through, each with its own API
   generation/   generating exercises: the commission, its job, its bounds
   evaluation/   the TFM's evaluation: arms, sessions, statistics
   tutor/        the Socratic tutor: the card, the turn, the checks
-web/            the React front end (its functions in web/src/apps/)
+web/            the React front end (its functions in web/src/consumers/)
 tests/          one directory per subsystem
 migrations/     Alembic
 workspaces/     the instances, one directory per slug (git-ignored)
 ```
 
-The boundary is strict and pinned by tests: `apps` imports `variatio` and `server`, never
+The boundary is strict and pinned by tests: `consumers` imports `variatio` and `server`, never
 the reverse; importing `variatio` pulls in neither Docling nor the server; and secrets live only
 in `.env`, never in `config.json`. Inside `variatio/`, two more rules are one `grep` each:
 only `entrypoints/` takes a `Workspace`, and only `builders/` and `runtime/` call the model.

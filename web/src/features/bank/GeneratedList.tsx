@@ -1,8 +1,8 @@
 import { ArrowRight, ChevronRight, Library, MessageCircle, MessagesSquare, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { fromGeneration, stashDraft } from "@/apps/generation/draft";
-import { ItemFields } from "@/apps/generation/ResultCard";
+import { fromGeneration, stashDraft } from "@/consumers/generation/draft";
+import { ItemFields } from "@/consumers/generation/ResultCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConceptBadge } from "@/components/ui/concept-chip";

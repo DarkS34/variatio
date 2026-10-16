@@ -9,7 +9,7 @@ import { featureAccessOf, type AdminOverview, type FeatureName } from "@/lib/typ
 import { useSession } from "@/state/auth";
 import { useAdminFeatures, useAdminOverview } from "@/state/queries";
 
-import type { EvaluationFilters } from "@/apps/evaluation/types";
+import type { EvaluationFilters } from "@/consumers/evaluation/types";
 
 import { AccountsTab } from "./AccountsTab";
 import {
@@ -30,7 +30,7 @@ import { useT, withCatalogues } from "@/lib/i18n";
 // The evaluation's reading is the evaluation's code, fetched when its section is opened. The
 // administrator reads it whatever the evaluation's mode: its routes are not behind it.
 const EvaluationTab = lazy(() =>
-  withCatalogues(import("@/apps/evaluation/AdminEvaluationTab")).then((m) => ({
+  withCatalogues(import("@/consumers/evaluation/AdminEvaluationTab")).then((m) => ({
     default: m.EvaluationTab,
   })),
 );
