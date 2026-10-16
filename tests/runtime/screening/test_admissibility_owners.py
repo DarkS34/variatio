@@ -4,7 +4,7 @@ from variatio.runtime import screening
 from variatio.core.lexicon import fold
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
-from ..conftest import PROFILE
+from ...conftest import PROFILE
 
 
 def _owner(owners, key):

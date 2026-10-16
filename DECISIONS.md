@@ -1186,7 +1186,7 @@ what each decision replaced.
 
 ### D-229. Client types, hooks and primitives split
 - **Rule:** `lib/types.ts` and `state/queries.ts` are split by area behind an `index.ts`; `components/ui/misc.tsx` becomes one primitive per file.
-- **Date:** 2026-10-16 · **Commit:** `ae5734a` (types and hooks) and the commit after it that splits `misc.tsx` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `ae5734a` (types and hooks), `1b46588` (primitives) · **Status:** in force
 - **Why:** 1 476 and 1 269 lines with 139 and 55 importers; `misc.tsx` held ten primitives under a name that says nothing, and shadcn creates one file per primitive.
 
 ### D-230. Who imports the engine boundary, with documents/

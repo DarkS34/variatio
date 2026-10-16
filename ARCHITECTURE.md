@@ -236,7 +236,7 @@ an `api/` package whose `install(app)` the composition root calls.
 | Folder | Holds |
 |---|---|
 | `migrations/` | Alembic migrations; the ORM models must match them |
-| `tests/` | one folder per subsystem (`core`, `settings`, `loaders`, `prompts`, `builders`, `generation`, `screening`, `server`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
+| `tests/` | one folder per subsystem (`core`, `settings`, `loaders`, `prompts`, `builders`, `runtime/generation`, `runtime/screening`, `server/<area>`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
 | `workspaces/` | the instances, one folder per slug (git-ignored) |
 | `plans/` | private work plans (git-ignored) |
 
@@ -249,9 +249,9 @@ there.
 |---|---|---|---|---|---|
 | Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
 | Step 2 «Temario» | `features/kg/` | `kg/` | `builders/knowledge_graph_builder/`, `loaders/knowledge_graph.py`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
-| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/generation/test_taggability*` |
+| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/runtime/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
-| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `entrypoints/generate.py` | `generate` | `tests/consumers/generation/`, `tests/generation/`, `tests/screening/` |
+| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `entrypoints/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |

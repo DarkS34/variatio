@@ -5,7 +5,7 @@ import pytest
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 from variatio.runtime.generator import VariantGenerator
 
-from ..conftest import CHAIN_GRAPH
+from ...conftest import CHAIN_GRAPH
 
 
 class _FakeItemType:

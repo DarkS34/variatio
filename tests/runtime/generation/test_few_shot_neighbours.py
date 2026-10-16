@@ -1,6 +1,6 @@
 from variatio.runtime.generator import NEIGHBOUR, VariantGenerator, build_few_shot_block
 
-from ..conftest import ES
+from ...conftest import ES
 
 
 class _FakeEmbedder:

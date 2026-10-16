@@ -14,7 +14,7 @@ from variatio import wording as wording_sets
 from variatio.runtime import checks, generator as generator_module, screening
 from variatio.runtime.generator import NEIGHBOUR, VariantGenerator
 
-from ..conftest import ES
+from ...conftest import ES
 
 STATEMENT = "Escribe una función recursiva que calcule el factorial de un número entero."
 

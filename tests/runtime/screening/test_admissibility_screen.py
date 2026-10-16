@@ -3,7 +3,7 @@ import json
 from variatio.runtime import screening
 from variatio.runtime.screening import admissibility
 
-from ..conftest import ES
+from ...conftest import ES
 
 
 class _Reply:

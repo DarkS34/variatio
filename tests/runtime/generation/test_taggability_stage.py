@@ -7,7 +7,7 @@ import pytest
 from variatio import entrypoints
 from variatio.core.workspace import Workspace
 
-from ..conftest import CHAIN_GRAPH, PROFILE
+from ...conftest import CHAIN_GRAPH, PROFILE
 
 
 @pytest.fixture
