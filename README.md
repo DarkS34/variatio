@@ -84,7 +84,11 @@ uv run system                      # the API on :8000
 
 Every database subcommand fails with a plain message and those two commands rather than a
 SQLAlchemy stack, and `serve` refuses to start against a schema that is behind the code,
-naming both revisions.
+naming both revisions; `uv run system db-check` reports the same. Deploying a change with a
+migration or a new dependency needs `uv sync` and `uv run alembic upgrade head` before the
+restart. Migration 0015 drops the `generations` table and refuses while a row has no file: on
+an installation that still has the table, run `uv run system export-generations`
+(idempotent, `--dry-run`) before the upgrade.
 
 The repository ships no instance: `workspaces/` is ignored in full and each installation
 holds its own. A workspace built elsewhere moves across unchanged — no cache key is a path
@@ -165,8 +169,8 @@ restart; deleting it is safe — everything falls back to the registry defaults.
 
 ## Internal documentation
 
-`ARCHITECTURE.md` is the map of the code. `AGENTS.md` records the design decisions and the
-measurements behind them, and `DECISIONS.md` is the register of the closed decisions, each
+`ARCHITECTURE.md` is the map of the code. `AGENTS.md` at the root and beside each folder records
+the design decisions and the measurements behind them, and `DECISIONS.md` is the register of the closed decisions, each
 with its date, commit and reason. `web/DESIGN.md` is the rulebook
 of the interface.
 

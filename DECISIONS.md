@@ -1156,17 +1156,17 @@ what each decision replaced.
 
 ### D-223. A narrative per folder
 - **Rule:** The why of a folder lives in that folder's `AGENTS.md`, and the why of a decision in `DECISIONS.md`. The root `AGENTS.md` holds at most 200 lines.
-- **Date:** 2026-10-16 · **Commit:** — · **Status:** decided; applies in plan phase F4
+- **Date:** 2026-10-16 · **Commit:** the commit after `184b5de` that adds `variatio/AGENTS.md` · **Status:** in force
 - **Why:** `AGENTS.md` grew from 55.6 KB to 192 KB in 14 days (about 48 000 tokens every session); Claude Code's guidance asks for under 200 lines per file.
 
 ### D-224. Narrative belongs in AGENTS.md
 - **Rule:** Comments are rare; narrative belongs in `AGENTS.md`.
-- **Date:** 2026-10-01 · **Commit:** `98bf7d4` · **Status:** in force until D-223 applies
+- **Date:** 2026-10-01 · **Commit:** `98bf7d4` · **Status:** superseded by D-223
 - **Why:** One place for the why, which the agent reads every session.
 
 ### D-225. The guide and the tutorial are deleted
 - **Rule:** The hidden guide and tutorial, their routes, their catalogue keys and `lib/help` are deleted; their text stays in git history.
-- **Date:** 2026-10-16 · **Commit:** the commit after `5604d5c` that deletes `web/src/features/guide/` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `184b5de` · **Status:** in force
 - **Why:** 8 009 lines (10 % of `web/src`) and 80 keys per language describing four steps when the application has three, kept behind a flag nobody turns on.
 
 ### D-226. Import boundaries checked by import-linter

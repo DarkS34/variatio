@@ -8,7 +8,7 @@ somewhere in the app; follow the existing primitive instead of drawing a new one
 - If you must break a rule, write the reason in a comment beside the code and add the
   exception here and in `AGENTS.md`.
 - The colour values and the why behind each token live in `src/index.css` (its comments)
-  and in `AGENTS.md` → *Material and tokens*. This file says **what to use**; those say why.
+  and in §12 below. This file says **what to use**; those say why.
 - Verify in the browser, in light **and** dark, at 1440 px and at a narrow width. A green
   test suite does not prove a visual rule.
 
@@ -313,3 +313,90 @@ Archivo only. Six steps, every line a whole number of pixels:
 | a document beside its transcription | `DocumentReader` (`features/raw/`): two columns that scroll page to page, `OriginalPane` and `TextPane` (`features/raw/reader/`) |
 | the tutor's reply and its map | `Reply` (`consumers/tutor/`): explanation, `ConceptMap` (a graph of `ConceptChip`s with lines traced over them, in a well, never Mermaid), then the question with `QuestionMark` beside it |
 | ruled list | `.rows` (+ `rows-tight` / `rows-flush`) in `src/index.css` |
+
+## 12. Material and tokens: the reasons
+
+[web/src/index.css](web/src/index.css) holds shadcn token names. **Atlas, worked in clay**
+(2026-10-04, the user's choice after five rounds of screenshots; it replaces the grid, black
+ink on white, which the user found had no identity): a sea-glass ground, a deep-sea ink and a
+coral for the land where you act. Semantics still encode position relative to the knowledge
+frontier: `--settled` (behind you, grey), `--attention` (coral, act here), dimmed/dashed
+(ahead), `--destructive` (damage), `--evaluation` (deep green, the study), `--tutor` (deep
+blue, the tutor). The last two are destination colours: each marks its function where
+something OUTSIDE its own screen names it (its door, a tab, the stage questionnaire, «Trabajar
+con el tutor» = `Button variant="tutor"`; the tone is the feature's name,
+`components/ui/tone.ts`). A door is its colour as TEXT (`DOOR_TONE`), never a fill; the tutor's
+button adds an inset ring. Inside the tutor's screen `--attention` stays «act here».
+`--success/--warning/--info` stay retired.
+
+- **No white anywhere**, the light half of a shadow included, in either mode: no token is
+  lighter than L 0.93 and `check:color` fails one that is. The ground and the card are ONE
+  value; a block is told from the ground by depth, not by a lighter sheet.
+- **Two levels of depth and no more**, three classes in `index.css`: `.surface` is a block
+  (it stands out of the ground; `Card` is one; a `.surface` inside a `.surface` goes flat);
+  `.raised` is what can be pressed inside a block (an option card, an `lg`/`xl` outline
+  button); `.well` is what holds something inside a block that is NOT a row of data: the drop
+  zone, the graph's canvas and tray, the tutor's box, a diagram, a live strip, a form or a
+  conversation that unfolds under a row, and a list that scrolls inside its block (its cut
+  needs an edge). **A table or a list of data rows lies flat on its block** (user's decision,
+  2026-10-07: «Clase» and `/raw` sank theirs while «Administración» laid them flat). **Small things never cast a shadow** — chips,
+  badges, tabs, fields, checkboxes, small buttons: what is chosen is the sunk tint (`bg-sunk`),
+  never a relief. A floating thing (dialog, menu, tooltip, sticky save bar) is `bg-popover` +
+  `shadow-overlay`.
+- **Edges**: no element carries a border and a shadow at once (depth draws the edge);
+  dividers stop short of a rounded edge (`rule-inset-b`, `rule-inset-head`, or an `mx-*` on
+  the row); radii step down as they nest (`rounded-block` 24, `rounded-inner` 16, controls 12
+  and under); blocks keep 28 px apart (`gap-7`/`space-y-7`) so two shadows never meet.
+- **One base for every block, table and list** (the consistency pass of 2026-10-07, at the
+  user's request):
+  - A block pads 20 px (`p-5`; the list of sections and the strip of weeks 8, their rows
+    being tiles). Its head (`CardHeader`) is the title in `text-heading` with no icon, the
+    sentence 4 px under it, the content 16 px under that; a head alone closes at 20.
+    Two blocks of one row are one height; a group of blocks may carry a title on the ground
+    in `text-heading`, 16 px over its first block.
+  - A table (`ui/table.tsx`) sits in a block and its text starts where the block's title
+    does (its frame reaches 12 px into the padding). Head of `text-micro` captions; rules that
+    stop short; a row `joined` to the one under it draws none. Ticked rows: the box that
+    ticks all is the head's first cell, and the head turns into the count and its gestures
+    (`TableBulk`), on the same line. A list without columns is `.rows`; the LIST sets its
+    density (`rows-tight`, `rows-flush`), never its rows. Empty is one sentence where the
+    table would be.
+  - A row's gestures are 28 px icons at its end in a column of fixed width, shown on hover
+    or focus (`RowGestures`, `RowAction`); the gesture that opens something («Gestionar»,
+    «Ver N ejercicios», the conversations, copying where copying is the list's job) stays in
+    sight. A person is written name first, username after in the code face (`PersonName`).
+  - Controls sharing a line are one height: 36 px in a toolbar (fields, selects, buttons,
+    `SearchInput` — the one search field, magnifier inside), 28 px in a row.
+  - A choice of a few words is `ChoicePill` (square mark, ink border over the sunk tint); a
+    choice that takes a sentence is a card (`CARD_CHOICE`, `.raised`, pressed in when chosen,
+    the same square). Tabs are the sunk pill everywhere (`TabStrip` draws them so too).
+  - Small captions are `text-micro font-condensed uppercase` and nothing else. Lines are
+    whole pixels (`--text-*--line-height` in rem), so 28 px between blocks draws as 28.
+- **The ink and the coral are each two tokens**: `--primary`/`--attention` are what a WORD is
+  written in (`check:color` measures them as text); `--ink`/`--attention-fill` (with their
+  `-foreground`) are what a filled control is painted with. In dark the text ink is a pale
+  sea, so `bg-primary` under a label is a white block: use `bg-ink text-ink-foreground` and
+  `bg-attention-fill text-attention-fill-foreground`.
+- Every value is measured: **`pnpm check:color`** is the gate (the no-white ceiling, contrast,
+  ΔE under dichromacy, every `--X-foreground` against `--X`, and each destination colour
+  against every `--arm-*` at ΔE ≥ 16 in all three visions, a missing token failing). The four
+  semantic hues were searched against every rule at once: an ochre evaluation sat ΔE 5.7 from
+  the coral under deuteranopia. A colour literal outside `index.css` is invisible to it, so a
+  foreground must be a token. Tint surfaces with `color-mix(in oklab, …)`, never `oklch` (hue
+  interpolation turns greens blue).
+
+- `--arm-naive/--arm-rag/--arm-system` are the one categorical scale, order fixed, slots per
+  entity, bars and rows only.
+- `--qr`/`--qr-foreground` (2026-10-06) are content, like a page of the notes: a QR code is
+  dark on light in EITHER theme or a phone cannot read it projected, so the pair is not
+  redefined in dark; the ground sits at the no-white ceiling and `check:color` measures the
+  pair as any `-foreground`.
+- Theme: three-state (`system`/`light`/`dark`), dark tokens only under
+  `:root[data-theme="dark"]`.
+- Typography: Archivo only, roles by width axis and weight; six ordered steps. One face across
+  the system: the tutor read in Literata for one afternoon and the user took it back, and
+  the tutorial, the last screen in Literata, was deleted with its font (2026-10-16).
+- **Global `*` rules in `index.css` go in `@layer base`** or they silently override every
+  Tailwind utility (this once disabled every `border-<colour>`).
+- `vertical-align` on a `<tr>` does nothing; select the cells (`[&>td]:align-top`).
+- `line-clamp-N` must never sit beside `block`.
