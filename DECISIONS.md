@@ -1156,7 +1156,7 @@ what each decision replaced.
 
 ### D-223. A narrative per folder
 - **Rule:** The why of a folder lives in that folder's `AGENTS.md`, and the why of a decision in `DECISIONS.md`. The root `AGENTS.md` holds at most 200 lines.
-- **Date:** 2026-10-16 · **Commit:** the commit after `184b5de` that adds `variatio/AGENTS.md` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `96f850e` · **Status:** in force
 - **Why:** `AGENTS.md` grew from 55.6 KB to 192 KB in 14 days (about 48 000 tokens every session); Claude Code's guidance asks for under 200 lines per file.
 
 ### D-224. Narrative belongs in AGENTS.md
@@ -1171,7 +1171,7 @@ what each decision replaced.
 
 ### D-226. Import boundaries checked by import-linter
 - **Rule:** Python import boundaries are contracts of import-linter (a dev dependency); the client's are checked by `pnpm check:layers`.
-- **Date:** 2026-10-16 · **Commit:** — · **Status:** decided; applies in plan phase F5
+- **Date:** 2026-10-16 · **Commit:** the commit after `96f850e` that adds `[tool.importlinter]` · **Status:** in force
 - **Why:** Only `consumers/` had a boundary test, a hand-written `ast` walk; nothing checked the library's layers or the client's direction.
 
 ### D-227. The server by areas

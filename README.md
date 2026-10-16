@@ -135,11 +135,12 @@ The suite is split by subject, one directory per subsystem. The `corpus` and `mo
 measure a real installation rather than the code, so they name the workspace they open
 (`VARIATIO_MODEL_WORKSPACE`) and skip when it is not there.
 
-In `web/`: `pnpm test` (vitest), `pnpm exec tsc --noEmit` and `pnpm build`, plus four gates
+In `web/`: `pnpm test` (vitest), `pnpm exec tsc --noEmit` and `pnpm build`, plus five gates
 of its own — `pnpm check:color` (palette contrasts and ΔE, re-derived rather than picked),
 `pnpm check:ui` (structural rules), `pnpm check:i18n` (catalogue coverage) and
 `pnpm check:lazy` (the evaluation's and the tutor's code stays out of what every session
-loads; run it after `pnpm build`).
+loads; run it after `pnpm build`) and `pnpm check:layers` (imports go one way:
+app → features → components → state → lib).
 
 ## Repository layout
 
@@ -152,10 +153,10 @@ tests/  migrations/  workspaces/ (git-ignored)
 ```
 
 [`ARCHITECTURE.md`](ARCHITECTURE.md) is the map: what each folder holds, where each area of
-the product lives, and the invariants with the test that pins each one. The import direction
-is pinned by `tests/consumers/test_consumers_boundary.py`: `consumers` imports `variatio` and
+the product lives, and the invariants with the test that pins each one. The import boundaries are contracts
+(`uv run lint-imports`, configured in `pyproject.toml`): `consumers` imports `variatio` and
 `server`, never the reverse. Importing `variatio` pulls in neither Docling nor the server
-(measured, not yet pinned by a test), and secrets live only in `.env`, never in `config.json`.
+(`tests/boundaries/`), and secrets live only in `.env`, never in `config.json`.
 Inside `variatio/`, `entrypoints/` is the public door (`builders/` and `loaders/` take a
 `Workspace` only for their own paths), and only `cli.py`, `builders/`, `runtime/` and `core/`
 import the engine boundary.

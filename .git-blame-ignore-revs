@@ -1,0 +1,8 @@
+# Commits that only move, split or delete code, left out of `git blame` so a line keeps the
+# commit that wrote it. Use it once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub reads this file by its name. Each phase of the refactor that moves code adds its
+# hash here in the commit that follows it.
+
+# refactor(web): delete the hidden guide and tutorial
+184b5de9431924a29726a69820ebf55c29382fdc

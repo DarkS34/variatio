@@ -14,7 +14,8 @@
     "check:color": "node scripts/check-color.mjs",
     "check:ui": "node scripts/check-ui.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
-    "check:lazy": "node scripts/check-lazy.mjs"
+    "check:lazy": "node scripts/check-lazy.mjs",
+    "check:layers": "node scripts/check-layers.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "5.3.0",

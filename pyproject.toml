@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.7"
+version = "1.174.8"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -74,6 +74,7 @@ dev = [
     "pypdf>=5.0.0",
     "cryptography>=43.0.0",
     "pytest>=8.3.0",
+    "import-linter>=2.1",
 ]
 
 [project.scripts]
@@ -92,4 +93,149 @@ addopts = "-m 'not corpus and not model'"
 markers = [
     "corpus: measures the built corpus cache; run with -m corpus after rebuilding the graph",
     "model: measures a judge against a live Ollama; run with -m model, it costs ~20 calls",
+]
+
+# The import boundaries, checked by `uv run lint-imports`. Each exception is an import that
+# exists today and is named here so that no new one grows; removing one is always welcome.
+[tool.importlinter]
+root_packages = ["variatio", "server", "consumers"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "The library knows neither the server nor the functions"
+type = "forbidden"
+source_modules = ["variatio"]
+forbidden_modules = ["server", "consumers"]
+ignore_imports = [
+    # Each function declares its settings beside the code that reads them; the registry
+    # picks them up by an optional import.
+    "variatio.settings.registry -> consumers.*.settings",
+]
+
+[[tool.importlinter.contracts]]
+name = "The server names the functions only where it mounts them"
+type = "forbidden"
+source_modules = ["server"]
+forbidden_modules = ["consumers"]
+ignore_imports = [
+    "variatio.settings.registry -> consumers.*.settings",
+    # The composition root mounts every function.
+    "server.app -> consumers.*.api",
+    # Four reads of the evaluation older than `consumers/`.
+    "server.jobs.handlers -> consumers.evaluation.raw_text",
+    "server.jobs.lanes -> consumers.evaluation.config",
+    "server.raw_data -> consumers.evaluation.raw_text",
+    "server.routers.admin -> consumers.evaluation.api.store",
+]
+
+[[tool.importlinter.contracts]]
+name = "The generation function imports no other function"
+type = "forbidden"
+source_modules = ["consumers.generation"]
+forbidden_modules = ["consumers.evaluation", "consumers.tutor", "consumers.chat"]
+# Direct imports only: each function reaches the server, and the server reaches the
+# evaluation in its four named reads.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The evaluation function imports no other function"
+type = "forbidden"
+source_modules = ["consumers.evaluation"]
+forbidden_modules = ["consumers.generation", "consumers.tutor", "consumers.chat"]
+# Direct imports only: each function reaches the server, and the server reaches the
+# evaluation in its four named reads.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The tutor function imports no other function"
+type = "forbidden"
+source_modules = ["consumers.tutor"]
+forbidden_modules = ["consumers.generation", "consumers.evaluation", "consumers.chat"]
+# Direct imports only: each function reaches the server, and the server reaches the
+# evaluation in its four named reads.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The chat function imports no other function"
+type = "forbidden"
+source_modules = ["consumers.chat"]
+forbidden_modules = ["consumers.generation", "consumers.evaluation", "consumers.tutor"]
+# Direct imports only: each function reaches the server, and the server reaches the
+# evaluation in its four named reads.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The library's layers"
+type = "layers"
+containers = ["variatio"]
+layers = [
+    "cli",
+    "entrypoints",
+    "builders | runtime",
+    "loaders",
+    "prompts | wording",
+    "core : settings : config",
+]
+ignore_imports = [
+    "variatio.runtime.taggability -> variatio.builders.knowledge_graph_builder.blocks",
+    "variatio.runtime.taggability -> variatio.builders.knowledge_graph_builder.parsing",
+    "variatio.runtime.taggability -> variatio.builders.knowledge_graph_builder.schemas",
+    "variatio.builders.knowledge_graph_builder.cleaning -> variatio.runtime.embedder",
+    "variatio.core.lexicon -> variatio.wording",
+]
+
+[[tool.importlinter.contracts]]
+name = "Only the door and the work know what a workspace is"
+type = "forbidden"
+source_modules = ["variatio.runtime", "variatio.prompts", "variatio.wording", "variatio.settings"]
+forbidden_modules = ["variatio.core.workspace"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The vocabulary and the door never import the engine boundary"
+type = "forbidden"
+source_modules = [
+    "variatio.entrypoints",
+    "variatio.loaders",
+    "variatio.prompts",
+    "variatio.wording",
+    "variatio.settings",
+]
+forbidden_modules = ["variatio.core.inference"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Only the engine boundary imports the Ollama SDK"
+type = "forbidden"
+source_modules = ["variatio", "server", "consumers"]
+forbidden_modules = ["ollama"]
+ignore_imports = ["variatio.core.inference -> ollama"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Nobody outside the server's routes imports a route module"
+type = "forbidden"
+source_modules = ["variatio", "consumers"]
+forbidden_modules = ["server.routers.*"]
+ignore_imports = [
+    # Routes used as libraries by the functions; they leave with the server's areas.
+    "consumers.*.api -> server.routers.jobs",
+    "consumers.*.api.admin -> server.routers.jobs",
+    "consumers.*.api.router -> server.routers.jobs",
+    "consumers.*.api.router -> server.routers.exercises",
+    "consumers.generation.api.router -> server.routers.bank",
+    "consumers.generation.api.router -> server.routers.pipeline",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "The server's route modules do not import each other"
+type = "independence"
+modules = ["server.routers.*"]
+ignore_imports = [
+    "server.routers.bank -> server.routers.jobs",
+    "server.routers.bank -> server.routers.pipeline",
+    "server.routers.kg -> server.routers.pipeline",
+    "server.routers.pipeline -> server.routers.jobs",
+    "server.routers.profile -> server.routers.pipeline",
 ]

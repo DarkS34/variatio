@@ -105,17 +105,24 @@ variatio/       the library          imports neither
 ```
 
 - **`consumers` imports `variatio` and `server`; neither imports `consumers` back.** The
-  exceptions are named one by one in `tests/consumers/test_consumers_boundary.py`, which
-  pins them: the settings registry's optional imports of each function's `settings.py`, and
-  four reads of the evaluation older than `consumers/` (`server/jobs/lanes.py`,
-  `server/jobs/handlers.py`, `server/raw_data.py`, `server/routers/admin.py`). The same test
-  pins that a function's library half imports neither FastAPI nor SQLAlchemy.
+  exceptions are named one by one in the import contracts (`[tool.importlinter]` in
+  `pyproject.toml`, `uv run lint-imports`): the settings registry's optional imports of each
+  function's `settings.py`, and four reads of the evaluation older than `consumers/`
+  (`server/jobs/lanes.py`, `server/jobs/handlers.py`, `server/raw_data.py`,
+  `server/routers/admin.py`). No function imports another.
+  `tests/consumers/test_consumers_boundary.py` pins that a function's library half imports
+  neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
-  `core.inference` (measured: 128 ms). No test pins this yet.
+  `core.inference` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
+- Nothing outside `server/routers/` imports a route module, and the route modules do not
+  import each other, but for the exceptions each contract names.
 - `import server` works with no database (`server/__init__.py`).
 - The client reaches a function's code (`web/src/consumers/evaluation/`,
   `web/src/consumers/tutor/`) and the landing (`web/src/landing/`) only through `import()`;
   `pnpm check:lazy` checks the sources and, after `pnpm build`, the chunk graph.
+- The client's imports go one way, app → features → components → state → lib, and a
+  screen's folder imports no other screen's folder. `pnpm check:layers` checks it, with the
+  imports of today against it named one by one; the list may only shrink.
 
 **Inside `variatio/`.**
 
@@ -132,9 +139,12 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
   `core.inference`.** `core/repair.py` calls it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
-- Two known crossings between the two kinds of work: `runtime/taggability.py` imports parts of
-  `builders/knowledge_graph_builder/`, and `builders/knowledge_graph_builder/cleaning.py`
-  imports `runtime/embedder/vectors.py`.
+- The layers above are an import contract: `cli`, `entrypoints`, `builders | runtime`,
+  `loaders`, `prompts | wording`, then `core`, `settings` and `config`. Three crossings are
+  named in it: `runtime/taggability.py` imports parts of `builders/knowledge_graph_builder/`,
+  `builders/knowledge_graph_builder/cleaning.py` imports `runtime/embedder/vectors.py`, and
+  `core/lexicon.py` imports `wording/`. The two rules above and «only `core/inference.py`
+  imports the Ollama SDK» are contracts too.
 
 ## 5. Code map
 
@@ -230,7 +240,9 @@ Client paths are under `web/src/`; server paths under `server/` unless they star
 
 Each rule holds everywhere. The check after it is what fails when the rule breaks.
 
-- **The import direction of section 4.** `tests/consumers/test_consumers_boundary.py`.
+- **The import boundaries of section 4.** `uv run lint-imports` (also run by
+  `tests/boundaries/test_import_contracts.py`) and `pnpm check:layers`.
+- **Every package has a docstring**, its front page. `tests/boundaries/test_package_docstrings.py`.
 - **There is no default workspace**: every path takes one; `paths.workspace("")` raises.
   `tests/server/test_no_default_workspace.py`.
 - **One writer of persisted JSON**, `core/json_io.write_json` (atomic; approval hashes are

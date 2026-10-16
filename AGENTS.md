@@ -49,12 +49,10 @@ education is out of scope; hardcoding a subject is equally a regression.
 
 ## Branches
 
-- **`main`** (this tree) is the complete system — the library, the API, the client and the
-  functions under `consumers/` — and the only branch (the user's decision, 2026-10-16;
-  `variatio-vanilla`, the library alone, was retired that day with no tag). Do not bring a
-  branch back to publish the library alone; ask first. `main` already keeps it apart:
-  `uv sync --no-dev` without the `server` and `builders` extras installs the library and its CLI.
-- Production serves a separate worktree, `/home/deploy/variatio-prod`; deploying is the user's.
+- **`main`** is the complete system and the only branch (2026-10-16: `variatio-vanilla`, the
+  library alone, was retired with no tag; ask before bringing a branch back). `uv sync --no-dev`
+  without the extras installs the library alone. Production serves a separate worktree,
+  `/home/deploy/variatio-prod`; deploying is the user's.
 
 ## Commands
 
@@ -84,8 +82,10 @@ Dependency management is **`uv`** (`pyproject.toml` + `uv.lock` + `.python-versi
   (`VARIATIO_MODEL_WORKSPACE`, default `default`; SKIPS when absent). They measure the
   artefact, not the code.
 - `uv run pytest -m model` — the admissibility judge against a live Ollama (~17 calls).
+- `uv run lint-imports` — the import contracts of `pyproject.toml`; `uv run pytest` runs them too.
 - Web: `pnpm test` (vitest), `pnpm exec tsc --noEmit`, `pnpm build`, `pnpm check:color`,
-  `pnpm check:ui`, `pnpm check:i18n`, `pnpm check:lazy` (after `pnpm build`).
+  `pnpm check:ui`, `pnpm check:i18n`, `pnpm check:lazy` (after `pnpm build`),
+  `pnpm check:layers` (app → features → components → state → lib; its list only shrinks).
 
 `README.md` says how to run it locally. Deploying a change with a migration or a new
 dependency needs `uv sync` and `uv run alembic upgrade head` before the restart.
@@ -158,14 +158,14 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
 - D-216, D-218 — `entrypoints/` is the library's door; `builders/` and `loaders/` take a
   `Workspace` only for their own paths. Inside `variatio/` only `cli.py`, `builders/`,
   `runtime/` and `core/` import `core.inference`.
-- D-220 — Closed decisions are entries of `DECISIONS.md`; this section keeps the rule and its
-  number.
+- D-220 — Closed decisions are entries of `DECISIONS.md`; each `AGENTS.md` keeps rule and number.
 - D-222 — Work plans go in `plans/` (git-ignored); there is no `docs/`.
 - D-225 — There is no guide and no tutorial; their text is in git history.
 - D-223 — One `AGENTS.md` per folder for what is the folder's; this file for what holds
   everywhere. The why of a folder lives in its `AGENTS.md`, of a decision in `DECISIONS.md`.
-- Decided on 2026-10-16, not yet applied (the refactor plan): D-226 import-linter, D-227 the
-  server by areas, D-228 `variatio/documents/`, D-229 the client's types, hooks and
+- D-226 — Python import boundaries are import-linter contracts; the client's direction is
+  `pnpm check:layers`. An exception is named in the contract, never added in silence.
+- Decided on 2026-10-16, not yet applied (the refactor plan): D-227 the server by areas, D-228 `variatio/documents/`, D-229 the client's types, hooks and
   primitives split.
 
 ## Code conventions

@@ -223,7 +223,11 @@ this section explains; when the two disagree, fix both in the same change.
   outside them imports them statically (`import type` aside).
   `pnpm check:lazy` checks the sources and, after `pnpm build`, the chunk graph
   `vite/chunk-graph.ts` writes to `dist/.vite/chunks.json`; its comment stripping is a
-  string-aware scanner with self-tests. `ApiError.code` is `X-Error-Code` and
+  string-aware scanner with self-tests (`scripts/imports.mjs`, shared with `check:layers`).
+- **Imports go one way: app → features → components → state → lib**, and a folder of
+  `features/`, `consumers/` or `landing/` imports no other such folder; what two share goes a
+  layer down. `pnpm check:layers` checks every static, type and dynamic import; its `ALLOWED`
+  list names today's exceptions file to file and may only shrink. `ApiError.code` is `X-Error-Code` and
   `ApiError.retryAfter` is `Retry-After` in seconds; a `feature_off` refetches the session
   (`main.tsx`), and a `not_member` or `membership_disabled` makes the tab leave the subject
   (`queries.leaveLostWorkspace`: forget the tab's slug, drop the instance's queries, land
