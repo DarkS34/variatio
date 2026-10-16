@@ -7,10 +7,10 @@ from pathlib import Path
 
 from loguru import logger
 
-from .... import config
-from ....core import inference
-from ....core.json_io import write_json
-from ....prompts.marks import EMPTY_IMAGE_MARK
+from ... import config
+from ...core import inference
+from ...core.json_io import write_json
+from ...prompts.marks import EMPTY_IMAGE_MARK
 from .cache import sampling_record
 from .render import encode_page
 from .transcribe import _ask_twice, _cause, _unfinished, _unwrap_markdown_fence

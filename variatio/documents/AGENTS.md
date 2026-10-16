@@ -1,4 +1,4 @@
-# AGENTS.md — `variatio/builders/source_docs/` — reading documents and transcription
+# AGENTS.md — `variatio/documents/` — reading documents and transcription
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for reading a raw document and transcribing it page by page. `pages/` is a package by
@@ -41,7 +41,7 @@ Both raw slots use the same VLM page route (quality over speed).
   (pictures are not salvaged). Cached pages are scanned for loops and re-read. There is **no
   prompt version**: a prompt change re-reads nothing (`RETIRED_FIELDS` drops old fingerprint keys).
 - Office files: Docling translates the text; EMF/WMF are rasterised through LibreOffice on a
-  copy first (`source_docs/office.py`, PNG filter, two passes at 4×, cropped); each body picture
+  copy first (`documents/office.py`, PNG filter, two passes at 4×, cropped); each body picture
   is **transcribed** (never merely described) with the page model under `IMAGE_RULES`, cached
   by content hash workspace-wide (failures never cached; `EMPTY_IMAGE_MARK` cached and leaves
   nothing). Header/furniture pictures are never read.

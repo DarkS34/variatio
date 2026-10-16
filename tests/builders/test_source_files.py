@@ -1,6 +1,6 @@
 """Listing the documents of a slot: one that is not there, and the order of one that is."""
 
-from variatio.builders.source_docs.files import list_source_files, name_order
+from variatio.documents.files import list_source_files, name_order
 
 
 def test_a_missing_directory_lists_nothing_whichever_way_it_is_walked(tmp_path):

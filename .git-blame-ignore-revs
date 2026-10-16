@@ -12,3 +12,6 @@
 
 # refactor(variatio): split source_docs/pages.py into a package by step
 0f48dcf75cdb96fc8914a37fe5697bd30b02df0a
+
+# refactor(variatio): OllamaEngine in its own module, core/ollama.py
+73fc00bb2c4dd8cfe06682a5b6912db7f121b037

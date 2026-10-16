@@ -28,7 +28,7 @@ name patches the module that looks it up (`document` calls `page_images`, `page_
 `_transcribe_page`; `render` holds `_PDFIUM_LOCK`).
 """
 
-from ....core import inference, progress
+from ...core import inference, progress
 from ..markdown import export_markdown, page_mark, tidy_markdown
 from .seams import (
     _boundaries,

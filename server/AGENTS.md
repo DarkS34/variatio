@@ -4,7 +4,7 @@ Read the root `AGENTS.md` first. The closed decisions are numbered in the root `
 Rules for the server outside its subpackages: the database, how a request finds its subject,
 the build chain and approvals, the generated exercises, the curriculum and the class activity.
 Identity is `auth/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
-`conversations/AGENTS.md`, and the transcription `variatio/builders/source_docs/AGENTS.md`.
+`conversations/AGENTS.md`, and the transcription `variatio/documents/AGENTS.md`.
 
 ## Database (`server/db/`)
 

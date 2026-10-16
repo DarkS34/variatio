@@ -14,7 +14,7 @@ from types import SimpleNamespace
 import pytest
 
 from variatio import wording
-from variatio.builders.source_docs import pages
+from variatio.documents import pages
 from variatio.core.workspace import Workspace
 from variatio.entrypoints import transcribe
 

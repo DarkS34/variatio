@@ -1131,7 +1131,7 @@ what each decision replaced.
 
 ### D-218. Who imports the engine boundary
 - **Rule:** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `core/` import `core.inference`; `core/repair.py` calls it on behalf of `builders/` and `runtime/`.
-- **Date:** 2026-10-16 · **Commit:** `18e03df` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `18e03df` · **Status:** superseded by D-230
 - **Why:** The earlier rule was false (`core/repair.py` calls `inference.generate`) and no test checked it. The new rule is what the code does; an import contract will check it (plan phase F5).
 
 ### D-219. Only builders and runtime call the model
@@ -1171,7 +1171,7 @@ what each decision replaced.
 
 ### D-226. Import boundaries checked by import-linter
 - **Rule:** Python import boundaries are contracts of import-linter (a dev dependency); the client's are checked by `pnpm check:layers`.
-- **Date:** 2026-10-16 · **Commit:** the commit after `96f850e` that adds `[tool.importlinter]` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `b03029f` · **Status:** in force
 - **Why:** Only `consumers/` had a boundary test, a hand-written `ast` walk; nothing checked the library's layers or the client's direction.
 
 ### D-227. The server by areas
@@ -1181,10 +1181,15 @@ what each decision replaced.
 
 ### D-228. Document code outside the builders
 - **Rule:** The document plumbing (`builders/source_docs/`) lives in `variatio/documents/`.
-- **Date:** 2026-10-16 · **Commit:** — · **Status:** decided; applies in plan phase F9
+- **Date:** 2026-10-16 · **Commit:** the commit after `73fc00b` that adds `variatio/documents/` · **Status:** in force
 - **Why:** Three server modules, two functions and `entrypoints/transcribe.py` import it, and the transcription is no builder.
 
 ### D-229. Client types, hooks and primitives split
 - **Rule:** `lib/types.ts` and `state/queries.ts` are split by area behind an `index.ts`; `components/ui/misc.tsx` becomes one primitive per file.
 - **Date:** 2026-10-16 · **Commit:** — · **Status:** decided; applies in plan phases F22 and F23
 - **Why:** 1 476 and 1 269 lines with 139 and 55 importers; `misc.tsx` held ten primitives under a name that says nothing, and shadcn creates one file per primitive.
+
+### D-230. Who imports the engine boundary, with documents/
+- **Rule:** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/` import `core.inference`; `documents/pages/` transcribes with the vision model, and `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
+- **Date:** 2026-10-16 · **Commit:** the commit after `73fc00b` that adds `variatio/documents/` · **Status:** in force
+- **Why:** D-228 moved the document code, page transcription included, out of `builders/`: the rule names the package the transcription now lives in, and the contracts still keep `entrypoints/`, `loaders/`, `prompts/`, `wording/` and `settings/` away from the engine.

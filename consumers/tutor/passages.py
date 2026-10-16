@@ -29,9 +29,8 @@ import numpy as np
 from loguru import logger
 
 from variatio import config as pipeline_config
-from variatio.builders import source_docs
-from variatio.builders.source_docs.chunking import is_navigation
-from variatio.builders.source_docs.chunking import split_sections
+from variatio import documents
+from variatio.documents.chunking import is_navigation, split_sections
 from variatio.core import progress
 from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
@@ -152,7 +151,7 @@ def cut_corpus(ws: Workspace, sources: dict, max_chars: int) -> list[Passage]:
         unit: str | None = None
         for location, title, body in split_sections(text):
             unit = _unit_of(location, [title], units) or unit
-            pieces = [body] if len(body) <= max_chars else source_docs.chunk_text(body, max_chars)
+            pieces = [body] if len(body) <= max_chars else documents.chunk_text(body, max_chars)
             for piece in pieces:
                 kept = [
                     paragraph.strip()
@@ -187,17 +186,17 @@ def _documents(ws: Workspace, sources: dict) -> list[str]:
 def _document_text(directory: Path) -> str:
     """Return one document's transcription stitched as its build stitched it, or nothing."""
     pages, meta = _document_pages(directory)
-    return source_docs.join_pages(pages, source_docs.valid_seams(meta.get("seams")))
+    return documents.join_pages(pages, documents.valid_seams(meta.get("seams")))
 
 
 def _document_pages(directory: Path) -> tuple[list[str], dict]:
     """Return one document's transcribed pages and what its transcription recorded."""
-    pages = source_docs.read_pages(directory)
+    pages = documents.read_pages(directory)
     if not pages:
         logger.warning(
             f"[tutor] «{directory.name}» no tiene páginas transcritas; el tutor no busca en él"
         )
-    return pages, source_docs.read_meta(directory)
+    return pages, documents.read_meta(directory)
 
 
 def _unit_of(location: str, headings: list[str], units: list[dict]) -> str | None:

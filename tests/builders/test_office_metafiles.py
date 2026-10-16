@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from variatio.builders.source_docs import office, pages
+from variatio.documents import office, pages
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 

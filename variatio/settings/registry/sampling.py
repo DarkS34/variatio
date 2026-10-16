@@ -44,7 +44,7 @@ en silencio lo que pide el ejercicio. Fijada a 0 por eso.
 
 Sigue siendo un valor propio en vez de heredar `TEMPERATURE_DETERMINISTIC`, aunque tenga el
 mismo valor y por la misma razón: esta forma parte de la huella de la caché de páginas
-(`source_docs/pages.py`), así que cambiarla vuelve a transcribir todas las páginas de
+(`documents/pages/`), así que cambiarla vuelve a transcribir todas las páginas de
 todos los corpus. Heredarla haría que esa consecuencia siguiera a una edición hecha
 pensando en otra cosa. Las imágenes de un Word o un PowerPoint la heredan mientras su
 propia temperatura esté vacía, como heredan el modelo."""

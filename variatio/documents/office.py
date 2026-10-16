@@ -18,7 +18,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from ... import config
+from .. import config
 
 METAFILE_EXTS = (".emf", ".wmf")
 # python-pptx joins a note's paragraphs with a newline and marks a soft line break with a

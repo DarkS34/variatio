@@ -14,7 +14,7 @@ import pytest
 from PIL import Image
 
 from variatio import config
-from variatio.builders.source_docs import pages
+from variatio.documents import pages
 
 PNG_MAGIC = b"\x89PNG"
 JPEG_MAGIC = b"\xff\xd8\xff"

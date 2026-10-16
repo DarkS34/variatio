@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from variatio import config
-from variatio.builders.source_docs import markdown, pages
+from variatio.documents import markdown, pages
 from variatio.core import inference
 from variatio.prompts.marks import EMPTY_IMAGE_MARK
 

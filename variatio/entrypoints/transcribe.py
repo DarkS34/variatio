@@ -11,8 +11,8 @@ from loguru import logger
 
 from .. import config
 from .. import prompts as prompts_pkg
-from ..builders import source_docs
-from ..builders.source_docs.pages import META_NAME
+from .. import documents
+from ..documents.pages import META_NAME
 from ..core import paths, progress
 from ..core.workspace import Workspace
 from ..loaders import locale
@@ -85,7 +85,7 @@ def _sources(ws: Workspace, slot: str) -> list[Path]:
     root = slot_dir(ws, slot)
     if not root.is_dir():
         return []
-    return source_docs.list_source_files(root)
+    return documents.list_source_files(root)
 
 
 def _source_for(ws: Workspace, slot: str, name: str) -> Path:
@@ -103,8 +103,8 @@ def _source_for(ws: Workspace, slot: str, name: str) -> Path:
 def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
     """Report one document as `done` / `pending` / `stale`, and why it is stale."""
     cache_dir = _cache_dir_for(ws, source)
-    meta = source_docs.read_meta(cache_dir)
-    pages = source_docs.read_pages(cache_dir) if meta else []
+    meta = documents.read_meta(cache_dir)
+    pages = documents.read_pages(cache_dir) if meta else []
     expected = _expected_fingerprint(source, slot)
 
     if not pages:
@@ -121,14 +121,14 @@ def _document_status(source: Path, ws: Workspace, slot: str) -> dict:
             "images_unreadable": 0,
         }
 
-    stored = source_docs.fingerprint_of(meta)
-    current = source_docs.same_document(stored, expected)
+    stored = documents.fingerprint_of(meta)
+    current = documents.same_document(stored, expected)
     failed = len(meta.get("failed_pages") or [])
     # Only a CURRENT PDF: a stale document is read whole anyway, and the other routes have no
     # page to render again. `retryable_pages` opens the file only when some page carries a
     # marker or is a repetition loop the model stopped on its own.
     retry = (
-        len(source_docs.retryable_pages(source, cache_dir, pages))
+        len(documents.retryable_pages(source, cache_dir, pages))
         if current and source.suffix.lower() == ".pdf"
         else 0
     )
@@ -150,20 +150,20 @@ def _declared_pages(source: Path) -> int:
     """How many pages a document not yet read will have: a PDF's pages, a deck's slides."""
     suffix = source.suffix.lower()
     if suffix == ".pdf":
-        return source_docs.page_count(source)
+        return documents.page_count(source)
     if suffix == ".pptx":
-        return source_docs.slide_count(source)
+        return documents.slide_count(source)
     return 0
 
 
 def _cache_dir_for(ws: Workspace, source: Path) -> Path:
     """Return where one document's transcribed pages live."""
-    return source_docs.document_cache_dir(source, ws.markdown_cache_dir)
+    return documents.document_cache_dir(source, ws.markdown_cache_dir)
 
 
 def _expected_fingerprint(source: Path, slot: str) -> dict:
     """Return the fingerprint this document would be transcribed under right now."""
-    return source_docs.fingerprint_for(
+    return documents.fingerprint_for(
         source, config.TRANSCRIBE_MODEL, config.TRANSCRIBE_DPI, _slot_ocr(slot)
     )
 
@@ -176,8 +176,8 @@ def _slot_ocr(slot: str) -> bool:
 def _slot_converter(slot: str):
     """Return the slot's lazily-opened Docling converter, still unbuilt."""
     if slot == EXEMPLARS:
-        return source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
-    return source_docs.LazyConverter(table_structure=False)
+        return documents.LazyConverter(ocr=config.EXEMPLARS_OCR)
+    return documents.LazyConverter(table_structure=False)
 
 
 def _reasons(stored: dict, expected: dict) -> list[str]:
@@ -205,7 +205,7 @@ def _count(meta: dict, key: str) -> int:
 
 def _merged(meta: dict) -> int:
     """Return how many page seams the model decided to join."""
-    return source_docs.seams_merged(meta.get("seams"))
+    return documents.seams_merged(meta.get("seams"))
 
 
 # ADOPTING A TRANSCRIPTION ALREADY IN THE INSTALLATION -----------------------------------------
@@ -249,16 +249,16 @@ def adopt_transcriptions(ws: Workspace, slot: str) -> dict:
 
     if not wanted:
         return summary
-    keys = {source_docs.reuse_key(f) for f in wanted.values()}
+    keys = {documents.reuse_key(f) for f in wanted.values()}
     donors: dict[tuple, Path] = {}
     failures: dict[tuple, int] = {}
     for directory, fingerprint in _transcribed_documents():
-        key = source_docs.reuse_key(fingerprint)
+        key = documents.reuse_key(fingerprint)
         if key not in keys:
             continue
         # Of several copies, the one with the fewest failed pages: what is adopted with a
         # failure still has to be read again, one model call a page.
-        failed = len(source_docs.read_meta(directory).get("failed_pages") or [])
+        failed = len(documents.read_meta(directory).get("failed_pages") or [])
         if key not in donors or failed < failures[key]:
             donors[key], failures[key] = directory, failed
     if not donors:
@@ -266,11 +266,11 @@ def adopt_transcriptions(ws: Workspace, slot: str) -> dict:
 
     for source, fingerprint in wanted.items():
         cache_dir = _cache_dir_for(ws, source)
-        donor = donors.get(source_docs.reuse_key(fingerprint))
+        donor = donors.get(documents.reuse_key(fingerprint))
         if donor is None or donor == cache_dir:
             continue
         try:
-            pages = source_docs.adopt_pages(donor, cache_dir, fingerprint)
+            pages = documents.adopt_pages(donor, cache_dir, fingerprint)
         except OSError as exc:
             logger.warning(f"[{source.name}] could not adopt a known transcription: {exc}")
             continue
@@ -294,9 +294,9 @@ def _transcribed_documents() -> list[tuple[Path, dict]]:
     """
     found: list[tuple[Path, dict]] = []
     for meta_path in sorted(paths.WORKSPACES_DIR.glob("*/cache/markdown/*/*/" + META_NAME)):
-        meta = source_docs.read_meta(meta_path.parent)
+        meta = documents.read_meta(meta_path.parent)
         if meta:
-            found.append((meta_path.parent, source_docs.fingerprint_of(meta)))
+            found.append((meta_path.parent, documents.fingerprint_of(meta)))
     return found
 
 
@@ -349,7 +349,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                     (idx - 1) / len(sources), f"{source.name} ({idx}/{len(sources)})"
                 )
                 try:
-                    pages = source_docs.document_pages(
+                    pages = documents.document_pages(
                         source,
                         prompts_pkg.of(locale.prompt_language(ws)),
                         converter=converter,
@@ -362,7 +362,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                 except Exception as e:
                     logger.exception(f"[{source.name}] transcription skipped: {e}")
                     continue
-                meta = source_docs.read_meta(_cache_dir_for(ws, source))
+                meta = documents.read_meta(_cache_dir_for(ws, source))
                 summary["documents"] += 1
                 summary["pages"] += len(pages)
                 summary["seams_merged"] += _merged(meta)
@@ -393,8 +393,8 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
 def document_pages_listing(ws: Workspace, slot: str, name: str) -> list[dict]:
     """List one document's pages, numbered from 1, flagging the ones the model failed on."""
     source = _source_for(ws, slot, name)
-    pages = source_docs.read_pages(_cache_dir_for(ws, source))
-    failed = set(source_docs.failed_pages(pages))
+    pages = documents.read_pages(_cache_dir_for(ws, source))
+    failed = set(documents.failed_pages(pages))
     return [
         {
             "index": index,
@@ -408,7 +408,7 @@ def document_pages_listing(ws: Workspace, slot: str, name: str) -> list[dict]:
 
 def document_meta(ws: Workspace, slot: str, name: str) -> dict:
     """Return what one document's page cache records about how its pages were made."""
-    return source_docs.read_meta(_cache_dir_for(ws, _source_for(ws, slot, name)))
+    return documents.read_meta(_cache_dir_for(ws, _source_for(ws, slot, name)))
 
 
 def write_document_page(
@@ -464,10 +464,10 @@ def _open_document(ws: Workspace, slot: str, name: str) -> tuple[Path, dict, lis
     """Resolve a document and read back its cache directory, metadata and pages."""
     source = _source_for(ws, slot, name)
     cache_dir = _cache_dir_for(ws, source)
-    pages = source_docs.read_pages(cache_dir)
+    pages = documents.read_pages(cache_dir)
     if not pages:
         raise ValueError(f"'{name}' has no transcribed pages to edit")
-    return cache_dir, source_docs.read_meta(cache_dir), pages
+    return cache_dir, documents.read_meta(cache_dir), pages
 
 
 def _check_index(index: int, count: int) -> None:
@@ -490,13 +490,13 @@ def _save_document(
     """
     seams = [
         record
-        for record in source_docs.valid_seams(meta.get("seams"))
+        for record in documents.valid_seams(meta.get("seams"))
         if record["page"] not in dropped
     ]
-    source_docs.write_pages(
+    documents.write_pages(
         cache_dir,
         pages,
-        source_docs.fingerprint_of(meta),
+        documents.fingerprint_of(meta),
         seams,
         {key: meta.get(key, 0) for key in ("images_total", "images_unreadable", "notes_total")},
         restructured=restructured or bool(meta.get("restructured")),

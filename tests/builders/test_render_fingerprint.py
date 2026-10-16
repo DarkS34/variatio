@@ -5,7 +5,7 @@ before reads as made with those values, so recording them expired nothing.
 """
 
 from variatio import config
-from variatio.builders.source_docs import pages
+from variatio.documents import pages
 from variatio.core import repetition
 from variatio.entrypoints import transcribe
 

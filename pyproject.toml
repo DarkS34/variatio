@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.11"
+version = "1.174.12"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -24,12 +24,12 @@ dependencies = [
 #
 # Authoring-only. Docling drags ~700 MB (torch, transformers, opencv, rapidocr, scipy, pandas,
 # docling-parse) that the runtime pipeline never touches; it is imported lazily in
-# builders/source_docs/files.py, behind a `LazyConverter` that resolves at the one point a
+# documents/files.py, behind a `LazyConverter` that resolves at the one point a
 # converter is used — so a PDF corpus (page transcription) or a cached one never builds it.
 
 [project.optional-dependencies]
-# pypdfium2 and python-pptx arrive with Docling anyway, but `source_docs.page_images`
-# imports the first to rasterise pages and `source_docs.office.speaker_notes` the second to
+# pypdfium2 and python-pptx arrive with Docling anyway, but `documents.page_images`
+# imports the first to rasterise pages and `documents.office.speaker_notes` the second to
 # read a deck's notes, so both are declared rather than relied on transitively.
 builders = ["docling>=2.0.0", "pypdfium2>=4.30.0", "pillow>=10.0.0", "python-pptx>=1.0.0"]
 
@@ -172,7 +172,7 @@ layers = [
     "cli",
     "entrypoints",
     "builders | runtime",
-    "loaders",
+    "loaders | documents",
     "prompts | wording",
     "core : settings : config",
 ]

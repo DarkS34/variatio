@@ -128,20 +128,20 @@ variatio/       the library          imports neither
 
 ```text
 entrypoints/                         the door: one function per thing asked of a workspace
-builders/   runtime/                 the work: raw → artifacts, artifacts → exercises
+builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
 loaders/  prompts/  wording/  settings/  core/      the vocabulary
 ```
 
 - **`entrypoints/` is the library's public door.** `builders/` and `loaders/` take a
   `Workspace` only to resolve their own paths. `runtime/`, `prompts/`, `wording/` and
   `settings/` do not import it.
-- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `core/` import
-  `core.inference`.** `core/repair.py` and `core/vectors.py` call it on behalf of `builders/`
-  and `runtime/`.
+- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/`
+  import `core.inference`.** `documents/pages/` asks the vision model for each page;
+  `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `entrypoints`, `builders | runtime`,
-  `loaders`, `prompts | wording`, then `core`, `settings` and `config`. Two crossings are
+  `loaders | documents`, `prompts | wording`, then `core`, `settings` and `config`. Two crossings are
   named in it: `runtime/taggability.py` imports the graph builder's node block and parser
   (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and
   «only `core/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
@@ -161,7 +161,7 @@ One line per folder: what it holds, and the file to open first.
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, and `marks.py`, shared by both; each function keeps its own in `consumers/<function>/prompts/` | `prompts/__init__.py` |
 | `wording/` | strings the code composes in the workspace's language | `wording/__init__.py` |
 | `builders/` | raw → artifacts: the graph, profile and bank builders, the context synthesis | `knowledge_graph_builder/__init__.py` |
-| `builders/source_docs/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
+| `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
 | `runtime/` | artifacts → exercises: generator, tagger, taggability, checks | `generator.py` |
 | `runtime/embedder/` | concept descriptions and the two vector indices | `embedder/__init__.py` |
 | `runtime/screening/` | the guardrail and the admissibility judge | `screening/__init__.py` |
@@ -220,7 +220,7 @@ there.
 
 | Area | Client | Server | Library | Jobs | Tests |
 |---|---|---|---|---|---|
-| Step 1 «Apuntes y ejercicios» | `features/raw/` | `routers/raw.py`, `raw_data.py`, `originals.py` | `builders/source_docs/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/test_raw_*`, `tests/builders/` |
+| Step 1 «Apuntes y ejercicios» | `features/raw/` | `routers/raw.py`, `raw_data.py`, `originals.py` | `documents/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/test_raw_*`, `tests/builders/` |
 | Step 2 «Temario» | `features/kg/` | `routers/kg.py`, `kg_view.py`, `editors/kg_edit.py` | `builders/knowledge_graph_builder/`, `loaders/knowledge_graph.py`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/test_kg_*` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `routers/bank.py`, `routers/profile.py`, `routers/exercises.py`, `editors/bank_edit.py`, `editors/profile_edit.py`, `bank_marks.py`, `taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/test_bank_*`, `tests/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `approvals.py`, `storage.py`, `jobs/chain.py`, `jobs/handlers.py`, `routers/pipeline.py` | — | the chains of the three steps | `tests/server/test_chain_gates.py`, `tests/server/test_job_chains.py` |

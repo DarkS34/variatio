@@ -11,8 +11,8 @@ from PIL import Image
 from server import auth, originals, raw_data
 from server.auth.deps import Access
 from server.routers.raw import router as raw_router
-from variatio.builders import source_docs
-from variatio.builders.source_docs.files import source_hash
+from variatio import documents
+from variatio.documents.files import source_hash
 from variatio.core.workspace import Workspace
 
 
@@ -26,7 +26,7 @@ def blank_pdf(path, pages: int) -> None:
 def transcribed(ws: Workspace, name: str, pages: int, **meta) -> None:
     """Put `pages` pages in the page cache of a corpus document, read from that very file."""
     source = ws.raw_corpus_dir / name
-    cache = source_docs.document_cache_dir(source, ws.markdown_cache_dir)
+    cache = documents.document_cache_dir(source, ws.markdown_cache_dir)
     cache.mkdir(parents=True, exist_ok=True)
     for index in range(1, pages + 1):
         (cache / f"{index:03d}.md").write_text(f"# Página {index}", encoding="utf-8")
@@ -106,7 +106,7 @@ def test_a_page_of_the_original_is_drawn_once_and_only_inside_the_document(ws, m
     data, media = originals.page_image(ws, original, 2)
 
     assert media == "image/png" and data.startswith(b"\x89PNG")
-    monkeypatch.setattr(originals.source_docs, "page_picture", lambda *a: pytest.fail("drawn twice"))
+    monkeypatch.setattr(originals.documents, "page_picture", lambda *a: pytest.fail("drawn twice"))
     assert originals.page_image(ws, original, 2) == (data, media)
     assert originals.page_image(ws, original, 0) is None
     assert originals.page_image(ws, original, 4) is None
@@ -125,7 +125,7 @@ def test_an_office_document_is_exported_once_and_a_refusal_is_not_asked_again(ws
         blank_pdf(workdir / "tema.pdf", 2)
         return workdir / "tema.pdf"
 
-    monkeypatch.setattr(originals.source_docs.office, "pdf_copy", export)
+    monkeypatch.setattr(originals.documents.office, "pdf_copy", export)
     monkeypatch.setattr(originals, "_unexportable", set())
     corpus = ws.raw_corpus_dir
 

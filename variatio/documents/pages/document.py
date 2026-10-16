@@ -6,8 +6,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from .... import config
-from ....core import progress
+from ... import config
+from ...core import progress
 from ..files import PLAIN_TEXT_EXTS, SUPPORTED_EXTS, required_cache_dir
 from ..markdown import tidy_markdown
 from .cache import (

@@ -1,13 +1,15 @@
 """Reading a source document: files, markdown, chunking and page transcription.
 
 Shared by all three builders — anything about reading a source file belongs here and is
-never duplicated into one of them. `pages` (a package, one module per step of a
-transcription) is the only part that talks to a model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
-property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
+never duplicated into one of them — and by whatever else reads a raw document: the
+transcription (`entrypoints/transcribe.py`), the server (`server/raw_data.py`,
+`server/originals.py`, `server/approvals.py`), the tutor's passages and the evaluation's plain
+reading. That is why it sits beside `builders/` and not inside it (until 2026-10-16 it was
+`builders/source_docs/`).
 
-Not private, despite serving the builders: `entrypoints/transcribe.py`, `server/raw_data.py`,
-`server/db/repository.py`, `consumers/evaluation/raw_text.py`, the settings registry and fourteen
-tests all reach it.
+`pages` (a package, one module per step of a transcription) is the only part that talks to a
+model; `markdown` and `chunking` import neither `inference` nor `progress`, which is the
+property the split exists to keep checkable; `office` talks to LibreOffice and to no model.
 """
 
 from . import chunking, files, markdown, office, pages

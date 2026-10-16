@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from variatio import config, settings
-from variatio.builders.source_docs import pages
+from variatio.documents import pages
 from variatio.core import inference
 from variatio.core.cerebras import CerebrasEngine
 from variatio.core.inference import Sampling

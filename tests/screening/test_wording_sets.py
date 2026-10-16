@@ -70,7 +70,7 @@ def test_the_spanish_set_catches_a_spanish_override():
 
 
 def test_a_failed_page_is_recognised_whatever_language_wrote_it():
-    from variatio.builders.source_docs import pages
+    from variatio.documents import pages
 
     for module in SETS:
         marked = module.failed_page(2, 3, "boom")

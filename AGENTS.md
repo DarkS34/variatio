@@ -99,8 +99,8 @@ dependency needs `uv sync` and `uv run alembic upgrade head` before the restart.
 - `dependencies` — runtime pipeline only (httpx, loguru, networkx, numpy, ollama, tqdm,
   json-repair, pydantic). Every name there must be imported by the runtime.
 - `[builders]` — Docling (~700 MB), python-pptx, pypdfium2. Imported **lazily**:
-  `source_docs/files.LazyConverter` opens Docling only at `markdown.to_markdown`'s
-  `convert()`, and `pypdfium2` only inside `source_docs/pages/render.py`. Never move those imports
+  `documents/files.LazyConverter` opens Docling only at `markdown.to_markdown`'s
+  `convert()`, and `pypdfium2` only inside `documents/pages/render.py`. Never move those imports
   to module scope. Importing anything under `variatio/` must not import Docling or torch.
 - `[server]` — FastAPI, uvicorn, SQLAlchemy/Alembic/psycopg, argon2-cffi, cryptography
   (`server/auth/links.py` only), pypdf (evaluation RAG reader).
@@ -122,7 +122,7 @@ The hard line: **`artifacts/` holds the instance definition (data), `variatio/` 
 that produces and consumes it.** `consumers` imports `variatio` and `server`; neither imports
 `consumers` back. The rules of each part are beside it:
 
-- `variatio/AGENTS.md` (library), `variatio/builders/source_docs/AGENTS.md` (transcription).
+- `variatio/AGENTS.md` (library), `variatio/documents/AGENTS.md` (transcription).
 - `server/AGENTS.md` (database, subjects, build chain, exercises, curriculum, activity),
   `server/auth/AGENTS.md` (identity, roles, classes), `server/jobs/AGENTS.md` (the queue),
   `server/conversations/AGENTS.md`.
@@ -155,9 +155,9 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
 - D-011 — A workspace's artifacts live in `artifacts/` and their loaders in
   `variatio/loaders/`; an old tree is renamed the first time it is opened.
 - D-015 — One writer of persisted JSON: `json_io.write_json`.
-- D-216, D-218 — `entrypoints/` is the library's door; `builders/` and `loaders/` take a
+- D-216, D-230 — `entrypoints/` is the library's door; `builders/` and `loaders/` take a
   `Workspace` only for their own paths. Inside `variatio/` only `cli.py`, `builders/`,
-  `runtime/` and `core/` import `core.inference`.
+  `runtime/`, `documents/` and `core/` import `core.inference`.
 - D-220 — Closed decisions are entries of `DECISIONS.md`; each `AGENTS.md` keeps rule and number.
 - D-222 — Work plans go in `plans/` (git-ignored); there is no `docs/`.
 - D-225 — There is no guide and no tutorial; their text is in git history.

@@ -26,8 +26,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.builders import source_docs
-from variatio.builders.source_docs.files import source_hash
+from variatio import documents
+from variatio.documents.files import source_hash
 from variatio.core.workspace import Workspace
 
 # Twice a reading column on a dense screen; a page is drawn once and kept.
@@ -92,7 +92,7 @@ def original_for(ws: Workspace, source: Path) -> Original | None:
     opened.
     """
     suffix = source.suffix.lower()
-    if suffix not in source_docs.CONVERTED_EXTS or not source.is_file():
+    if suffix not in documents.CONVERTED_EXTS or not source.is_file():
         return None
     _adopt_legacy(ws)
     stat = source.stat()
@@ -102,7 +102,7 @@ def original_for(ws: Workspace, source: Path) -> Original | None:
         return None
     ratios = tuple(
         round(min(height / max(width, 1.0), TALLEST), 4)
-        for width, height in source_docs.page_sizes(pdf)
+        for width, height in documents.page_sizes(pdf)
     )
     return Original(pdf, ratios, digest) if ratios else None
 
@@ -133,7 +133,7 @@ def page_image(ws: Workspace, original: Original, number: int) -> tuple[bytes, s
         kept = directory / f"{number:04d}{suffix}"
         if kept.is_file():
             return kept.read_bytes(), media
-    image = source_docs.page_picture(original.pdf, number, PAGE_WIDTH_PX)
+    image = documents.page_picture(original.pdf, number, PAGE_WIDTH_PX)
     if image is None:
         return None
     data, suffix = _encoded(image)
@@ -196,7 +196,7 @@ def _exported(ws: Workspace, source: Path, digest: str) -> Path | None:
         target.parent.mkdir(parents=True, exist_ok=True)
         workdir = Path(tempfile.mkdtemp(dir=target.parent, prefix=".export-"))
         try:
-            made = source_docs.office.pdf_copy(source, workdir, EXPORT_TIMEOUT_SECONDS)
+            made = documents.office.pdf_copy(source, workdir, EXPORT_TIMEOUT_SECONDS)
             if made is None:
                 _unexportable.add(digest)
                 logger.warning(

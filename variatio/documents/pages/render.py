@@ -10,7 +10,7 @@ import threading
 from collections.abc import Iterator
 from pathlib import Path
 
-from .... import config
+from ... import config
 
 
 # PDFium is not thread-safe and this process calls it from two threads at once: the job

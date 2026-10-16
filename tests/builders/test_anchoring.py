@@ -1,7 +1,7 @@
 import json
 
 from variatio.builders.knowledge_graph_builder import extraction
-from variatio.builders.source_docs import chunking
+from variatio.documents import chunking
 
 from ..conftest import ES
 

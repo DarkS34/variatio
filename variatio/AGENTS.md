@@ -2,7 +2,7 @@
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for the library: its engines, layout, settings, artifacts, builders, runtime, prompts and
-wording. The transcription's rules are in `builders/source_docs/AGENTS.md`.
+wording. The transcription's rules are in `documents/AGENTS.md`.
 
 ## Runtime prerequisites
 
@@ -55,8 +55,9 @@ Two rules (rewritten 2026-10-16: the earlier wording, «only `entrypoints/` take
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
 **`entrypoints/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
 only to resolve their own paths, and `runtime/`, `prompts/`, `wording/` and `settings/` do
-not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `core/`
-import `core.inference`** — `core/repair.py` and `core/vectors.py` call it on behalf of
+not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`,
+`documents/` and `core/` import `core.inference`** (D-230) — `documents/pages/` transcribes
+with the vision model, and `core/repair.py` and `core/vectors.py` call it on behalf of
 `builders/` and `runtime/`. `runtime/__init__.py` and `core/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
@@ -182,8 +183,10 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
 
 ## Builders (`variatio/builders/`)
 
-`entrypoints/build.py` is the only importer. `source_docs/` holds all document plumbing
-(`files`, `markdown`, `chunking`, `pages`, `office`); only the `pages/` package talks to a model.
+`entrypoints/build.py` is the only importer. The document plumbing they read through is
+`variatio/documents/` (`files`, `markdown`, `chunking`, `pages`, `office`; outside `builders/`
+since 2026-10-16, D-228, as the transcription and the server read it too); only its `pages/`
+package talks to a model.
 Builders use `inference.generate()`, never `generate_stream()` (a build runs out of process).
 
 **Knowledge graph** ([knowledge_graph_builder/](variatio/builders/knowledge_graph_builder/)):
@@ -202,7 +205,7 @@ extract → clean → curate, handing dicts in memory; only `curate()` writes.
   returned empty answers.
 - **The units are written in the order they are taught**, in two steps (user's request,
   2026-10-05). The documents are read in the order of their NAMES as a person reads them
-  (`source_docs.name_order`: case and accents folded, a run of digits counted as its number —
+  (`documents.name_order`: case and accents folded, a run of digits counted as its number —
   by bytes «Bloque 10» came before «Bloque 2»), which `/raw` lists them in too. Then the call
   that finds the units (`segment_syllabus_prompt`, and the naming call when the corpus has no
   heading index) is asked, between finding them and naming them, to ORDER them: the numbering

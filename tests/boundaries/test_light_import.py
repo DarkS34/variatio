@@ -44,6 +44,7 @@ def test_importing_variatio_loads_no_engine_converter_or_server():
 
 def test_importing_the_door_and_the_work_loads_no_converter():
     loaded = _loaded_after(
-        "import variatio.entrypoints, variatio.builders, variatio.runtime.generator"
+        "import variatio.entrypoints, variatio.builders, variatio.documents,"
+        " variatio.runtime.generator"
     )
     assert [m for m in ("docling", "torch", "server", "fastapi", "sqlalchemy") if m in loaded] == []

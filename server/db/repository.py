@@ -19,8 +19,8 @@ from .models import CURATED, DRAFT, Approval, Artifact, RawDocument, Workspace
 def content_sha256(content) -> str:
     """Hash content exactly as the same artifact would be hashed on disk.
 
-    Byte-identical to what `storage.write_json`, `entrypoints.save_bank` and
-    `source_docs.save_json` write, verified against all four artifacts of the reference
+    Byte-identical to what `json_io.write_json` writes (`storage.write_json` included, the
+    one writer of persisted JSON), verified against all four artifacts of the reference
     instance. Nothing *depends* on that agreement — `instance_io` re-derives hashes
     rather than trusting it — but it is what makes the two storage backends comparable,
     so do not change the separators or the indent casually.

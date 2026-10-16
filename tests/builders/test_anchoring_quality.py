@@ -6,7 +6,7 @@ import pytest
 
 from variatio import config
 from variatio.builders.knowledge_graph_builder import extraction
-from variatio.builders.source_docs import chunking
+from variatio.documents import chunking
 
 # WHICH INSTANCE IS MEASURED. `workspaces/` is gitignored in full, so a checkout has
 # whatever its owner built under whatever they called it; the reference slug stays the

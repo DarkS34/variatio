@@ -2,7 +2,7 @@
 
 import re
 
-from ... import config
+from .. import config
 from .markdown import HEADING_RE, mask_fences, restore_fences, strip_page_marks
 
 # A run of dot leaders, the mark of an index line.

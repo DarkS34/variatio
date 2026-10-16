@@ -26,7 +26,7 @@ from ..core.workspace import Workspace
 from ..loaders import locale
 from ..loaders.content_context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from . import source_docs
+from .. import documents
 
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
 # plus a short one per seam, and `extract` also tags each document as it comes out.
@@ -72,7 +72,7 @@ class ExemplarsBankBuilder:
 
         # Only `.docx` ever reaches it: a PDF goes through the page-transcription route and
         # plain text needs no conversion, so on the usual corpus Docling is never built.
-        self._docling = source_docs.LazyConverter(ocr=config.EXEMPLARS_OCR)
+        self._docling = documents.LazyConverter(ocr=config.EXEMPLARS_OCR)
         self._type_keys = exemplars_profile.type_keys
         self._types_block = self._build_types_block(exemplars_profile, self._wording)
         self._extraction_schema = self._build_extraction_schema(exemplars_profile)
@@ -148,7 +148,7 @@ class ExemplarsBankBuilder:
         """
         self.bootstrap()
 
-        files = source_docs.list_source_files(input_dir)
+        files = documents.list_source_files(input_dir)
         if not files:
             logger.error(f"No supported document in {input_dir}")
             return {}
@@ -255,7 +255,7 @@ class ExemplarsBankBuilder:
                 reporter.start(idx, detail=file_path.name)
                 progress.advance((idx - 1) / len(files), f"{file_path.name} ({idx}/{len(files)})")
                 try:
-                    text_by_file[file_path] = source_docs.document_markdown(
+                    text_by_file[file_path] = documents.document_markdown(
                         file_path,
                         self.prompts,
                         converter=self._docling,
@@ -436,7 +436,7 @@ class ExemplarsBankBuilder:
         by each; the price is items extracted twice, and `_identity` is what pays it. The
         ~10-character separator budget is charged to the first block of a batch too.
         """
-        blocks = source_docs.split_blocks(content)
+        blocks = documents.split_blocks(content)
         if not blocks:
             return []
 

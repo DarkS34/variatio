@@ -2,7 +2,7 @@
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Read `web/AGENTS.md` and `web/DESIGN.md` first. The transcription's rules are in
-`variatio/builders/source_docs/AGENTS.md`.
+`variatio/documents/AGENTS.md`.
 
 ## The document reader
 
