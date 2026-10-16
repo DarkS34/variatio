@@ -9,7 +9,7 @@ const FACT_LABEL: Record<string, Key> = {
 };
 
 
-export function WorkspaceContext({ slug }: { slug: string }) {
+export function SubjectDescription({ slug }: { slug: string }) {
   const { t } = useT();
   const query = useContentContext(slug);
   const data = query.data;

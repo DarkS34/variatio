@@ -11,7 +11,7 @@ import {
   type RefObject,
 } from "react";
 
-import { StepCounter } from "@/components/AppShell";
+import { StepCounter } from "@/components/StepCounter";
 import { STAGE_KICKER } from "@/components/StageGate";
 import { TabStrip, tabIds } from "@/components/TabStrip";
 import { Badge } from "@/components/ui/badge";

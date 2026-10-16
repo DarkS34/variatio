@@ -38,8 +38,8 @@ import {
   SettingsPanel,
   useEngineSettings,
 } from "@/features/admin/EngineSettings";
-import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
-import { FormError } from "@/features/auth/AuthLayout";
+import { SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
+import { FormError } from "@/components/ui/form-error";
 import { bytes, duration, JOB_STATUS, when } from "@/lib/format";
 import type { Key } from "@/lib/i18n";
 import type {

@@ -25,7 +25,9 @@ import {
   useSession,
 } from "@/state/auth";
 
-import { AuthLayout, FormError } from "./AuthLayout";
+import { FormError } from "@/components/ui/form-error";
+
+import { AuthLayout } from "./AuthLayout";
 import { useStripTokenFromUrl } from "./token";
 
 const PROFILE_IS_KEYS: Record<EvaluatorProfile, Key> = {

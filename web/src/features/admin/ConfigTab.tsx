@@ -4,12 +4,12 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormError } from "@/components/ui/form-error";
 import { SearchInput } from "@/components/ui/input";
 import { Alert, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { FormError } from "@/features/auth/AuthLayout";
 import { ReasoningLegend } from "@/features/admin/PhaseNode";
-import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
+import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
 import { DiffSummary, GroupCard, SETTING_LIST, sameValue } from "@/features/admin/SettingFields";
 import {
   FlowNode,

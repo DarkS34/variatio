@@ -9,7 +9,7 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   Six tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off, one per
   optional function in its own tone — «Evaluaciones» (`--evaluation`) and «Tutor»
   (`--tutor`), drawn for the administrator whatever the function's mode. **Every tab is one
-  list of its sections beside the section open** (`features/admin/Sections.tsx`, user's
+  list of its sections beside the section open** (`components/Sections.tsx`, user's
   request of 2026-10-04: «Motor» had a board of cells, «Configuración» a column of stages
   and the functions' tabs stacked everything down one page). A row of the list is a 16 px
   mark — an icon, or `NumberMark` where the list is an order (steps, units); «Motor» shows its

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
-import { FormError } from "@/features/auth/AuthLayout";
+import { FormError } from "@/components/ui/form-error";
 import {
   canReset,
   DiffSummary,

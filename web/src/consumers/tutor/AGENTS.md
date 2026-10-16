@@ -54,7 +54,7 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first. The tutor's server side is
   A teacher (`can_edit`) gets a second tab, «Criterios de la asignatura»: a review of plain
   sentences (the subject's open, each unit folded; concepts and sources only when
   correcting), «Modificar», and a rebuild that asks first when there is a
-  correction. The correction is the admin panel's list (`features/admin/Sections`) beside the
+  correction. The correction is the admin panel's list (`components/Sections`) beside the
   part open (user's request, 2026-10-04: stacked down one page the parts could not be told
   apart): the three parts of the subject whole lead — «Para toda la asignatura», «Lo que el
   tutor nunca sugiere», «Consultas administrativas» — and one per unit follows under a

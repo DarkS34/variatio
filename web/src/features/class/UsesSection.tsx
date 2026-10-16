@@ -4,7 +4,7 @@ import { ChoicePill } from "@/components/ui/choice";
 import { LoadError, Skeleton, Switch } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader } from "@/features/admin/Sections";
+import { SectionHeader } from "@/components/Sections";
 import { useT, type Key } from "@/lib/i18n";
 import type { GroupTool, StudentUses } from "@/lib/types";
 import { useSetStudentUses, useStudentUses } from "@/state/queries";

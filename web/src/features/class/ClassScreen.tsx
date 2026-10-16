@@ -24,7 +24,7 @@ import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { RowAction } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
+import { SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
 import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import {

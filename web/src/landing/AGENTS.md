@@ -72,7 +72,7 @@ English. The names the application already has (steps, door, phases) are the cor
   address without its query (`router.pathOf`): with it, the link matched no route and
   landed on the login form (the user's report, 2026-10-13). The landing's «Demo»
   section only presents it: three lines, the two ways in, and a glimpse of the bar drawn
-  with the application's own `StepCounter`.
+  with the application's own `StepCounter` (`components/StepCounter.tsx`).
 - **The demo draws the REAL screens over a server in memory** (the user's requirement,
   2026-10-12: faithful to the real design, never a drawing of it). `landing/demo/DemoFrame`,
   sized by the page that holds it,

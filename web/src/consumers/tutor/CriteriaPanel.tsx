@@ -9,7 +9,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Alert, EmptyState, LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/features/admin/Sections";
+import { NumberMark, SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
 import { when } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
+import { FormError } from "@/components/ui/form-error";
 import { InfoHint } from "@/components/ui/hint";
 import { Input, Label, SearchInput, Select } from "@/components/ui/input";
 import { Alert, Checkbox, LoadError, Spinner } from "@/components/ui/misc";
@@ -22,7 +23,8 @@ import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { FormError } from "@/features/auth/AuthLayout";
+import { CopyButton, CopyLink, LinkTable } from "@/components/CopyLink";
+import { SectionHeader } from "@/components/Sections";
 import { PROFILES, PROFILE_LABEL_KEYS } from "@/lib/evaluator";
 import { dateTime, relative } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
@@ -68,8 +70,6 @@ import {
   useRevokeInvite,
 } from "@/state/queries";
 
-import { CopyButton, CopyLink, LinkTable } from "./CopyLink";
-import { SectionHeader } from "./Sections";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 

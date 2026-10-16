@@ -3,6 +3,7 @@ import "./i18n";
 import { Download, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
+import { BarRows, Segments, ShareMeter, StatTile, type BarRow } from "@/components/charts";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ChoicePill } from "@/components/ui/choice";
 import { Select } from "@/components/ui/input";
@@ -11,7 +12,6 @@ import { useRadioGroup } from "@/components/ui/radio";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
-import { BarRows, Segments, ShareMeter, StatTile, type BarRow } from "@/features/admin/charts";
 import { PROFILES, profileLabel } from "@/lib/evaluator";
 import { duration, when } from "@/lib/format";
 import { artifactName } from "@/lib/names";

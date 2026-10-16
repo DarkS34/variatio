@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader } from "@/features/admin/Sections";
+import { SectionHeader } from "@/components/Sections";
 import { adjacency, priors } from "@/consumers/generation/prerequisites";
 import { domainColours } from "@/lib/domains";
 import { when } from "@/lib/format";

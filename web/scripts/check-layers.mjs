@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Whether the client's imports go one way: app → features → components → state → lib.
 //
-// `App.tsx` and `main.tsx` compose; a folder of `features/`, `consumers/` or `landing/` is one
-// screen or function; `components/` is what several of them share; `state/` holds the data
-// hooks and stores; `lib/` is pure helpers. An import may go down that list or stay inside its
-// own layer, and a screen's folder may not import another screen's folder: what two of them
-// share belongs a layer down. Static imports, type imports and `import()` all count, read by
-// the same scanner as `check:lazy` (`imports.mjs`).
+// `App.tsx`, `AppShell.tsx` and `main.tsx` compose; a folder of `features/`, `consumers/` or
+// `landing/` is one screen or function; `components/` is what several of them share; `state/`
+// holds the data hooks and stores; `lib/` is pure helpers. An import may go down that list or
+// stay inside its own layer, and a screen's folder may not import another screen's folder:
+// what two of them share belongs a layer down. Static imports, type imports and `import()` all
+// count, read by the same scanner as `check:lazy` (`imports.mjs`).
 //
 // `ALLOWED` lists the imports of today that go against it, file to file. It may only shrink:
 // a new import against the direction fails, and so does an entry that no longer exists, so
@@ -20,13 +20,9 @@ const DYNAMIC = /\bimport\(\s*(["'])([^"']+)\1\s*\)/g;
 const RANK = { app: 4, feature: 3, components: 2, state: 1, lib: 0 };
 
 const ALLOWED = new Set([
-  "components/AppShell.tsx -> features/auth/AccountMenu",
-  "components/AppShell.tsx -> features/raw/queries",
-  "components/AppShell.tsx -> features/workspaces/WorkspaceSwitcher",
   "components/ConceptSelector/GraphMode.tsx -> features/kg/GraphCanvas",
   "components/ConceptSelector/GraphMode.tsx -> features/kg/graph/model",
   "components/StageGate.tsx -> consumers/evaluation/StageReviewSlot",
-  "consumers/evaluation/AdminEvaluationTab.tsx -> features/admin/charts",
   "consumers/evaluation/AdminSetsPanel.tsx -> consumers/generation/commission",
   "consumers/evaluation/AdminSetsPanel.tsx -> consumers/generation/GenerateForm",
   "consumers/evaluation/commission.test.ts -> consumers/generation/commission",
@@ -41,26 +37,14 @@ const ALLOWED = new Set([
   "consumers/generation/GenerateForm.tsx -> features/profile/FieldEditor",
   "consumers/generation/GenerateScreen.tsx -> features/bank/Promote",
   "consumers/generation/GenerationsPanel.tsx -> features/bank/Promote",
-  "consumers/tutor/AdminConversations.tsx -> features/admin/Sections",
-  "consumers/tutor/CriteriaPanel.tsx -> features/admin/Sections",
   "features/account/AccountScreen.tsx -> consumers/generation/GenerationsPanel",
-  "features/account/AccountScreen.tsx -> features/auth/AuthLayout",
-  "features/account/AccountScreen.tsx -> features/context/WorkspaceContext",
   "features/account/AccountScreen.tsx -> features/workspaces/PeopleWhoLoseAccess",
-  "features/admin/AccessSection.tsx -> features/auth/AuthLayout",
-  "features/admin/AccountsTab.tsx -> features/auth/AuthLayout",
   "features/admin/AdminScreen.tsx -> consumers/evaluation/AdminEvaluationTab",
   "features/admin/AdminScreen.tsx -> consumers/evaluation/types",
-  "features/admin/ConfigTab.tsx -> features/auth/AuthLayout",
-  "features/admin/EngineSettings.tsx -> features/auth/AuthLayout",
-  "features/admin/EngineTab.tsx -> features/auth/AuthLayout",
-  "features/admin/FeatureAccess.tsx -> features/auth/AuthLayout",
-  "features/admin/InvitesSection.tsx -> features/auth/AuthLayout",
   "features/admin/SettingFields.tsx -> consumers/generation/effort",
   "features/admin/SettingFields.tsx -> consumers/generation/models",
   "features/admin/WorkspaceGenerations.tsx -> consumers/generation/GenerationsPanel",
   "features/admin/WorkspacesTab.tsx -> consumers/tutor/AdminConversations",
-  "features/admin/WorkspacesTab.tsx -> features/auth/AuthLayout",
   "features/admin/WorkspacesTab.tsx -> features/workspaces/PeopleWhoLoseAccess",
   "features/auth/AuthGate.tsx -> features/maintenance/MaintenanceScreen",
   "features/auth/AuthGate.tsx -> landing/DemoPage",
@@ -74,16 +58,7 @@ const ALLOWED = new Set([
   "features/bank/exercise.ts -> consumers/generation/commission",
   "features/bank/GeneratedList.tsx -> consumers/generation/draft",
   "features/bank/GeneratedList.tsx -> consumers/generation/ResultCard",
-  "features/class/ActivitySection.tsx -> features/admin/Sections",
-  "features/class/activity/TutorBlock.tsx -> features/admin/charts",
-  "features/class/ClassScreen.tsx -> features/admin/Sections",
-  "features/class/GroupsSection.tsx -> features/admin/Sections",
-  "features/class/InviteSection.tsx -> features/admin/CopyLink",
-  "features/class/InviteSection.tsx -> features/admin/Sections",
   "features/class/ProgressSection.tsx -> consumers/generation/prerequisites",
-  "features/class/ProgressSection.tsx -> features/admin/Sections",
-  "features/class/TeachersSection.tsx -> features/admin/Sections",
-  "features/class/UsesSection.tsx -> features/admin/Sections",
   "features/maintenance/MaintenanceScreen.tsx -> features/auth/LoginScreen",
   "landing/demo/world.test.ts -> features/raw/progress",
   "landing/LandingScreen.tsx -> features/auth/AuthGate",
@@ -97,7 +72,7 @@ const ALLOWED = new Set([
 
 /** The layer of a path relative to `src/`, and the folder it counts as; null outside them. */
 function place(path) {
-  if (/^(App|main)\.tsx?$/.test(path)) return { layer: "app", unit: "app" };
+  if (/^(App|AppShell|main)\.tsx?$/.test(path)) return { layer: "app", unit: "app" };
   const [top, sub] = path.split("/");
   if (top === "features" || top === "consumers") return { layer: "feature", unit: `${top}/${sub}` };
   if (top === "landing") return { layer: "feature", unit: "landing" };
@@ -148,7 +123,7 @@ let failed = false;
 
 if (unplaced.length) {
   failed = true;
-  console.log("FALLA  Ficheros fuera de las capas (App/main, features, consumers, landing, components, state, lib):");
+  console.log("FALLA  Ficheros fuera de las capas (App/AppShell/main, features, consumers, landing, components, state, lib):");
   for (const path of unplaced) console.log(`         ${path}`);
 }
 if (added.length) {

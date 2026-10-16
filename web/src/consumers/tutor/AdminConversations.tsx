@@ -3,11 +3,11 @@ import "./i18n";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
+import { SectionHeader } from "@/components/Sections";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/input";
 import { LoadError, Skeleton } from "@/components/ui/misc";
-import { SectionHeader } from "@/features/admin/Sections";
 import { when } from "@/lib/format";
 import { useT, type Key } from "@/lib/i18n";
 import type { AdminWorkspace } from "@/lib/types";

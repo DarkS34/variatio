@@ -184,7 +184,7 @@ else; `check:color` only sees what is in `src/index.css`.
   every row line up.
 - Destructive gestures: `danger` (red on hover) and a `useConfirm` question first.
 
-## 5. Lists of sections (`src/features/admin/Sections.tsx`)
+## 5. Lists of sections (`src/components/Sections.tsx`)
 
 - Every tab or screen made of parts is `Sections`: the list of sections beside the section
   open, under `SectionHeader`.
@@ -301,11 +301,11 @@ Archivo only. Six steps, every line a whole number of pixels:
 | Need | Use |
 |---|---|
 | block | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent` (`components/ui/card.tsx`) |
-| section list + header | `Sections`, `SectionHeader`, `NumberMark` (`features/admin/Sections.tsx`) |
+| section list + header | `Sections`, `SectionHeader`, `NumberMark` (`components/Sections.tsx`) |
 | table | `Table`, `THead`, `TBody`, `TR` (`joined`), `TH`, `TD`, `TableBulk`, `RowGestures`, `RowAction` (`components/ui/table.tsx`) |
 | person | `PersonName` (`components/ui/person.tsx`); class lists `PeopleTable`, `PersonRow` |
-| links just made | `LinkTable`, `CopyLink`, `CopyButton` (`features/admin/CopyLink.tsx`) |
-| fields | `Input`, `SearchInput`, `Select`, `Textarea`, `Label` (`components/ui/input.tsx`) |
+| links just made | `LinkTable`, `CopyLink`, `CopyButton` (`components/CopyLink.tsx`) |
+| fields | `Input`, `SearchInput`, `Select`, `Textarea`, `Label` (`components/ui/input.tsx`); a form's error, `FormError` (`components/ui/form-error.tsx`) |
 | choices | `ChoicePill`, `ChoiceMark`, `CARD_CHOICE`, `CARD_CHOSEN` (`components/ui/choice.tsx`), `useRadioGroup` |
 | tabs | `Tabs` (`components/ui/tabs.tsx`), `TabStrip` (`components/TabStrip.tsx`) |
 | states | `Badge`, `Alert`, `EmptyState`, `LoadError`, `Skeleton`, `Spinner`, `Progress`, `Switch`, `Checkbox` (`components/ui/`) |

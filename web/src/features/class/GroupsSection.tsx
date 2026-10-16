@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/misc";
 import { useRadioGroup } from "@/components/ui/radio";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader } from "@/features/admin/Sections";
+import { SectionHeader } from "@/components/Sections";
 import { useT } from "@/lib/i18n";
 import type { ClassGroup, Member } from "@/lib/types";
 import { useGroupActions, useMemberActions } from "@/state/queries";

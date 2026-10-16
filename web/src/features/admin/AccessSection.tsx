@@ -3,17 +3,17 @@ import { Plus, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { FormError } from "@/components/ui/form-error";
 import { Input, Label } from "@/components/ui/input";
 import { LoadError, Skeleton, Spinner } from "@/components/ui/misc";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { FormError } from "@/features/auth/AuthLayout";
+import { SectionHeader } from "@/components/Sections";
 import { api } from "@/lib/api";
 import { useT, type Key } from "@/lib/i18n";
 import { readNetwork } from "@/lib/networks";
 import type { ConfigPayload } from "@/lib/types";
 
-import { SectionHeader } from "./Sections";
 
 /** The setting this section edits, and the query its value is read from. */
 export const TRUSTED_NETWORKS_KEY = "access.trusted_networks";

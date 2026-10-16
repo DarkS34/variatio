@@ -3,7 +3,7 @@ import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/misc";
-import { Segments } from "@/features/admin/charts";
+import { Segments } from "@/components/charts";
 import { kindShares } from "@/lib/activity";
 import { dateTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";

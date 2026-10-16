@@ -4,6 +4,7 @@ import { lazy, Suspense, useRef, useState, type ReactNode } from "react";
 import { InfoHint } from "@/components/ui/hint";
 import { EmptyState, LoadError, Skeleton } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
+import { SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
 import { featureAccessOf, type AdminOverview, type FeatureName } from "@/lib/types";
 import { useSession } from "@/state/auth";
 import { useAdminFeatures, useAdminOverview } from "@/state/queries";
@@ -21,7 +22,6 @@ import {
 import { EngineTab } from "./EngineTab";
 import { FeatureAccess, useAccessDrafts, type AccessDrafts } from "./FeatureAccess";
 import { MaintenanceSwitch } from "./MaintenanceSwitch";
-import { SectionHeader, Sections, type SectionEntry } from "./Sections";
 import { CONFIG_STAGES, stageOfFeature } from "./stages";
 import { WorkspacesTab } from "./WorkspacesTab";
 import { useT, withCatalogues } from "@/lib/i18n";

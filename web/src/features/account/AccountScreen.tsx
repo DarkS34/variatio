@@ -13,7 +13,7 @@ import {
 import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { WorkspaceContext } from "@/features/context/WorkspaceContext";
+import { FormError } from "@/components/ui/form-error";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
@@ -23,7 +23,6 @@ import { Alert, Skeleton, Spinner } from "@/components/ui/misc";
 import { RowAction, RowGestures } from "@/components/ui/table";
 import { useRadioGroup } from "@/components/ui/radio";
 import { Tabs } from "@/components/ui/tabs";
-import { FormError } from "@/features/auth/AuthLayout";
 import { SubjectExercises } from "@/consumers/generation/GenerationsPanel";
 import { PeopleWhoLoseAccess } from "@/features/workspaces/PeopleWhoLoseAccess";
 import { LANGUAGES, LANGUAGE_NAMES, useT, type Key, type Language } from "@/lib/i18n";
@@ -43,6 +42,7 @@ import {
   useWorkspaces,
 } from "@/state/queries";
 import type { WorkspaceRow } from "@/lib/types";
+import { SubjectDescription } from "./SubjectDescription";
 
 /**
  * Everything that belongs to the person using the app, in one page: one tab per question.
@@ -756,7 +756,7 @@ function SubjectRow({
       {/* The subject's context, beside the instance it describes. It is the whole reason
           this list is more than a row of slugs: two workspaces called "Compiladores" and
           "CS0" say nothing about which course each one is. */}
-      <WorkspaceContext slug={workspace.slug} />
+      <SubjectDescription slug={workspace.slug} />
     </li>
   );
 }

@@ -221,8 +221,8 @@ an `api/` package whose `install(app)` the composition root calls.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `web/src/` (root) | `main.tsx` (boot), `App.tsx` (routes), `index.css` (tokens) | `App.tsx` |
-| `components/` | shared screens' parts: `AppShell`, `StageGate`, `BuildButton`, … | `StageGate.tsx` |
+| `web/src/` (root) | `main.tsx` (boot), `App.tsx` (routes), `AppShell.tsx` (the frame: the steps' bar, the account menu), `index.css` (tokens) | `App.tsx` |
+| `components/` | shared screens' parts: `StageGate`, `BuildButton`, `Sections`, `CopyLink`, `charts`, `StepCounter`, … | `StageGate.tsx` |
 | `components/ui/` | primitives (shadcn names): button, card, table, dialog, … | `web/DESIGN.md` |
 | `features/` | one folder per screen of the core: `raw`, `kg`, `profile`, `bank`, `class`, `admin`, `auth`, `account`, `workspaces`, … | the screen's `*Screen.tsx` |
 | `consumers/` | one folder per function, mirroring `consumers/` | the function's screen |

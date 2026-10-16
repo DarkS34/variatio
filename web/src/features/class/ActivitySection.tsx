@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, type ReactNode } from "react";
 import { Label, Select } from "@/components/ui/input";
 import { LoadError, Skeleton } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader } from "@/features/admin/Sections";
+import { SectionHeader } from "@/components/Sections";
 import { findingsIn, weekBefore } from "@/lib/activity";
 import { domainColour, number } from "@/lib/format";
 import { useT, type Translate } from "@/lib/i18n";

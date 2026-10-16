@@ -4,12 +4,13 @@ import { lazy, Suspense, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { FormError } from "@/components/ui/form-error";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Skeleton, Spinner } from "@/components/ui/misc";
 import { RowGestures, Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
-import { FormError } from "@/features/auth/AuthLayout";
+import { SectionHeader } from "@/components/Sections";
 import { api } from "@/lib/api";
 import { ARTIFACT_STATUS, bytes, when } from "@/lib/format";
 import type { AdminAccount, AdminOverview, AdminWorkspace } from "@/lib/types";
@@ -29,7 +30,6 @@ import { artifactName } from "@/lib/names";
 
 import { ClassLinksBlock } from "./ClassLinksBlock";
 import { EndCourseDialog } from "./EndCourseDialog";
-import { SectionHeader } from "./Sections";
 import { WorkspaceGenerations } from "./WorkspaceGenerations";
 
 // The tutor's code, fetched when the administrator opens a subject's conversations. Offered

@@ -6,7 +6,9 @@ import { Spinner } from "@/components/ui/misc";
 import { Link } from "@/lib/router";
 import { useLogin } from "@/state/auth";
 
-import { AuthLayout, FormError } from "./AuthLayout";
+import { FormError } from "@/components/ui/form-error";
+
+import { AuthLayout } from "./AuthLayout";
 import { useT } from "@/lib/i18n";
 
 /**

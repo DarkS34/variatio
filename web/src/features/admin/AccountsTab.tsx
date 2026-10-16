@@ -18,13 +18,15 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormError } from "@/components/ui/form-error";
 import { InfoHint } from "@/components/ui/hint";
 import { Label, SearchInput, Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { RowAction, RowGestures, Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { useConfirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
-import { FormError } from "@/features/auth/AuthLayout";
+import { CopyLink } from "@/components/CopyLink";
+import { SectionHeader, Sections } from "@/components/Sections";
 import { profileLabel } from "@/lib/evaluator";
 import { when } from "@/lib/format";
 import { inviteState } from "@/lib/invites";
@@ -42,9 +44,7 @@ import {
 
 import { AccessSection, trustedNetworksOf, useAdminConfig } from "./AccessSection";
 import { groupOf, matchesAccount, type GroupKey } from "./accounts";
-import { CopyLink } from "./CopyLink";
 import { InvitesSection } from "./InvitesSection";
-import { SectionHeader, Sections } from "./Sections";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 

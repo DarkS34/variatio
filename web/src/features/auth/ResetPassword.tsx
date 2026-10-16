@@ -5,7 +5,9 @@ import { Input, Label } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { useResetPassword } from "@/state/auth";
 
-import { AuthLayout, FormError } from "./AuthLayout";
+import { FormError } from "@/components/ui/form-error";
+
+import { AuthLayout } from "./AuthLayout";
 import { useStripTokenFromUrl } from "./token";
 import { useT } from "@/lib/i18n";
 

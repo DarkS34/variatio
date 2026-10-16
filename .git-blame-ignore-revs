@@ -51,3 +51,6 @@ c9990ef8fb910044247fc7965ad0315f7b4c6799
 
 # refactor(server): server/classroom/, «Clase» and its four route modules
 66ff69d89f1f946cd7844545f7df8515cc397443
+
+# refactor(server): server/admin/, one module per tab, and routers/ is gone
+f8d705090b2226ea27c3bbcf8f1ec0bef639abc3

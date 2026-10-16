@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/confirm";
 import { RowAction } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
-import { SectionHeader } from "@/features/admin/Sections";
+import { SectionHeader } from "@/components/Sections";
 import { useT } from "@/lib/i18n";
 import type { Member, Role } from "@/lib/types";
 import { ROLE_LABEL_KEYS, useIsOwner, useSession } from "@/state/auth";
