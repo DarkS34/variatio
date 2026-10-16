@@ -11,8 +11,9 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from server import auth, installation, singletons
+from server import auth, singletons
 from server.auth.deps import Access
+from server.core import installation
 from server.db import identity, repository
 from server.db import session as db_session
 from server.db.models import Base

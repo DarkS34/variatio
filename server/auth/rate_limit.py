@@ -10,8 +10,8 @@ exception is an address in a network the administrator listed as a school's
 (`TRUSTED_NETWORKS`): behind its NAT a whole class is one address, so only the account is
 counted there.
 
-`installation` and `deps` are imported inside the functions that need them, because this
-module sits between the two halves of their import cycle.
+`deps` is imported inside the function that needs it, because this module sits between the
+two halves of its import cycle.
 """
 
 import functools
@@ -23,6 +23,8 @@ from collections import defaultdict, deque
 from fastapi import HTTPException, Request
 
 from variatio import config
+
+from ..core import environment
 
 
 class RateLimiter:
@@ -162,9 +164,7 @@ def locked_seconds(bucket: str, account: str) -> float:
 
 def limits(bucket: str) -> tuple[int, float]:
     """Return the (limit, window) this bucket is configured with."""
-    from .. import installation
-
-    declared = installation.RATE_LIMITS.get(bucket)
+    declared = environment.RATE_LIMITS.get(bucket)
     return declared if declared is not None else FALLBACK_LIMITS[bucket]
 
 

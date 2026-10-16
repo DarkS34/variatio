@@ -165,7 +165,7 @@ def test_the_job_warms_the_rag_index_only_when_the_draw_needs_it(monkeypatch):
     class _Ws:
         id = 1
 
-    monkeypatch.setattr(evaluation_jobs.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(evaluation_jobs.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(evaluation_jobs, "context_for", lambda job: _Context())
     monkeypatch.setattr(evaluation_jobs.rag_arm, "warm", lambda ws: warmed.append(ws))
     monkeypatch.setattr(evaluation_jobs.evaluation_run, "evaluate", fake_evaluate)

@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from server import installation
-from server import tunnel
 from server.auth.rate_limit import RateLimiter
+from server.core import installation
+from server.core import tunnel
 from variatio import config
 from variatio import settings
 from variatio.core import paths

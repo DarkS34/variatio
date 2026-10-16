@@ -19,7 +19,8 @@ from datetime import datetime, timezone
 
 from loguru import logger
 
-from server import activity, deps, groups, installation
+from server import activity, groups
+from server.core import contexts, installation
 from server.db import repository
 from server.db.session import session_scope
 from server.editors import kg_edit
@@ -61,7 +62,7 @@ def handle_digest(job: Job, control: JobControl) -> dict:
 
     quiet = progress.set_emitter(QuietEmitter(control))
     try:
-        deps.require_inference()
+        contexts.require_inference()
         language = locale.prompt_language(ws)
         tutor_prompts = tutor_prompts_pkg.of(language)
         prompts = prompts_pkg.of(language)

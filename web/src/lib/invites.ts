@@ -34,7 +34,7 @@ export const BATCH_MAX = 50;
 export const LABEL_MAX = 120;
 
 /**
- * A teacher's links, mirrored from `server/installation.py` so a form stops where the server
+ * A teacher's links, mirrored from `server/core/environment.py` so a form stops where the server
  * would refuse: a class link's seats and days by default, its ceiling of seats, a personal
  * invitation's days by default, and how far ahead either may expire.
  */

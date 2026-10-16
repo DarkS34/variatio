@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server.daily import seconds_to_reopen, today, wait_in_words
+from server.core.daily import seconds_to_reopen, today, wait_in_words
 from server.db.models import TutorUsage
 
 

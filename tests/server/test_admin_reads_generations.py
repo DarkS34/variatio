@@ -11,8 +11,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server import auth, installation
+from server import auth
 from server import generations as store
+from server.core import installation
 from server.db import identity, repository
 from server.routers import admin
 from variatio.core.workspace import Workspace

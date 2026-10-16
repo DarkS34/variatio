@@ -32,7 +32,7 @@ def ws(tmp_path):
 def handler(ws, monkeypatch):
     monkeypatch.setattr(handlers, "_workspace", lambda job: ws)
     monkeypatch.setattr(handlers.mirror, "mirror_file", lambda *a, **k: None)
-    monkeypatch.setattr(handlers.deps, "invalidate", lambda *a, **k: None)
+    monkeypatch.setattr(handlers.contexts, "invalidate", lambda *a, **k: None)
     return handlers
 
 

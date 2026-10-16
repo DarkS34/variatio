@@ -17,7 +17,7 @@ def _client(tmp_path, monkeypatch) -> TestClient:
     (dist / "index.html").write_text("<!doctype html><title>index</title>", encoding="utf-8")
     (dist / "favicon.svg").write_text("<svg/>", encoding="utf-8")
     (dist / ".vite" / "chunks.json").write_text('{"chunks": []}', encoding="utf-8")
-    monkeypatch.setattr(app_module.installation, "WEB_DIST_DIR", dist)
+    monkeypatch.setattr(app_module.environment, "WEB_DIST_DIR", dist)
     app = FastAPI()
     app_module._mount_web(app)
     return TestClient(app)

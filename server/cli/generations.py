@@ -16,8 +16,8 @@ def export_generations(args) -> int:
     from sqlalchemy import MetaData, Table, inspect, select
 
     from .. import generations as store
+    from ..core.installation import workspace_for
     from ..db import session_scope
-    from ..installation import workspace_for
 
     dry_run = bool(args.dry_run)
     with session_scope() as session:

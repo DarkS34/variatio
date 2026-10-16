@@ -95,7 +95,7 @@ def _isolated_invite_link_key(tmp_path, monkeypatch):
 # would answer the next one's engine.
 @pytest.fixture(autouse=True)
 def _fresh_engine_reading():
-    from server.routers import health
+    from server.core.routes import health
 
     health.forget_reading()
     yield

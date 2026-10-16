@@ -33,7 +33,8 @@ from loguru import logger
 from variatio import entrypoints
 from variatio.core.workspace import Workspace
 
-from .. import approvals, installation
+from .. import approvals
+from ..core import installation
 from .catalogue import JOB_LABELS, Job
 
 # What each job drags behind it.

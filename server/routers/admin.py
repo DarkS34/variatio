@@ -25,11 +25,12 @@ from sqlalchemy.orm import Session as DbSession
 
 from consumers.evaluation.api import store as evaluation_store
 
-from .. import approvals, auth, deps, features, installation, maintenance, members, singletons, storage
+from .. import approvals, auth, features, members, singletons, storage
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import links
 from ..auth.rate_limit import locked_seconds, throttle, unlock
+from ..core import contexts, environment, installation, maintenance
 from ..db import identity, repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace
 from ..editors import profile_edit
@@ -192,7 +193,7 @@ def _workspace_view(db: DbSession, workspace) -> dict:
         ],
         "people": members.people_of(db, workspace),
         "generations": generations_store.count(installation.workspace_for(workspace.slug)),
-        "warm": workspace.slug in deps.warm_slugs(),
+        "warm": workspace.slug in contexts.warm_slugs(),
         "stages": _chain(workspace.slug),
         "disk": installation.disk_usage(installation.workspace_for(workspace.slug)),
     }
@@ -226,7 +227,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
             "job": running[0].to_dict() if running else None,
             "lanes": _lane_jobs(),
             "queued": len(singletons.runner.pending()),
-            "warm_contexts": deps.warm_slugs(),
+            "warm_contexts": contexts.warm_slugs(),
         },
     }
 
@@ -262,10 +263,10 @@ def create_invite(
     without limit, hence the throttle, which a batch pays link by link. `invite` and `link`
     repeat the first of the batch for a bundle that predates batches.
     """
-    if not 1 <= body.count <= installation.INVITE_BATCH_MAX:
+    if not 1 <= body.count <= environment.INVITE_BATCH_MAX:
         raise HTTPException(
             422,
-            f"Se pueden crear entre 1 y {installation.INVITE_BATCH_MAX} invitaciones a la vez.",
+            f"Se pueden crear entre 1 y {environment.INVITE_BATCH_MAX} invitaciones a la vez.",
         )
     throttle("invite", request, admin.username, cost=body.count)
     terms = _terms(db, body)
@@ -643,7 +644,7 @@ def delete_workspace(
 
     db.delete(workspace)
     db.flush()
-    deps.invalidate(slug, "workspace eliminado")
+    contexts.invalidate(slug, "workspace eliminado")
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
     singletons.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
@@ -714,7 +715,7 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
 
     ws = installation.workspace_for(slug)
     result = approvals.discard(ws, artifact)
-    deps.invalidate(slug, f"'{artifact}' eliminado desde administración")
+    contexts.invalidate(slug, f"'{artifact}' eliminado desde administración")
     singletons.bus.publish(slug, None, "pipeline.changed", {"artifact": artifact, "action": "discard"})
     return {"workspace": slug, **result}
 
@@ -734,7 +735,7 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
         raise HTTPException(409, "Esa asignatura tiene trabajo en curso o en cola; espera o cancélalo.")
     ws = installation.workspace_for(slug)
     result = installation.clear_cache(ws)
-    deps.invalidate(slug, "caché vaciada desde administración")
+    contexts.invalidate(slug, "caché vaciada desde administración")
     return {"workspace": slug, **result}
 
 
@@ -931,11 +932,11 @@ def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db))
     if not user.active:
         raise HTTPException(409, "La cuenta está desactivada: reactívala antes.")
     token = auth.new_token()
-    identity.create_reset(db, user.id, auth.digest(token), installation.RESET_TTL)
+    identity.create_reset(db, user.id, auth.digest(token), environment.RESET_TTL)
     return {
         "user_id": user.id,
         "link": f"{auth.base_url(request)}/reset?token={token}",
-        "expires_in_minutes": int(installation.RESET_TTL.total_seconds() // 60),
+        "expires_in_minutes": int(environment.RESET_TTL.total_seconds() // 60),
     }
 
 
@@ -1149,7 +1150,7 @@ def _expiry(value: datetime | None) -> datetime:
     """
     moment = identity.now()
     if value is None:
-        return moment + installation.INVITE_TTL
+        return moment + environment.INVITE_TTL
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     if moment.tzinfo is None:

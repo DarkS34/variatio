@@ -1181,7 +1181,7 @@ what each decision replaced.
 
 ### D-228. Document code outside the builders
 - **Rule:** The document plumbing (`builders/source_docs/`) lives in `variatio/documents/`.
-- **Date:** 2026-10-16 · **Commit:** the commit after `73fc00b` that adds `variatio/documents/` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `ed3abf7` · **Status:** in force
 - **Why:** Three server modules, two functions and `entrypoints/transcribe.py` import it, and the transcription is no builder.
 
 ### D-229. Client types, hooks and primitives split
@@ -1191,5 +1191,5 @@ what each decision replaced.
 
 ### D-230. Who imports the engine boundary, with documents/
 - **Rule:** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/` import `core.inference`; `documents/pages/` transcribes with the vision model, and `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
-- **Date:** 2026-10-16 · **Commit:** the commit after `73fc00b` that adds `variatio/documents/` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `ed3abf7` · **Status:** in force
 - **Why:** D-228 moved the document code, page transcription included, out of `builders/`: the rule names the package the transcription now lives in, and the contracts still keep `entrypoints/`, `loaders/`, `prompts/`, `wording/` and `settings/` away from the engine.

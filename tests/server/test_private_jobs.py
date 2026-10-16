@@ -17,14 +17,15 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server import auth, installation, singletons
+from server import auth, singletons
 from server.auth.deps import Access
+from server.core import installation
+from server.core.routes import stream as ws_routes
 from server.jobs import lanes
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import PRIVATE_KINDS, Job
 from server.jobs.runner import JobRunner
 from server.routers import jobs as jobs_routes
-from server.routers import ws as ws_routes
 from server.routers.pipeline import pipeline_payload
 
 ANA, LUIS = 1, 2

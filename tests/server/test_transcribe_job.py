@@ -18,7 +18,7 @@ from variatio.core.workspace import Workspace
 @pytest.fixture
 def stub(monkeypatch, tmp_path):
     calls: list[tuple[str, str]] = []
-    monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(handlers.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(
         handlers, "_workspace", lambda job: Workspace(tmp_path / job.workspace, slug=job.workspace)
     )

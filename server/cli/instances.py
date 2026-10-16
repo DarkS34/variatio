@@ -45,7 +45,7 @@ def export_instance(args) -> int:
 
 def _slug_error(*slugs: str | None) -> str | None:
     """Return the first complaint about these slugs, or None when all of them are usable."""
-    from ..installation import slug_error
+    from ..core.installation import slug_error
 
     for slug in slugs:
         if slug is None:
@@ -58,9 +58,9 @@ def _slug_error(*slugs: str | None) -> str | None:
 
 def list_workspaces(_args) -> int:
     """Print every workspace of the database with the directory it reads."""
+    from ..core.installation import workspace_for
     from ..db import session_scope
     from ..db.repository import list_workspaces as rows_of
-    from ..installation import workspace_for
 
     with session_scope() as session:
         rows = rows_of(session)
@@ -86,7 +86,7 @@ def create_workspace(args) -> int:
     from ..db.repository import create_workspace as insert, get_workspace
     from variatio.loaders import locale
 
-    from ..installation import provision, slug_error, workspace_for
+    from ..core.installation import provision, slug_error, workspace_for
 
     error = slug_error(args.slug)
     if error:

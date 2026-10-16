@@ -22,7 +22,8 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config, entrypoints
 from variatio.core import inference
 
-from .. import auth, deps, features, singletons
+from ... import auth, features, singletons
+from .. import contexts
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
 
@@ -146,7 +147,7 @@ def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) ->
         },
         # Whether THIS workspace's indices are warm: with a registry of contexts a
         # process-wide answer would report somebody else's instance.
-        "context_ready": deps.is_ready(ws.slug),
+        "context_ready": contexts.is_ready(ws.slug),
         "workspace": ws.slug,
         "paths": {
             "artifacts": str(ws.artifacts_dir),

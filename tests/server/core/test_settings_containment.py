@@ -1,6 +1,6 @@
 import pytest
 
-from server import installation
+from server.core import installation
 from variatio.core import paths
 from variatio.core.workspace import Workspace
 

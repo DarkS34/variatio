@@ -2,8 +2,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server import installation
-from server.routers import ws as ws_module
+from server.core import environment
+from server.core.routes import stream as ws_module
 
 
 # `OriginCheck` is a `BaseHTTPMiddleware`, which hands every non-`http` scope straight on, so
@@ -24,9 +24,9 @@ def attempts(monkeypatch):
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setattr(installation, "public_base_url", lambda: None)
-    monkeypatch.setattr(installation, "trust_proxy", lambda: False)
-    monkeypatch.setattr(installation, "dev_cors_origins", lambda: [])
+    monkeypatch.setattr(environment, "public_base_url", lambda: None)
+    monkeypatch.setattr(environment, "trust_proxy", lambda: False)
+    monkeypatch.setattr(environment, "dev_cors_origins", lambda: [])
     app = FastAPI()
     app.include_router(ws_module.router)
     return TestClient(app)

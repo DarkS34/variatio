@@ -8,13 +8,14 @@ from importlib import metadata
 
 from loguru import logger
 
-from server import approvals, deps, installation, storage
+from server import approvals, storage
 from server import curriculum as curriculum_store
 from server import generations as generations_store
+from server.core import contexts, installation
+from server.core.contexts import context_for
 from server.db import identity, session_scope
 from server.jobs import lanes
 from server.jobs.catalogue import Job
-from server.jobs.handlers import context_for
 from server.jobs.runner import JobControl
 from variatio import config, entrypoints
 from variatio.core import inference, progress
@@ -34,7 +35,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     that was asked for, so a saved exercise is reproducible from its own file. `on_accepted`
     persists item by item, so a run cancelled after the third keeps three files.
     """
-    deps.require_inference()
+    contexts.require_inference()
     context = context_for(job)
     ws = installation.workspace_for(job.workspace)
     params = job.params

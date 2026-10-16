@@ -2,7 +2,7 @@
  * A CSV the teacher downloads, written so a spreadsheet opens it as data.
  *
  * The cells are names somebody typed, so one opening with `=`, `+`, `-`, `@` or a control
- * character is defused with a leading apostrophe — the rule `server/csv_safe.py` keeps for
+ * character is defused with a leading apostrophe — the rule `server/core/csv_safe.py` keeps for
  * the server's exports, numbers exempt. Quoting is not the defusing (the parser strips the
  * quotes before typing the cell); it is what keeps a comma or a line break inside one cell.
  */

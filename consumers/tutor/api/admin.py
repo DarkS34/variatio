@@ -10,7 +10,8 @@ the administrator as they refuse anyone else.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, installation
+from server import auth
+from server.core import installation
 from server.db import identity, repository
 
 from . import store

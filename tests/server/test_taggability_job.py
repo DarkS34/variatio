@@ -37,7 +37,7 @@ PROFILE = {
 @pytest.fixture
 def stub(monkeypatch, tmp_path):
     saved: list[list[str]] = []
-    monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(handlers.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(
         handlers, "_workspace", lambda job: Workspace(tmp_path / job.workspace, slug=job.workspace)
     )
@@ -110,7 +110,7 @@ def aula(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(handlers, "_workspace", lambda job: ws)
-    monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(handlers.contexts, "require_inference", lambda: None)
     return ws
 
 

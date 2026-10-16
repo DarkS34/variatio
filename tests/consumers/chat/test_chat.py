@@ -245,7 +245,7 @@ def test_a_turn_writes_the_reply_and_says_nothing_in_public(db, aula, monkeypatc
     record["pending"] = {"job_id": job.id, "turn": 0}
     STORE.write(aula.ws, aula.sara.id, record)
     monkeypatch.setattr(jobs.installation, "workspace_for", lambda slug: aula.ws)
-    monkeypatch.setattr(jobs.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(jobs.contexts, "require_inference", lambda: None)
     seen = {}
 
     def answer(**kwargs):

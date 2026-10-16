@@ -15,10 +15,11 @@ the stream.
 
 from loguru import logger
 
+from server import storage
 from server.conversations.jobs import QuietEmitter, release
-from server import deps, installation, storage
+from server.core import contexts, installation
+from server.core.contexts import context_for
 from server.jobs.catalogue import Job
-from server.jobs.handlers import context_for
 from server.jobs.runner import JobControl
 from variatio import entrypoints
 from variatio.core import progress
@@ -62,7 +63,7 @@ def handle_turn(job: Job, control: JobControl) -> dict:
 
     quiet = progress.set_emitter(QuietEmitter(control))
     try:
-        deps.require_inference()
+        contexts.require_inference()
         context = context_for(job)
         tutor_prompts = tutor_prompts_pkg.of(context.language)
         sources = entrypoints.load_concept_sources(ws)
@@ -126,7 +127,7 @@ def handle_criteria(job: Job, control: JobControl) -> dict:
     screen says so before the button is pressed. This is the contract the graph and the
     profile keep (`approvals.retire_curated`).
     """
-    deps.require_inference()
+    contexts.require_inference()
     ws = installation.workspace_for(job.workspace)
     context = context_for(job)
     tutor_prompts = tutor_prompts_pkg.of(context.language)

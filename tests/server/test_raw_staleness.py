@@ -57,7 +57,7 @@ def state(ws, artifact=approvals.KNOWLEDGE_GRAPH):
 def test_the_build_handler_records_what_the_slot_held_when_it_started(ws, monkeypatch):
     drop(ws, "corpus", "tema1.pdf")
     monkeypatch.setattr(handlers, "_workspace", lambda job: ws)
-    monkeypatch.setattr(handlers.deps, "invalidate", lambda *a, **k: None)
+    monkeypatch.setattr(handlers.contexts, "invalidate", lambda *a, **k: None)
 
     def build(artifact, control, keep=None):
         # A document dropped in while the build runs is one it never read.

@@ -3,7 +3,7 @@ import io
 
 import pytest
 
-from server import csv_safe
+from server.core import csv_safe
 
 PAYLOADS = [
     "=cmd|'/c calc'!A1",

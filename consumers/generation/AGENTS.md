@@ -16,7 +16,7 @@ The client is `web/src/consumers/generation/` (rules in `web/AGENTS.md`).
   `Retry-After`, some left is 422 naming how many. A teacher has neither bound.
   `GET /api/jobs/allowance` tells the form (`max_items`, `daily_items`, `used_today`); its
   stepper stops there and says what is left of the day, and `lib/limit.ts` words the 429 from
-  its code and `Retry-After` (the wait's words are shared with the tutor's, `server/daily.py`
+  its code and `Retry-After` (the wait's words are shared with the tutor's, `server/core/daily.py`
   on the server).
 ## `consumers/generation/` — «Generar ejercicios»
 

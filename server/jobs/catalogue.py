@@ -1,7 +1,7 @@
 """What a job and an event are, and the tables that classify a job kind.
 
 Deliberately not called `models`: under `server/` that already means the ML model
-(`model_pulls.py`, `required_models`) and the ORM row (`db/models.py`).
+(`core/model_pulls.py`, `required_models`) and the ORM row (`db/models.py`).
 """
 
 import time

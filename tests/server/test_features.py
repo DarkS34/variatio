@@ -286,7 +286,7 @@ def test_the_functions_of_an_unused_invitation_can_be_changed(db):
 
 
 def test_a_function_that_is_off_does_not_ask_for_its_own_model(db, monkeypatch):
-    from server.routers import health
+    from server.core.routes import health
 
     monkeypatch.setattr(
         health.inference,

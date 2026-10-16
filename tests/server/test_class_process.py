@@ -15,9 +15,9 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from server import deps
 from server.auth import rate_limit
-from server.routers import health
+from server.core import contexts
+from server.core.routes import health
 from variatio import config
 from variatio.core.workspace import Workspace
 from variatio.settings import store
@@ -137,11 +137,11 @@ def test_the_panel_cannot_save_a_network_that_wide():
 @pytest.fixture
 def registry(monkeypatch, tmp_path):
     """An empty context registry, an engine that answers, and two subjects."""
-    monkeypatch.setattr(deps, "_contexts", deps.OrderedDict())
-    monkeypatch.setattr(deps, "_invalid_reasons", {})
-    monkeypatch.setattr(deps, "_generations", {})
-    monkeypatch.setattr(deps, "_building", {})
-    monkeypatch.setattr(deps, "require_inference", lambda: None)
+    monkeypatch.setattr(contexts, "_contexts", contexts.OrderedDict())
+    monkeypatch.setattr(contexts, "_invalid_reasons", {})
+    monkeypatch.setattr(contexts, "_generations", {})
+    monkeypatch.setattr(contexts, "_building", {})
+    monkeypatch.setattr(contexts, "require_inference", lambda: None)
     return SimpleNamespace(a=Workspace(tmp_path / "a", "a"), b=Workspace(tmp_path / "b", "b"))
 
 
@@ -156,19 +156,19 @@ def test_a_subject_warming_up_never_holds_up_another(monkeypatch, registry):
         built[ws.slug] = object()
         return built[ws.slug]
 
-    monkeypatch.setattr(deps.entrypoints, "initialize", initialize)
-    warm_b = deps.get_context(registry.b)
-    worker = threading.Thread(target=deps.get_context, args=(registry.a,))
+    monkeypatch.setattr(contexts.entrypoints, "initialize", initialize)
+    warm_b = contexts.get_context(registry.b)
+    worker = threading.Thread(target=contexts.get_context, args=(registry.a,))
     worker.start()
     assert started.wait(5)
 
     began = time.monotonic()
-    assert deps.get_context(registry.b) is warm_b
+    assert contexts.get_context(registry.b) is warm_b
     assert time.monotonic() - began < 0.5
 
     release.set()
     worker.join(5)
-    assert deps.peek("a") is built["a"]
+    assert contexts.peek("a") is built["a"]
 
 
 def test_two_jobs_of_one_subject_share_one_build(monkeypatch, registry):
@@ -180,10 +180,10 @@ def test_two_jobs_of_one_subject_share_one_build(monkeypatch, registry):
         release.wait(5)
         return object()
 
-    monkeypatch.setattr(deps.entrypoints, "initialize", initialize)
+    monkeypatch.setattr(contexts.entrypoints, "initialize", initialize)
     results = []
     workers = [
-        threading.Thread(target=lambda: results.append(deps.get_context(registry.a)))
+        threading.Thread(target=lambda: results.append(contexts.get_context(registry.a)))
         for _ in range(2)
     ]
     for worker in workers:
@@ -205,18 +205,18 @@ def test_a_build_invalidated_while_it_ran_is_not_kept(monkeypatch, registry):
         release.wait(5)
         return object()
 
-    monkeypatch.setattr(deps.entrypoints, "initialize", initialize)
-    worker = threading.Thread(target=deps.get_context, args=(registry.a,))
+    monkeypatch.setattr(contexts.entrypoints, "initialize", initialize)
+    worker = threading.Thread(target=contexts.get_context, args=(registry.a,))
     worker.start()
     assert started.wait(5)
 
     began = time.monotonic()
-    deps.invalidate("a", "se corrigió el temario")
+    contexts.invalidate("a", "se corrigió el temario")
     assert time.monotonic() - began < 0.5
 
     release.set()
     worker.join(5)
-    assert deps.peek("a") is None
+    assert contexts.peek("a") is None
 
 
 # ONE READING OF THE ENGINE -----------------------------------------------------------------

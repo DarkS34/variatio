@@ -44,9 +44,10 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import activity, auth, bank_marks, features, groups, installation, members
+from .. import activity, auth, bank_marks, features, groups, members
 from ..auth import links, mail
 from ..auth.rate_limit import throttle
+from ..core import environment
 from ..db import identity
 from ..db.models import (
     EDITOR,
@@ -382,8 +383,8 @@ def mint_class_link(
     """Mint the class link, or one group's, or renew it: the live one of that destination stops
     working, and whoever entered through it stays."""
     group_id = _group_id(db, access, group)
-    seats = _seats(body.max_uses, installation.CLASS_LINK_DEFAULT_SEATS)
-    expires_at = _expiry(body.expires_at, installation.CLASS_LINK_DEFAULT_DAYS)
+    seats = _seats(body.max_uses, environment.CLASS_LINK_DEFAULT_SEATS)
+    expires_at = _expiry(body.expires_at, environment.CLASS_LINK_DEFAULT_DAYS)
     throttle("teacher_invite", request, access.user.username)
     previous = identity.live_class_link(db, access.workspace.id, group_id)
     if previous is not None:
@@ -438,7 +439,7 @@ def edit_class_link(
     if "expires_at" in sent:
         if body.expires_at is None:
             raise HTTPException(422, "Un enlace de clase siempre tiene fecha de caducidad.")
-        changes["expires_at"] = _expiry(body.expires_at, installation.CLASS_LINK_DEFAULT_DAYS)
+        changes["expires_at"] = _expiry(body.expires_at, environment.CLASS_LINK_DEFAULT_DAYS)
     if "paused" in sent and body.paused is not None:
         changes["paused_at"] = identity.now() if body.paused else None
     link = identity.edit_class_link(db, link, **changes)
@@ -506,10 +507,10 @@ def mint_invites(
     for email in addresses:
         if len(email) > 254 or not _EMAIL.match(email):
             raise HTTPException(422, f"«{email[:60]}» no es una dirección de correo.")
-    if not 1 <= len(names) <= installation.INVITE_BATCH_MAX:
+    if not 1 <= len(names) <= environment.INVITE_BATCH_MAX:
         raise HTTPException(
             422,
-            f"Se pueden crear entre 1 y {installation.INVITE_BATCH_MAX} invitaciones a la vez.",
+            f"Se pueden crear entre 1 y {environment.INVITE_BATCH_MAX} invitaciones a la vez.",
         )
     for name in names:
         error = identity.label_error(name)
@@ -526,7 +527,7 @@ def mint_invites(
     group_id = _group_id(db, access, body.group_id)
     if group_id is not None and body.role != VIEWER:
         raise HTTPException(422, "Los grupos son de alumnos: una invitación de docente no lleva grupo.")
-    expires_at = _expiry(body.expires_at, installation.TEACHER_INVITE_DEFAULT_DAYS)
+    expires_at = _expiry(body.expires_at, environment.TEACHER_INVITE_DEFAULT_DAYS)
     throttle("teacher_invite", request, access.user.username, cost=len(names))
     base = auth.base_url(request)
     minted = []
@@ -712,9 +713,9 @@ def _subject_invite(db: DbSession, access: auth.Access, invite_id: int) -> Invit
 def _seats(asked: int | None, default: int) -> int:
     """Accept a class link's seats: from one up to the installation's ceiling."""
     seats = default if asked is None else asked
-    if not 1 <= seats <= installation.CLASS_LINK_MAX_SEATS:
+    if not 1 <= seats <= environment.CLASS_LINK_MAX_SEATS:
         raise HTTPException(
-            422, f"Un enlace de clase tiene entre 1 y {installation.CLASS_LINK_MAX_SEATS} plazas."
+            422, f"Un enlace de clase tiene entre 1 y {environment.CLASS_LINK_MAX_SEATS} plazas."
         )
     return seats
 
@@ -734,10 +735,10 @@ def _expiry(value: datetime | None, default_days: int) -> datetime:
         value = value.astimezone(timezone.utc).replace(tzinfo=None)
     if value <= moment:
         raise HTTPException(422, "Esa fecha de caducidad ya ha pasado: elige una que esté por llegar.")
-    if value > moment + timedelta(days=installation.TEACHER_LINK_MAX_DAYS):
+    if value > moment + timedelta(days=environment.TEACHER_LINK_MAX_DAYS):
         raise HTTPException(
             422,
-            f"Un enlace de docente caduca en {installation.TEACHER_LINK_MAX_DAYS} días como mucho.",
+            f"Un enlace de docente caduca en {environment.TEACHER_LINK_MAX_DAYS} días como mucho.",
         )
     return value
 

@@ -13,7 +13,7 @@ graph of a subject.
 from loguru import logger
 
 from server.conversations.jobs import QuietEmitter, release
-from server import deps, installation
+from server.core import contexts, installation
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from variatio import prompts as prompt_sets
@@ -46,7 +46,7 @@ def handle_turn(job: Job, control: JobControl) -> dict:
 
     quiet = progress.set_emitter(QuietEmitter(control))
     try:
-        deps.require_inference()
+        contexts.require_inference()
         language = locale.prompt_language(ws)
         opened = record.get("opened_from") or {}
         result = run_turn(

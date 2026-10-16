@@ -3,16 +3,23 @@
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for the server outside its subpackages: the database, how a request finds its subject,
 the build chain and approvals, the generated exercises, the curriculum and the class activity.
-Identity is `auth/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
-`conversations/AGENTS.md`, and the transcription `variatio/documents/AGENTS.md`.
+What every area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the queue
+`jobs/AGENTS.md`, what the tutor and the chat share `conversations/AGENTS.md`, and the
+transcription `variatio/documents/AGENTS.md`.
 
 
 ## Routes and where a function plugs in
 
-- `server/routing.py` holds `ROUTERS`, the order the core's routers are mounted in, and is
-  the one module that imports a route module (an import contract; the functions' imports of
-  `routers/jobs.py`, `exercises.py`, `bank.py` and `pipeline.py` are named exceptions that
-  leave with the server's areas). The route comparison of a phase reads `app.routes` whole.
+- `server/routing.py` holds `ROUTERS`, the order the server's own routers are mounted in,
+  and is the one module that imports a route module (an import contract; the functions'
+  imports of `routers/jobs.py`, `exercises.py`, `bank.py` and `pipeline.py` are named
+  exceptions that leave with the server's areas). The route comparison of a phase reads
+  `app.routes` whole.
+- The server's layers are an import contract too: composition (`app.py`, `routing.py`,
+  `cli/`), `routers/`, `auth/`, then `jobs/`, `conversations/` and `generations.py`, then
+  `core/`, then `db/`; each imports only what is below it. A route module is a leaf and may
+  import any layer; the modules still at the root are outside the order until their area
+  exists.
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
   `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
   construction's handlers join `HANDLERS` when `jobs/handlers.py` is imported.
@@ -41,15 +48,6 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 - A request names its workspace (`X-Workspace`, `?workspace=` on the socket, else the
   account's `active_workspace`); `require_member` resolves it once and hands `Access.ws` down.
   Switching workspace clears the client's query cache and resets the run store.
-- `deps.py` is an LRU (8) of `RuntimeContext`s keyed by slug. Each workspace has its own
-  lock, held across `initialize` (2026-10-06: one lock for all made a subject warming up hold
-  every other subject's jobs); `deps._lock` only guards the dicts. An invalidation during a
-  build bumps the workspace's generation and that build's context is not kept. Runtime
-  components keep no per-run state on `self` (two jobs of one workspace may share a context).
-- `GET /api/health` reads the engine once every `READ_EVERY` (5) seconds for the whole
-  process, one thread at a time (`health.engine_reading`): the others answer with the reading
-  before, and only the first request ever waits. A class's hundred tabs poll it. The panel's
-  «Motor» reads the engine live (`/api/admin/engine`).
 - Sync routes run in 200 AnyIO worker threads (`app.WORKER_THREADS`, set in `lifespan`; the
   default 40 queued a class's polls).
 - Every validated item is a JSON file, `<workspace>/generations/user_<id>/<id>.json`
@@ -74,12 +72,11 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
   `resolved.few_shot` as ids and origins (`consumers/generation/api/router.without_bank`), and a revealed
   comparison card answers them without `prompt` and `raw_response`.
 - Deleting is the admin panel's (`DELETE /api/admin/workspaces/{slug}`, `.../artifacts/...`).
-  `installation.destroy` refuses any path that is not a direct child of `WORKSPACES_DIR`; the
-  tree goes before the row. **A workspace deletion that leaves no other member takes its tree
-  too; if others remain, the files stay** — the generated exercises with them. Emptying a
-  stage never touches `.history/`.
-- The API owns the SSH tunnel to the GPU box (`server/tunnel.py`, system `ssh -N -L`,
-  `BatchMode=yes`, watchdog with backoff).
+  `core/installation.destroy` refuses any path that is not a direct child of
+  `WORKSPACES_DIR`; the tree goes before the row. **A workspace deletion that leaves no other
+  member takes its tree too; if others remain, the files stay** — the generated exercises
+  with them. Emptying a stage never touches `.history/`.
+
 ## Build chain and approvals
 
 - `approvals.ARTIFACTS` order: graph → profile → bank (2026-10-08; it led with the profile).
@@ -175,9 +172,9 @@ activity's «sin practicar» reads the scope's.
 
 What a subject's students do, for its teachers (the user's request and decision, 2026-10-07):
 `/api/activity` (`auth.EDIT`; a student reads nobody's, their own included). **The week is
-the unit**: ISO weeks, Monday to Sunday, UTC (`server/daily.py`); a past week is closed — every
-message and exercise is dated, so its figures do not move — and the present one is open. The
-history is the strip of weeks from the first with activity to now, an empty week kept.
+the unit**: ISO weeks, Monday to Sunday, UTC (`server/core/daily.py`); a past week is closed —
+every message and exercise is dated, so its figures do not move — and the present one is open.
+The history is the strip of weeks from the first with activity to now, an empty week kept.
 `?student=<id>` narrows to one student (active or paused; anybody else is 404); a removed
 student counts for nothing, a teacher's own files are not the class's. `?group=<id>` narrows
 the class to one of its groups (2026-10-14): every figure, finding, week and «Quién …» row is

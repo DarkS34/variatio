@@ -114,7 +114,7 @@ const MAX_TOKENS = 120_000;
 const MAX_RUNS = 12;
 const MAX_TAGGED = 24;
 
-/** The close code `server/routers/ws.py` uses when the handshake carries no session. */
+/** The close code `server/core/routes/stream.py` uses when the handshake carries no session. */
 const UNAUTHORISED = 4401;
 /** The close code for a session with no access to the subject: removed or paused from it. */
 const FORBIDDEN = 4403;

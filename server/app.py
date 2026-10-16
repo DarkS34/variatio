@@ -17,7 +17,8 @@ from loguru import logger
 
 from variatio import config
 
-from . import installation, jobs, middleware, singletons
+from . import jobs, singletons
+from .core import environment, middleware
 from .routing import ROUTERS
 
 # Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
@@ -61,7 +62,7 @@ def create_app() -> FastAPI:
 
     # Off by default: with a session cookie, a permissive CORS policy turns another
     # origin's page into a logged-in client. Vite proxies `/api` and `/ws` in development.
-    origins = installation.dev_cors_origins()
+    origins = environment.dev_cors_origins()
     if origins:
         app.add_middleware(
             CORSMiddleware,
@@ -150,7 +151,7 @@ class _Assets(StaticFiles):
 
 def _mount_web(app: FastAPI) -> None:
     """Serve the built front-end when it exists, so `uvicorn` alone is the whole app."""
-    dist = installation.WEB_DIST_DIR
+    dist = environment.WEB_DIST_DIR
     if not dist.is_dir():
         return
 

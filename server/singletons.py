@@ -10,10 +10,10 @@ per workspace, built where it is used.
 from variatio.core.workspace import Workspace
 
 from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner, chain
-from .model_pulls import PullTracker
+from .core.model_pulls import PullTracker
 from . import raw_data
 from .approvals import EXEMPLARS_BANK, Approvals
-from .tunnel import SshTunnel
+from .core.tunnel import SshTunnel
 
 bus = EventBus()
 runner = JobRunner(bus, HANDLERS)

@@ -10,8 +10,9 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, installation, singletons
+from server import auth, singletons
 from server import curriculum as curriculum_store
+from server.core import installation
 from server.db import identity, repository
 from server.db.models import User
 from server.editors import kg_edit

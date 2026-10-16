@@ -1,6 +1,6 @@
 import pytest
 
-from server import tunnel
+from server.core import tunnel
 from variatio import config
 
 

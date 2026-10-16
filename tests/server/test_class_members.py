@@ -18,10 +18,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import auth, installation, members, singletons
+from server import auth, members, singletons
 from server import generations as store
 from server.auth import links
 from server.auth.deps import FORBIDDEN, Access
+from server.core import installation
+from server.core.routes import stream as ws_routes
 from server.db import identity, repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
@@ -30,7 +32,6 @@ from server.routers import admin as admin_routes
 from server.routers import auth as auth_routes
 from server.routers import members as member_routes
 from server.routers import workspaces as workspace_routes
-from server.routers import ws as ws_routes
 
 
 @pytest.fixture

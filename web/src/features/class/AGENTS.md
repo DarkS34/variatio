@@ -78,7 +78,7 @@ are in `server/auth/AGENTS.md`; for the curriculum and the activity, in `server/
   the dialog then shows what was minted until it is closed: a link per name, «Copiar todo»
   (alias TAB link) and
   «Descargar CSV» (`nombre,enlace,caduca`, `lib/csv.ts`: a cell opening `= + - @` or a control
-  character gets the apostrophe of `server/csv_safe.py`, numbers exempt, RFC quoting, a BOM).
+  character gets the apostrophe of `server/core/csv_safe.py`, numbers exempt, RFC quoting, a BOM).
   An owner chooses «Alumnos» or «Docentes» over the names (a teacher's invitation, `editor`,
   gives a teacher's account), and a teacher's invitation wears a «Docente» badge.
   On an unused one, the copy icon reads the link and copies it in the SAME press (a

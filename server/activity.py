@@ -9,9 +9,10 @@ and concepts. The words of what students ask are the model's, once a teacher ask
 (`activity_digest`, the tutor's job), in paraphrase and checked by code.
 
 THE WEEK IS THE UNIT: ISO weeks, Monday to Sunday, in UTC like every other day of the system
-(`server/daily.py`). The history of a class is its list of weeks, from the first with activity
-to the present one, an empty week kept as a gap. A past week is closed — every message and
-every exercise carries its date, so its figures do not move — and the present one is open.
+(`server/core/daily.py`). The history of a class is its list of weeks, from the first with
+activity to the present one, an empty week kept as a gap. A past week is closed — every
+message and every exercise carries its date, so its figures do not move — and the present one
+is open.
 
 WHO COUNTS: the subject's students (`viewer`), active and paused, a paused one marked. A
 student removed from the subject is no longer of the class and counts for nothing, though
@@ -40,7 +41,8 @@ from variatio.core.workspace import Workspace
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from . import daily, generations
+from . import generations
+from .core import daily
 from .db import identity
 from .db.models import VIEWER, Workspace as WorkspaceRow
 

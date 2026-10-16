@@ -16,7 +16,8 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session as DbSession
 
-from server import approvals, csv_safe
+from server import approvals
+from server.core import csv_safe
 
 from . import stage_instruments, stage_queries
 

@@ -3,10 +3,10 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from server import maintenance
 from server.auth import deps
+from server.core import maintenance
+from server.core.routes import maintenance as route
 from server.db.models import VIEWER
-from server.routers import maintenance as route
 
 
 @pytest.fixture

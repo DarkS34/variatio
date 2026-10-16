@@ -416,7 +416,7 @@ def test_the_job_groups_the_week_reads_the_texts_and_writes_references(ws, monke
         return [{"text": "Confunden el caso base", "refs": [list(item.ref) for item in asked]}]
 
     monkeypatch.setattr(digest_job, "summarise", summarise)
-    monkeypatch.setattr(digest_job.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(digest_job.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(digest_job.installation, "workspace_for", lambda slug: ws)
     monkeypatch.setattr(
         digest_job.activity, "students_of", lambda session, workspace: [ANA, LUIS]

@@ -17,8 +17,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from consumers.evaluation.api import router as evaluation_router
-from server import auth, features, installation, singletons
+from server import auth, features, singletons
 from server.auth.deps import Access
+from server.core import installation
 from server.db import identity, repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus

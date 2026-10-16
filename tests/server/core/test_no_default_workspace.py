@@ -3,8 +3,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from server import installation
 from server.auth import deps
+from server.core import installation
 from variatio.core import paths
 
 

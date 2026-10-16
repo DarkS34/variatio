@@ -20,7 +20,7 @@ ANA = 1
 def wired(tutor_context, monkeypatch):
     ws = tutor_context.workspace
     monkeypatch.setattr(jobs.installation, "workspace_for", lambda slug: ws)
-    monkeypatch.setattr(jobs.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(jobs.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(jobs, "context_for", lambda job: tutor_context)
     monkeypatch.setattr(jobs.entrypoints, "load_concept_sources", lambda ws: SOURCES)
     monkeypatch.setattr(jobs, "index_for", lambda ws, sources, chars: None)

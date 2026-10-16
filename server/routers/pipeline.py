@@ -20,7 +20,8 @@ from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
 from variatio.entrypoints import build_phases as phases_of
 
-from .. import approvals, auth, deps, features, singletons, storage
+from .. import approvals, auth, features, singletons, storage
+from ..core import contexts
 from ..db.session import session_scope
 from ..editors import kg_edit
 from ..jobs import lanes as jobs_lanes
@@ -256,7 +257,7 @@ def scope(item_type: str, access: auth.Access = auth.VIEW) -> dict:
     a thing, never the values it may take, which is why this takes no `concepts` and its
     answer does not change with the commission.
 
-    Deliberately NOT `deps.get_context(access.ws)`: that registry builds a
+    Deliberately NOT `contexts.get_context(access.ws)`: that registry builds a
     `RuntimeContext`, which raises the embedder, the tagger and the generator and costs
     minutes. Three file reads are the whole job here.
     """
@@ -322,7 +323,7 @@ def restore(artifact: str, body: RestoreBody, access: auth.Access = auth.VIEW) -
         raise HTTPException(404, str(exc)) from exc
 
     singletons.approvals(access.ws).invalidate(artifact)
-    deps.invalidate(access.ws.slug, f"'{artifact}' restaurado desde una copia")
+    contexts.invalidate(access.ws.slug, f"'{artifact}' restaurado desde una copia")
     singletons.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "restore"}
     )

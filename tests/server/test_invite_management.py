@@ -22,9 +22,9 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server import installation
 from server.auth import links, passwords, rate_limit, tokens
 from server.auth.rate_limit import RateLimiter
+from server.core import environment
 from server.db import identity, repository
 from server.db.models import Base, Invite
 from server.routers import admin as admin_routes
@@ -237,7 +237,7 @@ def test_without_a_date_an_invitation_lasts_the_default_week(db, admin):
     created = _create(db, admin)
 
     row = db.get(Invite, created["invite"]["id"])
-    assert abs(row.expires_at - (_utc_now() + installation.INVITE_TTL)) < timedelta(minutes=1)
+    assert abs(row.expires_at - (_utc_now() + environment.INVITE_TTL)) < timedelta(minutes=1)
 
 
 def test_a_date_already_past_is_refused(db, admin):
@@ -303,7 +303,7 @@ def test_one_invitation_keeps_its_alias_as_written_and_a_batch_without_one_stays
     assert [m["invite"]["label"] for m in batch["invites"]] == [None, None]
 
 
-@pytest.mark.parametrize("count", [0, installation.INVITE_BATCH_MAX + 1])
+@pytest.mark.parametrize("count", [0, environment.INVITE_BATCH_MAX + 1])
 def test_a_batch_is_bounded(db, admin, count):
     with pytest.raises(HTTPException) as refused:
         _create(db, admin, count=count)
@@ -313,7 +313,7 @@ def test_a_batch_is_bounded(db, admin, count):
 
 
 def test_a_batch_pays_the_throttle_link_by_link(db, admin, monkeypatch):
-    monkeypatch.setitem(installation.RATE_LIMITS, "invite", (5, 3600.0))
+    monkeypatch.setitem(environment.RATE_LIMITS, "invite", (5, 3600.0))
 
     _create(db, admin, count=5)
     with pytest.raises(HTTPException) as refused:
@@ -540,7 +540,7 @@ def test_the_command_line_mints_a_numbered_batch_with_its_alias(capsys, monkeypa
     from server.db import session as db_session
 
     Base.metadata.create_all(db_session.engine())
-    monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.app")
+    monkeypatch.setattr(environment, "public_base_url", lambda: "https://variatio.app")
 
     code = accounts.invite(
         Namespace(workspace="", role="viewer", alias="Clase", days=3, count=2, profile="student")

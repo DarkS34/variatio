@@ -12,7 +12,7 @@ from email.message import EmailMessage
 
 from loguru import logger
 
-from .. import installation
+from ..core import environment
 
 
 def send(to: str, subject: str, body: str, shown_as: str | None = None) -> bool:
@@ -27,7 +27,7 @@ def send(to: str, subject: str, body: str, shown_as: str | None = None) -> bool:
         return False
 
     message = EmailMessage()
-    message["From"] = installation.MAIL_FROM
+    message["From"] = environment.MAIL_FROM
     message["To"] = to
     message["Subject"] = subject
     message.set_content(body)
@@ -46,20 +46,20 @@ def configured() -> bool:
     `GET /api/auth/me` reports this as `mail_configured`, which is what makes "Mi perfil"
     hide the address field where nothing could deliver to it.
     """
-    return bool(installation.smtp_host())
+    return bool(environment.smtp_host())
 
 
 def _deliver(message: EmailMessage) -> None:
     """Open the connection the settings describe and hand one message over."""
-    host, port = installation.smtp_host(), installation.SMTP_PORT
+    host, port = environment.smtp_host(), environment.SMTP_PORT
     context = ssl.create_default_context()
-    if installation.SMTP_SSL:
+    if environment.SMTP_SSL:
         with smtplib.SMTP_SSL(host, port, context=context, timeout=20) as client:
             _authenticate(client)
             client.send_message(message)
         return
     with smtplib.SMTP(host, port, timeout=20) as client:
-        if installation.SMTP_STARTTLS:
+        if environment.SMTP_STARTTLS:
             client.starttls(context=context)
         _authenticate(client)
         client.send_message(message)
@@ -67,5 +67,5 @@ def _deliver(message: EmailMessage) -> None:
 
 def _authenticate(client: smtplib.SMTP) -> None:
     """Log in, when a user is configured."""
-    if installation.SMTP_USER:
-        client.login(installation.SMTP_USER, installation.SMTP_PASSWORD)
+    if environment.SMTP_USER:
+        client.login(environment.SMTP_USER, environment.SMTP_PASSWORD)

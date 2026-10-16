@@ -1,5 +1,5 @@
-from server import installation
 from server.auth import rate_limit
+from server.core import environment
 
 
 def _spend(key: str, limit: int, window: float) -> None:
@@ -9,7 +9,7 @@ def _spend(key: str, limit: int, window: float) -> None:
 
 
 def test_a_successful_login_forgives_the_account():
-    limit, window = installation.RATE_LIMITS["login"]
+    limit, window = environment.RATE_LIMITS["login"]
     _spend("ana", limit, window)
 
     rate_limit.forgive("login", "ana")
@@ -18,7 +18,7 @@ def test_a_successful_login_forgives_the_account():
 
 
 def test_a_successful_login_does_not_forgive_the_ip():
-    limit, window = installation.RATE_LIMITS["login"]
+    limit, window = environment.RATE_LIMITS["login"]
     _spend("ana", limit, window)
     _spend("203.0.113.7", limit, window)
 

@@ -30,7 +30,8 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core.workspace import Workspace as PathWorkspace
 
-from .. import features, installation, maintenance
+from .. import features
+from ..core import environment, installation, maintenance
 from ..db import identity, repository, session_scope
 from ..db.models import EDITOR, OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
 from .tokens import digest
@@ -97,7 +98,7 @@ def db() -> Iterator[DbSession]:
 
 def session_token(request: Request | WebSocket) -> str | None:
     """Return the session cookie of this request or handshake, if it carries one."""
-    return request.cookies.get(installation.session_cookie())
+    return request.cookies.get(environment.session_cookie())
 
 
 _UNCONFIGURED_BASE_URL_REPORTED = False
@@ -114,10 +115,10 @@ def base_url(request: Request) -> str:
     """
     global _UNCONFIGURED_BASE_URL_REPORTED
 
-    configured = installation.public_base_url()
+    configured = environment.public_base_url()
     if configured:
         return configured
-    if installation.is_production() and not _UNCONFIGURED_BASE_URL_REPORTED:
+    if environment.is_production() and not _UNCONFIGURED_BASE_URL_REPORTED:
         _UNCONFIGURED_BASE_URL_REPORTED = True
         logger.warning(
             "PUBLIC_BASE_URL no está configurado: los enlaces de invitación y de "
@@ -136,7 +137,7 @@ def client_ip(request: Request | WebSocket) -> str:
     the same as not having one. Caddy overwrites the header rather than appending, so
     both readings agree there.
     """
-    if installation.trust_proxy():
+    if environment.trust_proxy():
         forwarded = [
             part.strip()
             for part in request.headers.get("x-forwarded-for", "").split(",")
@@ -193,7 +194,7 @@ def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] |
         return None
     row, user = found
     identity.touch_session(
-        session, row, installation.SESSION_SLIDING, installation.SESSION_TOUCH_INTERVAL
+        session, row, environment.SESSION_SLIDING, environment.SESSION_TOUCH_INTERVAL
     )
     return row, user
 
@@ -409,8 +410,8 @@ def at_least(access: Access, minimum: str) -> bool:
 # The two ways a socket is refused, as WebSocket close codes, since a browser reads no HTTP
 # status there. 4401: no session, and the client goes to log in. 4403: a session with no
 # access to the subject the socket names — removed or paused from it, or never let in — and
-# the client reads the session again to land where it may (`ws.py` closes a live one with it
-# too, the moment its membership closes).
+# the client reads the session again to land where it may (`core/routes/stream.py` closes a
+# live one with it too, the moment its membership closes).
 UNAUTHORISED = 4401
 FORBIDDEN = 4403
 

@@ -27,9 +27,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
-from .. import features, groups, installation
+from .. import features, groups
 from ..auth import deps, mail, passwords, tokens
 from ..auth.rate_limit import forgive, throttle
+from ..core import environment
 from ..db import identity
 from ..db.models import (
     EVALUATOR_PROFILES,
@@ -297,9 +298,9 @@ def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps
     user = identity.get_user(session, username)
     if user is not None and user.active:
         token = tokens.new_token()
-        identity.create_reset(session, user.id, tokens.digest(token), installation.RESET_TTL)
+        identity.create_reset(session, user.id, tokens.digest(token), environment.RESET_TTL)
         link = f"{deps.base_url(request)}/reset?token={token}"
-        minutes = int(installation.RESET_TTL.total_seconds() // 60)
+        minutes = int(environment.RESET_TTL.total_seconds() // 60)
         if user.email:
             mail.send(
                 user.email,
@@ -681,17 +682,17 @@ def _issue_session(session: DbSession, user: User, request: Request, response: R
         session,
         user_id=user.id,
         token_hash=tokens.digest(token),
-        sliding=installation.SESSION_SLIDING,
-        absolute=installation.SESSION_ABSOLUTE,
+        sliding=environment.SESSION_SLIDING,
+        absolute=environment.SESSION_ABSOLUTE,
         ip=deps.client_ip(request) or None,
         user_agent=request.headers.get("user-agent"),
     )
     response.set_cookie(
-        installation.session_cookie(),
+        environment.session_cookie(),
         token,
-        max_age=int(installation.SESSION_ABSOLUTE.total_seconds()),
+        max_age=int(environment.SESSION_ABSOLUTE.total_seconds()),
         httponly=True,
-        secure=installation.cookie_secure(),
+        secure=environment.cookie_secure(),
         samesite="lax",
         path="/",
     )
@@ -704,10 +705,10 @@ def _clear_cookie(response: Response) -> None:
     whole by the browser, so a logout written without them leaves the cookie in the jar.
     """
     response.delete_cookie(
-        installation.session_cookie(),
+        environment.session_cookie(),
         path="/",
         httponly=True,
-        secure=installation.cookie_secure(),
+        secure=environment.cookie_secure(),
         samesite="lax",
     )
 

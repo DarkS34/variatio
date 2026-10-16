@@ -14,7 +14,7 @@ export const GENERATION_DAILY_LIMIT = "generation_daily_limit";
 /**
  * How long until a limit reopens, in hours and minutes, never under one minute.
  *
- * The same rounding as the server's own sentence (`server/daily.py`), so both say the same
+ * The same rounding as the server's own sentence (`server/core/daily.py`), so both say the same
  * wait.
  */
 export function waitInWords(seconds: number, { t, plural }: Translate): string {

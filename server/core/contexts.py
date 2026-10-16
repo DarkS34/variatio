@@ -25,10 +25,12 @@ from collections import OrderedDict
 
 from loguru import logger
 
-from variatio import entrypoints
-from variatio.core import inference
+from variatio import config, entrypoints
+from variatio.core import inference, progress
 from variatio.core.workspace import Workspace
 from variatio.entrypoints import RuntimeContext
+
+from . import installation
 
 MAX_CONTEXTS = 8
 
@@ -37,6 +39,34 @@ _invalid_reasons: dict[str, str] = {}
 _generations: dict[str, int] = {}
 _building: dict[str, threading.Lock] = {}
 _lock = threading.RLock()
+
+
+def context_for(job, reload: bool = False):
+    """Return the workspace's pipeline context, warming the indices if they are cold.
+
+    Warming embeds every concept description and the whole bank — minutes of silence the
+    first time — so it gets a step of its own that says what it costs. `job` is a job of the
+    queue (`jobs.catalogue.Job`); only its `workspace` is read, so this module imports nothing
+    of the queue.
+    """
+    ws = installation.workspace_for(job.workspace)
+    if is_ready(ws.slug) and not reload:
+        logger.info("Índices ya calientes en memoria; se reutilizan")
+        return get_context(ws)
+
+    label = (
+        "Reconstruyendo el contexto: instancia + índices"
+        if reload
+        else "Preparando el contexto: cargando la instancia e indexando"
+    )
+    with progress.step("context", label):
+        logger.info(f"Cargando la instancia e indexando con '{config.EMBEDDING_LLM}'")
+        context = reload_context(ws) if reload else get_context(ws)
+    logger.success(
+        f"Contexto listo: {len(context.embedder.concepts_index)} concepto(s) indexado(s), "
+        f"{len(context.exemplars_bank)} ítem(s) del banco"
+    )
+    return context
 
 
 def reload_context(ws: Workspace) -> RuntimeContext:

@@ -19,8 +19,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from consumers.generation.api import limits
-from server import installation, singletons
+from server import singletons
 from server.auth.deps import Access
+from server.core import installation
 from server.db.models import EDITOR, VIEWER, Base
 from server.jobs import catalogue, lanes, priority
 from server.jobs.bus import EventBus

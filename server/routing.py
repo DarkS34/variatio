@@ -7,6 +7,7 @@ after the generation's routes (its `/api/jobs/allowance` must come before the qu
 `/api/jobs/{job_id}`) and before the other functions'. Nothing else imports a route module.
 """
 
+from .core.routes import health, maintenance, stream
 from .routers import (
     activity,
     admin,
@@ -16,16 +17,13 @@ from .routers import (
     config,
     context,
     exercises,
-    health,
     jobs,
     kg,
-    maintenance,
     members,
     pipeline,
     profile,
     raw,
     workspaces,
-    ws,
 )
 
 ROUTERS = [
@@ -46,5 +44,5 @@ ROUTERS = [
     admin.router,
     admin_engine.router,
     config.router,
-    ws.router,
+    stream.router,
 ]

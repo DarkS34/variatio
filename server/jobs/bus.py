@@ -14,7 +14,7 @@ import time
 from collections import deque
 from collections.abc import AsyncIterator
 
-from .. import installation
+from ..core import environment
 from .catalogue import Event, Job
 
 # What a redacted job (`Job.redacted`: its author is a student of the subject) keeps of the
@@ -38,7 +38,7 @@ class EventBus:
 
     def __init__(self, buffer_size: int | None = None):
         """Open an empty bus with a replay buffer and no subscribers."""
-        self._buffer: deque[Event] = deque(maxlen=buffer_size or installation.EVENT_BUFFER_SIZE)
+        self._buffer: deque[Event] = deque(maxlen=buffer_size or environment.EVENT_BUFFER_SIZE)
         self._lock = threading.Lock()
         self._seq = 0
         self._loop: asyncio.AbstractEventLoop | None = None

@@ -16,8 +16,8 @@ from sqlalchemy.pool import StaticPool
 from fastapi import HTTPException
 
 from server import singletons
-from server import installation
 from server.auth import deps as auth_deps
+from server.core import installation
 from server.db import identity, repository
 from server.db.models import Base, EDITOR, OWNER
 from server.routers.workspaces import remove

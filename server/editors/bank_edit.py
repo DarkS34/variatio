@@ -23,7 +23,8 @@ from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from .. import approvals, bank_marks, deps, storage
+from .. import approvals, bank_marks, storage
+from ..core import contexts
 
 ARTIFACT = approvals.EXEMPLARS_BANK
 
@@ -729,5 +730,5 @@ def _persist(ws: Workspace, bank: dict, note: str) -> dict:
         review.approve(ARTIFACT)
     else:
         review.invalidate(ARTIFACT)
-    deps.invalidate(ws.slug, note)
+    contexts.invalidate(ws.slug, note)
     return {"hash": storage.sha256_of(ws.exemplars_bank_path)}

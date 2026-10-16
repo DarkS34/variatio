@@ -183,7 +183,7 @@ def test_the_job_tags_what_it_was_asked_and_merges_it(ws, monkeypatch):
 
     bank_edit.add_item(ws, {"enunciado": "x"}, "ejercicio", [], origin=bank_edit.MANUAL)
     context = SimpleNamespace(exemplars_bank=_bank(ws), tagger=Tagger())
-    monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(handlers.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(handlers, "context_for", lambda job: context)
     monkeypatch.setattr(handlers, "_workspace", lambda job: ws)
 

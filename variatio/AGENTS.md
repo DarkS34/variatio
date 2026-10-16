@@ -84,7 +84,7 @@ from the package. Root paths live in [paths.py](variatio/core/paths.py). **There
 default workspace**: `ws` is required everywhere, `paths.workspace("")` raises, an
 installation may hold zero workspaces and an account may belong to none. A component with a
 path parameter requires it. No cache key is a path, so a workspace is portable.
-`server/installation.py` has `workspace_for(slug)`, never a no-argument `workspace()`.
+`server/core/installation.py` has `workspace_for(slug)`, never a no-argument `workspace()`.
 **The artifacts' directory is `artifacts/`** (2026-10-08; it was `instance/`, a word that also
 named the loaders' package and the whole subject). `paths.workspace`, the one door every
 workspace is opened through, renames an old tree's `instance/` the first time it opens it
@@ -374,6 +374,8 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-033 — Strings whose language must match the workspace live in `wording/`.
 - D-034, D-035 — Screening is one package with two calls in fixed order (guardrail first); the
   sequence exists once.
+- D-228 — The document plumbing (files, markdown, chunking, page transcription, Office) is
+  `documents/`, not a part of `builders/`.
 
 **Prompts and the graph**
 - D-036 — Two prompt sets per workspace; JSON keys never translated; sets interchangeable.

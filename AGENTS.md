@@ -124,7 +124,8 @@ that produces and consumes it.** `consumers` imports `variatio` and `server`; ne
 
 - `variatio/AGENTS.md` (library), `variatio/documents/AGENTS.md` (transcription).
 - `server/AGENTS.md` (database, subjects, build chain, exercises, curriculum, activity),
-  `server/auth/AGENTS.md` (identity, roles, classes), `server/jobs/AGENTS.md` (the queue),
+  `server/core/AGENTS.md` (contexts, environment, tunnel, the door), `server/auth/AGENTS.md`
+  (identity, roles, classes), `server/jobs/AGENTS.md` (the queue),
   `server/conversations/AGENTS.md`.
 - `consumers/AGENTS.md` and one per function: `generation/`, `evaluation/`, `tutor/`, `chat/`.
 - `web/AGENTS.md` and `web/DESIGN.md` (read before any UI change), plus `src/features/bank/`,
@@ -165,8 +166,8 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
   everywhere. The why of a folder lives in its `AGENTS.md`, of a decision in `DECISIONS.md`.
 - D-226 — Python import boundaries are import-linter contracts; the client's direction is
   `pnpm check:layers`. An exception is named in the contract, never added in silence.
-- Decided on 2026-10-16, not yet applied (the refactor plan): D-227 the server by areas, D-228 `variatio/documents/`, D-229 the client's types, hooks and
-  primitives split.
+- Decided on 2026-10-16, not yet applied (the refactor plan): D-227 the server by areas, D-229
+  the client's types, hooks and primitives split.
 
 ## Code conventions
 

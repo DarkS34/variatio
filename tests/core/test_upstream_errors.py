@@ -69,7 +69,7 @@ def test_no_ollama_call_reflects_the_engines_own_body(engine, call):
 
 
 def test_a_failed_pull_reaches_the_panel_without_the_body(engine):
-    from server.model_pulls import PullTracker
+    from server.core.model_pulls import PullTracker
 
     engine._client = _Client(ollama.ResponseError(BODY, 500))
     tracker = PullTracker()

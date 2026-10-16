@@ -59,7 +59,7 @@ def stubbed(monkeypatch, tmp_path):
         knowledge_graph=None,
         exemplars_profile=SimpleNamespace(item_type=lambda _key: item_type),
     )
-    monkeypatch.setattr(generation_jobs.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(generation_jobs.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(generation_jobs, "context_for", lambda job: context)
     monkeypatch.setattr(
         generation_jobs.curriculum_store, "resolve", lambda ws, kg, given: given or []

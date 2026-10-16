@@ -24,10 +24,11 @@ import contextlib
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from .. import middleware, singletons
-from ..auth import Access, authenticate_socket
-from ..auth.deps import FORBIDDEN, UNAUTHORISED
-from ..members import CLOSED_EVENT
+from ... import singletons
+from ...auth import Access, authenticate_socket
+from ...auth.deps import FORBIDDEN, UNAUTHORISED
+from ...members import CLOSED_EVENT
+from .. import middleware
 
 router = APIRouter()
 

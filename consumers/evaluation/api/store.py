@@ -21,7 +21,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session as DbSession
 
-from server import csv_safe
+from server.core import csv_safe
 from server.db.models import EvalSession
 
 from .. import ARMS, RIVALS, SYSTEM, EvaluationSession

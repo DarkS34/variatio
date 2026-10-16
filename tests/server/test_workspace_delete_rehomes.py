@@ -15,8 +15,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import installation
 from server.auth import deps as auth_deps
+from server.core import installation
 from server.db import identity, repository
 from server.db.models import Base, EDITOR
 from server.routers.admin import delete_workspace

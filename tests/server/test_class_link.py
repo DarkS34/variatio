@@ -21,8 +21,9 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server import auth, installation
+from server import auth
 from server.auth import links, passwords, rate_limit
+from server.core import environment
 from server.db import identity, repository
 from server.db import session as db_session
 from server.db.models import EDITOR, OWNER, VIEWER, Base, ClassLink, Invite
@@ -417,8 +418,8 @@ def test_a_new_link_has_forty_seats_and_a_month_unless_told(db, aula):
     "terms",
     [
         {"max_uses": 0},
-        {"max_uses": installation.CLASS_LINK_MAX_SEATS + 1},
-        {"expires_at": datetime.now() + timedelta(days=installation.TEACHER_LINK_MAX_DAYS + 2)},
+        {"max_uses": environment.CLASS_LINK_MAX_SEATS + 1},
+        {"expires_at": datetime.now() + timedelta(days=environment.TEACHER_LINK_MAX_DAYS + 2)},
         {"expires_at": datetime.now() - timedelta(days=1)},
     ],
 )
@@ -476,7 +477,7 @@ def test_the_command_line_prints_the_link_and_renews_it(capsys, monkeypatch):
     from server.cli import accounts
 
     Base.metadata.create_all(db_session.engine())
-    monkeypatch.setattr(installation, "public_base_url", lambda: "https://variatio.app")
+    monkeypatch.setattr(environment, "public_base_url", lambda: "https://variatio.app")
     with db_session.session_scope() as session:
         repository.ensure_workspace(session, "linea", "Línea")
 

@@ -55,7 +55,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   routes are `auth.VIEW` + `auth.EVALUATION`, and a student deletes their own exercises.
   `tests/server/test_route_roles.py` reads every mounted route and pins the level it
   declares against a table: a route with no row fails.
-- CSRF is an origin check (`middleware.py`); CORS off by default. Rate limiting is in memory,
+- CSRF is an origin check (`core/middleware.py`); CORS off by default. Rate limiting is in memory,
   keyed by IP and account. **A school's network counts the account alone** (decided
   2026-10-06): behind its NAT a class is one address and the ninth login was refused, so an
   address inside `access.trusted_networks` (`TRUSTED_NETWORKS`, env

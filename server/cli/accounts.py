@@ -148,10 +148,10 @@ def invite(args) -> int:
     from datetime import timedelta
 
     from ..auth import links
+    from ..core.environment import INVITE_BATCH_MAX, public_base_url
     from ..db import session_scope
     from ..db.identity import batch_labels, label_error, normalise_label, now
     from ..db.repository import get_workspace
-    from ..installation import INVITE_BATCH_MAX, public_base_url
 
     if args.days <= 0:
         print("--days tiene que ser un número de días mayor que cero.")
@@ -216,16 +216,16 @@ def class_link(args) -> int:
     from datetime import timedelta
 
     from ..auth import links
-    from ..db import session_scope
-    from ..db.identity import live_class_link, now, revoke_class_link
-    from ..db.repository import get_workspace
-    from ..installation import (
+    from ..core.environment import (
         CLASS_LINK_DEFAULT_DAYS,
         CLASS_LINK_DEFAULT_SEATS,
         CLASS_LINK_MAX_SEATS,
         TEACHER_LINK_MAX_DAYS,
         public_base_url,
     )
+    from ..db import session_scope
+    from ..db.identity import live_class_link, now, revoke_class_link
+    from ..db.repository import get_workspace
 
     seats = CLASS_LINK_DEFAULT_SEATS if args.seats is None else args.seats
     days = CLASS_LINK_DEFAULT_DAYS if args.days is None else args.days

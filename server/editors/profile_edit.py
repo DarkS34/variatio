@@ -8,7 +8,8 @@ gets the exact error the pipeline would raise.
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
-from .. import approvals, deps, storage
+from .. import approvals, storage
+from ..core import contexts
 
 ARTIFACT = approvals.EXEMPLARS_PROFILE
 
@@ -36,7 +37,7 @@ def save(ws: Workspace, raw: dict) -> dict:
     target = approvals.canonical_path(ws, ARTIFACT)
     storage.write_json(target, raw, ws=ws, artifact=ARTIFACT)
     approvals.Approvals(ws).invalidate(ARTIFACT)
-    deps.invalidate(ws.slug, "perfil de ejemplares editado")
+    contexts.invalidate(ws.slug, "perfil de ejemplares editado")
     return {"path": str(target), "hash": storage.sha256_of(target)}
 
 

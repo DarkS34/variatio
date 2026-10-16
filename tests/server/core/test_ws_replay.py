@@ -1,4 +1,4 @@
-from server.routers.ws import COLD_REPLAY_LIMIT, trim_cold_replay
+from server.core.routes.stream import COLD_REPLAY_LIMIT, trim_cold_replay
 
 
 def event(seq, kind):

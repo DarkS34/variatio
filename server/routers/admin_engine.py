@@ -24,10 +24,11 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config
 from variatio.core import cerebras_budget, inference
 
-from .. import auth, csv_safe, deps, jobs, singletons
+from .. import auth, jobs, singletons
+from ..core import contexts, csv_safe
+from ..core.tunnel import TunnelError
 from ..db import Base, database_url
 from ..db.models import User
-from ..tunnel import TunnelError
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]
@@ -113,7 +114,7 @@ def engine() -> dict:
             "poll": config.IDLE_UNLOAD_POLL_SECONDS,
         },
         "busy": singletons.runner.is_busy(),
-        "contexts": deps.warm_slugs(),
+        "contexts": contexts.warm_slugs(),
         "pulls": singletons.pulls.all(),
         "tunnel": singletons.tunnel.status(),
         "cerebras": cerebras_state(),
@@ -266,16 +267,16 @@ def delete_model(model: str) -> dict:
 def invalidate_contexts(admin: User = Depends(auth.require_admin)) -> dict:
     """Drop every warm context, so the next job rebuilds its index."""
     _refuse_while_running()
-    return {"invalidated": deps.invalidate_all(f"a petición de «{admin.username}»")}
+    return {"invalidated": contexts.invalidate_all(f"a petición de «{admin.username}»")}
 
 
 @router.delete("/engine/contexts/{slug}")
 def invalidate_context(slug: str, admin: User = Depends(auth.require_admin)) -> dict:
     """Drop one workspace's warm context."""
     _refuse_while_running(slug)
-    if slug not in deps.warm_slugs():
+    if slug not in contexts.warm_slugs():
         raise HTTPException(404, f"«{slug}» no tiene el contexto en memoria.")
-    deps.invalidate(slug, f"a petición de «{admin.username}»")
+    contexts.invalidate(slug, f"a petición de «{admin.username}»")
     return {"invalidated": slug}
 
 

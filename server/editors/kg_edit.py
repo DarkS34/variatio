@@ -15,7 +15,8 @@ from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from .. import approvals, deps, storage
+from .. import approvals, storage
+from ..core import contexts
 
 ARTIFACT = approvals.KNOWLEDGE_GRAPH
 
@@ -139,7 +140,7 @@ def set_description(ws: Workspace, concept: str, text: str) -> dict:
     entrypoints.save_concept_descriptions(stored, ws)
     # The embedding cache fingerprints the descriptions and invalidates itself; the
     # in-memory context does not, hence the explicit drop.
-    deps.invalidate(ws.slug, f"descripción de '{concept}' editada")
+    contexts.invalidate(ws.slug, f"descripción de '{concept}' editada")
     return {"concept": concept, "description": text}
 
 
@@ -190,7 +191,7 @@ def _save(ws: Workspace, graph_raw: dict, note: str) -> dict:
     target = approvals.canonical_path(ws, ARTIFACT)
     storage.write_json(target, graph_raw, ws=ws, artifact=ARTIFACT)
     approvals.Approvals(ws).invalidate(ARTIFACT)
-    deps.invalidate(ws.slug, note)
+    contexts.invalidate(ws.slug, note)
     return {"path": str(target), "hash": storage.sha256_of(target)}
 
 

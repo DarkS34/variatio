@@ -8,9 +8,9 @@ import random
 
 from loguru import logger
 
-from server import deps
+from server.core import contexts
+from server.core.contexts import context_for
 from server.db import repository, session_scope
-from server.jobs.handlers import context_for
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from variatio.core import progress
@@ -55,7 +55,7 @@ class _BlindEmitter:
 
 def handle_evaluate(job: Job, control: JobControl) -> dict:
     """Run one blind comparison — the system against a drawn rival — and save it, muted."""
-    deps.require_inference()
+    contexts.require_inference()
     context = context_for(job)
     params = job.params
     concepts = params.get("concepts") or []

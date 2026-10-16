@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from server import daily
+from server.core import daily
 from server.db.models import GenerationUsage
 
 # What a refusal for the day carries in `X-Error-Code`.

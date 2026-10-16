@@ -18,7 +18,8 @@ from variatio.core import cerebras, inference
 from variatio.core.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
-from .. import auth, deps, singletons
+from .. import auth, singletons
+from ..core import contexts
 
 router = APIRouter(
     prefix="/api/admin/config", tags=["config"], dependencies=[Depends(auth.require_admin)]
@@ -86,7 +87,7 @@ def _act(impacts: set) -> list[str]:
         inference.reset_engine()
         done.append("motor de inferencia reiniciado")
     if impacts & {Impact.CONTEXTS, Impact.REINDEX, Impact.ENGINE}:
-        count = deps.invalidate_all("configuración cambiada")
+        count = contexts.invalidate_all("configuración cambiada")
         done.append(f"{count} contexto(s) invalidado(s)")
     if Impact.REINDEX in impacts:
         done.append("el índice se reconstruirá en el próximo trabajo")

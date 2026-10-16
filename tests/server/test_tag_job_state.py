@@ -68,7 +68,7 @@ def test_retagging_keeps_a_closed_bank_closed_and_a_draft_a_draft(monkeypatch, w
         ws.exemplars_bank_path.write_text(json.dumps(tagged), encoding="utf-8")
         return tagged
 
-    monkeypatch.setattr(handlers.deps, "require_inference", lambda: None)
+    monkeypatch.setattr(handlers.contexts, "require_inference", lambda: None)
     monkeypatch.setattr(handlers, "_workspace", lambda _job: ws)
     monkeypatch.setattr(
         handlers, "context_for", lambda _job: SimpleNamespace(exemplars_bank=dict(BANK))

@@ -29,9 +29,10 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.core import languages
 from variatio.loaders import locale
 
-from .. import auth, deps, installation, members, singletons
+from .. import auth, members, singletons
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
+from ..core import contexts, installation
 from ..db import identity, repository
 from ..db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
 
@@ -239,7 +240,7 @@ def remove(
     rehomed = auth_deps.rehome_accounts(db, access.workspace)
     db.delete(access.workspace)
     db.flush()
-    deps.invalidate(ws.slug, "workspace eliminado")
+    contexts.invalidate(ws.slug, "workspace eliminado")
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
     singletons.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
@@ -320,7 +321,7 @@ def leave(
     db.flush()
     if user.active_workspace_id == workspace.id:
         user.active_workspace_id = None
-    deps.invalidate(slug, "asignatura eliminada al salir su último miembro")
+    contexts.invalidate(slug, "asignatura eliminada al salir su último miembro")
     logger.info(f"[workspace] «{user.username}» era el último de «{slug}»; se eliminó")
     return {
         "left": slug,

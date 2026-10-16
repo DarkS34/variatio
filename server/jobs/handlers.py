@@ -14,7 +14,9 @@ from variatio.runtime.tagger import ConceptTagger
 from variatio.core import json_io, progress
 from variatio.core.workspace import Workspace
 
-from .. import approvals, deps, installation, storage, taggability
+from .. import approvals, storage, taggability
+from ..core import contexts, installation
+from ..core.contexts import context_for
 from ..db import mirror
 from ..editors import bank_edit, kg_edit
 from .build_process import run_build
@@ -79,36 +81,10 @@ def _build(artifact: str):
         # The build ran in another process, so this one's context still speaks of the
         # previous artifact: without the drop, whatever follows — tagging, indexing,
         # generating, the chain — would reuse the graph or bank just replaced.
-        deps.invalidate(job.workspace, f"'{artifact}' reconstruido")
+        contexts.invalidate(job.workspace, f"'{artifact}' reconstruido")
         return result
 
     return handler
-
-
-def context_for(job: Job, reload: bool = False):
-    """Return the workspace's pipeline context, warming the indices if they are cold.
-
-    Warming embeds every concept description and the whole bank — minutes of silence the
-    first time — so it gets a step of its own that says what it costs.
-    """
-    ws = _workspace(job)
-    if deps.is_ready(ws.slug) and not reload:
-        logger.info("Índices ya calientes en memoria; se reutilizan")
-        return deps.get_context(ws)
-
-    label = (
-        "Reconstruyendo el contexto: instancia + índices"
-        if reload
-        else "Preparando el contexto: cargando la instancia e indexando"
-    )
-    with progress.step("context", label):
-        logger.info(f"Cargando la instancia e indexando con '{config.EMBEDDING_LLM}'")
-        context = deps.reload_context(ws) if reload else deps.get_context(ws)
-    logger.success(
-        f"Contexto listo: {len(context.embedder.concepts_index)} concepto(s) indexado(s), "
-        f"{len(context.exemplars_bank)} ítem(s) del banco"
-    )
-    return context
 
 
 def _workspace(job: Job) -> Workspace:
@@ -125,7 +101,7 @@ def handle_transcribe(job: Job, control: JobControl) -> dict:
     An accelerator and never a gate: nothing is chained after it and nothing waits for it —
     a build finding no cache transcribes on its own, exactly as it would have.
     """
-    deps.require_inference()
+    contexts.require_inference()
     ws = _workspace(job)
     slot = job.params.get("slot") or ""
     if slot not in _SLOTS:
@@ -147,7 +123,7 @@ def handle_transcribe(job: Job, control: JobControl) -> dict:
 
 def handle_describe_concepts(job: Job, control: JobControl) -> dict:
     """Write the concept descriptions the index is built on, all of them or a selection."""
-    deps.require_inference()
+    contexts.require_inference()
     ws = _workspace(job)
     concepts = job.params.get("concepts")
     overwrite = bool(job.params.get("overwrite"))
@@ -162,13 +138,13 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
     )
     descriptions = entrypoints.describe_concepts(concepts=concepts, overwrite=overwrite, ws=ws)
     # New prose means new embeddings; the cached context would keep matching the old.
-    deps.invalidate(ws.slug, "descripciones de conceptos regeneradas")
+    contexts.invalidate(ws.slug, "descripciones de conceptos regeneradas")
     return {"described": len(descriptions)}
 
 
 def handle_index(job: Job, control: JobControl) -> dict:
     """Rebuild the concepts and bank indices from scratch."""
-    deps.require_inference()
+    contexts.require_inference()
     context = context_for(job, reload=True)
     return {
         "concepts": len(context.embedder.concepts_index),
@@ -183,7 +159,7 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     collection that closes it (`chain.CLOSES`), not a teacher's edit, so it seals the new
     file again instead of sending the step back to «Te toca».
     """
-    deps.require_inference()
+    contexts.require_inference()
     ws = _workspace(job)
     sealed = approvals.Approvals(ws).sealed(approvals.EXEMPLARS_BANK)
     context = context_for(job)
@@ -217,7 +193,7 @@ def handle_tag_item(job: Job, control: JobControl) -> dict:
     as the whole bank this job read. The merge seals a closed bank again, as any edit of one
     of its exercises does.
     """
-    deps.require_inference()
+    contexts.require_inference()
     ws = _workspace(job)
     context = context_for(job)
     asked = [str(item_id) for item_id in job.params.get("items") or []]
@@ -256,7 +232,7 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
             "concepts": sum(len(names) for names in graph["concepts_by_domains"].values()),
         }
 
-    deps.require_inference()
+    contexts.require_inference()
     try:
         verdict = entrypoints.review_taggability(ws)
     except entrypoints.MissingArtifactError as exc:

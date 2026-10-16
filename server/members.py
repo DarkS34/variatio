@@ -6,7 +6,7 @@ administrator's panel, leaving a subject and ending a course. Closing a membersh
 what would take the last owner from the subject's people (`identity.would_orphan`), moves the
 account's active subject elsewhere, stops its jobs there, writes the row, and announces it on
 the bus as `membership.closed` — an event no browser receives, on which an open socket of that
-account closes (`routers/ws.py`).
+account closes (`core/routes/stream.py`).
 
 PAUSING IS REVERSIBLE AND REMOVING IS NOT. A paused membership keeps its role, its origin and
 its date, and a teacher opens it again; a removed one is gone, and only a new link brings the

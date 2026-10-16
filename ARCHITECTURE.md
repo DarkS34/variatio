@@ -87,7 +87,7 @@ flowchart TB
   worker --> ollama
 ```
 
-- The API serves the client's build (`web/dist`) and owns the SSH tunnel (`server/tunnel.py`).
+- The API serves the client's build (`web/dist`) and owns the SSH tunnel (`server/core/tunnel.py`).
 - A build runs in its own process because it lasts long and must be killable
   (`server/jobs/catalogue.py`, `SUBPROCESS_KINDS`). Everything else runs in the API's threads.
 - **Files are the truth; the database mirrors them.** Artifacts are read from files and their
@@ -114,8 +114,9 @@ variatio/       the library          imports neither
   neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
   `core.inference` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
-- Nothing outside `server/routers/` imports a route module, and the route modules do not
-  import each other, but for the exceptions each contract names.
+- **Only `server/routing.py` imports a route module** (`server/routers/`,
+  `server/core/routes/`), and the route modules do not import each other, but for the
+  exceptions each contract names: the functions still use four routes as libraries.
 - `import server` works with no database (`server/__init__.py`).
 - The client reaches a function's code (`web/src/consumers/evaluation/`,
   `web/src/consumers/tutor/`) and the landing (`web/src/landing/`) only through `import()`;
@@ -146,6 +147,22 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
   (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and
   «only `core/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
+**Inside `server/`.**
+
+```text
+app.py  routing.py  cli/                  composition
+routers/                                  the routes, which only routing.py imports
+auth/                                     identity and permissions
+jobs/  conversations/  generations.py     the queue, what the tutor and the chat share, the exercises
+core/                                     what every area stands on
+db/                                       models, session, mirror
+```
+
+- The order is an import contract («The server's layers»). A route module is a leaf wherever
+  it lives (`routers/`, `core/routes/`, `conversations/routes.py`), so what it imports is out
+  of the order. The modules still at the server's root are outside it until their areas
+  exist (D-227).
+
 ## 5. Code map
 
 One line per folder: what it holds, and the file to open first.
@@ -171,8 +188,9 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root) and 25 domain modules: `approvals`, `installation`, `deps` (warm contexts), `singletons` (the process's instances), `members`, `groups`, `activity`, `curriculum`, `features`, `raw_data`, `originals`, `generations`, … | `app.py` |
-| `routers/` | the core's HTTP and WebSocket routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 14 domain modules: `approvals`, `storage`, `singletons` (the process's instances), `members`, `groups`, `activity`, `curriculum`, `features`, `raw_data`, `originals`, `generations`, … | `app.py` |
+| `core/` | what every area stands on: the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
+| `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
 | `editors/` | hand edits of the artifacts: graph, profile, bank, context | `bank_edit.py` |
 | `auth/` | route guards (`deps.py`), passwords, tokens, sealed links, mail, rate limits | `deps.py` |
 | `db/` | ORM models, session, schema check, mirror, import/export, identity queries | `models.py` |
@@ -229,8 +247,8 @@ there.
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
-| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/`, `routers/auth.py`, `routers/workspaces.py`, `db/identity.py`, `features.py`, `installation.py` | — | — | `tests/server/test_invite_*`, `tests/server/test_workspace_*`, `tests/server/test_login_rate_limit.py` |
-| Administration | `features/admin/`, `features/maintenance/` | `routers/admin.py`, `routers/admin_engine.py`, `routers/config.py`, `routers/maintenance.py`, `routers/health.py` | `settings/` | — | `tests/server/test_admin_*`, `tests/settings/` |
+| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/`, `routers/auth.py`, `routers/workspaces.py`, `db/identity.py`, `features.py`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/test_invite_*`, `tests/server/test_workspace_*`, `tests/server/test_login_rate_limit.py` |
+| Administration | `features/admin/`, `features/maintenance/` | `routers/admin.py`, `routers/admin_engine.py`, `routers/config.py`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/test_admin_*`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
 
 Client paths are under `web/src/`; server paths under `server/` unless they start with
