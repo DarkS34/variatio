@@ -1,8 +1,8 @@
 /* The evaluation's own types: the three arms, one blind session — the system against ONE
  * rival drawn by the seed, on two cards since 2026-09-08 — and what the administration
- * panel reads over the population of them. They live here rather than in `lib/types.ts`
+ * panel reads over the population of them. They live here rather than in `lib/types/`
  * for the same reason the Python does: the evaluation is measured against the system, not part
- * of it. `lib/types.ts` keeps only the two counters the admin overview prints. */
+ * of it. `lib/types/admin.ts` keeps only the two counters the admin overview prints. */
 
 import type { EvaluatorProfile, ItemChecks } from "@/lib/types";
 

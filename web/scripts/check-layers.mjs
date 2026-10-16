@@ -66,8 +66,8 @@ const ALLOWED = new Set([
   "lib/i18n/index.ts -> consumers/evaluation/i18n/es",
   "lib/i18n/index.ts -> consumers/tutor/i18n/es",
   "lib/i18n/index.ts -> landing/i18n/es",
-  "lib/types.ts -> features/profile/drift",
-  "state/queries.ts -> components/ui/toast",
+  "lib/types/bank.ts -> features/profile/drift",
+  "state/queries/jobs.ts -> components/ui/toast",
 ]);
 
 /** The layer of a path relative to `src/`, and the folder it counts as; null outside them. */

@@ -227,8 +227,8 @@ an `api/` package whose `install(app)` the composition root calls.
 | `features/` | one folder per screen of the core: `raw`, `kg`, `profile`, `bank`, `class`, `admin`, `auth`, `account`, `workspaces`, … | the screen's `*Screen.tsx` |
 | `consumers/` | one folder per function, mirroring `consumers/` | the function's screen |
 | `landing/` | the public front page and the demo over an in-memory server | `LandingScreen.tsx` |
-| `lib/` | pure helpers, the API client, the router, i18n catalogues, the API types | `steps.ts`, `api.ts` |
-| `state/` | data hooks (`queries.ts`), the run store, the session, the tab's workspace | `queries.ts` |
+| `lib/` | pure helpers, the API client, the router, i18n catalogues, the API types (`types/`, one module per area of the server) | `steps.ts`, `api.ts` |
+| `state/` | data hooks (`queries/`, one module per area of the server), the run store, the session, the tab's workspace | `queries/index.ts` |
 | `scripts/` | the four `check:*` gates | — |
 
 **Elsewhere**

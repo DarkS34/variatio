@@ -54,3 +54,6 @@ c9990ef8fb910044247fc7965ad0315f7b4c6799
 
 # refactor(server): server/admin/, one module per tab, and routers/ is gone
 f8d705090b2226ea27c3bbcf8f1ec0bef639abc3
+
+# refactor(web): the shared pieces of the client go down to their layer
+3f1973f73a82574618a0314e076637107fa10af3
