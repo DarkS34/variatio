@@ -6,6 +6,7 @@ Deliberately not called `models`: under `server/` that already means the ML mode
 
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
@@ -195,3 +196,27 @@ class Event:
             "kind": self.kind,
             **self.payload,
         }
+
+
+# WHERE A FUNCTION PLUGS IN ---------------------------------------------------------------
+# The registries an optional function fills from its `api.install(app)`, kept beside the
+# tables above that classify a kind. Nothing here imports the server: each entry is
+# registered by the code that owns it.
+
+# What runs a job of each kind: the construction's handlers (`jobs/handlers.py`, registered
+# on import) and each function's, added at its install.
+HANDLERS: dict[str, Callable[..., dict]] = {}
+
+# The job kinds that belong to an optional function (`server/features.py`): queued by
+# `POST /api/jobs` only for an account the function is open to, and named as a lane's holder
+# only to such an account (`routers/pipeline.py`). The value is the feature's name
+# (`features.EVALUATION` is "evaluation"; `tests/server/test_features.py` pins it). The
+# tutor's and the chat's kinds are added at their install.
+FEATURE_OF: dict[str, str] = {"evaluate": "evaluation"}
+
+# What a kind's own function checks before one of its jobs is queued, registered when the
+# function is installed (`consumers.generation.api.install` for `generate`). It is handed
+# the database session, the request's `auth.Access`, the job's params and the queueing
+# itself, so a check and the queueing it guards can share one lock, and it answers the job
+# queued or refuses with an `HTTPException`.
+ADMISSIONS: dict[str, Callable[..., Job]] = {}

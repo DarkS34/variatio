@@ -1,6 +1,6 @@
 """The tutor's two jobs: answering one turn, and drafting the subject's criteria.
 
-Registered on `server.jobs.handlers.HANDLERS` by `consumers.tutor.api.install`, not declared there:
+Registered on `server.jobs.catalogue.HANDLERS` by `consumers.tutor.api.install`, not declared there:
 the queue is the installation's and the jobs are the tutor's. Both go through the queue for the
 reason every model call does — the idle unloader reads the queue's clock, and a call outside
 it would have the GPU released under it.

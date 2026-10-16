@@ -3,7 +3,8 @@
 Every handler resolves its paths from `job.workspace` and nothing else: the runner is one
 queue for the whole installation, so a handler reading a process-wide workspace would write
 one person's build into another's directory. The functions under `consumers/` add their own kinds
-to `HANDLERS` when they are installed: a commission, a comparison, the tutor's turns.
+to `catalogue.HANDLERS` when they are installed: a commission, a comparison, the tutor's turns.
+The construction's own register here, on import.
 """
 
 from loguru import logger
@@ -17,7 +18,7 @@ from .. import approvals, deps, installation, storage, taggability
 from ..db import mirror
 from ..editors import bank_edit, kg_edit
 from .build_process import run_build
-from .catalogue import Job
+from .catalogue import HANDLERS, Job
 from .runner import JobControl
 
 
@@ -268,7 +269,7 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
     return {"non_taggable": saved["non_taggable"], "concepts": verdict["concepts"]}
 
 
-HANDLERS = {
+HANDLERS.update({
     "build_profile": _build(approvals.EXEMPLARS_PROFILE),
     "build_kg": _build(approvals.KNOWLEDGE_GRAPH),
     "build_bank": _build(approvals.EXEMPLARS_BANK),
@@ -278,4 +279,4 @@ HANDLERS = {
     "tag": handle_tag,
     "tag_item": handle_tag_item,
     "review_taggability": handle_review_taggability,
-}
+})

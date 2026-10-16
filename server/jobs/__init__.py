@@ -1,9 +1,9 @@
 """The job queue: what runs, on which backend, in what order, and who hears about it."""
 
-from . import chain, lanes
+# `handlers` is imported for its registrations: the construction's kinds join `HANDLERS`.
+from . import chain, handlers, lanes
 from .bus import EventBus
-from .catalogue import JOB_LABELS, SUBPROCESS_KINDS, Event, Job
-from .handlers import HANDLERS
+from .catalogue import HANDLERS, JOB_LABELS, SUBPROCESS_KINDS, Event, Job
 from .idle import IdleUnloader, release_gpu
 from .lanes import LOCAL, REMOTE, backends_for
 from .runner import JobControl, JobRunner

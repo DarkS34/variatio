@@ -10,9 +10,14 @@ def install(app) -> None:
     from server import activity as class_activity
     from server import features
     from server.jobs import lanes
-    from server.jobs.catalogue import INTERACTIVE, JOB_CLASS, PRIVATE_KINDS, STUDENT_KINDS
-    from server.jobs.handlers import HANDLERS
-    from server.routers.jobs import FEATURE_OF
+    from server.jobs.catalogue import (
+        FEATURE_OF,
+        HANDLERS,
+        INTERACTIVE,
+        JOB_CLASS,
+        PRIVATE_KINDS,
+        STUDENT_KINDS,
+    )
 
     from .. import config as chat_config
     from . import activity, jobs, router

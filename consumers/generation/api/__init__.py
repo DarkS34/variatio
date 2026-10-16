@@ -8,8 +8,7 @@ is installed FIRST, before the core's routers (`server/app.py`), because its
 
 def install(app) -> None:
     """Register the `generate` handler and its admission, and mount the author's routes."""
-    from server.jobs.handlers import HANDLERS
-    from server.routers.jobs import ADMISSIONS
+    from server.jobs.catalogue import ADMISSIONS, HANDLERS
 
     from . import jobs, limits, router
 

@@ -12,7 +12,7 @@ runtime-only consumer, and `tests/consumers/test_consumers_boundary.py` pins it.
 
 def install(app) -> None:
     """Register the `evaluate` handler and mount the evaluation's three routers on the app."""
-    from server.jobs.handlers import HANDLERS
+    from server.jobs.catalogue import HANDLERS
 
     from . import admin, jobs, router, stages
 

@@ -4,7 +4,7 @@ A commission is one live batch per account and subject (`generation_busy`), and 
 bounded twice more: its size (`GENERATION_STUDENT_MAX_ITEMS`) and the exercises asked for in
 the day across every subject (`GENERATION_STUDENT_DAILY_ITEMS`, `usage`). A teacher has
 neither bound. `admit` is what `POST /api/jobs` hands a `generate` to
-(`server.routers.jobs.ADMISSIONS`, registered at install); `GET /api/jobs/allowance` tells the
+(`server.jobs.catalogue.ADMISSIONS`, registered at install); `GET /api/jobs/allowance` tells the
 form where its stepper stops.
 """
 

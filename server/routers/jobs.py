@@ -5,7 +5,7 @@ by kind inside: a student of the subject (`viewer`) queues a commission or a com
 (`STUDENT_KINDS`) and cancels their own; everything else — a build, a transcription, an
 indexing — takes a teacher, and a refusal says `role_too_low`.
 
-A kind's own function may admit it before it is queued (`ADMISSIONS`): a commission's
+A kind's own function may admit it before it is queued (`catalogue.ADMISSIONS`): a commission's
 bounds — one live batch per account and subject, and a student's size and day — are
 `consumers.generation`'s, registered when it is installed.
 
@@ -16,7 +16,6 @@ private job (`catalogue.PRIVATE_KINDS`) is visible to its author alone, and answ
 else the same 404 as a job that does not exist, as a generated exercise does.
 """
 
-from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -29,7 +28,15 @@ from .. import approvals, auth, features, raw_data, singletons
 from ..db.models import EDITOR, VIEWER
 from ..jobs import chain as job_chain
 from ..jobs import lanes
-from ..jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, STUDENT_KINDS, SUBPROCESS_KINDS, Job
+from ..jobs.catalogue import (
+    ADMISSIONS,
+    FEATURE_OF,
+    JOB_ARTIFACT,
+    JOB_LABELS,
+    STUDENT_KINDS,
+    SUBPROCESS_KINDS,
+    Job,
+)
 
 router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 
@@ -44,19 +51,6 @@ GATES: dict[str, str | None] = {
     "generate": "__all__",
     "evaluate": "__all__",
 }
-
-# The job kinds that belong to an optional function (`server/features.py`): queued here only
-# by an account the function is open to, and named as a lane's holder only to such an account
-# (`routers/pipeline.py`). The tutor's kinds are not in `JOB_LABELS` at all, so this route
-# never queues them; `consumers.tutor.api.install` adds them here for the second use.
-FEATURE_OF: dict[str, str] = {"evaluate": features.EVALUATION}
-
-# What a kind's own function checks before one of its jobs is queued, registered when the
-# function is installed (`consumers.generation.api.install` for `generate`). It is handed the
-# request and the queueing itself, so a check and the queueing it guards can share one lock,
-# and it answers the job queued or refuses with an `HTTPException`.
-Admission = Callable[[DbSession, auth.Access, dict, Callable[[], Job]], Job]
-ADMISSIONS: dict[str, Admission] = {}
 
 # `GATES` answers "are the UPSTREAM of X approved?", which is the question for building X.
 # Taggability asks a different one — that a SPECIFIC artifact is approved, the profile its

@@ -15,3 +15,6 @@
 
 # refactor(variatio): OllamaEngine in its own module, core/ollama.py
 73fc00bb2c4dd8cfe06682a5b6912db7f121b037
+
+# refactor(variatio): the document code leaves builders/ for variatio/documents/
+ed3abf7a0172f00f8e203bf320a26c1b0fff2e0d

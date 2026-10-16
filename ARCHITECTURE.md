@@ -172,7 +172,7 @@ One line per folder: what it holds, and the file to open first.
 | Folder | Holds | Start at |
 |---|---|---|
 | `server/` (root) | `app.py` (composition root) and 25 domain modules: `approvals`, `installation`, `deps` (warm contexts), `singletons` (the process's instances), `members`, `groups`, `activity`, `curriculum`, `features`, `raw_data`, `originals`, `generations`, … | `app.py` |
-| `routers/` | the core's HTTP and WebSocket routes, mounted in the order of `ROUTERS`; `app.py` mounts the generation's routes before them and the other functions' after them | `routers/__init__.py`, then `app.py` |
+| `routers/` | the core's HTTP and WebSocket routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
 | `editors/` | hand edits of the artifacts: graph, profile, bank, context | `bank_edit.py` |
 | `auth/` | route guards (`deps.py`), passwords, tokens, sealed links, mail, rate limits | `deps.py` |
 | `db/` | ORM models, session, schema check, mirror, import/export, identity queries | `models.py` |
@@ -279,14 +279,13 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **The queue.** A job (`server/jobs/catalogue.py`) waits on a lane (`server/jobs/lanes.py`):
   `local` has capacity 1, `remote` a setting. Inside a lane, three classes by who waits
   (`server/jobs/priority.py`). The runner (`server/jobs/runner.py`) runs a handler from
-  `HANDLERS` (`server/jobs/handlers.py`) and the bus (`server/jobs/bus.py`) carries its events
+  `catalogue.HANDLERS` (the construction's from `server/jobs/handlers.py`) and the bus (`server/jobs/bus.py`) carries its events
   to the WebSocket. Every model call of the API goes through a job, because the idle unload
   (`server/jobs/idle.py`) reads only the queue.
 - **How a function plugs in.** `server/app.py` calls each function's `api.install(app)`. It
-  mounts the function's routes and adds its kinds to the server's tables: `HANDLERS`
-  (`server/jobs/handlers.py`); `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`
-  (`server/jobs/catalogue.py`; `server/jobs/priority.py` reads the class); `FEATURE_OF`
-  (`server/routers/jobs.py`); its models in `EXTRA_MODELS` (`server/jobs/lanes.py`); and,
+  mounts the function's routes and adds its kinds to the server's tables, all in
+  `server/jobs/catalogue.py`: `HANDLERS`, `FEATURE_OF`, `ADMISSIONS`, `PRIVATE_KINDS`,
+  `STUDENT_KINDS` and `JOB_CLASS` (`server/jobs/priority.py` reads the class); its models in `EXTRA_MODELS` (`server/jobs/lanes.py`); and,
   for the tutor and the chat, the class activity's readers (`server/activity.py`,
   `TUTOR_READER`, `CHAT_READER`). Its settings come in by the registry's optional import.
 - **Identity and roles.** Own accounts and sessions (`server/auth/`), invitation-only. Every

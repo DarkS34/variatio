@@ -25,7 +25,8 @@ from ..db.session import session_scope
 from ..editors import kg_edit
 from ..jobs import lanes as jobs_lanes
 from ..jobs.catalogue import Job
-from .jobs import FEATURE_OF, transcribing_slot
+from ..jobs.catalogue import FEATURE_OF
+from .jobs import transcribing_slot
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
 
@@ -105,7 +106,7 @@ def _nameable_for(access: auth.Access) -> Callable[[Job], bool]:
     """Build the test of whether a lane's holder may be named to this account.
 
     Another account's private job is never named (`Job.seen_by`). A job of an optional
-    function (`jobs.FEATURE_OF`: a comparison, a tutor's turn) is named only to an account
+    function (`catalogue.FEATURE_OF`: a comparison, a tutor's turn) is named only to an account
     that function is open to: to anybody else the lane is busy with something, which is the
     whole of what their wait needs. The database is read at most once per function and per
     payload, and only when such a job holds a lane; a read that fails names nothing, because

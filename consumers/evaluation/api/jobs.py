@@ -1,6 +1,6 @@
 """The `evaluate` job, and the one filter that keeps the run drawer from breaking the blind.
 
-Registered on `server.jobs.handlers.HANDLERS` by `consumers.evaluation.api.install`, not declared
+Registered on `server.jobs.catalogue.HANDLERS` by `consumers.evaluation.api.install`, not declared
 there: the queue is the installation's and the job is the evaluation's.
 """
 

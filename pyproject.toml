@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.12"
+version = "1.174.13"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -211,15 +211,49 @@ ignore_imports = ["variatio.core.ollama -> ollama"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "Nobody outside the server's routes imports a route module"
+name = "Only server/routing.py imports a route module"
 type = "forbidden"
-source_modules = ["variatio", "consumers"]
+# Every module of the server but `routers/` and `routing.py` itself, listed because a forbidden
+# contract cannot exclude: a new top-level module of the server is added here.
+source_modules = [
+    "variatio",
+    "consumers",
+    "server.__main__",
+    "server.activity",
+    "server.app",
+    "server.approvals",
+    "server.auth",
+    "server.bank_marks",
+    "server.cli",
+    "server.conversations",
+    "server.csv_safe",
+    "server.curriculum",
+    "server.daily",
+    "server.db",
+    "server.deps",
+    "server.editors",
+    "server.features",
+    "server.generations",
+    "server.groups",
+    "server.installation",
+    "server.jobs",
+    "server.kg_view",
+    "server.maintenance",
+    "server.members",
+    "server.middleware",
+    "server.model_pulls",
+    "server.originals",
+    "server.raw_data",
+    "server.singletons",
+    "server.storage",
+    "server.taggability",
+    "server.tunnel",
+]
 forbidden_modules = ["server.routers.*"]
 ignore_imports = [
     # Routes used as libraries by the functions; they leave with the server's areas.
-    "consumers.*.api -> server.routers.jobs",
-    "consumers.*.api.admin -> server.routers.jobs",
-    "consumers.*.api.router -> server.routers.jobs",
+    "consumers.evaluation.api.admin -> server.routers.jobs",
+    "consumers.evaluation.api.router -> server.routers.jobs",
     "consumers.*.api.router -> server.routers.exercises",
     "consumers.generation.api.router -> server.routers.bank",
     "consumers.generation.api.router -> server.routers.pipeline",

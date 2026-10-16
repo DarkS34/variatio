@@ -16,13 +16,13 @@ def install(app) -> None:
     from server.jobs import lanes
     from server.jobs.catalogue import (
         BACKGROUND,
+        FEATURE_OF,
+        HANDLERS,
         INTERACTIVE,
         JOB_CLASS,
         PRIVATE_KINDS,
         STUDENT_KINDS,
     )
-    from server.jobs.handlers import HANDLERS
-    from server.routers.jobs import FEATURE_OF
     from variatio import config as pipeline_config
 
     from .. import config as tutor_config

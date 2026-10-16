@@ -50,7 +50,7 @@ usage.
   the tutor waiting until it ends, so builds go outside class hours.
 - `GET /api/pipeline` reports lanes: `busy` means FULL; `current_job` is the oldest job of
   YOUR workspace. A lane's holder travels as `kind` (named by the client, `lib/names.ts`) plus
-  the server's `label`, both left out when the holder's function (`routers/jobs.FEATURE_OF`,
+  the server's `label`, both left out when the holder's function (`catalogue.FEATURE_OF`,
   which the tutor's kinds join at install) is closed to the account. The idle GPU clock
   counts every lane.
 - **Cancellation is cooperative at token granularity**: `inference.generate()` streams

@@ -8,7 +8,7 @@ Always mounted. **`consumers.evaluation` imports `variatio`, never the reverse**
 the settings registry's optional import); `consumers/evaluation/__init__.py` never imports
 `consumers/evaluation/api/`, so `import consumers.evaluation` stays free of FastAPI/SQLAlchemy. It is
 attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never from
-`server/routers/__init__.py`.
+`server/routing.py`.
 
 - **Arms**: `naive` (commercial chain `gemini → mistral → groq`, no `response_format`, no
   retries — the chain is the retry; provider and model id are stored per session), `rag`

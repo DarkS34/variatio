@@ -96,7 +96,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   (`GET /api/admin/features`, `PUT /api/admin/features/{feature}`; the list is replaced only
   when `accounts` is sent and survives a change of mode). A function with no row is off.
   `auth.EVALUATION` and `auth.TUTOR` sit beside `auth.VIEW` on the routers of
-  `/api/evaluation`, `/api/stage-evaluations` and `/api/tutor`, and `routers/jobs.FEATURE_OF`
+  `/api/evaluation`, `/api/stage-evaluations` and `/api/tutor`, and `catalogue.FEATURE_OF`
   closes `POST /api/jobs` for an `evaluate` job. **No administrator bypass**: the admin lists
   their own account. The admin's read routes are not behind it. A refusal is a 403 with
   `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its

@@ -20,7 +20,7 @@ from types import SimpleNamespace
 import pytest
 
 from server import features, singletons
-from server.jobs import lanes
+from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.routers import pipeline as pipeline_routes
@@ -131,7 +131,7 @@ def test_a_busy_lane_is_reported_to_everyone_and_owned_by_one(stand):
 def test_a_holder_of_a_closed_function_is_busy_and_unnamed(stand, monkeypatch):
     # The tutor's turns are jobs of the workspace like any other, and they hold the GPU. To
     # an account the tutor is closed to, the lane is busy with something, and that is all.
-    monkeypatch.setitem(pipeline_routes.FEATURE_OF, "local", features.TUTOR)
+    monkeypatch.setitem(catalogue.FEATURE_OF, "local", features.TUTOR)
     monkeypatch.setattr(pipeline_routes, "session_scope", lambda: nullcontext(None))
     open_to = {1}
     monkeypatch.setattr(

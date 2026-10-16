@@ -18,7 +18,7 @@ from loguru import logger
 from variatio import config
 
 from . import installation, jobs, middleware, singletons
-from .routers import ROUTERS
+from .routing import ROUTERS
 
 # Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
 WORKER_THREADS = 200

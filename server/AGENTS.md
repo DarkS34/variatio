@@ -6,6 +6,17 @@ the build chain and approvals, the generated exercises, the curriculum and the c
 Identity is `auth/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
 `conversations/AGENTS.md`, and the transcription `variatio/documents/AGENTS.md`.
 
+
+## Routes and where a function plugs in
+
+- `server/routing.py` holds `ROUTERS`, the order the core's routers are mounted in, and is
+  the one module that imports a route module (an import contract; the functions' imports of
+  `routers/jobs.py`, `exercises.py`, `bank.py` and `pipeline.py` are named exceptions that
+  leave with the server's areas). The route comparison of a phase reads `app.routes` whole.
+- The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
+  `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
+  construction's handlers join `HANDLERS` when `jobs/handlers.py` is imported.
+
 ## Database (`server/db/`)
 
 Postgres 16 + SQLAlchemy 2.0 + Alembic, all under the `server` extra; `import server` works

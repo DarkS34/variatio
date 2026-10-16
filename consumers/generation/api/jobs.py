@@ -1,6 +1,6 @@
 """A commission: generate `n` exercises and save each one, with how it was made.
 
-Registered on `server.jobs.handlers.HANDLERS` by `consumers.generation.api.install`, not declared
+Registered on `server.jobs.catalogue.HANDLERS` by `consumers.generation.api.install`, not declared
 there: the queue runs it as any other kind, and the construction's handlers know nothing of it.
 """
 

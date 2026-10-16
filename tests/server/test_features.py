@@ -298,3 +298,11 @@ def test_a_function_that_is_off_does_not_ask_for_its_own_model(db, monkeypatch):
 
     features.set_mode(db, features.TUTOR, features.SELECTED)
     assert health._required(db)["tutor.models.reply"] == "a-tutor-model"
+
+
+def test_the_catalogue_names_the_evaluation_s_kind_by_the_feature_s_own_name():
+    # `jobs/catalogue.py` keeps the value and not the constant, so the queue's tables import
+    # nothing of the server; this is what keeps the two from drifting apart.
+    from server.jobs import catalogue
+
+    assert catalogue.FEATURE_OF["evaluate"] == features.EVALUATION

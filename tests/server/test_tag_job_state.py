@@ -4,8 +4,7 @@ import pytest
 
 from server import approvals
 from server.jobs.bus import EventBus
-from server.jobs.handlers import HANDLERS
-from server.jobs.catalogue import JOB_ARTIFACT, Job
+from server.jobs.catalogue import HANDLERS, JOB_ARTIFACT, Job
 from server.jobs.runner import JobRunner
 from server.approvals import Approvals
 from variatio.core.workspace import Workspace

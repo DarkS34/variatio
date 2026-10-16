@@ -1,6 +1,6 @@
 """The free chat's one job: answering one turn.
 
-Registered on `server.jobs.handlers.HANDLERS` by `consumers.chat.api.install`. It goes through the
+Registered on `server.jobs.catalogue.HANDLERS` by `consumers.chat.api.install`. It goes through the
 queue for the reason every model call does — the idle unloader reads the queue's clock — and
 says nothing in public (`server.conversations.jobs`): it names the conversation and the turn,
 reads the message from the author's own file and writes the reply back to it.
