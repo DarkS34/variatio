@@ -248,3 +248,12 @@ def test_nothing_else_closes_the_bank(tmp_path, monkeypatch, job):
     job.workspace = ws.slug
     advance(monkeypatch, ws, job)
     assert approvals.Approvals(ws).state(approvals.EXEMPLARS_BANK)["status"] == "draft"
+
+
+def test_making_the_app_wires_the_chain_to_the_queue():
+    """The queue knows nothing about the chain: the composition root wires it, once per app."""
+    from server.app import create_app
+    from server.core import process
+
+    create_app()
+    assert process.runner.after_success is chain.advance

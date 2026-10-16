@@ -17,7 +17,8 @@ from dataclasses import dataclass
 from fastapi import HTTPException
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, singletons
+from server import auth
+from server.core import process
 from server.jobs.catalogue import Job
 from variatio.core import inference
 
@@ -58,7 +59,7 @@ def admit(fn: Function, access: auth.Access, db: DbSession) -> None:
     The engine and, for a function that needs them, the artifacts are the caller's to check
     first.
     """
-    for job in [*singletons.runner.running(access.ws.slug), *singletons.runner.pending(access.ws.slug)]:
+    for job in [*process.runner.running(access.ws.slug), *process.runner.pending(access.ws.slug)]:
         if job.kind == fn.turn and job.user_id == access.user.id:
             raise HTTPException(409, fn.busy)
     refused = fn.limit.refusal(db, access.user.id, fn.daily())
@@ -71,7 +72,7 @@ def admit(fn: Function, access: auth.Access, db: DbSession) -> None:
 
 def queue_turn(fn: Function, access: auth.Access, db: DbSession, record: dict, turn: int) -> Job:
     """Queue the reply to one student turn, count it and record it as pending, under the caller's lock."""
-    job = singletons.runner.submit(
+    job = process.runner.submit(
         fn.turn,
         {"conversation": record["id"], "turn": turn},
         workspace=access.ws.slug,
@@ -94,7 +95,7 @@ def heal(fn: Function, access: auth.Access, record: dict, locked: bool = False) 
     pending = record.get("pending") or {}
     if not pending:
         return record
-    job = singletons.runner.get(str(pending.get("job_id")))
+    job = process.runner.get(str(pending.get("job_id")))
     if job is not None and job.status in _LIVE:
         return record
     if job is not None and job.status == "succeeded":
@@ -122,7 +123,7 @@ def heal(fn: Function, access: auth.Access, record: dict, locked: bool = False) 
 def detail(record: dict, row: dict) -> dict:
     """Render a conversation for its author: every turn, without the prompts it was made with."""
     pending = record.get("pending") or None
-    job = singletons.runner.get(str(pending["job_id"])) if pending else None
+    job = process.runner.get(str(pending["job_id"])) if pending else None
     return {
         **row,
         "opened_from": record.get("opened_from") or {"kind": "message"},
@@ -131,7 +132,7 @@ def detail(record: dict, row: dict) -> dict:
         "pending": {
             **pending,
             "status": job.status if job else None,
-            "queue_position": singletons.runner.queue_position(job.id) if job else 0,
+            "queue_position": process.runner.queue_position(job.id) if job else 0,
             "job": job.to_dict() if job else None,
         }
         if pending

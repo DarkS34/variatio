@@ -19,9 +19,9 @@ from dataclasses import dataclass
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from . import singletons
 from .auth import queries
 from .auth.deps import first_membership
+from .core import process
 from .db.models import OWNER, VIEWER, Membership, User, Workspace
 
 CLOSED_EVENT = "membership.closed"
@@ -182,7 +182,7 @@ def _close(
     if member.active_workspace_id == workspace.id:
         landing = first_membership(session, member, excluding=workspace.id)
         member.active_workspace_id = landing.id if landing is not None else None
-    runner = singletons.runner
+    runner = process.runner
     for job in [*runner.running(workspace.slug), *runner.pending(workspace.slug)]:
         if job.user_id == member.id:
             runner.cancel(job.id)
@@ -192,7 +192,7 @@ def _close(
     else:
         session.delete(row)
     session.commit()
-    singletons.bus.publish_internal(
+    process.bus.publish_internal(
         workspace.slug, CLOSED_EVENT, {"user_id": member.id, "gesture": gesture}
     )
     verb = "desactivó" if gesture == DISABLED else "quitó"

@@ -3,21 +3,27 @@
 Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
 the root `DECISIONS.md`; none is this folder's alone.
 
-The pieces the server needs and that know no area: the warm contexts (`contexts.py`), resolving
-a subject (`installation.py`), the environment (`environment.py`), the SSH tunnel
-(`tunnel.py`), model downloads (`model_pulls.py`), the maintenance door (`maintenance.py`), the
-origin check and the security headers (`middleware.py`), days and weeks (`daily.py`) and CSV
-cells (`csv_safe.py`). `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket
+The pieces the server needs and that know no area: the process's live pieces (`process.py`),
+the warm contexts (`contexts.py`), resolving a subject (`installation.py`), the environment
+(`environment.py`), the SSH tunnel (`tunnel.py`), model downloads (`model_pulls.py`), the
+maintenance door (`maintenance.py`), the origin check and the security headers
+(`middleware.py`), days and weeks (`daily.py`) and CSV cells (`csv_safe.py`). `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket
 stream (`/ws`).
 
 ## Boundaries
 
 - **The core imports no area.** In the server's layers (an import contract) `core/` sits
-  above `db/` and below `jobs/`, `conversations/`, `generations.py`, `auth/` and every area.
-  Its routes are leaves: they may import any area, and only `server/routing.py` imports them.
+  above `jobs/` and `db/`, and below `conversations/`, `generations.py`, `auth/` and every
+  area. Its routes are leaves: they may import any area, and only `server/routing.py`
+  imports them.
+- **One bus and one queue for the whole installation** (`process.py`, with the idle unloader,
+  the tunnel and the downloads): the core assembles them from the queue's machinery in
+  `jobs/`. The queue knows nothing about the chain; `server/app.py` wires it
+  (`pipeline.chain.wire`). Code reads them as `process.runner`, never imported by name, so a
+  test that puts its own runner there is the one everybody sees.
 - **The API's switches and limits are `environment.py`**: production, cookies and sessions,
-  the lifetimes and sizes of invitations and class links, mail, rate limits, the event buffer
-  and the client's build. The database's variables are `db/session.py`'s, and the
+  the lifetimes and sizes of invitations and class links, mail, rate limits and the client's
+  build. The database's variables are `db/session.py`'s, and the
   invitations' key `auth/links.py`'s. None of it is a setting (`variatio/settings/` is the
   settings registry).
 - **Every path of a subject comes from its slug**, through `installation.workspace_for`;

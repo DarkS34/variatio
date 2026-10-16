@@ -154,8 +154,9 @@ app.py  routing.py  cli/                  composition
 routers/                                  the routes, which only routing.py imports
 pipeline/                                 the chain of the three steps
 auth/  workspaces/                        identity and permissions; the subjects of an account
-jobs/  conversations/  generations.py     the queue, what the tutor and the chat share, the exercises
-core/                                     what every area stands on
+conversations/  generations.py            what the tutor and the chat share; the exercises
+core/                                     what every area stands on, the live queue among it
+jobs/                                     the queue's machinery
 db/                                       models, session, mirror
 ```
 
@@ -189,8 +190,8 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 10 domain modules: `singletons` (the process's instances), `members`, `groups`, `activity`, `curriculum`, `raw_data`, `originals`, `kg_view`, `bank_marks`, `generations` | `app.py` |
-| `core/` | what every area stands on: the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 9 domain modules: `members`, `groups`, `activity`, `curriculum`, `raw_data`, `originals`, `kg_view`, `bank_marks`, `generations` | `app.py` |
+| `core/` | what every area stands on: the process's live pieces (`process.py`: the bus, the queue, the tunnel, the downloads), the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
 | `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
 | `editors/` | hand edits of the artifacts: graph, profile, bank | `bank_edit.py` |
 | `workspaces/` | the subjects of an account: `router.py` (`/api/workspaces`) and `trees.py` (a subject's tree on disk) | `router.py` |

@@ -109,6 +109,16 @@ REQUIRES = {
 }
 
 
+def wire(runner) -> None:
+    """Have the runner queue a job's links once the job finishes well.
+
+    The queue knows nothing about the chain, so a build's mandatory derivations are wired to
+    enqueue themselves where the process is assembled: `server/app.py`, and a test that runs
+    the real queue without making the app.
+    """
+    runner.after_success = advance
+
+
 def advance(runner, job: Job) -> None:
     """Queue the next link of the chain this job belongs to, skipping what cannot run yet.
 

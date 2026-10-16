@@ -24,8 +24,8 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config
 from variatio.core import cerebras_budget, inference
 
-from .. import auth, jobs, singletons
-from ..core import contexts, csv_safe
+from .. import auth, jobs
+from ..core import contexts, csv_safe, process
 from ..core.tunnel import TunnelError
 from ..db import Base, database_url
 from ..db.models import User
@@ -109,14 +109,14 @@ def engine() -> dict:
             for model, names in sorted(asked_by.items())
         ],
         "idle": {
-            "seconds": singletons.runner.idle_seconds(),
+            "seconds": process.runner.idle_seconds(),
             "threshold": config.IDLE_UNLOAD_SECONDS,
             "poll": config.IDLE_UNLOAD_POLL_SECONDS,
         },
-        "busy": singletons.runner.is_busy(),
+        "busy": process.runner.is_busy(),
         "contexts": contexts.warm_slugs(),
-        "pulls": singletons.pulls.all(),
-        "tunnel": singletons.tunnel.status(),
+        "pulls": process.pulls.all(),
+        "tunnel": process.tunnel.status(),
         "cerebras": cerebras_state(),
     }
 
@@ -200,7 +200,7 @@ def cerebras_export() -> Response:
 @router.post("/engine/release")
 def release(admin: User = Depends(auth.require_admin)) -> dict:
     """Unload the resident models, refusing while any job runs."""
-    job = singletons.runner.current()
+    job = process.runner.current()
     if job is not None:
         raise HTTPException(
             409, f"Hay un trabajo en curso («{job.label}»): espera o cancélalo antes."
@@ -225,7 +225,7 @@ def pull_model(body: ModelBody, admin: User = Depends(auth.require_admin)) -> di
     if not inference.is_available():
         raise HTTPException(503, "El motor no responde: no puede descargar nada.")
     try:
-        return {"pull": singletons.pulls.start(body.model, admin.username)}
+        return {"pull": process.pulls.start(body.model, admin.username)}
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
 
@@ -244,9 +244,9 @@ def delete_model(model: str) -> dict:
             f"'{model}' lo pide la configuración ({', '.join(asked_by)}): "
             "cambia esos ajustes antes de borrarlo.",
         )
-    if singletons.pulls.is_pulling(model):
+    if process.pulls.is_pulling(model):
         raise HTTPException(409, f"'{model}' se está descargando ahora mismo.")
-    job = singletons.runner.current()
+    job = process.runner.current()
     if job is not None:
         raise HTTPException(
             409, f"Hay un trabajo en curso («{job.label}») que podría estar usándolo."
@@ -282,7 +282,7 @@ def invalidate_context(slug: str, admin: User = Depends(auth.require_admin)) -> 
 
 def _refuse_while_running(slug: str | None = None) -> None:
     """Raise 409 while a job runs: invalidating under it would pull its index away."""
-    for job in singletons.runner.running():
+    for job in process.runner.running():
         if slug is None or job.workspace == slug:
             raise HTTPException(
                 409,
@@ -296,14 +296,14 @@ def _refuse_while_running(slug: str | None = None) -> None:
 @router.get("/engine/tunnel")
 def tunnel() -> dict:
     """Answer the tunnel's state, with the last stderr lines a key problem lands in."""
-    return singletons.tunnel.status()
+    return process.tunnel.status()
 
 
 @router.post("/engine/tunnel/start")
 def tunnel_start() -> dict:
     """Open the port forward to the GPU box and let the watchdog keep it open."""
     try:
-        return singletons.tunnel.start()
+        return process.tunnel.start()
     except TunnelError as exc:
         raise HTTPException(409, str(exc)) from None
 
@@ -311,7 +311,7 @@ def tunnel_start() -> dict:
 @router.post("/engine/tunnel/stop")
 def tunnel_stop() -> dict:
     """Close the port forward, and stop the watchdog relaunching it."""
-    return singletons.tunnel.stop()
+    return process.tunnel.stop()
 
 
 # THE QUEUE'S PAST ------------------------------------------------------------------------
@@ -332,7 +332,7 @@ def job_history(limit: int = Query(30, ge=1, le=200)) -> dict:
     """
     settled = [
         job.to_dict()
-        for job in singletons.runner.all(limit=400)
+        for job in process.runner.all(limit=400)
         if job.status not in ("running", "queued")
         and (job.finished_at or 0.0) > _history_cleared_at
     ]

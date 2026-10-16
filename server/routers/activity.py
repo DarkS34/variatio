@@ -21,8 +21,9 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import inference
 
-from .. import activity, auth, curriculum, groups, singletons
+from .. import activity, auth, curriculum, groups
 from ..auth import features
+from ..core import process
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
 
@@ -89,7 +90,7 @@ def write_digest(
     and on the engine the installation has; a closed week's digest may be written again (the
     screen offers it quietly, for one that came out wrong).
     """
-    if activity.TUTOR_READER is None or DIGEST_KIND not in singletons.runner.handlers:
+    if activity.TUTOR_READER is None or DIGEST_KIND not in process.runner.handlers:
         raise HTTPException(404, "El tutor no está instalado.")
     key = _week(week)
     chosen_group = _group(db, access, group)
@@ -113,7 +114,7 @@ def write_digest(
             503,
             f"No hay conexión con el motor de inferencia '{inference.engine_name()}'.",
         )
-    job = singletons.runner.submit(
+    job = process.runner.submit(
         DIGEST_KIND,
         {"week": key, **({"group": chosen_group.id} if chosen_group is not None else {})},
         workspace=access.ws.slug,
@@ -129,8 +130,8 @@ def write_digest(
     )
     return {
         "job": job.to_dict(),
-        "since": singletons.bus.last_seq,
-        "queue_position": singletons.runner.queue_position(job.id),
+        "since": process.bus.last_seq,
+        "queue_position": process.runner.queue_position(job.id),
     }
 
 
@@ -213,7 +214,7 @@ def _digest(access: auth.Access, key: str, group_id: int | None = None) -> dict 
 
 def _live_digest(slug: str, key: str, group_id: int | None = None):
     """Return the digest job of this week of this subject, or of one group, that is live."""
-    live = [*singletons.runner.running(slug), *singletons.runner.pending(slug)]
+    live = [*process.runner.running(slug), *process.runner.pending(slug)]
     return next(
         (
             job

@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from server import auth
 from server import curriculum as curriculum_store
-from server import singletons
+from server.core import process
 from server.db.models import EDITOR, VIEWER, EvalSession
 from server.editors import kg_edit
 from server.pipeline.gates import gate_error
@@ -113,7 +113,7 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         "instructions": body.instructions,
         "seed": body.seed,
     }
-    job = singletons.runner.submit(
+    job = process.runner.submit(
         "evaluate",
         params,
         workspace=access.ws.slug,
@@ -121,7 +121,7 @@ def launch(body: EvaluationBody, access: auth.Access = auth.VIEW) -> dict:
         user_name=access.user.name,
         redacted=access.role == VIEWER,
     )
-    return {"job": job.to_dict(), "since": singletons.bus.last_seq}
+    return {"job": job.to_dict(), "since": process.bus.last_seq}
 
 
 # LISTING ---------------------------------------------------------------------------------------

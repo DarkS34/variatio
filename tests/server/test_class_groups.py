@@ -15,8 +15,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import activity, curriculum, groups, members, singletons
+from server import activity, curriculum, groups, members
 from server.auth import features, queries
+from server.core import process
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
@@ -45,8 +46,8 @@ def db(monkeypatch):
 def stage(monkeypatch):
     """A bus that keeps what is said and a queue that never starts anything."""
     bus = EventBus(buffer_size=100)
-    monkeypatch.setattr(singletons, "bus", bus)
-    monkeypatch.setattr(singletons, "runner", JobRunner(bus, {}))
+    monkeypatch.setattr(process, "bus", bus)
+    monkeypatch.setattr(process, "runner", JobRunner(bus, {}))
 
 
 @pytest.fixture

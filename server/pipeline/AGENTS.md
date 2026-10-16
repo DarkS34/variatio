@@ -40,7 +40,7 @@ runs (`gates.py`), the chain as the bar reads it (`view.py`), the construction's
   (`gates.gate_error`, `transcribing_slot`, both over `chain.links(kind)`): a link the
   runner queues has no route, so a closed gate behind the head would be skipped in silence
   and a transcription of the exercises would collide with the build behind the review.
-- **The bank reads as building from its review on** (`singletons.building`: a live
+- **The bank reads as building from its review on** (`readings.building`: a live
   `review_taggability` whose chain names `build_bank`), and the runner queues a job's next
   link BEFORE announcing the job finished (`runner._execute`), so no reading between the two
   finds the chain gone and offers to collect again.
@@ -60,7 +60,7 @@ runs (`gates.py`), the chain as the bar reads it (`view.py`), the construction's
   rebuild offered anywhere). `approvals.RAW_SOURCE` is the one table of which slot feeds which
   artifact. A stage with no record is never stale for its documents.
 - **A build waits for a LIVE transcription of the slot it reads** (409 outside `force`),
-  because both write the same page cache. `singletons.transcribing(slug, slot)` is the one
+  because both write the same page cache. `readings.transcribing(slug, slot)` is the one
   reading. This is not a gate on transcription having happened.
 - Every hand edit withdraws the stage's approval on the server; the client never reopens.
   **One exception: an exercise of a closed bank** (the user's decision, 2026-10-14). Editing,

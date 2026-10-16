@@ -23,8 +23,9 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import inference
 
-from .. import auth, singletons
+from .. import auth
 from ..auth import features
+from ..core import process
 from ..db.models import EDITOR, VIEWER
 from ..pipeline.gates import gate_error, transcription_error
 from . import lanes
@@ -51,7 +52,7 @@ def _mine(job_id: str, access: auth.Access):
     One of another instance does not exist here, and neither does another account's private
     job: the same sentence for both, because a 403 would confirm that the id names one.
     """
-    job = singletons.runner.get(job_id)
+    job = process.runner.get(job_id)
     if job is None or job.workspace != access.ws.slug or not job.seen_by(access.user.id):
         raise HTTPException(404, f"No existe el trabajo '{job_id}'")
     return job
@@ -105,7 +106,7 @@ def submit(
 
     def queue() -> Job:
         """Queue the job as asked; a student's is redacted on the bus."""
-        return singletons.runner.submit(
+        return process.runner.submit(
             body.kind,
             body.params,
             workspace=access.ws.slug,
@@ -118,15 +119,15 @@ def submit(
     job = queue() if admit is None else admit(db, access, body.params, queue)
     return {
         "job": job.to_dict(),
-        "since": singletons.bus.last_seq,
-        "queue_position": singletons.runner.queue_position(job.id),
+        "since": process.bus.last_seq,
+        "queue_position": process.runner.queue_position(job.id),
     }
 
 
 @router.get("/jobs")
 def listing(limit: int = Query(50, ge=1, le=200), access: auth.Access = auth.VIEW) -> dict:
     """Answer the most recent jobs of this workspace that this account may see."""
-    jobs = singletons.runner.all(limit, workspace=access.ws.slug, for_user=access.user.id)
+    jobs = process.runner.all(limit, workspace=access.ws.slug, for_user=access.user.id)
     return {"jobs": [j.to_dict() for j in jobs]}
 
 
@@ -143,20 +144,20 @@ def current(access: auth.Access = auth.VIEW) -> dict:
     private job is neither `job` nor in `queued`: what it is doing is its author's.
     """
     me = access.user.id
-    running = singletons.runner.running()
+    running = process.runner.running()
     ours = [j for j in running if j.workspace == access.ws.slug and j.seen_by(me)]
-    holders = [singletons.runner.current_in(backend) for backend in lanes.BACKENDS]
+    holders = [process.runner.current_in(backend) for backend in lanes.BACKENDS]
     held = [job for job in holders if job is not None]
     return {
         "job": ours[0].to_dict() if ours else None,
         "queued": [
-            {**j.to_dict(), "queue_position": singletons.runner.queue_position(j.id)}
-            for j in singletons.runner.pending(access.ws.slug)
+            {**j.to_dict(), "queue_position": process.runner.queue_position(j.id)}
+            for j in process.runner.pending(access.ws.slug)
             if j.seen_by(me)
         ],
         "engine_busy": bool(held),
         "engine_busy_elsewhere": any(j.workspace != access.ws.slug for j in held),
-        "last_seq": singletons.bus.last_seq,
+        "last_seq": process.bus.last_seq,
     }
 
 
@@ -164,7 +165,7 @@ def current(access: auth.Access = auth.VIEW) -> dict:
 def detail(job_id: str, access: auth.Access = auth.VIEW) -> dict:
     """Answer one job of this workspace, with how many are ahead of it."""
     job = _mine(job_id, access)
-    return {"job": job.to_dict(), "queue_position": singletons.runner.queue_position(job_id)}
+    return {"job": job.to_dict(), "queue_position": process.runner.queue_position(job_id)}
 
 
 @router.delete("/jobs/{job_id}")
@@ -181,7 +182,7 @@ def cancel(job_id: str, access: auth.Access = auth.VIEW) -> dict:
             "Solo puedes detener tus propios trabajos.",
             headers={"X-Error-Code": auth.ROLE_TOO_LOW},
         )
-    return {"cancelled": singletons.runner.cancel(job_id)}
+    return {"cancelled": process.runner.cancel(job_id)}
 
 
 @router.get("/events")
@@ -192,7 +193,7 @@ def events(since: int = 0, access: auth.Access = auth.VIEW) -> dict:
     explicitly anyway so "you may only replay your own events" is visible where the
     replay happens rather than inferred two files away.
     """
-    replayed, gap = singletons.bus.replay(
+    replayed, gap = process.bus.replay(
         since, workspace=access.ws.slug, user_id=access.user.id
     )
-    return {"events": replayed, "gap": gap, "last_seq": singletons.bus.last_seq}
+    return {"events": replayed, "gap": gap, "last_seq": process.bus.last_seq}

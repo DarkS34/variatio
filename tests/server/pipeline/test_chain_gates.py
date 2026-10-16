@@ -14,9 +14,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from server import singletons
+from server.core import process
 from server.jobs import EventBus, JobRunner
-from server.pipeline import approvals
+from server.pipeline import approvals, readings
 from server.pipeline.gates import gate_error, transcribing_slot, transcription_error
 from server.pipeline.view import NEXT_JOB
 from variatio.core.workspace import Workspace
@@ -57,7 +57,7 @@ def stand(monkeypatch):
         return {}
 
     runner = JobRunner(EventBus(), {"transcribe": handler, "review_taggability": handler})
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "runner", runner)
     runner.start()
     yield SimpleNamespace(runner=runner, started=started, release=release)
     release.set()
@@ -107,13 +107,13 @@ def test_a_transcription_of_the_notes_does_not(stand, aula):
 
 
 def test_the_bank_reads_as_building_while_its_review_runs(stand, aula):
-    assert approvals.EXEMPLARS_BANK not in singletons.building(aula)
+    assert approvals.EXEMPLARS_BANK not in readings.building(aula)
 
     stand.runner.submit("review_taggability", {}, workspace="aula")
     assert stand.started.wait(3.0)
 
-    assert approvals.EXEMPLARS_BANK in singletons.building(aula)
-    bank = next(s for s in singletons.pipeline_snapshot(aula) if s["artifact"] == "exemplars_bank")
+    assert approvals.EXEMPLARS_BANK in readings.building(aula)
+    bank = next(s for s in readings.pipeline_snapshot(aula) if s["artifact"] == "exemplars_bank")
     assert bank["status"] == "building"
 
 
@@ -121,7 +121,7 @@ def test_a_review_that_collects_nothing_marks_nothing(stand, aula):
     stand.runner.submit("review_taggability", {"chain": ["index"]}, workspace="aula")
     assert stand.started.wait(3.0)
 
-    assert approvals.EXEMPLARS_BANK not in singletons.building(aula)
+    assert approvals.EXEMPLARS_BANK not in readings.building(aula)
 
 
 def test_the_chain_order_is_the_path_s(aula):
@@ -130,4 +130,4 @@ def test_the_chain_order_is_the_path_s(aula):
         approvals.EXEMPLARS_PROFILE,
         approvals.EXEMPLARS_BANK,
     )
-    assert [s["artifact"] for s in singletons.pipeline_snapshot(aula)] == list(approvals.ARTIFACTS)
+    assert [s["artifact"] for s in readings.pipeline_snapshot(aula)] == list(approvals.ARTIFACTS)

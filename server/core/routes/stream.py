@@ -24,11 +24,10 @@ import contextlib
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from ... import singletons
 from ...auth import Access, authenticate_socket
 from ...auth.deps import FORBIDDEN, UNAUTHORISED
 from ...members import CLOSED_EVENT
-from .. import middleware
+from .. import middleware, process
 
 router = APIRouter()
 
@@ -81,7 +80,7 @@ def _backlog(since: int, slug: str, user_id: int) -> tuple[list[dict], bool, int
     `delivered` is computed BEFORE the cold trim: a trimmed event must not come back from
     the live queue as if it were new.
     """
-    replayed, gap = singletons.bus.replay(since, workspace=slug, user_id=user_id)
+    replayed, gap = process.bus.replay(since, workspace=slug, user_id=user_id)
     delivered = replayed[-1]["seq"] if replayed else since
     if since <= 0:
         replayed = trim_cold_replay(replayed)
@@ -115,11 +114,11 @@ async def stream(websocket: WebSocket) -> None:
     user_id = access.user.id
     since = _since(websocket)
 
-    async with singletons.bus.subscribe() as queue:
+    async with process.bus.subscribe() as queue:
         replayed, gap, delivered = _backlog(since, slug, user_id)
         jobs = [
             job.to_dict()
-            for job in singletons.runner.all(
+            for job in process.runner.all(
                 limit=JOBS_SNAPSHOT_LIMIT, workspace=slug, for_user=user_id
             )
         ]
@@ -130,7 +129,7 @@ async def stream(websocket: WebSocket) -> None:
                     "kind": "stream.ready",
                     "since": since,
                     "gap": gap,
-                    "last_seq": singletons.bus.last_seq,
+                    "last_seq": process.bus.last_seq,
                     "workspace": slug,
                     "jobs": jobs,
                     "events": replayed,
@@ -141,7 +140,7 @@ async def stream(websocket: WebSocket) -> None:
                     event = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
                 except asyncio.TimeoutError:
                     await websocket.send_json(
-                        {"kind": "stream.heartbeat", "last_seq": singletons.bus.last_seq}
+                        {"kind": "stream.heartbeat", "last_seq": process.bus.last_seq}
                     )
                     continue
                 if _closes(event, slug, user_id):
@@ -152,7 +151,7 @@ async def stream(websocket: WebSocket) -> None:
                 if event.seq <= delivered:
                     continue
                 delivered = event.seq
-                if not singletons.bus.visible(event, slug, user_id):
+                if not process.bus.visible(event, slug, user_id):
                     continue
                 await websocket.send_json(event.to_dict())
         except WebSocketDisconnect:

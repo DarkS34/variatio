@@ -18,8 +18,8 @@ from variatio.core import cerebras, inference
 from variatio.core.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
-from .. import auth, singletons
-from ..core import contexts
+from .. import auth
+from ..core import contexts, process
 
 router = APIRouter(
     prefix="/api/admin/config", tags=["config"], dependencies=[Depends(auth.require_admin)]
@@ -71,7 +71,7 @@ def _models() -> dict:
 
 def _refuse_while_busy() -> None:
     """Raise 409 while a job runs: half a build written under two configurations."""
-    job = singletons.runner.current()
+    job = process.runner.current()
     if job is not None:
         raise HTTPException(
             409,

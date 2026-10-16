@@ -8,12 +8,13 @@ from collections.abc import Callable
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from .. import auth, singletons
+from .. import auth
 from ..auth import features
+from ..core import process
 from ..db.session import session_scope
 from ..jobs import lanes as jobs_lanes
 from ..jobs.catalogue import FEATURE_OF, Job
-from . import approvals
+from . import approvals, readings
 from .gates import transcribing_slot
 
 # The job that moves each stage forward, so the UI never has to hardcode it. The bank's is
@@ -38,7 +39,7 @@ def pipeline_payload(access: auth.Access) -> dict:
     the account may see (`Job.seen_by`): another student's commission is neither the
     `current_job` nor the one a wait is measured against.
     """
-    chain = singletons.pipeline_snapshot(access.ws)
+    chain = readings.pipeline_snapshot(access.ws)
     slug = access.ws.slug
     me = access.user.id
     for stage in chain:
@@ -47,8 +48,8 @@ def pipeline_payload(access: auth.Access) -> dict:
         # the build button turns into "espera a que termine". A key, not a sentence, so
         # the client names the slot in its own language.
         stage["transcribing_slot"] = transcribing_slot(slug, stage["build_job"])
-    waiting = [j for j in singletons.runner.pending(slug) if j.seen_by(me)]
-    running = singletons.runner.running()
+    waiting = [j for j in process.runner.pending(slug) if j.seen_by(me)]
+    running = process.runner.running()
     # The oldest running job of THIS workspace: the oldest of the installation would blank
     # your own run for as long as somebody else's older one holds the other lane.
     ours = [j for j in running if j.workspace == slug and j.seen_by(me)]
@@ -63,7 +64,7 @@ def pipeline_payload(access: auth.Access) -> dict:
         "generation_unlocked": all(s["status"] == "approved" for s in chain),
         "current_job": current.to_dict() if current is not None else None,
         "queued": len(waiting),
-        "queue_length": len(running) + len(singletons.runner.pending()),
+        "queue_length": len(running) + len(process.runner.pending()),
         "queue_ahead": ahead,
         "lanes": lanes,
         # Somebody else is holding a lane: the honest reason a job of yours has not
@@ -125,9 +126,9 @@ def _lane_payload(
     nothing. `running` and `capacity` report the activity itself; at capacity 1 the two
     readings coincide, so a single-engine installation is unchanged.
     """
-    holders = singletons.runner.holders_in(backend)
+    holders = process.runner.holders_in(backend)
     room = jobs_lanes.capacity(backend)
-    waiting = [j for j in singletons.runner.pending() if backend in j.backends]
+    waiting = [j for j in process.runner.pending() if backend in j.backends]
     mine = [j for j in waiting if j.workspace == slug and j.seen_by(me)]
     ahead = None
     if mine:
@@ -159,4 +160,4 @@ def _queue_ahead(waiting: list, running: list) -> int | None:
         return None
     first = set(waiting[0].backends)
     blocking = sum(1 for j in running if first & set(j.backends))
-    return max(0, blocking + singletons.runner.queue_position(waiting[0].id) - 1)
+    return max(0, blocking + process.runner.queue_position(waiting[0].id) - 1)

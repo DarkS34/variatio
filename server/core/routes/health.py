@@ -22,9 +22,9 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config, entrypoints
 from variatio.core import inference
 
-from ... import auth, singletons
+from ... import auth
 from ...auth import features
-from .. import contexts
+from .. import contexts, process
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])
 
@@ -157,7 +157,7 @@ def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) ->
             "raw_exemplars_exists": ws.raw_exemplars_dir.is_dir(),
             "raw_corpus_exists": ws.raw_corpus_dir.is_dir(),
         },
-        "busy": singletons.runner.is_busy(),
+        "busy": process.runner.is_busy(),
     }
 
 

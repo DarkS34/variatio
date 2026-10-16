@@ -17,15 +17,16 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server import auth, singletons
+from server import auth
 from server.auth.deps import Access
-from server.core import installation
+from server.core import installation, process
 from server.core.routes import stream as ws_routes
 from server.jobs import lanes
 from server.jobs import router as jobs_routes
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import PRIVATE_KINDS, Job
 from server.jobs.runner import JobRunner
+from server.pipeline import readings
 from server.pipeline.view import pipeline_payload
 
 ANA, LUIS = 1, 2
@@ -147,10 +148,10 @@ def queue(monkeypatch):
 
     bus = EventBus(buffer_size=200)
     runner = JobRunner(bus, {"generate": handler, "build_kg": handler})
-    monkeypatch.setattr(singletons, "bus", bus)
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "bus", bus)
+    monkeypatch.setattr(process, "runner", runner)
     monkeypatch.setattr(
-        singletons, "pipeline_snapshot", lambda ws: [{"artifact": "knowledge_graph", "status": "approved"}]
+        readings, "pipeline_snapshot", lambda ws: [{"artifact": "knowledge_graph", "status": "approved"}]
     )
     runner.start()
     yield SimpleNamespace(runner=runner, bus=bus, started=started)

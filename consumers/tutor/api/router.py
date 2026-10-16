@@ -26,11 +26,12 @@ from sqlalchemy.orm import Session as DbSession
 
 from server.conversations import routes as shared
 
-from server import auth, singletons
+from server import auth
 from server import generations as generations_store
+from server.core import process
 from server.editors import bank_edit
 from server.jobs.catalogue import Job
-from server.pipeline import approvals, storage
+from server.pipeline import approvals, readings, storage
 from server.routers.exercises import reader_of
 from variatio import entrypoints
 from variatio.core import inference
@@ -205,14 +206,14 @@ def build_criteria(access: auth.Access = auth.EDIT) -> dict:
         raise HTTPException(409, error)
     if _criteria_job(access.ws.slug) is not None:
         raise HTTPException(409, "Los criterios ya se están redactando.")
-    job = singletons.runner.submit(
+    job = process.runner.submit(
         jobs.CRITERIA,
         {},
         workspace=access.ws.slug,
         user_id=access.user.id,
         user_name=access.user.name,
     )
-    return {"job": job.to_dict(), "queue_position": singletons.runner.queue_position(job.id)}
+    return {"job": job.to_dict(), "queue_position": process.runner.queue_position(job.id)}
 
 
 @router.get("/syllabus")
@@ -282,7 +283,7 @@ def cancel_turn(conversation_id: str, access: auth.Access = auth.VIEW) -> dict:
     pending = record.get("pending") or {}
     if not pending:
         return {"cancelled": False}
-    cancelled = singletons.runner.cancel(str(pending.get("job_id")))
+    cancelled = process.runner.cancel(str(pending.get("job_id")))
     _heal(access, record)
     return {"cancelled": cancelled}
 
@@ -365,7 +366,7 @@ def _require_engine() -> None:
 
 def _chain_error(access: auth.Access) -> str | None:
     """Say which construction steps still have to be closed before the tutor can answer."""
-    state = singletons.approvals(access.ws)
+    state = readings.approvals(access.ws)
     if state.generation_unlocked():
         return None
     pending = [
@@ -378,7 +379,7 @@ def _chain_error(access: auth.Access) -> str | None:
 
 def _criteria_job(slug: str) -> Job | None:
     """Return the live criteria job of this workspace, if one is queued or running."""
-    for job in [*singletons.runner.running(slug), *singletons.runner.pending(slug)]:
+    for job in [*process.runner.running(slug), *process.runner.pending(slug)]:
         if job.kind == jobs.CRITERIA:
             return job
     return None

@@ -20,7 +20,8 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import inference
 
-from .. import auth, bank_marks, groups, singletons
+from .. import auth, bank_marks, groups
+from ..core import process
 from ..db.models import User
 from ..editors import bank_edit
 from ..editors.bank_edit import BankError
@@ -312,14 +313,14 @@ def refuse_tagging(access: auth.Access) -> None:
 
 def queue_tagging(access: auth.Access, items: list[str]) -> dict:
     """Queue `tag_item` on these exercises, as a job of the teacher who asked."""
-    job = singletons.runner.submit(
+    job = process.runner.submit(
         TAG_ITEM,
         {"items": items},
         workspace=access.ws.slug,
         user_id=access.user.id,
         user_name=access.user.name,
     )
-    return {**job.to_dict(), "queue_position": singletons.runner.queue_position(job.id)}
+    return {**job.to_dict(), "queue_position": process.runner.queue_position(job.id)}
 
 
 @router.patch("/{item_id}")

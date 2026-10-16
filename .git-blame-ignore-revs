@@ -33,3 +33,6 @@ b698dc95ffc7651154b14e215ff0999866eed944
 
 # refactor(server): server/workspaces/, a subject's life and its tree
 02c64c754ee71e3f46529ce1839d510f5fa4f9e9
+
+# refactor(server): server/pipeline/, the chain of the three steps
+e27bb3918aee852e74586cc46bf24b950d32fa78

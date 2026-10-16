@@ -16,8 +16,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import auth, singletons
+from server import auth
 from server.auth.deps import Access
+from server.core import process
 from server.db import mirror
 from server.db.models import Base, User
 from server.editors import bank_edit
@@ -223,7 +224,7 @@ def db():
 def queue(monkeypatch):
     monkeypatch.setattr(lanes, "backends_for", lambda kind, params=None: frozenset({lanes.LOCAL}))
     runner = JobRunner(EventBus(buffer_size=50), {catalogue.TAG_ITEM: lambda job, control: {}})
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "runner", runner)
     monkeypatch.setattr(bank_routes.inference, "is_available", lambda: True)
     return runner
 

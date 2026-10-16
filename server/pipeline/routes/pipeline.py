@@ -18,10 +18,10 @@ from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
 from variatio.entrypoints import build_phases as phases_of
 
-from ... import auth, singletons
-from ...core import contexts
+from ... import auth
+from ...core import contexts, process
 from ...editors import kg_edit
-from .. import approvals, storage
+from .. import approvals, readings, storage
 from ..view import pipeline_payload
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"], dependencies=[auth.VIEW])
@@ -135,10 +135,10 @@ def approve(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     """Mark one artifact approved, opening whatever it gates."""
     _check(artifact)
     try:
-        singletons.approvals(access.ws).approve(artifact)
+        readings.approvals(access.ws).approve(artifact)
     except FileNotFoundError as exc:
         raise HTTPException(409, str(exc)) from exc
-    singletons.bus.publish(
+    process.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "approve"}
     )
     return pipeline_payload(access)
@@ -148,8 +148,8 @@ def approve(artifact: str, access: auth.Access = auth.VIEW) -> dict:
 def reopen(artifact: str, access: auth.Access = auth.VIEW) -> dict:
     """Take one artifact back out of approval so it can be edited again."""
     _check(artifact)
-    singletons.approvals(access.ws).reopen(artifact)
-    singletons.bus.publish(
+    readings.approvals(access.ws).reopen(artifact)
+    process.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "reopen"}
     )
     return pipeline_payload(access)
@@ -172,9 +172,9 @@ def restore(artifact: str, body: RestoreBody, access: auth.Access = auth.VIEW) -
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
 
-    singletons.approvals(access.ws).invalidate(artifact)
+    readings.approvals(access.ws).invalidate(artifact)
     contexts.invalidate(access.ws.slug, f"'{artifact}' restaurado desde una copia")
-    singletons.bus.publish(
+    process.bus.publish(
         access.ws.slug, None, "pipeline.changed", {"artifact": artifact, "action": "restore"}
     )
     return pipeline_payload(access)

@@ -15,8 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, singletons
-from server.pipeline import approvals
+from server import auth
+from server.pipeline import approvals, readings
 
 from . import stage_instruments, stage_queries
 
@@ -49,7 +49,7 @@ def _artifact(artifact: str) -> str:
 
 def _digest(access: auth.Access, artifact: str) -> str | None:
     """The digest of what is on disk right now, or None when nothing is built."""
-    return singletons.approvals(access.ws).state(artifact)["hash"]
+    return readings.approvals(access.ws).state(artifact)["hash"]
 
 
 def _payload(artifact: str, digest: str | None, row) -> dict:

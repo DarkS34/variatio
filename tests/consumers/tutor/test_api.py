@@ -11,10 +11,10 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from server import auth, singletons
+from server import auth
 from server.auth import queries
 from server.auth.deps import Access
-from server.core import installation
+from server.core import installation, process
 from server.db import repository
 from server.db import session as db_session
 from server.db.models import Base
@@ -50,7 +50,7 @@ def ws(tmp_path):
 def runner(monkeypatch):
     idle = lambda job, control: None  # noqa: E731
     fresh = JobRunner(EventBus(), {jobs.TURN: idle, jobs.CRITERIA: idle})
-    monkeypatch.setattr(singletons, "runner", fresh)
+    monkeypatch.setattr(process, "runner", fresh)
     monkeypatch.setattr(router_module.inference, "is_available", lambda: True)
     monkeypatch.setattr(router_module, "_chain_error", lambda access: None)
     return fresh
@@ -287,7 +287,7 @@ def test_a_turn_started_before_its_route_wrote_pending_waits_for_it(ws, monkeypa
         seen["job"] = job.id
 
     fresh = JobRunner(EventBus(), {jobs.TURN: handler, jobs.CRITERIA: handler})
-    monkeypatch.setattr(singletons, "runner", fresh)
+    monkeypatch.setattr(process, "runner", fresh)
     monkeypatch.setattr(router_module.inference, "is_available", lambda: True)
     monkeypatch.setattr(router_module, "_chain_error", lambda access: None)
     fresh.start()

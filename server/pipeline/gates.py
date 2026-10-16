@@ -6,9 +6,9 @@ has no route, so a closed gate behind the head would be skipped in silence.
 
 from variatio.core.workspace import Workspace
 
-from .. import raw_data, singletons
+from .. import raw_data
 from ..jobs.catalogue import JOB_ARTIFACT, SUBPROCESS_KINDS
-from . import approvals
+from . import approvals, readings
 from . import chain as job_chain
 
 # What the chain requires before a job kind is allowed to run.
@@ -55,13 +55,13 @@ def _gate_error_of(ws: Workspace, kind: str) -> str | None:
     """Say which steps have to be settled before one kind of job may run, or nothing."""
     needed = NEEDS_APPROVED.get(kind)
     if needed is not None:
-        if singletons.approvals(ws).state(needed)["status"] != "approved":
+        if readings.approvals(ws).state(needed)["status"] != "approved":
             return f"Antes hay que dar por bueno: {approvals.LABELS[needed]}."
 
     gate = GATES.get(kind)
     if gate is None:
         return None
-    state = singletons.approvals(ws)
+    state = readings.approvals(ws)
     if gate == "__all__":
         if not state.generation_unlocked():
             pending = _pending_labels(ws)
@@ -89,7 +89,7 @@ def transcribing_slot(slug: str, kind: str) -> str | None:
         if link not in SUBPROCESS_KINDS:
             continue
         slot = raw_data.slot_feeding(JOB_ARTIFACT.get(link))
-        if slot is not None and singletons.transcribing(slug, slot) is not None:
+        if slot is not None and readings.transcribing(slug, slot) is not None:
             return slot
     return None
 
@@ -106,7 +106,7 @@ def transcription_error(ws: Workspace, kind: str) -> str | None:
 def _pending_labels(ws: Workspace) -> list[str]:
     """Name the stages of the chain that are not approved yet."""
     return [
-        s["label"] for s in singletons.pipeline_snapshot(ws) if s["status"] != "approved"
+        s["label"] for s in readings.pipeline_snapshot(ws) if s["status"] != "approved"
     ]
 
 

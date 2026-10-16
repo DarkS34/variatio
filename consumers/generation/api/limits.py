@@ -14,7 +14,8 @@ from collections.abc import Callable
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, singletons
+from server import auth
+from server.core import process
 from server.db.models import VIEWER
 from server.jobs.catalogue import Job
 from variatio import config, entrypoints
@@ -116,7 +117,7 @@ def max_items(student: bool) -> int:
 
 def _refuse_second_batch(access: auth.Access) -> None:
     """Refuse a commission while this account has another batch queued or running here."""
-    live = [*singletons.runner.running(access.ws.slug), *singletons.runner.pending(access.ws.slug)]
+    live = [*process.runner.running(access.ws.slug), *process.runner.pending(access.ws.slug)]
     if any(job.kind == "generate" and job.user_id == access.user.id for job in live):
         raise HTTPException(
             409,

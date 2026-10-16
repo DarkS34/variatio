@@ -153,9 +153,5 @@ def smtp_host() -> str:
 
 WEB_DIST_DIR: Path = paths.PROJECT_ROOT / "web" / "dist"
 
-# Kept in memory for instant `?since=N` replay after a browser reload; the JSONL
-# on disk is the long-term record.
-EVENT_BUFFER_SIZE = 20_000
-
 # A generated item is small; the payload that matters is the token stream.
 MAX_TOKEN_CHARS = 200_000

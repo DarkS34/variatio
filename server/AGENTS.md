@@ -16,12 +16,11 @@ transcription `variatio/documents/AGENTS.md`.
   imports of `routers/exercises.py` and `routers/bank.py` are named exceptions that leave
   with the bank's area). The route comparison of a phase reads
   `app.routes` whole.
-- The server's layers are an import contract too: composition (`app.py`, `routing.py`,
-  `cli/`), `routers/`, `pipeline/`, `auth/` and `workspaces/` (neither imports the other),
-  then `jobs/`, `conversations/` and `generations.py`, then
-  `core/`, then `db/`; each imports only what is below it. A route module is a leaf and may
-  import any layer; the modules still at the root are outside the order until their area
-  exists.
+- The server's layers are an import contract too: composition (`app.py`, `routing.py`, `cli/`),
+  `routers/`, `pipeline/`, `auth/` and `workspaces/` (neither imports the other), then
+  `conversations/` and `generations.py`, then `core/`, then `jobs/`, then `db/`; each imports
+  only what is below it. A route module is a leaf and may import any layer; the modules still
+  at the root are outside the order until their area exists.
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
   `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
   construction's handlers join `HANDLERS` at `pipeline/jobs.install()`, which `app.py` calls

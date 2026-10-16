@@ -24,9 +24,10 @@ from consumers.chat import turn as chat_turn
 from consumers.chat.api import jobs, router as router_module, usage
 from consumers.chat.api.store import STORE
 from consumers.tutor.api import store as tutor_store
-from server import auth, bank_marks, groups, singletons
+from server import auth, bank_marks, groups
 from server.auth import features, queries
 from server.auth.deps import Access
+from server.core import process
 from server.db import repository
 from server.db.models import OWNER, VIEWER, Base
 from server.editors import bank_edit
@@ -97,7 +98,7 @@ def aula(db, tmp_path):
 @pytest.fixture
 def runner(monkeypatch):
     fresh = JobRunner(EventBus(), {jobs.TURN: lambda job, control: None})
-    monkeypatch.setattr(singletons, "runner", fresh)
+    monkeypatch.setattr(process, "runner", fresh)
     monkeypatch.setattr(router_module.shared.inference, "is_available", lambda: True)
     return fresh
 

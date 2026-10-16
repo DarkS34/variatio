@@ -14,8 +14,11 @@ import time
 from collections import deque
 from collections.abc import AsyncIterator
 
-from ..core import environment
 from .catalogue import Event, Job
+
+# Kept in memory for instant `?since=N` replay after a browser reload; the JSONL
+# on disk is the long-term record.
+EVENT_BUFFER_SIZE = 20_000
 
 # What a redacted job (`Job.redacted`: its author is a student of the subject) keeps of the
 # two events that carry the bank. The prompt holds the chosen exemplars with their solutions
@@ -38,7 +41,7 @@ class EventBus:
 
     def __init__(self, buffer_size: int | None = None):
         """Open an empty bus with a replay buffer and no subscribers."""
-        self._buffer: deque[Event] = deque(maxlen=buffer_size or environment.EVENT_BUFFER_SIZE)
+        self._buffer: deque[Event] = deque(maxlen=buffer_size or EVENT_BUFFER_SIZE)
         self._lock = threading.Lock()
         self._seq = 0
         self._loop: asyncio.AbstractEventLoop | None = None

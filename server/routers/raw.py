@@ -21,7 +21,9 @@ from pydantic import BaseModel
 
 from variatio.core import inference
 
-from .. import auth, raw_data, singletons
+from .. import auth, raw_data
+from ..core import process
+from ..pipeline import readings
 
 router = APIRouter(prefix="/api/raw", tags=["raw"], dependencies=[auth.EDIT])
 
@@ -46,7 +48,7 @@ def _not_found(exc: raw_data.RawError) -> HTTPException:
 
 def _transcribing(slug: str, kind: str):
     """Find this slot's transcription job, running or waiting, or nothing."""
-    return singletons.transcribing(slug, kind)
+    return readings.transcribing(slug, kind)
 
 
 @router.get("")
@@ -85,7 +87,7 @@ def start_transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
             409, f"Ya se está transcribiendo «{raw_data.SLOTS[kind]['label']}»."
         )
 
-    job = singletons.runner.submit(
+    job = process.runner.submit(
         raw_data.TRANSCRIBE_JOB,
         {"slot": kind},
         workspace=access.ws.slug,
@@ -93,7 +95,7 @@ def start_transcription(kind: str, access: auth.Access = auth.EDIT) -> dict:
         user_name=access.user.name,
     )
     logger.info(f"[{kind}] Transcripción encolada")
-    return {"job": job.to_dict(), "since": singletons.bus.last_seq}
+    return {"job": job.to_dict(), "since": process.bus.last_seq}
 
 
 @router.get("/{kind}/transcription/{name}")
@@ -193,7 +195,7 @@ def upload(
     if result["added"]:
         names = ", ".join(f["name"] for f in result["added"])
         logger.info(f"[{kind}] {len(result['added'])} documento(s) añadidos: {names}")
-        singletons.bus.publish(
+        process.bus.publish(
             access.ws.slug, None, "raw.changed", {"kind": kind, "added": len(result["added"])}
         )
 
@@ -209,7 +211,7 @@ def delete(kind: str, name: str, access: auth.Access = auth.EDIT) -> dict:
         raise _not_found(exc) from exc
 
     logger.info(f"[{kind}] documento eliminado: {result['deleted']}")
-    singletons.bus.publish(
+    process.bus.publish(
         access.ws.slug, None, "raw.changed", {"kind": kind, "deleted": result["deleted"]}
     )
     return {**result, "slot": raw_data.slot(access.ws, kind)}

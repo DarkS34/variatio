@@ -19,9 +19,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from consumers.generation.api import limits
-from server import singletons
 from server.auth.deps import Access
-from server.core import installation
+from server.core import installation, process
 from server.db.models import EDITOR, VIEWER, Base
 from server.jobs import catalogue, lanes, priority
 from server.jobs import router as jobs_router
@@ -243,7 +242,7 @@ def db():
 @pytest.fixture
 def queue(monkeypatch, runner):
     """The route over the runner above, with every gate of the chain open."""
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "runner", runner)
     monkeypatch.setattr(jobs_router.inference, "is_available", lambda: True)
     monkeypatch.setattr(jobs_router, "gate_error", lambda ws, kind: None)
     monkeypatch.setattr(jobs_router, "transcription_error", lambda ws, kind: None)

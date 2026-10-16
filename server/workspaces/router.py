@@ -29,13 +29,14 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.core import languages
 from variatio.loaders import locale
 
-from .. import auth, members, singletons
+from .. import auth, members
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import queries
-from ..core import contexts, installation
+from ..core import contexts, installation, process
 from ..db import repository
 from ..db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
+from ..pipeline import readings
 from . import trees
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
@@ -245,7 +246,7 @@ def remove(
     contexts.invalidate(ws.slug, "workspace eliminado")
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
-    singletons.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
+    process.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
     return {
         "deleted": slug,
         "path": str(ws.root),
@@ -343,7 +344,7 @@ def summary(
     """Answer another instance's chain, so the switcher can show its state in place."""
     workspace = auth.resolve_workspace(db, user, slug)
     access = auth.access_for(db, user, workspace, VIEWER)
-    stages = singletons.pipeline_snapshot(access.ws)
+    stages = readings.pipeline_snapshot(access.ws)
     return {
         "slug": workspace.slug,
         "name": workspace.name,

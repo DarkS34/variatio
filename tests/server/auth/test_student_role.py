@@ -17,10 +17,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from consumers.evaluation.api import router as evaluation_router
-from server import auth, singletons
+from server import auth
 from server.auth import features, queries
 from server.auth.deps import Access
-from server.core import installation
+from server.core import installation, process
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs import router as jobs_router
@@ -116,7 +116,7 @@ def queue(monkeypatch):
     """A runner that queues and never starts anything, with every gate of the chain open."""
     kinds = ("generate", "evaluate", "build_kg", "transcribe", "tag", "index")
     runner = JobRunner(EventBus(buffer_size=100), {kind: lambda job, control: {} for kind in kinds})
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "runner", runner)
     monkeypatch.setattr(jobs_router.inference, "is_available", lambda: True)
     monkeypatch.setattr(jobs_router, "gate_error", lambda ws, kind: None)
     monkeypatch.setattr(jobs_router, "transcription_error", lambda ws, kind: None)

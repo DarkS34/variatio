@@ -15,10 +15,9 @@ from sqlalchemy.pool import StaticPool
 
 from fastapi import HTTPException
 
-from server import singletons
 from server.auth import deps as auth_deps
 from server.auth import queries
-from server.core import installation
+from server.core import installation, process
 from server.db import repository
 from server.db.models import Base, EDITOR, OWNER
 from server.workspaces import trees
@@ -32,7 +31,7 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(singletons.bus, "publish", lambda *a, **k: None)
+    monkeypatch.setattr(process.bus, "publish", lambda *a, **k: None)
     yield session
     session.close()
 

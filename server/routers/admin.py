@@ -25,17 +25,17 @@ from sqlalchemy.orm import Session as DbSession
 
 from consumers.evaluation.api import store as evaluation_store
 
-from .. import auth, members, singletons
+from .. import auth, members
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import features, links, queries
 from ..auth.rate_limit import locked_seconds, throttle, unlock
-from ..core import contexts, environment, installation, maintenance
+from ..core import contexts, environment, installation, maintenance, process
 from ..db import repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace
 from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
-from ..pipeline import approvals, storage
+from ..pipeline import approvals, readings, storage
 from ..workspaces import trees as workspaces_trees
 
 router = APIRouter(
@@ -146,7 +146,7 @@ def _lane_jobs() -> dict:
     return {
         backend: {
             "capacity": jobs_lanes.capacity(backend),
-            "jobs": [job.to_dict() for job in singletons.runner.holders_in(backend)],
+            "jobs": [job.to_dict() for job in process.runner.holders_in(backend)],
         }
         for backend in jobs_lanes.BACKENDS
     }
@@ -211,7 +211,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
     headers = evaluation_store.headers(db)
     by_account = {group["key"]: group for group in evaluation_store.by_account(headers)}
 
-    running = singletons.runner.running()
+    running = process.runner.running()
     return {
         "totals": {
             "users": len(users),
@@ -228,7 +228,7 @@ def overview(db: DbSession = Depends(auth.db)) -> dict:
             "busy": bool(running),
             "job": running[0].to_dict() if running else None,
             "lanes": _lane_jobs(),
-            "queued": len(singletons.runner.pending()),
+            "queued": len(process.runner.pending()),
             "warm_contexts": contexts.warm_slugs(),
         },
     }
@@ -649,7 +649,7 @@ def delete_workspace(
     contexts.invalidate(slug, "workspace eliminado")
     # Heard only by whoever is looking at the instance that has just stopped existing,
     # which is exactly who has to reload.
-    singletons.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
+    process.bus.publish(slug, None, "workspace.deleted", {"slug": slug})
     return {
         "deleted": slug,
         "path": str(ws.root),
@@ -710,7 +710,7 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    if artifact in singletons.runner.building_artifacts(slug):
+    if artifact in process.runner.building_artifacts(slug):
         raise HTTPException(
             409, "Ese artefacto se está construyendo ahora mismo; cancela el trabajo antes."
         )
@@ -718,7 +718,7 @@ def delete_artifact(slug: str, artifact: str, db: DbSession = Depends(auth.db)) 
     ws = installation.workspace_for(slug)
     result = approvals.discard(ws, artifact)
     contexts.invalidate(slug, f"'{artifact}' eliminado desde administración")
-    singletons.bus.publish(slug, None, "pipeline.changed", {"artifact": artifact, "action": "discard"})
+    process.bus.publish(slug, None, "pipeline.changed", {"artifact": artifact, "action": "discard"})
     return {"workspace": slug, **result}
 
 
@@ -733,7 +733,7 @@ def clear_cache(slug: str, db: DbSession = Depends(auth.db)) -> dict:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     # Every run of this workspace, on either lane: `current()` alone would miss the one on
     # the second lane whenever somebody else's older job holds the first.
-    if singletons.runner.running(slug) or singletons.runner.pending(slug):
+    if process.runner.running(slug) or process.runner.pending(slug):
         raise HTTPException(409, "Esa asignatura tiene trabajo en curso o en cola; espera o cancélalo.")
     ws = installation.workspace_for(slug)
     result = workspaces_trees.clear_cache(ws)
@@ -825,13 +825,13 @@ def job_queue() -> dict:
     `running` is the oldest job, kept as it was; `lanes` is the honest picture now that
     the queue serialises per backend and two jobs can be in flight at once.
     """
-    running = singletons.runner.running()
+    running = process.runner.running()
     return {
         "running": running[0].to_dict() if running else None,
         "lanes": _lane_jobs(),
         "queued": [
-            {**job.to_dict(), "queue_position": singletons.runner.queue_position(job.id)}
-            for job in singletons.runner.pending()
+            {**job.to_dict(), "queue_position": process.runner.queue_position(job.id)}
+            for job in process.runner.pending()
         ],
     }
 
@@ -839,9 +839,9 @@ def job_queue() -> dict:
 @router.delete("/jobs/{job_id}")
 def cancel_job(job_id: str) -> dict:
     """Cancel any job of the installation, whatever workspace it belongs to."""
-    if singletons.runner.get(job_id) is None:
+    if process.runner.get(job_id) is None:
         raise HTTPException(404, f"No existe el trabajo '{job_id}'.")
-    return {"cancelled": singletons.runner.cancel(job_id)}
+    return {"cancelled": process.runner.cancel(job_id)}
 
 
 # ACCOUNTS --------------------------------------------------------------------------------
@@ -1048,7 +1048,7 @@ def _chain(slug: str) -> list[dict]:
             "status": stage["status"],
             "is_autogenerated": stage["is_autogenerated"],
         }
-        for stage in singletons.pipeline_snapshot(ws)
+        for stage in readings.pipeline_snapshot(ws)
     ]
 
 

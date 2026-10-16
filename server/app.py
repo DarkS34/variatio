@@ -17,8 +17,9 @@ from loguru import logger
 
 from variatio import config
 
-from . import jobs, singletons
-from .core import environment, middleware
+from . import jobs
+from .core import environment, middleware, process
+from .pipeline import chain
 from .pipeline import jobs as pipeline_jobs
 from .routing import ROUTERS
 
@@ -73,8 +74,10 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
-    # The construction's jobs join the queue's table here, as each function's do below.
+    # The construction's jobs join the queue's table here, as each function's do below, and
+    # the chain is wired to queue a build's derivations once it finishes.
     pipeline_jobs.install()
+    chain.wire(process.runner)
 
     # Generating goes first: its `/api/jobs/allowance` must be matched before the queue's
     # `/api/jobs/{job_id}`, which would read "allowance" as a job id.
@@ -104,31 +107,31 @@ async def lifespan(app: FastAPI):
     can release them, so shutdown does it best-effort in a thread — a slow engine must not
     hold the event loop past uvicorn's own shutdown timeout.
     """
-    singletons.bus.attach_loop(asyncio.get_running_loop())
+    process.bus.attach_loop(asyncio.get_running_loop())
     # Sync routes run in AnyIO's worker threads, 40 by default: a class's tabs polling at
     # once, each route reading files and the database, queued behind those 40.
     anyio.to_thread.current_default_thread_limiter().total_tokens = WORKER_THREADS
     _autostart_tunnel()
-    singletons.runner.start()
-    singletons.idle_unloader.start()
+    process.runner.start()
+    process.idle_unloader.start()
     try:
         yield
     finally:
-        singletons.idle_unloader.stop()
-        singletons.runner.shutdown()
+        process.idle_unloader.stop()
+        process.runner.shutdown()
         try:
             await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, "al apagar la API"), 20)
         except Exception as e:  # noqa: BLE001 - shutdown must finish whatever the engine does
             logger.warning(f"No se pudieron descargar los modelos de la GPU al apagar: {e}")
-        singletons.tunnel.stop()
+        process.tunnel.stop()
 
 
 def _autostart_tunnel() -> None:
     """Open the SSH tunnel when the installation asks for it; a failure is a panel message."""
-    if not (config.OLLAMA_SSH_AUTOSTART and singletons.tunnel.configured()):
+    if not (config.OLLAMA_SSH_AUTOSTART and process.tunnel.configured()):
         return
     try:
-        singletons.tunnel.start()
+        process.tunnel.start()
     except Exception as e:  # noqa: BLE001 - a dead tunnel is a panel message, not a crash
         logger.warning(f"No se pudo abrir el túnel SSH al arrancar: {e}")
 

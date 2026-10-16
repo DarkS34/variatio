@@ -16,10 +16,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
+from server import auth
+from server import generations as generations_store
 from server.conversations import routes as shared
 from server.conversations import store as shared_store
-from server import auth, singletons
-from server import generations as generations_store
+from server.core import process
 from server.editors import bank_edit
 from server.pipeline import approvals
 from server.routers.exercises import reader_of
@@ -128,7 +129,7 @@ def cancel_turn(conversation_id: str, access: auth.Access = auth.VIEW) -> dict:
     pending = record.get("pending") or {}
     if not pending:
         return {"cancelled": False}
-    cancelled = singletons.runner.cancel(str(pending.get("job_id")))
+    cancelled = process.runner.cancel(str(pending.get("job_id")))
     shared.heal(CHAT, access, record)
     return {"cancelled": cancelled}
 

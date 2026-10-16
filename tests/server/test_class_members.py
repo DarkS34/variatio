@@ -18,12 +18,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import auth, members, singletons
+from server import auth, members
 from server import generations as store
 from server.auth import links, queries
 from server.auth import router as auth_routes
 from server.auth.deps import FORBIDDEN, Access
-from server.core import installation
+from server.core import installation, process
 from server.core.routes import stream as ws_routes
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
@@ -52,8 +52,8 @@ def stage(monkeypatch):
     """A bus that keeps what is said and a queue that never starts anything."""
     bus = EventBus(buffer_size=100)
     runner = JobRunner(bus, {"generate": lambda job, control: {}, "build_kg": lambda job, control: {}})
-    monkeypatch.setattr(singletons, "bus", bus)
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "bus", bus)
+    monkeypatch.setattr(process, "runner", runner)
     return SimpleNamespace(bus=bus, runner=runner)
 
 
@@ -367,8 +367,8 @@ def test_a_socket_closes_when_its_membership_does_and_no_other_does(monkeypatch)
     async def scenario():
         bus = EventBus(buffer_size=50)
         bus.attach_loop(asyncio.get_running_loop())
-        monkeypatch.setattr(singletons, "bus", bus)
-        monkeypatch.setattr(singletons, "runner", JobRunner(bus, {}))
+        monkeypatch.setattr(process, "bus", bus)
+        monkeypatch.setattr(process, "runner", JobRunner(bus, {}))
         monkeypatch.setattr(ws_routes.middleware, "cross_site", lambda socket: False)
         sockets = {1: _Socket(), 2: _Socket()}
         monkeypatch.setattr(

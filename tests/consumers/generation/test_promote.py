@@ -13,9 +13,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from consumers.generation.api.router import router as generations_router
-from server import auth, singletons
+from server import auth
 from server import generations as store
 from server.auth.deps import Access
+from server.core import process
 from server.db import mirror
 from server.editors import bank_edit
 from server.jobs import catalogue, lanes
@@ -168,7 +169,7 @@ def test_passing_one_in_for_the_tagger_queues_it(ws, monkeypatch):
     review.approve(approvals.EXEMPLARS_PROFILE)
     monkeypatch.setattr(lanes, "backends_for", lambda kind, params=None: frozenset({lanes.LOCAL}))
     runner = JobRunner(EventBus(buffer_size=50), {catalogue.TAG_ITEM: lambda job, control: {}})
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "runner", runner)
     monkeypatch.setattr(bank_routes.inference, "is_available", lambda: True)
 
     generation = id_of(ws, "recorre la lista")

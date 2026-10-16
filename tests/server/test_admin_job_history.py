@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from server import singletons
+from server.core import process
 from server.routers import admin_engine
 
 
@@ -13,7 +13,7 @@ def _job(job_id: str, status: str, finished_at: float | None) -> SimpleNamespace
 
 
 def _runner(monkeypatch, jobs: list) -> None:
-    monkeypatch.setattr(singletons, "runner", SimpleNamespace(all=lambda limit=50: jobs))
+    monkeypatch.setattr(process, "runner", SimpleNamespace(all=lambda limit=50: jobs))
     monkeypatch.setattr(admin_engine, "_history_cleared_at", 0.0)
 
 
@@ -31,5 +31,5 @@ def test_clearing_hides_what_had_finished_and_not_what_finishes_after(monkeypatc
     assert admin_engine.clear_job_history() == {"cleared": True}
     assert admin_engine.job_history(limit=30)["jobs"] == []
     _runner_jobs = [_job("nuevo", "succeeded", 2_500.0), _job("viejo", "failed", 1_000.0)]
-    monkeypatch.setattr(singletons, "runner", SimpleNamespace(all=lambda limit=50: _runner_jobs))
+    monkeypatch.setattr(process, "runner", SimpleNamespace(all=lambda limit=50: _runner_jobs))
     assert [row["id"] for row in admin_engine.job_history(limit=30)["jobs"]] == ["nuevo"]

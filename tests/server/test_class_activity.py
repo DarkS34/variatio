@@ -527,7 +527,7 @@ def test_a_future_or_malformed_week_does_not_exist(db, aula, monkeypatch):
 
 def test_a_week_with_too_few_messages_is_not_summed_up(db, aula, ws, monkeypatch):
     monkeypatch.setattr(activity, "current_week", lambda now=None: WEEK)
-    monkeypatch.setattr(activity_routes.singletons.runner, "handlers", {activity_routes.DIGEST_KIND: None})
+    monkeypatch.setattr(activity_routes.process.runner, "handlers", {activity_routes.DIGEST_KIND: None})
     _conversation(ws, aula.sara.id, "20261006T100000Z-111111", [(at(6), "duda", "theory", "Variable", None, None)])
 
     with pytest.raises(HTTPException) as refused:
@@ -538,7 +538,7 @@ def test_a_week_with_too_few_messages_is_not_summed_up(db, aula, ws, monkeypatch
 
 def test_one_digest_of_a_week_at_a_time(db, aula, ws, monkeypatch):
     monkeypatch.setattr(activity, "current_week", lambda now=None: WEEK)
-    monkeypatch.setattr(activity_routes.singletons.runner, "handlers", {activity_routes.DIGEST_KIND: None})
+    monkeypatch.setattr(activity_routes.process.runner, "handlers", {activity_routes.DIGEST_KIND: None})
     _conversation(
         ws,
         aula.sara.id,
@@ -546,7 +546,7 @@ def test_one_digest_of_a_week_at_a_time(db, aula, ws, monkeypatch):
         [(at(6, 9, n), f"duda {n}", "theory", "Variable", None, None) for n in range(10)],
     )
     live = SimpleNamespace(kind=activity_routes.DIGEST_KIND, params={"week": WEEK})
-    monkeypatch.setattr(activity_routes.singletons.runner, "running", lambda slug=None: [live])
+    monkeypatch.setattr(activity_routes.process.runner, "running", lambda slug=None: [live])
 
     with pytest.raises(HTTPException) as refused:
         activity_routes.write_digest(WEEK, access=aula.teacher, db=db)

@@ -11,8 +11,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from server import singletons
+from server.core import process
 from server.jobs import EventBus, JobRunner
+from server.pipeline import readings
 from server.pipeline.gates import transcribing_slot, transcription_error
 from server.pipeline.view import pipeline_payload
 
@@ -25,7 +26,7 @@ CHAIN = [
 
 @pytest.fixture
 def stand(monkeypatch):
-    monkeypatch.setattr(singletons, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
+    monkeypatch.setattr(readings, "pipeline_snapshot", lambda ws: [dict(s) for s in CHAIN])
     started = threading.Event()
     release = threading.Event()
 
@@ -35,7 +36,7 @@ def stand(monkeypatch):
         return {}
 
     runner = JobRunner(EventBus(), {"transcribe": handler})
-    monkeypatch.setattr(singletons, "runner", runner)
+    monkeypatch.setattr(process, "runner", runner)
     runner.start()
     yield SimpleNamespace(runner=runner, started=started, release=release)
     release.set()

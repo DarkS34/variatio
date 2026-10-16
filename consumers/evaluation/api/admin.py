@@ -10,13 +10,14 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server import auth, singletons
+from server import auth
 from server import curriculum as curriculum_store
 from server.auth import queries as identity
-from server.core import installation
+from server.core import installation, process
 from server.db import repository
 from server.db.models import User
 from server.editors import kg_edit
+from server.pipeline import readings
 from server.pipeline.gates import gate_error
 
 from .. import ARM_LABELS, ARMS
@@ -271,7 +272,7 @@ def _commission_gate(slug: str) -> dict:
         "ready": False,
         "pending": [
             stage["artifact"]
-            for stage in singletons.pipeline_snapshot(ws)
+            for stage in readings.pipeline_snapshot(ws)
             if stage["status"] != "approved"
         ],
     }
@@ -356,7 +357,7 @@ def generate(
     # One job per comparison: the handler produces exactly one session, and the lane
     # serialises them on the single GPU.
     jobs = [
-        singletons.runner.submit(
+        process.runner.submit(
             "evaluate",
             {
                 "concepts": body.concepts,
@@ -377,7 +378,7 @@ def generate(
         f"[estudio] «{admin.username}» encargó {len(jobs)} comparación(es) "
         f"en «{body.workspace}»"
     )
-    return {"jobs": [job.to_dict() for job in jobs], "since": singletons.bus.last_seq}
+    return {"jobs": [job.to_dict() for job in jobs], "since": process.bus.last_seq}
 
 
 @router.get("/evaluations/sets")
