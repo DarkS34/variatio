@@ -15,8 +15,9 @@ import pytest
 import sqlalchemy as sa
 
 from server import generations as store
+from server.auth import queries
 from server.cli.generations import export_generations
-from server.db import Base, identity, repository, session
+from server.db import Base, repository, session
 from variatio.core import paths
 
 MIGRATION = Path(__file__).parents[2] / "migrations" / "versions" / "0015_generations_to_files.py"
@@ -58,7 +59,7 @@ def database(monkeypatch, tmp_path):
     table.create(engine)
     with session.session_scope() as db:
         workspace = repository.ensure_workspace(db, "aula")
-        user = identity.create_user(db, username="ana", name="Ana", password_hash="x")
+        user = queries.create_user(db, username="ana", name="Ana", password_hash="x")
         db.flush()
         ids = (workspace.id, user.id)
     common = dict(

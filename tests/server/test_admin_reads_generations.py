@@ -13,8 +13,9 @@ from fastapi.testclient import TestClient
 
 from server import auth
 from server import generations as store
+from server.auth import queries
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.routers import admin
 from variatio.core.workspace import Workspace
 
@@ -55,7 +56,7 @@ def client(ws, monkeypatch):
     monkeypatch.setattr(
         repository, "get_workspace", lambda db, slug: object() if slug == "ws" else None
     )
-    monkeypatch.setattr(identity, "list_users", lambda db: users)
+    monkeypatch.setattr(queries, "list_users", lambda db: users)
     monkeypatch.setattr(installation, "workspace_for", lambda slug: ws)
     app = FastAPI()
     app.include_router(admin.router)

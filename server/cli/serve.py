@@ -20,8 +20,8 @@ def serve(args) -> int:
     """
     import uvicorn
 
+    from ..auth.queries import count_users
     from ..db import is_available, schema, session_scope
-    from ..db.identity import count_users
     from .access_log import access_log_config, access_log_path
 
     try:

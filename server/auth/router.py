@@ -27,11 +27,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
-from .. import features, groups
-from ..auth import deps, mail, passwords, tokens
-from ..auth.rate_limit import forgive, throttle
+from .. import groups
 from ..core import environment
-from ..db import identity
 from ..db.models import (
     EVALUATOR_PROFILES,
     OWNER,
@@ -45,6 +42,8 @@ from ..db.models import (
     User,
     Workspace,
 )
+from . import deps, features, mail, passwords, queries, tokens
+from .rate_limit import forgive, throttle
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -146,10 +145,10 @@ def login(
     in microseconds and the wrong-password one in ~200 ms, which answers the question the
     shared sentence exists to refuse.
     """
-    username = identity.normalise_username(body.username)
+    username = queries.normalise_username(body.username)
     throttle("login", request, username)
 
-    user = identity.get_user(session, username)
+    user = queries.get_user(session, username)
     if user is None or not user.active:
         passwords.waste_time()
         raise HTTPException(401, BAD_CREDENTIALS)
@@ -159,7 +158,7 @@ def login(
     # The Argon2 parameters live inside the hash, so raising them upgrades every account
     # one login at a time, with no migration.
     if passwords.needs_rehash(user.password_hash):
-        identity.set_password(session, user, passwords.hash_password(body.password))
+        queries.set_password(session, user, passwords.hash_password(body.password))
 
     forgive("login", username)
     _issue_session(session, user, request, response)
@@ -171,7 +170,7 @@ def logout(request: Request, response: Response, session: DbSession = Depends(de
     """Revoke this session and clear its cookie."""
     found = deps.resolve(session, deps.session_token(request))
     if found is not None:
-        identity.revoke_session(session, found[0])
+        queries.revoke_session(session, found[0])
     _clear_cookie(response)
     return {"ok": True}
 
@@ -184,7 +183,7 @@ def logout_all(
     session: DbSession = Depends(deps.db),
 ) -> dict:
     """Revoke every session of this account, on every device."""
-    revoked = identity.revoke_all_sessions(session, user.id)
+    revoked = queries.revoke_all_sessions(session, user.id)
     _clear_cookie(response)
     return {"ok": True, "revoked": revoked}
 
@@ -212,11 +211,11 @@ def update_me(
     if not name:
         raise HTTPException(422, "El nombre no puede quedar vacío.")
 
-    email = identity.normalise_email(body.email) if body.email else None
+    email = queries.normalise_email(body.email) if body.email else None
     if email:
         if not EMAIL_PATTERN.fullmatch(email):
             raise HTTPException(422, "Eso no parece una dirección de correo.")
-        other = identity.get_user_by_email(session, email)
+        other = queries.get_user_by_email(session, email)
         if other is not None and other.id != user.id:
             raise HTTPException(409, "Ese correo ya está en otra cuenta.")
 
@@ -249,10 +248,10 @@ def change_language(
     in is nobody else's decision. It touches no workspace — what a person reads and what
     an instance's prompts are written in are separate axes.
     """
-    error = identity.language_error(body.language)
+    error = queries.language_error(body.language)
     if error:
         raise HTTPException(422, error)
-    identity.set_ui_language(session, user, body.language)
+    queries.set_ui_language(session, user, body.language)
     return {"ui_language": user.ui_language}
 
 
@@ -276,10 +275,10 @@ def change_password(
     if error:
         raise HTTPException(422, error)
 
-    identity.set_password(session, user, passwords.hash_password(body.next))
+    queries.set_password(session, user, passwords.hash_password(body.next))
     # This session gets a brand-new identifier too: if the change was prompted by a
     # suspicion, leaving the old one usable defeats it.
-    identity.revoke_all_sessions(session, user.id)
+    queries.revoke_all_sessions(session, user.id)
     _issue_session(session, user, request, response)
     return {"ok": True}
 
@@ -292,13 +291,13 @@ def forgot(body: ForgotBody, request: Request, session: DbSession = Depends(deps
     depend on what was found. With no address on the account — the normal case here — the
     link goes to the log, where whoever administers the installation is already looking.
     """
-    username = identity.normalise_username(body.username)
+    username = queries.normalise_username(body.username)
     throttle("forgot", request, username)
 
-    user = identity.get_user(session, username)
+    user = queries.get_user(session, username)
     if user is not None and user.active:
         token = tokens.new_token()
-        identity.create_reset(session, user.id, tokens.digest(token), environment.RESET_TTL)
+        queries.create_reset(session, user.id, tokens.digest(token), environment.RESET_TTL)
         link = f"{deps.base_url(request)}/reset?token={token}"
         minutes = int(environment.RESET_TTL.total_seconds() // 60)
         if user.email:
@@ -327,11 +326,11 @@ def reset(
 ) -> dict:
     """Spend a reset link, set the password and log the account straight in."""
     throttle("reset", request, "")
-    row = identity.live_reset(session, tokens.digest(body.token))
+    row = queries.live_reset(session, tokens.digest(body.token))
     if row is None:
         raise HTTPException(404, "Ese enlace ya no vale. Pide otro.")
 
-    user = identity.get_user_by_id(session, row.user_id)
+    user = queries.get_user_by_id(session, row.user_id)
     if user is None or not user.active:
         raise HTTPException(404, "Ese enlace ya no vale. Pide otro.")
 
@@ -339,13 +338,13 @@ def reset(
     if error:
         raise HTTPException(422, error)
 
-    identity.set_password(session, user, passwords.hash_password(body.password))
-    identity.consume_reset(session, row)
-    identity.revoke_all_sessions(session, user.id)
+    queries.set_password(session, user, passwords.hash_password(body.password))
+    queries.consume_reset(session, row)
+    queries.revoke_all_sessions(session, user.id)
     # A link that arrived by mail proves control of that mailbox; one handed over by the
     # administrator proves nothing about an address, so only the first case verifies one.
     if user.email and user.email_verified_at is None:
-        user.email_verified_at = identity.now()
+        user.email_verified_at = queries.now()
     _issue_session(session, user, request, response)
     return _me(session, user)
 
@@ -363,7 +362,7 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
     whoever wants to spend them.
     """
     token_hash = tokens.digest(token)
-    invite = identity.live_invite(session, token_hash)
+    invite = queries.live_invite(session, token_hash)
     if invite is not None:
         workspace = invite.workspace
         return {
@@ -375,8 +374,8 @@ def preview_invite(token: str, session: DbSession = Depends(deps.db)) -> dict:
             "profile": _profile_of(invite),
             "inviter": _display_name(session, invite.created_by),
         }
-    link = identity.class_link_by_digest(session, token_hash)
-    if link is not None and link.expires_at > identity.now():
+    link = queries.class_link_by_digest(session, token_hash)
+    if link is not None and link.expires_at > queries.now():
         return {
             "kind": "class",
             "role": VIEWER,
@@ -416,22 +415,22 @@ def accept_invite(
     a whole class registers through one link, and `accept` would stop the eleventh.
     """
     token_hash = tokens.digest(body.token)
-    link = identity.class_link_by_digest(session, token_hash)
+    link = queries.class_link_by_digest(session, token_hash)
     if link is not None:
         throttle("accept_class", request, token_hash)
         return _accept_class(body, link, request, response, session)
     throttle("accept", request, token_hash)
 
-    invite = identity.live_invite(session, token_hash)
+    invite = queries.live_invite(session, token_hash)
     if invite is None:
         raise HTTPException(404, DEAD_LINK)
 
     # Losing the claim is the same answer as a spent invitation.
-    if not identity.claim_invite(session, invite):
+    if not queries.claim_invite(session, invite):
         raise HTTPException(404, DEAD_LINK)
 
     username = _checked_credentials(session, body)
-    user = identity.create_user(
+    user = queries.create_user(
         session,
         username=username,
         name=body.name.strip() or username,
@@ -441,7 +440,7 @@ def accept_invite(
     )
     _apply_membership(session, invite, user)
     _apply_features(session, invite, user)
-    identity.attribute_invite(session, invite, user.id)
+    queries.attribute_invite(session, invite, user.id)
     _issue_session(session, user, request, response)
     return _me(session, user)
 
@@ -467,9 +466,9 @@ def join(
     """
     throttle("join", request, user.username)
     token_hash = tokens.digest(body.token)
-    invite = identity.live_invite(session, token_hash)
-    link = None if invite is not None else identity.class_link_by_digest(session, token_hash)
-    if invite is None and (link is None or link.expires_at <= identity.now()):
+    invite = queries.live_invite(session, token_hash)
+    link = None if invite is not None else queries.class_link_by_digest(session, token_hash)
+    if invite is None and (link is None or link.expires_at <= queries.now()):
         raise HTTPException(404, DEAD_LINK)
 
     workspace_id = invite.workspace_id if invite is not None else link.workspace_id
@@ -479,7 +478,7 @@ def join(
             "Esa invitación no da acceso a ninguna asignatura: sirve para crear una cuenta nueva.",
             headers={"X-Error-Code": "no_subject"},
         )
-    row = identity.membership(session, workspace_id, user.id)
+    row = queries.membership(session, workspace_id, user.id)
     if row is not None and not row.active:
         raise HTTPException(
             409,
@@ -488,18 +487,18 @@ def join(
         )
 
     if invite is not None:
-        if not identity.claim_invite(session, invite):
+        if not queries.claim_invite(session, invite):
             raise HTTPException(404, DEAD_LINK)
-        identity.attribute_invite(session, invite, user.id)
+        queries.attribute_invite(session, invite, user.id)
         _apply_features(session, invite, user)
         role, via, inviter = invite.role, VIA_INVITE, invite.created_by
     else:
-        if row is None and not identity.reserve_seat(session, link):
+        if row is None and not queries.reserve_seat(session, link):
             raise _class_link_refusal(session, link)
         role, via, inviter = VIEWER, VIA_CLASS_LINK, link.created_by
 
     if row is None:
-        identity.grant(session, workspace_id, user.id, role, via=via, invited_by=inviter)
+        queries.grant(session, workspace_id, user.id, role, via=via, invited_by=inviter)
     elif ROLE_RANK[role] > ROLE_RANK[row.role]:
         row.role = role
     # A link of a group puts the student in it, moving them from the one they were in.
@@ -532,14 +531,14 @@ def _accept_class(
     student's whatever the request says, and the membership the link's: a student of its
     subject, let in by whoever minted it.
     """
-    if link.expires_at <= identity.now():
+    if link.expires_at <= queries.now():
         raise HTTPException(404, DEAD_LINK)
     username = _checked_credentials(session, body)
     password_hash = passwords.hash_password(body.password)
-    if not identity.reserve_seat(session, link):
+    if not queries.reserve_seat(session, link):
         raise _class_link_refusal(session, link)
     try:
-        user = identity.create_user(
+        user = queries.create_user(
             session,
             username=username,
             name=body.name.strip() or username,
@@ -550,7 +549,7 @@ def _accept_class(
     except IntegrityError:
         session.rollback()
         raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.") from None
-    identity.grant(
+    queries.grant(
         session,
         link.workspace_id,
         user.id,
@@ -566,17 +565,17 @@ def _accept_class(
 
 def _checked_credentials(session: DbSession, body: AcceptBody) -> str:
     """Refuse a username, password or language a new account may not have; return the username."""
-    username = identity.normalise_username(body.username)
-    error = identity.username_error(username)
+    username = queries.normalise_username(body.username)
+    error = queries.username_error(username)
     if error:
         raise HTTPException(422, error)
-    if identity.get_user(session, username) is not None:
+    if queries.get_user(session, username) is not None:
         raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.")
     error = passwords.policy_error(body.password, account=username, name=body.name)
     if error:
         raise HTTPException(422, error)
     if body.ui_language is not None:
-        error = identity.language_error(body.ui_language)
+        error = queries.language_error(body.ui_language)
         if error:
             raise HTTPException(422, error)
     return username
@@ -585,7 +584,7 @@ def _checked_credentials(session: DbSession, body: AcceptBody) -> str:
 def _class_link_refusal(session: DbSession, link: ClassLink) -> HTTPException:
     """Say why a class link gave no seat: gone (the 404 of a dead link), paused, or full."""
     session.refresh(link)
-    if link.revoked_at is not None or link.expires_at <= identity.now():
+    if link.revoked_at is not None or link.expires_at <= queries.now():
         return HTTPException(404, DEAD_LINK)
     if link.paused_at is not None:
         return HTTPException(
@@ -604,7 +603,7 @@ def _display_name(session: DbSession, user_id: int | None) -> str | None:
     """Name who minted a link, by their display name; None when the account is gone."""
     if user_id is None:
         return None
-    user = identity.get_user_by_id(session, user_id)
+    user = queries.get_user_by_id(session, user_id)
     return user.name if user is not None else None
 
 
@@ -615,7 +614,7 @@ def _me(session: DbSession, user: User) -> dict:
     on every request as `X-Workspace`, and `role` is the role THERE, so the UI knows what
     to offer before it has asked for anything.
     """
-    rows = identity.memberships_for(session, user.id)
+    rows = queries.memberships_for(session, user.id)
     current = deps.current_workspace_for(session, user)
     active = current.slug if current else None
     mine = {w.id: m.role for m, w in rows}
@@ -678,7 +677,7 @@ def _issue_session(session: DbSession, user: User, request: Request, response: R
     rotates renews a stolen cookie for ever.
     """
     token = tokens.new_token()
-    identity.create_session(
+    queries.create_session(
         session,
         user_id=user.id,
         token_hash=tokens.digest(token),
@@ -717,7 +716,7 @@ def _apply_membership(session: DbSession, invite: Invite, user: User) -> None:
     """Grant the membership an invitation carried, if it carried one at all."""
     if invite.workspace_id is None:
         return
-    identity.grant(
+    queries.grant(
         session,
         invite.workspace_id,
         user.id,

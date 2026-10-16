@@ -16,11 +16,11 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.auth import passwords, rate_limit
-from server.db import identity, repository
+from server.auth import passwords, queries, rate_limit
+from server.auth.router import AcceptBody, LanguageBody, accept_invite, change_language
+from server.db import repository
 from server.db.models import Base
 from server.routers.admin import InviteBody, create_invite
-from server.routers.auth import AcceptBody, LanguageBody, accept_invite, change_language
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     yield session
     session.close()
@@ -38,7 +38,7 @@ def db(monkeypatch):
 
 @pytest.fixture
 def admin(db):
-    return identity.create_user(
+    return queries.create_user(
         db, username="admin", name="admin", password_hash="x", is_admin=True
     )
 
@@ -81,7 +81,7 @@ def _register(db, admin, username: str, language):
         Response(),
         session=db,
     )
-    return identity.get_user(db, username)
+    return queries.get_user(db, username)
 
 
 # REGISTRATION ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ def test_a_language_the_installation_does_not_speak_is_refused(db, admin):
         _register(db, admin, "dani", "fr")
     assert refused.value.status_code == 422
     assert "fr" in refused.value.detail
-    assert identity.get_user(db, "dani") is None
+    assert queries.get_user(db, "dani") is None
 
 
 # CHANGING IT AFTERWARDS ------------------------------------------------------------------
@@ -118,7 +118,7 @@ def test_an_account_changes_its_own(db, admin):
     assert change_language(LanguageBody(language="en"), user=user, session=db) == {
         "ui_language": "en"
     }
-    assert identity.get_user(db, "elena").ui_language == "en"
+    assert queries.get_user(db, "elena").ui_language == "en"
 
 
 def test_changing_it_to_something_unknown_leaves_it_alone(db, admin):
@@ -126,7 +126,7 @@ def test_changing_it_to_something_unknown_leaves_it_alone(db, admin):
     with pytest.raises(HTTPException) as refused:
         change_language(LanguageBody(language="fr"), user=user, session=db)
     assert refused.value.status_code == 422
-    assert identity.get_user(db, "fran").ui_language == "es"
+    assert queries.get_user(db, "fran").ui_language == "es"
 
 
 # THE TWO AXES ----------------------------------------------------------------------------
@@ -146,11 +146,11 @@ def test_the_interface_language_and_the_prompt_language_do_not_touch_each_other(
     user = _register(db, admin, "gema", "es")
     workspace = repository.create_workspace(db, "english", "English", prompt_language="en")
 
-    identity.set_ui_language(db, user, "en")
+    queries.set_ui_language(db, user, "en")
     assert repository.get_workspace(db, "english").prompt_language == "en"
 
-    identity.set_ui_language(db, user, "es")
-    assert identity.get_user(db, "gema").ui_language == "es"
+    queries.set_ui_language(db, user, "es")
+    assert queries.get_user(db, "gema").ui_language == "es"
     assert workspace.prompt_language == "en"
 
 

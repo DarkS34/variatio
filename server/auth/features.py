@@ -31,8 +31,7 @@ everybody in a listed subject uses it there — not in their other subjects.
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .db import identity
-from .db.models import (
+from ..db.models import (
     VIEWER,
     FeatureAccess,
     FeatureGrant,
@@ -41,6 +40,7 @@ from .db.models import (
     User,
     Workspace,
 )
+from . import queries
 
 EVALUATION = "evaluation"
 TUTOR = "tutor"
@@ -131,7 +131,7 @@ def refusal(
     column = SUBJECT_SWITCHES.get(feature)
     if not column or workspace is None or role != VIEWER:
         return None
-    group = identity.group_of(session, workspace.id, user.id) if isinstance(workspace.id, int) else None
+    group = queries.group_of(session, workspace.id, user.id) if isinstance(workspace.id, int) else None
     said = getattr(group, feature, None) if group is not None else None
     open_here = said if said is not None else getattr(workspace, column, _OPEN_BY_DEFAULT[feature])
     return None if open_here else (CLOSED_GROUP[feature] if said is False else CLOSED_HERE[feature])

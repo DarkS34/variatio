@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DbSession
 
 from .. import auth
-from ..db import identity
+from ..auth import queries
 from ..db.models import VIEWER
 from ..editors import bank_edit
 from ..editors.bank_edit import BankError
@@ -90,5 +90,5 @@ def reader_of(db: DbSession, access: auth.Access) -> tuple[int | None, bool]:
     workspace_id = getattr(getattr(access, "workspace", None), "id", None)
     if not isinstance(workspace_id, int) or not isinstance(db, DbSession):
         return None, False
-    group = identity.group_of(db, workspace_id, access.user.id)
+    group = queries.group_of(db, workspace_id, access.user.id)
     return (group.id if group is not None else None), False

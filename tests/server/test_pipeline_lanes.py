@@ -19,7 +19,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from server import features, singletons
+from server import singletons
+from server.auth import features
 from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner

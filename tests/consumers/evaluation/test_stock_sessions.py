@@ -16,8 +16,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from server.auth import queries as identity
 from server.auth.deps import Access
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import Base
 from server.jobs.catalogue import Job
 from consumers.evaluation.api import admin as evaluation_admin

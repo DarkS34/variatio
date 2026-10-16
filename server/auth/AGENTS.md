@@ -2,9 +2,10 @@
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for accounts, sessions, invitations, roles, memberships, the optional functions and what
-a subject lets its students use. The code is `server/auth/`, `server/db/identity.py`,
-`server/features.py`, `server/members.py`, `server/groups.py` and the routes of
-`server/routers/auth.py`, `members.py` and `admin.py`.
+a subject lets its students use. The code is `server/auth/` (with its queries,
+`queries.py`, the optional functions, `features.py`, and its routes, `router.py`),
+`server/members.py`, `server/groups.py` and the routes of `server/routers/members.py` and
+`admin.py`.
 
 ## Identity (`server/auth/`)
 
@@ -73,7 +74,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `POST /api/admin/workspaces/{slug}/end-course`; every active student paused — `disable`,
   the default — or removed, the teachers stay, the class link is paused, the files stay). `members.people_of` counts a subject's
   people and `owners_of` names its active owners, for the listing and the panel. Closing a membership refuses taking the last
-  active owner from people still active (`identity.would_orphan`, 409 `last_owner`; a
+  active owner from people still active (`queries.would_orphan`, 409 `last_owner`; a
   subject with no owner to lose, or emptying, is not refused), moves the account's active
   subject elsewhere, cancels its jobs there, writes the row, COMMITS, then publishes
   `membership.closed` with `bus.publish_internal` (private with no author: no browser sees
@@ -91,7 +92,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   mail is configured (`mail_configured` on `/api/auth/me`). No «forgot password» link on the
   login screen; admins hand out reset links. No password generator anywhere.
 - `users.evaluator_profile` authorises nothing inside a subject: the membership does.
-- **The evaluation and the tutor are optional functions** ([server/features.py](server/features.py)):
+- **The evaluation and the tutor are optional functions** ([features.py](features.py)):
   each is `off`, `all` or `selected` (a list of accounts), set by the administrator
   (`GET /api/admin/features`, `PUT /api/admin/features/{feature}`; the list is replaced only
   when `accounts` is sent and survives a change of mode). A function with no row is off.
@@ -128,11 +129,11 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - **A teacher's links** (decided 2026-10-06; `/api/members`): a subject has at most ONE live
   class link per destination (`class_links`, revoked = dead; the rule is code, not an index;
   the destinations are the class and, since 2026-10-14, each of its groups:
-  `class_links.group_id`, `identity.live_class_link(session, workspace_id, group_id)`) — seats (40 by
+  `class_links.group_id`, `queries.live_class_link(session, workspace_id, group_id)`) — seats (40 by
   default, `CLASS_LINK_MAX_SEATS` 300), a required expiry (30 days by default, at most
   `TEACHER_LINK_MAX_DAYS` 180), a pause — minted sealed like an invitation
   (`links.mint_class_link`) and renewed by revoking it; its seats never drop below those
-  taken. A seat is taken by ONE conditional UPDATE (`identity.reserve_seat`: free seat, not
+  taken. A seat is taken by ONE conditional UPDATE (`queries.reserve_seat`: free seat, not
   paused, not revoked, not expired) AFTER the checks and the password hash, so the row lock is
   short; an account that cannot be created rolls the seat back with it. `/accept` takes both
   kinds (a class link: bucket `accept_class`, keyed by the link, a student's account, a

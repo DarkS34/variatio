@@ -64,8 +64,8 @@ export function useAccessDrafts(): AccessDrafts {
  * switching back finds them as they were. Only a list that changed is sent, because a write
  * without one leaves the server's as it is.
  *
- * The administrator is not exempt (`server/features.py`): under «Cuentas elegidas» their own
- * account opens the function only when it is ticked, like anybody's. One line says so,
+ * The administrator is not exempt (`server/auth/features.py`): under «Cuentas elegidas» their
+ * own account opens the function only when it is ticked, like anybody's. One line says so,
  * because the panel is the one screen where an administrator expects to see everything.
  *
  * A class is ticked at once: under «Cuentas elegidas» a subject is chosen and every account

@@ -22,7 +22,8 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config, entrypoints
 from variatio.core import inference
 
-from ... import auth, features, singletons
+from ... import auth, singletons
+from ...auth import features
 from .. import contexts
 
 router = APIRouter(prefix="/api", tags=["health"], dependencies=[auth.VIEW])

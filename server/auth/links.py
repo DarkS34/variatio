@@ -28,9 +28,8 @@ from sqlalchemy.orm import Session
 
 from variatio.core import paths
 
-from ..db import identity
 from ..db.models import EDITOR, STUDENT, ClassLink, Invite
-from . import tokens
+from . import queries, tokens
 
 KEY_ENV = "VARIATIO_INVITE_LINK_KEY"
 KEY_FILE = ".invite_link_key"
@@ -74,7 +73,7 @@ def mint(
     the invitation: the link is handed over now either way, it just cannot be shown later.
     """
     token = token or tokens.new_token()
-    invite = identity.create_invite(
+    invite = queries.create_invite(
         session,
         token_hash=tokens.digest(token),
         expires_at=expires_at,
@@ -106,7 +105,7 @@ def mint_class_link(
     renewing keeps.
     """
     token = tokens.new_token()
-    link = identity.create_class_link(
+    link = queries.create_class_link(
         session,
         workspace_id=workspace_id,
         token_hash=tokens.digest(token),

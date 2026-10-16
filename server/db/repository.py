@@ -2,7 +2,7 @@
 
 Artifacts are versioned rows keyed `(workspace, kind, stage, version)` and never updated
 in place; approvals are one row per (workspace, kind). The queries over accounts live in
-`identity.py`; the generated exercises are files, read by `server/generations.py`.
+`server/auth/queries.py`; the generated exercises are files, read by `server/generations.py`.
 """
 
 import hashlib

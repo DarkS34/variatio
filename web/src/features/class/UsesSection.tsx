@@ -70,11 +70,11 @@ export function usesDetail(
  * and, since 2026-10-15, the free chat — which starts closed.
  *
  * Two switches that act at once — during an exam a teacher closes generating and opens it
- * again after — and bind the students alone (`server/features.refusal`): the teachers keep
- * both. The tutor's switch is drawn wherever the tutor is installed (`tutor_installed`; user's
- * request, 2026-10-07: a teacher looked for it and did not find it); where the administrator
- * has not opened the tutor to any of the students (`tutor_offered`) it is drawn off and still,
- * with the reason, since it would switch nothing.
+ * again after — and bind the students alone (`server/auth/features.refusal`): the teachers
+ * keep both. The tutor's switch is drawn wherever the tutor is installed (`tutor_installed`;
+ * user's request, 2026-10-07: a teacher looked for it and did not find it); where the
+ * administrator has not opened the tutor to any of the students (`tutor_offered`) it is drawn
+ * off and still, with the reason, since it would switch nothing.
  */
 export function UsesSection({ group = null, scope }: { group?: number | null; scope?: ReactNode }) {
   const { t } = useT();

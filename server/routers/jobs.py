@@ -24,7 +24,8 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.core import inference
 from variatio.core.workspace import Workspace
 
-from .. import approvals, auth, features, raw_data, singletons
+from .. import approvals, auth, raw_data, singletons
+from ..auth import features
 from ..db.models import EDITOR, VIEWER
 from ..jobs import chain as job_chain
 from ..jobs import lanes

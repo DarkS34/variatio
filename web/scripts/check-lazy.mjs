@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Whether the evaluation's and the tutor's client code stays out of what every session loads.
 //
-// Both are optional functions the administrator opens per account (`server/features.py`), and
-// an account they are closed to must fetch no module of `src/consumers/evaluation/` or
-// `src/consumers/tutor/`. The
+// Both are optional functions the administrator opens per account
+// (`server/auth/features.py`), and an account they are closed to must fetch no module of
+// `src/consumers/evaluation/` or `src/consumers/tutor/`. The
 // app keeps that by importing them only through `import()` behind the account's `features`;
 // one static import from core undoes it silently — the page works, it only ships code nobody
 // asked for. Two rules, because each misses what the other sees:

@@ -3,7 +3,7 @@
 Three gestures — pause, open again, remove — each one function, because every door that
 performs one must do the same things in the same order: the class's own routes, the
 administrator's panel, leaving a subject and ending a course. Closing a membership refuses
-what would take the last owner from the subject's people (`identity.would_orphan`), moves the
+what would take the last owner from the subject's people (`queries.would_orphan`), moves the
 account's active subject elsewhere, stops its jobs there, writes the row, and announces it on
 the bus as `membership.closed` — an event no browser receives, on which an open socket of that
 account closes (`core/routes/stream.py`).
@@ -20,8 +20,8 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from . import singletons
+from .auth import queries
 from .auth.deps import first_membership
-from .db import identity
 from .db.models import OWNER, VIEWER, Membership, User, Workspace
 
 CLOSED_EVENT = "membership.closed"
@@ -52,7 +52,7 @@ def people_of(session: Session, workspace: Workspace) -> dict[str, int]:
     Counts and nothing else — who they are is the class list's, behind a teacher's role.
     """
     counts = {"students": 0, "disabled": 0, "teachers": 0}
-    for row, _ in identity.members_of(session, workspace.id, include_disabled=True):
+    for row, _ in queries.members_of(session, workspace.id, include_disabled=True):
         if not row.active:
             counts["disabled"] += 1
         elif row.role == VIEWER:
@@ -66,7 +66,7 @@ def owners_of(session: Session, workspace: Workspace) -> list[User]:
     """Return the subject's active owners, by username."""
     return [
         user
-        for row, user in identity.members_of(session, workspace.id)
+        for row, user in queries.members_of(session, workspace.id)
         if row.role == OWNER
     ]
 
@@ -131,7 +131,7 @@ def end_course(session: Session, workspace: Workspace, by: User | None, action: 
     to stop half way. The groups' links are paused with the class's.
     """
     gesture = {"disable": disable_member, "remove": remove_member}[action]
-    students = [user for row, user in identity.members_of(session, workspace.id) if row.role == VIEWER]
+    students = [user for row, user in queries.members_of(session, workspace.id) if row.role == VIEWER]
     done = 0
     for student in students:
         try:
@@ -141,16 +141,16 @@ def end_course(session: Session, workspace: Workspace, by: User | None, action: 
         done += 1
     # Every live link of the subject: the class's and each group's.
     paused = False
-    for link in identity.live_class_links(session, workspace.id):
+    for link in queries.live_class_links(session, workspace.id):
         if link.paused_at is None:
-            identity.edit_class_link(session, link, paused_at=identity.now())
+            queries.edit_class_link(session, link, paused_at=queries.now())
             paused = True
     return {"action": action, "students": done, "class_link_paused": paused}
 
 
 def _row(session: Session, workspace: Workspace, member: User) -> Membership:
     """Return the account's membership of this subject, or refuse: it is not one of its people."""
-    row = identity.membership(session, workspace.id, member.id)
+    row = queries.membership(session, workspace.id, member.id)
     if row is None:
         raise Refusal(404, "not_found", "Esa persona no está en esta asignatura.")
     return row
@@ -158,7 +158,7 @@ def _row(session: Session, workspace: Workspace, member: User) -> Membership:
 
 def _guard(session: Session, workspace: Workspace, member: User, role: str | None) -> None:
     """Refuse a change that would leave the subject's people with no active owner."""
-    if identity.would_orphan(session, workspace.id, member.id, role):
+    if queries.would_orphan(session, workspace.id, member.id, role):
         raise Refusal(
             409,
             LAST_OWNER,
@@ -187,7 +187,7 @@ def _close(
         if job.user_id == member.id:
             runner.cancel(job.id)
     if gesture == DISABLED:
-        row.disabled_at = identity.now()
+        row.disabled_at = queries.now()
         row.disabled_by = by.id if by is not None else None
     else:
         session.delete(row)

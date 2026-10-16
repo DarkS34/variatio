@@ -25,7 +25,7 @@ the administrator's and read again on a request of its own that leaves a line in
 invitation of another subject is a 404 here.
 
 WHAT THE STUDENTS USE is the teachers' too: whether the subject's students generate exercises
-and use the tutor (`/uses`, the two switches `server/features.py` reads), closed during an
+and use the tutor (`/uses`, the two switches `server/auth/features.py` reads), closed during an
 exam, say. The tutor's switch matters only where the administrator opened the tutor to one of
 them, and the answer says whether that is so.
 
@@ -44,11 +44,10 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import activity, auth, bank_marks, features, groups, members
-from ..auth import links, mail
+from .. import activity, auth, bank_marks, groups, members
+from ..auth import features, links, mail, queries
 from ..auth.rate_limit import throttle
 from ..core import environment
-from ..db import identity
 from ..db.models import (
     EDITOR,
     OWNER,
@@ -143,7 +142,7 @@ class InvitesBody(BaseModel):
 @router.get("")
 def listing(access: auth.Access = auth.EDIT, db: DbSession = Depends(auth.db)) -> dict:
     """Answer the subject's people, the paused ones included, by username, and its groups."""
-    rows = identity.members_of(db, access.workspace.id, include_disabled=True)
+    rows = queries.members_of(db, access.workspace.id, include_disabled=True)
     inviters = {row.invited_by for row, _ in rows if row.invited_by is not None}
     names = {user_id: _display(db, user_id) for user_id in inviters}
     placed = groups.placed(db, access.workspace)
@@ -344,7 +343,7 @@ def class_link(
 ) -> dict:
     """Answer the live link of the class, or of one group — seats, expiry, pause, who minted
     it — never the link."""
-    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
+    link = queries.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     return {"class_link": _link_view(db, link) if link is not None else None}
 
 
@@ -356,7 +355,7 @@ def class_link_url(
     db: DbSession = Depends(auth.db),
 ) -> dict:
     """Answer the live class link itself, opened from its sealed copy, and say who read it."""
-    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
+    link = queries.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     if link is None:
         raise HTTPException(404, "Esta asignatura no tiene enlace de clase.")
     token = links.unseal(link.token_sealed, link.token_hash)
@@ -386,9 +385,9 @@ def mint_class_link(
     seats = _seats(body.max_uses, environment.CLASS_LINK_DEFAULT_SEATS)
     expires_at = _expiry(body.expires_at, environment.CLASS_LINK_DEFAULT_DAYS)
     throttle("teacher_invite", request, access.user.username)
-    previous = identity.live_class_link(db, access.workspace.id, group_id)
+    previous = queries.live_class_link(db, access.workspace.id, group_id)
     if previous is not None:
-        identity.revoke_class_link(db, previous)
+        queries.revoke_class_link(db, previous)
     link, token = links.mint_class_link(
         db,
         workspace_id=access.workspace.id,
@@ -423,7 +422,7 @@ def edit_class_link(
 
     Its seats never go below the ones already taken: whoever entered stays in.
     """
-    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
+    link = queries.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     if link is None:
         raise HTTPException(404, "Esta asignatura no tiene enlace de clase.")
     sent = body.model_fields_set
@@ -441,8 +440,8 @@ def edit_class_link(
             raise HTTPException(422, "Un enlace de clase siempre tiene fecha de caducidad.")
         changes["expires_at"] = _expiry(body.expires_at, environment.CLASS_LINK_DEFAULT_DAYS)
     if "paused" in sent and body.paused is not None:
-        changes["paused_at"] = identity.now() if body.paused else None
-    link = identity.edit_class_link(db, link, **changes)
+        changes["paused_at"] = queries.now() if body.paused else None
+    link = queries.edit_class_link(db, link, **changes)
     return {"class_link": _link_view(db, link)}
 
 
@@ -452,10 +451,10 @@ def revoke_class_link(
 ) -> dict:
     """Retire the live class link, or a group's: it stops working at once, and whoever entered
     stays."""
-    link = identity.live_class_link(db, access.workspace.id, _group_id(db, access, group))
+    link = queries.live_class_link(db, access.workspace.id, _group_id(db, access, group))
     if link is None:
         return {"revoked": False}
-    identity.revoke_class_link(db, link)
+    queries.revoke_class_link(db, link)
     logger.info("[asignatura] «{}» retiró el enlace de clase de «{}»", access.user.username, access.ws.slug)
     return {"revoked": True}
 
@@ -469,9 +468,9 @@ def invites(
 ) -> dict:
     """Answer the subject's personal invitations nobody has used yet, live and expired alike;
     with `group`, only the ones that bring into that group."""
-    moment = identity.now()
+    moment = queries.now()
     group_id = _group_id(db, access, group)
-    rows = identity.unused_invites(db, access.workspace.id)
+    rows = queries.unused_invites(db, access.workspace.id)
     if group_id is not None:
         rows = [row for row in rows if row.group_id == group_id]
     return {"invites": [_invite_view(db, row, moment) for row in rows]}
@@ -513,7 +512,7 @@ def mint_invites(
             f"Se pueden crear entre 1 y {environment.INVITE_BATCH_MAX} invitaciones a la vez.",
         )
     for name in names:
-        error = identity.label_error(name)
+        error = queries.label_error(name)
         if error:
             raise HTTPException(422, f"«{name[:40]}…»: {error}")
     if body.role not in (VIEWER, EDITOR):
@@ -610,7 +609,7 @@ def revoke_invite(
 ) -> dict:
     """Withdraw one of the subject's invitations before anybody redeems it."""
     invite = _subject_invite(db, access, invite_id)
-    return {"revoked": identity.revoke_invite(db, invite.id)}
+    return {"revoked": queries.revoke_invite(db, invite.id)}
 
 
 def _group(db: DbSession, access: auth.Access, group_id: int | None):
@@ -640,7 +639,7 @@ def _groups_view(db: DbSession, access: auth.Access) -> list[dict]:
 
 def _place(db: DbSession, access: auth.Access, user_id: int, group) -> None:
     """Put one student in a group, or take them out of theirs."""
-    member = identity.get_user_by_id(db, user_id)
+    member = queries.get_user_by_id(db, user_id)
     if member is None:
         raise Refusal(404, "not_found", "Esa persona no está en esta asignatura.")
     groups.place(db, access.workspace, member, group)
@@ -657,8 +656,8 @@ def _single(db: DbSession, access: auth.Access, user_id: int, action: str) -> di
 
 def _act(db: DbSession, access: auth.Access, user_id: int, action: str) -> None:
     """Do one gesture to one person, refusing what this teacher may not do to them."""
-    member = identity.get_user_by_id(db, user_id)
-    row = identity.membership(db, access.workspace.id, user_id) if member else None
+    member = queries.get_user_by_id(db, user_id)
+    row = queries.membership(db, access.workspace.id, user_id) if member else None
     if member is None or row is None:
         raise Refusal(404, "not_found", "Esa persona no está en esta asignatura.")
     if member.id == access.user.id:
@@ -676,7 +675,7 @@ def _act(db: DbSession, access: auth.Access, user_id: int, action: str) -> None:
 
 def _member(db: DbSession, user_id: int) -> User:
     """Return the account a route names, or 404."""
-    member = identity.get_user_by_id(db, user_id)
+    member = queries.get_user_by_id(db, user_id)
     if member is None:
         raise HTTPException(404, "Esa persona no está en esta asignatura.")
     return member
@@ -726,7 +725,7 @@ def _expiry(value: datetime | None, default_days: int) -> datetime:
     A moment with no zone is read as UTC, and compared as naive when the clock is (SQLite in the
     test suite), as the administrator's own invitations are.
     """
-    moment = identity.now()
+    moment = queries.now()
     if value is None:
         return moment + timedelta(days=default_days)
     if value.tzinfo is None:
@@ -750,7 +749,7 @@ def _link_view(db: DbSession, link: ClassLink) -> dict:
         "uses": link.uses,
         "max_uses": link.max_uses,
         "expires_at": _iso(link.expires_at),
-        "expired": link.expires_at <= identity.now(),
+        "expired": link.expires_at <= queries.now(),
         "paused": link.paused_at is not None,
         "created_at": _iso(link.created_at),
         "created_by": _display(db, link.created_by) if link.created_by is not None else None,
@@ -761,7 +760,7 @@ def _link_view(db: DbSession, link: ClassLink) -> dict:
 
 def _invite_view(db: DbSession, invite: Invite, moment: datetime | None = None) -> dict:
     """Render one of the subject's personal invitations: its alias, role, expiry and author."""
-    moment = moment if moment is not None else identity.now()
+    moment = moment if moment is not None else queries.now()
     return {
         "id": invite.id,
         "label": invite.label,
@@ -778,7 +777,7 @@ def _invite_view(db: DbSession, invite: Invite, moment: datetime | None = None) 
 
 def _display(db: DbSession, user_id: int) -> str | None:
     """Name the account that let somebody in, by its display name; None when it is gone."""
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     return user.name if user is not None else None
 
 

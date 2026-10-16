@@ -18,8 +18,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server import auth, bank_marks, groups
+from server.auth import queries
 from server.auth.deps import Access
-from server.db import identity, mirror, repository
+from server.db import mirror, repository
 from server.db.models import OWNER, VIEWER, Base
 from server.editors import bank_edit
 from server.routers import bank as bank_routes
@@ -70,7 +71,7 @@ def db(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
@@ -83,11 +84,11 @@ def aula(db, tmp_path, monkeypatch):
     workspace = repository.ensure_workspace(db, "aula", "Aula")
     people = {}
     for username, role in (("ana", OWNER), ("sara", VIEWER), ("diego", VIEWER)):
-        user = identity.create_user(
+        user = queries.create_user(
             db, username=username, name=username, password_hash="x",
             evaluator_profile="teacher" if role == OWNER else "student",
         )
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
         people[username] = user
     db.flush()
     ws = Workspace(tmp_path / "aula", "aula")

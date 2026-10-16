@@ -20,16 +20,16 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth, members, singletons
 from server import generations as store
-from server.auth import links
+from server.auth import links, queries
+from server.auth import router as auth_routes
 from server.auth.deps import FORBIDDEN, Access
 from server.core import installation
 from server.core.routes import stream as ws_routes
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.routers import admin as admin_routes
-from server.routers import auth as auth_routes
 from server.routers import members as member_routes
 from server.routers import workspaces as workspace_routes
 
@@ -41,7 +41,7 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
@@ -62,8 +62,8 @@ def aula(db):
     workspace = repository.ensure_workspace(db, "aula", "Aula")
     people = {}
     for username, role in (("ana", OWNER), ("bruno", EDITOR), ("carla", VIEWER), ("dani", VIEWER)):
-        user = identity.create_user(db, username=username, name=username.title(), password_hash="x")
-        identity.grant(db, workspace.id, user.id, role, via="invite", invited_by=None)
+        user = queries.create_user(db, username=username, name=username.title(), password_hash="x")
+        queries.grant(db, workspace.id, user.id, role, via="invite", invited_by=None)
         user.active_workspace_id = workspace.id
         people[username] = user
     db.flush()
@@ -117,8 +117,8 @@ def test_a_teacher_pauses_and_removes_students(db, aula, stage):
     member_routes.disable(aula.carla.id, access=access, db=db)
     member_routes.remove(aula.dani.id, access=access, db=db)
 
-    assert identity.membership(db, aula.workspace.id, aula.carla.id).disabled_at is not None
-    assert identity.membership(db, aula.workspace.id, aula.dani.id) is None
+    assert queries.membership(db, aula.workspace.id, aula.carla.id).disabled_at is not None
+    assert queries.membership(db, aula.workspace.id, aula.dani.id) is None
 
 
 @pytest.mark.parametrize("gesture", ["disable", "remove"])
@@ -138,11 +138,11 @@ def test_the_owner_pauses_and_removes_a_teacher(db, aula, stage):
     member_routes.enable(aula.bruno.id, access=access, db=db)
     member_routes.remove(aula.bruno.id, access=access, db=db)
 
-    assert identity.membership(db, aula.workspace.id, aula.bruno.id) is None
+    assert queries.membership(db, aula.workspace.id, aula.bruno.id) is None
 
 
 def test_an_owner_is_never_paused(db, aula, stage):
-    identity.grant(db, aula.workspace.id, aula.bruno.id, OWNER)
+    queries.grant(db, aula.workspace.id, aula.bruno.id, OWNER)
     access = _access(db, aula.bruno, aula.workspace)
 
     refused = _refused(lambda: member_routes.disable(aula.ana.id, access=access, db=db))
@@ -161,7 +161,7 @@ def test_nobody_pauses_or_removes_themselves_here(db, aula, stage):
 
 
 def test_a_stranger_is_a_404(db, aula, stage):
-    outsider = identity.create_user(db, username="eva", name="Eva", password_hash="x")
+    outsider = queries.create_user(db, username="eva", name="Eva", password_hash="x")
 
     refused = _refused(
         lambda: member_routes.disable(outsider.id, access=_access(db, aula.ana, aula.workspace), db=db)
@@ -188,11 +188,11 @@ def test_the_last_owner_does_not_step_down_while_people_remain(db, aula, stage):
 
 def test_the_last_owner_does_not_leave_while_people_remain(db, aula, stage):
     _last_owner(_refused(lambda: workspace_routes.leave("aula", user=aula.ana, db=db)))
-    assert identity.membership(db, aula.workspace.id, aula.ana.id) is not None
+    assert queries.membership(db, aula.workspace.id, aula.ana.id) is not None
 
 
 def test_the_administrator_does_not_take_the_last_owner_out_either(db, aula, stage):
-    admin = identity.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
+    admin = queries.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
 
     _last_owner(_refused(lambda: admin_routes.revoke_membership(aula.ana.id, "aula", admin=admin, db=db)))
     _last_owner(_refused(lambda: admin_routes.grant_membership(
@@ -206,7 +206,7 @@ def test_handing_over_the_ownership_keeps_an_owner_and_never_none(db, aula, stag
     member_routes.change_role(aula.bruno.id, member_routes.RoleBody(role="owner"), access=access, db=db)
     member_routes.change_role(aula.ana.id, member_routes.RoleBody(role="editor"), access=access, db=db)
 
-    roles = {m.user_id: m.role for m, _ in identity.members_of(db, aula.workspace.id)}
+    roles = {m.user_id: m.role for m, _ in queries.members_of(db, aula.workspace.id)}
     assert roles[aula.bruno.id] == OWNER
     assert roles[aula.ana.id] == EDITOR
 
@@ -215,19 +215,19 @@ def test_the_last_person_of_all_still_leaves_and_takes_the_subject(db, stage):
     ws = installation.workspace_for("sola")
     installation.provision(ws)
     workspace = repository.ensure_workspace(db, "sola", "Sola")
-    ana = identity.create_user(db, username="ana", name="Ana", password_hash="x")
-    identity.grant(db, workspace.id, ana.id, OWNER)
+    ana = queries.create_user(db, username="ana", name="Ana", password_hash="x")
+    queries.grant(db, workspace.id, ana.id, OWNER)
 
     assert workspace_routes.leave("sola", user=ana, db=db)["deleted"] is True
 
 
 def test_a_subject_with_no_owner_left_does_not_block_its_teachers(db, aula, stage):
     """Its owner's account was deleted: there is no owner to lose, and the panel marks it."""
-    identity.revoke_membership(db, aula.workspace.id, aula.ana.id)
+    queries.revoke_membership(db, aula.workspace.id, aula.ana.id)
 
     member_routes.remove(aula.carla.id, access=_access(db, aula.bruno, aula.workspace), db=db)
 
-    assert identity.membership(db, aula.workspace.id, aula.carla.id) is None
+    assert queries.membership(db, aula.workspace.id, aula.carla.id) is None
 
 
 # WHAT A GESTURE SETS OFF ------------------------------------------------------------------------
@@ -236,7 +236,7 @@ def test_a_subject_with_no_owner_left_does_not_block_its_teachers(db, aula, stag
 @pytest.mark.parametrize("gesture", [members.disable_member, members.remove_member])
 def test_a_closed_membership_stops_its_jobs_moves_its_tab_and_keeps_its_files(db, aula, stage, gesture):
     other = repository.ensure_workspace(db, "otra", "Otra")
-    identity.grant(db, other.id, aula.carla.id, VIEWER)
+    queries.grant(db, other.id, aula.carla.id, VIEWER)
     ws = installation.workspace_for("aula")
     saved = store.save(ws, aula.carla.id, "job1", 1, {"output": {"item": {"enunciado": "mío"}}})
     hers = stage.runner.submit("generate", {}, workspace="aula", user_id=aula.carla.id)
@@ -275,7 +275,7 @@ def test_a_paused_student_is_refused_everywhere_with_its_own_code(db, aula, stag
 
 def test_a_paused_subject_leaves_the_switcher_and_is_never_landed_in(db, aula, stage):
     other = repository.ensure_workspace(db, "otra", "Otra")
-    identity.grant(db, other.id, aula.carla.id, VIEWER)
+    queries.grant(db, other.id, aula.carla.id, VIEWER)
     members.disable_member(db, aula.workspace, aula.carla, aula.bruno)
     aula.carla.active_workspace_id = aula.workspace.id  # a stale preference
 
@@ -288,7 +288,7 @@ def test_a_paused_subject_leaves_the_switcher_and_is_never_landed_in(db, aula, s
 
 
 def test_opened_again_it_is_as_it_was(db, aula, stage):
-    before = identity.membership(db, aula.workspace.id, aula.carla.id)
+    before = queries.membership(db, aula.workspace.id, aula.carla.id)
     joined, via = before.created_at, before.via
     ws = installation.workspace_for("aula")
     saved = store.save(ws, aula.carla.id, "job2", 1, {"output": {"item": {"enunciado": "sigue"}}})
@@ -296,7 +296,7 @@ def test_opened_again_it_is_as_it_was(db, aula, stage):
     members.disable_member(db, aula.workspace, aula.carla, aula.bruno)
     members.enable_member(db, aula.workspace, aula.carla, aula.bruno)
 
-    row = identity.membership(db, aula.workspace.id, aula.carla.id)
+    row = queries.membership(db, aula.workspace.id, aula.carla.id)
     assert (row.role, row.via, row.created_at, row.disabled_at) == (VIEWER, via, joined, None)
     assert auth.access_for(db, aula.carla, aula.workspace, VIEWER).role == VIEWER
     assert store.get(ws, aula.carla.id, saved) is not None
@@ -412,7 +412,7 @@ def test_the_listing_counts_the_people_where_the_account_teaches(db, aula, stage
 
 
 def _root(db):
-    return identity.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
+    return queries.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
 
 
 def _end(db, admin, action="disable"):
@@ -421,16 +421,16 @@ def _end(db, admin, action="disable"):
 
 def test_ending_the_course_pauses_every_student_and_the_link_and_keeps_the_teachers(db, aula, stage):
     links.mint_class_link(
-        db, workspace_id=aula.workspace.id, expires_at=identity.now() + timedelta(days=9), max_uses=9
+        db, workspace_id=aula.workspace.id, expires_at=queries.now() + timedelta(days=9), max_uses=9
     )
 
     answer = _end(db, _root(db))
 
     assert answer == {"action": "disable", "students": 2, "class_link_paused": True}
-    rows = {user.username: row for row, user in identity.members_of(db, aula.workspace.id, include_disabled=True)}
+    rows = {user.username: row for row, user in queries.members_of(db, aula.workspace.id, include_disabled=True)}
     assert not rows["carla"].active and not rows["dani"].active
     assert rows["ana"].active and rows["bruno"].active
-    assert identity.live_class_link(db, aula.workspace.id).paused_at is not None
+    assert queries.live_class_link(db, aula.workspace.id).paused_at is not None
 
 
 def test_a_paused_course_reopens_by_opening_its_students(db, aula, stage):
@@ -448,8 +448,8 @@ def test_ending_it_by_removing_takes_the_students_out_and_leaves_their_files(db,
     answer = _end(db, _root(db), "remove")
 
     assert answer["students"] == 2 and answer["class_link_paused"] is False
-    assert identity.membership(db, aula.workspace.id, aula.carla.id) is None
-    assert identity.membership(db, aula.workspace.id, aula.bruno.id) is not None
+    assert queries.membership(db, aula.workspace.id, aula.carla.id) is None
+    assert queries.membership(db, aula.workspace.id, aula.bruno.id) is not None
     assert store.get(ws, aula.carla.id, saved) is not None
 
 
@@ -473,7 +473,7 @@ def test_a_teacher_has_no_door_to_end_the_course():
 
 def test_a_paused_subject_is_listed_closed_and_never_active(db, aula, stage):
     other = repository.ensure_workspace(db, "otra", "Otra")
-    identity.grant(db, other.id, aula.carla.id, VIEWER)
+    queries.grant(db, other.id, aula.carla.id, VIEWER)
     members.disable_member(db, aula.workspace, aula.carla, aula.bruno)
 
     rows = {row["slug"]: row for row in workspace_routes.listing(user=aula.carla, db=db)["workspaces"]}
@@ -483,13 +483,13 @@ def test_a_paused_subject_is_listed_closed_and_never_active(db, aula, stage):
 
 
 def test_the_administrator_opens_a_paused_membership(db, aula, stage):
-    admin = identity.create_user(db, username="root", name="Root", password_hash="x")
+    admin = queries.create_user(db, username="root", name="Root", password_hash="x")
     admin.is_admin = True
     members.disable_member(db, aula.workspace, aula.carla, aula.bruno)
 
     admin_routes.enable_membership(aula.carla.id, "aula", admin=admin, db=db)
 
-    assert identity.membership(db, aula.workspace.id, aula.carla.id).active
+    assert queries.membership(db, aula.workspace.id, aula.carla.id).active
 
 
 def test_the_panel_names_each_subjects_owners_and_counts_its_students(db, aula, stage):

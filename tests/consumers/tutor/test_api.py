@@ -12,9 +12,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from server import auth, singletons
+from server.auth import queries
 from server.auth.deps import Access
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.db import session as db_session
 from server.db.models import Base
 from server.jobs.bus import EventBus
@@ -241,7 +242,7 @@ def test_the_criteria_are_drafted_by_one_job_at_a_time(ws, runner):
 def admin(ws, monkeypatch):
     users = [SimpleNamespace(id=ANA, username="ana", name="Ana")]
     monkeypatch.setattr(repository, "get_workspace", lambda db, slug: object() if slug == "ws" else None)
-    monkeypatch.setattr(identity, "list_users", lambda db: users)
+    monkeypatch.setattr(queries, "list_users", lambda db: users)
     monkeypatch.setattr(installation, "workspace_for", lambda slug: ws)
     app = FastAPI()
     app.include_router(admin_module.router)

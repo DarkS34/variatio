@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.loaders import locale
 
 from .. import auth, curriculum, groups, kg_view
-from ..db import identity
+from ..auth import queries
 from ..db.models import VIEWER
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
@@ -277,7 +277,7 @@ def read_curriculum(
     if not isinstance(db, DbSession) or not isinstance(workspace_id, int):
         return curriculum.of_group(access.ws, None, graph)
     if access.role == VIEWER:
-        return curriculum.of_group(access.ws, identity.group_of(db, workspace_id, access.user.id), graph)
+        return curriculum.of_group(access.ws, queries.group_of(db, workspace_id, access.user.id), graph)
     return curriculum.of_group(access.ws, _group(db, access, group), graph)
 
 

@@ -80,8 +80,8 @@ def create_workspace(args) -> int:
     before there is anybody to hand it to. The prompt language is chosen here and never
     after: it is baked into the artifacts a build writes.
     """
+    from ..auth.queries import get_user, grant
     from ..db import session_scope
-    from ..db.identity import get_user, grant
     from ..db.models import OWNER, VIA_CLI
     from ..db.repository import create_workspace as insert, get_workspace
     from variatio.loaders import locale

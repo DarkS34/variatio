@@ -11,9 +11,10 @@ from loguru import logger
 from server import approvals, storage
 from server import curriculum as curriculum_store
 from server import generations as generations_store
+from server.auth import queries
 from server.core import contexts, installation
 from server.core.contexts import context_for
-from server.db import identity, session_scope
+from server.db import session_scope
 from server.jobs import lanes
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
@@ -251,7 +252,7 @@ def _author(job: Job) -> dict:
     if job.user_id is not None:
         try:
             with session_scope() as session:
-                user = identity.get_user_by_id(session, job.user_id)
+                user = queries.get_user_by_id(session, job.user_id)
                 username = user.username if user is not None else None
         except Exception as exc:  # noqa: BLE001 - a name is not worth a failed run
             logger.warning(f"No se pudo leer el usuario de la cuenta {job.user_id}: {exc}")

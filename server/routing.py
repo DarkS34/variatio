@@ -1,4 +1,4 @@
-"""The order the core's routers are mounted in, which is part of the routing.
+"""The order the server's own routers are mounted in, which is part of the routing.
 
 FastAPI matches routes in declaration order, so the order here decides which route answers:
 `admin`, `admin_engine` and `config` all sit under `/api/admin`, and a fixed path must stay
@@ -7,12 +7,12 @@ after the generation's routes (its `/api/jobs/allowance` must come before the qu
 `/api/jobs/{job_id}`) and before the other functions'. Nothing else imports a route module.
 """
 
+from .auth import router as auth
 from .core.routes import health, maintenance, stream
 from .routers import (
     activity,
     admin,
     admin_engine,
-    auth,
     bank,
     config,
     context,

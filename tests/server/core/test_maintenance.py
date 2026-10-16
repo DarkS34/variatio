@@ -71,7 +71,7 @@ def test_a_closed_door_stops_a_member(door, monkeypatch):
 
 def test_a_closed_door_lets_the_administrator_through(door, monkeypatch):
     door.set_state(True, "Un momento", "ana")
-    monkeypatch.setattr(deps.identity, "membership", lambda *args: None)
+    monkeypatch.setattr(deps.queries, "membership", lambda *args: None)
     user = SimpleNamespace(id=1, is_admin=True)
     workspace = SimpleNamespace(id=1, slug="default")
 

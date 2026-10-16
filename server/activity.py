@@ -42,8 +42,8 @@ from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from . import generations
+from .auth import queries
 from .core import daily
-from .db import identity
 from .db.models import VIEWER, Workspace as WorkspaceRow
 
 WEEK_PATTERN = re.compile(r"\A(\d{4})-W(\d{2})\Z")
@@ -175,7 +175,7 @@ def weeks_from(first: str, last: str) -> list[str]:
 
 def students_of(session: Session, workspace: WorkspaceRow) -> list[Student]:
     """Return the subject's students, active and paused, by name."""
-    rows = identity.members_of(session, workspace.id, include_disabled=True)
+    rows = queries.members_of(session, workspace.id, include_disabled=True)
     found = [
         Student(user.id, user.name or user.username, user.username, row.disabled_at is not None)
         for row, user in rows

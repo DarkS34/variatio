@@ -17,14 +17,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 
-from server import features
-from server.auth import mail, passwords, rate_limit
-from server.db import identity, repository
+from server.auth import features, mail, passwords, queries, rate_limit
+from server.auth.router import _me
+from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base, Invite
 from server.routers import admin as admin_routes
 from server.routers import members as member_routes
 from server.routers.admin import FeatureBody
-from server.routers.auth import _me
 from server.routers.members import InvitesBody, RoleBody
 
 
@@ -33,7 +32,7 @@ def db(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     yield session
     session.close()
@@ -57,13 +56,13 @@ def aula(db):
         ("bruno", EDITOR, "teacher"),
         ("sara", VIEWER, "student"),
     ):
-        user = identity.create_user(
+        user = queries.create_user(
             db, username=username, name=username.title(), password_hash="x", evaluator_profile=profile
         )
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
         people[username] = user
-    identity.grant(db, otra.id, people["sara"].id, VIEWER)
-    admin = identity.create_user(db, username="admin", name="Admin", password_hash="x", is_admin=True)
+    queries.grant(db, otra.id, people["sara"].id, VIEWER)
+    admin = queries.create_user(db, username="admin", name="Admin", password_hash="x", is_admin=True)
     db.flush()
     return SimpleNamespace(workspace=workspace, otra=otra, admin=admin, **people)
 
@@ -101,7 +100,7 @@ def test_handing_over_the_ownership_leaves_one_owner_and_never_none(db, aula):
     member_routes.change_role(aula.bruno.id, RoleBody(role=OWNER), access=owner, db=db)
     member_routes.change_role(aula.ana.id, RoleBody(role=EDITOR), access=owner, db=db)
 
-    roles = {u.username: m.role for m, u in identity.members_of(db, aula.workspace.id)}
+    roles = {u.username: m.role for m, u in queries.members_of(db, aula.workspace.id)}
     assert roles == {"ana": EDITOR, "bruno": OWNER, "sara": VIEWER}
 
 

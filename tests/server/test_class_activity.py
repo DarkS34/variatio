@@ -18,7 +18,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server import activity, curriculum
-from server.db import identity, repository
+from server.auth import queries
+from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.routers import activity as activity_routes
 from consumers.tutor.api import activity as tutor_activity
@@ -480,7 +481,7 @@ def db(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
@@ -490,8 +491,8 @@ def aula(db, ws):
     workspace = repository.ensure_workspace(db, "aula", "Programación I")
     people = {}
     for username, role, profile in (("profe", OWNER, "teacher"), ("bea", EDITOR, "teacher"), ("sara", VIEWER, "student")):
-        user = identity.create_user(db, username=username, name=username.title(), password_hash="x", evaluator_profile=profile)
-        identity.grant(db, workspace.id, user.id, role)
+        user = queries.create_user(db, username=username, name=username.title(), password_hash="x", evaluator_profile=profile)
+        queries.grant(db, workspace.id, user.id, role)
         people[username] = user
     db.flush()
     teacher = SimpleNamespace(user=people["profe"], workspace=workspace, role=OWNER, ws=ws)

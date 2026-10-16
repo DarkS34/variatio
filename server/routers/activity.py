@@ -21,7 +21,8 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core import inference
 
-from .. import activity, auth, curriculum, features, groups, singletons
+from .. import activity, auth, curriculum, groups, singletons
+from ..auth import features
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
 

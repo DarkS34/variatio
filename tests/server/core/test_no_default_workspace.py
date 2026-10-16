@@ -11,8 +11,8 @@ from variatio.core import paths
 @pytest.fixture
 def nobody(monkeypatch):
     """An account that belongs to no workspace, which is a normal account."""
-    monkeypatch.setattr(deps.identity, "memberships_for", lambda *args: [])
-    monkeypatch.setattr(deps.identity, "membership", lambda *args: None)
+    monkeypatch.setattr(deps.queries, "memberships_for", lambda *args: [])
+    monkeypatch.setattr(deps.queries, "membership", lambda *args: None)
     return SimpleNamespace(id=2, is_admin=False, active_workspace_id=None)
 
 
@@ -38,7 +38,7 @@ def test_an_administrator_with_no_membership_lands_nowhere_either(monkeypatch, n
 def test_the_first_membership_is_still_where_an_account_lands(monkeypatch):
     workspace = SimpleNamespace(id=7, slug="aula")
     monkeypatch.setattr(
-        deps.identity, "memberships_for", lambda *args: [(SimpleNamespace(role="owner"), workspace)]
+        deps.queries, "memberships_for", lambda *args: [(SimpleNamespace(role="owner"), workspace)]
     )
     user = SimpleNamespace(id=2, is_admin=False, active_workspace_id=None)
 

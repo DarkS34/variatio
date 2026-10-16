@@ -334,7 +334,7 @@ function RecoverInvite({
  * The date is a real picker and the four quick periods only write into it, so what will
  * be sent is always the moment on screen and never a hidden «+7 días».
  *
- * The functions put the holder on each one's list at registration (`server/features.py`).
+ * The functions put the holder on each one's list at registration (`server/auth/features.py`).
  * They grant nothing by themselves: the list counts only while the function is set to
  * «Cuentas elegidas», which is decided in that function's own tab.
  */

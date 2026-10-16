@@ -14,11 +14,11 @@ from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from .db import identity
+from .auth import queries
 from .db.models import VIEWER, ClassGroup, ClassGroupMember, Membership, User, Workspace
 from .members import Refusal
 
-# The tools a group may open or close, beside the subject's switches (`features.py`).
+# The tools a group may open or close, beside the subject's switches (`auth/features.py`).
 TOOLS: tuple[str, ...] = ("generate", "tutor", "chat")
 
 NAME_MAX = 80
@@ -103,9 +103,9 @@ def rename(session: Session, workspace: Workspace, group: ClassGroup, name: str)
 
 def delete_group(session: Session, workspace: Workspace, group: ClassGroup, by: User | None) -> None:
     """Delete a group: its students stay in the class with no group, and its live link dies."""
-    link = identity.live_class_link(session, workspace.id, group.id)
+    link = queries.live_class_link(session, workspace.id, group.id)
     if link is not None:
-        identity.revoke_class_link(session, link)
+        queries.revoke_class_link(session, link)
     name = group.name
     session.delete(group)
     session.flush()
@@ -119,7 +119,7 @@ def place(
 
     Students only: a teacher is in no group.
     """
-    row = identity.membership(session, workspace.id, member.id)
+    row = queries.membership(session, workspace.id, member.id)
     if row is None:
         raise Refusal(404, "not_found", "Esa persona no está en esta asignatura.")
     if row.role != VIEWER:
@@ -139,7 +139,7 @@ def place_on_entry(session: Session, workspace_id: int, user_id: int, group_id: 
     if group_id is None:
         return
     group = session.get(ClassGroup, group_id)
-    row = identity.membership(session, workspace_id, user_id)
+    row = queries.membership(session, workspace_id, user_id)
     if group is None or group.workspace_id != workspace_id or row is None or row.role != VIEWER:
         return
     session.execute(delete(ClassGroupMember).where(ClassGroupMember.membership_id == row.id))

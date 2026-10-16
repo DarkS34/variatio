@@ -1,6 +1,6 @@
 """Every query that touches a user, a session, an invite or a membership.
 
-Kept apart from `repository.py` — which is about the instance's artifacts — because
+Kept apart from `db/repository.py` — which is about the instance's artifacts — because
 these are the only queries on the request path of *every* endpoint, and because the
 normalising boundary for an identifier has to be exactly one place: `normalise_username`
 is it, so a duplicate differing in case cannot enter through a second door.
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from variatio.core import languages
 
-from .models import (
+from ..db.models import (
     EDITOR,
     EVALUATOR_PROFILES,
     INVITE_LABEL_MAX,

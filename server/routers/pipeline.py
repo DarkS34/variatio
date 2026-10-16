@@ -20,7 +20,8 @@ from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
 from variatio.entrypoints import build_phases as phases_of
 
-from .. import approvals, auth, features, singletons, storage
+from .. import approvals, auth, singletons, storage
+from ..auth import features
 from ..core import contexts
 from ..db.session import session_scope
 from ..editors import kg_edit

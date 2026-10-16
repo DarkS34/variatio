@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session as DbSession
 
 from server import auth, singletons
 from server import curriculum as curriculum_store
+from server.auth import queries as identity
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import User
 from server.editors import kg_edit
 from server.routers.jobs import gate_error

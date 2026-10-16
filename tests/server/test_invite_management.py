@@ -22,14 +22,14 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.auth import links, passwords, rate_limit, tokens
+from server.auth import links, passwords, queries, rate_limit, tokens
 from server.auth.rate_limit import RateLimiter
+from server.auth.router import AcceptBody, accept_invite, preview_invite
 from server.core import environment
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import Base, Invite
 from server.routers import admin as admin_routes
 from server.routers.admin import InviteBody, InviteEditBody, InviteImportBody
-from server.routers.auth import AcceptBody, accept_invite, preview_invite
 
 IP = "10.0.0.2"
 
@@ -51,7 +51,7 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", _utc_now)
+    monkeypatch.setattr(queries, "now", _utc_now)
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     yield session
     session.close()
@@ -59,7 +59,7 @@ def db(monkeypatch):
 
 @pytest.fixture
 def admin(db):
-    return identity.create_user(
+    return queries.create_user(
         db, username="admin", name="admin", password_hash="x", is_admin=True
     )
 
@@ -136,13 +136,13 @@ def _redeem(db, link: str, username: str = "ana"):
     # The claim is a bare UPDATE, so this session's copy of the row is stale; every request
     # in production opens a session of its own and never sees it.
     db.expire_all()
-    return identity.get_user(db, username)
+    return queries.get_user(db, username)
 
 
 def _legacy(db, **terms) -> tuple[Invite, str]:
     """An invitation as every one minted before this change: a digest and nothing else."""
     token = tokens.new_token()
-    invite = identity.create_invite(
+    invite = queries.create_invite(
         db, token_hash=tokens.digest(token), ttl=timedelta(days=1), **terms
     )
     return invite, token
@@ -270,7 +270,7 @@ def test_the_listing_never_carries_a_link_sealed_or_not(db, admin):
 
 def test_an_alias_that_does_not_fit_is_refused(db, admin):
     with pytest.raises(HTTPException) as refused:
-        _create(db, admin, label="x" * (identity.INVITE_LABEL_MAX + 1))
+        _create(db, admin, label="x" * (queries.INVITE_LABEL_MAX + 1))
 
     assert refused.value.status_code == 422
 
@@ -398,7 +398,7 @@ def test_the_link_of_a_deleted_invitation_comes_back_under_the_terms_given(
     assert revived["invite"]["label"] == "Recuperada"
     assert _read_link(db, admin, revived["invite"]["id"]) == created["link"]
     user = _redeem(db, created["link"])
-    assert [(w.slug, m.role) for m, w in identity.memberships_for(db, user.id)] == [
+    assert [(w.slug, m.role) for m, w in queries.memberships_for(db, user.id)] == [
         ("enfermeria", "viewer")
     ]
 
@@ -441,7 +441,7 @@ def test_moving_the_date_brings_an_expired_invitation_back(db, admin):
     db.get(Invite, invite_id).expires_at = _utc_now() - timedelta(hours=1)
     db.flush()
 
-    assert identity.live_invite(db, digest) is None
+    assert queries.live_invite(db, digest) is None
     assert admin_routes.invites(db=db)["invites"][0]["state"] == "expired"
     # An expired link is still worth reading: it is about to be sent again.
     assert _read_link(db, admin, invite_id) == created["link"]
@@ -449,7 +449,7 @@ def test_moving_the_date_brings_an_expired_invitation_back(db, admin):
     edited = _edit(db, admin, invite_id, expires_at=_ahead(days=3))
 
     assert edited["invite"]["state"] == "pending"
-    assert identity.live_invite(db, digest) is not None
+    assert queries.live_invite(db, digest) is not None
 
 
 def test_an_edit_changes_only_what_it_sends(db, admin, workspace):
@@ -525,11 +525,11 @@ def test_redeeming_forgets_the_sealed_copy_and_closes_the_row(db, admin):
 
 def test_a_claim_refuses_an_invitation_whose_date_moved_into_the_past(db):
     invite, token = _legacy(db)
-    read = identity.live_invite(db, tokens.digest(token))
+    read = queries.live_invite(db, tokens.digest(token))
     invite.expires_at = _utc_now() - timedelta(seconds=1)
     db.flush()
 
-    assert identity.claim_invite(db, read) is False
+    assert queries.claim_invite(db, read) is False
 
 
 # THE COMMAND LINE ------------------------------------------------------------------------

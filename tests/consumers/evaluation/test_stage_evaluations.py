@@ -366,7 +366,7 @@ def test_deleting_the_account_takes_its_forms_with_it():
     # SQLite enforces nothing unless told to, and this is exactly a test of enforcement.
     from sqlalchemy import event
 
-    from server.db import identity
+    from server.auth import queries as identity
     from server.db.models import User
 
     engine = create_engine(

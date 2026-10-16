@@ -15,8 +15,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import activity, curriculum, features, groups, members, singletons
-from server.db import identity, repository
+from server import activity, curriculum, groups, members, singletons
+from server.auth import features, queries
+from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
@@ -35,7 +36,7 @@ def db(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
@@ -55,11 +56,11 @@ def aula(db, tmp_path):
     other = repository.ensure_workspace(db, "otra", "Otra")
     people = {}
     for username, role in (("ana", OWNER), ("bruno", EDITOR), ("sara", VIEWER), ("diego", VIEWER), ("noa", VIEWER)):
-        user = identity.create_user(
+        user = queries.create_user(
             db, username=username, name=username, password_hash="x",
             evaluator_profile="teacher" if role != VIEWER else "student",
         )
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
         people[username] = user
     db.flush()
     ws = Workspace(root=tmp_path / "aula", slug="aula")
@@ -92,9 +93,9 @@ def test_a_student_is_in_one_group_at_most_and_moving_them_keeps_the_rest(db, au
     groups.place(db, aula.workspace, aula.sara, first)
     groups.place(db, aula.workspace, aula.sara, second)
 
-    assert identity.group_of(db, aula.workspace.id, aula.sara.id).id == second.id
+    assert queries.group_of(db, aula.workspace.id, aula.sara.id).id == second.id
     assert groups.member_ids(db, first) == set()
-    row = identity.membership(db, aula.workspace.id, aula.sara.id)
+    row = queries.membership(db, aula.workspace.id, aula.sara.id)
     assert row.role == VIEWER and row.active
 
 
@@ -131,7 +132,7 @@ def test_the_bulk_gesture_puts_students_in_and_takes_them_out_person_by_person(d
     assert listing["groups"][0]["students"] == 1
 
     member_routes.bulk(BulkBody(action="group", user_ids=[aula.sara.id], group_id=None), access=access, db=db)
-    assert identity.group_of(db, aula.workspace.id, aula.sara.id) is None
+    assert queries.group_of(db, aula.workspace.id, aula.sara.id) is None
 
 
 def test_deleting_a_group_leaves_its_students_in_the_class_and_kills_its_link(db, aula):
@@ -139,14 +140,14 @@ def test_deleting_a_group_leaves_its_students_in_the_class_and_kills_its_link(db
     member_routes.create_group(GroupBody(name="A"), access=access, db=db)
     group = groups.all_of(db, aula.workspace)[0]
     groups.place(db, aula.workspace, aula.sara, group)
-    link = identity.create_class_link(
+    link = queries.create_class_link(
         db, aula.workspace.id, "h1", datetime(2100, 1, 1), 10, group_id=group.id
     )
 
     member_routes.delete_group(group.id, access=access, db=db)
 
-    assert identity.group_of(db, aula.workspace.id, aula.sara.id) is None
-    assert identity.membership(db, aula.workspace.id, aula.sara.id).active
+    assert queries.group_of(db, aula.workspace.id, aula.sara.id) is None
+    assert queries.membership(db, aula.workspace.id, aula.sara.id).active
     assert link.revoked_at is not None
 
 
@@ -251,29 +252,29 @@ def _graph(aula):
 
 def test_each_destination_has_its_own_live_link(db, aula):
     group = _group(db, aula, "A")
-    whole = identity.create_class_link(db, aula.workspace.id, "h1", datetime(2100, 1, 1), 10)
-    part = identity.create_class_link(db, aula.workspace.id, "h2", datetime(2100, 1, 1), 10, group_id=group.id)
+    whole = queries.create_class_link(db, aula.workspace.id, "h1", datetime(2100, 1, 1), 10)
+    part = queries.create_class_link(db, aula.workspace.id, "h2", datetime(2100, 1, 1), 10, group_id=group.id)
 
-    assert identity.live_class_link(db, aula.workspace.id).id == whole.id
-    assert identity.live_class_link(db, aula.workspace.id, group.id).id == part.id
-    identity.revoke_class_link(db, part)
-    assert identity.live_class_link(db, aula.workspace.id).id == whole.id
+    assert queries.live_class_link(db, aula.workspace.id).id == whole.id
+    assert queries.live_class_link(db, aula.workspace.id, group.id).id == part.id
+    queries.revoke_class_link(db, part)
+    assert queries.live_class_link(db, aula.workspace.id).id == whole.id
 
 
 def test_entering_through_a_groups_link_puts_the_student_in_it(db, aula):
     group = _group(db, aula, "A")
-    newcomer = identity.create_user(db, username="leo", name="Leo", password_hash="x", evaluator_profile="student")
-    identity.grant(db, aula.workspace.id, newcomer.id, VIEWER)
+    newcomer = queries.create_user(db, username="leo", name="Leo", password_hash="x", evaluator_profile="student")
+    queries.grant(db, aula.workspace.id, newcomer.id, VIEWER)
     groups.place_on_entry(db, aula.workspace.id, newcomer.id, group.id)
-    assert identity.group_of(db, aula.workspace.id, newcomer.id).id == group.id
+    assert queries.group_of(db, aula.workspace.id, newcomer.id).id == group.id
 
     groups.place_on_entry(db, aula.workspace.id, aula.bruno.id, group.id)
-    assert identity.group_of(db, aula.workspace.id, aula.bruno.id) is None
+    assert queries.group_of(db, aula.workspace.id, aula.bruno.id) is None
 
 
 def test_ending_the_course_pauses_every_live_link(db, aula):
     group = _group(db, aula, "A")
-    whole = identity.create_class_link(db, aula.workspace.id, "h1", datetime(2100, 1, 1), 10)
-    part = identity.create_class_link(db, aula.workspace.id, "h2", datetime(2100, 1, 1), 10, group_id=group.id)
+    whole = queries.create_class_link(db, aula.workspace.id, "h1", datetime(2100, 1, 1), 10)
+    part = queries.create_class_link(db, aula.workspace.id, "h2", datetime(2100, 1, 1), 10, group_id=group.id)
     members.end_course(db, aula.workspace, aula.ana, "disable")
     assert whole.paused_at is not None and part.paused_at is not None

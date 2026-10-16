@@ -18,11 +18,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server.auth import mail
+from server.auth import mail, queries
+from server.auth.router import _me
 from server.core import environment
-from server.db import identity
 from server.db.models import Base
-from server.routers.auth import _me
 
 
 @pytest.fixture
@@ -32,14 +31,14 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
 
 @pytest.fixture
 def user(db):
-    return identity.create_user(db, username="ana", name="Ana", password_hash="x")
+    return queries.create_user(db, username="ana", name="Ana", password_hash="x")
 
 
 def test_no_smtp_is_reported_as_no_mail(db, user, monkeypatch):

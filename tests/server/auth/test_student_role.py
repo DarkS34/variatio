@@ -17,10 +17,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from consumers.evaluation.api import router as evaluation_router
-from server import auth, features, singletons
+from server import auth, singletons
+from server.auth import features, queries
 from server.auth.deps import Access
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
@@ -48,10 +49,10 @@ def db():
 
 
 def _member(db, username: str, workspace, role: str | None, admin: bool = False):
-    user = identity.create_user(db, username=username, name=username, password_hash="x")
+    user = queries.create_user(db, username=username, name=username, password_hash="x")
     user.is_admin = admin
     if role is not None:
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
     db.flush()
     return user
 

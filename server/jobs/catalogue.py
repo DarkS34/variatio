@@ -207,7 +207,7 @@ class Event:
 # on import) and each function's, added at its install.
 HANDLERS: dict[str, Callable[..., dict]] = {}
 
-# The job kinds that belong to an optional function (`server/features.py`): queued by
+# The job kinds that belong to an optional function (`server/auth/features.py`): queued by
 # `POST /api/jobs` only for an account the function is open to, and named as a lane's holder
 # only to such an account (`routers/pipeline.py`). The value is the feature's name
 # (`features.EVALUATION` is "evaluation"; `tests/server/test_features.py` pins it). The

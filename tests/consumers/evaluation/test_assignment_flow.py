@@ -10,7 +10,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server.db import identity, repository
+from server.auth import queries
+from server.db import repository
 from server.db.models import Base
 
 
@@ -25,18 +26,18 @@ def db():
     ejercicios = repository.ensure_workspace(session, "default", "cs0-ejercicios")
     examenes = repository.ensure_workspace(session, "examenes-cs1", "cs0-examenes")
 
-    admin = identity.create_user(
+    admin = queries.create_user(
         session, username="admin", name="admin", password_hash="x", is_admin=True
     )
-    ana = identity.create_user(
+    ana = queries.create_user(
         session, username="ana", name="Ana", password_hash="x", evaluator_profile="teacher"
     )
-    nadie = identity.create_user(session, username="nadie", name="Nadie", password_hash="x")
+    nadie = queries.create_user(session, username="nadie", name="Nadie", password_hash="x")
 
     # The real shape of the installation this was found on: the administrator holds a
     # membership of ONE workspace and reaches the other through the bypass.
-    identity.grant(session, examenes.id, admin.id, "owner")
-    identity.grant(session, ejercicios.id, ana.id, "editor")
+    queries.grant(session, examenes.id, admin.id, "owner")
+    queries.grant(session, ejercicios.id, ana.id, "editor")
 
     session.flush()
     yield session, {"admin": admin, "ana": ana, "nadie": nadie}
@@ -96,7 +97,7 @@ def test_a_deleted_workspace_is_never_offered(db):
     session, _ = db
     repository.get_workspace(session, "examenes-cs1")
     workspace = repository.get_workspace(session, "examenes-cs1")
-    from server.db.identity import now
+    from server.auth.queries import now
 
     workspace.deleted_at = now()
     session.flush()
@@ -164,7 +165,7 @@ def test_the_profile_travels_so_the_screen_can_say_who_is_unclassified(db):
 
 def test_a_disabled_account_is_not_offered(db):
     session, users = db
-    users["ana"].disabled_at = identity.now()
+    users["ana"].disabled_at = queries.now()
     session.flush()
 
     assert "ana" not in _accounts(session)

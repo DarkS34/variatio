@@ -17,8 +17,9 @@ from fastapi import HTTPException
 
 from server import singletons
 from server.auth import deps as auth_deps
+from server.auth import queries
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import Base, EDITOR, OWNER
 from server.routers.workspaces import remove
 
@@ -46,9 +47,9 @@ def _workspace(db, slug: str):
 
 
 def _account(db, username: str, grants: list, active=None):
-    user = identity.create_user(db, username=username, name=username, password_hash="x")
+    user = queries.create_user(db, username=username, name=username, password_hash="x")
     for workspace, role in grants:
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
     if active is not None:
         user.active_workspace_id = active.id
     db.flush()

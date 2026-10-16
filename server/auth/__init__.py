@@ -1,15 +1,21 @@
-"""What a router imports to protect itself.
+"""Identity and permissions, and what a router imports to protect itself.
+
+The area holds the sessions and the route guards (`deps.py`), the queries over accounts,
+invitations and memberships (`queries.py`), who may use each optional function
+(`features.py`), passwords, tokens, sealed links, mail and rate limits, and the routes of
+login, one's own account and password recovery (`router.py`). Who belongs to a subject and
+its groups is `members.py` and `groups.py`, at the server's root.
 
 `VIEW`, `EDIT` and `MANAGE` are the three membership levels as FastAPI dependencies, and
-`EVALUATION` and `TUTOR` the two optional functions (`server/features.py`), and `CHAT` the
-free chat, which a subject opens to its students; the rest is re-exported from `deps`,
-`rate_limit` and `tokens`.
+`EVALUATION` and `TUTOR` the two optional functions, and `CHAT` the free chat, which a
+subject opens to its students; the rest is re-exported from `deps`, `rate_limit` and
+`tokens`.
 """
 
 from fastapi import Depends
 
-from .. import features
 from ..db.models import EDITOR, OWNER, VIEWER
+from . import features
 from .deps import (
     MEMBERSHIP_DISABLED,
     NOT_MEMBER,

@@ -30,10 +30,10 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.core.workspace import Workspace as PathWorkspace
 
-from .. import features
 from ..core import environment, installation, maintenance
-from ..db import identity, repository, session_scope
+from ..db import repository, session_scope
 from ..db.models import EDITOR, OWNER, ROLE_RANK, VIEWER, User, UserSession, Workspace
+from . import features, queries
 from .tokens import digest
 
 DB_UNREACHABLE = (
@@ -189,11 +189,11 @@ def resolve(session: DbSession, token: str | None) -> tuple[UserSession, User] |
     """
     if not token:
         return None
-    found = identity.live_session(session, digest(token))
+    found = queries.live_session(session, digest(token))
     if found is None:
         return None
     row, user = found
-    identity.touch_session(
+    queries.touch_session(
         session, row, environment.SESSION_SLIDING, environment.SESSION_TOUCH_INTERVAL
     )
     return row, user
@@ -223,7 +223,7 @@ def require_feature(feature: str):
     """Build the dependency refusing an account `feature` is not open to, here.
 
     Beside the membership check and never instead of it, and with no administrator bypass:
-    the function is open to an account or it is not (`server/features.py`). It reads the
+    the function is open to an account or it is not (`features.py`). It reads the
     request's `Access` through `require_viewer`, the very callable `auth.VIEW` wraps, so
     FastAPI resolves the membership once: a student meets the switch the subject's teachers
     set (`features.refusal`).
@@ -318,7 +318,7 @@ def current_workspace_for(session: DbSession, user: User) -> Workspace | None:
         # revoked or paused, and landing on one is a 403 on every route with no way back,
         # even for someone who is a member of two others.
         if workspace is not None and workspace.deleted_at is None:
-            if user.is_admin or identity.active_membership(session, workspace.id, user.id):
+            if user.is_admin or queries.active_membership(session, workspace.id, user.id):
                 return workspace
     return first_membership(session, user)
 
@@ -327,7 +327,7 @@ def first_membership(
     session: DbSession, user: User, excluding: int | None = None
 ) -> Workspace | None:
     """Return the first workspace this account belongs to, skipping `excluding`."""
-    for _, workspace in identity.memberships_for(session, user.id):
+    for _, workspace in queries.memberships_for(session, user.id):
         if workspace.id != excluding:
             return workspace
     return None
@@ -353,7 +353,7 @@ def access_for(session: DbSession, user: User, workspace: Workspace, minimum: st
     if not user.is_admin and maintenance.active():
         raise HTTPException(503, maintenance.CLOSED)
 
-    row = identity.membership(session, workspace.id, user.id)
+    row = queries.membership(session, workspace.id, user.id)
     as_admin = False
 
     if row is None:

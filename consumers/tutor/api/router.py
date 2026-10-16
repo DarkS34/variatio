@@ -17,7 +17,7 @@ reply at a time per conversation (409 while it is live), one per account in the 
 the installation's daily limit per account (`tutor.daily_messages`, 429 when it is reached).
 
 The whole router is also behind `auth.TUTOR`: the tutor is open to nobody, to every account or
-to a list, as the administrator set it (`server/features.py`).
+to a list, as the administrator set it (`server/auth/features.py`).
 """
 
 from fastapi import APIRouter, Depends, HTTPException

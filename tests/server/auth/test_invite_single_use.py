@@ -8,10 +8,9 @@ from sqlalchemy.orm import sessionmaker
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.auth import passwords, rate_limit, tokens
-from server.db import identity
+from server.auth import passwords, queries, rate_limit, tokens
+from server.auth.router import AcceptBody, accept_invite
 from server.db.models import Base, Invite
-from server.routers.auth import AcceptBody, accept_invite
 
 TOKEN = "un-enlace-de-invitacion"
 DIGEST = tokens.digest(TOKEN)
@@ -25,7 +24,7 @@ def sessions(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{tmp_path / 'identity.db'}")
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     opened = []
 
@@ -81,7 +80,7 @@ def _accept(session, username: str, ip: str = IP):
 
 
 def _invite(session) -> None:
-    identity.create_invite(session, token_hash=DIGEST, ttl=timedelta(days=1))
+    queries.create_invite(session, token_hash=DIGEST, ttl=timedelta(days=1))
     session.commit()
 
 
@@ -90,14 +89,14 @@ def test_only_one_of_two_sessions_racing_on_one_invitation_claims_it(sessions):
     _invite(one)
 
     # Both read the row while it is still live, which is the window the Argon2 hash sat in.
-    first = identity.live_invite(one, DIGEST)
-    second = identity.live_invite(two, DIGEST)
+    first = queries.live_invite(one, DIGEST)
+    second = queries.live_invite(two, DIGEST)
     assert first is not None and second is not None
 
-    assert identity.claim_invite(one, first) is True
+    assert queries.claim_invite(one, first) is True
     one.commit()
 
-    assert identity.claim_invite(two, second) is False
+    assert queries.claim_invite(two, second) is False
 
 
 def test_the_registration_that_loses_the_race_is_refused_and_creates_nothing(
@@ -106,19 +105,19 @@ def test_the_registration_that_loses_the_race_is_refused_and_creates_nothing(
     one, two = sessions(), sessions()
     _invite(one)
 
-    stale = identity.live_invite(two, DIGEST)
-    assert identity.claim_invite(one, identity.live_invite(one, DIGEST)) is True
+    stale = queries.live_invite(two, DIGEST)
+    assert queries.claim_invite(one, queries.live_invite(one, DIGEST)) is True
     one.commit()
 
     # What the loser of the race sees: the read that happened before the other side wrote.
-    monkeypatch.setattr(identity, "live_invite", lambda *_: stale)
+    monkeypatch.setattr(queries, "live_invite", lambda *_: stale)
 
     with pytest.raises(HTTPException) as refused:
         _accept(two, "beto")
 
     assert refused.value.status_code == 404
     assert "invitación" in refused.value.detail
-    assert identity.get_user(two, "beto") is None
+    assert queries.get_user(two, "beto") is None
 
 
 def test_the_first_registration_still_goes_through_and_is_attributed(sessions):
@@ -127,17 +126,17 @@ def test_the_first_registration_still_goes_through_and_is_attributed(sessions):
 
     _accept(session, "ana")
 
-    user = identity.get_user(session, "ana")
+    user = queries.get_user(session, "ana")
     assert user is not None
-    invite = session.get(identity.Invite, 1)
+    invite = session.get(queries.Invite, 1)
     assert invite.used_at is not None
     assert invite.used_by == user.id
-    assert identity.live_invite(session, DIGEST) is None
+    assert queries.live_invite(session, DIGEST) is None
 
 
 def test_a_username_that_is_taken_still_says_which_one(sessions):
     session = sessions()
-    identity.create_user(session, username="ana", name="ana", password_hash="x")
+    queries.create_user(session, username="ana", name="ana", password_hash="x")
     _invite(session)
 
     with pytest.raises(HTTPException) as refused:

@@ -1,8 +1,8 @@
 """The free chat's routes: one's own conversations, as the tutor's are.
 
 Declares `auth.VIEW` and `auth.CHAT` for the whole router: the chat is the subject's to open
-to its students (`server.features`, closed until a teacher opens it), and its teachers always
-have it. Every conversation route is scoped to the account that asks
+to its students (`server.auth.features`, closed until a teacher opens it), and its teachers
+always have it. Every conversation route is scoped to the account that asks
 (`server.conversations.routes`); a message is answered by a job of the queue, one reply at a
 time per account in the workspace, under the installation's daily limit of the chat.
 

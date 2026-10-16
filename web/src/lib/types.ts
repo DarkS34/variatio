@@ -757,7 +757,7 @@ export interface Session {
   features?: Partial<Openings>;
 }
 
-/** The two optional functions (`server/features.py`), as the session reports them. */
+/** The two optional functions (`server/auth/features.py`), as the session reports them. */
 export interface Features {
   evaluation: boolean;
   tutor: boolean;
@@ -822,7 +822,7 @@ export interface FeatureAccessState {
   /** Account ids, in id order. */
   accounts: number[];
   /** Subject slugs, in slug order: everybody in one uses the function there. The tutor's
-   *  alone (`server/features.SUBJECT_LISTED`); absent for the evaluation and an older API. */
+   *  alone (`server/auth/features.SUBJECT_LISTED`); absent for the evaluation and an older API. */
   workspaces?: string[];
 }
 

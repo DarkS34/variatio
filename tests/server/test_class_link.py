@@ -22,15 +22,15 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server import auth
-from server.auth import links, passwords, rate_limit
+from server.auth import links, passwords, queries, rate_limit
+from server.auth import router as auth_routes
+from server.auth.router import AcceptBody, JoinBody
 from server.core import environment
-from server.db import identity, repository
+from server.db import repository
 from server.db import session as db_session
 from server.db.models import EDITOR, OWNER, VIEWER, Base, ClassLink, Invite
 from server.routers import admin as admin_routes
-from server.routers import auth as auth_routes
 from server.routers import members as member_routes
-from server.routers.auth import AcceptBody, JoinBody
 
 PASSWORD = "una-contraseña-larga"
 
@@ -43,7 +43,7 @@ def db(monkeypatch):
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
     # SQLite drops the offset Postgres keeps; every moment below is compared naive.
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     yield session
     session.close()
@@ -76,10 +76,10 @@ def _request() -> Request:
 def aula(db):
     """A subject with its owner and a second teacher."""
     workspace = repository.ensure_workspace(db, "aula", "Programación I")
-    ana = identity.create_user(db, username="ana", name="Ana Pérez", password_hash="x", evaluator_profile="teacher")
-    bruno = identity.create_user(db, username="bruno", name="Bruno", password_hash="x", evaluator_profile="teacher")
-    identity.grant(db, workspace.id, ana.id, OWNER)
-    identity.grant(db, workspace.id, bruno.id, EDITOR)
+    ana = queries.create_user(db, username="ana", name="Ana Pérez", password_hash="x", evaluator_profile="teacher")
+    bruno = queries.create_user(db, username="bruno", name="Bruno", password_hash="x", evaluator_profile="teacher")
+    queries.grant(db, workspace.id, ana.id, OWNER)
+    queries.grant(db, workspace.id, bruno.id, EDITOR)
     db.flush()
     return SimpleNamespace(workspace=workspace, ana=ana, bruno=bruno)
 
@@ -105,7 +105,7 @@ def _register(db, token: str, username: str, **sent):
         Response(),
         session=db,
     )
-    return identity.get_user(db, username)
+    return queries.get_user(db, username)
 
 
 def _refused(call) -> HTTPException:
@@ -126,7 +126,7 @@ def test_three_registrations_fill_three_seats_and_the_fourth_is_told(db, aula):
     assert refused.status_code == 409
     assert refused.headers == {"X-Error-Code": auth_routes.CLASS_LINK_FULL}
     for account in accounts:
-        row = identity.membership(db, aula.workspace.id, account.id)
+        row = queries.membership(db, aula.workspace.id, account.id)
         assert (row.role, row.via, row.invited_by) == (VIEWER, "class_link", aula.bruno.id)
         assert account.evaluator_profile == "student"
         assert account.active_workspace_id == aula.workspace.id
@@ -165,11 +165,11 @@ def test_an_account_that_cannot_be_created_gives_its_seat_back(db, aula, monkeyp
     def taken(*args, **kwargs):
         raise IntegrityError("INSERT", {}, Exception("unique"))
 
-    monkeypatch.setattr(identity, "create_user", taken)
+    monkeypatch.setattr(queries, "create_user", taken)
     refused = _refused(lambda: _register(db, token, "carrera"))
 
     assert refused.status_code == 409
-    link = identity.live_class_link(db, aula.workspace.id)
+    link = queries.live_class_link(db, aula.workspace.id)
     db.refresh(link)
     assert link.uses == 0
 
@@ -194,11 +194,11 @@ def test_a_whole_class_registers_through_one_link_in_an_hour(db, aula):
     for n in range(15):
         _register(db, token, f"clase{n:02d}")
 
-    assert identity.live_class_link(db, aula.workspace.id).uses == 15
+    assert queries.live_class_link(db, aula.workspace.id).uses == 15
 
 
 def test_a_personal_link_still_stops_at_the_tenth_attempt_of_the_hour(db, aula):
-    invite, token = links.mint(db, expires_at=identity.now() + timedelta(days=1), workspace_id=aula.workspace.id)
+    invite, token = links.mint(db, expires_at=queries.now() + timedelta(days=1), workspace_id=aula.workspace.id)
     _register(db, token, "primera")
     answers = []
     for n in range(10):
@@ -213,7 +213,7 @@ def test_a_personal_link_still_stops_at_the_tenth_attempt_of_the_hour(db, aula):
 
 def test_two_registrations_racing_for_the_last_seat_make_one_account(monkeypatch):
     """Two threads, two connections, one statement deciding: never two students in one seat."""
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     engine = db_session.engine()
     Base.metadata.create_all(engine)
     with db_session.session_scope() as session:
@@ -221,7 +221,7 @@ def test_two_registrations_racing_for_the_last_seat_make_one_account(monkeypatch
         _, token = links.mint_class_link(
             session,
             workspace_id=workspace.id,
-            expires_at=identity.now() + timedelta(days=1),
+            expires_at=queries.now() + timedelta(days=1),
             max_uses=1,
         )
     start = threading.Barrier(2)
@@ -258,7 +258,7 @@ def test_two_registrations_racing_for_the_last_seat_make_one_account(monkeypatch
     with db_session.session_scope() as session:
         link = session.query(ClassLink).one()
         assert link.uses == 1
-        assert {identity.get_user(session, "uno") is None, identity.get_user(session, "dos") is None} == {True, False}
+        assert {queries.get_user(session, "uno") is None, queries.get_user(session, "dos") is None} == {True, False}
 
 
 # AN ACCOUNT THAT EXISTS -------------------------------------------------------------------------
@@ -272,8 +272,8 @@ def _join(db, user, token: str) -> dict:
 def luis(db):
     """A student of another subject, landed there."""
     otra = repository.ensure_workspace(db, "otra", "Otra")
-    user = identity.create_user(db, username="luis", name="Luis", password_hash="x", evaluator_profile="student")
-    identity.grant(db, otra.id, user.id, VIEWER)
+    user = queries.create_user(db, username="luis", name="Luis", password_hash="x", evaluator_profile="student")
+    queries.grant(db, otra.id, user.id, VIEWER)
     user.active_workspace_id = otra.id
     db.flush()
     return user
@@ -287,9 +287,9 @@ def test_an_account_of_another_subject_joins_with_the_class_link(db, aula, luis)
     assert me["already"] is False
     assert me["active_workspace"] == "aula"
     assert sorted(row["slug"] for row in me["workspaces"]) == ["aula", "otra"]
-    row = identity.membership(db, aula.workspace.id, luis.id)
+    row = queries.membership(db, aula.workspace.id, luis.id)
     assert (row.role, row.via) == (VIEWER, "class_link")
-    assert identity.live_class_link(db, aula.workspace.id).uses == 1
+    assert queries.live_class_link(db, aula.workspace.id).uses == 1
 
 
 def test_a_link_never_lowers_anybody(db, aula):
@@ -298,8 +298,8 @@ def test_a_link_never_lowers_anybody(db, aula):
     me = _join(db, aula.bruno, token)
 
     assert me["already"] is True
-    assert identity.membership(db, aula.workspace.id, aula.bruno.id).role == EDITOR
-    assert identity.live_class_link(db, aula.workspace.id).uses == 0
+    assert queries.membership(db, aula.workspace.id, aula.bruno.id).role == EDITOR
+    assert queries.live_class_link(db, aula.workspace.id).uses == 0
 
 
 def test_a_personal_link_used_to_join_is_spent(db, aula, luis):
@@ -310,8 +310,8 @@ def test_a_personal_link_used_to_join_is_spent(db, aula, luis):
 
     _join(db, luis, token)
 
-    assert identity.live_invite(db, auth.digest(token)) is None
-    assert identity.membership(db, aula.workspace.id, luis.id).via == "invite"
+    assert queries.live_invite(db, auth.digest(token)) is None
+    assert queries.membership(db, aula.workspace.id, luis.id).via == "invite"
 
 
 def test_a_false_token_is_the_same_404_everywhere(db, aula, luis):
@@ -335,8 +335,8 @@ def test_a_paused_member_does_not_come_back_with_the_link(db, aula, luis):
 
     assert refused.status_code == 409
     assert refused.headers == {"X-Error-Code": auth.MEMBERSHIP_DISABLED}
-    assert identity.live_class_link(db, aula.workspace.id).uses == 1
-    assert identity.membership(db, aula.workspace.id, luis.id).disabled_at is not None
+    assert queries.live_class_link(db, aula.workspace.id).uses == 1
+    assert queries.membership(db, aula.workspace.id, luis.id).disabled_at is not None
 
 
 # A TEACHER'S PERSONAL INVITATIONS ---------------------------------------------------------------
@@ -370,12 +370,12 @@ def test_an_owner_invites_a_teacher_whose_account_is_a_teachers(db, aula):
     nueva = _register(db, token, "nueva")
 
     assert nueva.evaluator_profile == "teacher"
-    assert identity.membership(db, aula.workspace.id, nueva.id).role == EDITOR
+    assert queries.membership(db, aula.workspace.id, nueva.id).role == EDITOR
 
 
 def test_another_subjects_invitations_are_unknown_here(db, aula):
     otra = repository.ensure_workspace(db, "ajena", "Ajena")
-    invite, _ = links.mint(db, expires_at=identity.now() + timedelta(days=1), workspace_id=otra.id)
+    invite, _ = links.mint(db, expires_at=queries.now() + timedelta(days=1), workspace_id=otra.id)
     access = _access(db, aula.bruno, aula.workspace)
 
     listed = member_routes.invites(access=access, db=db)["invites"]
@@ -460,7 +460,7 @@ def test_the_live_link_is_read_again_and_revoked(db, aula):
 
 
 def test_the_administrator_sees_pauses_and_retires_a_subjects_link(db, aula):
-    admin = identity.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
+    admin = queries.create_user(db, username="root", name="Root", password_hash="x", is_admin=True)
     token = _mint(db, aula)
 
     [row] = admin_routes.class_links(db=db)["class_links"]

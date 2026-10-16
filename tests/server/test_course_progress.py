@@ -15,13 +15,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import activity, curriculum, features
+from server import activity, curriculum
+from server.auth import features, queries
 from server.auth.deps import require_feature
-from server.db import identity, repository
+from server.auth.router import _me
+from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.routers import jobs as jobs_routes
 from server.routers import members as member_routes
-from server.routers.auth import _me
 from server.routers.members import UsesBody
 from variatio.core.workspace import Workspace
 from variatio.loaders.knowledge_graph import KnowledgeGraph
@@ -63,7 +64,7 @@ def db(monkeypatch):
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
@@ -78,10 +79,10 @@ def aula(db, tmp_path):
         ("bruno", EDITOR, "teacher"),
         ("sara", VIEWER, "student"),
     ):
-        user = identity.create_user(
+        user = queries.create_user(
             db, username=username, name=username, password_hash="x", evaluator_profile=profile
         )
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
         people[username] = user
     db.flush()
     ws = Workspace(root=tmp_path / "aula", slug="aula")

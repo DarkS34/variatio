@@ -19,8 +19,9 @@ from sqlalchemy.pool import StaticPool
 
 from fastapi import HTTPException
 
+from server.auth import queries
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import Base, EDITOR, OWNER
 from server.routers.workspaces import leave
 
@@ -47,10 +48,10 @@ def _workspace(db, slug: str):
 
 
 def _account(db, username: str, grants: list, active=None, admin: bool = False):
-    user = identity.create_user(db, username=username, name=username, password_hash="x")
+    user = queries.create_user(db, username=username, name=username, password_hash="x")
     user.is_admin = admin
     for workspace, role in grants:
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
     if active is not None:
         user.active_workspace_id = active.id
     db.flush()
@@ -85,8 +86,8 @@ def test_leaving_a_shared_workspace_removes_only_that_seat(db):
     assert result["deleted"] is False
     assert result["members_left"] == 1
     assert repository.get_workspace(db, "aula") is not None
-    assert identity.membership(db, aula.id, bruno.id) is None
-    assert identity.membership(db, aula.id, ana.id) is not None
+    assert queries.membership(db, aula.id, bruno.id) is None
+    assert queries.membership(db, aula.id, ana.id) is not None
     assert bruno.active_workspace_id is None
     assert ana.active_workspace_id == aula.id
     # Nothing on disk moves: the instance still belongs to somebody, and one person walking
@@ -156,4 +157,4 @@ def test_a_tree_that_cannot_be_removed_leaves_the_row_standing(db, monkeypatch):
 
     assert raised.value.status_code == 409
     assert repository.get_workspace(db, "aula") is not None
-    assert identity.membership(db, aula.id, ana.id) is not None
+    assert queries.membership(db, aula.id, ana.id) is not None

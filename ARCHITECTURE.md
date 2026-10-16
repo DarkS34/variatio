@@ -192,8 +192,8 @@ One line per folder: what it holds, and the file to open first.
 | `core/` | what every area stands on: the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
 | `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
 | `editors/` | hand edits of the artifacts: graph, profile, bank, context | `bank_edit.py` |
-| `auth/` | route guards (`deps.py`), passwords, tokens, sealed links, mail, rate limits | `deps.py` |
-| `db/` | ORM models, session, schema check, mirror, import/export, identity queries | `models.py` |
+| `auth/` | identity and permissions: route guards (`deps.py`), the account queries (`queries.py`), the optional functions (`features.py`), passwords, tokens, sealed links, mail, rate limits; `router.py` is login, one's account and password recovery | `deps.py` |
+| `db/` | ORM models, session, schema check, mirror, import/export | `models.py` |
 | `jobs/` | the queue: catalogue, runner, lanes, priority, bus, handlers, chains, build worker | `catalogue.py`, then `runner.py` |
 | `conversations/` | what the tutor and the chat share: store, daily count, quiet stream, route half | `store.py` |
 | `cli/` | the `system` command | `main.py` |
@@ -247,7 +247,7 @@ there.
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
-| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/`, `routers/auth.py`, `routers/workspaces.py`, `db/identity.py`, `features.py`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/test_invite_*`, `tests/server/test_workspace_*`, `tests/server/test_login_rate_limit.py` |
+| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `routers/workspaces.py`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/test_invite_*`, `tests/server/test_workspace_*`, `tests/server/test_login_rate_limit.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `routers/admin.py`, `routers/admin_engine.py`, `routers/config.py`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/test_admin_*`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
 
@@ -309,7 +309,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **Identity and roles.** Own accounts and sessions (`server/auth/`), invitation-only. Every
   route checks a membership row: `auth.VIEW`, `EDIT` or `MANAGE` (`server/auth/deps.py`); the
   administrator's bypass lives there alone. An optional function adds its own guard
-  (`server/features.py`).
+  (`server/auth/features.py`).
 - **Model calls.** One boundary, `variatio/core/inference.py` (`generate()`, `embed()`,
   `embed_batch()`), over two engines: `core/ollama.py` (local) and `core/cerebras.py` (hybrid).
   Business code never calls an SDK; the evaluation's naive arm alone calls commercial APIs

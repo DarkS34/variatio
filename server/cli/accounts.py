@@ -14,14 +14,14 @@ def create_user(args) -> int:
     it, and belonging to none is a normal state.
     """
     from ..auth import passwords
-    from ..db import session_scope
-    from ..db.identity import (
+    from ..auth.queries import (
         create_user as insert,
         get_user,
         grant,
         normalise_username,
         username_error,
     )
+    from ..db import session_scope
     from ..db.models import TEACHER, VIA_CLI
     from ..db.repository import ensure_workspace
 
@@ -97,8 +97,8 @@ def _ask_password(args) -> str | None:
 
 def list_users(_args) -> int:
     """Print every account with its roles, its flags and its profile."""
+    from ..auth.queries import list_users as rows_of, memberships_for
     from ..db import session_scope
-    from ..db.identity import list_users as rows_of, memberships_for
 
     with session_scope() as session:
         users = rows_of(session)
@@ -119,8 +119,8 @@ def list_users(_args) -> int:
 
 def grant_role(args) -> int:
     """Give an account a role in a workspace, or name whichever of the two is missing."""
+    from ..auth.queries import get_user, grant
     from ..db import session_scope
-    from ..db.identity import get_user, grant
     from ..db.models import VIA_CLI
     from ..db.repository import get_workspace
 
@@ -148,9 +148,9 @@ def invite(args) -> int:
     from datetime import timedelta
 
     from ..auth import links
+    from ..auth.queries import batch_labels, label_error, normalise_label, now
     from ..core.environment import INVITE_BATCH_MAX, public_base_url
     from ..db import session_scope
-    from ..db.identity import batch_labels, label_error, normalise_label, now
     from ..db.repository import get_workspace
 
     if args.days <= 0:
@@ -216,6 +216,7 @@ def class_link(args) -> int:
     from datetime import timedelta
 
     from ..auth import links
+    from ..auth.queries import live_class_link, now, revoke_class_link
     from ..core.environment import (
         CLASS_LINK_DEFAULT_DAYS,
         CLASS_LINK_DEFAULT_SEATS,
@@ -224,7 +225,6 @@ def class_link(args) -> int:
         public_base_url,
     )
     from ..db import session_scope
-    from ..db.identity import live_class_link, now, revoke_class_link
     from ..db.repository import get_workspace
 
     seats = CLASS_LINK_DEFAULT_SEATS if args.seats is None else args.seats

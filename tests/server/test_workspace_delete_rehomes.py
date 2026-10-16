@@ -16,8 +16,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server.auth import deps as auth_deps
+from server.auth import queries
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import Base, EDITOR
 from server.routers.admin import delete_workspace
 
@@ -43,16 +44,16 @@ def _workspace(db, slug: str):
 # The route reports where the CALLER lands, so it needs one — every test here is about the
 # accounts that were inside the instance, and this administrator is a member of none of them.
 def _admin(db):
-    user = identity.create_user(db, username="root", name="root", password_hash="x")
+    user = queries.create_user(db, username="root", name="root", password_hash="x")
     user.is_admin = True
     db.flush()
     return user
 
 
 def _account(db, username: str, workspaces: list, active=None):
-    user = identity.create_user(db, username=username, name=username, password_hash="x")
+    user = queries.create_user(db, username=username, name=username, password_hash="x")
     for workspace in workspaces:
-        identity.grant(db, workspace.id, user.id, EDITOR)
+        queries.grant(db, workspace.id, user.id, EDITOR)
     user.active_workspace_id = (active or workspaces[0]).id if workspaces or active else None
     db.flush()
     return user
@@ -101,7 +102,7 @@ def test_only_the_accounts_that_were_inside_it_are_moved(db):
 def test_an_administrator_with_no_membership_lands_nowhere_either(db):
     aula = _workspace(db, "aula")
     taller = _workspace(db, "taller")
-    jefa = identity.create_user(db, username="jefa", name="jefa", password_hash="x")
+    jefa = queries.create_user(db, username="jefa", name="jefa", password_hash="x")
     jefa.is_admin = True
     jefa.active_workspace_id = taller.id
     db.flush()
@@ -129,8 +130,8 @@ def test_the_answer_says_where_the_caller_itself_lands(db):
     aula = _workspace(db, "aula")
     taller = _workspace(db, "taller")
     root = _admin(db)
-    identity.grant(db, aula.id, root.id, EDITOR)
-    identity.grant(db, taller.id, root.id, EDITOR)
+    queries.grant(db, aula.id, root.id, EDITOR)
+    queries.grant(db, taller.id, root.id, EDITOR)
     root.active_workspace_id = taller.id
     db.flush()
 

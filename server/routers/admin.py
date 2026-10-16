@@ -25,13 +25,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from consumers.evaluation.api import store as evaluation_store
 
-from .. import approvals, auth, features, members, singletons, storage
+from .. import approvals, auth, members, singletons, storage
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
-from ..auth import links
+from ..auth import features, links, queries
 from ..auth.rate_limit import locked_seconds, throttle, unlock
 from ..core import contexts, environment, installation, maintenance
-from ..db import identity, repository
+from ..db import repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace
 from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
@@ -50,7 +50,7 @@ class InviteTerms(BaseModel):
     `workspace` may be absent — an invitation granting no membership creates an account
     and no access, which is the honest way to add somebody who will be given a workspace
     later. `features` lists the new account for the optional functions named
-    (`server/features.py`), which is access too. `profile` is what the account will be, a
+    (`server/auth/features.py`), which is access too. `profile` is what the account will be, a
     teacher or a student, and it is REQUIRED: nobody asks the person registering, and no
     default is presumed for them — a teacher creates subjects. An absent `expires_at` is
     the installation's default week, and a chosen one has no upper bound; `label` is the
@@ -162,12 +162,12 @@ def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) 
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "workspaces": [
             {"slug": w.slug, "role": m.role, "disabled": not m.active}
-            for m, w in identity.memberships_for(db, user.id, include_disabled=True)
+            for m, w in queries.memberships_for(db, user.id, include_disabled=True)
         ],
         "generations": generated.get(user.id, 0),
         "evaluations": by_account.get(user.id, {}).get("sessions", 0),
         "decided": by_account.get(user.id, {}).get("decided", 0),
-        "sessions": identity.count_live_sessions(db, user.id),
+        "sessions": queries.count_live_sessions(db, user.id),
         "locked_seconds": locked_seconds("login", user.username),
         "email": user.email,
     }
@@ -184,7 +184,7 @@ def _workspace_view(db: DbSession, workspace) -> dict:
         "slug": workspace.slug,
         "name": workspace.name,
         "created_at": workspace.created_at.isoformat() if workspace.created_at else None,
-        "members": len(identity.members_of(db, workspace.id)),
+        "members": len(queries.members_of(db, workspace.id)),
         # Who owns it and how many study in it: a subject with nobody to own it is the one
         # thing on this row that asks for the administrator («Elegir propietario»).
         "owners": [
@@ -203,7 +203,7 @@ def _workspace_view(db: DbSession, workspace) -> dict:
 def overview(db: DbSession = Depends(auth.db)) -> dict:
     """Answer the whole panel: totals, every account, every instance and the queue."""
     workspaces = repository.list_workspaces(db)
-    users = identity.list_users(db)
+    users = queries.list_users(db)
     trees = [installation.workspace_for(workspace.slug) for workspace in workspaces]
     generated = generations_store.count_by_author(trees)
     headers = evaluation_store.headers(db)
@@ -244,8 +244,8 @@ def invites(db: DbSession = Depends(auth.db)) -> dict:
     Expired ones stay because a date can be moved, and the same link works again once it
     is. What a row never carries is its link: that is a request of its own, and a logged one.
     """
-    moment = identity.now()
-    return {"invites": [_invite(db, row, moment) for row in identity.unused_invites(db)]}
+    moment = queries.now()
+    return {"invites": [_invite(db, row, moment) for row in queries.unused_invites(db)]}
 
 
 @router.post("/invites", status_code=201)
@@ -271,7 +271,7 @@ def create_invite(
     throttle("invite", request, admin.username, cost=body.count)
     terms = _terms(db, body)
     try:
-        labels = identity.batch_labels(db, terms.label, body.count)
+        labels = queries.batch_labels(db, terms.label, body.count)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -319,7 +319,7 @@ def import_invite(
     throttle("invite", request, admin.username)
     terms = _terms(db, body)
 
-    existing = identity.invite_by_digest(db, auth.digest(token))
+    existing = queries.invite_by_digest(db, auth.digest(token))
     if existing is not None:
         if existing.used_at is not None:
             raise HTTPException(
@@ -329,7 +329,7 @@ def import_invite(
         if links.unseal(existing.token_sealed, existing.token_hash) is None:
             sealed = links.seal(token)
             if sealed is not None:
-                identity.edit_invite(db, existing, token_sealed=sealed)
+                queries.edit_invite(db, existing, token_sealed=sealed)
                 outcome = "recovered"
         logger.info(
             "[invitaciones] {} ha pegado el enlace de la invitación {} ({})",
@@ -416,7 +416,7 @@ def edit_invite(
         changes["features"] = _features(body.features)
     if "profile" in sent:
         changes["profile"] = _profile(body.profile)
-    identity.edit_invite(db, invite, **changes)
+    queries.edit_invite(db, invite, **changes)
     if changes:
         logger.info(
             "[invitaciones] {} ha cambiado la invitación {}: {}",
@@ -437,7 +437,7 @@ def revoke_invite(
     invite = db.get(Invite, invite_id)
     if invite is None:
         raise HTTPException(404, "Esa invitación no existe.")
-    revoked = identity.revoke_invite(db, invite_id)
+    revoked = queries.revoke_invite(db, invite_id)
     if revoked:
         logger.info("[invitaciones] {} ha anulado la invitación {}", admin.username, invite_id)
     return {"revoked": revoked}
@@ -452,8 +452,8 @@ def revoke_invite(
 @router.get("/class-links")
 def class_links(db: DbSession = Depends(auth.db)) -> dict:
     """List every live class link: its subject, seats, expiry, pause and who minted it."""
-    moment = identity.now()
-    return {"class_links": [_class_link(db, link, moment) for link in identity.class_links(db)]}
+    moment = queries.now()
+    return {"class_links": [_class_link(db, link, moment) for link in queries.class_links(db)]}
 
 
 @router.patch("/class-links/{link_id}")
@@ -465,7 +465,7 @@ def pause_class_link(
 ) -> dict:
     """Pause a subject's class link, or resume it."""
     link = _live_class_link(db, link_id)
-    identity.edit_class_link(db, link, paused_at=identity.now() if body.paused else None)
+    queries.edit_class_link(db, link, paused_at=queries.now() if body.paused else None)
     logger.info(
         "[invitaciones] {} ha {} el enlace de clase de «{}»",
         admin.username,
@@ -483,7 +483,7 @@ def revoke_class_link(
 ) -> dict:
     """Retire a subject's class link: it stops working, and whoever entered through it stays."""
     link = _live_class_link(db, link_id)
-    identity.revoke_class_link(db, link)
+    queries.revoke_class_link(db, link)
     logger.info("[invitaciones] {} ha retirado el enlace de clase de «{}»", admin.username, link.workspace.slug)
     return {"revoked": link.id}
 
@@ -495,15 +495,15 @@ def grant_membership(
     """Let one account into one instance, with a role."""
     if body.role not in ROLES:
         raise HTTPException(422, f"Rol desconocido: '{body.role}'.")
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     workspace = repository.get_workspace(db, body.workspace)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{body.workspace}'.")
 
-    if identity.membership(db, workspace.id, user.id) is None:
-        identity.grant(db, workspace.id, user.id, body.role, via=VIA_ADMIN)
+    if queries.membership(db, workspace.id, user.id) is None:
+        queries.grant(db, workspace.id, user.id, body.role, via=VIA_ADMIN)
     else:
         try:
             members.change_role(db, workspace, user, body.role)
@@ -522,7 +522,7 @@ def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db
     nothing, a word nobody knows — is refused with `profile_only_climbs`. Raising a teacher
     changes nothing and is not an error.
     """
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     if body.evaluator_profile != TEACHER:
@@ -532,7 +532,7 @@ def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db
             headers={"X-Error-Code": PROFILE_ONLY_CLIMBS},
         )
     if user.evaluator_profile != TEACHER:
-        identity.set_evaluator_profile(db, user, TEACHER)
+        queries.set_evaluator_profile(db, user, TEACHER)
         logger.info("[cuentas] «{}» pasa a ser docente", user.username)
     return {"user_id": user.id, "evaluator_profile": user.evaluator_profile}
 
@@ -553,8 +553,8 @@ def revoke_membership(
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    user = identity.get_user_by_id(db, user_id)
-    if user is not None and identity.membership(db, workspace.id, user.id) is not None:
+    user = queries.get_user_by_id(db, user_id)
+    if user is not None and queries.membership(db, workspace.id, user.id) is not None:
         try:
             members.remove_member(db, workspace, user, admin)
         except members.Refusal as refusal:
@@ -573,8 +573,8 @@ def enable_membership(
     workspace = repository.get_workspace(db, slug)
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
-    user = identity.get_user_by_id(db, user_id)
-    if user is None or identity.membership(db, workspace.id, user.id) is None:
+    user = queries.get_user_by_id(db, user_id)
+    if user is None or queries.membership(db, workspace.id, user.id) is None:
         raise HTTPException(404, "Esa cuenta no está en esa asignatura.")
     try:
         members.enable_member(db, workspace, user, admin)
@@ -757,7 +757,7 @@ def workspace_generations(
     if repository.get_workspace(db, slug) is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
     ws = installation.workspace_for(slug)
-    accounts = {user.id: user for user in identity.list_users(db)}
+    accounts = {user.id: user for user in queries.list_users(db)}
     pairs, total = generations_store.list_all(
         ws, author=author, query=q, limit=limit, offset=offset
     )
@@ -850,20 +850,20 @@ def disable(
     user_id: int, admin: User = Depends(auth.require_admin), db: DbSession = Depends(auth.db)
 ) -> dict:
     """Shut the door on one account, revoking its sessions, without deleting anything."""
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     if user.id == admin.id:
         raise HTTPException(409, "No puedes desactivar tu propia cuenta.")
-    user.disabled_at = identity.now()
-    identity.revoke_all_sessions(db, user.id)
+    user.disabled_at = queries.now()
+    queries.revoke_all_sessions(db, user.id)
     return {"disabled": user_id}
 
 
 @router.post("/accounts/{user_id}/enable")
 def enable(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
     """Let a disabled account back in."""
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     user.disabled_at = None
@@ -882,14 +882,14 @@ def delete_account(
     is `SET NULL`, so deleting somebody must not delete the material a course was built on. Deleting yourself is refused, which is also what keeps
     the installation from losing its last administrator.
     """
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     if user.id == admin.id:
         raise HTTPException(409, "No puedes borrar tu propia cuenta.")
 
     username = user.username
-    identity.delete_user(db, user)
+    queries.delete_user(db, user)
     return {"deleted": user_id, "username": username}
 
 
@@ -907,7 +907,7 @@ def set_admin(
     administrator is a teacher: granting it raises the profile, which only climbs, so
     withdrawing it leaves the teacher a teacher.
     """
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     if user.id == admin.id and not body.is_admin:
@@ -926,13 +926,13 @@ def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db))
     With no SMTP the only route to a locked-out person is by hand, and this is where the
     administrator already is. It is issued, not sent, and it expires like any other.
     """
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     if not user.active:
         raise HTTPException(409, "La cuenta está desactivada: reactívala antes.")
     token = auth.new_token()
-    identity.create_reset(db, user.id, auth.digest(token), environment.RESET_TTL)
+    queries.create_reset(db, user.id, auth.digest(token), environment.RESET_TTL)
     return {
         "user_id": user.id,
         "link": f"{auth.base_url(request)}/reset?token={token}",
@@ -943,16 +943,16 @@ def reset_link(user_id: int, request: Request, db: DbSession = Depends(auth.db))
 @router.delete("/accounts/{user_id}/sessions")
 def revoke_sessions(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
     """Log one account out everywhere without touching the account itself."""
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
-    return {"user_id": user.id, "revoked": identity.revoke_all_sessions(db, user.id)}
+    return {"user_id": user.id, "revoked": queries.revoke_all_sessions(db, user.id)}
 
 
 @router.post("/accounts/{user_id}/unlock")
 def unlock_login(user_id: int, db: DbSession = Depends(auth.db)) -> dict:
     """Clear the login rate limiter for one account. Its key only, never the IP's."""
-    user = identity.get_user_by_id(db, user_id)
+    user = queries.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(404, "Esa cuenta no existe.")
     unlock("login", user.username)
@@ -1005,7 +1005,7 @@ def set_feature(
             422, f"Modo desconocido: '{body.mode}'. Usa uno de {', '.join(features.MODES)}."
         )
     if body.accounts is not None:
-        missing = [uid for uid in body.accounts if identity.get_user_by_id(db, uid) is None]
+        missing = [uid for uid in body.accounts if queries.get_user_by_id(db, uid) is None]
         if missing:
             raise HTTPException(
                 422, f"No existe la cuenta {', '.join(str(uid) for uid in missing)}."
@@ -1093,7 +1093,7 @@ def _role(role: str | None) -> str:
 
 def _class_link(db: DbSession, link: ClassLink, moment: datetime) -> dict:
     """Render a class link for the panel: its subject and group, how full it is, who minted it."""
-    author = identity.get_user_by_id(db, link.created_by) if link.created_by else None
+    author = queries.get_user_by_id(db, link.created_by) if link.created_by else None
     group = db.get(ClassGroup, link.group_id) if link.group_id is not None else None
     return {
         "id": link.id,
@@ -1124,7 +1124,7 @@ def _refused(refusal: members.Refusal) -> HTTPException:
 
 def _profile(profile: str | None) -> str:
     """Accept what the account an invitation creates will be: a teacher or a student."""
-    error = identity.profile_error(profile)
+    error = queries.profile_error(profile)
     if error:
         raise HTTPException(422, error)
     return profile
@@ -1148,7 +1148,7 @@ def _expiry(value: datetime | None) -> datetime:
     A moment with no zone is read as UTC. The clock may be naive too — SQLite in the test
     suite keeps no offset — and then the moment is compared, and stored, as naive UTC.
     """
-    moment = identity.now()
+    moment = queries.now()
     if value is None:
         return moment + environment.INVITE_TTL
     if value.tzinfo is None:
@@ -1162,8 +1162,8 @@ def _expiry(value: datetime | None) -> datetime:
 
 def _label(label: str | None) -> str | None:
     """Fold an alias to what is stored, refusing one that does not fit."""
-    label = identity.normalise_label(label)
-    error = identity.label_error(label)
+    label = queries.normalise_label(label)
+    error = queries.label_error(label)
     if error:
         raise HTTPException(422, error)
     return label
@@ -1196,8 +1196,8 @@ def _link(request: Request, token: str) -> str:
 def _invite(db: DbSession, invite: Invite, moment: datetime | None = None) -> dict:
     """Render one invitation for the panel. Never its token, sealed or not — that is `/link`."""
     workspace = invite.workspace
-    author = identity.get_user_by_id(db, invite.created_by) if invite.created_by else None
-    moment = moment if moment is not None else identity.now()
+    author = queries.get_user_by_id(db, invite.created_by) if invite.created_by else None
+    moment = moment if moment is not None else queries.now()
     return {
         "id": invite.id,
         "label": invite.label,

@@ -17,14 +17,13 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server import auth, features
-from server.auth import passwords, rate_limit
+from server import auth
+from server.auth import features, passwords, queries, rate_limit
 from server.auth.deps import require_feature
-from server.db import identity
+from server.auth.router import AcceptBody, _me, accept_invite
 from server.db.models import Base
 from server.routers import admin as admin_routes
 from server.routers.admin import FeatureBody, InviteBody, InviteEditBody
-from server.routers.auth import AcceptBody, _me, accept_invite
 
 IP = "10.0.0.3"
 
@@ -37,7 +36,7 @@ def db(monkeypatch):
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
     monkeypatch.setattr(
-        identity, "now", lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+        queries, "now", lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     yield session
@@ -53,7 +52,7 @@ def forget_the_attempts():
 
 
 def _user(db, username: str, is_admin: bool = False):
-    return identity.create_user(
+    return queries.create_user(
         db, username=username, name=username, password_hash="x", is_admin=is_admin
     )
 
@@ -238,7 +237,7 @@ def _redeem(db, link: str, username: str):
         Response(),
         session=db,
     )
-    return identity.get_user(db, username)
+    return queries.get_user(db, username)
 
 
 def test_an_invitation_lists_the_new_account_for_the_functions_it_names(db):

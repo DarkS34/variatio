@@ -18,13 +18,13 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.auth import passwords, rate_limit
-from server.db import identity, repository
+from server.auth import passwords, queries, rate_limit
+from server.auth.router import AcceptBody, accept_invite, preview_invite
+from server.db import repository
 from server.db.models import Base
 from server.routers import admin as admin_routes
 from server.routers import workspaces as workspace_routes
 from server.routers.admin import InviteBody, InviteEditBody, ProfileBody
-from server.routers.auth import AcceptBody, accept_invite, preview_invite
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def db(monkeypatch):
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
     # SQLite drops the offset Postgres keeps; every link below is far from expiring.
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     monkeypatch.setattr(passwords, "hash_password", lambda password: "hashed")
     yield session
     session.close()
@@ -43,7 +43,7 @@ def db(monkeypatch):
 
 @pytest.fixture
 def admin(db):
-    return identity.create_user(
+    return queries.create_user(
         db, username="admin", name="admin", password_hash="x", is_admin=True,
         evaluator_profile="teacher",
     )
@@ -87,7 +87,7 @@ def _register(db, link: str, username: str, **sent):
         Response(),
         session=db,
     )
-    return identity.get_user(db, username)
+    return queries.get_user(db, username)
 
 
 # THE INVITATION SETS IT ------------------------------------------------------------------------
@@ -120,7 +120,7 @@ def test_an_invitation_without_a_profile_is_refused(db, admin):
         _invite(db, admin)
 
     assert refused.value.status_code == 422
-    assert identity.unused_invites(db) == []
+    assert queries.unused_invites(db) == []
 
 
 def test_an_invitation_with_an_unknown_profile_is_refused(db, admin):
@@ -152,7 +152,7 @@ def test_an_invitation_minted_without_saying_is_a_students():
 
 
 def _account(db, username: str, profile: str | None):
-    return identity.create_user(
+    return queries.create_user(
         db, username=username, name=username, password_hash="x", evaluator_profile=profile
     )
 
@@ -208,7 +208,7 @@ def test_a_teacher_creates_a_subject(db):
 
     assert created["workspace"]["slug"] == "prog-uno"
     workspace = repository.get_workspace(db, "prog-uno")
-    assert identity.membership(db, workspace.id, docente.id).via == "owner"
+    assert queries.membership(db, workspace.id, docente.id).via == "owner"
 
 
 @pytest.mark.parametrize("profile", ["student", None])
@@ -235,7 +235,7 @@ def test_a_membership_remembers_the_invitation_and_who_minted_it(db, admin):
     link = _invite(db, admin, profile="student", workspace="aula", role="viewer")["link"]
 
     alumna = _register(db, link, "alumna")
-    row = identity.membership(db, workspace.id, alumna.id)
+    row = queries.membership(db, workspace.id, alumna.id)
 
     assert (row.role, row.via, row.invited_by) == ("viewer", "invite", admin.id)
     assert row.disabled_at is None

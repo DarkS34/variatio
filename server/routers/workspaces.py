@@ -32,8 +32,9 @@ from variatio.loaders import locale
 from .. import auth, members, singletons
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
+from ..auth import queries
 from ..core import contexts, installation
-from ..db import identity, repository
+from ..db import repository
 from ..db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
@@ -78,7 +79,7 @@ def listing(
     A membership a teacher paused is listed too, marked `disabled`: «Mis asignaturas» shows
     it among the subjects one studies, with its access closed, and nothing enters it.
     """
-    rows = identity.memberships_for(db, user.id, include_disabled=True)
+    rows = queries.memberships_for(db, user.id, include_disabled=True)
     mine = {workspace.id: membership.role for membership, workspace in rows}
     paused = {workspace.id for membership, workspace in rows if not membership.active}
     current = auth.current_workspace_for(db, user)
@@ -146,7 +147,7 @@ def create(
     workspace = repository.create_workspace(
         db, slug, body.name.strip() or slug, prompt_language=body.prompt_language
     )
-    identity.grant(db, workspace.id, user.id, OWNER, via=VIA_OWNER)
+    queries.grant(db, workspace.id, user.id, OWNER, via=VIA_OWNER)
     user.active_workspace_id = workspace.id
 
     # The directory tree before the row is usable: every screen of a brand-new workspace
@@ -170,7 +171,7 @@ def activate(
     if workspace is None:
         raise HTTPException(404, f"No existe la asignatura '{slug}'.")
 
-    membership = identity.membership(db, workspace.id, user.id)
+    membership = queries.membership(db, workspace.id, user.id)
     if membership is None and not user.is_admin:
         raise HTTPException(
             403,
@@ -222,7 +223,7 @@ def remove(
     # it" and not "does it have members" — a paused member included, whose files are there.
     others = [
         m
-        for m, _ in identity.members_of(db, access.workspace.id, include_disabled=True)
+        for m, _ in queries.members_of(db, access.workspace.id, include_disabled=True)
         if m.user_id != access.user.id
     ]
     removed = False
@@ -285,7 +286,7 @@ def leave(
     # An administrator reaches every instance through the bypass and usually holds no row
     # at all. There is nothing for them to leave, and deleting somebody else's workspace
     # from this route would be a different act wearing this one's name.
-    membership = identity.membership(db, workspace.id, user.id)
+    membership = queries.membership(db, workspace.id, user.id)
     if membership is None:
         raise HTTPException(
             409,
@@ -295,7 +296,7 @@ def leave(
 
     others = [
         m
-        for m, _ in identity.members_of(db, workspace.id, include_disabled=True)
+        for m, _ in queries.members_of(db, workspace.id, include_disabled=True)
         if m.user_id != user.id
     ]
     ws = installation.workspace_for(slug)

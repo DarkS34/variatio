@@ -209,7 +209,7 @@ class User(Base):
     is optional and only ever a delivery address for a link; `unique=True` on a nullable
     column is exactly what is wanted, since Postgres lets many rows be NULL and still
     refuses two accounts with the same address. A plain string rather than `citext`:
-    `identity.normalise_username` is the one door an identifier enters or is looked up
+    `auth/queries.normalise_username` is the one door an identifier enters or is looked up
     through, which answers the same question without an extension SQLite could not run.
 
     `evaluator_profile` (`teacher` / `student`) is the account's profile: what its invitation
@@ -326,8 +326,8 @@ class Invite(Base):
     There is no open registration — an account exists because the installation's
     administrator issued one of these, or because it was the first and came from the CLI.
 
-    `features` names the optional functions (`server/features.py`) the account is listed for
-    the moment it registers, and `profile` what the account will be — a teacher or a student;
+    `features` names the optional functions (`server/auth/features.py`) the account is listed
+    for the moment it registers, and `profile` what the account will be — a teacher or a student;
     the person registering is never asked. `label` is the administrator's own name for it and never reaches
     the person holding the link. `token_sealed` is the token encrypted with a key kept outside the database
     (`server/auth/links.py`), so the panel can show the link again; it is emptied the
@@ -575,8 +575,8 @@ class StageEvaluation(Base):
 class FeatureAccess(Base):
     """Who an optional function of the installation is open to: nobody, everybody or a list.
 
-    One row per function (`server/features.py`); a function with no row is off. The list of a
-    `selected` function is `FeatureGrant`, kept whatever the mode, so switching to everybody
+    One row per function (`server/auth/features.py`); a function with no row is off. The list
+    of a `selected` function is `FeatureGrant`, kept whatever the mode, so switching to everybody
     and back does not lose it.
     """
 

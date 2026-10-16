@@ -70,7 +70,7 @@ export const USES = [
   key: string;
   path: string;
   labelKey: Key;
-  /** The optional function the door belongs to (`server/features.py`), or null for the
+  /** The optional function the door belongs to (`server/auth/features.py`), or null for the
    *  product's own. The evaluation's is drawn in `--evaluation`, the tutor's in `--tutor`. */
   feature: null | keyof Features;
 }[];

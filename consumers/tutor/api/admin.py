@@ -11,8 +11,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DbSession
 
 from server import auth
+from server.auth import queries
 from server.core import installation
-from server.db import identity, repository
+from server.db import repository
 
 from . import store
 
@@ -33,7 +34,7 @@ def conversations(
 ) -> dict:
     """Answer one page of every conversation held in this workspace, with its author."""
     ws = _workspace(slug, db)
-    accounts = {user.id: user for user in identity.list_users(db)}
+    accounts = {user.id: user for user in queries.list_users(db)}
     pairs = store.list_all(ws, author=author)
     return {
         "workspace": slug,
@@ -55,7 +56,7 @@ def conversation(slug: str, author_id: int, conversation_id: str, db: DbSession 
     record = store.get(ws, author_id, conversation_id)
     if record is None:
         raise HTTPException(404, "Esa conversación no existe.")
-    accounts = {user.id: user for user in identity.list_users(db)}
+    accounts = {user.id: user for user in queries.list_users(db)}
     return {**_row(record), "author": _author(author_id, accounts), "turns": record.get("turns") or []}
 
 

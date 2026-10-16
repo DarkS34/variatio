@@ -8,7 +8,7 @@ package: that is what keeps `import consumers.chat` free of FastAPI and SQLAlche
 def install(app) -> None:
     """Register the chat's turn, its lane and its function, and mount its router."""
     from server import activity as class_activity
-    from server import features
+    from server.auth import features
     from server.jobs import lanes
     from server.jobs.catalogue import (
         FEATURE_OF,

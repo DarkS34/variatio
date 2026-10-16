@@ -12,7 +12,7 @@ package: that is what keeps `import tutor` free of FastAPI and SQLAlchemy.
 def install(app) -> None:
     """Register the tutor's three jobs, their lanes and their function, and mount its routers."""
     from server import activity as class_activity
-    from server import features
+    from server.auth import features
     from server.jobs import lanes
     from server.jobs.catalogue import (
         BACKGROUND,

@@ -24,9 +24,10 @@ from consumers.chat import turn as chat_turn
 from consumers.chat.api import jobs, router as router_module, usage
 from consumers.chat.api.store import STORE
 from consumers.tutor.api import store as tutor_store
-from server import auth, bank_marks, features, groups, singletons
+from server import auth, bank_marks, groups, singletons
+from server.auth import features, queries
 from server.auth.deps import Access
-from server.db import identity, repository
+from server.db import repository
 from server.db.models import OWNER, VIEWER, Base
 from server.editors import bank_edit
 from server.jobs.bus import EventBus
@@ -58,7 +59,7 @@ def db(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)()
-    monkeypatch.setattr(identity, "now", datetime.now)
+    monkeypatch.setattr(queries, "now", datetime.now)
     yield session
     session.close()
 
@@ -69,11 +70,11 @@ def aula(db, tmp_path):
     workspace = repository.ensure_workspace(db, "aula", "Aula")
     people = {}
     for username, role in (("ana", OWNER), ("sara", VIEWER)):
-        user = identity.create_user(
+        user = queries.create_user(
             db, username=username, name=username, password_hash="x",
             evaluator_profile="teacher" if role == OWNER else "student",
         )
-        identity.grant(db, workspace.id, user.id, role)
+        queries.grant(db, workspace.id, user.id, role)
         people[username] = user
     db.flush()
     ws = Workspace(tmp_path / "aula", "aula")
