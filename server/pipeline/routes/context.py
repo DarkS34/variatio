@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 
 from variatio.loaders.content_context import CANONICAL_KEYS
 
-from .. import auth
-from ..editors import context_edit
+from ... import auth
+from .. import context_edit
 
 router = APIRouter(prefix="/api/context", tags=["context"], dependencies=[auth.VIEW])
 

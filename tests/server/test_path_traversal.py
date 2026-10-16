@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from server import app as app_module
-from server import storage
 from server.core import environment
+from server.pipeline import storage
 from variatio.core.workspace import Workspace
 
 

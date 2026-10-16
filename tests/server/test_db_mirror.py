@@ -6,9 +6,9 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import approvals, storage
 from server.db import Approval, Artifact, Base, instance_io, repository
 from server.db import mirror
+from server.pipeline import approvals, storage
 from variatio.core.workspace import Workspace
 
 GRAPH = {"concepts_by_domains": {"D": ["A"]}, "relations": []}

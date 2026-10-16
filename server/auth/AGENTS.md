@@ -54,7 +54,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   `role_too_low` for a student, a student's `force` is ignored (here and on
   `POST /api/evaluation`), and a student cancels their own jobs only. The evaluation's own
   routes are `auth.VIEW` + `auth.EVALUATION`, and a student deletes their own exercises.
-  `tests/server/test_route_roles.py` reads every mounted route and pins the level it
+  `tests/server/auth/test_route_roles.py` reads every mounted route and pins the level it
   declares against a table: a route with no row fails.
 - CSRF is an origin check (`core/middleware.py`); CORS off by default. Rate limiting is in memory,
   keyed by IP and account. **A school's network counts the account alone** (decided

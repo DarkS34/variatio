@@ -3,7 +3,7 @@ from variatio.runtime import screening
 
 
 def test_the_scope_payload_carries_slots_owners_and_facts(graph, profile, context):
-    from server.routers.pipeline import _scope_payload
+    from server.pipeline.routes.pipeline import _scope_payload
 
     payload = _scope_payload(graph, profile, context, "ejercicio", wording.of("es"))
     assert [s["key"] for s in payload["slots"]] == [s.key for s in screening.catalog()]

@@ -2,11 +2,11 @@ import json
 
 import pytest
 
-from server import approvals
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import HANDLERS, JOB_ARTIFACT, Job
 from server.jobs.runner import JobRunner
-from server.approvals import Approvals
+from server.pipeline import approvals
+from server.pipeline.approvals import Approvals
 from variatio.core.workspace import Workspace
 
 BANK = {"C001": {"enunciado": "Suma dos números.", "item_type": "ejercicio"}}
@@ -22,6 +22,10 @@ def ws(tmp_path):
 
 @pytest.fixture
 def runner(monkeypatch):
+    """A queue with the construction's kinds, which join `HANDLERS` when the app is made."""
+    from server.pipeline import jobs as handlers
+
+    handlers.install()
     return JobRunner(EventBus(), HANDLERS)
 
 
@@ -58,7 +62,7 @@ def test_retagging_keeps_a_closed_bank_closed_and_a_draft_a_draft(monkeypatch, w
     """Tagging is the system's derivation: it seals a closed bank again, never opens one."""
     from types import SimpleNamespace
 
-    from server.jobs import handlers
+    from server.pipeline import jobs as handlers
 
     if closed:
         Approvals(ws).approve(approvals.EXEMPLARS_BANK)

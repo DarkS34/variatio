@@ -15,8 +15,9 @@ import { isQueued } from "@/lib/queue";
  * and the bank are ONE step in two parts — the types first, then the exercises collected with
  * them — so a step names the artifact its screen is about (`artifact`) and every artifact it
  * closes (`artifacts`): step 3 is done only with both closed. «Recoger el banco» closes the
- * types, and the collection closes the bank once it is indexed (`server/jobs/chain.CLOSES`),
- * so the step is done as soon as the bank is ready, with no press after it.
+ * types, and the collection closes the bank once it is indexed
+ * (`server/pipeline/chain.CLOSES`), so the step is done as soon as the bank is ready, with no
+ * press after it.
  */
 export const STEPS = [
   { path: "/raw", labelKey: "nav.step.raw", artifact: null, artifacts: [] },
@@ -249,7 +250,7 @@ export function stepBusy(stages: StageState[], jobs: Job[]): boolean[] {
 
 /**
  * Whether a job with no artifact of its own is part of a step's work: the taggability review
- * heads the bank's collection (`server/jobs/chain.py`), and the pipeline marks the bank as
+ * heads the bank's collection (`server/pipeline/chain.py`), and the pipeline marks the bank as
  * building from the moment it starts.
  */
 function chainOf(step: (typeof STEPS)[number], job: Job): boolean {

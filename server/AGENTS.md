@@ -4,7 +4,8 @@ Read the root `AGENTS.md` first. The closed decisions are numbered in the root `
 Rules for the server outside its subpackages: the database, how a request finds its subject,
 the build chain and approvals, the generated exercises, the curriculum and the class activity.
 What every area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the subjects of an
-account `workspaces/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share `conversations/AGENTS.md`, and the
+account `workspaces/AGENTS.md`, the build chain `pipeline/AGENTS.md`, the queue
+`jobs/AGENTS.md`, what the tutor and the chat share `conversations/AGENTS.md`, and the
 transcription `variatio/documents/AGENTS.md`.
 
 
@@ -12,17 +13,19 @@ transcription `variatio/documents/AGENTS.md`.
 
 - `server/routing.py` holds `ROUTERS`, the order the server's own routers are mounted in,
   and is the one module that imports a route module (an import contract; the functions'
-  imports of `routers/jobs.py`, `exercises.py`, `bank.py` and `pipeline.py` are named
-  exceptions that leave with the server's areas). The route comparison of a phase reads
+  imports of `routers/exercises.py` and `routers/bank.py` are named exceptions that leave
+  with the bank's area). The route comparison of a phase reads
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`,
-  `cli/`), `routers/`, `auth/` and `workspaces/` (neither imports the other), then `jobs/`, `conversations/` and `generations.py`, then
+  `cli/`), `routers/`, `pipeline/`, `auth/` and `workspaces/` (neither imports the other),
+  then `jobs/`, `conversations/` and `generations.py`, then
   `core/`, then `db/`; each imports only what is below it. A route module is a leaf and may
   import any layer; the modules still at the root are outside the order until their area
   exists.
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
   `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
-  construction's handlers join `HANDLERS` when `jobs/handlers.py` is imported.
+  construction's handlers join `HANDLERS` at `pipeline/jobs.install()`, which `app.py` calls
+  as it installs each function.
 
 ## Database (`server/db/`)
 
@@ -38,8 +41,9 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 - Artifacts are versioned rows keyed `(workspace, kind, stage, version)`; an unchanged hash
   reuses the existing row.
 - **Reads come from files; writes are mirrored best-effort** (`server/db/mirror.py`) at three
-  hooks: `storage.write_json`, `jobs/handlers._build`, `Approvals.approve/reopen`. A DB
-  failure is one warning, never an exception. `.review_state.json` is the operational truth.
+  hooks: `pipeline/storage.write_json`, `pipeline/jobs._build`, `Approvals.approve/reopen`. A
+  DB failure is one warning, never an exception. `.review_state.json` is the operational
+  truth.
 - `import_instance`/`export_instance` round-trip byte-identically; approval hashes are
   re-derived, never trusted.
 
@@ -77,58 +81,11 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 
 ## Build chain and approvals
 
-- `approvals.ARTIFACTS` order: graph → profile → bank (2026-10-08; it led with the profile).
-  The graph comes first because the bank is tagged with it; the profile and the bank are the
-  two parts of ONE step, the types first. `GATES` answers «are X's upstreams approved?»;
-  `NEEDS_APPROVED` gates `review_taggability` on the profile.
-- A build writes exactly one artifact (+ its cache). `server/jobs/chain.py` holds two chains,
-  each link with its own condition, an unmet one a skip with its reason logged, never a
-  failure: the graph build chains describing its concepts (the graph exists), and the
-  taggability review heads the BANK's collection — `review_taggability → build_bank → index`
-  (the profile and the graph approved and a document in the exemplars' slot; a profile and
-  a bank). «Recoger el banco» queues the head; the pipeline's `build_job` of the bank is
-  `review_taggability`. The graph no longer chains the review or the index: indexing between
-  a graph build and a bank collection embedded concepts nobody had reviewed.
-- **The bank's collection closes the bank** (`chain.CLOSES`, the user's decision of
-  2026-10-08): when the last link that ran after the head ends the chain, the bank is
-  approved and `pipeline.changed` published, so step 3 reads done and the doors open as soon
-  as the bank is extracted, tagged and indexed. Only behind types and a syllabus still
-  approved (`gate_open`): types corrected while it ran leave the bank a draft. Links carry
-  their head in `params.head`; a job outside a chain closes nothing. A retag (`tag`) seals a
-  closed bank again (`handle_tag`, like the review's reseal), and so does a hand edit of its
-  exercises (see below).
-- **The route checks every link of a chain** before queueing its head
-  (`routers/jobs.gate_error`, `transcribing_slot`, both over `chain.links(kind)`): a link the
-  runner queues has no route, so a closed gate behind the head would be skipped in silence
-  and a transcription of the exercises would collide with the build behind the review.
-- **The bank reads as building from its review on** (`singletons.building`: a live
-  `review_taggability` whose chain names `build_bank`), and the runner queues a job's next
-  link BEFORE announcing the job finished (`runner._execute`), so no reading between the two
-  finds the chain gone and offers to collect again.
-- **The review is skipped when nothing it reads changed** (`server/taggability.py`): a
-  fingerprint of the profile's bytes, the graph's units and concepts in their order and the
-  context's bytes — NOT the non-taggable list, which is what a teacher corrects by hand, and
-  not the bank —, kept in `cache/taggability_review.json` (a cache: a graph that says
-  `taggability_reviewed` with no record is taken at its word and the record written; emptying
-  the graph's stage deletes it, `approvals.DERIVED`). Skipped, the job answers
-  `{"skipped": true, …}` with no model call, and a switch turned by hand survives the next
-  collection. **The review seals the graph's approval again** (`kg_edit.set_non_taggable(…,
-  reseal=True)` when the graph was approved, `Approvals.sealed`): it is the system's
-  derivation, not a teacher's edit; a hand edit of the switch still withdraws it.
-- **The raw documents are an upstream**: `jobs/handlers._build` records the slot's documents
-  (name, size, mtime) in `artifacts/.built_from.json`; a stage built from documents its slot no
-  longer holds is stale with the drift named, and offers «Volver a construir» (the only
-  rebuild offered anywhere). `approvals.RAW_SOURCE` is the one table of which slot feeds which
-  artifact. A stage with no record is never stale for its documents.
-- **A build waits for a LIVE transcription of the slot it reads** (409 outside `force`),
-  because both write the same page cache. `singletons.transcribing(slug, slot)` is the one
-  reading. This is not a gate on transcription having happened.
-- Every hand edit withdraws the stage's approval on the server; the client never reopens.
-  **One exception: an exercise of a closed bank** (the user's decision, 2026-10-14). Editing,
-  retagging, adding or deleting one seals the bank again (`bank_edit._persist`) when it was
-  closed behind closed types and syllabus and stale for nothing, so a teacher correcting an
-  erratum mid-course does not close generating and the tutor to the class. A draft stays a
-  draft; editing the types still withdraws them and closes the doors.
+The chain of the three steps, its approvals and gates, and the construction's jobs are
+`pipeline/AGENTS.md`.
+
+## The bank's build
+
 - The bank checkpoints per document into `artifacts/.exemplars_bank.building.json` and writes
   `exemplars_bank.json` once at the end, starting empty (`C001`); cancelling loses the run;
   the parent sweeps the working file. **What a person added survives a re-extraction**
@@ -221,12 +178,6 @@ class's cut to the group's students, as for one student.
 One line per rule in force; the date, commit and reason of each are in
 the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 
-- D-017, D-018 — A build writes only its final artifact; draft and curated stay two files. The
-  bank's building file is the one exception.
-- D-019, D-020, D-022, D-023 — Taggability is not part of the builder: it heads the bank's
-  collection (`review_taggability → build_bank → index`), is skipped when the profile, the
-  syllabus and the context did not change, and seals the graph's approval again; no `GATES` or
-  `JOB_ARTIFACT` entry. The route checks the gates of every link before queueing a head.
 - D-114, D-116 — Deleting workspaces/artifacts from the panel is the admin's and takes the
   files; `.history/` is never emptied by it. CORS off. D-115, a last-member deletion taking
   the tree, is `workspaces/AGENTS.md`'s.

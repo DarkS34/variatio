@@ -22,7 +22,7 @@ from ..auth import queries
 from ..db.models import VIEWER
 from ..editors import kg_edit
 from ..editors.kg_edit import KGError
-from .pipeline import pipeline_payload
+from ..pipeline.view import pipeline_payload
 
 router = APIRouter(prefix="/api/kg", tags=["kg"], dependencies=[auth.VIEW])
 

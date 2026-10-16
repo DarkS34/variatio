@@ -155,7 +155,7 @@ def test_the_routers_of_both_functions_declare_their_dependency():
 
 
 def test_the_generic_jobs_route_is_no_way_round_the_evaluation_s_switch(db):
-    from server.routers import jobs as jobs_router
+    from server.jobs import router as jobs_router
 
     ana = _user(db, "ana")
     access = SimpleNamespace(user=ana, ws=None, workspace=None, role="viewer")

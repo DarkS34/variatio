@@ -69,7 +69,7 @@ PRIVATE_KINDS: set[str] = {"generate", "evaluate", TAG_ITEM}
 
 # The kinds a student of the subject (`viewer`) may queue: a commission, a comparison and —
 # added by `consumers.tutor.api.install` — a tutor's turn, each behind its own permission besides.
-# Every other kind is the construction's and takes a teacher (`routers/jobs.submit`).
+# Every other kind is the construction's and takes a teacher (`jobs/router.submit`).
 STUDENT_KINDS: set[str] = {"generate", "evaluate"}
 
 # The queue's three classes (`jobs/priority.py`), by how long a kind lasts and who waits for
@@ -203,14 +203,14 @@ class Event:
 # tables above that classify a kind. Nothing here imports the server: each entry is
 # registered by the code that owns it.
 
-# What runs a job of each kind: the construction's handlers (`jobs/handlers.py`, registered
-# on import) and each function's, added at its install.
+# What runs a job of each kind: the construction's handlers (`pipeline/jobs.py`) and each
+# function's, each added at its install.
 HANDLERS: dict[str, Callable[..., dict]] = {}
 
 # The job kinds that belong to an optional function (`server/auth/features.py`): queued by
 # `POST /api/jobs` only for an account the function is open to, and named as a lane's holder
-# only to such an account (`routers/pipeline.py`). The value is the feature's name
-# (`features.EVALUATION` is "evaluation"; `tests/server/test_features.py` pins it). The
+# only to such an account (`pipeline/view.py`). The value is the feature's name
+# (`features.EVALUATION` is "evaluation"; `tests/server/auth/test_features.py` pins it). The
 # tutor's and the chat's kinds are added at their install.
 FEATURE_OF: dict[str, str] = {"evaluate": "evaluation"}
 

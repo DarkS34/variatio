@@ -21,7 +21,7 @@ from server.auth.deps import require_feature
 from server.auth.router import _me
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
-from server.routers import jobs as jobs_routes
+from server.jobs import router as jobs_routes
 from server.routers import members as member_routes
 from server.routers.members import UsesBody
 from variatio.core.workspace import Workspace

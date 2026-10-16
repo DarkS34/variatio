@@ -4,7 +4,7 @@ Every handler resolves its paths from `job.workspace` and nothing else: the runn
 queue for the whole installation, so a handler reading a process-wide workspace would write
 one person's build into another's directory. The functions under `consumers/` add their own kinds
 to `catalogue.HANDLERS` when they are installed: a commission, a comparison, the tutor's turns.
-The construction's own register here, on import.
+The construction's own register the same way, in `install()`.
 """
 
 from loguru import logger
@@ -14,14 +14,33 @@ from variatio.runtime.tagger import ConceptTagger
 from variatio.core import json_io, progress
 from variatio.core.workspace import Workspace
 
-from .. import approvals, storage, taggability
 from ..core import contexts, installation
 from ..core.contexts import context_for
 from ..db import mirror
 from ..editors import bank_edit, kg_edit
-from .build_process import run_build
-from .catalogue import HANDLERS, Job
-from .runner import JobControl
+from ..jobs.build_process import run_build
+from ..jobs.catalogue import HANDLERS, Job
+from ..jobs.runner import JobControl
+from . import approvals, storage, taggability
+
+
+def install() -> None:
+    """Register the construction's job kinds on `HANDLERS`.
+
+    `server/app.py` calls it as it installs each function; a test that runs one of these
+    kinds without making the app calls it too. Registering twice changes nothing.
+    """
+    HANDLERS.update({
+        "build_profile": _build(approvals.EXEMPLARS_PROFILE),
+        "build_kg": _build(approvals.KNOWLEDGE_GRAPH),
+        "build_bank": _build(approvals.EXEMPLARS_BANK),
+        "transcribe": handle_transcribe,
+        "describe_concepts": handle_describe_concepts,
+        "index": handle_index,
+        "tag": handle_tag,
+        "tag_item": handle_tag_item,
+        "review_taggability": handle_review_taggability,
+    })
 
 
 # `MissingArtifactError` names the artifact and nothing else, which is right for a library
@@ -213,7 +232,7 @@ def handle_tag_item(job: Job, control: JobControl) -> dict:
 def handle_review_taggability(job: Job, control: JobControl) -> dict:
     """Decide which graph concepts work as labels, unless nothing they are judged by changed.
 
-    The review heads every collection of the bank (`jobs/chain.py`). When the profile, the
+    The review heads every collection of the bank (`chain.py`). When the profile, the
     syllabus and the context are what the last review read (`taggability.up_to_date`) it is
     skipped: no model call, and what a teacher switched by hand since stays as it is. The
     judgement is `entrypoints.review_taggability`; what stays here is the writing, because
@@ -243,16 +262,3 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
         ws, taggability.fingerprint(ws), verdict["non_taggable"], verdict["concepts"]
     )
     return {"non_taggable": saved["non_taggable"], "concepts": verdict["concepts"]}
-
-
-HANDLERS.update({
-    "build_profile": _build(approvals.EXEMPLARS_PROFILE),
-    "build_kg": _build(approvals.KNOWLEDGE_GRAPH),
-    "build_bank": _build(approvals.EXEMPLARS_BANK),
-    "transcribe": handle_transcribe,
-    "describe_concepts": handle_describe_concepts,
-    "index": handle_index,
-    "tag": handle_tag,
-    "tag_item": handle_tag_item,
-    "review_taggability": handle_review_taggability,
-})

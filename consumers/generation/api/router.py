@@ -40,8 +40,8 @@ from server.db.models import EDITOR, VIEWER
 from server.editors import bank_edit
 from server.editors.bank_edit import BankError
 from server.generations import row_view
+from server.pipeline.view import pipeline_payload
 from server.routers.bank import Shown, checked_groups, queue_tagging, refuse_tagging, show
-from server.routers.pipeline import pipeline_payload
 from variatio.loaders import locale
 
 router = APIRouter(prefix="/api/generations", tags=["generations"], dependencies=[auth.VIEW])

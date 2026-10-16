@@ -29,8 +29,8 @@ from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile, ItemType
 
-from . import storage
 from .db.models import BankFavourite
+from .pipeline import storage
 
 HIDDEN = "hidden"
 FULL = "full"

@@ -26,7 +26,7 @@ from server import curriculum as curriculum_store
 from server import singletons
 from server.db.models import EDITOR, VIEWER, EvalSession
 from server.editors import kg_edit
-from server.routers.jobs import gate_error
+from server.pipeline.gates import gate_error
 
 from .. import ARM_LABELS, ARMS, EvaluationSession
 from ..arms import external

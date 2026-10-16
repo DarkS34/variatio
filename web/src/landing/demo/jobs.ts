@@ -6,7 +6,7 @@ import { PLANS, SUBJECT, say, type World } from "./world";
 /**
  * THE DEMO'S JOBS: what each kind does to the world, and the events it says while doing it.
  *
- * Each script says what the real handler says (`server/jobs/handlers.py`, the builders'
+ * Each script says what the real handler says (`server/pipeline/jobs.py`, the builders'
  * `BUILD_PHASES`, the generator's `progress.step`s) in the same order and with the same
  * payloads, only faster: a build takes seconds, not minutes. The screens read nothing
  * else, so what they draw — the segmented bar, the steps, the live feed of tagged items,

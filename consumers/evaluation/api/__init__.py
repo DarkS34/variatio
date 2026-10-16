@@ -2,7 +2,7 @@
 
 `server/app.py` is the one module of the installation that knows both halves, so it is
 where the evaluation is attached: importing it from `routers/__init__.py` instead would close
-a cycle, since these routers import `server.auth` and `server.routers.jobs` back.
+a cycle, since these routers import `server.auth` and `server.pipeline.gates` back.
 
 Nothing here is imported until `install` runs, and `consumers/evaluation/__init__.py` never reaches
 this package: that is what keeps `import consumers.evaluation` free of FastAPI and SQLAlchemy for a

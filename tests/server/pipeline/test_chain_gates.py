@@ -1,11 +1,11 @@
 """The route checks every link of a chain before it queues the head.
 
-The taggability review heads the bank's collection (`jobs/chain.py`); the links behind it are
-queued by the runner and not by the route, so a link whose gate is closed would be skipped in
-silence and «Recoger el banco» would decide the labels and collect nothing. The route answers
-the head with the link's reason instead, and the same for a transcription of the slot a link
-reads. While the head runs, the bank reads as building, so its step does not offer to
-collect it a second time.
+The taggability review heads the bank's collection (`server/pipeline/chain.py`); the links
+behind it are queued by the runner and not by the route, so a link whose gate is closed would
+be skipped in silence and «Recoger el banco» would decide the labels and collect nothing. The
+route answers the head with the link's reason instead, and the same for a transcription of the
+slot a link reads. While the head runs, the bank reads as building, so its step does not offer
+to collect it a second time.
 """
 
 import json
@@ -14,13 +14,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from server import approvals, singletons
+from server import singletons
 from server.jobs import EventBus, JobRunner
-from server.routers.jobs import gate_error, transcribing_slot, transcription_error
-from server.routers.pipeline import NEXT_JOB
+from server.pipeline import approvals
+from server.pipeline.gates import gate_error, transcribing_slot, transcription_error
+from server.pipeline.view import NEXT_JOB
 from variatio.core.workspace import Workspace
 
-from ..conftest import CHAIN_GRAPH
+from ...conftest import CHAIN_GRAPH
 
 PROFILE = {
     "item_types": {

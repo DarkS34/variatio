@@ -1,8 +1,8 @@
 """What a teacher answered about each artifact, over HTTP.
 
-One router rather than a couple of routes bolted onto `routers/pipeline.py`, and it lives
-in `evaluation/` for the reason the register gives: this is a measurement of the system, and a
-system that contains its own measurement cannot be handed over without it. The screens
+One router rather than a couple of routes bolted onto `pipeline/routes/pipeline.py`, and it
+lives in `evaluation/` for the reason the register gives: this is a measurement of the system,
+and a system that contains its own measurement cannot be handed over without it. The screens
 that draw it are stage screens; what they are collecting is research data.
 
 THE HASH IS NEVER TAKEN FROM THE REQUEST. Which build was judged is the one fact that
@@ -15,7 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server import approvals, auth, singletons
+from server import auth, singletons
+from server.pipeline import approvals
 
 from . import stage_instruments, stage_queries
 

@@ -9,10 +9,11 @@ per workspace, built where it is used.
 
 from variatio.core.workspace import Workspace
 
-from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner, chain
+from .jobs import HANDLERS, EventBus, IdleUnloader, JobRunner
+from .pipeline import chain
 from .core.model_pulls import PullTracker
 from . import raw_data
-from .approvals import EXEMPLARS_BANK, Approvals
+from .pipeline.approvals import EXEMPLARS_BANK, Approvals
 from .core.tunnel import SshTunnel
 
 bus = EventBus()
@@ -37,8 +38,8 @@ def building(ws: Workspace) -> set[str]:
     """The artifacts a job is building right now in one workspace.
 
     The bank counts from the moment its collection starts, which is the taggability review
-    at the head of its chain (`jobs/chain.py`): the review writes no bank, but a screen that
-    read the bank as missing meanwhile would offer to collect it a second time.
+    at the head of its chain (`pipeline/chain.py`): the review writes no bank, but a screen
+    that read the bank as missing meanwhile would offer to collect it a second time.
     """
     artifacts = runner.building_artifacts(ws.slug)
     for job in runner.running(ws.slug) + runner.pending(ws.slug):

@@ -29,8 +29,8 @@ from variatio.core import json_io
 from variatio.core.workspace import Workspace
 from variatio.documents import SUPPORTED_EXTS
 
+from ..db import mirror
 from . import storage
-from .db import mirror
 
 EXEMPLARS_PROFILE = entrypoints.EXEMPLARS_PROFILE
 KNOWLEDGE_GRAPH = entrypoints.KNOWLEDGE_GRAPH
@@ -39,8 +39,8 @@ EXEMPLARS_BANK = entrypoints.EXEMPLARS_BANK
 # The chain in the order a person works it: the navbar and the panel's cards read this tuple.
 # The graph leads, because the bank is tagged with it; the profile and the bank are the two
 # parts of one step, the types first and then the exercises collected with them. The
-# taggability review, which needs the APPROVED profile (`routers/jobs.NEEDS_APPROVED`), heads
-# the bank's collection (`jobs/chain.py`) and not the graph's build.
+# taggability review, which needs the APPROVED profile (`gates.NEEDS_APPROVED`), heads
+# the bank's collection (`chain.py`) and not the graph's build.
 ARTIFACTS: tuple[str, ...] = (KNOWLEDGE_GRAPH, EXEMPLARS_PROFILE, EXEMPLARS_BANK)
 
 # `UPSTREAM[KNOWLEDGE_GRAPH]` is `()` and must stay so: a graph build reads only the raw

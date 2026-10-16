@@ -19,6 +19,7 @@ from variatio import config
 
 from . import jobs, singletons
 from .core import environment, middleware
+from .pipeline import jobs as pipeline_jobs
 from .routing import ROUTERS
 
 # Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
@@ -71,6 +72,9 @@ def create_app() -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    # The construction's jobs join the queue's table here, as each function's do below.
+    pipeline_jobs.install()
 
     # Generating goes first: its `/api/jobs/allowance` must be matched before the queue's
     # `/api/jobs/{job_id}`, which would read "allowance" as a job id.

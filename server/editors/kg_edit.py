@@ -15,8 +15,8 @@ from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from .. import approvals, storage
 from ..core import contexts
+from ..pipeline import approvals, storage
 
 ARTIFACT = approvals.KNOWLEDGE_GRAPH
 

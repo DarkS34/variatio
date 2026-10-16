@@ -16,16 +16,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import approvals, auth, singletons
+from server import auth, singletons
 from server.auth.deps import Access
 from server.db import mirror
 from server.db.models import Base, User
 from server.editors import bank_edit
 from server.editors.bank_edit import BankError
-from server.jobs import catalogue, handlers, lanes
+from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobRunner
+from server.pipeline import approvals
+from server.pipeline import jobs as handlers
 from server.routers import bank as bank_routes
 from variatio.core.workspace import Workspace
 
@@ -188,6 +190,7 @@ def test_the_job_tags_what_it_was_asked_and_merges_it(ws, monkeypatch):
     monkeypatch.setattr(handlers, "_workspace", lambda job: ws)
 
     job = Job(kind=catalogue.TAG_ITEM, params={"items": ["M001", "M404"]}, workspace="aula")
+    handlers.install()  # the construction's kinds join `HANDLERS` when the app is made
     result = handlers.HANDLERS[catalogue.TAG_ITEM](job, None)
 
     assert seen["ids"] == ["M001"]

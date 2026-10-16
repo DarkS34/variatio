@@ -11,12 +11,19 @@ import os
 
 import pytest
 
-from server import approvals, raw_data
+from server import raw_data
 from server.db import mirror
-from server.jobs import handlers
+from server.pipeline import approvals
+from server.pipeline import jobs as handlers
 from variatio.core.workspace import Workspace
 
 DRAFT = {"concepts_by_domains": {"Tema I": ["A"]}, "relations": {}}
+
+
+@pytest.fixture(autouse=True)
+def _construction_jobs():
+    """The construction's kinds join `HANDLERS` with the app, and these tests make none."""
+    handlers.install()
 
 
 @pytest.fixture

@@ -8,11 +8,18 @@ absent from `JOB_ARTIFACT`, from `SUBPROCESS_KINDS`, from `GATES` and from `CHAI
 
 import pytest
 
-from server.jobs import chain, handlers
 from server.jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS, Job
-from server.routers.jobs import GATES, NEEDS_APPROVED
+from server.pipeline import chain
+from server.pipeline import jobs as handlers
+from server.pipeline.gates import GATES, NEEDS_APPROVED
 from variatio import entrypoints
 from variatio.core.workspace import Workspace
+
+
+@pytest.fixture(autouse=True)
+def _construction_jobs():
+    """The construction's kinds join `HANDLERS` with the app, and these tests make none."""
+    handlers.install()
 
 
 @pytest.fixture

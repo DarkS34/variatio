@@ -32,7 +32,7 @@ are never pooled by accident — bump it whenever a statement, the scale or thei
 changes, and never edit a wording in place without doing so.
 """
 
-from server import approvals
+from server.pipeline import approvals
 
 # Stored in `stage_evaluations.instrument`. Bump on ANY change to the statements below, or
 # two wordings are pooled by accident: rows under an earlier version hold option keys such

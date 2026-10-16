@@ -8,7 +8,6 @@ from importlib import metadata
 
 from loguru import logger
 
-from server import approvals, storage
 from server import curriculum as curriculum_store
 from server import generations as generations_store
 from server.auth import queries
@@ -18,6 +17,7 @@ from server.db import session_scope
 from server.jobs import lanes
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
+from server.pipeline import approvals, storage
 from variatio import config, entrypoints
 from variatio.core import inference, progress
 from variatio.core.workspace import Workspace

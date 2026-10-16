@@ -7,9 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import approvals
 from server.db import Base, repository
 from server.db.models import StageEvaluation
+from server.pipeline import approvals
 from consumers.evaluation.api import stage_instruments as instruments
 from consumers.evaluation.api import stage_queries as queries
 from consumers.evaluation.api import stages

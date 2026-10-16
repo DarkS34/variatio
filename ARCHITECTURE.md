@@ -108,7 +108,7 @@ variatio/       the library          imports neither
   exceptions are named one by one in the import contracts (`[tool.importlinter]` in
   `pyproject.toml`, `uv run lint-imports`): the settings registry's optional imports of each
   function's `settings.py`, and four reads of the evaluation older than `consumers/`
-  (`server/jobs/lanes.py`, `server/jobs/handlers.py`, `server/raw_data.py`,
+  (`server/jobs/lanes.py`, `server/pipeline/jobs.py`, `server/raw_data.py`,
   `server/routers/admin.py`). No function imports another.
   `tests/consumers/test_consumers_boundary.py` pins that a function's library half imports
   neither FastAPI nor SQLAlchemy.
@@ -152,6 +152,7 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
 ```text
 app.py  routing.py  cli/                  composition
 routers/                                  the routes, which only routing.py imports
+pipeline/                                 the chain of the three steps
 auth/  workspaces/                        identity and permissions; the subjects of an account
 jobs/  conversations/  generations.py     the queue, what the tutor and the chat share, the exercises
 core/                                     what every area stands on
@@ -159,9 +160,9 @@ db/                                       models, session, mirror
 ```
 
 - The order is an import contract («The server's layers»). A route module is a leaf wherever
-  it lives (`routers/`, `core/routes/`, `conversations/routes.py`), so what it imports is out
-  of the order. The modules still at the server's root are outside it until their areas
-  exist (D-227).
+  it lives (an area's `router.py` or `routes/`, `routers/`, `conversations/routes.py`), and
+  so are the construction's jobs (`pipeline/jobs.py`): what they import is out of the order.
+  The modules still at the server's root are outside it until their areas exist (D-227).
 
 ## 5. Code map
 
@@ -188,14 +189,15 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 14 domain modules: `approvals`, `storage`, `singletons` (the process's instances), `members`, `groups`, `activity`, `curriculum`, `features`, `raw_data`, `originals`, `generations`, … | `app.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 10 domain modules: `singletons` (the process's instances), `members`, `groups`, `activity`, `curriculum`, `raw_data`, `originals`, `kg_view`, `bank_marks`, `generations` | `app.py` |
 | `core/` | what every area stands on: the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
 | `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
-| `editors/` | hand edits of the artifacts: graph, profile, bank, context | `bank_edit.py` |
+| `editors/` | hand edits of the artifacts: graph, profile, bank | `bank_edit.py` |
 | `workspaces/` | the subjects of an account: `router.py` (`/api/workspaces`) and `trees.py` (a subject's tree on disk) | `router.py` |
 | `auth/` | identity and permissions: route guards (`deps.py`), the account queries (`queries.py`), the optional functions (`features.py`), passwords, tokens, sealed links, mail, rate limits; `router.py` is login, one's account and password recovery | `deps.py` |
 | `db/` | ORM models, session, schema check, mirror, import/export | `models.py` |
-| `jobs/` | the queue: catalogue, runner, lanes, priority, bus, handlers, chains, build worker | `catalogue.py`, then `runner.py` |
+| `jobs/` | the queue: catalogue, runner, lanes, priority, bus, build worker, and its routes (`router.py`) | `catalogue.py`, then `runner.py` |
+| `pipeline/` | the chain of the three steps: approvals, artifact writes, the label review, the context, what a job chains and what must be settled before it runs, the construction's jobs (`jobs.py`); `routes/` holds `/api/pipeline` and `/api/context` | `approvals.py`, then `chain.py` |
 | `conversations/` | what the tutor and the chat share: store, daily count, quiet stream, route half | `store.py` |
 | `cli/` | the `system` command | `main.py` |
 
@@ -241,14 +243,14 @@ there.
 |---|---|---|---|---|---|
 | Step 1 «Apuntes y ejercicios» | `features/raw/` | `routers/raw.py`, `raw_data.py`, `originals.py` | `documents/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/test_raw_*`, `tests/builders/` |
 | Step 2 «Temario» | `features/kg/` | `routers/kg.py`, `kg_view.py`, `editors/kg_edit.py` | `builders/knowledge_graph_builder/`, `loaders/knowledge_graph.py`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/test_kg_*` |
-| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `routers/bank.py`, `routers/profile.py`, `routers/exercises.py`, `editors/bank_edit.py`, `editors/profile_edit.py`, `bank_marks.py`, `taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/test_bank_*`, `tests/generation/test_taggability*` |
-| The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `approvals.py`, `storage.py`, `jobs/chain.py`, `jobs/handlers.py`, `routers/pipeline.py` | — | the chains of the three steps | `tests/server/test_chain_gates.py`, `tests/server/test_job_chains.py` |
+| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `routers/bank.py`, `routers/profile.py`, `routers/exercises.py`, `editors/bank_edit.py`, `editors/profile_edit.py`, `bank_marks.py`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/test_bank_*`, `tests/generation/test_taggability*` |
+| The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `entrypoints/generate.py` | `generate` | `tests/consumers/generation/`, `tests/generation/`, `tests/screening/` |
 | «Clase» | `features/class/` | `members.py`, `groups.py`, `activity.py`, `curriculum.py`, `routers/members.py`, `routers/activity.py`, `routers/kg.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/test_class_*`, `tests/server/test_course_progress.py` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
-| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/test_invite_*`, `tests/server/test_workspace_*`, `tests/server/test_login_rate_limit.py` |
+| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/test_invite_management.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `routers/admin.py`, `routers/admin_engine.py`, `routers/config.py`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/test_admin_*`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
 
@@ -263,12 +265,12 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   `tests/boundaries/test_import_contracts.py`) and `pnpm check:layers`.
 - **Every package has a docstring**, its front page. `tests/boundaries/test_package_docstrings.py`.
 - **There is no default workspace**: every path takes one; `paths.workspace("")` raises.
-  `tests/server/test_no_default_workspace.py`.
+  `tests/server/core/test_no_default_workspace.py`.
 - **One writer of persisted JSON**, `core/json_io.write_json` (atomic; approval hashes are
   hashes of its bytes). `tests/core/test_json_io_atomic.py` tests the writer; the rule itself
   is a convention.
 - **Every route declares its access level**, and a new route with no row fails.
-  `tests/server/test_route_roles.py`.
+  `tests/server/auth/test_route_roles.py`.
 - **A fixed route sits above any wildcard that could swallow it**, in every router.
   `tests/consumers/evaluation/test_route_order.py`.
 - **A private job is its author's alone** (`catalogue.PRIVATE_KINDS`).
@@ -298,9 +300,10 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **The queue.** A job (`server/jobs/catalogue.py`) waits on a lane (`server/jobs/lanes.py`):
   `local` has capacity 1, `remote` a setting. Inside a lane, three classes by who waits
   (`server/jobs/priority.py`). The runner (`server/jobs/runner.py`) runs a handler from
-  `catalogue.HANDLERS` (the construction's from `server/jobs/handlers.py`) and the bus (`server/jobs/bus.py`) carries its events
-  to the WebSocket. Every model call of the API goes through a job, because the idle unload
-  (`server/jobs/idle.py`) reads only the queue.
+  `catalogue.HANDLERS` (the construction's from `server/pipeline/jobs.py`, at its `install()`)
+  and the bus (`server/jobs/bus.py`) carries its events to the WebSocket. Every model call of
+  the API goes through a job, because the idle unload (`server/jobs/idle.py`) reads only the
+  queue.
 - **How a function plugs in.** `server/app.py` calls each function's `api.install(app)`. It
   mounts the function's routes and adds its kinds to the server's tables, all in
   `server/jobs/catalogue.py`: `HANDLERS`, `FEATURE_OF`, `ADMISSIONS`, `PRIVATE_KINDS`,

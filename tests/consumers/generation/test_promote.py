@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from consumers.generation.api.router import router as generations_router
-from server import approvals, auth, singletons
+from server import auth, singletons
 from server import generations as store
 from server.auth.deps import Access
 from server.db import mirror
@@ -21,6 +21,7 @@ from server.editors import bank_edit
 from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
+from server.pipeline import approvals
 from server.routers import bank as bank_routes
 from variatio.core.workspace import Workspace
 

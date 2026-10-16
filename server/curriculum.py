@@ -21,7 +21,7 @@ from variatio.core.workspace import Workspace
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
-from . import storage
+from .pipeline import storage
 
 
 def save(ws: Workspace, concepts: list[str], graph: KnowledgeGraph) -> dict:

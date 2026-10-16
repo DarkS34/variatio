@@ -4036,7 +4036,7 @@ wheels = [
 
 [[package]]
 name = "variatio"
-version = "1.174.17"
+version = "1.174.18"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

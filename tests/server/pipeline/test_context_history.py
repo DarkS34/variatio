@@ -1,8 +1,7 @@
 import pytest
 
-from server import storage
 from server.db.layout import locate
-from server.editors import context_edit
+from server.pipeline import context_edit, storage
 from variatio.core.workspace import Workspace
 
 

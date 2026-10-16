@@ -46,7 +46,7 @@ const PICKER = "bank-parts";
  * (the user's decision, 2026-10-08).
  *
  * They were two steps only because deciding which concepts work as labels needs the types
- * closed, and that review now heads the bank's collection on the server (`jobs/chain.py`):
+ * closed, and that review now heads the bank's collection on the server (`pipeline/chain.py`):
  * «Recoger el banco» closes the types, decides the labels, extracts and tags the exercises
  * and warms the indices, and none of it is named on its own.
  *

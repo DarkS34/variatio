@@ -8,8 +8,8 @@ gets the exact error the pipeline would raise.
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
-from .. import approvals, storage
 from ..core import contexts
+from ..pipeline import approvals, storage
 
 ARTIFACT = approvals.EXEMPLARS_PROFILE
 

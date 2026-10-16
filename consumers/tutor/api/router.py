@@ -26,10 +26,11 @@ from sqlalchemy.orm import Session as DbSession
 
 from server.conversations import routes as shared
 
-from server import approvals, auth, singletons, storage
+from server import auth, singletons
 from server import generations as generations_store
 from server.editors import bank_edit
 from server.jobs.catalogue import Job
+from server.pipeline import approvals, storage
 from server.routers.exercises import reader_of
 from variatio import entrypoints
 from variatio.core import inference

@@ -9,18 +9,17 @@ after the generation's routes (its `/api/jobs/allowance` must come before the qu
 
 from .auth import router as auth
 from .core.routes import health, maintenance, stream
+from .jobs import router as jobs
+from .pipeline.routes import context, pipeline
 from .routers import (
     activity,
     admin,
     admin_engine,
     bank,
     config,
-    context,
     exercises,
-    jobs,
     kg,
     members,
-    pipeline,
     profile,
     raw,
 )

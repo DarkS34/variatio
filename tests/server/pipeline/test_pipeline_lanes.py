@@ -24,8 +24,8 @@ from server.auth import features
 from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
-from server.routers import pipeline as pipeline_routes
-from server.routers.pipeline import pipeline_payload
+from server.pipeline import view
+from server.pipeline.view import pipeline_payload
 from variatio import config
 
 LOCAL = lanes.LOCAL
@@ -133,7 +133,7 @@ def test_a_holder_of_a_closed_function_is_busy_and_unnamed(stand, monkeypatch):
     # The tutor's turns are jobs of the workspace like any other, and they hold the GPU. To
     # an account the tutor is closed to, the lane is busy with something, and that is all.
     monkeypatch.setitem(catalogue.FEATURE_OF, "local", features.TUTOR)
-    monkeypatch.setattr(pipeline_routes, "session_scope", lambda: nullcontext(None))
+    monkeypatch.setattr(view, "session_scope", lambda: nullcontext(None))
     open_to = {1}
     monkeypatch.setattr(
         features, "enabled", lambda session, user, feature, workspace=None: user.id in open_to

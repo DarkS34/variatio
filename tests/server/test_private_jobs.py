@@ -22,11 +22,11 @@ from server.auth.deps import Access
 from server.core import installation
 from server.core.routes import stream as ws_routes
 from server.jobs import lanes
+from server.jobs import router as jobs_routes
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import PRIVATE_KINDS, Job
 from server.jobs.runner import JobRunner
-from server.routers import jobs as jobs_routes
-from server.routers.pipeline import pipeline_payload
+from server.pipeline.view import pipeline_payload
 
 ANA, LUIS = 1, 2
 

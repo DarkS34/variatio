@@ -18,7 +18,8 @@ from variatio import config as vg_config
 from variatio.core.workspace import Workspace
 from variatio.documents import SUPPORTED_EXTS, name_order
 
-from . import approvals, originals
+from . import originals
+from .pipeline import approvals
 
 CHUNK = 1024 * 1024
 MB = 1024 * 1024

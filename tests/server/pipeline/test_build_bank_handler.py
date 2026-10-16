@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from server import approvals
-from server.jobs import handlers
+from server.pipeline import approvals
+from server.pipeline import jobs as handlers
 from variatio.core import progress
 from variatio.core.workspace import Workspace
 
@@ -30,6 +30,8 @@ def ws(tmp_path):
 
 @pytest.fixture
 def handler(ws, monkeypatch):
+    # The construction's kinds join `HANDLERS` with the app, and these tests make none.
+    handlers.install()
     monkeypatch.setattr(handlers, "_workspace", lambda job: ws)
     monkeypatch.setattr(handlers.mirror, "mirror_file", lambda *a, **k: None)
     monkeypatch.setattr(handlers.contexts, "invalidate", lambda *a, **k: None)

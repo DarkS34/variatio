@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from server import approvals
 from server.db import mirror
-from server.jobs import handlers
 from server.jobs.catalogue import Job
+from server.pipeline import approvals
+from server.pipeline import jobs as handlers
 from variatio import entrypoints
 from variatio.core.workspace import Workspace
 

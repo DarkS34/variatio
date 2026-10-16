@@ -2,7 +2,7 @@
 
 The review decides which concepts of the graph work as labels, judged against the exemplars
 profile and the subject's context. Since 2026-10-08 it heads every collection of the bank
-(`jobs/chain.py`), so collecting a bank twice over the same profile and syllabus would pay a
+(`chain.py`), so collecting a bank twice over the same profile and syllabus would pay a
 model pass per unit for the same verdict and, worse, undo whatever a teacher switched by hand
 in between. This module keeps a fingerprint of what the last review read and says when it
 still holds.

@@ -9,13 +9,13 @@ A phase that HAS to happen should not be a button. Two jobs leave mandatory work
   decided against the APPROVED profile, the bank is extracted and tagged with them, and the
   indices are warmed: the teacher presses «Recoger el banco» once and the three run in
   order. The review is skipped inside its own handler when nothing it reads has changed
-  (`server/taggability.py`); the chain goes on either way.
+  (`taggability.py`); the chain goes on either way.
 
 Each link declares its condition, and the condition is what the LINK ITSELF reads:
 describing needs the graph, collecting the bank needs the profile and the graph approved and
 a document to read, indexing needs a profile and a bank. If a condition does not hold the
 link is skipped, the log says so and the chain goes on with the next one. The route that
-queues the head checks the gates of every link first (`routers/jobs.gate_error`), so a skip
+queues the head checks the gates of every link first (`gates.gate_error`), so a skip
 here is what a forced job or a state that moved while queued leaves.
 
 A link that fails or is cancelled cuts the chain: `advance` is only called after a job that
@@ -33,9 +33,9 @@ from loguru import logger
 from variatio import entrypoints
 from variatio.core.workspace import Workspace
 
-from .. import approvals
 from ..core import installation
-from .catalogue import JOB_LABELS, Job
+from ..jobs.catalogue import JOB_LABELS, Job
+from . import approvals
 
 # What each job drags behind it.
 CHAINS: dict[str, tuple[str, ...]] = {

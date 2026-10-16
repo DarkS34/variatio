@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.17"
+version = "1.174.18"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -122,7 +122,7 @@ ignore_imports = [
     # The composition root mounts every function.
     "server.app -> consumers.*.api",
     # Four reads of the evaluation older than `consumers/`.
-    "server.jobs.handlers -> consumers.evaluation.raw_text",
+    "server.pipeline.jobs -> consumers.evaluation.raw_text",
     "server.jobs.lanes -> consumers.evaluation.config",
     "server.raw_data -> consumers.evaluation.raw_text",
     "server.routers.admin -> consumers.evaluation.api.store",
@@ -218,6 +218,8 @@ protected_modules = [
     "server.core.routes.*",
     "server.auth.router",
     "server.workspaces.router",
+    "server.pipeline.routes.*",
+    "server.jobs.router",
 ]
 # What one route module imports of another is the next contract's.
 allowed_importers = [
@@ -226,14 +228,13 @@ allowed_importers = [
     "server.core.routes.*",
     "server.auth.router",
     "server.workspaces.router",
+    "server.pipeline.routes.*",
+    "server.jobs.router",
 ]
 ignore_imports = [
     # Routes used as libraries by the functions; they leave with the server's areas.
-    "consumers.evaluation.api.admin -> server.routers.jobs",
-    "consumers.evaluation.api.router -> server.routers.jobs",
     "consumers.*.api.router -> server.routers.exercises",
     "consumers.generation.api.router -> server.routers.bank",
-    "consumers.generation.api.router -> server.routers.pipeline",
 ]
 
 [[tool.importlinter.contracts]]
@@ -244,13 +245,8 @@ modules = [
     "server.core.routes.*",
     "server.auth.router",
     "server.workspaces.router",
-]
-ignore_imports = [
-    "server.routers.bank -> server.routers.jobs",
-    "server.routers.bank -> server.routers.pipeline",
-    "server.routers.kg -> server.routers.pipeline",
-    "server.routers.pipeline -> server.routers.jobs",
-    "server.routers.profile -> server.routers.pipeline",
+    "server.pipeline.routes.*",
+    "server.jobs.router",
 ]
 
 [[tool.importlinter.contracts]]
@@ -260,6 +256,7 @@ containers = ["server"]
 layers = [
     "__main__ : app : cli : routing",
     "routers",
+    "pipeline",
     "auth | workspaces",
     "jobs | conversations | generations",
     "core",
@@ -270,5 +267,9 @@ ignore_imports = [
     "server.core.routes.** -> server.**",
     "server.auth.router -> server.**",
     "server.workspaces.router -> server.**",
+    "server.pipeline.routes.** -> server.**",
+    "server.jobs.router -> server.**",
+    # The construction's jobs are leaves too: only server/app.py installs them.
+    "server.pipeline.jobs -> server.**",
     "server.conversations.routes -> server.**",
 ]

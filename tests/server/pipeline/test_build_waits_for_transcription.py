@@ -13,8 +13,8 @@ import pytest
 
 from server import singletons
 from server.jobs import EventBus, JobRunner
-from server.routers.jobs import transcribing_slot, transcription_error
-from server.routers.pipeline import pipeline_payload
+from server.pipeline.gates import transcribing_slot, transcription_error
+from server.pipeline.view import pipeline_payload
 
 CHAIN = [
     {"artifact": "exemplars_profile", "status": "missing"},

@@ -25,8 +25,8 @@ from ..db.models import User
 from ..editors import bank_edit
 from ..editors.bank_edit import BankError
 from ..jobs.catalogue import TAG_ITEM
-from .jobs import gate_error
-from .pipeline import pipeline_payload
+from ..pipeline.gates import gate_error
+from ..pipeline.view import pipeline_payload
 
 router = APIRouter(prefix="/api/bank", tags=["bank"], dependencies=[auth.EDIT])
 

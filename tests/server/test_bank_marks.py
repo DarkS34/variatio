@@ -147,7 +147,7 @@ def test_shown_whole_or_by_fields_never_without_the_statement_nor_the_level(ws, 
 
 
 def test_showing_an_exercise_does_not_reopen_a_closed_bank(ws, db):
-    from server import approvals
+    from server.pipeline import approvals
 
     review = approvals.Approvals(ws)
     for artifact in approvals.ARTIFACTS:

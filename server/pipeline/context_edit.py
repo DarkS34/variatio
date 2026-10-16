@@ -10,7 +10,7 @@ words one more time.
 from variatio.core.workspace import Workspace
 from variatio.loaders.content_context import ContentContext
 
-from .. import storage
+from . import storage
 
 HISTORY_NAME = "content_context"
 

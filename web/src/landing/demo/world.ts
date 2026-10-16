@@ -116,7 +116,7 @@ const JOB_ARTIFACT: Partial<Record<string, ArtifactName>> = {
   tag: "exemplars_bank",
 };
 
-/** The bank's collection: the review heads it, and the two links follow (`jobs/chain.py`). */
+/** The bank's collection: the review heads it, and two links follow (`pipeline/chain.py`). */
 const BANK_CHAIN: readonly JobKind[] = ["review_taggability", "build_bank", "index"];
 
 /** The three relations of the sample graph, as the loader indexes them, in prompt language. */
@@ -1125,7 +1125,7 @@ export class World {
     };
   }
 
-  /** The route's gates: what `POST /api/jobs` refuses before queueing (`routers/jobs.py`). */
+  /** The route's gates: what `POST /api/jobs` refuses before queueing (`pipeline/gates`). */
   private gate(kind: JobKind, params: Record<string, unknown>): void {
     const live = this.live();
     if (kind === "generate" && live.some((job) => job.kind === "generate")) {

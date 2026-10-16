@@ -14,7 +14,7 @@ from pathlib import Path
 from variatio.core import json_io
 from variatio.core.workspace import Workspace
 
-from .db import mirror
+from ..db import mirror
 
 
 def read_json(path: Path) -> dict | list | None:

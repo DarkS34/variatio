@@ -1,10 +1,10 @@
 """Reading a source document: files, markdown, chunking and page transcription.
 
-Shared by all three builders — anything about reading a source file belongs here and is
-never duplicated into one of them — and by whatever else reads a raw document: the
-transcription (`entrypoints/transcribe.py`), the server (`server/raw_data.py`,
-`server/originals.py`, `server/approvals.py`), the tutor's passages and the evaluation's plain
-reading. That is why it sits beside `builders/` and not inside it (until 2026-10-16 it was
+Shared by all three builders — anything about reading a source file belongs here and is never
+duplicated into one of them — and by whatever else reads a raw document: the transcription
+(`entrypoints/transcribe.py`), the server (`server/raw_data.py`, `server/originals.py`,
+`server/pipeline/approvals.py`), the tutor's passages and the evaluation's plain reading. That
+is why it sits beside `builders/` and not inside it (until 2026-10-16 it was
 `builders/source_docs/`).
 
 `pages` (a package, one module per step of a transcription) is the only part that talks to a

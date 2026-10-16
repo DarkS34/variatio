@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from consumers.evaluation.api import store as evaluation_store
 
-from .. import approvals, auth, members, singletons, storage
+from .. import auth, members, singletons
 from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import features, links, queries
@@ -35,6 +35,7 @@ from ..db import repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace
 from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
+from ..pipeline import approvals, storage
 from ..workspaces import trees as workspaces_trees
 
 router = APIRouter(

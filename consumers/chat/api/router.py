@@ -18,9 +18,10 @@ from sqlalchemy.orm import Session as DbSession
 
 from server.conversations import routes as shared
 from server.conversations import store as shared_store
-from server import approvals, auth, singletons
+from server import auth, singletons
 from server import generations as generations_store
 from server.editors import bank_edit
+from server.pipeline import approvals
 from server.routers.exercises import reader_of
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 

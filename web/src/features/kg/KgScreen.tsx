@@ -933,7 +933,7 @@ function SyllabusReader() {
 
 function SyllabusStage({ stage }: { stage: StageState | undefined }) {
   const { t } = useT();
-  // The build does not end with the graph and the screen has to say so: `jobs/chain.py`
+  // The build does not end with the graph and the screen has to say so: `pipeline/chain.py`
   // queues the descriptions behind every `build_kg`. Which concepts work as labels is no
   // longer decided here: since 2026-10-08 that review heads the bank's collection, where it
   // is judged against the types of exercise it needs.

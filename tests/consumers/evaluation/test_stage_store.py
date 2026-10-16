@@ -7,7 +7,7 @@ paper, because these are the numbers the memoria quotes about the chain itself.
 import csv
 import io
 
-from server import approvals
+from server.pipeline import approvals
 from consumers.evaluation.api import stage_instruments as instruments
 from consumers.evaluation.api import stage_store as store
 from consumers.evaluation.api.admin import PROFILE_FILTERS, _narrow

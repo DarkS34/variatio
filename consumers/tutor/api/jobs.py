@@ -15,12 +15,12 @@ the stream.
 
 from loguru import logger
 
-from server import storage
 from server.conversations.jobs import QuietEmitter, release
 from server.core import contexts, installation
 from server.core.contexts import context_for
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
+from server.pipeline import storage
 from variatio import entrypoints
 from variatio.core import progress
 

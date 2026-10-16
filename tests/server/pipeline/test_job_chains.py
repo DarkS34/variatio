@@ -16,12 +16,11 @@ import json
 
 import pytest
 
-from server import approvals
-from server.jobs import chain
 from server.jobs.catalogue import Job
+from server.pipeline import approvals, chain
 from variatio.core.workspace import Workspace
 
-from ..conftest import CHAIN_GRAPH
+from ...conftest import CHAIN_GRAPH
 
 PROFILE = {
     "item_types": {
