@@ -20,7 +20,7 @@ from variatio.entrypoints import build_phases as phases_of
 
 from ... import auth
 from ...core import contexts, process
-from ...editors import kg_edit
+from ...kg import edit as kg_edit
 from .. import approvals, readings, storage
 from ..view import pipeline_payload
 

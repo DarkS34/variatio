@@ -24,8 +24,8 @@ from variatio.core import inference
 from .. import activity, auth, curriculum, groups
 from ..auth import features
 from ..core import process
-from ..editors import kg_edit
-from ..editors.kg_edit import KGError
+from ..kg import edit as kg_edit
+from ..kg.edit import KGError
 
 router = APIRouter(prefix="/api/activity", tags=["activity"], dependencies=[auth.EDIT])
 

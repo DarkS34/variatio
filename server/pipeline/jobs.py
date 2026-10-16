@@ -17,10 +17,11 @@ from variatio.core.workspace import Workspace
 from ..core import contexts, installation
 from ..core.contexts import context_for
 from ..db import mirror
-from ..editors import bank_edit, kg_edit
+from ..editors import bank_edit
 from ..jobs.build_process import run_build
 from ..jobs.catalogue import HANDLERS, Job
 from ..jobs.runner import JobControl
+from ..kg import edit as kg_edit
 from . import approvals, storage, taggability
 
 

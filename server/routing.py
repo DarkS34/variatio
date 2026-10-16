@@ -10,19 +10,10 @@ after the generation's routes (its `/api/jobs/allowance` must come before the qu
 from .auth import router as auth
 from .core.routes import health, maintenance, stream
 from .jobs import router as jobs
+from .kg import router as kg
 from .pipeline.routes import context, pipeline
 from .raw import router as raw
-from .routers import (
-    activity,
-    admin,
-    admin_engine,
-    bank,
-    config,
-    exercises,
-    kg,
-    members,
-    profile,
-)
+from .routers import activity, admin, admin_engine, bank, config, exercises, members, profile
 from .workspaces import router as workspaces
 
 ROUTERS = [

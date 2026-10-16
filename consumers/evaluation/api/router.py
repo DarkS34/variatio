@@ -25,7 +25,7 @@ from server import auth
 from server import curriculum as curriculum_store
 from server.core import process
 from server.db.models import EDITOR, VIEWER, EvalSession
-from server.editors import kg_edit
+from server.kg import edit as kg_edit
 from server.pipeline.gates import gate_error
 
 from .. import ARM_LABELS, ARMS, EvaluationSession

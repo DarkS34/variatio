@@ -22,9 +22,9 @@ from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
+from server.kg import router as kg_routes
 from server.members import Refusal
 from server.routers import activity as activity_routes
-from server.routers import kg as kg_routes
 from server.routers import members as member_routes
 from server.routers.members import BulkBody, GroupBody, UsesBody
 from variatio.core.workspace import Workspace

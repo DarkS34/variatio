@@ -16,7 +16,7 @@ from server.auth import queries as identity
 from server.core import installation, process
 from server.db import repository
 from server.db.models import User
-from server.editors import kg_edit
+from server.kg import edit as kg_edit
 from server.pipeline import readings
 from server.pipeline.gates import gate_error
 

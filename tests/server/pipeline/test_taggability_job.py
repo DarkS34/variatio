@@ -12,8 +12,8 @@ import json
 
 import pytest
 
-from server.editors import kg_edit
 from server.jobs.catalogue import JOB_ARTIFACT, Job
+from server.kg import edit as kg_edit
 from server.pipeline import approvals, taggability
 from server.pipeline import jobs as handlers
 from variatio import entrypoints

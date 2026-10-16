@@ -3,7 +3,7 @@
 Its own stage rather than a handler's assembly: the review is a model pass over the graph
 and the profile, so the CLI and the API have to reach it through the same door as every
 other phase. What it does NOT do is write — the non-taggable list is patched into the
-graph by `server/editors/kg_edit`, which owns the history, the database mirror and the
+graph by `server/kg/edit`, which owns the history, the database mirror and the
 approval it revokes.
 """
 

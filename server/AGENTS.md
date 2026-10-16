@@ -2,11 +2,11 @@
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for the server outside its subpackages: the database, how a request finds its subject,
-the bank's build, the generated exercises, the curriculum and the class activity.
-What every area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the subjects of an
-account `workspaces/AGENTS.md`, the build chain `pipeline/AGENTS.md`, step 1 `raw/AGENTS.md`,
-the queue `jobs/AGENTS.md`, what the tutor and the chat share `conversations/AGENTS.md`, and
-the transcription `variatio/documents/AGENTS.md`.
+the bank's build, the generated exercises, the curriculum and the class activity. What every
+area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the subjects of an account
+`workspaces/AGENTS.md`, the build chain `pipeline/AGENTS.md`, step 1 `raw/AGENTS.md`, step 2
+`kg/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
+`conversations/AGENTS.md`, and the transcription `variatio/documents/AGENTS.md`.
 
 
 ## Routes and where a function plugs in
@@ -17,10 +17,10 @@ the transcription `variatio/documents/AGENTS.md`.
   with the bank's area). The route comparison of a phase reads
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`, `cli/`),
-  `routers/`, `raw/`, `pipeline/`, `auth/` and `workspaces/` (neither imports the other), then
-  `conversations/` and `generations.py`, then `core/`, then `jobs/`, then `db/`; each imports
-  only what is below it. A route module is a leaf and may import any layer; the modules still
-  at the root are outside the order until their area exists.
+  `routers/`, `kg/` and `raw/`, `pipeline/`, `auth/` and `workspaces/` (neither of a pair
+  imports the other), then `conversations/` and `generations.py`, then `core/`, then `jobs/`,
+  then `db/`; each imports only what is below it. A route module is a leaf and may import any
+  layer; the modules still at the root are outside the order until their area exists.
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
   `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
   construction's handlers join `HANDLERS` at `pipeline/jobs.install()`, which `app.py` calls
