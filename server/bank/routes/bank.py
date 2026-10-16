@@ -18,16 +18,14 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
-from variatio.core import inference
-
-from .. import auth, bank_marks, groups
-from ..core import process
-from ..db.models import User
-from ..editors import bank_edit
-from ..editors.bank_edit import BankError
-from ..jobs.catalogue import TAG_ITEM
-from ..pipeline.gates import gate_error
-from ..pipeline.view import pipeline_payload
+from ... import auth
+from ...db.models import User
+from ...pipeline.view import pipeline_payload
+from .. import edit as bank_edit
+from .. import marks as bank_marks
+from ..edit import BankError, show
+from ..marks import Shown, checked_groups
+from ..tagging import queue_tagging, refuse_tagging
 
 router = APIRouter(prefix="/api/bank", tags=["bank"], dependencies=[auth.EDIT])
 
@@ -43,17 +41,6 @@ class ConceptsBody(BaseModel):
 
     concepts: list[str]
     primary_concept: str | None = None
-
-
-class Shown(BaseModel):
-    """What the class sees of an exercise: nothing, all of it, or the fields chosen.
-
-    `groups` names the groups of the class that see it; absent, the whole class does.
-    """
-
-    level: Literal["hidden", "full", "fields"] = "hidden"
-    fields: list[str] = []
-    groups: list[int] | None = None
 
 
 class AddBody(BaseModel):
@@ -263,64 +250,6 @@ def tag(body: TagBody, access: auth.Access = auth.EDIT) -> dict:
         raise HTTPException(404, f"No están en el banco: {', '.join(missing)}")
     refuse_tagging(access)
     return {"job": queue_tagging(access, body.items)}
-
-
-def show(access: auth.Access, item_id: str, visibility: Shown | None) -> None:
-    """Let the class see an exercise just added, as its author chose; nothing to do if hidden.
-
-    Public because passing a generated exercise in (`consumers.generation`) chooses it too. The
-    groups were checked before anything was written (`checked_groups`).
-    """
-    if visibility is None or visibility.level == bank_marks.HIDDEN:
-        return
-    key = bank_edit.key_of(access.ws, item_id)
-    if key is not None:
-        bank_marks.set_visibility(
-            access.ws, [key], visibility.level, visibility.fields, visibility.groups
-        )
-
-
-def checked_groups(db: DbSession, access: auth.Access, visibility: Shown | None) -> None:
-    """Refuse groups that are not this class's, or a choice of groups that names none.
-
-    Public for the reason `show` is.
-    """
-    if visibility is None or visibility.groups is None or visibility.level == bank_marks.HIDDEN:
-        return
-    if not visibility.groups:
-        raise HTTPException(422, "Elige al menos un grupo, o toda la clase.")
-    known = {group.id for group in groups.all_of(db, access.workspace)}
-    if any(group not in known for group in visibility.groups):
-        raise HTTPException(404, "Ese grupo no existe en esta asignatura.")
-
-
-def refuse_tagging(access: auth.Access) -> None:
-    """Refuse a tagging the chain or the engine would make fail: the gates of `tag`.
-
-    Public because passing a generated exercise into the bank (`consumers.generation`) asks the
-    same of the same tagger.
-    """
-    error = gate_error(access.ws, "tag")
-    if error:
-        raise HTTPException(409, error)
-    if not inference.is_available():
-        raise HTTPException(
-            503,
-            f"No hay conexión con el motor de inferencia '{inference.engine_name()}'. "
-            "Elige tú los conceptos, o vuelve a intentarlo cuando esté en marcha.",
-        )
-
-
-def queue_tagging(access: auth.Access, items: list[str]) -> dict:
-    """Queue `tag_item` on these exercises, as a job of the teacher who asked."""
-    job = process.runner.submit(
-        TAG_ITEM,
-        {"items": items},
-        workspace=access.ws.slug,
-        user_id=access.user.id,
-        user_name=access.user.name,
-    )
-    return {**job.to_dict(), "queue_position": process.runner.queue_position(job.id)}
 
 
 @router.patch("/{item_id}")

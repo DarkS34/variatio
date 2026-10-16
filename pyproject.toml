@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.174.21"
+version = "1.174.22"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -222,6 +222,7 @@ protected_modules = [
     "server.jobs.router",
     "server.raw.router",
     "server.kg.router",
+    "server.bank.routes.*",
 ]
 # What one route module imports of another is the next contract's.
 allowed_importers = [
@@ -234,11 +235,7 @@ allowed_importers = [
     "server.jobs.router",
     "server.raw.router",
     "server.kg.router",
-]
-ignore_imports = [
-    # Routes used as libraries by the functions; they leave with the server's areas.
-    "consumers.*.api.router -> server.routers.exercises",
-    "consumers.generation.api.router -> server.routers.bank",
+    "server.bank.routes.*",
 ]
 
 [[tool.importlinter.contracts]]
@@ -253,6 +250,7 @@ modules = [
     "server.jobs.router",
     "server.raw.router",
     "server.kg.router",
+    "server.bank.routes.*",
 ]
 
 [[tool.importlinter.contracts]]
@@ -262,7 +260,7 @@ containers = ["server"]
 layers = [
     "__main__ : app : cli : routing",
     "routers",
-    "kg | raw",
+    "bank | kg | raw",
     "pipeline",
     "auth | workspaces",
     "conversations | generations",
@@ -280,6 +278,7 @@ ignore_imports = [
     "server.jobs.router -> server.**",
     "server.raw.router -> server.**",
     "server.kg.router -> server.**",
+    "server.bank.routes.** -> server.**",
     # The construction's jobs are leaves too: only server/app.py installs them.
     "server.pipeline.jobs -> server.**",
     "server.conversations.routes -> server.**",

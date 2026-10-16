@@ -10,8 +10,9 @@ import json
 
 import pytest
 
+from server.bank import edit as bank_edit
+from server.bank import profile_edit
 from server.db import mirror
-from server.editors import bank_edit, profile_edit
 from server.pipeline import approvals
 from variatio.core.workspace import Workspace
 

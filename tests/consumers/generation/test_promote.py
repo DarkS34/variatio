@@ -16,14 +16,14 @@ from consumers.generation.api.router import router as generations_router
 from server import auth
 from server import generations as store
 from server.auth.deps import Access
+from server.bank import edit as bank_edit
+from server.bank import tagging
 from server.core import process
 from server.db import mirror
-from server.editors import bank_edit
 from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.pipeline import approvals
-from server.routers import bank as bank_routes
 from variatio.core.workspace import Workspace
 
 PROFILE = {
@@ -170,7 +170,7 @@ def test_passing_one_in_for_the_tagger_queues_it(ws, monkeypatch):
     monkeypatch.setattr(lanes, "backends_for", lambda kind, params=None: frozenset({lanes.LOCAL}))
     runner = JobRunner(EventBus(buffer_size=50), {catalogue.TAG_ITEM: lambda job, control: {}})
     monkeypatch.setattr(process, "runner", runner)
-    monkeypatch.setattr(bank_routes.inference, "is_available", lambda: True)
+    monkeypatch.setattr(tagging.inference, "is_available", lambda: True)
 
     generation = id_of(ws, "recorre la lista")
     answer = client(ws).post(f"/api/generations/{generation}/promote", json={"tag": "auto"})

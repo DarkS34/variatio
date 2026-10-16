@@ -1,8 +1,8 @@
 # AGENTS.md — `web/src/features/bank/` — step 3, «Banco de ejercicios»
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
-Read `web/AGENTS.md` and `web/DESIGN.md` first. The server's side is `server/routers/bank.py`,
-`server/editors/bank_edit.py` and `server/bank_marks.py`.
+Read `web/AGENTS.md` and `web/DESIGN.md` first. The server's side is `server/bank/`
+(`server/bank/AGENTS.md`).
 
 ## The screens of step 3
 
@@ -78,13 +78,13 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first. The server's side is `server/rou
   still there) and `promotable` (a teacher's own, out of the bank); a student is told
   neither. «Pasar al banco» is offered the same way on a teacher's saved results of
   «Generar ejercicios» and on «Mis ejercicios» of the subject in use. **Marks** (the same
-  day; `server/bank_marks.py`): what the class sees of each exercise — nothing (every
+  day; `server/bank/marks.py`): what the class sees of each exercise — nothing (every
   exercise starts hidden), all of it, or the fields chosen among the type's own but the
   difficulty, the statement always — and one teacher's stars. Neither is content of the
   bank: no hash, no approval moved. Both name an exercise by its CONTENT (`bank_marks.keys`:
   type and folded statement, `~2`, `~3` for the repeats of one statement in the bank's
   order), never by its id, so a re-extraction keeps them and editing a statement carries
-  them (`routers/bank.patch`). Who sees what is the subject's
+  them (`bank/routes/bank.patch`). Who sees what is the subject's
   (`artifacts/.bank_visibility.json`, exported with the instance); a star is a row
   (`bank_favourites`, migration 0021). On screen: «Visible» or «Visible: N campos» beside
   the id, an eye on hover that opens «Lo que ve la clase de …» (`features/bank/Visibility.tsx`:

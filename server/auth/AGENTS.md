@@ -45,7 +45,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   of exercise and, since 2026-10-14, the bank as its teachers showed it (`GET /api/exercises`,
   `auth.VIEW`: the exercises shown to the class or to their group, each cut to the fields
   shown, with its type, level and concepts, never its origin, author or the tagger's trace;
-  `bank_edit.reading`), and queues only `catalogue.STUDENT_KINDS` (`generate`, `evaluate`, and
+  `bank/reading.reading`), and queues only `catalogue.STUDENT_KINDS` (`generate`, `evaluate`, and
   `tutor_turn` joined at the tutor's install), each behind its own permission. The bank
   (`/api/bank`, its coverage included), the raw documents and their transcriptions
   (`/api/raw`), the graph's document verbatim (`GET /api/kg/raw`) and a stage's history

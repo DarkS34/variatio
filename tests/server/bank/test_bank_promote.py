@@ -2,9 +2,9 @@ import json
 
 import pytest
 
+from server.bank import edit as bank_edit
+from server.bank.edit import BankError
 from server.db import mirror
-from server.editors import bank_edit
-from server.editors.bank_edit import BankError
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 

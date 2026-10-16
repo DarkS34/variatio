@@ -128,6 +128,7 @@ that produces and consumes it.** `consumers` imports `variatio` and `server`; ne
   (identity, roles, classes), `server/workspaces/AGENTS.md` (a subject's life and tree),
   `server/pipeline/AGENTS.md` (the build chain, approvals, the construction's jobs),
   `server/raw/AGENTS.md` (step 1), `server/kg/AGENTS.md` (step 2),
+  `server/bank/AGENTS.md` (step 3),
   `server/jobs/AGENTS.md` (the queue), `server/conversations/AGENTS.md`.
 - `consumers/AGENTS.md` and one per function: `generation/`, `evaluation/`, `tutor/`, `chat/`.
 - `web/AGENTS.md` and `web/DESIGN.md` (read before any UI change), plus `src/features/bank/`,

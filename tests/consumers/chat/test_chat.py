@@ -24,13 +24,14 @@ from consumers.chat import turn as chat_turn
 from consumers.chat.api import jobs, router as router_module, usage
 from consumers.chat.api.store import STORE
 from consumers.tutor.api import store as tutor_store
-from server import auth, bank_marks, groups
+from server import auth, groups
 from server.auth import features, queries
 from server.auth.deps import Access
+from server.bank import edit as bank_edit
+from server.bank import marks as bank_marks
 from server.core import process
 from server.db import repository
 from server.db.models import OWNER, VIEWER, Base
-from server.editors import bank_edit
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobRunner

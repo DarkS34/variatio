@@ -18,12 +18,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from server import auth
 from server import generations as generations_store
+from server.bank import edit as bank_edit
+from server.bank import reading as bank_reading
+from server.bank.reading import reader_of
 from server.conversations import routes as shared
 from server.conversations import store as shared_store
 from server.core import process
-from server.editors import bank_edit
 from server.pipeline import approvals
-from server.routers.exercises import reader_of
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 from .. import config as chat_config
@@ -159,7 +160,7 @@ def _opened_from(body: MessageBody, access: auth.Access, db: DbSession) -> dict 
     if body.bank_id:
         group_id, every_group = reader_of(db, access)
         try:
-            item = bank_edit.readable(access.ws, body.bank_id, group_id, every_group)
+            item = bank_reading.readable(access.ws, body.bank_id, group_id, every_group)
         except bank_edit.BankError:
             item = None
         if item is None:

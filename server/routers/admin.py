@@ -30,10 +30,10 @@ from .. import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import features, links, queries
 from ..auth.rate_limit import locked_seconds, throttle, unlock
+from ..bank import profile_edit
 from ..core import contexts, environment, installation, maintenance, process
 from ..db import repository
 from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, ClassGroup, ClassLink, Invite, User, Workspace
-from ..editors import profile_edit
 from ..jobs import lanes as jobs_lanes
 from ..pipeline import approvals, readings, storage
 from ..workspaces import trees as workspaces_trees

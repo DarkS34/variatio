@@ -44,9 +44,10 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import activity, auth, bank_marks, groups, members
+from .. import activity, auth, groups, members
 from ..auth import features, links, mail, queries
 from ..auth.rate_limit import throttle
+from ..bank import marks as bank_marks
 from ..core import environment
 from ..db.models import (
     EDITOR,

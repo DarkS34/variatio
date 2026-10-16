@@ -16,12 +16,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from server import auth, bank_marks
+from server import auth
 from server.auth.deps import Access
+from server.bank import edit as bank_edit
+from server.bank import marks as bank_marks
+from server.bank.routes import bank as bank_routes
 from server.db import mirror
 from server.db.models import Base, User, Workspace as WorkspaceRow
-from server.editors import bank_edit
-from server.routers import bank as bank_routes
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 

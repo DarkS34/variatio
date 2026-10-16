@@ -152,7 +152,7 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
 ```text
 app.py  routing.py  cli/                  composition
 routers/                                  the routes, which only routing.py imports
-kg/  raw/                                 step 2, the syllabus; step 1, the raw documents
+bank/  kg/  raw/                          step 3, the bank; step 2, the syllabus; step 1, the raw documents
 pipeline/                                 the chain of the three steps
 auth/  workspaces/                        identity and permissions; the subjects of an account
 conversations/  generations.py            what the tutor and the chat share; the exercises
@@ -191,10 +191,10 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 6 domain modules: `members`, `groups`, `activity`, `curriculum`, `bank_marks`, `generations` | `app.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order of the routes) and 5 domain modules: `members`, `groups`, `activity`, `curriculum`, `generations` | `app.py` |
 | `core/` | what every area stands on: the process's live pieces (`process.py`: the bus, the queue, the tunnel, the downloads), the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
 | `routers/` | the server's own HTTP routes, one module per URL prefix or screen; `routing.py` holds the order they are mounted in (`ROUTERS`), and `app.py` mounts the generation's routes before them and the other functions' after them | `routing.py`, then `app.py` |
-| `editors/` | hand edits of the bank and the profile | `bank_edit.py` |
+| `bank/` | step 3: editing the bank (`edit.py`), the class's reading (`reading.py`), its marks (`marks.py`), the tagger (`tagging.py`), the types (`profile_edit.py`); `routes/` holds `/api/bank`, `/api/exercises` and `/api/profile` | `edit.py` |
 | `kg/` | step 2: the graph as the canvas reads it (`view.py`), its edits (`edit.py`) and `/api/kg` (`router.py`) | `edit.py` |
 | `raw/` | step 1: the slots' documents (`documents.py`), their originals (`originals.py`) and `/api/raw` (`router.py`) | `documents.py` |
 | `workspaces/` | the subjects of an account: `router.py` (`/api/workspaces`) and `trees.py` (a subject's tree on disk) | `router.py` |
@@ -245,9 +245,9 @@ there.
 
 | Area | Client | Server | Library | Jobs | Tests |
 |---|---|---|---|---|---|
-| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/test_raw_*`, `tests/builders/` |
-| Step 2 «Temario» | `features/kg/` | `kg/` | `builders/knowledge_graph_builder/`, `loaders/knowledge_graph.py`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/test_kg_*` |
-| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `routers/bank.py`, `routers/profile.py`, `routers/exercises.py`, `editors/bank_edit.py`, `editors/profile_edit.py`, `bank_marks.py`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/test_bank_*`, `tests/generation/test_taggability*` |
+| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
+| Step 2 «Temario» | `features/kg/` | `kg/` | `builders/knowledge_graph_builder/`, `loaders/knowledge_graph.py`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
+| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `entrypoints/generate.py` | `generate` | `tests/consumers/generation/`, `tests/generation/`, `tests/screening/` |
 | «Clase» | `features/class/` | `members.py`, `groups.py`, `activity.py`, `curriculum.py`, `routers/members.py`, `routers/activity.py`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/test_class_*`, `tests/server/test_course_progress.py` |

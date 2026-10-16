@@ -2,7 +2,7 @@
 
 Declares `auth.VIEW`: a student reads here what `/api/bank` (`auth.EDIT`, reads included)
 never answers them (the user's decision, 2026-10-14). Each exercise is cut to the fields a
-teacher chose to show (`server/bank_marks.py`), with its type, its level and its concepts;
+teacher chose to show (`server/bank/marks.py`), with its type, its level and its concepts;
 never where it comes from, who added it or the tagger's trace. A student sees the exercises
 shown to the whole class and those shown to their group; a teacher reading it sees the ones
 shown to anybody.
@@ -15,11 +15,10 @@ concepto» are a teacher's work, not a reader's.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session as DbSession
 
-from .. import auth
-from ..auth import queries
-from ..db.models import VIEWER
-from ..editors import bank_edit
-from ..editors.bank_edit import BankError
+from ... import auth
+from .. import reading as bank_reading
+from ..edit import BankError
+from ..reading import reader_of
 
 router = APIRouter(prefix="/api/exercises", tags=["exercises"], dependencies=[auth.VIEW])
 
@@ -42,7 +41,7 @@ def listing(
     """
     group_id, every_group = reader_of(db, access)
     try:
-        return bank_edit.reading(
+        return bank_reading.reading(
             access.ws,
             group_id,
             every_group=every_group,
@@ -71,24 +70,9 @@ def detail(item_id: str, access: auth.Access = auth.VIEW, db: DbSession = Depend
     """Answer one exercise as this account's class reads it; one not shown to it is a 404."""
     group_id, every_group = reader_of(db, access)
     try:
-        item = bank_edit.readable(access.ws, item_id, group_id, every_group)
+        item = bank_reading.readable(access.ws, item_id, group_id, every_group)
     except BankError:
         item = None
     if item is None:
         raise HTTPException(404, "Ese ejercicio no existe.")
     return {"item": item}
-
-
-def reader_of(db: DbSession, access: auth.Access) -> tuple[int | None, bool]:
-    """Say whose eyes read the bank: a student's group, or every group for a teacher.
-
-    Public because the functions that open a conversation on an exercise of the bank (the
-    tutor, the chat) must refuse one this account cannot read.
-    """
-    if access.role != VIEWER:
-        return None, True
-    workspace_id = getattr(getattr(access, "workspace", None), "id", None)
-    if not isinstance(workspace_id, int) or not isinstance(db, DbSession):
-        return None, False
-    group = queries.group_of(db, workspace_id, access.user.id)
-    return (group.id if group is not None else None), False

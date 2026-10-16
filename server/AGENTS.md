@@ -2,25 +2,25 @@
 
 Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
 Rules for the server outside its subpackages: the database, how a request finds its subject,
-the bank's build, the generated exercises, the curriculum and the class activity. What every
-area stands on is `core/AGENTS.md`, identity `auth/AGENTS.md`, the subjects of an account
-`workspaces/AGENTS.md`, the build chain `pipeline/AGENTS.md`, step 1 `raw/AGENTS.md`, step 2
-`kg/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
+the generated exercises, the curriculum and the class activity. What every area stands on is
+`core/AGENTS.md`, identity `auth/AGENTS.md`, the subjects of an account `workspaces/AGENTS.md`,
+the build chain `pipeline/AGENTS.md`, step 1 `raw/AGENTS.md`, step 2 `kg/AGENTS.md`, step 3
+`bank/AGENTS.md`, the queue `jobs/AGENTS.md`, what the tutor and the chat share
 `conversations/AGENTS.md`, and the transcription `variatio/documents/AGENTS.md`.
 
 
 ## Routes and where a function plugs in
 
 - `server/routing.py` holds `ROUTERS`, the order the server's own routers are mounted in,
-  and is the one module that imports a route module (an import contract; the functions'
-  imports of `routers/exercises.py` and `routers/bank.py` are named exceptions that leave
-  with the bank's area). The route comparison of a phase reads
+  and is the one module that imports a route module (an import contract with no exception: a
+  function reads an area's services, never its routes). The route comparison of a phase reads
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`, `cli/`),
-  `routers/`, `kg/` and `raw/`, `pipeline/`, `auth/` and `workspaces/` (neither of a pair
-  imports the other), then `conversations/` and `generations.py`, then `core/`, then `jobs/`,
-  then `db/`; each imports only what is below it. A route module is a leaf and may import any
-  layer; the modules still at the root are outside the order until their area exists.
+  `routers/`, `bank/`, `kg/` and `raw/`, `pipeline/`, `auth/` and `workspaces/` (no two of one
+  group import each other), then `conversations/` and `generations.py`, then `core/`, then
+  `jobs/`, then `db/`; each imports only what is below it. A route module is a leaf and may
+  import any layer; the modules still at the root are outside the order until their area
+  exists.
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
   `FEATURE_OF`, `ADMISSIONS`, beside `PRIVATE_KINDS`, `STUDENT_KINDS` and `JOB_CLASS`. The
   construction's handlers join `HANDLERS` at `pipeline/jobs.install()`, which `app.py` calls
@@ -82,20 +82,6 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 
 The chain of the three steps, its approvals and gates, and the construction's jobs are
 `pipeline/AGENTS.md`.
-
-## The bank's build
-
-- The bank checkpoints per document into `artifacts/.exemplars_bank.building.json` and writes
-  `exemplars_bank.json` once at the end, starting empty (`C001`); cancelling loses the run;
-  the parent sweeps the working file. **What a person added survives a re-extraction**
-  (2026-10-14): the handler hands the build the bank's `manual` and `generated` exercises as
-  a seed (`bank_edit.seed`, `artifacts/.exemplars_bank.seed.json`, `build_worker --keep`),
-  the builder starts from them with their ids and tags and drops an extracted exercise that
-  repeats one (`ExemplarsBankBuilder.build(keep=)`). One that no longer fits its type is put
-  aside once the new bank is in place (`artifacts/.bank_set_aside.json`), and the bank's page
-  offers it back, corrected through «Nuevo ejercicio» as it was (`POST /api/bank`
-  `set_aside`), or lets it go. The confirmation of «Extraer el banco otra vez» says what is
-  kept and how many collected exercises carry marks that only an identical statement keeps.
 
 ## Curriculum (`server/curriculum.py`)
 

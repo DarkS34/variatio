@@ -28,11 +28,12 @@ from server.conversations import routes as shared
 
 from server import auth
 from server import generations as generations_store
+from server.bank import edit as bank_edit
+from server.bank import reading as bank_reading
+from server.bank.reading import reader_of
 from server.core import process
-from server.editors import bank_edit
 from server.jobs.catalogue import Job
 from server.pipeline import approvals, readings, storage
-from server.routers.exercises import reader_of
 from variatio import entrypoints
 from variatio.core import inference
 from variatio.loaders import locale
@@ -142,7 +143,7 @@ def _opened_on_bank(item_id: str, access: auth.Access, db: DbSession) -> dict:
     """
     group_id, every_group = reader_of(db, access)
     try:
-        item = bank_edit.readable(access.ws, item_id, group_id, every_group)
+        item = bank_reading.readable(access.ws, item_id, group_id, every_group)
     except bank_edit.BankError:
         item = None
     if item is None:

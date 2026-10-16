@@ -18,18 +18,19 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth
 from server.auth.deps import Access
+from server.bank import edit as bank_edit
+from server.bank.edit import BankError
+from server.bank import tagging
+from server.bank.routes import bank as bank_routes
 from server.core import process
 from server.db import mirror
 from server.db.models import Base, User
-from server.editors import bank_edit
-from server.editors.bank_edit import BankError
 from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobRunner
 from server.pipeline import approvals
 from server.pipeline import jobs as handlers
-from server.routers import bank as bank_routes
 from variatio.core.workspace import Workspace
 
 PROFILE = {
@@ -225,7 +226,7 @@ def queue(monkeypatch):
     monkeypatch.setattr(lanes, "backends_for", lambda kind, params=None: frozenset({lanes.LOCAL}))
     runner = JobRunner(EventBus(buffer_size=50), {catalogue.TAG_ITEM: lambda job, control: {}})
     monkeypatch.setattr(process, "runner", runner)
-    monkeypatch.setattr(bank_routes.inference, "is_available", lambda: True)
+    monkeypatch.setattr(tagging.inference, "is_available", lambda: True)
     return runner
 
 

@@ -681,7 +681,7 @@ class ClassGroupMember(Base):
 class BankFavourite(Base):
     """One exercise of a subject's bank that one teacher marked with the star.
 
-    The exercise is named by its CONTENT (`item_key`, `server/bank_marks.fingerprint`) and not
+    The exercise is named by its CONTENT (`item_key`, `server/bank/marks.fingerprint`) and not
     by its id, which a re-extraction renumbers. A mark of one account in one subject, so a row:
     both go with it. It changes nothing but a filter and the look of the row.
     """

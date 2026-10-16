@@ -5,7 +5,7 @@ re-extraction must not lose them. So an exercise is named here by its CONTENT â€
 of its type and its folded statement, the very key the bank's builder tells two extractions
 apart by, and its place among the exercises that repeat that statement (`keys`) â€” and never
 by its id, which a re-extraction renumbers. Editing a statement moves its
-marks to the new fingerprint (`routers/bank.patch`, which knows both). A mark whose exercise
+marks to the new fingerprint (`routes/bank.patch`, which knows both). A mark whose exercise
 is gone is not answered: they are read against the bank every time.
 
 WHO SEES AN EXERCISE is the subject's, a file beside `.curriculum.json`
@@ -20,7 +20,10 @@ changes nothing but a filter and the look of a row.
 """
 
 import hashlib
+from typing import Literal
 
+from fastapi import HTTPException
+from pydantic import BaseModel
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
@@ -29,8 +32,9 @@ from variatio.core.lexicon import fold
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile, ItemType
 
-from .db.models import BankFavourite
-from .pipeline import storage
+from .. import auth, groups
+from ..db.models import BankFavourite
+from ..pipeline import storage
 
 HIDDEN = "hidden"
 FULL = "full"
@@ -239,3 +243,29 @@ def move(ws: Workspace, session: Session, workspace_id: int, old: str, new: str)
         .values(item_key=new)
     )
     session.flush()
+
+
+class Shown(BaseModel):
+    """What the class sees of an exercise: nothing, all of it, or the fields chosen.
+
+    `groups` names the groups of the class that see it; absent, the whole class does.
+    """
+
+    level: Literal["hidden", "full", "fields"] = "hidden"
+    fields: list[str] = []
+    groups: list[int] | None = None
+
+
+def checked_groups(db: Session, access: auth.Access, visibility: Shown | None) -> None:
+    """Refuse groups that are not this class's, or a choice of groups that names none.
+
+    Public because passing a generated exercise in (`consumers.generation`) chooses the groups
+    too, before anything is written.
+    """
+    if visibility is None or visibility.groups is None or visibility.level == HIDDEN:
+        return
+    if not visibility.groups:
+        raise HTTPException(422, "Elige al menos un grupo, o toda la clase.")
+    known = {group.id for group in groups.all_of(db, access.workspace)}
+    if any(group not in known for group in visibility.groups):
+        raise HTTPException(404, "Ese grupo no existe en esta asignatura.")

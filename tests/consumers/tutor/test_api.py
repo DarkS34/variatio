@@ -353,8 +353,8 @@ def test_a_student_reads_the_units_and_the_concepts_to_choose_from(ws, runner):
 
 def _bank(ws):
     """Two exercises of the bank: C001 shown to the class, C002 hidden."""
-    from server import bank_marks
-    from server.editors import bank_edit
+    from server.bank import edit as bank_edit
+    from server.bank import marks as bank_marks
 
     ws.exemplars_profile_path.write_text(json.dumps(PROFILE, ensure_ascii=False), encoding="utf-8")
     item = {"item_type": "ejercicio", "nivel_dificultad": "basico", "source": "t.pdf"}

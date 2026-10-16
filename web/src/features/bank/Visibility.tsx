@@ -47,7 +47,7 @@ const LEVELS: { value: VisibilityChoice["level"]; key: Key }[] = [
 
 /**
  * The fields a teacher may show of a type: every field but the difficulty, which is always
- * seen as the level, the statement first. Mirrors `server/bank_marks.showable_fields`.
+ * seen as the level, the statement first. Mirrors `server/bank/marks.showable_fields`.
  */
 export function showableFields(type: BankItemType): string[] {
   const fields = type.fields.filter((name) => name !== type.difficulty_field);
