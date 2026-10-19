@@ -20,11 +20,12 @@ import { fold } from "@/lib/text";
 import {
   featureAccessOf,
   SUBJECT_LISTED,
+  SUBJECT_SWITCHED,
   type AdminAccount,
   type AdminWorkspace,
   type FeatureAccessState,
   type FeatureMode,
-  type FeatureName,
+  type GatedName,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/state/auth";
@@ -41,8 +42,8 @@ const SEARCH_FROM = 9;
 
 /** The panel's unsaved changes to who may use each function: none until one is edited. */
 export type AccessDrafts = {
-  values: Partial<Record<FeatureName, FeatureAccessState>>;
-  set: Dispatch<SetStateAction<Partial<Record<FeatureName, FeatureAccessState>>>>;
+  values: Partial<Record<GatedName, FeatureAccessState>>;
+  set: Dispatch<SetStateAction<Partial<Record<GatedName, FeatureAccessState>>>>;
 };
 
 /**
@@ -53,14 +54,15 @@ export type AccessDrafts = {
  * mode and ticks gone without a word, while the stages' draft beside it came back pending.
  */
 export function useAccessDrafts(): AccessDrafts {
-  const [values, set] = useState<Partial<Record<FeatureName, FeatureAccessState>>>({});
+  const [values, set] = useState<Partial<Record<GatedName, FeatureAccessState>>>({});
   return { values, set };
 }
 
 /**
- * WHO ONE OPTIONAL FUNCTION IS FOR: nobody, every account, or the accounts ticked. It is
- * the «Permisos de uso» section of the function's tab, header included: the header's one
- * sentence is the SAVED state, and the block under it is the draft.
+ * WHO ONE FUNCTION IS FOR: nobody, every account, or the accounts ticked. It is the
+ * «Permisos de uso» part of the function in «Funciones», header included: the header's one
+ * sentence is the SAVED state, and the block under it is the draft. Every door of the bar has
+ * it since 2026-10-19 — generating and the chat open to everybody until it narrows them.
  *
  * The draft is the panel's (`useAccessDrafts`) and one button saves it. The server keeps the
  * list whatever the mode, so the ticks stay on screen, dimmed, while another mode is chosen:
@@ -75,9 +77,11 @@ export function useAccessDrafts(): AccessDrafts {
  * in it now (`accountsIn`, teachers included, paused memberships left out) is ticked, or
  * unticked, in one press. The ticks are the draft as any other, so nothing is saved by it.
  *
- * The tutor may also list whole subjects («Asignaturas elegidas», `SUBJECT_LISTED`): everybody
- * in one uses it there, whoever joins later included, and not in their other subjects. The
- * accounts' shortcut ticks who is in a subject today; the subject's list follows its class.
+ * Every function but the evaluation may also list whole subjects («Asignaturas elegidas»,
+ * `SUBJECT_LISTED`): everybody in one uses it there, whoever joins later included, and not in
+ * their other subjects. The accounts' shortcut ticks who is in a subject today; the subject's
+ * list follows its class. Where a subject's teachers also decide for its students
+ * (`SUBJECT_SWITCHED`), one line says that this choice comes first and theirs after it.
  *
  * WHAT A CHOSEN SUBJECT COVERS IS DRAWN IN THE ACCOUNTS (user's request, 2026-10-19: ticking a
  * subject left its students unticked below, and an account that used the function read as one
@@ -93,7 +97,7 @@ export function FeatureAccess({
   workspaces,
   drafts,
 }: {
-  feature: FeatureName;
+  feature: GatedName;
   accounts: AdminAccount[];
   workspaces: AdminWorkspace[];
   drafts: AccessDrafts;
@@ -432,6 +436,9 @@ export function FeatureAccess({
           <p className="text-small text-muted-foreground">{t("feature.covered.note")}</p>
         ) : null}
         <p className="text-small text-muted-foreground">{t("feature.adminNote")}</p>
+        {SUBJECT_SWITCHED.includes(feature) ? (
+          <p className="text-small text-muted-foreground">{t("feature.studentsNote")}</p>
+        ) : null}
 
         <FormError error={write.error} />
         <Button disabled={!dirty || write.isPending} onClick={submit}>

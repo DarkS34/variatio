@@ -23,7 +23,7 @@ import type {
   ExemplarsProfile,
   Coverage,
   FeatureMode,
-  FeatureName,
+  GatedName,
   CurriculumState,
   EvaluatorProfile,
   GenerationDetail,
@@ -738,10 +738,10 @@ export const api = {
       { method: "DELETE" },
     ),
 
-  // Who each optional function is for. A write without `accounts` leaves the list as it is.
+  // Who each function is for. A write without `accounts` leaves the list as it is.
   adminFeatures: () => request<AdminFeaturesPayload>("/api/admin/features"),
   adminSetFeature: (
-    feature: FeatureName,
+    feature: GatedName,
     body: { mode: FeatureMode; accounts?: number[]; workspaces?: string[] },
   ) =>
     put<AdminFeaturesPayload>(`/api/admin/features/${feature}`, body),

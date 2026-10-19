@@ -2,7 +2,7 @@ import { MessageCircle, MessagesSquare, Play, Scale, type LucideIcon } from "luc
 
 import type { Key } from "@/lib/i18n";
 import { STEPS, USES, stepNumber, type Door } from "@/lib/steps";
-import type { ConfigSetting, FeatureName } from "@/lib/types";
+import type { ConfigSetting, FeatureName, GatedName } from "@/lib/types";
 
 /**
  * THE CONFIGURATION'S SCREENS ARE THE PATH'S STAGES, named and numbered as the bar names
@@ -13,8 +13,9 @@ import type { ConfigSetting, FeatureName } from "@/lib/types";
  * `lib/steps.ts`, the one home of the path, so a stage cannot be called one thing in the
  * bar and another here.
  *
- * The stage of an optional function is drawn in that function's own tab of «Administración»,
- * beside who may use it, and «Configuración» lists the others: `feature` says which.
+ * The stage of a door — generating, the evaluation, the tutor, the free chat — is drawn in
+ * «Funciones», beside who may use it where it is an optional function, and «Configuración»
+ * lists the construction's: `door` says which.
  */
 export type ConfigStage = {
   key: string;
@@ -23,8 +24,12 @@ export type ConfigStage = {
   /** The step's number in the bar, or null for a door. */
   number: string | null;
   icon: LucideIcon | null;
+  /** The door whose stage this is, or null for a construction step. */
+  door: Door["key"] | null;
   /** The optional function whose door this is, or null for the product's own stages. */
   feature: FeatureName | null;
+  /** The name the users of the door's function are chosen under, or null for a step. */
+  access: GatedName | null;
 };
 
 const step = (index: number, key: string, descriptionKey: Key): ConfigStage => ({
@@ -33,14 +38,16 @@ const step = (index: number, key: string, descriptionKey: Key): ConfigStage => (
   descriptionKey,
   number: stepNumber(index),
   icon: null,
+  door: null,
   feature: null,
+  access: null,
 });
 
 /**
  * A door's screen, found in `USES` by the door's key and never by its position: the bar
  * draws a subset of the list per account, so an index names no fixed door. Every door has
- * a screen whatever its function's mode — an optional function's is drawn in its own tab,
- * where the administrator configures it before opening it to anybody.
+ * a screen whatever its function's mode, drawn in «Funciones», where the administrator
+ * configures a function before opening it to anybody.
  */
 const door = (
   use: Door["key"],
@@ -55,7 +62,9 @@ const door = (
     descriptionKey,
     number: null,
     icon,
+    door: use,
     feature: entry.feature,
+    access: entry.access,
   };
 };
 
@@ -68,14 +77,12 @@ export const CONFIG_STAGES: ConfigStage[] = [
   door("generate", "generation", Play, "cfg.stage.generation"),
   door("compare", "evaluation", Scale, "cfg.stage.evaluation"),
   door("tutor", "tutoring", MessagesSquare, "cfg.stage.tutoring"),
-  // The free chat is no optional function of the administrator's: its screen is here, in
-  // «Configuración», after generating.
   door("chat", "chat", MessageCircle, "cfg.stage.chat"),
 ];
 
-/** The stage an optional function's tab draws, by the function's name. */
-export function stageOfFeature(feature: FeatureName): ConfigStage {
-  return CONFIG_STAGES.find((stage) => stage.feature === feature)!;
+/** The stage «Funciones» draws for a door, by the door's key. */
+export function stageOfDoor(door: Door["key"]): ConfigStage {
+  return CONFIG_STAGES.find((stage) => stage.door === door)!;
 }
 
 /** The construction stages: a setting every one of them reads is common to the whole path. */

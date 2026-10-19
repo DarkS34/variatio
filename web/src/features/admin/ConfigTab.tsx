@@ -59,11 +59,11 @@ const OTHERS_KEY = "__otros__";
  * of another stage's (a setting shared is still ONE value: changing it here changes it
  * there). Nothing is folded that is not also unfolded on its own stage's screen.
  *
- * The two optional functions' stages are not listed here: each is drawn in its function's
- * own tab, beside who may use it (`StageSettings`). The search still finds their settings
- * and edits them here, because a value is one wherever it is drawn.
+ * The doors' stages — generating, the evaluation, the tutor, the free chat — are not listed
+ * here: each is drawn in «Funciones», beside who may use it (`StageSettings`). The search
+ * still finds their settings and edits them here, because a value is one wherever it is drawn.
  *
- * Which stage is open belongs to `AdminScreen`, which also opens one from a function's tab:
+ * Which stage is open belongs to `AdminScreen`, which also opens one from «Funciones»:
  * `onGo` is every way to another stage, the nav's and the folded links'. So does the draft
  * (`useStagesDraft`), which a folded link would otherwise leave behind in the tab it left.
  */
@@ -99,7 +99,7 @@ export function ConfigTab({
   const served = new Set(payload.stages ?? []);
   const stages = CONFIG_STAGES.filter(
     (entry) =>
-      entry.feature === null &&
+      entry.door === null &&
       served.has(entry.key) &&
       visible.some((setting) => readsIn(setting, entry.key)),
   );
@@ -233,8 +233,7 @@ export function ConfigTab({
 }
 
 /**
- * One stage's screen on its own, with its own save bar: what an optional function's tab
- * draws under who may use it.
+ * One stage's screen on its own, with its own save bar: what «Funciones» draws for a door.
  *
  * The same draft, save and reset as «Configuración», and the same screen: a setting it
  * shares with another stage is still ONE value, folded here and unfolded on its owner's
@@ -290,25 +289,31 @@ export function StageSettings({
   );
 }
 
+/** How much one stage's screen holds: its settings, and how many are changed and not saved. */
+export type StageSummary = { settings: number; pending: number };
+
 /**
- * How much one stage's screen holds, for the row that opens it: its settings and how many
- * of them are changed and not saved. Null while unread, or when the server does not serve
- * the stage or serves it with nothing to set — the cases in which `StageSettings` draws
- * nothing, so no row should open it.
+ * How much each stage's screen holds, for the rows that open them. A stage reads null while
+ * the configuration is unread, or when the server does not serve it or serves it with
+ * nothing to set — the cases in which `StageSettings` draws nothing, so no row should open
+ * its settings.
  */
-export function useStageSummary(
-  stage: string,
+export function useStageSummaries(
+  stages: readonly string[],
   held: StagesDraft,
-): { settings: number; pending: number } | null {
+): Record<string, StageSummary | null> {
   const query = useQuery({ queryKey: ["admin", "config"], queryFn: api.adminConfig });
   const payload = query.data;
-  if (!payload || !(payload.stages ?? []).includes(stage)) return null;
-  const settings = visibleOf(payload).filter((setting) => readsIn(setting, stage));
-  if (settings.length === 0) return null;
-  return {
-    settings: settings.length,
-    pending: settings.filter((setting) => setting.key in held.values).length,
+  const summaryOf = (stage: string): StageSummary | null => {
+    if (!payload || !(payload.stages ?? []).includes(stage)) return null;
+    const settings = visibleOf(payload).filter((setting) => readsIn(setting, stage));
+    if (settings.length === 0) return null;
+    return {
+      settings: settings.length,
+      pending: settings.filter((setting) => setting.key in held.values).length,
+    };
   };
+  return Object.fromEntries(stages.map((stage) => [stage, summaryOf(stage)]));
 }
 
 /** The stages' settings changed and not yet saved, and the way to change them. */
@@ -320,9 +325,9 @@ export type StagesDraft = {
 /**
  * Hold the stages' draft, for the screen that draws every tab of the panel.
  *
- * Three tabs draw stages' settings — «Configuración» and the two functions' — and a folded
- * link crosses from one to another, so the draft outlives the tab it was typed in: a change
- * left pending in «Tutor» is still pending in «Configuración», and its save bar saves it.
+ * Two tabs draw stages' settings — «Configuración» and «Funciones» — and a folded link
+ * crosses from one to the other, so the draft outlives the tab it was typed in: a change
+ * left pending on the tutor is still pending in «Configuración», and its save bar saves it.
  * It is ONE draft because a setting is one value wherever it is drawn. The engine's draft
  * stays «Motor»'s own: no setting is in both, because the stages never draw the engine's.
  */
@@ -337,7 +342,7 @@ type ConfigScreen = ReturnType<typeof useConfigScreen>;
  * What a screen of the configuration edits through: the stored payload, the stages' draft
  * over it, and saving, resetting and re-reading.
  *
- * «Configuración» holds one and so does each function's stage in its own tab, all over the
+ * «Configuración» holds one and so does each door's stage in «Funciones», all over the
  * draft `AdminScreen` holds; only one is mounted at a time.
  */
 function useConfigScreen(held: StagesDraft) {

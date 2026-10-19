@@ -1,34 +1,29 @@
-import { BarChart3, KeyRound, ShieldCheck, SlidersHorizontal } from "lucide-react";
-import { lazy, Suspense, useRef, useState, type ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
+import { lazy, Suspense, useRef, useState } from "react";
 
 import { InfoHint } from "@/components/ui/hint";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
-import { SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
-import { featureAccessOf, type AdminOverview, type FeatureName } from "@/lib/types";
+import type { Door } from "@/lib/steps";
+import type { GatedName } from "@/lib/types";
 import { useSession } from "@/state/auth";
-import { useAdminFeatures, useAdminOverview } from "@/state/queries";
+import { useAdminOverview } from "@/state/queries";
 
 import type { EvaluationFilters } from "@/consumers/evaluation/types";
 
 import { AccountsTab } from "./AccountsTab";
-import {
-  ConfigTab,
-  StageSettings,
-  useStagesDraft,
-  useStageSummary,
-  type StagesDraft,
-} from "./ConfigTab";
+import { ConfigTab, useStagesDraft } from "./ConfigTab";
 import { EngineTab } from "./EngineTab";
-import { FeatureAccess, useAccessDrafts, type AccessDrafts } from "./FeatureAccess";
+import { useAccessDrafts } from "./FeatureAccess";
+import { FunctionsTab, type FeaturePart } from "./FunctionsTab";
 import { MaintenanceSwitch } from "./MaintenanceSwitch";
-import { CONFIG_STAGES, stageOfFeature } from "./stages";
+import { CONFIG_STAGES } from "./stages";
 import { WorkspacesTab } from "./WorkspacesTab";
 import { useT, withCatalogues } from "@/lib/i18n";
 
-// The evaluation's reading is the evaluation's code, fetched when its section is opened. The
+// The evaluation's reading is the evaluation's code, fetched when its part is opened. The
 // administrator reads it whatever the evaluation's mode: its routes are not behind it.
 const EvaluationTab = lazy(() =>
   withCatalogues(import("@/consumers/evaluation/AdminEvaluationTab")).then((m) => ({
@@ -36,18 +31,16 @@ const EvaluationTab = lazy(() =>
   })),
 );
 
-/** The sections of an optional function's tab, in the order its list draws them. */
-type FeatureSection = "access" | "analytics" | "settings";
-
 /**
- * The installation seen from outside: six tabs, one per thing an administrator runs.
+ * The installation seen from outside: five tabs, one per thing an administrator runs.
  *
  * "Motor" is the machine and the process — the GPU, the tunnel, the models on disk, the
- * queue; "Configuración" is every value the registry exposes for the product's stages;
+ * queue; "Configuración" is every value the registry exposes for the construction's stages;
  * "Cuentas" decides who exists and where they get in; "Asignaturas" lists the instances and
- * what they weigh. Then, ruled off and each in its own colour like its door in the bar, one
- * tab per optional function: "Evaluaciones" and "Tutor". Both are always here, whatever
- * their mode: the administrator configures a function before opening it to anybody.
+ * what they weigh. Then, ruled off, "Funciones": what the installation offers once a subject
+ * is built — generating, the evaluation, the tutor and the free chat — each with who may
+ * use it and its settings. Each is there whatever its mode: the administrator configures a
+ * function before opening it to anybody.
  *
  * EVERY TAB IS DRAWN THE SAME WAY (`Sections`): the list of its sections on the left, each
  * row with the state of what it opens, and the section open on the right under one header.
@@ -61,37 +54,42 @@ export function AdminScreen() {
   const { t } = useT();
   const session = useSession();
   const [tab, setTab] = useState("motor");
-  // The open stage of "Configuración" lives here and not in its tab, because a function's
-  // tab opens it too: a setting folded there under another stage links to that stage.
+  // The open stage of "Configuración" lives here and not in its tab, because «Funciones»
+  // opens it too: a setting folded there under another stage links to that stage.
   const [configStage, setConfigStage] = useState<string | null>(null);
-  // So does the draft of the stages' settings, and for the same link: a change typed in a
-  // function's tab is still pending on the stage the link opens, and back. And so does the
+  // So does the draft of the stages' settings, and for the same link: a change typed in
+  // «Funciones» is still pending on the stage the link opens, and back. And so does the
   // draft of who may use each function, which sits in that same tab above the link.
   const stagesDraft = useStagesDraft();
   const accessDrafts = useAccessDrafts();
   // The evaluation's reading filter lives here and not in its tab, so it survives a visit
   // to another tab of the panel.
   const [filters, setFilters] = useState<EvaluationFilters>({});
-  // The section open in each function's tab lives here for the same link: a folded link
-  // opens a function's settings from another tab.
-  const [sections, setSections] = useState<Record<FeatureName, FeatureSection>>({
+  // The function open in «Funciones», and the part open in each, live here for the same
+  // link: a folded link opens a function's settings from another tab.
+  const [door, setDoor] = useState<Door["key"]>("generate");
+  const [parts, setParts] = useState<Record<GatedName, FeaturePart>>({
+    generate: "access",
     evaluation: "access",
     tutor: "access",
+    chat: "access",
   });
-  const openSection = (feature: FeatureName, section: FeatureSection) =>
-    setSections((held) => ({ ...held, [feature]: section }));
+  const openPart = (name: GatedName, part: FeaturePart) =>
+    setParts((held) => ({ ...held, [name]: part }));
   const tabs = useRef<HTMLDivElement>(null);
 
   const overview = useAdminOverview();
 
-  // Every way to a stage's settings: a function's own stage is the settings of its tab, any
-  // other one is "Configuración" open on it. Crossing tabs from the foot of a long one would
-  // land at the foot of the next, so the bar of tabs comes back into view.
+  // Every way to a stage's settings: a door's stage is its function in «Funciones», open on
+  // its settings; any other one is "Configuración" open on it. Crossing tabs from the foot of
+  // a long one would land at the foot of the next, so the bar of tabs comes back into view.
   const goToStage = (key: string) => {
-    const feature = CONFIG_STAGES.find((stage) => stage.key === key)?.feature ?? null;
-    const next = feature ?? "config";
-    if (feature) openSection(feature, "settings");
-    else setConfigStage(key);
+    const stage = CONFIG_STAGES.find((entry) => entry.key === key);
+    const next = stage?.door ? "functions" : "config";
+    if (stage?.door) {
+      setDoor(stage.door);
+      if (stage.access) openPart(stage.access, "settings");
+    } else setConfigStage(key);
     if (next !== tab) {
       setTab(next);
       tabs.current?.scrollIntoView({ block: "start" });
@@ -122,8 +120,8 @@ export function AdminScreen() {
         <MaintenanceSwitch />
       </header>
 
-      {/* Above the tabs on purpose: three of the six render nothing without this data, the
-          functions' two lose who may use them, and an empty tab with no explanation reads as
+      {/* Above the tabs on purpose: three of the five render nothing without this data,
+          «Funciones» loses who may use each function, and an empty tab with no explanation reads as
           a feature that does not exist. */}
       {overview.data ? null : (
         <LoadError
@@ -141,24 +139,19 @@ export function AdminScreen() {
             { value: "config", label: t("admin.tab.config") },
             { value: "cuentas", label: t("admin.tab.accounts") },
             { value: "workspaces", label: t("admin.tab.workspaces") },
-            {
-              value: "evaluation",
-              label: t("admin.tab.evaluation"),
-              tone: "evaluation",
-              separated: true,
-            },
-            { value: "tutor", label: t("admin.tab.tutor"), tone: "tutor" },
+            { value: "functions", label: t("admin.tab.functions"), separated: true },
           ]}
           value={tab}
           onChange={setTab}
         />
       </div>
 
-      {tab === "evaluation" ? (
-        <FeatureTab
-          feature="evaluation"
-          section={sections.evaluation}
-          onSection={(section) => openSection("evaluation", section)}
+      {tab === "functions" ? (
+        <FunctionsTab
+          door={door}
+          onDoor={setDoor}
+          parts={parts}
+          onPart={openPart}
           overview={overview.data}
           draft={stagesDraft}
           access={accessDrafts}
@@ -168,18 +161,6 @@ export function AdminScreen() {
               <EvaluationTab filters={filters} onFilters={setFilters} />
             </Suspense>
           }
-        />
-      ) : null}
-
-      {tab === "tutor" ? (
-        <FeatureTab
-          feature="tutor"
-          section={sections.tutor}
-          onSection={(section) => openSection("tutor", section)}
-          overview={overview.data}
-          draft={stagesDraft}
-          access={accessDrafts}
-          onGo={goToStage}
         />
       ) : null}
 
@@ -197,116 +178,5 @@ export function AdminScreen() {
         <ConfigTab stage={configStage} draft={stagesDraft} onGo={goToStage} />
       ) : null}
     </div>
-  );
-}
-
-/**
- * One optional function's tab, as the list every tab is: who may use it («Permisos de
- * uso»), what it recorded where it has a reading («Analíticas»), and its stage's settings
- * («Configuración»), the same values «Configuración» edits.
- *
- * Each row says its section's state: who the function is open to now, how much the reading
- * holds, how many settings — and what is changed there and not saved yet, since both drafts
- * outlive the section they were typed in.
- */
-function FeatureTab({
-  feature,
-  section,
-  onSection,
-  overview,
-  draft,
-  access,
-  onGo,
-  analytics,
-}: {
-  feature: FeatureName;
-  section: FeatureSection;
-  onSection: (next: FeatureSection) => void;
-  overview: AdminOverview | undefined;
-  draft: StagesDraft;
-  access: AccessDrafts;
-  onGo: (stage: string) => void;
-  /** The function's reading, for the one that has it. */
-  analytics?: ReactNode;
-}) {
-  const { t, plural } = useT();
-  const stage = stageOfFeature(feature);
-  const features = useAdminFeatures();
-  const summary = useStageSummary(stage.key, draft);
-  const saved = features.data ? featureAccessOf(features.data, feature) : null;
-
-  const items: SectionEntry[] = [
-    {
-      key: "access",
-      label: t("feature.section.access"),
-      mark: <KeyRound className="size-4" />,
-      detail: !saved
-        ? undefined
-        : saved.mode === "all"
-          ? t("feature.mode.all")
-          : saved.mode === "selected" && saved.accounts.length > 0
-            ? plural("acc.count", saved.accounts.length)
-            : t("feature.mode.off"),
-      pending: access.values[feature] ? 1 : 0,
-    },
-    ...(analytics
-      ? [
-          {
-            key: "analytics",
-            label: t("feature.section.analytics"),
-            mark: <BarChart3 className="size-4" />,
-            detail: overview ? plural("acc.comparisons", overview.totals.evaluations) : undefined,
-          },
-        ]
-      : []),
-    ...(summary
-      ? [
-          {
-            key: "settings",
-            label: t("admin.tab.config"),
-            mark: <SlidersHorizontal className="size-4" />,
-            detail: plural("cfg.nav.settings", summary.settings),
-            pending: summary.pending,
-          },
-        ]
-      : []),
-  ];
-  const open = items.some((item) => item.key === section) ? section : "access";
-
-  return (
-    <Sections
-      label={t("feature.section.label", { name: t(stage.labelKey) })}
-      items={items}
-      value={open}
-      onChange={(key) => onSection(key as FeatureSection)}
-    >
-      {open === "access" && overview ? (
-        <FeatureAccess
-          feature={feature}
-          accounts={overview.accounts}
-          workspaces={overview.workspaces}
-          drafts={access}
-        />
-      ) : null}
-
-      {open === "analytics" ? (
-        <>
-          <SectionHeader
-            title={t("feature.section.analytics")}
-            description={t("feature.section.analyticsNote")}
-          />
-          {analytics}
-        </>
-      ) : null}
-
-      {open === "settings" ? (
-        <StageSettings
-          stage={stage.key}
-          title={t("admin.tab.config")}
-          draft={draft}
-          onGo={onGo}
-        />
-      ) : null}
-    </Sections>
   );
 }

@@ -1,12 +1,15 @@
-"""Who the installation's optional functions are for: the evaluation and the Socratic tutor.
+"""Who the installation's functions are for: generating, the evaluation, the tutor, the chat.
 
 Each function is in one of three modes — nobody, every account, or a list of accounts — and
-the administrator sets it from the panel. A function with no row is off, so an installation
-opens neither until somebody decides to.
+the administrator sets it from the panel («Administración → Funciones»). The evaluation and the
+Socratic tutor are the OPTIONAL functions: with no row they are off, so an installation opens
+neither until somebody decides to. Generating and the free chat (`GATED` since 2026-10-19, the
+user's request) are the product's own: with no row they are open to every account, so an
+upgrading installation keeps them as they were until its administrator narrows them.
 
 NOT A MEMBERSHIP, AND CHECKED BESIDE ONE. `auth.VIEW` still decides whether an account may
-enter the workspace a request names; `auth.EVALUATION` and `auth.TUTOR` decide whether the
-function exists for that account at all. The administrator gets no bypass here: an
+enter the workspace a request names; `auth.EVALUATION`, `auth.TUTOR` and `auth.CHAT`, and the
+jobs route for generating, decide whether the function exists for that account at all. The administrator gets no bypass here: an
 installation's administrator who wants the tutor lists their own account, like anybody's.
 The administrator's own READ routes (`/api/admin/...`) are not behind this, so what a function
 recorded stays readable while it is off.
@@ -24,8 +27,8 @@ the one reading of all of it — the administrator's mode, the role, the group's
 subject's — and `for_user` answers it for the subject an account is in.
 
 A FUNCTION FOR A WHOLE SUBJECT (the class plan's phase 15): under `selected`, beside the
-accounts on its list, a function may list subjects (`SUBJECT_LISTED`: the tutor alone), and then
-everybody in a listed subject uses it there — not in their other subjects.
+accounts on its list, a function may list subjects (`SUBJECT_LISTED`: all but the evaluation),
+and then everybody in a listed subject uses it there — not in their other subjects.
 """
 
 from sqlalchemy import delete, select
@@ -44,20 +47,25 @@ from . import queries
 
 EVALUATION = "evaluation"
 TUTOR = "tutor"
+# The optional functions: off until the administrator opens them, and what an invitation may
+# list its holder for.
 FEATURES: tuple[str, ...] = (EVALUATION, TUTOR)
+
+# Generating: open to every account until the administrator narrows it, and a subject's
+# teachers may close it to its students.
+GENERATE = "generate"
+
+# The free chat (2026-10-14): open to every account until the administrator narrows it, and a
+# subject's teachers OPEN it to its students, since there it starts closed.
+CHAT = "chat"
+
+# Every function the administrator sets a mode for, in the order of the bar's doors.
+GATED: tuple[str, ...] = (GENERATE, EVALUATION, TUTOR, CHAT)
 
 # The functions a whole subject may be listed for (the class plan's phase 15): under `selected`
 # everybody in a listed subject uses the function there. The evaluation stays account by
-# account (decided 2026-10-06), so only the tutor.
-SUBJECT_LISTED: tuple[str, ...] = (TUTOR,)
-
-# Generating is everybody's, but a subject's teachers may close it to its students. It is not
-# an optional function: it has no mode and no row in `feature_access`.
-GENERATE = "generate"
-
-# The free chat (2026-10-14) is neither: a subject's teachers OPEN it to its students, since it
-# starts closed, and its teachers always have it.
-CHAT = "chat"
+# account (decided 2026-10-06).
+SUBJECT_LISTED: tuple[str, ...] = (GENERATE, TUTOR, CHAT)
 
 # What a subject's teachers may close to its students, and the column that says it is open.
 SUBJECT_SWITCHES: dict[str, str] = {
@@ -78,9 +86,14 @@ MODES: tuple[str, ...] = (OFF, ALL, SELECTED)
 # never by the sentence.
 OFF_CODE = "feature_off"
 
+# The mode of a function nobody has set: the optional ones start off, the product's own open.
+_DEFAULT_MODE = {GENERATE: ALL, CHAT: ALL}
+
 REFUSALS = {
+    GENERATE: "La generación de ejercicios no está activada para tu cuenta.",
     EVALUATION: "La evaluación del sistema no está activada para tu cuenta.",
     TUTOR: "El tutor socrático no está activado para tu cuenta.",
+    CHAT: "El chat libre no está activado para tu cuenta.",
 }
 
 # What a student hears when the subject's teachers closed the function to its students.
@@ -108,7 +121,7 @@ def for_user(
     """
     return {
         feature: refusal(session, user, feature, workspace, role) is None
-        for feature in (GENERATE, CHAT, *FEATURES)
+        for feature in (GENERATE, CHAT, EVALUATION, TUTOR)
     }
 
 
@@ -121,12 +134,11 @@ def refusal(
 ) -> str | None:
     """Return why `feature` is closed to this account in this subject, or None when it is open.
 
-    The administrator's mode first, for the optional functions; then, for a student of the
-    subject, the switch of their group when it says something, else the subject's. A teacher,
+    The administrator's mode first; then, for a student of the subject, the switch of their group when it says something, else the subject's. A teacher,
     and an administrator entering through the bypass (who holds the owner's role), never meets
     either.
     """
-    if feature in FEATURES and not enabled(session, user, feature, workspace):
+    if feature in GATED and not enabled(session, user, feature, workspace):
         return REFUSALS[feature]
     column = SUBJECT_SWITCHES.get(feature)
     if not column or workspace is None or role != VIEWER:
@@ -219,21 +231,21 @@ def subject_listed(session: Session, feature: str, workspace: Workspace) -> bool
 
 
 def snapshot(session: Session) -> dict[str, dict]:
-    """Render every function for the panel: its mode, its accounts and, where it may, its subjects."""
+    """Render every gated function for the panel: its mode, its accounts and, where it may, its subjects."""
     return {
         feature: {
             "mode": mode(session, feature),
             "accounts": listed(session, feature),
             **({"workspaces": listed_subjects(session, feature)} if feature in SUBJECT_LISTED else {}),
         }
-        for feature in FEATURES
+        for feature in GATED
     }
 
 
 def mode(session: Session, feature: str) -> str:
-    """Return the mode `feature` is in; a function nobody has set is off."""
+    """Return the mode `feature` is in; one nobody has set is its default, off or open."""
     row = session.get(FeatureAccess, feature)
-    return row.mode if row is not None and row.mode in MODES else OFF
+    return row.mode if row is not None and row.mode in MODES else _DEFAULT_MODE.get(feature, OFF)
 
 
 def listed(session: Session, feature: str) -> list[int]:

@@ -54,9 +54,9 @@ export interface Features {
 }
 
 /**
- * What is open to the account where it is: the two functions, and generating — everybody's,
- * but a subject's teachers may close it to its students («Clase → Funcionalidades permitidas»).
- * Not an optional function: it has no mode, no tone and no admin tab.
+ * What is open to the account where it is: the two functions, and generating — open to every
+ * account until the administrator narrows it, and a subject's teachers may close it to its
+ * students («Clase → Funcionalidades permitidas»). Not an optional function: it has no tone.
  */
 export interface Openings extends Features {
   generate: boolean;
@@ -98,6 +98,12 @@ export function featuresOf(session: Pick<Session, "features"> | null | undefined
 /** One optional function, by the name the server keys it with. */
 export type FeatureName = keyof Features;
 
+/**
+ * A function whose users the administrator chooses (`server/auth/features.GATED`): the two
+ * optional ones, and generating and the free chat since 2026-10-19.
+ */
+export type GatedName = FeatureName | "generate" | "chat";
+
 /** The two functions, in the order of their doors. */
 export const FEATURE_NAMES: readonly FeatureName[] = ["evaluation", "tutor"];
 
@@ -117,21 +123,33 @@ export interface FeatureAccessState {
 }
 
 /** The functions a whole subject may be listed for, as the server declares them. */
-export const SUBJECT_LISTED: readonly FeatureName[] = ["tutor"];
+export const SUBJECT_LISTED: readonly GatedName[] = ["generate", "tutor", "chat"];
+
+/** The functions a subject's teachers also open or close to its students («Clase»). */
+export const SUBJECT_SWITCHED: readonly GatedName[] = ["generate", "tutor", "chat"];
+
+/** The mode of a function nobody has set: the optional ones start off, the product's own open. */
+const DEFAULT_MODE: Record<GatedName, FeatureMode> = {
+  generate: "all",
+  evaluation: "off",
+  tutor: "off",
+  chat: "all",
+};
 
 /**
  * One function's mode and list, read defensively.
  *
- * Anything unreadable is the server's own default — off, with an empty list — so an older
- * API, or a malformed answer, draws the function as closed rather than blanking the tab.
+ * Anything unreadable is the server's own default — off for an optional function, open for
+ * generating and the chat, with an empty list — so an older API, or a malformed answer, draws
+ * the function as the server would rather than blanking the tab.
  */
 export function featureAccessOf(
   payload: AdminFeaturesPayload | null | undefined,
-  feature: FeatureName,
+  feature: GatedName,
 ): FeatureAccessState {
   const raw: unknown = payload?.features?.[feature];
   const record = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
-  const mode = FEATURE_MODES.find((known) => known === record.mode) ?? "off";
+  const mode = FEATURE_MODES.find((known) => known === record.mode) ?? DEFAULT_MODE[feature];
   const accounts = Array.isArray(record.accounts)
     ? record.accounts.filter((id): id is number => Number.isInteger(id))
     : [];

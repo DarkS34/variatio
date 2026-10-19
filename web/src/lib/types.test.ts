@@ -23,6 +23,11 @@ describe("featureAccessOf", () => {
     expect(featureAccessOf(null, "evaluation")).toEqual({ mode: "off", accounts: [] });
   });
 
+  it("reads generating and the chat left out as open to everybody, as the server does", () => {
+    expect(featureAccessOf({}, "generate")).toEqual({ mode: "all", accounts: [], workspaces: [] });
+    expect(featureAccessOf(null, "chat")).toEqual({ mode: "all", accounts: [], workspaces: [] });
+  });
+
   it("keeps what it can of a malformed answer", () => {
     const payload = {
       features: { tutor: { mode: "maybe", accounts: [3, "4", null, 7.5, 9], workspaces: ["a", 2] } },

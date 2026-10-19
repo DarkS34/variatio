@@ -41,7 +41,8 @@ attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never fro
   (`precision`, `recall`, `function`, `effort`, `overall`), 1-5 agreement, 5 is best,
   `VERSION = "4"`; earlier wordings are never pooled. `curated` records whether the answerer
   corrected the stage (nullable, only climbs). «Opened» is stamped when the form unfolds.
-- The admin «Evaluaciones» tab, between who may use the evaluation and its settings, filters
+- The evaluation's «Analíticas» in «Administración → Funciones», between who may use it and
+  its settings, filters
   by profile → account → workspace, one «Por evaluador» table, then «Fase de construcción» and
   «Fase de pruebas» blocks with CSVs; an evaluator's records can be withdrawn
   (`DELETE /api/admin/evaluations/records`).

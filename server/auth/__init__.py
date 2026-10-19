@@ -54,8 +54,8 @@ MANAGE = Depends(require_member(OWNER))
 # whether the account may enter the workspace, these whether the function is open to it.
 EVALUATION = Depends(require_feature(features.EVALUATION))
 TUTOR = Depends(require_feature(features.TUTOR))
-# The free chat is no optional function of the administrator's, but the same dependency reads
-# what the subject's teachers decided (`features.refusal`).
+# The free chat: open to everybody until the administrator narrows it, and the same dependency
+# reads what the subject's teachers decided (`features.refusal`).
 CHAT = Depends(require_feature(features.CHAT))
 
 __all__ = [

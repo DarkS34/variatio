@@ -658,6 +658,11 @@ what each decision replaced.
 - **Date:** 2026-10-03 · **Commit:** `ebbe9fe` · **Status:** in force
 - **Why:** One branch carries both optional functions, so each is switched from the installation; a function with no row is off, so an upgrading installation opens neither until its administrator does.
 
+### D-233. The administrator chooses who generates and who chats
+- **Rule:** Generating and the free chat are switched by the administrator like the evaluation and the tutor — nobody, everybody, or a list of accounts and of subjects — with no exemption for the administrator; with no row both are open to every account. A subject's teachers still decide for its students after that.
+- **Date:** 2026-10-19 · **Commit:** pending · **Status:** in force
+- **Why:** The user's request: in «Funciones» every function must let the administrator choose who may use it. Open by default, so an installation that upgrades keeps generating and the chat as they were.
+
 ### D-124. Tutor opened for whole subjects
 - **Rule:** The tutor may also be switched on for a list of subjects: everybody in a listed subject uses it there, whoever joins later included, and nowhere else.
 - **Date:** 2026-10-07 · **Commit:** `7363aeb` · **Status:** in force
@@ -997,8 +1002,13 @@ what each decision replaced.
 
 ### D-190. Optional function's stage in its tab
 - **Rule:** An optional function's stage lives in that function's own admin tab, under who may use it, not in «Configuración».
-- **Date:** 2026-10-04 · **Commit:** `fc3ecf8` · **Status:** in force
+- **Date:** 2026-10-04 · **Commit:** `fc3ecf8` · **Status:** superseded by D-232
 - **Why:** The «Evaluaciones» and «Tutor» tabs each hold who sees the function and its configuration, which leaves «Configuración».
+
+### D-232. The functions are one admin tab
+- **Rule:** «Administración» has one tab, «Funciones», with one row per door of the bar (generating, the evaluation, the tutor, the free chat); each opens its stage's settings, and an optional function opens them as a tab beside who may use it (and the evaluation's reading). «Configuración» lists the construction's stages only.
+- **Date:** 2026-10-19 · **Commit:** pending · **Status:** in force
+- **Why:** The user's request: the free chat and generating sat in «Configuración» while the evaluation and the tutor had a tab each, though the four are the same kind of thing — what the installation offers once a subject is built.
 
 ### D-191. The mark is three equal squares
 - **Rule:** The mark is three equal squares: settled, attention and outline.

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import type { ArtifactName, FeatureMode, FeatureName, InviteTerms, Role } from "@/lib/types";
+import type { ArtifactName, FeatureMode, GatedName, InviteTerms, Role } from "@/lib/types";
 import { authKeys } from "../auth";
 import { keys } from "./keys";
 import { useInvalidateChain } from "./pipeline";
@@ -207,7 +207,7 @@ export function useSetFeature() {
       accounts,
       workspaces,
     }: {
-      feature: FeatureName;
+      feature: GatedName;
       mode: FeatureMode;
       accounts?: number[];
       workspaces?: string[];

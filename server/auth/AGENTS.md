@@ -65,10 +65,15 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   bucket with no account (`reset`) keeps its IP. The list is read on every attempt, stores
   each network as its network address and refuses one wider than /8 (IPv4) or /32 (IPv6)
   (`registry/access.networks`, the setting's `clean`).
-- **The evaluation and the tutor are optional functions** ([features.py](features.py)):
-  each is `off`, `all` or `selected` (a list of accounts), set by the administrator
-  (`GET /api/admin/features`, `PUT /api/admin/features/{feature}`; the list is replaced only
-  when `accounts` is sent and survives a change of mode). A function with no row is off.
+- **The administrator chooses who uses each function** ([features.py](features.py), `GATED`):
+  generating, the evaluation, the tutor and the chat are each `off`, `all` or `selected` (a
+  list of accounts), set in «Administración → Funciones» (`GET /api/admin/features`,
+  `PUT /api/admin/features/{feature}`; the list is replaced only when `accounts` is sent and
+  survives a change of mode). **The evaluation and the tutor are the optional functions**
+  (`FEATURES`): with no row they are off, and an invitation may list its holder for them.
+  Generating and the chat (D-233, 2026-10-19) are open to every account with no row, so an
+  upgrading installation keeps them; the jobs route reads generating's mode, `auth.CHAT` the
+  chat's.
   `auth.EVALUATION` and `auth.TUTOR` sit beside `auth.VIEW` on the routers of
   `/api/evaluation`, `/api/stage-evaluations` and `/api/tutor`, and `catalogue.FEATURE_OF`
   closes `POST /api/jobs` for an `evaluate` job. **No administrator bypass**: the admin lists
@@ -79,10 +84,11 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   (the class plan's phase 15; migration 0020, `feature_subjects`): under `selected`,
   everybody in a listed subject uses it THERE, whoever joins later included, and not in their
   other subjects (`features.enabled(session, user, feature, workspace)`, `SUBJECT_LISTED` =
-  the tutor alone: the evaluation stays account by account, and `workspaces` for it is a 422).
-  `PUT /api/admin/features/tutor` takes `workspaces` (slugs; replaced only when sent, like
-  `accounts`), the snapshot lists them, and «Permisos de uso» draws «Asignaturas elegidas»
-  above «Cuentas elegidas», its state sentence naming the three things.
+  the tutor, and since 2026-10-19 generating and the chat: the evaluation stays account by
+  account, and `workspaces` for it is a 422). `PUT /api/admin/features/{feature}` takes
+  `workspaces` (slugs; replaced only when sent, like `accounts`), the snapshot lists them, and
+  «Permisos de uso» draws «Asignaturas elegidas» above «Cuentas elegidas», its state sentence
+  naming the three things.
 - **What a subject lets its students use** (decided 2026-10-06; migration 0019): switches
   of the subject, `workspaces.student_generate` and `student_tutor` (open by default) and,
   since 2026-10-15, `student_chat` (closed by default, migration 0023), that
@@ -96,7 +102,7 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   so the membership is resolved once), by `POST /api/jobs` (`generate` included) and by
   `features.for_user`, which `/api/auth/me` answers for the subject the account lands in:
   `features` carries `generate` beside the two functions. Generating is not an optional
-  function (no mode, no tone, no admin tab): the client reads it with `featuresOf` (only a
+  function (no tone, open with no row): the client reads it with `featuresOf` (only a
   literal `false` closes it), `usesFor` drops its door and `/generate` draws «not found»; a
   student's exercises stay in «Mis asignaturas y ejercicios».
 - Invitations are the admin's alone (`admin/invites.py`): chosen expiry (floor, no ceiling),
@@ -132,3 +138,5 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-123, D-124, D-125 — The evaluation and the tutor are switched by the administrator for
   nobody, everybody or a list of accounts (the tutor also of subjects); both start off; no
   exemption for the administrator; the tutor's daily limit is the account's.
+- D-233 — Generating and the chat are switched the same way (also by subjects), and start
+  open to every account.

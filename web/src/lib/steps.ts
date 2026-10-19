@@ -1,4 +1,4 @@
-import type { Features, Job, StageState } from "@/lib/types";
+import type { Features, GatedName, Job, StageState } from "@/lib/types";
 import type { Key } from "@/lib/i18n";
 import { isQueued } from "@/lib/queue";
 
@@ -61,12 +61,18 @@ function stepIndexOf(artifact: string | null): number {
  * both draw `usesFor` of the account's functions, never the whole list.
  */
 export const USES = [
-  { key: "generate", path: "/generate", labelKey: "nav.create", feature: null },
-  { key: "compare", path: "/evaluate", labelKey: "nav.compare", feature: "evaluation" },
-  { key: "tutor", path: "/tutor", labelKey: "nav.tutor", feature: "tutor" },
-  // The free chat (2026-10-15): no optional function of the administrator's, so no tone, as
-  // generating; the subject opens it (`Openings.chat`).
-  { key: "chat", path: "/chat", labelKey: "nav.chat", feature: null },
+  { key: "generate", path: "/generate", labelKey: "nav.create", feature: null, access: "generate" },
+  {
+    key: "compare",
+    path: "/evaluate",
+    labelKey: "nav.compare",
+    feature: "evaluation",
+    access: "evaluation",
+  },
+  { key: "tutor", path: "/tutor", labelKey: "nav.tutor", feature: "tutor", access: "tutor" },
+  // The free chat (2026-10-15): no optional function, so no tone, as generating; the subject
+  // opens it (`Openings.chat`).
+  { key: "chat", path: "/chat", labelKey: "nav.chat", feature: null, access: "chat" },
 ] as const satisfies readonly {
   key: string;
   path: string;
@@ -74,6 +80,8 @@ export const USES = [
   /** The optional function the door belongs to (`server/auth/features.py`), or null for the
    *  product's own. The evaluation's is drawn in `--evaluation`, the tutor's in `--tutor`. */
   feature: null | keyof Features;
+  /** The name the administrator's choice of its users is kept under (`features.GATED`). */
+  access: GatedName;
 }[];
 
 export type Door = (typeof USES)[number];
@@ -136,9 +144,9 @@ export function afterConstruction(features: Features & { generate?: boolean; cha
   return { path, labelKey };
 }
 
-/** The name an optional function goes by on screen: its door's. */
-export function featureLabelKey(feature: keyof Features): Key {
-  return USES.find((door) => door.feature === feature)!.labelKey;
+/** The name a function goes by on screen: its door's. */
+export function featureLabelKey(feature: GatedName): Key {
+  return USES.find((door) => door.access === feature)!.labelKey;
 }
 
 /**

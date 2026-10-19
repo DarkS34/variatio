@@ -6,9 +6,11 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
 ## «Administración»
 
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
-  Six tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off, one per
-  optional function in its own tone — «Evaluaciones» (`--evaluation`) and «Tutor»
-  (`--tutor`), drawn for the administrator whatever the function's mode. **Every tab is one
+  Five tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off,
+  «Funciones» (D-232, 2026-10-19): one row per door of the bar — «Generar ejercicios»,
+  «Evaluar el sistema», «Tutor socrático», «Chat libre» — each its door's icon (the optional
+  functions' in their tone, `DOOR_TONE`), drawn for the administrator whatever the function's
+  mode; each row's line says who may use it. **Every tab is one
   list of its sections beside the section open** (`components/Sections.tsx`, user's
   request of 2026-10-04: «Motor» had a board of cells, «Configuración» a column of stages
   and the functions' tabs stacked everything down one page). A row of the list is a 16 px
@@ -29,15 +31,19 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   subject's name as written, as deleting a subject is; destructive, never `--attention`. Below `lg` the list
   lies down and scrolls sideways. The maintenance switch is in the header, beside the
   title: one line while the installation is open, a red block across the page while it is
-  closed; it is no tab and no section. A function's tab has three sections — «Permisos de
-  uso», «Analíticas» («Evaluaciones» only) and «Configuración» — and `AdminScreen` holds
-  which is open, because a folded link opens one from another tab.
+  closed; it is no tab and no section. In «Funciones»
+  every function opens its parts as a row of `Tabs` over the part open — «Permisos de uso»
+  (for all four since 2026-10-19, D-233), «Analíticas» («Evaluar el sistema» only) and
+  «Configuración» — never stacked down one page;
+  `AdminScreen` holds the door open and each function's part, because a folded link opens
+  one from another tab. A row's badge counts both drafts.
   «Permisos de uso» is
   `features/admin/FeatureAccess.tsx` (a radio group «Nadie» / «Todas las cuentas» /
   «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
   marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
   under another mode because the server keeps the list; one sentence states the SAVED state,
-  one line says the administrator is not exempt; «Por asignatura» ticks or unticks at once
+  one line says the administrator is not exempt, and another, for all but the evaluation,
+  that a subject's teachers decide for its students after it; «Por asignatura» ticks or unticks at once
   every account in a subject now, `accounts.accountsIn`, paused memberships left out). **What a
   chosen subject covers is drawn in the accounts** (user's request, 2026-10-19: ticking a
   subject left its students unticked, and an account that used the function read as one that
@@ -49,9 +55,9 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   subject's, and one line says how to leave somebody out. «Analíticas» is the evaluation's reading
   (lazy); «Configuración» is the function's stage settings (`ConfigTab.StageSettings`, its
   own save bar over the same values; `tutor.daily_messages` is there). A folded link to
-  another stage opens «Configuración» on it: `AdminScreen` owns the tab, the open stage and
-  the ONE draft of the stages' settings (`useStagesDraft`), so a change left pending follows
-  the link and any of the three save bars saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
+  another stage opens it where it lives — «Configuración», or the door in «Funciones»:
+  `AdminScreen` owns the tab, the open stage and the ONE draft of the stages' settings
+  (`useStagesDraft`), so a change left pending follows the link and any save bar saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
   holder joins at registration («Funciones»), and each row shows them as badges in the
   functions' tones. The form opens on «Perfil de la cuenta» — «Docente» / «Alumno», a radio
   group with NEITHER marked, the button waiting until one is — and each row shows the profile
@@ -97,8 +103,8 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   then «General de la etapa», «Común a todas las etapas», and folded what it reads of
   another stage's — the same value, unfolded on its owner's screen. The search sits over
   the list and «Recargar desde el fichero» under it. Its list holds the
-  product's stages only: an optional function's stage (`ConfigStage.feature`) is drawn in
-  that function's tab, and «Configuración»'s search still finds and edits its settings.
+  construction's stages only: a door's stage (`ConfigStage.door`) is drawn in «Funciones»,
+  and «Configuración»'s search still finds and edits its settings.
 - A setting's measured `doc` stays in the registry and never leaves the API. A row carries at
   most one (i), and only where its name does not say what it controls or a change has a
   consequence nobody would guess: `features/admin/hints.ts` maps the registry key to

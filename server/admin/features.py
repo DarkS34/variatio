@@ -1,4 +1,4 @@
-"""Who the optional functions are for: the evaluation's and the tutor's modes and lists.
+"""Who the functions are for: the modes and lists of generating, the evaluation, the tutor, the chat.
 
 Behind `require_admin`, under `/api/admin` like every route of the panel.
 """
@@ -19,7 +19,7 @@ router = APIRouter(
 
 
 class FeatureBody(BaseModel):
-    """Who one optional function is for: its mode and, when sent, its accounts and subjects."""
+    """Who one function is for: its mode and, when sent, its accounts and subjects."""
 
     mode: str
     accounts: list[int] | None = None
@@ -28,7 +28,7 @@ class FeatureBody(BaseModel):
 
 @router.get("/features")
 def read_features(db: DbSession = Depends(auth.db)) -> dict:
-    """Answer who each optional function is for: its mode and the accounts on its list."""
+    """Answer who each function is for: its mode and the accounts on its list."""
     return {"features": features.snapshot(db)}
 
 
@@ -39,12 +39,12 @@ def set_feature(
     admin: User = Depends(auth.require_admin),
     db: DbSession = Depends(auth.db),
 ) -> dict:
-    """Set who one optional function is for.
+    """Set who one function is for.
 
     A list is replaced only when it is sent — `accounts`, or `workspaces` for a function a
     subject may be listed for — so switching the mode alone keeps both.
     """
-    if feature not in features.FEATURES:
+    if feature not in features.GATED:
         raise HTTPException(404, f"No existe la función '{feature}'.")
     if body.mode not in features.MODES:
         raise HTTPException(

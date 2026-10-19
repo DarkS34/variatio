@@ -164,11 +164,11 @@ def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) ->
 def _required(db: DbSession) -> dict[str, str]:
     """Return the models the registry asks for, without those only a switched-off function calls.
 
-    A setting of an optional function is keyed under the function's name (`tutor.models.reply`),
+    A setting of a function is keyed under the function's name (`tutor.models.reply`),
     so a function that is off for everybody does not report its own model as missing.
     """
     off = tuple(
-        f"{feature}." for feature in features.FEATURES if features.mode(db, feature) == features.OFF
+        f"{feature}." for feature in features.GATED if features.mode(db, feature) == features.OFF
     )
     return {
         key: model for key, model in inference.required_models().items() if not key.startswith(off)

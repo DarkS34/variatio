@@ -1,6 +1,6 @@
 /** The administration panel: the accounts, the subjects, the engine, invitations, settings. */
 
-import type { EvaluatorProfile, FeatureAccessState, FeatureName, Role } from "./auth";
+import type { EvaluatorProfile, FeatureAccessState, FeatureName, GatedName, Role } from "./auth";
 import type { ExemplarsProfile } from "./bank";
 import type { RunningModel } from "./core";
 import type { GenerationListing } from "./generations";
@@ -10,7 +10,7 @@ import type { SubjectPeople } from "./workspaces";
 
 /** What `/api/admin/features` answers, and what a write to one function answers too. */
 export interface AdminFeaturesPayload {
-  features?: Partial<Record<FeatureName, Partial<FeatureAccessState>>>;
+  features?: Partial<Record<GatedName, Partial<FeatureAccessState>>>;
 }
 
 /** Every account's exercises of one workspace, as the administrator's panel reads them. */

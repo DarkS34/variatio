@@ -74,9 +74,9 @@ def submit(
             headers={"X-Error-Code": auth.ROLE_TOO_LOW},
         )
 
-    # A kind that belongs to an optional function is that function's: this route must not be
-    # a way round the dependency its own router declares. Generating is everybody's, but a
-    # subject's teachers may close it to its students.
+    # A kind that belongs to a function is that function's: this route must not be a way
+    # round the dependency its own router declares. Generating has no router of its own, so
+    # its mode and its subject's switch are read here.
     feature = FEATURE_OF.get(body.kind) or (features.GENERATE if body.kind == "generate" else None)
     refused = feature and features.refusal(db, access.user, feature, access.workspace, access.role)
     if refused:

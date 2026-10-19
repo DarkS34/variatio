@@ -84,6 +84,25 @@ def test_a_function_nobody_has_set_is_off_for_everybody(db):
     assert features.for_user(db, ana) == {"generate": True, "chat": True, "evaluation": False, "tutor": False}
 
 
+def test_generating_and_the_chat_nobody_has_set_are_open_to_everybody(db):
+    assert features.mode(db, features.GENERATE) == features.ALL
+    assert features.mode(db, features.CHAT) == features.ALL
+    assert features.snapshot(db)["generate"] == {"mode": "all", "accounts": [], "workspaces": []}
+
+
+def test_the_administrator_narrows_generating_and_the_chat_for_teachers_too(db):
+    ana, bea = _user(db, "ana"), _user(db, "bea")
+    subject = SimpleNamespace(id="not-a-row", student_generate=True, student_chat=True)
+
+    features.set_mode(db, features.GENERATE, features.SELECTED)
+    features.set_listed(db, features.GENERATE, [ana.id])
+    features.set_mode(db, features.CHAT, features.OFF)
+
+    assert features.refusal(db, ana, features.GENERATE, subject, "owner") is None
+    assert features.refusal(db, bea, features.GENERATE, subject, "owner") == features.REFUSALS["generate"]
+    assert features.refusal(db, ana, features.CHAT, subject, "owner") == features.REFUSALS["chat"]
+
+
 def test_all_opens_a_function_to_every_account_and_only_that_function(db):
     ana = _user(db, "ana")
 
@@ -204,7 +223,7 @@ def test_a_mode_sent_alone_keeps_the_list(db):
 @pytest.mark.parametrize(
     ("feature", "body", "status"),
     [
-        ("chat", {"mode": "all"}, 404),
+        ("class", {"mode": "all"}, 404),
         ("tutor", {"mode": "some"}, 422),
         ("tutor", {"mode": "selected", "accounts": [999]}, 422),
     ],

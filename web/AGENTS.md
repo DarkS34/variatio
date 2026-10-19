@@ -286,8 +286,8 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   exercises only; the exercises open beside the list, never folded under their subject.
 - D-186, D-187 — «Cuentas» is one table per kind of account, each a section, one search across
   them; no figure of what an account produced.
-- D-189, D-190 — «Configuración» is one screen per stage; a shared setting is one value; an
-  optional function's stage lives in that function's admin tab.
+- D-189, D-232 — «Configuración» is one screen per construction stage; a shared setting is
+  one value; the doors' stages (generating, evaluation, tutor, chat) live in «Funciones».
 - D-191 — The mark is three equal squares (settled, attention, outline).
 - D-192, D-193 — Every URL path is English. A refusal names the move out of it (`ChainGate`).
 - D-194 — The exemplars profile is edited through the form alone.
