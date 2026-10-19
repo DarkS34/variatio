@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { PersonName } from "@/components/ui/person";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
-import { accountsIn } from "@/features/admin/accounts";
+import { accountsIn, coveredBy } from "@/features/admin/accounts";
 import { SectionHeader } from "@/components/Sections";
 import { FormError } from "@/components/ui/form-error";
 import { useT, type Key, type Translate } from "@/lib/i18n";
@@ -78,6 +78,14 @@ export function useAccessDrafts(): AccessDrafts {
  * The tutor may also list whole subjects («Asignaturas elegidas», `SUBJECT_LISTED`): everybody
  * in one uses it there, whoever joins later included, and not in their other subjects. The
  * accounts' shortcut ticks who is in a subject today; the subject's list follows its class.
+ *
+ * WHAT A CHOSEN SUBJECT COVERS IS DRAWN IN THE ACCOUNTS (user's request, 2026-10-19: ticking a
+ * subject left its students unticked below, and an account that used the function read as one
+ * that did not). Under «Cuentas elegidas» an account in a chosen subject, by the draft, has its
+ * box ticked and locked and a badge naming the subject: the subject gives it the function, so
+ * unticking it there would take nothing away, and only removing the subject does. Its own tick,
+ * when it has one, stays its own and can be taken off. Each chosen subject counts its accounts,
+ * the count says how many ticks are a subject's, and one line says how to leave somebody out.
  */
 export function FeatureAccess({
   feature,
@@ -152,6 +160,15 @@ export function FeatureAccess({
   const selecting = current.mode === "selected";
   const ticked = new Set(current.accounts);
   const known = accounts.filter((account) => ticked.has(account.id));
+  // Who a chosen subject gives the function to, read from the draft: ticking a subject marks
+  // its accounts at once. Under another mode no subject gives anything.
+  const covered = selecting && bySubjects ? coveredBy(accounts, subjects) : new Map<number, string[]>();
+  const coveredOnly = accounts.filter((account) => covered.has(account.id) && !ticked.has(account.id)).length;
+  const subjectName = new Map(workspaces.map((row) => [row.slug, row.name]));
+  const coverReason = (slugs: string[]) =>
+    slugs.length === 1
+      ? t("feature.covered.one", { subject: subjectName.get(slugs[0]) ?? slugs[0] })
+      : t("feature.covered.many", { n: slugs.length });
 
   const tick = (id: number, on: boolean) =>
     change({
@@ -262,6 +279,9 @@ export function FeatureAccess({
                         <span className="min-w-0 flex-1 truncate font-mono text-small text-muted-foreground">
                           {row.slug}
                         </span>
+                        <span className="nums shrink-0 text-small text-muted-foreground">
+                          {plural("feature.state.accountsN", accountsIn(accounts, row.slug).length)}
+                        </span>
                       </label>
                     </li>
                   ),
@@ -274,6 +294,9 @@ export function FeatureAccess({
         {selecting || known.length > 0 ? (
           <div className="space-y-2">
             {bySubjects ? <h3 className="text-heading">{t("feature.accounts.title")}</h3> : null}
+            {bySubjects && selecting ? (
+              <p className="text-small text-muted-foreground">{t("feature.accounts.lead")}</p>
+            ) : null}
             {selecting && workspaces.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">
                 <label htmlFor={subjectId} className="text-small text-muted-foreground">
@@ -326,9 +349,15 @@ export function FeatureAccess({
               />
             ) : null}
             <p className="text-small text-muted-foreground">
-              {selecting
-                ? t("feature.ticked", { n: known.length, total: accounts.length })
-                : t("feature.kept")}
+              {!selecting
+                ? t("feature.kept")
+                : coveredOnly > 0
+                  ? t("feature.tickedCovered", {
+                      n: known.length + coveredOnly,
+                      total: accounts.length,
+                      covered: coveredOnly,
+                    })
+                  : t("feature.ticked", { n: known.length, total: accounts.length })}
             </p>
             {rows.length === 0 ? (
               <p className="text-small text-muted-foreground">{t("feature.noMatch")}</p>
@@ -341,46 +370,67 @@ export function FeatureAccess({
                   !selecting && "opacity-60",
                 )}
               >
-                {rows.map((account) => (
-                  <li key={account.id}>
-                    {/* A label around the box: the whole row ticks it, the name included. */}
-                    <label
-                      className={cn(
-                        "flex items-center gap-2 rounded-md px-1 py-2",
-                        selecting && "cursor-pointer hover:bg-accent",
-                      )}
-                    >
-                      <Checkbox
-                        checked={ticked.has(account.id)}
-                        disabled={!selecting || write.isPending}
-                        onCheckedChange={(on) => tick(account.id, on)}
-                        label={account.username}
-                        // The kept list is dimmed once, as a whole; the box's own disabled
-                        // dimming on top would all but erase the ticks.
-                        className={selecting ? undefined : "disabled:opacity-100"}
-                      />
-                      <PersonName
-                        name={account.name || account.username}
-                        username={account.username}
-                        badges={
-                          <>
-                            {account.id === session.data?.user.id ? (
-                              <Badge variant="outline">{t("acc.badge.you")}</Badge>
-                            ) : null}
-                            {account.disabled ? (
-                              <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
-                            ) : null}
-                          </>
-                        }
-                      />
-                    </label>
-                  </li>
-                ))}
+                {rows.map((account) => {
+                  const through = covered.get(account.id);
+                  const reason = through ? coverReason(through) : null;
+                  // A chosen subject gives it the function: ticked, and not to be unticked here.
+                  const locked = !!through && !ticked.has(account.id);
+                  return (
+                    <li key={account.id}>
+                      {/* A label around the box: the whole row ticks it, the name included. */}
+                      <label
+                        className={cn(
+                          "flex items-center gap-2 rounded-md px-1 py-2",
+                          selecting && !locked && "cursor-pointer hover:bg-accent",
+                        )}
+                      >
+                        <Checkbox
+                          checked={ticked.has(account.id) || locked}
+                          disabled={!selecting || locked || write.isPending}
+                          onCheckedChange={(on) => tick(account.id, on)}
+                          label={reason ? `${account.username} · ${reason}` : account.username}
+                          // The kept list is dimmed once, as a whole; the box's own disabled
+                          // dimming on top would all but erase the ticks.
+                          className={selecting ? undefined : "disabled:opacity-100"}
+                        />
+                        <PersonName
+                          name={account.name || account.username}
+                          username={account.username}
+                          badges={
+                            <>
+                              {account.id === session.data?.user.id ? (
+                                <Badge variant="outline">{t("acc.badge.you")}</Badge>
+                              ) : null}
+                              {account.disabled ? (
+                                <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
+                              ) : null}
+                              {through && reason ? (
+                                // A subject's name is long, and on a phone it ate the person's:
+                                // with no basis of its own the badge takes only the room the
+                                // name leaves, up to its text, and cuts its text, not the name.
+                                <Badge
+                                  variant="outline"
+                                  className="min-w-16 max-w-fit grow basis-0"
+                                  title={through.map((slug) => subjectName.get(slug) ?? slug).join(", ")}
+                                >
+                                  <span className="truncate">{reason}</span>
+                                </Badge>
+                              ) : null}
+                            </>
+                          }
+                        />
+                      </label>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         ) : null}
 
+        {covered.size > 0 ? (
+          <p className="text-small text-muted-foreground">{t("feature.covered.note")}</p>
+        ) : null}
         <p className="text-small text-muted-foreground">{t("feature.adminNote")}</p>
 
         <FormError error={write.error} />

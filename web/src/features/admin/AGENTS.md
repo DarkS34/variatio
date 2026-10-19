@@ -38,7 +38,15 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
   under another mode because the server keeps the list; one sentence states the SAVED state,
   one line says the administrator is not exempt; «Por asignatura» ticks or unticks at once
-  every account in a subject now, `accounts.accountsIn`, paused memberships left out); «Analíticas» is the evaluation's reading
+  every account in a subject now, `accounts.accountsIn`, paused memberships left out). **What a
+  chosen subject covers is drawn in the accounts** (user's request, 2026-10-19: ticking a
+  subject left its students unticked, and an account that used the function read as one that
+  did not): an account in a subject of the draft's «Asignaturas elegidas»
+  (`accounts.coveredBy`) has its box ticked and LOCKED and a badge «Por <asignatura>» («Por N
+  asignaturas»), because unticking it would take nothing away; its own tick, if any, can
+  still be taken off. «Cuentas elegidas» says that a ticked account uses the function in all its
+  subjects, each chosen subject counts its accounts, the count says how many ticks are a
+  subject's, and one line says how to leave somebody out. «Analíticas» is the evaluation's reading
   (lazy); «Configuración» is the function's stage settings (`ConfigTab.StageSettings`, its
   own save bar over the same values; `tutor.daily_messages` is there). A folded link to
   another stage opens «Configuración» on it: `AdminScreen` owns the tab, the open stage and

@@ -31,7 +31,28 @@ export function matchesAccount(account: Pick<AdminAccount, "name" | "username">,
  * paused, whatever its role. What «Permisos de uso» ticks at once for a whole class.
  */
 export function accountsIn(accounts: Pick<AdminAccount, "id" | "workspaces">[], slug: string): number[] {
-  return accounts
-    .filter((account) => account.workspaces.some((row) => row.slug === slug && !row.disabled))
-    .map((account) => account.id);
+  return accounts.filter((account) => isIn(account, slug)).map((account) => account.id);
+}
+
+/**
+ * The chosen subjects each account is in now, by id, in the order given: who uses a function
+ * through «Asignaturas elegidas», and through which. The same reading as `accountsIn`, so the
+ * subjects' list and the accounts' shortcut agree on who is in a class. An account in none of
+ * them has no entry.
+ */
+export function coveredBy(
+  accounts: Pick<AdminAccount, "id" | "workspaces">[],
+  slugs: readonly string[],
+): Map<number, string[]> {
+  const covered = new Map<number, string[]>();
+  for (const account of accounts) {
+    const where = slugs.filter((slug) => isIn(account, slug));
+    if (where.length > 0) covered.set(account.id, where);
+  }
+  return covered;
+}
+
+/** Whether an account is in a subject now: it has a membership there a teacher has not paused. */
+function isIn(account: Pick<AdminAccount, "workspaces">, slug: string): boolean {
+  return account.workspaces.some((row) => row.slug === slug && !row.disabled);
 }

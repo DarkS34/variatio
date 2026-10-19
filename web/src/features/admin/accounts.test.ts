@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { accountsIn, groupOf, matchesAccount } from "./accounts";
+import { accountsIn, coveredBy, groupOf, matchesAccount } from "./accounts";
 
 const account = (over: Partial<Parameters<typeof groupOf>[0]> = {}) => ({
   disabled: false,
@@ -50,5 +50,36 @@ describe("accountsIn", () => {
     ];
     expect(accountsIn(accounts, "algebra")).toEqual([1, 2]);
     expect(accountsIn(accounts, "quimica")).toEqual([]);
+  });
+});
+
+describe("coveredBy", () => {
+  const accounts = [
+    { id: 1, workspaces: [{ slug: "algebra", role: "owner" as const }] },
+    {
+      id: 2,
+      workspaces: [
+        { slug: "fisica", role: "viewer" as const },
+        { slug: "algebra", role: "viewer" as const },
+      ],
+    },
+    { id: 3, workspaces: [{ slug: "algebra", role: "viewer" as const, disabled: true }] },
+    { id: 4, workspaces: [{ slug: "quimica", role: "viewer" as const }] },
+  ];
+
+  it("names, for each account, the chosen subjects it is in, in the order chosen", () => {
+    const covered = coveredBy(accounts, ["algebra", "fisica"]);
+    expect(covered.get(1)).toEqual(["algebra"]);
+    expect(covered.get(2)).toEqual(["algebra", "fisica"]);
+  });
+
+  it("leaves out an account whose only membership there is paused, and one in no chosen subject", () => {
+    const covered = coveredBy(accounts, ["algebra", "fisica"]);
+    expect(covered.has(3)).toBe(false);
+    expect(covered.has(4)).toBe(false);
+  });
+
+  it("covers nobody while no subject is chosen", () => {
+    expect(coveredBy(accounts, []).size).toBe(0);
   });
 });
