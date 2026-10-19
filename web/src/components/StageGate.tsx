@@ -43,7 +43,7 @@ import {
   useRawMissingFor,
   useSplitEngine,
 } from "@/state/queries";
-import { useAsksStageReview } from "@/state/auth";
+import { useAsksStageReview, useFeatures } from "@/state/auth";
 import { useMutation } from "@tanstack/react-query";
 import { useT, withCatalogues, type Key } from "@/lib/i18n";
 import { artifactName, buildCall, jobName } from "@/lib/names";
@@ -321,6 +321,7 @@ export function StageGate({
   const confirm = useConfirm();
   const { navigate } = useRouter();
   const asksReview = useAsksStageReview();
+  const features = useFeatures();
   // Whether the bar's "Guardar" has written once this visit: what lets it say "Cambios
   // guardados" over a clean draft instead of "todavía no has cambiado nada".
   const [savedOnce, setSavedOnce] = useState(false);
@@ -354,7 +355,7 @@ export function StageGate({
   const hasPrevious = Boolean(stage.hash);
   // Where moving on goes, and what it is called there. Read from `STEPS` so the number on
   // the button and the screen it opens cannot drift apart.
-  const next = nextStepOf(stage.artifact);
+  const next = nextStepOf(stage.artifact, features);
 
   // Moving on CLOSES the stage, or the one control the screen offers would lead to a step
   // that then refuses to build for want of an approval nobody was asked for.
@@ -703,14 +704,14 @@ export function WayOn({
 
 /**
  * What "Continuar" says: the next step's number, or — after the last — the door it opens,
- * named as the bar names it. «Ya está: crear mi primer ejercicio» said "first" on every
- * visit, the hundredth included (2026-10-08).
+ * named as the bar names it («Temario» when no door is open). «Ya está: crear mi primer
+ * ejercicio» said "first" on every visit, the hundredth included (2026-10-08).
  */
 export function continueLabel(
-  next: { number: string | null },
+  next: { number: string | null; labelKey: Key },
   t: (key: Key, vars?: Record<string, string | number>) => string,
 ): string {
-  return next.number === null ? t("nav.create") : t("stage.continue", { n: next.number });
+  return next.number === null ? t(next.labelKey) : t("stage.continue", { n: next.number });
 }
 
 export function StaleWarning({ children }: { children: ReactNode }) {

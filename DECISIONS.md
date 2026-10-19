@@ -745,6 +745,11 @@ what each decision replaced.
 - **Date:** 2026-10-14 · **Commit:** `2591988` · **Status:** in force
 - **Why:** Students read the bank as their teachers show it, next to the syllabus in their bar, and take an exercise to a commission, the tutor or the chat.
 
+### D-234. The walked path leads to the first open door
+- **Rule:** Once the construction is closed, `/` and the last step's «Continuar» lead to the first door open to the account, in the bar's order (generating while it is open), and to «Temario» when none is open; a student lands there at once, as D-140 says.
+- **Date:** 2026-10-19 · **Commit:** pending · **Status:** in force
+- **Why:** The user's request: a student with generating closed lands on the first function in the list that is open to them, else on the syllabus, which every account sees. A teacher follows the same rule, so an account with generating closed never meets «not found». Until then a student tried the evaluation last.
+
 ### D-141. Student bar is the syllabus alone
 - **Rule:** For a student the bar draws «Temario» alone, without a number, as the whole construction, then the doors open to them; `/` lands on the first open door or `SubjectNotReady`.
 - **Date:** 2026-10-06 · **Commit:** `3f5bfd7` · **Status:** superseded by D-140

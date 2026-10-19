@@ -25,7 +25,7 @@ import { Link, useRouter } from "@/lib/router";
 import { nextStepOf, stepNumberOf } from "@/lib/steps";
 import type { BuildPhase, StageState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useAsksStageReview, useCanEdit } from "@/state/auth";
+import { useAsksStageReview, useCanEdit, useFeatures } from "@/state/auth";
 import {
   useActiveWorkspace,
   useEngineOffline,
@@ -79,6 +79,7 @@ export function BankStep({
   const intro = useProfileIntro(profile);
   const asksReview = useAsksStageReview();
   const canEdit = useCanEdit();
+  const features = useFeatures();
   const offline = useEngineOffline();
   const rawMissing = useRawMissingFor("exemplars_bank");
   const submit = useSubmitJob();
@@ -150,7 +151,7 @@ export function BankStep({
   const part: Part = parts.bankOpen ? (chosen ?? parts.opening) : "types";
   const typesName = artifactName("exemplars_profile", t, profile.label);
   const bankName = artifactName("exemplars_bank", t, bank.label);
-  const next = nextStepOf("exemplars_bank");
+  const next = nextStepOf("exemplars_bank", features);
   // The bank as its part draws it. The server says it is blocked while the types are open,
   // and inside this step that is no block: collecting the bank, keeping it or going on to
   // generate closes them first. What does block it is the syllabus, said in the step's words.

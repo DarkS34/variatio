@@ -6,12 +6,12 @@ import {
   STUDENT_READS,
   SYLLABUS,
   USES,
+  afterConstruction,
   currentStepPath,
   nextStepOf,
   stepBusy,
   stepNumberOf,
   stepStates,
-  studentLandingPath,
   usesFor,
 } from "./steps";
 import { featuresOf, type ArtifactStatus, type Job, type StageState } from "./types";
@@ -67,24 +67,36 @@ describe("stepStates", () => {
 });
 
 describe("currentStepPath", () => {
+  const all = { evaluation: false, tutor: false };
+
   it("answers with the step that is next", () => {
-    expect(currentStepPath(chain("missing", "missing", "missing"), true)).toBe("/prepare/graph");
-    expect(currentStepPath(chain("approved", "missing", "missing"), true)).toBe("/prepare/bank");
+    expect(currentStepPath(chain("missing", "missing", "missing"), true, all)).toBe("/prepare/graph");
+    expect(currentStepPath(chain("approved", "missing", "missing"), true, all)).toBe("/prepare/bank");
   });
 
   it("answers with the first step when there is nothing uploaded", () => {
-    expect(currentStepPath(chain("missing", "missing", "missing"), false)).toBe("/raw");
+    expect(currentStepPath(chain("missing", "missing", "missing"), false, all)).toBe("/raw");
   });
 
   it("answers with generation once everything is approved", () => {
     // It is what everything before it was for; ending at the last step would send somebody
     // back to a screen they have already finished.
-    expect(currentStepPath(chain("approved", "approved", "approved"), true)).toBe("/generate");
+    expect(currentStepPath(chain("approved", "approved", "approved"), true, all)).toBe("/generate");
+  });
+
+  it("answers with the first open door where generating is closed to the account", () => {
+    const done = chain("approved", "approved", "approved");
+    expect(currentStepPath(done, true, { evaluation: false, tutor: true, generate: false })).toBe(
+      "/tutor",
+    );
+    expect(currentStepPath(done, true, { evaluation: false, tutor: false, generate: false })).toBe(
+      "/prepare/graph",
+    );
   });
 
   it("only ever answers a path the bar itself draws", () => {
     const paths = STEPS.map((s) => s.path) as string[];
-    expect(paths).toContain(currentStepPath(chain("approved", "missing", "missing"), true));
+    expect(paths).toContain(currentStepPath(chain("approved", "missing", "missing"), true, all));
   });
 });
 
@@ -108,14 +120,16 @@ describe("the order of the path", () => {
 });
 
 describe("nextStepOf", () => {
+  const all = { evaluation: false, tutor: false };
+
   it("leads the raw material to the first stage, numbered", () => {
     // The step with no artifact offers the same "Continuar" as the rest, from the same list.
-    expect(nextStepOf(null)).toEqual({
+    expect(nextStepOf(null, all)).toEqual({
       path: "/prepare/graph",
       number: "2",
       labelKey: "nav.step.graph",
     });
-    expect(nextStepOf("knowledge_graph")).toEqual({
+    expect(nextStepOf("knowledge_graph", all)).toEqual({
       path: "/prepare/bank",
       number: "3",
       labelKey: "nav.step.bank",
@@ -123,12 +137,25 @@ describe("nextStepOf", () => {
   });
 
   it("leads the last stage to generation, unnumbered", () => {
-    expect(nextStepOf("exemplars_bank")).toEqual({
+    expect(nextStepOf("exemplars_bank", all)).toEqual({
       path: "/generate",
       number: null,
       labelKey: "nav.create",
     });
-    expect(nextStepOf("exemplars_profile")).toEqual(nextStepOf("exemplars_bank"));
+    expect(nextStepOf("exemplars_profile", all)).toEqual(nextStepOf("exemplars_bank", all));
+  });
+
+  it("leads the last stage to the first open door where generating is closed", () => {
+    expect(nextStepOf("exemplars_bank", { evaluation: false, tutor: false, generate: false, chat: true })).toEqual({
+      path: "/chat",
+      number: null,
+      labelKey: "nav.chat",
+    });
+    expect(nextStepOf("exemplars_bank", { evaluation: false, tutor: false, generate: false })).toEqual({
+      path: "/prepare/graph",
+      number: null,
+      labelKey: "nav.step.graph",
+    });
   });
 });
 
@@ -246,21 +273,30 @@ describe("a student's bar", () => {
   });
 });
 
-describe("studentLandingPath", () => {
-  it("lands on generating while it is open", () => {
-    expect(studentLandingPath({ evaluation: true, tutor: true })).toBe("/generate");
-    expect(studentLandingPath({ evaluation: false, tutor: false })).toBe("/generate");
+describe("afterConstruction", () => {
+  const path = (features: Parameters<typeof afterConstruction>[0]) => afterConstruction(features).path;
+
+  it("leads to generating while it is open", () => {
+    expect(path({ evaluation: true, tutor: true })).toBe("/generate");
+    expect(path({ evaluation: false, tutor: false })).toBe("/generate");
   });
 
-  it("goes on to the tutor, then the syllabus, where the teachers closed generating", () => {
-    expect(studentLandingPath({ evaluation: true, tutor: true, generate: false })).toBe("/tutor");
-    expect(studentLandingPath({ evaluation: false, tutor: false, generate: false })).toBe(
-      "/prepare/graph",
-    );
+  it("goes on to the first open door in the bar's order where generating is closed", () => {
+    // The user's request (2026-10-19): «la primera que esté en la lista», the bar's list.
+    expect(path({ evaluation: true, tutor: true, generate: false, chat: true })).toBe("/evaluate");
+    expect(path({ evaluation: false, tutor: true, generate: false, chat: true })).toBe("/tutor");
+    expect(path({ evaluation: false, tutor: false, generate: false, chat: true })).toBe("/chat");
   });
 
-  it("tries the chat after the tutor", () => {
-    expect(studentLandingPath({ evaluation: true, tutor: false, generate: false, chat: true })).toBe("/chat");
-    expect(studentLandingPath({ evaluation: false, tutor: true, generate: false, chat: true })).toBe("/tutor");
+  it("falls back to the syllabus, which every account sees, with no door open", () => {
+    expect(afterConstruction({ evaluation: false, tutor: false, generate: false })).toEqual({
+      path: SYLLABUS.path,
+      labelKey: SYLLABUS.labelKey,
+    });
+  });
+
+  it("follows the door the bar draws first", () => {
+    const features = featuresOf({ features: { generate: false, tutor: true, chat: true } });
+    expect(path(features)).toBe(usesFor(features)[0].path);
   });
 });

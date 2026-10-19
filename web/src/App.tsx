@@ -7,7 +7,7 @@ import { Link, useRouter } from "@/lib/router";
 import { NoWorkspace } from "@/features/workspaces/NoWorkspace";
 import { SubjectNotReady } from "@/features/workspaces/SubjectNotReady";
 import { useCanEdit, useFeatures, useHasWorkspace, useIsStudent } from "@/state/auth";
-import { STUDENT_HIDDEN, currentStepPath, studentLandingPath } from "@/lib/steps";
+import { STUDENT_HIDDEN, afterConstruction, currentStepPath } from "@/lib/steps";
 import type { Features } from "@/lib/types";
 import { usePipeline, useRaw } from "@/state/queries";
 import { useTranscriptionSummary } from "@/features/raw/queries";
@@ -115,7 +115,7 @@ export function App() {
       // "/" is not a screen but an ANSWER. The bar IS the chain, so there is nothing left
       // to watch from outside it; what is left is the only question somebody entering has —
       // "and now what?" — which this answers by taking them there. With the whole chain
-      // approved it lands on generating, which is what everything before it was for.
+      // approved it lands on the first door open to the account, generating while it is.
       case "/":
         return <Landing />;
       // The raw material is not a stage — it writes no artifact and nobody approves it —
@@ -217,8 +217,9 @@ function Redirect({ to }: { to: string }) {
 
 
 /**
- * Where a session lands: the step that is next, or — for a student, whose subject is ready
- * by the time this is drawn — their first open door.
+ * Where a session lands: the step that is next, or the first open door once the construction
+ * is closed (`afterConstruction`) — at once for a student, whose subject is ready by the time
+ * this is drawn.
  *
  * It waits for every reading before deciding — `currentStepPath` over an empty pipeline
  * answers "step 1" for every workspace in existence, and redirecting there and then
@@ -240,10 +241,10 @@ function Landing() {
   useEffect(() => {
     if (!ready) return;
     if (student) {
-      navigate(studentLandingPath(features), { replace: true });
+      navigate(afterConstruction(features).path, { replace: true });
       return;
     }
-    navigate(currentStepPath(pipeline.data!.stages, summary.stepDone), { replace: true });
+    navigate(currentStepPath(pipeline.data!.stages, summary.stepDone, features), { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 

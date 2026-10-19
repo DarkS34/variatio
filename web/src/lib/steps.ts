@@ -117,19 +117,23 @@ export const STUDENT_HIDDEN: readonly string[] = [
   "/prepare/profile",
 ];
 
-// Where a student lands, door by door: generating first, then the tutor, the chat, then the
-// evaluation.
-const LANDING_ORDER: readonly Door["key"][] = ["generate", "tutor", "chat", "compare"];
-
 /**
- * Where "/" lands a student once the subject is ready: their first open door, or the
- * syllabus when none is open. Before the subject is ready there is nowhere to land
- * (`SubjectNotReady`), which is the caller's to decide.
+ * Where the walked path leads: the first door open to the account, in the bar's order, or the
+ * syllabus when none is — the one screen of a ready subject every account sees.
+ *
+ * "/" lands a student there once the subject is ready, and a teacher once the construction is
+ * closed; the last step's «Continuar» opens it. Generating is the first door while it is open.
+ * Until 2026-10-19 a student tried the evaluation last and a teacher always went to
+ * generating, open to them or not (the user's request). Before
+ * the subject is ready a student has nowhere to land (`SubjectNotReady`), which is the
+ * caller's to decide.
  */
-export function studentLandingPath(features: Features & { generate?: boolean; chat?: boolean }): string {
-  const open = usesFor(features);
-  const first = LANDING_ORDER.map((key) => open.find((door) => door.key === key)).find(Boolean);
-  return first?.path ?? SYLLABUS.path;
+export function afterConstruction(features: Features & { generate?: boolean; chat?: boolean }): {
+  path: string;
+  labelKey: Key;
+} {
+  const { path, labelKey } = usesFor(features)[0] ?? SYLLABUS;
+  return { path, labelKey };
 }
 
 /** The name an optional function goes by on screen: its door's. */
@@ -162,19 +166,21 @@ export function stepNumberOf(artifact: string): string | null {
 }
 
 /**
- * Where the step AFTER this artifact's leads, and what to call it.
+ * Where the step AFTER this artifact's leads, and what to call it; after the last step, the
+ * door the walked path leads to (`afterConstruction`), unnumbered.
  *
  * `null` is the raw material — the one step with no artifact — so its screen can offer the
  * same "Continuar" every stage ends with, read from the same list.
  */
 export function nextStepOf(
   artifact: string | null,
+  features: Features & { generate?: boolean; chat?: boolean },
 ): { path: string; number: string | null; labelKey: Key } {
   const index = stepIndexOf(artifact);
   const next = index === -1 ? -1 : index + 1;
   return next > 0 && next < STEPS.length
     ? { path: STEPS[next].path, number: stepNumber(next), labelKey: STEPS[next].labelKey }
-    : { path: "/generate", number: null, labelKey: "nav.create" };
+    : { ...afterConstruction(features), number: null };
 }
 
 export type StepState = "done" | "now" | "later";
@@ -204,16 +210,21 @@ export function stepStates(stages: StageState[], rawDone: boolean): StepState[] 
 }
 
 /**
- * Where "/" lands: the step that is next, or generation once the whole path is walked.
+ * Where "/" lands: the step that is next, or the first open door once the whole path is
+ * walked (`afterConstruction`).
  *
  * A landing route that resolves rather than a page of its own, because there is nothing
  * left to say from outside a chain that IS the navigation — and because the one question
  * somebody opening this has is "what do I do now", which this answers by doing it.
  */
-export function currentStepPath(stages: StageState[], rawDone: boolean): string {
+export function currentStepPath(
+  stages: StageState[],
+  rawDone: boolean,
+  features: Features & { generate?: boolean; chat?: boolean },
+): string {
   const states = stepStates(stages, rawDone);
   const now = states.indexOf("now");
-  return now === -1 ? "/generate" : STEPS[now].path;
+  return now === -1 ? afterConstruction(features).path : STEPS[now].path;
 }
 
 /**

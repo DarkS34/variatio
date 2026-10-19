@@ -35,8 +35,10 @@ this section explains; when the two disagree, fix both in the same change.
   `‹` to fold them again). From `xl` the bar sits on the header's centre line while it fits
   there; when it does not, it takes the line under the header, measured, never a fixed
   breakpoint. The current pill is scrolled
-  into sight. There is **no dashboard**: with a session `/` redirects to the current step
-  (without one it is the landing, `web/src/landing/AGENTS.md`). An account in no
+  into sight. There is **no dashboard**: with a session `/` redirects to the current step,
+  and once the construction is closed to `afterConstruction` — the first door open to the
+  account, in the bar's order, else «Temario», which every account sees (D-234, 2026-10-19)
+  (without a session it is the landing, `web/src/landing/AGENTS.md`). An account in no
   subject sees `NoWorkspace`: a teacher, the form that starts one; a student, the sentence
   that sends them to their teacher's link. Creating — there and in the switcher — is offered
   to a teacher only (`useCanCreate`, the session's profile).
@@ -48,8 +50,8 @@ this section explains; when the two disagree, fix both in the same change.
   whose redirect would land them on the bank) draw «not found»; `/prepare/bank` draws
   `BankReader` for them (`web/src/features/bank/AGENTS.md`); every other
   route of the subject draws `SubjectNotReady` (no button) until `generation_unlocked`; `/`
-  lands a student on `studentLandingPath` — generating, then the tutor, the chat, then the
-  evaluation, else the syllabus. `useRaw` and `useCoverage` are never asked for a student.
+  lands a student on `afterConstruction` (until 2026-10-19 its own order, the evaluation
+  last). `useRaw` and `useCoverage` are never asked for a student.
 - A step with a running job spins a wheel (`stepBusy`); queued is never busy.
 - Vocabulary seen by teachers: «Apuntes y ejercicios», «Temario» (the step, with no article;
   «concepto» for a node; «grafo» only for the structure), «Banco de ejercicios» (the step)
@@ -79,7 +81,8 @@ this section explains; when the two disagree, fix both in the same change.
   length of the explanation (centred, it moved with it), takes half the line at most, and
   wraps in reverse so «Continuar» keeps the first line; the sentence the foot block carried
   is the `title` of the button it explains. After the last step «Continuar» is the door it
-  opens, «Generar ejercicios» (`continueLabel`; until 2026-10-08 «Ya está: crear mi primer
+  opens, named as the bar names it: `afterConstruction`, so «Generar ejercicios» while
+  generating is open (`continueLabel`; until 2026-10-08 «Ya está: crear mi primer
   ejercicio», which said "first" on every visit).
   No «Aprobar» or «Reabrir». No tags or (i) beside a stage's title. The header is `StageHeader` (kicker «Paso N de 3», `STEPS.length`; for a step
   drawn in parts, `part` joins the part's place to it, «Paso 3 de 3 · Parte 1 de 2»), and a
@@ -254,6 +257,8 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-131, D-133, D-135, D-137, D-139, D-140 — The bar is the path: three numbered steps and the unnumbered doors open to
   the account, set apart by a rule, with no phase captions; the steps never fold; no
   dashboard; no rail. A student's bar draws «Temario» and «Banco de ejercicios» unnumbered.
+- D-234 — The walked path leads to the first door open to the account, in the bar's order, or
+  to «Temario»: `/` (a student's at once) and the last step's «Continuar».
 - D-142 — Step 3 is two parts (types, then bank), one on screen, chosen from two cards at the
   top; «Paso 3 de 3 · Parte N de 2»; one part corrected at a time.
 - D-144…D-147, D-149, D-151, D-153 — View and correct are two moments: «Modificar» and «Continuar» stand beside

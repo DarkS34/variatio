@@ -10,7 +10,7 @@ import { useT } from "@/lib/i18n";
 import { Link } from "@/lib/router";
 import { STEPS, nextStepOf, stepNumber } from "@/lib/steps";
 import type { RawKind } from "@/lib/types";
-import { useCanEdit } from "@/state/auth";
+import { useCanEdit, useFeatures } from "@/state/auth";
 import { useEngineOffline, useRaw } from "@/state/queries";
 
 import { useStartAllTranscriptions, useTranscriptionSummary } from "./queries";
@@ -170,7 +170,7 @@ export function RawScreen() {
  */
 function RawClosing({ done }: { done: boolean }) {
   const { t } = useT();
-  const next = nextStepOf(null);
+  const next = nextStepOf(null, useFeatures());
   return (
     <WayOn caption={t(done ? "raw.done.title" : "raw.next.title")}>
       <Link to={next.path}>
