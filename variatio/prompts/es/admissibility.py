@@ -10,7 +10,7 @@ def classify_instructions_prompt(
 ) -> str:
     """Ask, per request in the free text, which slot it fills or which control it invades.
 
-    The four slots are fixed and the owners are derived per instance, so no line here may
+    The five slots are fixed and the owners are derived per instance, so no line here may
     name a control this workspace has not declared. The answer is a `requests` list of
     `text`/`slot`/`owner`/`term` entries, never both `slot` and `owner` at once, with `term`
     copied from the owner's own list — `admissibility._accept` discards anything invented.
@@ -48,7 +48,7 @@ def classify_instructions_prompt(
 Clasificas la petición que ha escrito quien encarga un ejercicio. No escribes el ejercicio ni opinas sobre él: solo dices, para cada cosa que pide, si es de las que puede pedir aquí o si es de las que ya ha decidido en otro sitio.
 {context_section}
 # LO QUE SÍ SE PIDE AQUÍ
-Cuatro huecos. Una petición que encaje en uno de ellos es admisible:
+Cinco huecos. Una petición que encaje en uno de ellos es admisible:
 {slots}
 
 # LO QUE YA ESTÁ DECIDIDO EN OTRO SITIO
@@ -61,9 +61,10 @@ Pedir algo sobre ellos NO es invadir nada: son el tema del ejercicio. Solo es in
 
 # LA PRUEBA
 Un ejercicio USA muchos conceptos y PRACTICA uno o dos. La pregunta, para cada petición, es cuál de las dos cosas pide.
-- «que vaya de una lista de la compra» USA la palabra lista como escenario de la vida real: es el hueco `ambito`, no una invasión, aunque el temario tuviera un concepto llamado «Lista».
+- «que vaya de una lista de la compra» USA la palabra lista como escenario de la vida real: es el hueco `ambito`, no una invasión, aunque el temario tuviera un concepto llamado «Lista». Lo mismo vale en cualquier asignatura: «Fuerza», «Célula», «Mercado» u «Oración» también son palabras corrientes.
 - «que vaya de una biblioteca que presta libros» es un edificio con libros: es `ambito`.
-- «con un ejemplo de entrada y salida» pide que el enunciado enseñe un caso resuelto: es el hueco `elementos`, aunque el nombre de un concepto aparezca dentro de la frase.
+- «con un ejemplo resuelto» pide que el enunciado enseñe un caso resuelto: es el hueco `elementos`, aunque el nombre de un concepto aparezca dentro de la frase.
+- «sin calculadora», «sin usar la regla de tres», «sin diccionario» o «sin usar la instrucción len» PROHÍBEN a la solución un recurso: una herramienta, un material, un método, una fórmula o una instrucción. Es el hueco `restricciones`, aunque el recurso prohibido o una palabra de la frase coincida con un concepto del temario. Prohibir algo no es pedir que se practique.
 - «que practique también otro concepto» — uno del temario que no está entre los objetivos — pide PRACTICAR un concepto: invade `concepts`.
 {difficulty_rule}
 - «hazlo en inglés» cambia el idioma, que lo fija la asignatura: invade `context`.

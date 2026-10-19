@@ -25,6 +25,35 @@ def test_the_prompt_renders_one_line_per_typed_request():
     assert "da igual" not in prompt
 
 
+def test_a_constraint_gets_its_own_section_and_its_own_check():
+    requests = (
+        screening.Request(text="una panadería", slot="ambito", owner=None, term=None),
+        screening.Request(text="sin usar la función len", slot="restricciones", owner=None, term=None),
+    )
+    prompt = generate_content_prompt(**BLOCKS, instructions="da igual", requests=requests)
+    petition, constraints = prompt.split("# RESTRICCIONES DE LA SOLUCIÓN")
+    assert "- Ámbito: una panadería" in petition
+    assert "sin usar la función len" not in petition
+    assert "- sin usar la función len" in constraints
+    assert "cada restricción de la solución" in prompt
+
+
+def test_only_constraints_open_no_petition_section():
+    requests = (
+        screening.Request(text="sin usar len", slot="restricciones", owner=None, term=None),
+    )
+    prompt = generate_content_prompt(**BLOCKS, instructions="sin usar len", requests=requests)
+    assert "PETICIÓN DE QUIEN PIDE EL EJERCICIO" not in prompt
+    assert "# RESTRICCIONES DE LA SOLUCIÓN" in prompt
+
+
+def test_no_constraint_check_without_constraints():
+    requests = (screening.Request(text="breve", slot="extension", owner=None, term=None),)
+    prompt = generate_content_prompt(**BLOCKS, instructions="breve", requests=requests)
+    assert "RESTRICCIONES DE LA SOLUCIÓN" not in prompt
+    assert "cada restricción de la solución" not in prompt
+
+
 def test_the_prompt_falls_back_to_the_raw_text_without_a_ruling():
     prompt = generate_content_prompt(**BLOCKS, instructions="que vaya de deporte", requests=None)
     assert "que vaya de deporte" in prompt
@@ -39,6 +68,12 @@ def test_the_prompt_labels_match_the_catalog():
     from variatio.prompts.es.generation import _SLOT_LABELS
 
     assert _SLOT_LABELS == {s.key: s.label for s in screening.catalog()}
+
+
+def test_the_english_prompt_labels_every_slot():
+    from variatio.prompts.en.generation import _SLOT_LABELS
+
+    assert set(_SLOT_LABELS) == set(screening.SLOT_KEYS)
 
 
 def _screen(context, graph, profile, instructions):

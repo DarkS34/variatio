@@ -307,9 +307,10 @@ Take objects, return data, know no `Workspace`, write no files.
   tagger flag reads `targets_found` (a target among the tags), not the primary.
 - **Screening** (`runtime/screening/`): `guardrail` then `admissibility`, sequence in
   `screen_instructions` (one copy, used by the pipeline and the evaluation). Admissibility is
-  a catalogue of four fixed slots (`ambito`, `elementos`, `extension`, `datos`) with owners
-  derived per instance; answers are verified against those owners before belief; it **fails
-  open** three ways. The ruling travels to the prompt as typed lines. A refusal raises
+  a catalogue of five fixed slots (`ambito`, `elementos`, `extension`, `datos`,
+  `restricciones`) with owners derived per instance; answers are verified against those owners before belief; it **fails
+  open** three ways. The ruling travels to the prompt as typed lines; `restricciones` gets
+  its own section (a mandatory limit on the solution) and a line in the final check. A refusal raises
   `InstructionsBlocked` (a `ValueError` with `code = "instructions_blocked"`), copied onto
   `Job.error_code`; the client recognises it by code, never by sentence.
 
@@ -394,8 +395,9 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   embeddings; no wholesale regeneration of descriptions without benchmarking retrieval.
 - D-051, D-052 — No anchoring beats a false one. Descriptions are impersonal and
   grammar-constrained.
-- D-053 — The free-text field is a four-slot catalogue, judged after the guardrail, failing
-  open, verified against derived owners.
+- D-231 — The free-text field is a five-slot catalogue (the fifth, `restricciones`, limits
+  the solution in a section of its own), judged after the guardrail, failing open, verified
+  against derived owners.
 - D-054, D-055, D-056 — Diagrams are transcribed as Mermaid; grammatical variants are one
   concept; a profile may declare one variant decision field per modality.
 

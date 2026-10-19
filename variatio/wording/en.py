@@ -63,7 +63,8 @@ SLOTS: tuple[tuple[str, str, str], ...] = (
     ("ambito", "Setting", "set it in a bakery"),
     ("elementos", "Parts of the statement", "with a table of data"),
     ("extension", "Length", "a short statement"),
-    ("datos", "Specific data", "the list should have at least 10 elements"),
+    ("datos", "Specific data", "use small whole numbers"),
+    ("restricciones", "Constraints on the solution", "without a calculator"),
 )
 
 OWNER_CONCEPTS: tuple[str, str] = ("the target concepts", "pick them in the concepts step")

@@ -1097,7 +1097,12 @@
     {
      "key": "datos",
      "label": "Datos concretos",
-     "example": "que la lista tenga al menos 10 elementos"
+     "example": "que use números enteros pequeños"
+    },
+    {
+     "key": "restricciones",
+     "label": "Restricciones de la solución",
+     "example": "sin usar calculadora"
     }
    ],
    "owners": [

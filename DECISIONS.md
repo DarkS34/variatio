@@ -296,8 +296,13 @@ what each decision replaced.
 
 ### D-053. Free text is a four-slot catalogue
 - **Rule:** The commission's free-text field is judged against a catalogue of four fixed slots (`ambito`, `elementos`, `extension`, `datos`) with owners derived per instance; it runs after the guardrail, the judge's answer is verified against the derived owners, and it fails open.
-- **Date:** 2026-08-23 · **Commit:** `62902e3` · **Status:** in force
+- **Date:** 2026-08-23 · **Commit:** `62902e3` · **Status:** superseded by D-231
 - **Why:** Free text is admitted only where no other control already decides the matter; failing open means a judge that cannot answer never blocks a commission, and a hard-coded owner made the model blame controls the instance did not have.
+
+### D-231. Free text is a five-slot catalogue, with constraints on the solution
+- **Rule:** The commission's free-text field is judged against a catalogue of five fixed slots (`ambito`, `elementos`, `extension`, `datos`, `restricciones`) with owners derived per instance; it runs after the guardrail, the judge's answer is verified against the derived owners, and it fails open. A `restricciones` request reaches the generator in a section of its own, as a mandatory limit on the solution that the statement states, not as a surface preference.
+- **Date:** 2026-10-19 · **Commit:** pending · **Status:** in force
+- **Why:** The user's request: a teacher blocked «no podemos usar instrucción len» because no slot held a limit on the solution, and the judge blamed the graph concept «Instrucción» for a word the text only shared with it. Forbidding a resource is not asking for a concept to be practised, and the four surface slots told the generator to treat every request as wrapping.
 
 ### D-054. Diagrams transcribed as Mermaid
 - **Rule:** A diagram of labelled nodes and edges is transcribed as a fenced Mermaid block of the fitting type, with the surrounding text outside it; plots, plans and photographs stay `[figura: …]`.

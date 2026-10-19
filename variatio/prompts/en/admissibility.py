@@ -10,7 +10,7 @@ def classify_instructions_prompt(
 ) -> str:
     """Ask, per request in the free text, which slot it fills or which control it invades.
 
-    The four slots are fixed and the owners are derived per instance, so no line here may
+    The five slots are fixed and the owners are derived per instance, so no line here may
     name a control this workspace has not declared. The answer is a `requests` list of
     `text`/`slot`/`owner`/`term` entries, never both `slot` and `owner` at once, with `term`
     copied from the owner's own list — `admissibility._accept` discards anything invented.
@@ -49,7 +49,7 @@ def classify_instructions_prompt(
 You classify the request written by whoever is commissioning an exercise. You do not write the exercise and you do not judge it: you only say, for each thing it asks for, whether it is one of the things that may be asked here or one of the things already decided elsewhere.
 {context_section}
 # WHAT IS ASKED FOR HERE
-Four slots. A request that fits into one of them is admissible:
+Five slots. A request that fits into one of them is admissible:
 {slots}
 
 # WHAT IS ALREADY DECIDED ELSEWHERE
@@ -62,9 +62,10 @@ Asking for something about them is NOT invading anything: they are the subject o
 
 # THE TEST
 An exercise USES many concepts and PRACTISES one or two. The question, for each request, is which of the two it is asking for.
-- «make it about a shopping list» USES the word list as a real-life setting: that is the `ambito` slot, not an invasion, even if the syllabus had a concept called «List».
+- «make it about a shopping list» USES the word list as a real-life setting: that is the `ambito` slot, not an invasion, even if the syllabus had a concept called «List». The same holds in any subject: «Force», «Cell», «Market» or «Sentence» are everyday words too.
 - «make it about a library that lends books» is a building with books: that is `ambito`.
-- «with a sample input and output» asks the statement to show a worked case: that is the `elementos` slot, even if the name of a concept appears inside the sentence.
+- «with a worked example» asks the statement to show a worked case: that is the `elementos` slot, even if the name of a concept appears inside the sentence.
+- «without a calculator», «without using the rule of three», «without a dictionary» or «without using the len instruction» FORBID the solution a resource: a tool, a material, a method, a formula or an instruction. That is the `restricciones` slot, even if the forbidden resource or a word of the sentence coincides with a concept of the syllabus. Forbidding something is not asking for it to be practised.
 - «make it practise another concept too» — one from the syllabus that is not among the targets — asks for a concept to be PRACTISED: it invades `concepts`.
 {difficulty_rule}
 - «write it in Spanish» changes the language, which the subject fixes: it invades `context`.

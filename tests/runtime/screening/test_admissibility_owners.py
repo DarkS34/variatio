@@ -48,7 +48,7 @@ def test_catalog_keys_never_collide_with_owner_keys(owners_for):
 
 
 def test_every_slot_declares_a_label_and_an_example():
-    assert len(screening.catalog()) == 4
+    assert len(screening.catalog()) == 5
     assert all(s.key and s.label and s.example for s in screening.catalog())
 
 

@@ -1,6 +1,6 @@
 """The scope judge for the commission's free-text field.
 
-Free text is admitted only where no other control already decides the matter: four
+Free text is admitted only where no other control already decides the matter: five
 fixed slots, judged against owners derived per instance. It runs AFTER the guardrail —
 that one reads the text alone with a 4096 window, this one is handed the whole concept
 list — and it fails open, so a judge that cannot answer never blocks a commission.
@@ -126,7 +126,7 @@ def screen(
 
 
 def catalog(wording=None) -> tuple[Slot, ...]:
-    """Return the four admissible slots, worded in one language.
+    """Return the five admissible slots, worded in one language.
 
     The KEYS are the catalogue and never move — the grammar pins them, the prompt's own
     label table is checked against them by test, and `_accept` admits nothing else. What a

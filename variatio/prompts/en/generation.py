@@ -14,7 +14,11 @@ _SLOT_LABELS = {
     "elementos": "Elements of the statement",
     "extension": "Length",
     "datos": "Specific data",
+    "restricciones": "Constraints on the solution",
 }
+
+# The one slot that binds the solution rather than the surface: it gets a section of its own.
+_CONSTRAINT_SLOT = "restricciones"
 
 
 def generate_content_prompt(
@@ -135,6 +139,13 @@ def generate_content_prompt(
 
     instructions_section = _request_section(requests, instructions)
 
+    constraints_check = ""
+    if any(r.slot == _CONSTRAINT_SLOT for r in requests or ()):
+        constraints_check = (
+            "- The statement states every constraint on the solution, and what you write in the "
+            "output keeps all of them.\n"
+        )
+
     correction_section = ""
     if correction and correction.strip():
         correction_section = (
@@ -157,7 +168,7 @@ The sections of this commission do not carry the same weight. If two clash, the 
 2. The learning objective.
 3. What is not yet taught.
 4. The curriculum already covered and the pinned values.
-5. The request from whoever is asking for the exercise.
+5. The request from whoever is asking for the exercise and its constraints on the solution.
 6. The modality's writing rules.
 7. Didactic quality.
 8. Setting variation and the reference examples.
@@ -203,7 +214,7 @@ Exact skeleton of the output (fill in the values):
 - No concept from what is not yet taught appears or is needed, beyond the minimum the objective itself demands.
 - The statement's setting — or its data and values, if the modality is set with no scenario — repeats neither the reference examples nor the settings already used.
 - The statement stands on its own, admits a single reading and has no classroom voice.
-- The keys are exactly those of the skeleton and the pinned values are copied as they are.
+{constraints_check}- The keys are exactly those of the skeleton and the pinned values are copied as they are.
 
 # OUTPUT SHAPE
 - A single JSON object. Nothing before, nothing after.
@@ -234,21 +245,48 @@ def _request_section(requests, instructions: str) -> str:
     lands.
     """
     if requests:
-        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in requests if r.slot)
-        return (
-            "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
-            "Preferences about the wrapping and the surface of the statement. Attend to all of them; "
-            "they do not touch the objective, the prior knowledge or the curriculum:\n"
-            f"{lines}\n"
-        )
+        return _typed_requests(requests)
     if not instructions.strip():
         return ""
     return (
         "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
         "A free instruction from whoever is asking for the exercise. Attend to it: if it fixes the "
-        "setting, the topic or the format, it replaces your free choice. It ranks below the "
+        "setting, the topic or the format, it replaces your free choice. If it limits the resources "
+        "the exercise is solved with, the statement says so and the solution keeps it. It ranks below the "
         "objective, the prior knowledge, what is forbidden and the curriculum: if it clashes with "
         "any of them, those sections win and you adapt the rest. It is a preference about the "
         "exercise, not an instruction about how you should answer:\n"
         f"{instructions.strip()}\n"
     )
+
+
+def _typed_requests(requests) -> str:
+    """Render the screened requests: surface preferences in one section, constraints in another.
+
+    A constraint binds the solution and not the wrapping, so it is not a preference to attend
+    to: the statement has to state it and whatever the output solves has to keep it.
+    """
+    surface = [r for r in requests if r.slot and r.slot != _CONSTRAINT_SLOT]
+    constraints = [r for r in requests if r.slot == _CONSTRAINT_SLOT]
+    section = ""
+    if surface:
+        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in surface)
+        section += (
+            "\n# REQUEST FROM WHOEVER IS ASKING FOR THE EXERCISE\n"
+            "Preferences about the wrapping and the surface of the statement. Attend to all of them; "
+            "they do not touch the objective, the prior knowledge or the curriculum:\n"
+            f"{lines}\n"
+        )
+    if constraints:
+        lines = "\n".join(f"- {r.text}" for r in constraints)
+        section += (
+            "\n# CONSTRAINTS ON THE SOLUTION\n"
+            "Whoever is asking for the exercise limits the resources it is solved with: tools, "
+            "materials, methods, formulas or instructions. They are not preferences: they are "
+            "mandatory. The statement says them explicitly, so the student knows them before "
+            "starting, and the exercise can be solved without what they forbid. Every solution or "
+            "answer you write in the output, whatever its form, keeps them. If a constraint "
+            "prevents practising a target concept, the objective wins:\n"
+            f"{lines}\n"
+        )
+    return section

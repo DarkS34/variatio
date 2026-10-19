@@ -70,7 +70,7 @@ def build_phases() -> dict:
 
 
 def _scope_payload(knowledge_graph, profile, content_context, item_type: str, wording) -> dict:
-    """Render the admissibility catalogue: the four slots and who owns each of them.
+    """Render the admissibility catalogue: the five slots and who owns each of them.
 
     Worded in the WORKSPACE's language and not the account's: what it names are the judge's
     own slots and the controls it points at, and the judge reads this instance's prompts.

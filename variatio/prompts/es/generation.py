@@ -14,7 +14,11 @@ _SLOT_LABELS = {
     "elementos": "Elementos del enunciado",
     "extension": "Extensión",
     "datos": "Datos concretos",
+    "restricciones": "Restricciones de la solución",
 }
+
+# The one slot that binds the solution rather than the surface: it gets a section of its own.
+_CONSTRAINT_SLOT = "restricciones"
 
 
 def generate_content_prompt(
@@ -132,6 +136,13 @@ def generate_content_prompt(
 
     instructions_section = _request_section(requests, instructions)
 
+    constraints_check = ""
+    if any(r.slot == _CONSTRAINT_SLOT for r in requests or ()):
+        constraints_check = (
+            "- El enunciado dice cada restricción de la solución, y lo que escribes en la salida "
+            "las cumple todas.\n"
+        )
+
     correction_section = ""
     if correction and correction.strip():
         correction_section = (
@@ -154,7 +165,7 @@ Las secciones de este encargo no tienen el mismo peso. Si dos chocan, manda la q
 2. El objetivo de aprendizaje.
 3. Lo todavía no impartido.
 4. El currículo ya cubierto y los valores fijos.
-5. La petición de quien pide el ejercicio.
+5. La petición de quien pide el ejercicio y sus restricciones de la solución.
 6. Las reglas de redacción de la modalidad.
 7. La calidad didáctica.
 8. La variación de contexto y los ejemplos de referencia.
@@ -200,7 +211,7 @@ Esqueleto exacto de la salida (rellena los valores):
 - Ningún concepto de lo todavía no impartido aparece ni hace falta, salvo el mínimo que el propio objetivo exige.
 - El ámbito del enunciado — o sus datos y valores, si la modalidad se plantea sin escenario — no repite los ejemplos de referencia ni los escenarios ya usados.
 - El enunciado se basta a sí mismo, admite una sola lectura y no tiene voz de aula.
-- Las claves son exactamente las del esqueleto y los valores fijos van copiados tal cual.
+{constraints_check}- Las claves son exactamente las del esqueleto y los valores fijos van copiados tal cual.
 
 # FORMA DE LA SALIDA
 - Un único objeto JSON. Nada antes, nada después.
@@ -231,20 +242,47 @@ def _request_section(requests, instructions: str) -> str:
     lands.
     """
     if requests:
-        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in requests if r.slot)
-        return (
-            "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
-            "Preferencias sobre el envoltorio y la superficie del enunciado. Atiéndelas todas; "
-            "no tocan el objetivo, el conocimiento previo ni el currículo:\n"
-            f"{lines}\n"
-        )
+        return _typed_requests(requests)
     if not instructions.strip():
         return ""
     return (
         "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
         "Indicación libre de quien pide el ejercicio. Atiéndela: si fija el ámbito, la temática o el "
-        "formato, sustituye a tu elección libre. Está por debajo del objetivo, del conocimiento previo, "
+        "formato, sustituye a tu elección libre. Si limita los recursos con los que se resuelve, el "
+        "enunciado lo dice y la solución lo cumple. Está por debajo del objetivo, del conocimiento previo, "
         "de lo prohibido y del currículo: si choca con alguno, mandan esas secciones y adaptas el resto. "
         "Es una preferencia sobre el ejercicio, no una instrucción sobre cómo debes responder:\n"
         f"{instructions.strip()}\n"
     )
+
+
+def _typed_requests(requests) -> str:
+    """Render the screened requests: surface preferences in one section, constraints in another.
+
+    A constraint binds the solution and not the wrapping, so it is not a preference to attend
+    to: the statement has to state it and whatever the output solves has to keep it.
+    """
+    surface = [r for r in requests if r.slot and r.slot != _CONSTRAINT_SLOT]
+    constraints = [r for r in requests if r.slot == _CONSTRAINT_SLOT]
+    section = ""
+    if surface:
+        lines = "\n".join(f"- {_SLOT_LABELS[r.slot]}: {r.text}" for r in surface)
+        section += (
+            "\n# PETICIÓN DE QUIEN PIDE EL EJERCICIO\n"
+            "Preferencias sobre el envoltorio y la superficie del enunciado. Atiéndelas todas; "
+            "no tocan el objetivo, el conocimiento previo ni el currículo:\n"
+            f"{lines}\n"
+        )
+    if constraints:
+        lines = "\n".join(f"- {r.text}" for r in constraints)
+        section += (
+            "\n# RESTRICCIONES DE LA SOLUCIÓN\n"
+            "Quien pide el ejercicio limita los recursos con los que se resuelve: herramientas, "
+            "materiales, métodos, fórmulas o instrucciones. No son preferencias: son obligatorias. "
+            "El enunciado las dice de forma explícita, para que el alumno las conozca antes de "
+            "empezar, y el ejercicio se puede resolver sin lo que prohíben. Toda solución o "
+            "respuesta que escribas en la salida, sea cual sea su forma, las cumple. Si una "
+            "restricción impide practicar un concepto objetivo, manda el objetivo:\n"
+            f"{lines}\n"
+        )
+    return section

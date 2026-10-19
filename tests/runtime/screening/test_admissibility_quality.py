@@ -22,6 +22,8 @@ ADMISSIBLE = [
     "que el enunciado sea breve y con números enteros pequeños",
     "que vaya de la cadena de montaje de una fábrica",
     "sitúalo en una biblioteca que presta libros a sus socios",
+    "no podemos usar la instrucción len",
+    "que se resuelva sin usar la función sort",
 ]
 
 # The reference profile declares no `decided_by: "user"` field, so nothing on the screen
