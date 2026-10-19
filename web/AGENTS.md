@@ -130,7 +130,9 @@ this section explains; when the two disagree, fix both in the same change.
   and the count, the chosen one the sunk tint. Below `lg` the exercises take the list's
   place and a button leads back (user's request, 2026-10-04: unfolded under their subject,
   the exercises read as more subjects). «Generar más como este» in another subject switches
-  into it first. It keeps every subject OF THE ACCOUNT'S
+  into it first. An exercise's gestures head its card on a band of their own, over its type
+  and concepts (`DESIGN.md` §3's exception, 2026-10-19), and its commission leaves out a
+  pinned field the exercise already shows (it read «nivel dificultad» twice). It keeps every subject OF THE ACCOUNT'S
   OWN — the ones a membership row gives it — for an administrator like for anybody (user's
   decision, 2026-10-04): a subject reached only through the admin bypass (`as_admin` on
   `/api/workspaces`) has no row here; it is entered from the switcher and its exercises are

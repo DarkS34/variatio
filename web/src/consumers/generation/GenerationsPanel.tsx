@@ -14,10 +14,10 @@ import { PromoteButton } from "@/features/bank/Promote";
 import { stashChatDraft } from "@/lib/chatDraft";
 import { stashTutorDraft } from "@/lib/tutorDraft";
 import { ItemChecks, ItemFields, download, toMarkdown } from "@/consumers/generation/ResultCard";
-import { fieldText } from "@/lib/fields";
+import { fieldText, isEmptyField } from "@/lib/fields";
 import { useRouter } from "@/lib/router";
-import { itemTypeOf, typeLabel } from "@/lib/profile";
-import type { ExemplarsProfile, GenerationRow } from "@/lib/types";
+import { fieldLabel, itemTypeOf, typeLabel } from "@/lib/profile";
+import type { ExemplarsProfile, GenerationRow, ItemTypeSpec } from "@/lib/types";
 import {
   useDeleteGeneration,
   useGenerations,
@@ -302,6 +302,72 @@ export function GenerationCard({
 
   return (
     <Card>
+      {/* What is done WITH the exercise heads the card, on a band of its own in the sunk tint,
+          apart from what the exercise is (user's request, 2026-10-19): on the title's line the
+          gestures wrapped under it and read as part of the exercise. An exception to «the
+          block's one action on the title's line» (DESIGN.md §3): a card here has up to six.
+          The band takes the block's top corners, and wraps: on a phone the controls alone
+          are wider than the card. */}
+      <div className="flex flex-wrap items-center justify-end gap-1 rounded-t-block bg-sunk/60 px-5 py-2">
+        {/* Whether it is in the bank, and the way in for a teacher's own: read off the
+            server's `in_bank` and `promotable`. An older API says only what it was
+            promoted as, and that is all it is told. */}
+        {"promotable" in row ? (
+          promotes || row.in_bank ? (
+            <PromoteButton row={row} />
+          ) : null
+        ) : row.promoted_item_id ? (
+          <Badge variant="secondary" className="gap-1 self-center">
+            <Library className="size-3" />
+            {t("generations.inBank", { id: row.promoted_item_id })}
+          </Badge>
+        ) : null}
+        {onAgain ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7"
+            title={t("generations.againHint")}
+            onClick={onAgain}
+          >
+            <Sparkles />
+            {t("generations.moreLikeThis")}
+          </Button>
+        ) : null}
+        {onTutor ? (
+          <Button variant="tutor" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+            <MessagesSquare />
+            {t("tutor.fromExercise")}
+          </Button>
+        ) : null}
+        {onChat ? (
+          <Button variant="ghost" size="sm" className="h-7" title={t("chat.fromExercise.hint")} onClick={onChat}>
+            <MessageCircle />
+            {t("chat.fromExercise")}
+          </Button>
+        ) : null}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("generations.copyJson")}
+          onClick={() => navigator.clipboard.writeText(JSON.stringify(row.item, null, 2))}
+        >
+          <Copy />
+        </Button>
+        {/* Offered on every row of the author's own list: each is this account's own, and the
+            endpoint refuses anybody else's before this screen could draw one. */}
+        {onDelete ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("generations.delete")}
+            onClick={onDelete}
+          >
+            <Trash2 />
+          </Button>
+        ) : null}
+      </div>
+
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           {/* The modality first, then the concepts: the row answers "¿qué clase de
@@ -323,67 +389,6 @@ export function GenerationCard({
                 : t("generations.byNobody")}
             </span>
           ) : null}
-
-          {/* Wraps inside too: on a phone the controls alone are wider than the card. */}
-          <div className="ml-auto flex flex-wrap justify-end gap-1">
-            {/* Whether it is in the bank, and the way in for a teacher's own: read off the
-                server's `in_bank` and `promotable`. An older API says only what it was
-                promoted as, and that is all it is told. */}
-            {"promotable" in row ? (
-              promotes || row.in_bank ? (
-                <PromoteButton row={row} />
-              ) : null
-            ) : row.promoted_item_id ? (
-              <Badge variant="secondary" className="gap-1 self-center">
-                <Library className="size-3" />
-                {t("generations.inBank", { id: row.promoted_item_id })}
-              </Badge>
-            ) : null}
-            {onAgain ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7"
-                title={t("generations.againHint")}
-                onClick={onAgain}
-              >
-                <Sparkles />
-                {t("generations.moreLikeThis")}
-              </Button>
-            ) : null}
-            {onTutor ? (
-              <Button variant="tutor" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
-                <MessagesSquare />
-                {t("tutor.fromExercise")}
-              </Button>
-            ) : null}
-            {onChat ? (
-              <Button variant="ghost" size="sm" className="h-7" title={t("chat.fromExercise.hint")} onClick={onChat}>
-                <MessageCircle />
-                {t("chat.fromExercise")}
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("generations.copyJson")}
-              onClick={() => navigator.clipboard.writeText(JSON.stringify(row.item, null, 2))}
-            >
-              <Copy />
-            </Button>
-            {/* Offered on every row of the author's own list: each is this account's own, and the
-                endpoint refuses anybody else's before this screen could draw one. */}
-            {onDelete ? (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("generations.delete")}
-                onClick={onDelete}
-              >
-                <Trash2 />
-              </Button>
-            ) : null}
-          </div>
         </div>
       </CardHeader>
 
@@ -399,7 +404,7 @@ export function GenerationCard({
           </p>
         )}
 
-        {expanded ? <Commission row={row} /> : null}
+        {expanded ? <Commission row={row} spec={spec} /> : null}
 
         <button
           onClick={onToggle}
@@ -413,14 +418,19 @@ export function GenerationCard({
 }
 
 /** The parameters the item was asked for with. Without them the statement is unreadable
- *  as evidence: "demasiado fácil" means nothing until you know what curriculum it had. */
-function Commission({ row }: { row: GenerationRow }) {
+ *  as evidence: "demasiado fácil" means nothing until you know what curriculum it had.
+ *
+ *  A pinned field the exercise already shows with that value is left out: the item carries
+ *  it under its label just above, and every pinned field of the stored exercises (46 in
+ *  development, 44 in production on 2026-10-19, all `nivel_dificultad`) was such a repeat. */
+function Commission({ row, spec }: { row: GenerationRow; spec: ItemTypeSpec | null }) {
   const { t } = useT();
   const entries: [string, string][] = [];
   if (row.curriculum.length > 0)
     entries.push([t("generations.curriculum"), row.curriculum.join(" · ")]);
   for (const [field, value] of Object.entries(row.fixed)) {
-    entries.push([field, String(value)]);
+    if (shownByItem(row.item, spec, field, String(value))) continue;
+    entries.push([fieldLabel(field, spec), String(value)]);
   }
   if (row.instructions) entries.push([t("generations.instructions"), row.instructions]);
   if (entries.length === 0) return null;
@@ -435,4 +445,16 @@ function Commission({ row }: { row: GenerationRow }) {
       ))}
     </dl>
   );
+}
+
+/** Whether `ItemFields` draws `field` with `value`: a field of the type other than the
+ *  primary one, not empty. */
+function shownByItem(
+  item: Record<string, unknown>,
+  spec: ItemTypeSpec | null,
+  field: string,
+  value: string,
+): boolean {
+  if (!spec || !(field in spec.fields) || field === spec.primary_field) return false;
+  return !isEmptyField(item[field]) && fieldText(item[field]) === value;
 }

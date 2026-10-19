@@ -106,7 +106,10 @@ else; `check:color` only sees what is in `src/index.css`.
   closes the block at 20 px by itself.
 - A hand-built block uses the same measures: `surface space-y-4 p-5`, title `h3.text-heading`,
   lead in a `space-y-1` group with the title.
-- The block's one action sits **on the title's line**, right.
+- The block's one action sits **on the title's line**, right. **One exception**: a saved
+  exercise (`GenerationCard`, «Mis ejercicios» and the panel) carries its gestures on a band
+  of its own over the head, `bg-sunk/60`, the block's top corners (user's request,
+  2026-10-19): it has up to six, and on the title's line they wrapped under it.
 - **Blocks are 28 px apart** everywhere (`space-y-7`, `gap-7`), vertically and side by side.
 - **Two blocks in the same row are the same height** (grid `items-stretch`, child `h-full`) —
   unless their contents are lists of different length that the user wants at their own
