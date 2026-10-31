@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 
 import { Input, Select } from "@/components/ui/input";
 import { bytes } from "@/lib/format";
+import { callName, callNote } from "@/lib/names";
 import type {
   ConfigPayload,
   ConfigSetting,
@@ -101,9 +102,9 @@ export function PhaseNode({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span
             className="font-condensed uppercase leading-tight text-small text-foreground"
-            title={phase.note || undefined}
+            title={callNote(phase, t) || undefined}
           >
-            {phase.label}
+            {callName(phase, t)}
           </span>
           {aside}
           <span className="flex min-w-0 flex-1 items-center gap-1.5 sm:max-w-md">
@@ -152,7 +153,7 @@ function NodeEffort({
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   const title = [
-    t("pipe.effortTitle", { phase: phase.label, level: value }),
+    t("pipe.effortTitle", { phase: callName(phase, t), level: value }),
     lockedByEnv ? t("pipe.lockedByEnv", { env: setting.env ?? "" }) : null,
   ]
     .filter(Boolean)
@@ -160,7 +161,7 @@ function NodeEffort({
 
   return (
     <Select
-      aria-label={t("pipe.effortAria", { phase: phase.label })}
+      aria-label={t("pipe.effortAria", { phase: callName(phase, t) })}
       title={title}
       value={value}
       disabled={disabled}
@@ -208,7 +209,7 @@ function NodeModel({
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
   const effective = value;
-  const label = t("pipe.modelLabel", { phase: phase.label });
+  const label = t("pipe.modelLabel", { phase: callName(phase, t) });
 
   const describe = (model: InstalledModel) => {
     if (model.remote) return t("pipe.model.remote", { model: model.model });
@@ -289,11 +290,11 @@ function Toggle({
   const disabled = !setting.editable || lockedByEnv;
   const title = [
     t("pipe.thinkTitle", {
-      phase: phase.label,
+      phase: callName(phase, t),
       state: on ? t("pipe.think.on") : t("pipe.think.off"),
     }),
     lockedByEnv ? t("pipe.lockedByEnv", { env: setting.env ?? "" }) : null,
-    phase.note || null,
+    callNote(phase, t) || null,
   ]
     .filter(Boolean)
     .join(" — ");
@@ -303,7 +304,7 @@ function Toggle({
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={t("pipe.thinkAria", { phase: phase.label })}
+      aria-label={t("pipe.thinkAria", { phase: callName(phase, t) })}
       title={title}
       disabled={disabled}
       onClick={() => onChange(setting.key, !on)}
@@ -326,7 +327,7 @@ function Fixed({ phase }: { phase: ReasoningPhase }) {
   const { t } = useT();
   const fixed = phase.fixed ?? "grammar";
   const Icon = FIXED_ICONS[fixed];
-  const title = [`${phase.label}: ${t(FIXED_LABELS[fixed])}`, phase.note || null]
+  const title = [`${callName(phase, t)}: ${t(FIXED_LABELS[fixed])}`, callNote(phase, t) || null]
     .filter(Boolean)
     .join(" — ");
   return (

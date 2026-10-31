@@ -7,7 +7,7 @@ export const en: Catalogue = {
   "landing.nav.label": "Sections",
   "landing.nav.how": "How it works",
   "landing.nav.demo": "Demo",
-  "landing.login": "Log in",
+  "landing.login": "Sign in",
   "landing.language": "Language",
   "landing.home": "Variatio, home",
 
@@ -23,7 +23,7 @@ export const en: Catalogue = {
 
   // THE HERO'S EXAMPLE ---------------------------------------------------------------------
   "landing.example.label": "Example: from your notes to a new exercise",
-  "landing.example.subjects": "Subject of the example",
+  "landing.example.subjects": "Example subject",
   "landing.example.notes": "Your notes",
   "landing.example.syllabus": "Syllabus",
   "landing.example.known": "Already covered",
@@ -84,12 +84,12 @@ export const en: Catalogue = {
   "landing.demo.point2": "Generate exercises and find them saved.",
   "landing.demo.point3": "Nothing is real: restart it whenever you want.",
   "landing.demo.open": "Open the demo",
-  "landing.demo.openGenerate": "Start at “Generate exercises”",
+  "landing.demo.openGenerate": "Start at «Generate exercises»",
   "landing.demo.window": "Interactive demo",
   "landing.demo.sample": "Sample data",
   "landing.demo.reset": "Restart",
-  "landing.demo.skip": "Go to “Generate exercises”",
-  "landing.demo.frame": "Demonstration of Variatio",
+  "landing.demo.skip": "Go to «Generate exercises»",
+  "landing.demo.frame": "Variatio demo",
   "landing.demoPage.back": "Home",
   "landing.demoPage.arriving": "Loading the sample documents…",
   "landing.demoPage.samples": "Add sample documents",

@@ -144,7 +144,7 @@ function Flight({ cerebras }: { cerebras: CerebrasState }) {
 /* The four meters, and the breakdown under them ------------------------------------------- */
 
 function ModelBudget({ entry, single }: { entry: CerebrasModel; single: boolean }) {
-  const { t } = useT();
+  const { t, language } = useT();
   const day = entry.windows.day;
   const exhausted = day.requests_remaining <= 0 || day.tokens_remaining <= 0;
 
@@ -154,7 +154,7 @@ function ModelBudget({ entry, single }: { entry: CerebrasModel; single: boolean 
 
       {exhausted ? (
         <Alert tone="danger" title={t("cere.refusing")}>
-          {t("cere.refusing.body", { hours: hours(day.resets_in) })}
+          {t("cere.refusing.body", { hours: hours(day.resets_in, language) })}
         </Alert>
       ) : null}
 
@@ -241,7 +241,7 @@ function Meter({
         {remaining <= 0
           ? t("cere.exhaustedIn", {
               rolling: rolling.toLowerCase(),
-              time: daily ? hours(resets) : `${Math.ceil(resets)} s`,
+              time: daily ? hours(resets, language) : `${Math.ceil(resets)} s`,
             })
           : daily
             ? t("cere.slidingDay")
@@ -305,7 +305,7 @@ function Breakdown({ entry }: { entry: CerebrasModel }) {
                     />
                   </span>
                   <span className="nums w-12 text-right">
-                    {((row.tokens * 100) / ceiling).toFixed(1).replace(".", ",")} %
+                    {((row.tokens * 100) / ceiling).toLocaleString(language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %
                   </span>
                 </div>
               </TD>
@@ -317,9 +317,9 @@ function Breakdown({ entry }: { entry: CerebrasModel }) {
   );
 }
 
-function hours(seconds: number): string {
+function hours(seconds: number, language: string): string {
   if (seconds < 90) return `${Math.ceil(seconds)} s`;
   if (seconds < 5_400) return `${Math.round(seconds / 60)} min`;
-  return `${(seconds / 3_600).toFixed(1).replace(".", ",")} h`;
+  return `${(seconds / 3_600).toLocaleString(language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h`;
 }
 

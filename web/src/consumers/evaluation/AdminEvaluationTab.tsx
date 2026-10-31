@@ -558,7 +558,7 @@ function Measurement({ data }: { data: AdminEvaluations }) {
                 {" "}
                 (π ={" "}
                 <span className="nums text-foreground">
-                  {agreement.choice.kappa.toFixed(2).replace(".", ",")}
+                  {agreement.choice.kappa.toLocaleString(language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 )
               </>

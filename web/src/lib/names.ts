@@ -189,3 +189,51 @@ export function stepName(
   const entry = id ? STEP_KEYS[id] : undefined;
   return entry ? t(entry) : (fallback ?? id ?? "");
 }
+
+/**
+ * The calls of the pipeline, by the phase key the settings registry gives each one. The
+ * registry writes their label and note in Spanish; the panel draws them from here.
+ */
+const CALL_KEYS: Record<string, { label: Key; note?: Key }> = {
+  transcribe: { label: "pipe.call.transcribe", note: "pipe.call.transcribe.note" },
+  transcribe_image: { label: "pipe.call.transcribe_image", note: "pipe.call.transcribe_image.note" },
+  transcribe_seam: { label: "pipe.call.transcribe_seam", note: "pipe.call.transcribe_seam.note" },
+  kg_extract: { label: "pipe.call.kg_extract" },
+  kg_clean_merge: { label: "pipe.call.kg_clean_merge" },
+  kg_clean_drop: { label: "pipe.call.kg_clean_drop" },
+  kg_units: { label: "pipe.call.kg_units", note: "pipe.call.kg_units.note" },
+  kg_domains: { label: "pipe.call.kg_domains", note: "pipe.call.kg_domains.note" },
+  kg_domains_leftovers: { label: "pipe.call.kg_domains_leftovers" },
+  kg_link_domain: { label: "pipe.call.kg_link_domain" },
+  kg_link_cross_domain: { label: "pipe.call.kg_link_cross_domain" },
+  kg_context: { label: "pipe.call.kg_context" },
+  description_generation: { label: "pipe.call.description_generation", note: "pipe.call.description_generation.note" },
+  ep_scan: { label: "pipe.call.ep_scan" },
+  ep_consolidate: { label: "pipe.call.ep_consolidate" },
+  ep_context: { label: "pipe.call.ep_context" },
+  kg_taggable: { label: "pipe.call.kg_taggable", note: "pipe.call.kg_taggable.note" },
+  eb_extract: { label: "pipe.call.eb_extract" },
+  concept_tagger: { label: "pipe.call.concept_tagger", note: "pipe.call.concept_tagger.note" },
+  guardrail: { label: "pipe.call.guardrail", note: "pipe.call.guardrail.note" },
+  admissibility: { label: "pipe.call.admissibility" },
+  variant_generation: { label: "pipe.call.variant_generation", note: "pipe.call.variant_generation.note" },
+  repair: { label: "pipe.call.repair", note: "pipe.call.repair.note" },
+  scenario: { label: "pipe.call.scenario", note: "pipe.call.scenario.note" },
+  local_arms: { label: "pipe.call.local_arms", note: "pipe.call.local_arms.note" },
+  external_arm: { label: "pipe.call.external_arm", note: "pipe.call.external_arm.note" },
+  tutor_classify: { label: "pipe.call.tutor_classify", note: "pipe.call.tutor_classify.note" },
+  tutor_reply: { label: "pipe.call.tutor_reply", note: "pipe.call.tutor_reply.note" },
+  tutor_criteria: { label: "pipe.call.tutor_criteria", note: "pipe.call.tutor_criteria.note" },
+  tutor_digest: { label: "pipe.call.tutor_digest", note: "pipe.call.tutor_digest.note" },
+  chat_reply: { label: "pipe.call.chat_reply", note: "pipe.call.chat_reply.note" },
+};
+
+export function callName(phase: { key: string; label: string }, t: (key: Key) => string): string {
+  const keys = CALL_KEYS[phase.key];
+  return keys ? t(keys.label) : phase.label;
+}
+
+export function callNote(phase: { key: string; note: string }, t: (key: Key) => string): string {
+  const note = CALL_KEYS[phase.key]?.note;
+  return note ? t(note) : phase.note;
+}

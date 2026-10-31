@@ -578,7 +578,7 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
 
   const confirm = useConfirm();
   const askAndDiscard = async (artifact: AdminWorkspace["stages"][number]) => {
-    const message = t("ws.discardConfirm", { label: artifact.label, slug: workspace.slug });
+    const message = t("ws.discardConfirm", { label: artifactName(artifact.artifact, t, artifact.label), slug: workspace.slug });
     if (!(await confirm({ title: message, tone: "danger" }))) return;
     discard.mutate(
       { slug: workspace.slug, artifact: artifact.artifact },
@@ -587,7 +587,7 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
           toast({
             title: t("ws.stageCleared"),
             description: t("ws.stageClearedBody", {
-              label: artifact.label,
+              label: artifactName(artifact.artifact, t, artifact.label),
               slug: workspace.slug,
             }),
             tone: "attention",
@@ -620,7 +620,7 @@ function ChainCell({ workspace }: { workspace: AdminWorkspace }) {
             )}
           >
             <Badge variant={meta.tone as never}>
-              {artifactName(stage.artifact, t, stage.label).split(" ")[0]} · {t(meta.labelKey).toLowerCase()}
+              {artifactName(stage.artifact, t, stage.label)} · {t(meta.labelKey).toLowerCase()}
             </Badge>
           </button>
         );

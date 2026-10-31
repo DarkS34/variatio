@@ -184,7 +184,7 @@ export function ClassScreen() {
       group: t("class.group.course"),
       label: t("class.progress"),
       mark: <Spline className="size-4" />,
-      detail: progressDetail(progress.data, t),
+      detail: progressDetail(progress.data, tr),
     },
     {
       key: "uses",

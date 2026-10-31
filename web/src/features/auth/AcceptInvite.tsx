@@ -9,7 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { LANGUAGES, LANGUAGE_NAMES, localeStore, useLanguage, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
 import { cn } from "@/lib/utils";
@@ -113,7 +113,10 @@ export function AcceptInvite({ token }: { token: string }) {
           </a>
         }
       >
-        <FormError error={preview.error} />
+        {/* A 404 is the dead link the title already names; the API's sentence would only repeat it. */}
+        {preview.error instanceof ApiError && preview.error.status === 404 ? null : (
+          <FormError error={preview.error} />
+        )}
       </AuthLayout>
     );
   }

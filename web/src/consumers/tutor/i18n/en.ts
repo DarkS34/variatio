@@ -57,7 +57,7 @@ export const en: Catalogue = {
   "tutor.map.more": "and {n} more",
   "tutor.pending.queued": "Queued",
   "tutor.pending.queuedNext": "The tutor will start as soon as its turn comes.",
-  "tutor.pending.queuedAhead": "{n} job(s) ahead. The tutor will start when its turn comes.",
+  "tutor.pending.queuedAhead": { one: "1 job ahead. The tutor will start when its turn comes.", other: "{n} jobs ahead. The tutor will start when its turn comes." },
   "tutor.pending.running": "The tutor is preparing its question",
   "tutor.pending.runningWhy": "It reads your message, searches the notes and checks what it writes before sending it. That is why the reply arrives whole.",
   "tutor.pending.stop": "Stop",

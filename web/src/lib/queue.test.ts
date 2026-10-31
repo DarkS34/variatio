@@ -237,7 +237,7 @@ describe("what the button and the notice say", () => {
     );
     await ensureCatalogue("en");
     const evaluate = { ...wait, kind: "evaluate", label: "Evaluación comparativa" };
-    expect(waitReason(evaluate, false, translator("en"))).toContain("«Blind comparison»");
+    expect(waitReason(evaluate, false, translator("en"))).toContain("«Comparative evaluation»");
   });
 
   it("falls back to the server's label for a kind this bundle does not know", () => {

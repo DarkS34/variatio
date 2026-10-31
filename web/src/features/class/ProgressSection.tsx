@@ -20,11 +20,11 @@ import { useKg, useKgGraph, useMembers, useSaveCurriculum, useScopedCurriculum }
 /** The line under «Avance de la asignatura» in the section list: how much of the syllabus is covered. */
 export function progressDetail(
   state: CurriculumState | undefined,
-  t: ReturnType<typeof useT>["t"],
+  { t, plural }: ReturnType<typeof useT>,
 ): string | null {
   if (!state) return null;
   return state.concepts.length > 0
-    ? t("class.progress.detail", { n: state.concepts.length })
+    ? plural("class.progress.detail", state.concepts.length)
     : t("class.progress.none");
 }
 

@@ -65,7 +65,7 @@ export const es = {
   "tutor.map.more": "y {n} más",
   "tutor.pending.queued": "En cola",
   "tutor.pending.queuedNext": "El tutor empezará en cuanto le toque.",
-  "tutor.pending.queuedAhead": "Hay {n} trabajo(s) por delante. El tutor empezará cuando le toque.",
+  "tutor.pending.queuedAhead": { one: "Hay 1 trabajo por delante. El tutor empezará cuando le toque.", other: "Hay {n} trabajos por delante. El tutor empezará cuando le toque." },
   "tutor.pending.running": "El tutor prepara su pregunta",
   "tutor.pending.runningWhy": "Lee tu mensaje, busca en los apuntes y revisa lo que escribe antes de enviarlo. Por eso la respuesta llega entera.",
   "tutor.pending.stop": "Detener",

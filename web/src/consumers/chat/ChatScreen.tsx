@@ -329,7 +329,7 @@ function TurnBlock({ turn }: { turn: ChatTurn }) {
 
 /** The reply on its way: queued, or being written, and the way to stop it. */
 function Waiting({ pending, onStop }: { pending: ChatPending; onStop: () => void }) {
-  const { t } = useT();
+  const { t, plural } = useT();
   const queued = pending.status === "queued";
   return (
     <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 py-1">
@@ -339,7 +339,7 @@ function Waiting({ pending, onStop }: { pending: ChatPending; onStop: () => void
         <p className="max-w-prose text-small text-muted-foreground">
           {queued
             ? pending.queue_position > 1
-              ? t("chat.pending.queuedAhead", { n: pending.queue_position - 1 })
+              ? plural("chat.pending.queuedAhead", pending.queue_position - 1)
               : t("chat.pending.queuedNext")
             : t("chat.pending.runningWhy")}
         </p>

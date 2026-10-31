@@ -21,7 +21,7 @@ import type { Pending } from "./types";
  * A queued reply is not a running one: its mark is hollow and still.
  */
 export function Thinking({ pending, onStop }: { pending: Pending; onStop: () => void }) {
-  const { t } = useT();
+  const { t, plural } = useT();
   const queued = pending.status === "queued";
   return (
     <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 py-1">
@@ -31,7 +31,7 @@ export function Thinking({ pending, onStop }: { pending: Pending; onStop: () => 
         <p className="max-w-prose text-small text-muted-foreground">
           {queued
             ? pending.queue_position > 1
-              ? t("tutor.pending.queuedAhead", { n: pending.queue_position - 1 })
+              ? plural("tutor.pending.queuedAhead", pending.queue_position - 1)
               : t("tutor.pending.queuedNext")
             : t("tutor.pending.runningWhy")}
         </p>
