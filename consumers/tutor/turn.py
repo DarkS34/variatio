@@ -273,7 +273,9 @@ def _reply(
                 system=system,
                 think=think,
                 sampling=inference.sampling("tutor_reply", think),
-                max_output_tokens=None if think else tutor_config.REPLY_MAX_TOKENS,
+                max_output_tokens=(
+                    tutor_config.REASONING_MAX_TOKENS if think else tutor_config.REPLY_MAX_TOKENS
+                ),
             )
         text = inference.split_thinking(response.response or "").response.strip()
         failures = checks.check_reply(

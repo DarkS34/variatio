@@ -86,7 +86,8 @@ modelo.""",
         False,
         """Si el chat razona antes de contestar. Apagado por defecto porque es una conversación: cada
 turno espera a la respuesta entera, y en la GPU local la deliberación añade decenas de segundos.
-Sin medir.""",
+En el perfil `ollama` va encendido (low): en pares a ciegas ganó 17–7 en español y 20–5 en inglés,
+a cambio de pasar de 12–15 s a 35–42 s por turno (F3b, 2026-11-02).""",
         phase="chat_reply",
         scope="engine",
     ),
@@ -134,9 +135,20 @@ Lo anterior sigue guardado en la conversación. Sin medir.""",
         2048,
         """El techo de salida de la respuesta cuando no razona (`num_predict` en Ollama,
 `max_completion_tokens` en Cerebras). Más alto que el del tutor, porque el chat escribe
-soluciones y programas enteros. Con el razonamiento encendido no se aplica. Sin medir.""",
+soluciones y programas enteros. Con el razonamiento encendido manda
+`chat.reasoning_max_tokens`. Sin medir.""",
         phase="chat_reply",
         minimum=64,
+    ),
+    _setting(
+        "reasoning_max_tokens",
+        "int",
+        2048,
+        """El techo de salida de la respuesta cuando razona, deliberación incluida. Medido en el perfil
+`ollama` con low: p95 1 171 tokens y máximo 1 353 en 60 respuestas (F3b, 2026-11-02). Impide
+que un turno delibere sin fin mientras el alumno espera.""",
+        phase="chat_reply",
+        minimum=256,
     ),
     *phase_sampling(
         "chat_reply",

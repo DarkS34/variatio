@@ -93,7 +93,9 @@ def run_turn(
             system=chat_prompts.system_prompt(subject),
             think=think,
             sampling=inference.sampling("chat_reply", think),
-            max_output_tokens=None if think else chat_config.REPLY_MAX_TOKENS,
+            max_output_tokens=(
+                chat_config.REASONING_MAX_TOKENS if think else chat_config.REPLY_MAX_TOKENS
+            ),
         )
     text = inference.split_thinking(response.response or "").response.strip()
     return ChatResult(

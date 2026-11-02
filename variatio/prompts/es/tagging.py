@@ -51,7 +51,7 @@ Todo ejercicio USA muchos conceptos y PRACTICA unos pocos. Aquí se etiqueta lo 
 - Usa ÚNICAMENTE conceptos de la lista de candidatos. No inventes ni parafrasees nombres.
 - ORDEN DE DECISIÓN: fija PRIMERO el primario, aplicando solo la prueba decisiva y sin pensar todavía en la lista. Solo después amplía a `concepts`. Ampliar la lista no puede cambiar el primario que ya fijaste.
 - `primary_concept`: UNO SOLO, el OBJETIVO DE APRENDIZAJE del ejercicio — aquello que el ejercicio existe para poner a prueba, lo que se evaluaría con él. Aquí aplica la prueba decisiva sin concesiones. Debe aparecer también en `concepts`.
-- `concepts`: el primario MÁS todo concepto que este ejercicio sirva para practicar, aunque no sea su objetivo central. La pregunta aquí es más amplia y es ésta: un docente que buscase ejercicios para trabajar ese concepto, ¿se alegraría de encontrar éste? Si la respuesta es sí, va en la lista.
+- `concepts`: el primario MÁS todo concepto que este ejercicio sirva para practicar, aunque no sea su objetivo central. La pregunta aquí es más amplia y es ésta: para practicar ese concepto, ¿serviría este ejercicio? Si la respuesta es sí, va en la lista.
 - Lo que sigue quedando FUERA de `concepts`: lo que el enunciado solo menciona, lo que usa como pura notación y lo que da por sabido sin ejercitarlo en absoluto. Amplio no es indiscriminado.
 - CUÁNTOS: dos o tres es lo normal, cuatro el máximo. Si pasas de cuatro has colado herramientas.
 - ESPECIFICIDAD: entre dos candidatos donde uno es un tipo de otro, o parte de otro, el primario es el MÁS ESPECÍFICO que el ejercicio practique de verdad. El general puede acompañarlo en `concepts`.

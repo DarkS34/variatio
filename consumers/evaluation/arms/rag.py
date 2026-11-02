@@ -91,7 +91,7 @@ def run(commission: Commission, context) -> ArmResult:
         ),
         repair_model=config.REPAIR_LLM,
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
-        shape="objeto",
+        shape="object",
         format=item_type.stripped_schema(),
         # The workspace's set, not this arm's: what is repaired is JSON, not the baseline.
         prompts=context.prompts,

@@ -48,7 +48,7 @@ def ask_object(
         parse_object,
         repair_model=pipeline_config.REPAIR_LLM,
         max_attempts=pipeline_config.MAX_JSON_REPAIR_TRIES,
-        shape=tutor_prompts.SHAPE_OBJECT,
+        shape="object",
         format=format,
         prompts=prompts,
         log_prefix="[tutor] ",

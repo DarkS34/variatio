@@ -189,7 +189,7 @@ class ExemplarsProfileBuilder:
             for _, excerpt in record.get("excerpts", [])
         ][: config.EP_CONTEXT_EXCERPTS]
         if excerpts:
-            lines.append("Ejemplares literales del material:")
+            lines.append(self._wording.LITERAL_EXEMPLARS_HEADING)
             lines.extend(f"---\n{excerpt}" for excerpt in excerpts)
 
         content_context_builder.synthesize(
@@ -289,7 +289,7 @@ class ExemplarsProfileBuilder:
             self._parse_scan,
             repair_model=config.REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
-            shape="objeto",
+            shape="object",
             format=SCAN_SCHEMA,
             log_prefix=tag,
             prompts=self.prompts,
@@ -416,7 +416,7 @@ class ExemplarsProfileBuilder:
             if profile is None:
                 repair_model = config.REPAIR_LLM
                 repair_prompt = self.prompts.json_repair_prompt(
-                    broken_output=response, error_msg=err, shape="objeto"
+                    broken_output=response, error_msg=err, shape="object", grammar=False
                 )
             else:
                 repair_model = self.consolidate_model

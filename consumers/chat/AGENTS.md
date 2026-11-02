@@ -17,7 +17,8 @@ solves and writes code, as the student asks, within the subject and education.
   embedder or graph.
 - **The model**: `chat.models.reply`, empty = `VARIANT_GENERATION_LLM` (the generation's, the
   user's choice; the tutor falls back to the same); its reasoning switch and effort, its
-  sampling triple, `chat.reply_max_tokens` (2048), `chat.message_max_chars`,
+  sampling triple, `chat.reply_max_tokens` (2048; `chat.reasoning_max_tokens`, 2048, when it
+  reasons, which the `ollama` profile does since F3b), `chat.message_max_chars`,
   `chat.daily_messages` (empty = none; counted apart from the tutor's, `chat_daily_limit`).
   Declared in `consumers/chat/settings.py` (stage `chat`, after the tutor's; `MODEL_KEYS` join
   `registry.EXTRA_MODEL_KEYS`), picked up by the registry's optional import, and drawn in

@@ -20,7 +20,7 @@ def parse_with_repair(
 ) -> tuple[object | None, str | None]:
     """Parse `response`, asking the repair model to fix it up to `max_attempts` times.
 
-    `format` and `shape` are required rather than defaulted: a silent default is what let
+    `shape` is "object" or "array". `format` and `shape` are required rather than defaulted: a silent default is what let
     the tagger ask for an array while its parser demanded an object. The grammar is also
     what makes a SCHEMA error fixable at all — under it the model cannot name a field
     `sol` instead of `solucion`, which the prompt alone never prevented. Pass the schema
@@ -51,7 +51,10 @@ def parse_with_repair(
             where=log_prefix.strip() or shape,
         )
         prompt = prompts.json_repair_prompt(
-            broken_output=response, error_msg=error or "invalid JSON", shape=shape
+            broken_output=response,
+            error_msg=error or "invalid JSON",
+            shape=shape,
+            grammar=isinstance(format, dict),
         )
         response = inference.generate(
             model=repair_model,

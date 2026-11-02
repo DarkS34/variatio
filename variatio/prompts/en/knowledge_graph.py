@@ -408,7 +408,7 @@ You are given the TABLE OF CONTENTS of a corpus of teaching material of a single
 Your task: say which headings OPEN a TEACHING UNIT — a topic, a module, a large block of the syllabus — and what each one is called.
 
 # WHAT A UNIT IS
-- It is a LARGE divider of the content: what a teacher would call a topic, a module or a block. It is not a subsection, not an example, not an exercise.
+- It is a LARGE divider of the content: what the syllabus would call a topic, a module or a block. It is not a subsection, not an example, not an exercise.
 - A heading that already carries an ordinal in its name («Topic I», «Unit 3», «Module II») almost always opens one, and it is the most reliable signal there is in a table of contents.
 - FEW: between 3 and 12 in total. If you are naming more than a dozen, you are splitting by subsection and not by topic.
 - The cover, the table of contents, the bibliography, the acknowledgements, the appendices and the course notes do NOT open a unit.
@@ -600,7 +600,7 @@ For each concept, in this order:
 A label that fits almost everything says nothing at all.
 
 # EXCLUDE
-- One of any two concepts of this domain that would end up labelling THE SAME exercises — the ones no exercise could tell apart because what one practises the other practises. Keep the one a teacher would write on the exam, exclude the other. (An excluded concept remains in the graph through its relations.)
+- One of any two concepts of this domain that would end up labelling THE SAME exercises — the ones no exercise could tell apart because what one practises the other practises. Keep the one the syllabus would name as what is assessed, exclude the other. (An excluded concept remains in the graph through its relations.)
 - The course, the subject or the discipline itself, its units, and the umbrella terms that only name a part of the syllabus.
 - Generic activities or stages of the work: writing, running, designing, analysing, testing, documenting, maintaining, solving and the like.
 - Cross-cutting qualities and virtues: quality, efficiency as a virtue, readability, correctness, usefulness — unless the corpus treats it as a technical object with content and criteria of its own.

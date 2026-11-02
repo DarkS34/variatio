@@ -265,7 +265,7 @@ class ConceptTagger:
             parse,
             repair_model=self.concept_tagger_model,
             max_attempts=self.max_repair_attempts,
-            shape="objeto",
+            shape="object",
             format=schema,
             prompts=self.prompts,
         )

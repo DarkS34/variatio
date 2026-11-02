@@ -164,6 +164,18 @@ TYPE_LIST: str = "list"
 TYPE_OBJECT: str = "object"
 TYPE_VALUE: str = "value"
 TYPE_OR: str = " or "
+ONE_OF: str = "one of: "
+LITERAL_EXEMPLARS_HEADING: str = "Literal exemplars from the material:"
+
+
+def value_placeholder(name: str) -> str:
+    """Stand for the value the model writes into one unpinned field of the skeleton."""
+    return f"<concrete value for {name}>"
+
+
+def group_heading(index: int) -> str:
+    """Head one candidate merge group."""
+    return f"## Group {index}"
 
 
 def neighbour_note(concept: str) -> str:

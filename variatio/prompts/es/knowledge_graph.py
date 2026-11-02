@@ -408,7 +408,7 @@ Se te da el ÍNDICE de un corpus de material docente de una sola asignatura: tod
 Tu tarea: decir qué encabezados ABREN una UNIDAD DIDÁCTICA — un tema, un módulo, un bloque grande del temario — y cómo se llama cada una.
 
 # QUÉ ES UNA UNIDAD
-- Es un divisor GRANDE del contenido: lo que el docente llamaría tema, módulo o bloque. No es un apartado, ni un ejemplo, ni un ejercicio, ni una subsección.
+- Es un divisor GRANDE del contenido: lo que el temario llamaría tema, módulo o bloque. No es un apartado, ni un ejemplo, ni un ejercicio, ni una subsección.
 - Un encabezado que ya lleva un ordinal en el nombre («Tema I», «Unidad 3», «Módulo II») casi siempre abre una, y es la señal más fiable que hay en el índice.
 - POCAS: entre 3 y 12 en total. Si estás nombrando más de una docena, estás partiendo por apartados y no por temas.
 - La portada, el índice, la bibliografía, los agradecimientos, los anexos y las notas de la asignatura NO abren unidad.
@@ -601,7 +601,7 @@ Para cada concepto, en este orden:
 Una etiqueta que encaja en casi todo no dice nada de nada.
 
 # EXCLUYE
-- Uno de cualesquiera dos conceptos de este dominio que acabarían etiquetando LOS MISMOS ejercicios — aquellos que ningún ejercicio podría distinguir porque lo que practica uno practica el otro. Conserva el que un docente escribiría en el examen, excluye el otro. (Un concepto excluido sigue en el grafo a través de sus relaciones.)
+- Uno de cualesquiera dos conceptos de este dominio que acabarían etiquetando LOS MISMOS ejercicios — aquellos que ningún ejercicio podría distinguir porque lo que practica uno practica el otro. Conserva el que el temario nombraría como objetivo de evaluación, excluye el otro. (Un concepto excluido sigue en el grafo a través de sus relaciones.)
 - La asignatura, el curso o la disciplina en sí, sus unidades, y los términos paraguas que solo nombran una parte del temario.
 - Actividades o etapas genéricas del trabajo: escribir, ejecutar, diseñar, analizar, probar, documentar, mantener, resolver y similares.
 - Cualidades y virtudes transversales: calidad, eficiencia como virtud, legibilidad, corrección, utilidad — salvo que el corpus la trate como un objeto técnico con contenido y criterios propios.

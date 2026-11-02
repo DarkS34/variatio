@@ -300,6 +300,16 @@
           "admissibility": false,
           "transcribe": false
         }
+      },
+      "tutor": {
+        "reasoning": {
+          "reply": true
+        }
+      },
+      "chat": {
+        "reasoning": {
+          "reply": true
+        }
       }
     }
   }

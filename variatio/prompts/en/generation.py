@@ -160,7 +160,7 @@ def generate_content_prompt(
     return f"""\
 You are an expert in the didactics of the course described below and you are writing a new exercise, conforming to the output shape given at the end.
 
-Whoever is asking may be the student themselves wanting to practise on their own, or the teacher preparing material for their class. You do not know which of the two it is, and you do not need to: the exercise is the same and it always addresses whoever is going to solve it.
+You do not know who is asking, and you do not need to: the exercise always addresses whoever is going to solve it.
 
 # ORDER OF PRECEDENCE
 The sections of this commission do not carry the same weight. If two clash, the one earlier in this list wins:

@@ -18,6 +18,7 @@ MESSAGE_MAX_CHARS: int
 DAILY_MESSAGES: int | None
 HISTORY_TURNS: int
 REPLY_MAX_TOKENS: int
+REASONING_MAX_TOKENS: int
 MAX_QUESTIONS: int
 MAX_CODE_LINES: int
 COPY_MAX_WORDS: int
@@ -56,6 +57,7 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         "DAILY_MESSAGES": values["tutor.daily_messages"],
         "HISTORY_TURNS": values["tutor.history_turns"],
         "REPLY_MAX_TOKENS": values["tutor.reply_max_tokens"],
+        "REASONING_MAX_TOKENS": values["tutor.reasoning_max_tokens"],
         "MAX_QUESTIONS": values["tutor.max_questions"],
         "MAX_CODE_LINES": values["tutor.max_code_lines"],
         "COPY_MAX_WORDS": values["tutor.copy_max_words"],

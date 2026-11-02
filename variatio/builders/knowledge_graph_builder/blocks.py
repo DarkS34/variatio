@@ -40,12 +40,14 @@ def groups_block(
     relations: list[list],
     node_map: dict,
     definitions: dict[str, str] | None = None,
+    *,
+    wording,
 ) -> str:
     """The candidate merge groups, each under its own heading."""
     edges = outgoing(relations, node_map)
     lines = []
     for idx, group in enumerate(groups, 1):
-        lines.append(f"## Grupo {idx}")
+        lines.append(wording.group_heading(idx))
         for name in group:
             evidence = "; ".join(edges[name][: config.KG_MAX_EVIDENCE_RELATIONS])
             lines.append(node_line(name, definitions) + (f"  [{evidence}]" if evidence else ""))

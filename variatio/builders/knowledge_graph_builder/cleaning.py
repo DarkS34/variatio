@@ -15,6 +15,7 @@ import numpy as np
 from loguru import logger
 
 from ... import config
+from ... import wording as wording_sets
 from ...core import inference, progress
 from ...core.vectors import embed_normalized
 from . import blocks, parsing
@@ -164,7 +165,9 @@ def propose_merges(
                 0.1 + 0.4 * (idx - 1) / len(batches), f"grupos {idx}/{len(batches)}"
             )
             prompt = prompts.merge_candidate_groups_prompt(
-                blocks.groups_block(batch, relations, det_map, definitions)
+                blocks.groups_block(
+                    batch, relations, det_map, definitions, wording=wording_sets.beside(prompts)
+                )
             )
             response = inference.generate(
                 model=config.KG_CLEAN_MERGE_MODEL,

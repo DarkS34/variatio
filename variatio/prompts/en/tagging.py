@@ -51,7 +51,7 @@ Every exercise USES many concepts and PRACTISES a few. What is tagged here is wh
 - Use ONLY concepts from the candidate list. Do not invent or paraphrase names.
 - ORDER OF DECISION: fix the primary FIRST, applying only the deciding test and without thinking about the list yet. Only then widen out to `concepts`. Widening the list cannot change the primary you already fixed.
 - `primary_concept`: ONE ONLY, the exercise's LEARNING OBJECTIVE — what the exercise exists to test, what would be assessed with it. Here the deciding test applies without concessions. It must also appear in `concepts`.
-- `concepts`: the primary PLUS every concept this exercise serves to practise, even if it is not its central objective. The question here is broader and it is this one: would a teacher looking for exercises to work on that concept be glad to find this one? If the answer is yes, it goes in the list.
+- `concepts`: the primary PLUS every concept this exercise serves to practise, even if it is not its central objective. The question here is broader and it is this one: would this exercise serve to practise that concept? If the answer is yes, it goes in the list.
 - What still stays OUT of `concepts`: what the statement merely mentions, what it uses as pure notation and what it takes as known without exercising it at all. Broad is not indiscriminate.
 - HOW MANY: two or three is normal, four the maximum. If you go past four you have let tools in.
 - SPECIFICITY: between two candidates where one is a kind of the other, or a part of the other, the primary is the MOST SPECIFIC one the exercise genuinely practises. The general one may accompany it in `concepts`.

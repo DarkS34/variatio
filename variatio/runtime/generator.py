@@ -737,7 +737,7 @@ class VariantGenerator:
                 value_repr = json.dumps(fixed[name], ensure_ascii=False)
                 lines.append(f'  "{name}": {value_repr}{comma}')
             else:
-                lines.append(f'  "{name}": <valor concreto para {name}>{comma}')
+                lines.append(f'  "{name}": {self._wording.value_placeholder(name)}{comma}')
         lines.append("}")
         return "\n".join(lines)
 
@@ -784,7 +784,7 @@ class VariantGenerator:
             facets = [self._field_type(spec)]
             if "enum" in spec:
                 facets.append(
-                    "uno de: " + " | ".join(json.dumps(v, ensure_ascii=False) for v in spec["enum"])
+                    self._wording.ONE_OF + " | ".join(json.dumps(v, ensure_ascii=False) for v in spec["enum"])
                 )
             facets.extend(
                 f"{key}={json.dumps(value, ensure_ascii=False)}"
@@ -868,7 +868,7 @@ class VariantGenerator:
             parse,
             repair_model=self.repair_model,
             max_attempts=self.max_repair_attempts,
-            shape="objeto",
+            shape="object",
             format=item_type.stripped_schema(),
             prompts=self.prompts,
         )

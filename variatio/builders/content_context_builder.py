@@ -64,8 +64,7 @@ def synthesize(
         _parse,
         config.REPAIR_LLM,
         config.MAX_JSON_REPAIR_TRIES,
-        shape='{"narrative": "…", "subject": "…", '
-        '"educational_level": "…", "language_of_instruction": "…"}',
+        shape="object",
         format=CONTENT_CONTEXT_SCHEMA,
         prompts=prompts,
     )

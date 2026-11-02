@@ -96,5 +96,6 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 290 → 291 the same day: the tutor's daily limit of messages per account.
     # 305 → 315 on 2026-10-15: the free chat's ten (`consumers.chat.settings`, its model, reasoning,
     # effort, caps, history and sampling triple); none carries a name either.
-    assert len(REGISTRY) == 315
+    # 315 → 317 on 2026-11-02: the tutor's and the chat's caps for a reply that reasons.
+    assert len(REGISTRY) == 317
     assert len(BY_NAME) == 159

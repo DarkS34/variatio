@@ -336,6 +336,24 @@ def test_the_repair_is_told_not_to_drop_it(code):
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_json_repair_asks_for_the_empty_form_of_its_own_shape(code):
+    # An array caller asked for `{}` and a grammar with required keys cannot write it at all.
+    module = prompts.of(code)
+    array = module.json_repair_prompt("[", "err", shape="array", grammar=False)
+    obj = module.json_repair_prompt("{", "err", shape="object", grammar=False)
+    assert "`[]`" in array and "`{}`" not in array
+    assert "`{}`" in obj and "`[]`" not in obj
+    under_grammar = module.json_repair_prompt("{", "err", shape="object", grammar=True)
+    assert "`{}`" not in under_grammar
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_json_repair_names_its_shape_in_its_own_language(code):
+    rendered = prompts.of(code).json_repair_prompt("{", "err", shape="object", grammar=True)
+    assert {"es": "objeto JSON", "en": "JSON object"}[code] in rendered
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
 def test_the_fallbacks_are_prose_and_not_a_criterion(code):
     # They exist for the field to be honest about having none, not to classify a bank in
     # silence: the words the criterion would be graded on must not appear as if measured.

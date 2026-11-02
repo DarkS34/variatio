@@ -13,6 +13,7 @@ MESSAGE_MAX_CHARS: int
 DAILY_MESSAGES: int | None
 HISTORY_TURNS: int
 REPLY_MAX_TOKENS: int
+REASONING_MAX_TOKENS: int
 
 
 def derive(values: dict[str, object]) -> dict[str, object]:
@@ -27,6 +28,7 @@ def derive(values: dict[str, object]) -> dict[str, object]:
         "DAILY_MESSAGES": values["chat.daily_messages"],
         "HISTORY_TURNS": values["chat.history_turns"],
         "REPLY_MAX_TOKENS": values["chat.reply_max_tokens"],
+        "REASONING_MAX_TOKENS": values["chat.reasoning_max_tokens"],
     }
 
 

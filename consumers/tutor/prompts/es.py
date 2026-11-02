@@ -59,9 +59,6 @@ DEFAULT_ADMINISTRATIVE_REPLY = (
 
 BANK_SOURCE = "Banco de ejercicios"
 
-# How a repair names what it is asked to return, in the repair prompt's own language.
-SHAPE_OBJECT = "objeto"
-
 _KIND_LABELS = {
     "theory": "duda de teoría",
     "exercise": "ayuda con un enunciado",

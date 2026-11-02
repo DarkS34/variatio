@@ -176,7 +176,9 @@ modelo en ningún sitio.""",
         """Si el tutor razona antes de contestar. Apagado por defecto porque es una conversación:
 cada turno espera a la respuesta entera, y en la GPU local la deliberación añade decenas de
 segundos por turno. Las comprobaciones del sistema (pregunta, código, copia de los apuntes,
-conceptos posteriores) se aplican igual con él encendido o apagado. Sin medir.""",
+conceptos posteriores) se aplican igual con él encendido o apagado. En el perfil `ollama` va
+encendido (low): en pares a ciegas ganó 20–6 en español y 19–7 en inglés, con menos respuestas de
+respaldo, a cambio de pasar de 7 s a 25–29 s por turno (F3b, 2026-11-02).""",
     ),
     _effort("reply"),
     _model(
@@ -238,10 +240,20 @@ aparte, en la ficha, así que no se pierden al salir de la ventana. Sin medir.""
         """El techo de salida de la respuesta cuando no razona (`num_predict` en Ollama,
 `max_completion_tokens` en Cerebras). Una respuesta socrática son unas líneas y una o dos
 preguntas; el techo es lo que impide que un modelo que no se para escriba la solución entera.
-Con el razonamiento encendido no se aplica, porque la deliberación cuenta contra el mismo
-techo.""",
+Con el razonamiento encendido manda `tutor.reasoning_max_tokens`, porque la deliberación
+cuenta contra el mismo techo.""",
         phase="tutor_reply",
         minimum=64,
+    ),
+    _number(
+        "reasoning_max_tokens",
+        "int",
+        2048,
+        """El techo de salida de la respuesta cuando razona, deliberación incluida. Medido en el perfil
+`ollama` con low: p95 825 tokens y máximo 1 373 en 62 respuestas; 2 de ellas pasaban de 1 024
+(F3b, 2026-11-02). Impide que un turno delibere sin fin mientras el alumno espera.""",
+        phase="tutor_reply",
+        minimum=256,
     ),
     _number(
         "max_questions",

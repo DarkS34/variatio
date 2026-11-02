@@ -157,7 +157,7 @@ def generate_content_prompt(
     return f"""\
 Eres experto en la didáctica de la asignatura descrita abajo y redactas un ejercicio nuevo, conforme a la forma de salida indicada al final.
 
-Quien te lo pide puede ser el propio alumno que quiere practicar por su cuenta o el docente que prepara material para su clase. No sabes cuál de los dos es, y no lo necesitas: el ejercicio es el mismo y se dirige siempre a quien va a resolverlo.
+No sabes quién te lo pide, y no lo necesitas: el ejercicio se dirige siempre a quien va a resolverlo.
 
 # ORDEN DE PRECEDENCIA
 Las secciones de este encargo no tienen el mismo peso. Si dos chocan, manda la que está antes en esta lista:

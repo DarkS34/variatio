@@ -40,7 +40,7 @@ def describe_domain_concepts_prompt(
         else ""
     )
     passages_section = (
-        "\n# MATERIAL DE TEORÍA (LITERAL) Y QUÉ CONCEPTOS SALIÓ DE CADA FRAGMENTO\n"
+        "\n# MATERIAL DE TEORÍA (LITERAL) Y QUÉ CONCEPTOS SALIERON DE CADA FRAGMENTO\n"
         "Cada fragmento se muestra UNA vez, con la lista de los conceptos de este bloque que se extrajeron de él.\n"
         "- Es la única prueba de qué significan estos conceptos EN ESTA ASIGNATURA: toma de aquí el vocabulario, la notación y el nivel.\n"
         "- Un fragmento que produjo VARIOS conceptos trata de uno de ellos y menciona los demás de pasada. Ésa es justo la trampa: no describas a todos con el asunto del fragmento. Pregúntate, para cada uno, qué hace ÉL aquí que no hagan los otros.\n"
