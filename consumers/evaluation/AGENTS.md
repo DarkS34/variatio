@@ -20,7 +20,9 @@ attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never fro
   in `draw_session` (rival, order, `think`). Only the two drawn arms are generated.
   Three-card sessions recorded earlier are read, never rewritten.
 - **One scenario per session**: drawn once by a short call and placed in both prompts, unless
-  the free text already fixes a theme (`SCENARIO_NONE`). No scenario field on the form.
+  the free text already fixes a theme, or the exercise is naturally set bare (`SCENARIO_NONE`;
+  in F12 that took the draws without a scenario from 3 to 9 of 20 in Spanish and from 4 to 7 in
+  English). No scenario field on the form.
 - The two local arms are written by `evaluation.local_model` (admin setting; null = the first
   offered generation model); no request carries a model for `evaluate`.
 - After all arms, `_tag` tags every proposal; `off_limits` = tagged ∩ forbidden ∪ lexical

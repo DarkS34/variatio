@@ -31,7 +31,9 @@ def test_the_baselines_carry_the_scenario_in_both_sets(code):
     assert "biblioteca" not in bare
     draw = module.scenario_prompt("Programación", ["Bucles"], context_block="Curso de Python")
     assert "Bucles" in draw and "Curso de Python" in draw
-    assert module.SCENARIO_NONE not in draw
+    # Since 2026-11-02 (plan F12) the draw may answer NONE for an exercise set bare, so the
+    # word is in every prompt; only the instructions' line depends on there being any.
+    assert module.SCENARIO_NONE in draw and "panadería" not in draw
     told = module.scenario_prompt("Programación", ["Bucles"], instructions="Que vaya de una panadería")
     assert "Que vaya de una panadería" in told and module.SCENARIO_NONE in told
 

@@ -80,7 +80,9 @@ def scenario_prompt(
     Plain text, one line, no task and no concept named: the setting is a wrapper and the
     exercise itself is each arm's own. When `instructions` already fix a setting the
     answer is `SCENARIO_NONE`: the evaluator's words reach both arms as they are, and a
-    second sentence saying the same thing would only compete with them.
+    second sentence saying the same thing would only compete with them. It is `SCENARIO_NONE`
+    too where the exercise is naturally set bare (plan F12): the generator would otherwise
+    receive a FIXED SCENARIO for a modality that has none.
     """
     subject = subject or "la asignatura"
     context_section = f"\nDe qué va la asignatura:\n{context_block.strip()}\n" if context_block.strip() else ""
@@ -95,6 +97,8 @@ def scenario_prompt(
 Propón UN escenario concreto y realista en el que ambientar un ejercicio de {subject} que practique {', '.join(concepts)}.
 {context_section}{instructions_section}
 Una sola frase, de 25 palabras como mucho, que describa una organización, un sistema o una situación cotidiana reconocible. No plantees la tarea, no menciones los conceptos, no resuelvas nada y no expliques la elección.
+
+Si un ejercicio de estos conceptos se plantea de forma natural sin ningún escenario (un cálculo directo, una demostración, una pregunta de definición o de análisis de un caso dado), responde únicamente con la palabra {SCENARIO_NONE}: un escenario inventado ahí solo añade texto que descifrar.
 
 Responde solo con la frase, sin comillas ni preámbulo."""
 
