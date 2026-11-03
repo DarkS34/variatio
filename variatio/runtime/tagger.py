@@ -20,6 +20,9 @@ from ..loaders.content_context import ContentContext
 
 TRACE_KEY = "_tagging"
 
+# The prompt's ceiling on `concepts`, which the parser holds too.
+MAX_CONCEPTS = 4
+
 
 class ConceptTagger:
     """Assign graph concepts to an item and name the one it PRACTISES as primary."""
@@ -297,7 +300,10 @@ class ConceptTagger:
             if not primary:
                 return None
 
-            return {"concepts": valid_concepts or [primary], "primary_concept": primary}
+            # The prompt's two rules nothing else enforced (plan R7): the primary is among the
+            # concepts, and there are four at most.
+            concepts = [primary] + [c for c in dict.fromkeys(valid_concepts) if c != primary]
+            return {"concepts": concepts[:MAX_CONCEPTS], "primary_concept": primary}
 
         except (json.JSONDecodeError, KeyError, TypeError):
             return None
