@@ -309,8 +309,10 @@ Take objects, return data, know no `Workspace`, write no files.
   `screen_instructions` (one copy, used by the pipeline and the evaluation). Admissibility is
   a catalogue of five fixed slots (`ambito`, `elementos`, `extension`, `datos`,
   `restricciones`) with owners derived per instance; answers are verified against those owners before belief; it **fails
-  open** three ways. The ruling travels to the prompt as typed lines; `restricciones` gets
-  its own section (a mandatory limit on the solution) and a line in the final check. A refusal raises
+  open** three ways. The modality owner shows the chosen modality apart (`Owner.chosen`) and
+  never lists it as a term, so a request that agrees with the type («a brief clinical case» on
+  a clinical-case type) cannot trespass; an undeclared modality has the term «otra modalidad».
+  The ruling travels to the prompt as typed lines; `restricciones` gets its own section (a mandatory limit on the solution) and a line in the final check. A refusal raises
   `InstructionsBlocked` (a `ValueError` with `code = "instructions_blocked"`), copied onto
   `Job.error_code`; the client recognises it by code, never by sentence.
 

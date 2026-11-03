@@ -26,7 +26,10 @@ def classify_instructions_prompt(
     owner_lines = []
     for owner in owners:
         terms = ", ".join(f"«{t}»" for t in owner.terms)
-        owner_lines.append(f"- {owner.key} ({owner.label}) decides: {terms}")
+        chosen = ""
+        if owner.chosen:
+            chosen = "; already chosen for this exercise: " + ", ".join(f"«{t}»" for t in owner.chosen)
+        owner_lines.append(f"- {owner.key} ({owner.label}) decides: {terms}{chosen}")
     owners_block = "\n".join(owner_lines)
 
     targets_block = ", ".join(f"«{t}»" for t in targets) or "(none)"
@@ -45,6 +48,21 @@ def classify_instructions_prompt(
             "most resembles it."
         )
 
+    # The same holds for the context: an example naming an owner the instance lacks invites
+    # the model to blame the nearest one.
+    context_rule = ""
+    if any(owner.key == "context" for owner in owners):
+        context_rule = "\n- «write it in another language» changes the language, which the course fixes: it invades `context`."
+
+    # A request that names the value a control already holds agrees with it; without the
+    # chosen value in sight the judge reads «a clinical case» on a clinical-case type as a
+    # change of type.
+    # `owners` puts the term for an undeclared value last in such a control's list.
+    chosen_rule = ""
+    for owner in owners:
+        if owner.chosen:
+            chosen_rule = f"\n- Asking for what a control has ALREADY chosen for this exercise (above, after «already chosen») changes nothing: it invades nothing. Asking for another value of that control does invade it; for one its list does not name, the term is «{owner.terms[-1]}»."
+
     return f"""\
 You classify the request written by whoever is commissioning an exercise. You do not write the exercise and you do not judge it: you only say, for each thing it asks for, whether it is one of the things that may be asked here or one of the things already decided elsewhere.
 {context_section}
@@ -58,17 +76,17 @@ Each line is a control on the form and what that control decides. A request that
 
 # THE TARGET CONCEPTS OF THIS COMMISSION
 {targets_block}
-Asking for something about them is NOT invading anything: they are the subject of the exercise. It is only an invasion to ask that a concept NOT on this line be practised.
+Asking for something about them is NOT invading anything: they are what the exercise is about. It is only an invasion to ask that a concept NOT on this line be practised.
 
 # THE TEST
 An exercise USES many concepts and PRACTISES one or two. The question, for each request, is which of the two it is asking for.
 - «make it about a shopping list» USES the word list as a real-life setting: that is the `ambito` slot, not an invasion, even if the syllabus had a concept called «List». The same holds in any subject: «Force», «Cell», «Market» or «Sentence» are everyday words too.
 - «make it about a library that lends books» is a building with books: that is `ambito`.
 - «with a worked example» asks the statement to show a worked case: that is the `elementos` slot, even if the name of a concept appears inside the sentence.
-- «without a calculator», «without using the rule of three», «without a dictionary» or «without using the len instruction» FORBID the solution a resource: a tool, a material, a method, a formula or an instruction. That is the `restricciones` slot, even if the forbidden resource or a word of the sentence coincides with a concept of the syllabus. Forbidding something is not asking for it to be practised.
+- «without a calculator», «without using the rule of three» or «without a dictionary» FORBID the solution a resource: a tool, a material, a method, a formula or an instruction. That is the `restricciones` slot, even if the forbidden resource or a word of the sentence coincides with a concept of the syllabus. Forbidding something is not asking for it to be practised, and neither is asking for a concept NOT to appear in the statement.
+- «a client with a history of asthma», «a firm making a loss» or «a circuit with a faulty resistor» give DATA of the case: that is the `datos` slot (or `ambito`), even if the data carry the name of a concept of the syllabus. A fact of the case is used; nobody asks for it to be practised.
 - «make it practise another concept too» — one from the syllabus that is not among the targets — asks for a concept to be PRACTISED: it invades `concepts`.
-{difficulty_rule}
-- «write it in Spanish» changes the language, which the subject fixes: it invades `context`.
+{difficulty_rule}{context_rule}{chosen_rule}
 A word in the text coinciding with the name of a concept is NOT an invasion: only asking for that concept to be PRACTISED is.
 An owner can only be invaded if it is on the list above. If what is asked fits no slot and no listed owner decides it, leave `slot` and `owner` as `null`: it is not this screen's business, nor any other's.
 When in doubt between a slot and an owner, the slot wins: refusing a legitimate request costs more than letting a doubtful one through.

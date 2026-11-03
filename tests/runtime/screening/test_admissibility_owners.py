@@ -42,6 +42,15 @@ def test_owners_carries_the_modalities_and_the_three_facts(owners_for):
     assert "Programación en Python" in _owner(found, "context").terms
 
 
+def test_the_type_owner_names_the_type_already_chosen_apart_from_its_terms(owners_for):
+    found = owners_for(item_type="analisis")
+    owner = _owner(found, "item_type")
+    assert owner.chosen == ("analisis", "Análisis de código")
+    assert "analisis" not in owner.terms and "Análisis de código" not in owner.terms
+    assert owner.terms[-1] == "otra modalidad"
+    assert not _owner(found, "context").chosen
+
+
 def test_catalog_keys_never_collide_with_owner_keys(owners_for):
     found = owners_for()
     assert not {s.key for s in screening.catalog()} & {o.key for o in found}

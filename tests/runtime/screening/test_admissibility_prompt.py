@@ -38,3 +38,16 @@ def test_the_schema_pins_the_slot_and_owner_keys(owners_for):
     assert set(item["properties"]["slot"]["enum"]) == {s.key for s in screening.catalog()} | {None}
     assert "field:nivel_dificultad" in item["properties"]["owner"]["enum"]
     assert item["required"] == ["text", "slot", "owner", "term"]
+
+
+def test_the_prompt_shows_the_type_already_chosen_as_no_invasion(owners_for):
+    prompt = classify_instructions_prompt(
+        instructions="un análisis breve",
+        catalog=screening.catalog(),
+        owners=owners_for(item_type="analisis"),
+        targets=["Recursividad"],
+        context_block="",
+    )
+    assert "ya elegido para este ejercicio: «analisis», «Análisis de código»" in prompt
+    assert "YA ha elegido para este ejercicio" in prompt
+    assert "el término es «otra modalidad»" in prompt

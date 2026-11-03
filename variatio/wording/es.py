@@ -26,10 +26,16 @@ OVERRIDE_OBJECTS: str = (
 
 OVERRIDE_QUALIFIERS: str = r"anterior(?:es)?|previ[ao]s?|de arriba|" + shared.OVERRIDE_QUALIFIERS
 
+OWN_INSTRUCTIONS: str = r"que te (?:di|he dado|habia dado|pedi|escribi)|" + shared.OWN_INSTRUCTIONS
+
 # The lookahead spares "instrucciones del sistema operativo", a legitimate subject.
 INJECTION_PATTERNS: tuple[str, ...] = shared.INJECTION_PATTERNS + (
     r"\bprompt del sistema\b",
     r"\binstrucciones del sistema\b(?! ?operativ)",
+    r"\brepite\b[^.;!?]{0,40}\b(?:texto|todo|lo que)\b[^.;!?]{0,25}\b(?:encima|de arriba)\b",
+    r"\b(?:tus|sus) (?:instrucciones|reglas) (?:de configuracion|iniciales|originales|internas|ocultas)\b",
+    r"\b(?:pd|p\.d\.|nota|mensaje) para (?:el modelo|la ia|el asistente|el sistema)\b",
+    r"\b(?:vamos a jugar a|juguemos a)\b[^.;!?]{0,30}\b(?:tu eres|eres|seras|finge|actua)\b",
 )
 
 # WORD MATCHING ----------------------------------------------------------------------------------
@@ -75,6 +81,8 @@ OWNER_CONCEPTS: tuple[str, str] = ("los conceptos objetivo", "elígelos en el pa
 OWNER_DIFFICULTY_WHERE: str = "elígelo en «¿De qué nivel?»"
 OWNER_FIELD_WHERE: str = "decídelo en «¿Cómo debe ser?»"
 OWNER_ITEM_TYPE: tuple[str, str] = ("la modalidad del ejercicio", "elígela en el paso de modalidad")
+# The term for a modality the profile does not declare.
+OWNER_ITEM_TYPE_OTHER: str = "otra modalidad"
 OWNER_CONTEXT: tuple[str, str] = (
     "la materia, el nivel y el idioma",
     "los fija el contexto de la asignatura, en el panel",

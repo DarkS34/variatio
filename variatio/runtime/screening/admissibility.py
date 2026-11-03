@@ -29,12 +29,18 @@ class Slot:
 
 @dataclass(frozen=True)
 class Owner:
-    """A control that already decides something, the terms it holds and where it lives."""
+    """A control that already decides something, the terms it holds and where it lives.
+
+    `chosen` is what the control already holds for this commission, shown to the judge and
+    kept out of `terms`: a request that agrees with it changes nothing. «a brief clinical
+    case» on a clinical-case type is not asking for another type.
+    """
     
     key: str
     label: str
     where: str
     terms: tuple[str, ...]
+    chosen: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -262,9 +268,13 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts, wordi
             )
         )
 
+    # The chosen modality is not a term: a request naming it asks for nothing new, and a
+    # judge that cites it anyway is discarded by `_accept`. Asking for one the profile does
+    # not declare still trespasses, under the one term that names no modality.
     modalities = tuple(
         value
         for key in profile.item_types
+        if key != item_type.key
         for value in (key, profile.item_type(key).label)
     )
     found.append(
@@ -272,7 +282,8 @@ def owners(knowledge_graph, item_type, profile, content_context, concepts, wordi
             key="item_type",
             label=item_type_label,
             where=item_type_where,
-            terms=modalities,
+            terms=(*modalities, wording.OWNER_ITEM_TYPE_OTHER),
+            chosen=tuple(dict.fromkeys((item_type.key, item_type.label))),
         )
     )
 

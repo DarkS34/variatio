@@ -26,7 +26,10 @@ def classify_instructions_prompt(
     owner_lines = []
     for owner in owners:
         terms = ", ".join(f"«{t}»" for t in owner.terms)
-        owner_lines.append(f"- {owner.key} ({owner.label}) decide: {terms}")
+        chosen = ""
+        if owner.chosen:
+            chosen = "; ya elegido para este ejercicio: " + ", ".join(f"«{t}»" for t in owner.chosen)
+        owner_lines.append(f"- {owner.key} ({owner.label}) decide: {terms}{chosen}")
     owners_block = "\n".join(owner_lines)
 
     targets_block = ", ".join(f"«{t}»" for t in targets) or "(ninguno)"
@@ -43,6 +46,21 @@ def classify_instructions_prompt(
             "- «que sea muy difícil» fija la exigencia, y arriba NO hay ningún control que "
             "la decida: no invade nada. No se la atribuyas al dueño que más se le parezca."
         )
+
+    # The same holds for the context: an example naming an owner the instance lacks invites
+    # the model to blame the nearest one.
+    context_rule = ""
+    if any(owner.key == "context" for owner in owners):
+        context_rule = "\n- «hazlo en otro idioma» cambia el idioma, que lo fija la asignatura: invade `context`."
+
+    # A request that names the value a control already holds agrees with it; without the
+    # chosen value in sight the judge reads «a clinical case» on a clinical-case type as a
+    # change of type.
+    # `owners` puts the term for an undeclared value last in such a control's list.
+    chosen_rule = ""
+    for owner in owners:
+        if owner.chosen:
+            chosen_rule = f"\n- Pedir lo que un control YA ha elegido para este ejercicio (arriba, tras «ya elegido») no cambia nada: no invade nada. Pedir otro valor de ese control sí lo invade; para uno que su lista no nombra, el término es «{owner.terms[-1]}»."
 
     return f"""\
 Clasificas la petición que ha escrito quien encarga un ejercicio. No escribes el ejercicio ni opinas sobre él: solo dices, para cada cosa que pide, si es de las que puede pedir aquí o si es de las que ya ha decidido en otro sitio.
@@ -64,10 +82,10 @@ Un ejercicio USA muchos conceptos y PRACTICA uno o dos. La pregunta, para cada p
 - «que vaya de una lista de la compra» USA la palabra lista como escenario de la vida real: es el hueco `ambito`, no una invasión, aunque el temario tuviera un concepto llamado «Lista». Lo mismo vale en cualquier asignatura: «Fuerza», «Célula», «Mercado» u «Oración» también son palabras corrientes.
 - «que vaya de una biblioteca que presta libros» es un edificio con libros: es `ambito`.
 - «con un ejemplo resuelto» pide que el enunciado enseñe un caso resuelto: es el hueco `elementos`, aunque el nombre de un concepto aparezca dentro de la frase.
-- «sin calculadora», «sin usar la regla de tres», «sin diccionario» o «sin usar la instrucción len» PROHÍBEN a la solución un recurso: una herramienta, un material, un método, una fórmula o una instrucción. Es el hueco `restricciones`, aunque el recurso prohibido o una palabra de la frase coincida con un concepto del temario. Prohibir algo no es pedir que se practique.
+- «sin calculadora», «sin usar la regla de tres» o «sin diccionario» PROHÍBEN a la solución un recurso: una herramienta, un material, un método, una fórmula o una instrucción. Es el hueco `restricciones`, aunque el recurso prohibido o una palabra de la frase coincida con un concepto del temario. Prohibir algo no es pedir que se practique, y pedir que un concepto NO aparezca en el enunciado tampoco.
+- «un paciente con antecedentes de asma», «una empresa con pérdidas» o «un circuito con una resistencia averiada» dan DATOS del caso: es el hueco `datos` (o `ambito`), aunque el dato tenga el nombre de un concepto del temario. Un dato del caso se usa; no se pide practicarlo.
 - «que practique también otro concepto» — uno del temario que no está entre los objetivos — pide PRACTICAR un concepto: invade `concepts`.
-{difficulty_rule}
-- «hazlo en inglés» cambia el idioma, que lo fija la asignatura: invade `context`.
+{difficulty_rule}{context_rule}{chosen_rule}
 Que una palabra del texto coincida con el nombre de un concepto NO es una invasión: solo lo es pedir que ese concepto se PRACTIQUE.
 Un dueño solo se puede invadir si está en la lista de arriba. Si lo que se pide no encaja en ningún hueco y ningún dueño listado lo decide, deja `slot` y `owner` a `null`: no es asunto de esta pantalla ni de ninguna otra.
 Ante la duda entre un hueco y un dueño, gana el hueco: rechazar una petición legítima cuesta más que dejar pasar una dudosa.

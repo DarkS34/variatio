@@ -28,6 +28,17 @@ def test_accept_rejects_a_term_that_is_a_target_concept(owners_for):
     assert admissibility._accept(entry, owners_for(), {"Recursividad"}) is None
 
 
+def test_accept_rejects_the_type_already_chosen_as_a_trespass(owners_for):
+    entry = {"text": "un análisis breve", "slot": None, "owner": "item_type", "term": "Análisis de código"}
+    assert admissibility._accept(entry, owners_for(item_type="analisis"), {"Recursividad"}) is None
+
+
+def test_accept_takes_an_undeclared_type_under_its_own_term(owners_for):
+    entry = {"text": "que sea de desarrollo", "slot": None, "owner": "item_type", "term": "otra modalidad"}
+    request = admissibility._accept(entry, owners_for(item_type="analisis"), {"Recursividad"})
+    assert request is not None and request.term == "otra modalidad"
+
+
 def test_accept_tolerates_an_accent_difference_in_the_term(owners_for):
     entry = {"text": "que use funciones", "slot": None, "owner": "concepts", "term": "funcion"}
     request = admissibility._accept(entry, owners_for(), {"Recursividad"})

@@ -14,7 +14,20 @@ OVERRIDE_OBJECTS: str = (
 
 OVERRIDE_QUALIFIERS: str = r"previous|prior|above|earlier"
 
-INJECTION_PATTERNS: tuple[str, ...] = (r"\b(?:system|previous|prior) prompt\b",)
+# A requester taking back an instruction of their own ("forget the rules I gave you") is
+# revising the commission, not attacking it; each language adds its own phrasing.
+OWN_INSTRUCTIONS: str = r"(?:that )?i (?:gave|have given|'ve given|wrote|asked for)(?: you)?"
+
+# Beyond the override verbs (plan F6, 2026-11-02): asking for the text above to be repeated,
+# for one's own configuration, a note addressed to the model, and a role-play that hands the
+# model another part. The four passed the screen in the F3 gold in both languages.
+INJECTION_PATTERNS: tuple[str, ...] = (
+    r"\b(?:system|previous|prior) prompt\b",
+    r"\brepeat\b[^.;!?]{0,40}\b(?:text|everything|what(?:'s| is)?(?: written)?)\b[^.;!?]{0,20}\babove\b",
+    r"\byour (?:configuration|initial|original|internal|hidden|setup) (?:instructions|prompt|rules|settings)\b",
+    r"\b(?:p\.? ?s\.?|note|message) (?:to|for) the (?:model|ai|assistant|system)\b",
+    r"\blet'?s play a game\b[^.;!?]{0,30}\b(?:you'?re|you are|pretend|act as)\b",
+)
 
 
 def quote_block(label: str, text: str) -> str:

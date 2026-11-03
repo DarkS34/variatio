@@ -21,6 +21,8 @@ OVERRIDE_OBJECTS: str = r"order(?:s)?|command(?:s)?|restriction(?:s)?|" + shared
 
 OVERRIDE_QUALIFIERS: str = shared.OVERRIDE_QUALIFIERS
 
+OWN_INSTRUCTIONS: str = shared.OWN_INSTRUCTIONS
+
 # The lookahead spares "system requirements", a legitimate subject, as the Spanish set
 # spares "instrucciones del sistema operativo".
 INJECTION_PATTERNS: tuple[str, ...] = shared.INJECTION_PATTERNS + (
@@ -71,6 +73,8 @@ OWNER_CONCEPTS: tuple[str, str] = ("the target concepts", "pick them in the conc
 OWNER_DIFFICULTY_WHERE: str = "choose it under «How hard?»"
 OWNER_FIELD_WHERE: str = "decide it under «What should it be like?»"
 OWNER_ITEM_TYPE: tuple[str, str] = ("the exercise type", "pick it in the type step")
+# The term for a type the profile does not declare.
+OWNER_ITEM_TYPE_OTHER: str = "another type"
 OWNER_CONTEXT: tuple[str, str] = (
     "the subject, the level and the language",
     "the subject's context sets them, in the panel",

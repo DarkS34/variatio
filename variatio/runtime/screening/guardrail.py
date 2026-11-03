@@ -31,12 +31,14 @@ def injection_pattern(wording) -> re.Pattern[str]:
 
     Two branches plus whatever the language adds: a verb reaching an object within 40
     characters, and an object carried by a backward-looking qualifier with no verb at all.
+    Neither fires when the object is the requester's own («las instrucciones que te di»).
     """
     cached = _INJECTION_CACHE.get(wording.LANGUAGE)
     if cached is not None:
         return cached
     branches = [
-        rf"\b(?:{wording.OVERRIDE_VERBS})\b[^.;:!?]{{0,40}}?\b(?:{wording.OVERRIDE_OBJECTS})\b",
+        rf"\b(?:{wording.OVERRIDE_VERBS})\b[^.;:!?]{{0,40}}?\b(?:{wording.OVERRIDE_OBJECTS})\b"
+        rf"(?! (?:{wording.OWN_INSTRUCTIONS})\b)",
         rf"\b(?:{wording.OVERRIDE_OBJECTS}) (?:{wording.OVERRIDE_QUALIFIERS})\b",
         *wording.INJECTION_PATTERNS,
     ]
