@@ -9,11 +9,13 @@ solves and writes code, as the student asks, within the subject and education.
 
 - **A turn** (`consumers/chat/turn.py`): the guardrail (`screening.screen_message`; a refusal is a
   fixed text, kind `blocked`, and reaches no model), then ONE call (`chat_reply`) with the
-  system prompt — its role, its scope, refusing in one sentence a request for its
-  instructions or another role and what is dangerous or out of place, and the subject's
-  `content_context.prompt_block()` — the last `chat.history_turns` exchanges and, when the
+  system prompt — its role and its way of helping over the shared blocks of
+  `server/conversations/prompts/` (the subject's `content_context.prompt_block()`, the reply
+  in the subject's `language_of_instruction`, the scope, the format, and the code rule only when
+  code is in play; D-235) — the last `chat.history_turns` exchanges and, when the
   conversation was opened on an exercise, that exercise. No classification, no card, no
-  checks, no map. Its job (`chat_turn`) needs no runtime context: it never warms a subject's
+  checks, no map. The guardrail's fixed refusal is in the subject's language too, when there is
+  a prompt set for it. Its job (`chat_turn`) needs no runtime context: it never warms a subject's
   embedder or graph.
 - **The model**: `chat.models.reply`, empty = `VARIANT_GENERATION_LLM` (the generation's, the
   user's choice; the tutor falls back to the same); its reasoning switch and effort, its

@@ -9,6 +9,10 @@ import json
 
 LANGUAGE = "es"
 
+# Words of everyday Spanish prose that a criterion may also name as an instruction it never
+# suggests: in a reply's prose they are words, so only its code is searched for them.
+EVERYDAY_WORDS: frozenset[str] = frozenset({"si", "mientras", "para", "hasta", "repetir", "caso", "hacer", "fin"})
+
 METHOD_RULES: tuple[str, ...] = (
     "Hace al menos una pregunta guiada en cada respuesta y como mucho {max_questions}: de "
     "comprensión, de diseño, de análisis o que lleve al alumno a encontrar su propio error. "
@@ -49,6 +53,7 @@ METHOD_RULES: tuple[str, ...] = (
     "pide que lo explique con sus palabras o que lo aplique a un caso nuevo.",
     "Si no está seguro de algo, lo dice. No presenta como cierto lo que no sabe.",
 )
+
 
 GOLDEN_RULE = "Si el alumno puede copiar tu respuesta y avanzar sin pensar, has fallado como tutor."
 
@@ -103,9 +108,12 @@ _FAILURES = {
     "diagram": "dibujaba un diagrama, y los mapas los añade el sistema cuando ayudan",
     "copied": "copiaba un pasaje de la ficha en vez de decirlo con otras palabras",
     "pointed": "mandaba al alumno a los apuntes o a un apartado en vez de contárselo con sus palabras",
-    "later": "introducía conceptos que el temario sitúa después: {concepts}",
-    "forbidden": "sugería instrucciones que el material no usa: {terms}",
-    "validated": "confirmaba si el alumno tenía razón, en vez de preguntarle algo que le deje comprobarlo",
+    "later": "introducía conceptos que el temario sitúa después ({concepts}): no los nombres",
+    "forbidden": "sugería instrucciones que el material no usa ({terms}): no las nombres ni las uses",
+    "validated": (
+        "abría confirmando si el alumno tenía razón: empieza de otra forma, sin «tienes razón», "
+        "«correcto» ni «exacto», y pregúntale algo que le deje comprobarlo"
+    ),
     "truncated": "era demasiado larga y se cortó",
     "empty": "llegó vacía",
 }
@@ -153,8 +161,13 @@ NORMATIVE_PATTERN = (
 # THE REPLY -----------------------------------------------------------------------------
 
 
-def method(max_questions: int) -> str:
-    """Return the system prompt every reply is written under."""
+def method(max_questions: int, *, language: str = "") -> str:
+    """Return the system prompt every reply is written under.
+
+    `language` is the subject's language of instruction, in which every reply is written
+    whatever the student writes in (P5, D-235). The rest is the prompt of before plan F8: the
+    shared blocks the chat uses were tried three times here and lost each time.
+    """
     rules = "\n".join(
         f"{index}. {rule.format(max_questions=max_questions)}"
         for index, rule in enumerate(METHOD_RULES, 1)
@@ -167,8 +180,9 @@ def method(max_questions: int) -> str:
         f"{rules}\n\n"
         "Estilo: cercano y paciente, nunca condescendiente ni sancionador. Respuestas breves, de "
         "unas pocas frases, sin repetir de un turno a otro la misma fórmula. Si reconoces un "
-        "avance, di en concreto cuál, sin superlativos ni elogios vacíos. Escribe en español y "
-        "háblale de tú al alumno. La ficha de cada turno la escribe el sistema y el alumno no la ve: no la "
+        "avance, di en concreto cuál, sin superlativos ni elogios vacíos. Escribe en "
+        f"{language or 'español'}, aunque el alumno escriba en otra lengua, y háblale de tú al "
+        "alumno. La ficha de cada turno la escribe el sistema y el alumno no la ve: no la "
         "menciones. Lo que sabes de la asignatura lo sabes tú: no digas de dónde lo sacas ni "
         "mandes al alumno a ningún documento.\n\n"
         "Notación: cuando lo que se trabaja se escribe con notación matemática (una fórmula, una "
@@ -358,7 +372,7 @@ def classify_prompt(subject: str, units: list[str], last_reply: str | None, mess
         "Tipos:\n"
         "- theory: pregunta o duda sobre un concepto o un contenido de la asignatura, o sigue la "
         "conversación sobre uno (también «no lo entiendo» o una respuesta a la pregunta del tutor).\n"
-        "- exercise: trae el enunciado de un ejercicio, aunque esté escrito como una orden («Escribe un programa que…»), y pide ayuda para entenderlo o empezarlo.\n"
+        "- exercise: trae el enunciado de un ejercicio, aunque esté escrito como una orden («Calcula…», «Diseña…», «Explica por qué…»), y pide ayuda para entenderlo o empezarlo.\n"
         "- attempt: enseña su propio código, su respuesta o su razonamiento y pide opinión.\n"
         "- solution: pide la solución, el código completo o la respuesta final.\n"
         "- social: saluda, da las gracias o comenta algo sin contenido de la asignatura.\n"
@@ -437,7 +451,7 @@ def criteria_unit_prompt(
         "quedar vacía.\n"
         "- \"forbidden\": SOLO nombres de instrucciones, palabras reservadas o funciones del "
         "lenguaje que el material prohíbe o desaconseja, escritos tal como aparecen en el código "
-        "(una o dos palabras, por ejemplo break o global), con la razón y la cita. Una práctica "
+        "(una o dos palabras, tal como aparecen en el material), con la razón y la cita. Una práctica "
         "desaconsejada es un criterio, no un término. Vacía si no hay ninguno.\n\n"
         "Contesta solo con el JSON."
     )

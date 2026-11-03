@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 
 from loguru import logger
 
+from server.conversations import prompts as shared_prompts
 from variatio.core import inference, progress
 from variatio.core.lexicon import mentions
 from variatio.runtime import screening
@@ -102,6 +103,10 @@ def run_turn(
     """
     started = time.perf_counter()
     tutor_prompts = tutor_prompts_pkg.of(context.language)
+    # The reply, the fixed answers and the checks that read its language follow the subject's
+    # language of instruction; the prompts stay the workspace's (plan §12.1, E11).
+    instruction = context.content_context.language_of_instruction
+    reader_prompts = tutor_prompts_pkg.of(shared_prompts.instruction_code(instruction) or context.language)
     wording = wording_sets.beside(context.prompts)
     state = {"focus": [], "trail": [], **(state or {})}
 
@@ -119,7 +124,7 @@ def run_turn(
     screened = screening.screen_message(message, prompts=context.prompts, step_prefix="tutor.")
     if screened.blocked:
         logger.info(f"[tutor] Mensaje rechazado por el guardián ({screened.blocked_by})")
-        return done(tutor_prompts.blocked_reply(), BLOCKED, "guardrail")
+        return done(reader_prompts.blocked_reply(), BLOCKED, "guardrail")
 
     vector = context.embedder.embed_query(message)
     scores = context.embedder.concept_scores(vector)
@@ -143,7 +148,7 @@ def run_turn(
         return done(criteria.administrative_reply, classified.kind, classified.decided_by)
     if classified.kind == OFF_TOPIC:
         subject = context.content_context.facts.get("subject", "")
-        offer = tutor_prompts.off_topic_reply(subject, list(graph.domains))
+        offer = reader_prompts.off_topic_reply(subject, list(graph.domains))
         return done(offer, classified.kind, classified.decided_by)
 
     given = given_focus if (given_focus and not history) else None
@@ -210,18 +215,21 @@ def run_turn(
     model, think = tutor_config.REPLY_MODEL, tutor_config.THINK_REPLY
     student_texts = [str(t.get("text") or "") for t in history if t.get("role") == "student"] + [message]
 
-    text, attempts = _reply(prompt, the_card, student_texts, tutor_prompts, wording, model, think)
+    system = tutor_prompts.method(tutor_config.MAX_QUESTIONS, language=instruction)
+    text, attempts = _reply(
+        prompt, system, the_card, student_texts, tutor_prompts, reader_prompts, wording, model, think
+    )
     failures = attempts[-1]
     fallback = bool(failures)
     if fallback:
         first = the_card.focus[0] if the_card.focus else None
-        text = tutor_prompts.fallback_reply(first.name if first else None)
+        text = reader_prompts.fallback_reply(first.name if first else None)
         logger.warning(
             f"[tutor] Dos respuestas incumplieron el método ({', '.join(c for c, _ in failures)}); "
             "se envía la pregunta de reserva"
         )
 
-    sent_back = None if fallback else the_card.sent_back(text, tutor_prompts.REVIEW_PATTERN, wording)
+    sent_back = None if fallback else the_card.sent_back(text, reader_prompts.REVIEW_PATTERN, wording)
     if the_map is None:
         the_map = concept_map.review(classified.kind, sent_back, state, context)
         if the_map and the_map.review:
@@ -253,14 +261,45 @@ def run_turn(
 
 
 def _reply(
-    prompt: str, the_card, student_texts: list[str], tutor_prompts, wording, model: str, think
+    prompt: str,
+    system: str,
+    the_card,
+    student_texts: list[str],
+    tutor_prompts,
+    reader_prompts,
+    wording,
+    model: str,
+    think,
 ) -> tuple[str, list[list[tuple[str, dict]]]]:
     """Ask for the reply, check it, and ask once more with a note when it broke the method.
 
     Returns the last text and, per attempt, the rules it broke: the last list is empty when
-    the reply passed, and a second list means a second attempt was made.
+    the reply passed, and a second list means a second attempt was made. When the second one
+    breaks only by opening with a verdict, it goes out without that first sentence, which is
+    better than the fixed question (F3: the reply was good, the fallback much worse).
+    `reader_prompts` holds the patterns of the reply's language; `tutor_prompts` the note.
     """
-    system = tutor_prompts.method(tutor_config.MAX_QUESTIONS)
+
+    def check(text: str, truncated: bool) -> list[tuple[str, dict]]:
+        """Return the rules `text` breaks."""
+        return checks.check_reply(
+            text,
+            quotes=[quote.text for quote in the_card.quotes()],
+            later=the_card.later(),
+            forbidden_terms=list(the_card.forbidden_terms),
+            student_texts=student_texts,
+            truncated=truncated,
+            max_questions=tutor_config.MAX_QUESTIONS,
+            max_code_lines=tutor_config.MAX_CODE_LINES,
+            copy_max_words=tutor_config.COPY_MAX_WORDS,
+            validation=reader_prompts.VALIDATION_PATTERN,
+            pointing=reader_prompts.POINTING_PATTERN,
+            wording=wording,
+            exercise_texts=student_texts + ([the_card.exercise.statement] if the_card.exercise else []),
+            vocabulary=[quote.text for quote in the_card.quotes()],
+            everyday=reader_prompts.EVERYDAY_WORDS,
+        )
+
     note = ""
     attempts: list[list[tuple[str, dict]]] = []
     text = ""
@@ -278,22 +317,13 @@ def _reply(
                 ),
             )
         text = inference.split_thinking(response.response or "").response.strip()
-        failures = checks.check_reply(
-            text,
-            quotes=[quote.text for quote in the_card.quotes()],
-            later=the_card.later(),
-            forbidden_terms=list(the_card.forbidden_terms),
-            student_texts=student_texts,
-            truncated=response.truncated,
-            max_questions=tutor_config.MAX_QUESTIONS,
-            max_code_lines=tutor_config.MAX_CODE_LINES,
-            copy_max_words=tutor_config.COPY_MAX_WORDS,
-            validation=tutor_prompts.VALIDATION_PATTERN,
-            pointing=tutor_prompts.POINTING_PATTERN,
-            wording=wording,
-            exercise_texts=student_texts + ([the_card.exercise.statement] if the_card.exercise else []),
-            vocabulary=[quote.text for quote in the_card.quotes()],
-        )
+        failures = check(text, response.truncated)
+        if attempt == 2 and [code for code, _ in failures] == ["validated"]:
+            trimmed = checks.without_opening(text)
+            if trimmed and not check(trimmed, False):
+                logger.info("[tutor] La segunda respuesta sale sin su primera frase, que validaba")
+                attempts.append([])
+                return trimmed, attempts
         attempts.append(failures)
         if not failures:
             return text, attempts

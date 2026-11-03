@@ -49,10 +49,12 @@ def handle_turn(job: Job, control: JobControl) -> dict:
         contexts.require_inference()
         language = locale.prompt_language(ws)
         opened = record.get("opened_from") or {}
+        subject = content_context.load_for(ws)
         result = run_turn(
             language=language,
             prompts=prompt_sets.of(language),
-            subject=content_context.load_for(ws).prompt_block(),
+            subject=subject.prompt_block(),
+            instruction_language=subject.language_of_instruction,
             message=str(record["turns"][turn]["text"]),
             history=[{"role": t.get("role"), "text": t.get("text")} for t in record["turns"][:turn]],
             exercise=[tuple(pair) for pair in opened.get("exercise") or []] or None,

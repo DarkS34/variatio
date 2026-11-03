@@ -64,11 +64,13 @@ def check_reply(
     wording=None,
     exercise_texts: list[str] | None = None,
     vocabulary: list[str] | None = None,
+    everyday: frozenset[str] = frozenset(),
 ) -> list[tuple[str, dict]]:
     """Return the method's rules this reply breaks, as `(code, data)` for the retry's note.
 
     `exercise_texts` is what the student wrote and the statement of the exercise the message
     is; `vocabulary` the notes the card carries. Without them no code is checked for names.
+    `everyday` holds the words of the reply's language that a forbidden term may also be.
     """
     if not text.strip():
         return [("empty", {})]
@@ -104,7 +106,7 @@ def check_reply(
     if introduced:
         failures.append(("later", {"concepts": ", ".join(f"«{name}»" for name in introduced)}))
 
-    suggested = suggested_terms(text, forbidden_terms, said)
+    suggested = suggested_terms(text, forbidden_terms, said, everyday)
     if suggested:
         failures.append(("forbidden", {"terms": ", ".join(suggested)}))
 
@@ -173,15 +175,28 @@ def longest_shared_run(text: str, other: str) -> int:
     return best
 
 
-def suggested_terms(text: str, terms: list[str], said: str) -> list[str]:
-    """Return the forbidden terms the reply suggests: in its code always, in prose when unprompted."""
+def suggested_terms(text: str, terms: list[str], said: str, everyday: frozenset[str] = frozenset()) -> list[str]:
+    """Return the forbidden terms the reply suggests: in its code always, in prose when unprompted.
+
+    A term that is also an everyday word of the reply's language («if», «while» in English) is
+    looked for in the code only: in prose it is the word, and searching for it there failed
+    nearly every English reply of a programming course (F3: 11 of 13 fallbacks).
+    """
     code = "\n".join(_FENCE.findall(text) + _INLINE.findall(text))
     prose = _INLINE.sub(" ", _FENCE.sub(" ", text))
     found = []
     for term in terms:
-        if _has_term(code, term) or (_has_term(prose, term) and not _has_term(said, term)):
+        in_prose = fold(term).strip() not in everyday and _has_term(prose, term) and not _has_term(said, term)
+        if _has_term(code, term) or in_prose:
             found.append(term)
     return found
+
+
+def without_opening(text: str) -> str:
+    """Return the reply without its first sentence, or "" when nothing would be left."""
+    match = re.search(r"[.!?](?:\s+|$)", text)
+    rest = text[match.end():].strip() if match else ""
+    return rest
 
 
 def _has_term(text: str, term: str) -> bool:

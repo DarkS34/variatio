@@ -20,6 +20,8 @@ from loguru import logger
 from variatio.core import inference, progress
 from variatio.runtime import screening
 
+from server.conversations import prompts as shared_prompts
+
 from . import BLOCKED, REPLIED
 from . import config as chat_config
 from . import prompts as chat_prompts_pkg
@@ -57,21 +59,25 @@ def run_turn(
     message: str,
     history: list[dict],
     exercise: list[tuple[str, str]] | None = None,
+    instruction_language: str = "",
 ) -> ChatResult:
     """Answer one message of a conversation, following the two steps above.
 
     `prompts` is the workspace's prompt set (the guardrail's wording reads it), `subject` the
     subject's prompt block, `history` the conversation before this message as `{role, text}`
     turns, and `exercise` the fields of the exercise it was opened on, as labels and values.
+    `instruction_language` is the subject's language of instruction: the reply is written in
+    it, and so is a fixed answer when we have a set in that language (plan §12.1).
     """
     started = time.perf_counter()
     chat_prompts = chat_prompts_pkg.of(language)
+    reader_prompts = chat_prompts_pkg.of(shared_prompts.instruction_code(instruction_language) or language)
 
     screened = screening.screen_message(message, prompts=prompts, step_prefix="chat.")
     if screened.blocked:
         logger.info(f"[chat] Mensaje rechazado por el guardián ({screened.blocked_by})")
         return ChatResult(
-            text=chat_prompts.blocked_reply(),
+            text=reader_prompts.blocked_reply(),
             kind=BLOCKED,
             elapsed_ms=round((time.perf_counter() - started) * 1000),
         )
@@ -90,7 +96,13 @@ def run_turn(
         response = inference.generate(
             model=model,
             prompt=prompt,
-            system=chat_prompts.system_prompt(subject),
+            system=chat_prompts.system_prompt(
+                subject,
+                instruction_language,
+                shared_prompts.has_code(
+                    [message, *(text for _, text in pairs), *(value for _, value in exercise or [])]
+                ),
+            ),
             think=think,
             sampling=inference.sampling("chat_reply", think),
             max_output_tokens=(

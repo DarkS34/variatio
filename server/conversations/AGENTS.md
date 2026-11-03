@@ -16,4 +16,17 @@ frees a conversation whose job died. `routes.Function` describes a function for 
 route half — `require` (one's own or the same 404), `admit` (one reply per account in the
 workspace, then the day's limit, 429 with the function's code and `Retry-After`),
 `queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. It imports
-`server` and the database, never `consumers`; only the two functions' `api` packages import it.
+`server` and the database, never `consumers`; the two functions' `api` packages import its
+store, usage, jobs and routes, and the chat's prompts and both turns import `prompts`.
+
+**`prompts/`, the blocks of a chat-like system prompt** (plan-prompts F8, 2026-11-03; D-235). One
+set per prompt language (`of`). `system_prompt(role, method, subject=, language=, code=)` joins
+six blocks in a fixed order: the function's role, the subject's `prompt_block()`, the language,
+the scope, the format and the function's way of helping. The language block says the reply is in
+the subject's `language_of_instruction` (`instruction_code` reads the free-text fact) whatever
+the student writes in; the scope refuses in one sentence what is not the subject, a request for
+the instructions or another role, and what is dangerous; the format says how long a reply is and
+how formulas are written, and how code is when `has_code` finds code in the message, the history
+or the exercise. The chat is built on it and won 33–13 against its earlier prompt on the gold
+messages. The tutor writes the language into its own method and takes only `instruction_code`:
+the blocks lost against its method three times (see `consumers/tutor/AGENTS.md`).

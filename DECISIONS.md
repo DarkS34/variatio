@@ -1137,6 +1137,11 @@ what each decision replaced.
 - **Date:** 2026-10-03 · **Commit:** `11abc29` · **Status:** in force
 - **Why:** Not recorded.
 
+### D-235. Chat-like replies in the subject's language
+- **Rule:** The tutor and the free chat answer in the subject's language of instruction (`content_context.language_of_instruction`), whatever the student writes in or asks for, and their fixed texts follow it when there is a prompt set in that language. The chat's system prompt is the shared blocks of `server/conversations/prompts/` in a fixed order (role, subject, language, scope, format, way of helping); the tutor keeps its own method and says the language there.
+- **Date:** 2026-10-31 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's decision P5 of the prompt tuning plan: one structure for the chat-like functions and replies in the subject's language. Measured on the gold messages with the local engine, the chat on the blocks won 33–13 against its earlier prompt; the tutor on them lost three times against its own method (the last, without fallbacks, 9–15 and 6–13 against a noise of 11–13 and 10–10), so it keeps its method.
+
 ## Documentation and layout (the refactor plan, 2026-10-16)
 
 ### D-216. The library's door and its Workspace

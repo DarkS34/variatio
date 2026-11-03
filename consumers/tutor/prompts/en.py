@@ -8,6 +8,14 @@ import json
 
 LANGUAGE = "en"
 
+# Words of everyday English prose that a criterion may also name as an instruction it never
+# suggests («if», «while»): in a reply's prose they are words, so only its code is searched.
+EVERYDAY_WORDS: frozenset[str] = frozenset(
+    {"if", "while", "for", "and", "or", "not", "in", "is", "as", "with", "else", "then", "do",
+     "until", "case", "try", "pass", "break", "continue", "return", "from", "to", "repeat",
+     "begin", "end", "print", "input"}
+)
+
 METHOD_RULES: tuple[str, ...] = (
     "Asks at least one guiding question in every reply and at most {max_questions}: about "
     "understanding, design or analysis, or one that leads the student to find their own mistake. "
@@ -102,9 +110,12 @@ _FAILURES = {
     "diagram": "it drew a diagram, and the system adds the maps when they help",
     "copied": "it copied a passage of the card instead of saying it in other words",
     "pointed": "it sent the student to the notes or to a section instead of telling them in its own words",
-    "later": "it introduced concepts the syllabus places later: {concepts}",
-    "forbidden": "it suggested statements the material does not use: {terms}",
-    "validated": "it told the student they were right instead of asking something that lets them check it",
+    "later": "it introduced concepts the syllabus places later ({concepts}): do not name them",
+    "forbidden": "it suggested instructions the material does not use ({terms}): neither name nor use them",
+    "validated": (
+        "it opened by telling the student they were right: open differently, with no \"you're "
+        "right\", \"correct\" or \"exactly\", and ask something that lets them check it"
+    ),
     "truncated": "it was too long and was cut",
     "empty": "it came back empty",
 }
@@ -142,8 +153,8 @@ NORMATIVE_PATTERN = (
 # THE REPLY -----------------------------------------------------------------------------
 
 
-def method(max_questions: int) -> str:
-    """Return the system prompt every reply is written under."""
+def method(max_questions: int, *, language: str = "") -> str:
+    """Return the system prompt every reply is written under; `language` as in `es.method`."""
     rules = "\n".join(
         f"{index}. {rule.format(max_questions=max_questions)}"
         for index, rule in enumerate(METHOD_RULES, 1)
@@ -156,8 +167,9 @@ def method(max_questions: int) -> str:
         f"{rules}\n\n"
         "Style: warm and patient, never condescending nor punitive. Short replies, a few "
         "sentences, never the same formula from one turn to the next. When you acknowledge "
-        "progress, say exactly which, with no superlatives and no empty praise. Write in English "
-        "and address the student directly. "
+        "progress, say exactly which, with no superlatives and no empty praise. Write in "
+        f"{language or 'English'}, even if the student writes in another language, and address "
+        "the student directly. "
         "The system writes each turn's card and the student never sees it: do not mention it. "
         "What you know of the subject you know yourself: do not say where you got it from nor "
         "send the student to any document.\n\n"
@@ -312,13 +324,13 @@ def retry_note(failures: list[tuple[str, dict]], max_questions: int, max_code_li
 def fallback_reply(concept: str | None) -> str:
     """Return the question sent when the model failed the checks twice."""
     if concept:
-        return f"Let's go step by step. What do you remember about «{concept}»? Tell me in your own words."
+        return f'Let\'s go step by step. What do you remember about "{concept}"? Tell me in your own words.'
     return "Let's go step by step. Which part of the subject do you want to work on first?"
 
 
 def off_topic_reply(subject: str, units: list[str]) -> str:
     """Return the fixed answer to a question outside the subject, offering its units."""
-    name = f"«{subject}»" if subject else "the subject"
+    name = f'"{subject}"' if subject else "the subject"
     listing = "\n".join(f"- {unit}" for unit in units)
     offer = f"\n\nShall we work on one of these units?\n{listing}\n\nWhich one first?" if units else (
         "\n\nWhich unit of the subject do you want to work on?"
@@ -347,8 +359,8 @@ def classify_prompt(subject: str, units: list[str], last_reply: str | None, mess
         f"The student's message:\n{message}\n\n"
         "Kinds:\n"
         "- theory: a question or doubt about a concept or content of the subject, or carrying on "
-        "with one (also «I don't get it» or an answer to the tutor's question).\n"
-        "- exercise: brings an exercise statement, even one worded as an order («Write a program that…»), and asks for help understanding or starting it.\n"
+        "with one (also \"I don't get it\" or an answer to the tutor's question).\n"
+        "- exercise: brings an exercise statement, even one worded as an order (\"Calculate…\", \"Design…\", \"Explain why…\"), and asks for help understanding or starting it.\n"
         "- attempt: shows their own code, answer or reasoning and asks for an opinion.\n"
         "- solution: asks for the solution, the complete code or the final answer.\n"
         "- social: greets, thanks or remarks on something with no content of the subject.\n"
@@ -427,7 +439,7 @@ def criteria_unit_prompt(
         "- \"concepts\": at most three concepts of the list it refers to; it may stay empty.\n"
         "- \"forbidden\": ONLY names of statements, keywords or functions of the language that "
         "the material forbids or advises against, written as they appear in code (one or two "
-        "words, for instance break or global), with the reason and the citation. A practice to "
+        "words, as they appear in the material), with the reason and the citation. A practice to "
         "avoid is a criterion, not a term. Empty if there are none.\n\n"
         "Answer only with the JSON."
     )
