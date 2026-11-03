@@ -189,7 +189,8 @@ Passage-by-passage extraction only sees a dependency when two concepts are expla
 - A dependency is real even if the two concepts have never appeared together: their being far apart in the material is evidence FOR proposing it here, not against.
 - Most concepts of a subject lean on something. A concept with nothing before it should be the exception — the genuine starting points — and not the norm.
 - Do not chain what is already implicit: state the DIRECT dependency, not the whole ancestry. If A leans on B and B on C, do not also relate A to C.
-- Being cautious is not free here: a dependency you leave out is one no later step can recover.
+- On WHETHER a dependency exists, being cautious is not free: one you leave out is one no later step can recover. On WHICH WAY it goes, when in doubt the material's order wins (below): what is taught first is the prerequisite.
+- The direction, with a contrast case: if teaching A needs B to have been taught, the triple says A depends on B (A is the SOURCE, B the TARGET). The reversed triple claims B cannot be taught without A, which is another claim and almost always false.
 - Prefer BOTH ends to be things a student is taught and could be examined on. The extraction also picked up tools, notation and vocabulary of the document; an order hanging off that describes the material and not the syllabus, and nothing downstream can use it. When a dependency is real but one of the ends is such a term, look for the taught concept behind it and relate that one."""
 
 
@@ -307,6 +308,7 @@ Your task: within EACH group, and never across groups, decide which names are TH
 - Merge across grammatical form: the adjective, the noun and the quality of the same idea are a single concept; so are the singular, the plural and the plural noun phrase; and so are a term and that same term with the object it applies to stuck on the end.
 - Merge a term with its own definition used as a name: when one name states the idea and another spells out that same idea as a longer phrase, they are a single concept.
 - Do NOT merge two ideas a student could be examined on separately, even if they always appear together: a mechanism and the technique that uses it stay apart, and so do a part and the whole it belongs to, and so do a general term and one of its concrete kinds.
+- "X of Y" is the hard border. If "of Y" only says what X applies to in that passage, it is the same concept as X: "Speed of propagation" and "Speed of propagation of the wave" merge. If "of Y" names a kind of X the material teaches on its own, they are two: "Cost" and "Opportunity cost" do not merge.
 - Do NOT merge two names merely because they belong to the same topic, are related or often appear together. Sharing a word is not evidence.
 - Use the relations as evidence: names with clearly different relations are usually different concepts.
 - When a name carries after « — » a definition taken from the material, read it as evidence of WHICH idea it names, not as proof that it is another concept: each fragment defined its own in its own words, so two different wordings of ONE idea are the normal case and are a single concept; they are two concepts only when they define ideas a student could be examined on separately, however alike the names.
@@ -349,6 +351,7 @@ Your task: list the nodes that do NOT name a concept of the subject and have to 
 
 # WHAT COUNTS AS A VALID NODE
 A valid node NAMES a concept of the subject: a term that could be an entry in a glossary or an index (a thing, idea, technique, category, structure, phenomenon or named entity). It is NOT a sentence describing, explaining or predicating something.
+Decide in two steps: first the form (is it a noun phrase and not a piece of a sentence?); then, only for what passes, the glossary test (would it be an entry in the subject's index?).
 
 # REMOVE
 - Document metadata: section titles, bibliography, licences, authors, layout
@@ -358,6 +361,8 @@ A valid node NAMES a concept of the subject: a term that could be an entry in a 
 - Single letters, isolated symbols and bare values.
 - The objects, characters or settings of the illustrative examples, which belong to the
   example and not to the subject.
+- The anecdotes and background facts the material mentions in passing (who proposed it, in
+  which year, a curiosity), when the course is not about them.
 
 Judge only whether the string NAMES something. Whether what it names works as an exercise
 LABEL is another question, asked later and with the exemplars profile in front of you; do
@@ -370,8 +375,7 @@ DO NAME something, so they stay.
 
 # WHEN IN DOUBT
 - When a node carries after « — » a definition taken from the material, read it: an awkward name with a definition stating an idea of the subject is a concept and it stays.
-- The glossary test: if you would NOT put it as an entry in an index of the subject, remove it.
-- Faced with a FRAGMENT, remove even in doubt. Faced with a CONCEPT, keep even in doubt.
+- Faced with a FRAGMENT (the form fails), remove even in doubt. Faced with a phrase that could be an index entry, keep even in doubt.
 
 # OUTPUT
 A single JSON object with exactly this shape:

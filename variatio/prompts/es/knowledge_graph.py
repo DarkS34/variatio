@@ -189,7 +189,8 @@ La extracción fragmento a fragmento solo ve una dependencia cuando dos concepto
 - Una dependencia es real aunque los dos conceptos no hayan aparecido nunca juntos: que estén lejos el uno del otro en el material es evidencia A FAVOR de proponerla aquí, no en contra.
 - La mayoría de los conceptos de una materia se apoyan en algo. Un concepto sin nada delante debería ser la excepción — los puntos de partida de verdad —, no la norma.
 - No encadenes lo que ya está implícito: enuncia la dependencia DIRECTA, no toda la ascendencia. Si A se apoya en B y B en C, no relaciones además A con C.
-- Ser cauto no sale gratis aquí: una dependencia que dejes fuera es una que ningún paso posterior puede recuperar.
+- Sobre SI existe una dependencia, ser cauto no sale gratis: una que dejes fuera es una que ningún paso posterior puede recuperar. Sobre HACIA DÓNDE va, ante la duda manda el orden del material (abajo): lo que se enseña antes es el prerrequisito.
+- La dirección, con un caso de contraste: si para enseñar A hay que haber enseñado B, la terna dice que A depende de B (A es el ORIGEN, B el DESTINO). La terna al revés afirma que B no puede enseñarse sin A, que es otra afirmación y casi siempre falsa.
 - Prefiere que AMBOS extremos sean cosas que se le enseñan a un alumno y de las que se le podría examinar. La extracción recogió también herramientas, notación y vocabulario del documento; un orden colgado de eso describe el material y no el temario, y nada aguas abajo puede usarlo. Cuando una dependencia sea real pero uno de los extremos sea un término así, busca el concepto enseñado que hay detrás y relaciona ese."""
 
 
@@ -307,6 +308,7 @@ Tu tarea: dentro de CADA grupo, y nunca entre grupos, decide qué nombres son EL
 - Funde a través de la forma gramatical: el adjetivo, el sustantivo y la cualidad de la misma idea son un solo concepto; también lo son el singular, el plural y el sintagma nominal en plural; y también un término y ese mismo término con el objeto al que se aplica pegado detrás.
 - Funde un término con su propia definición usada como nombre: cuando un nombre enuncia la idea y otro desarrolla esa misma idea como una frase más larga, son un solo concepto.
 - NO fundas dos ideas de las que un alumno podría examinarse por separado, aunque aparezcan siempre juntas: un mecanismo y la técnica que lo usa siguen aparte, y también una parte y el todo al que pertenece, y también un término general y una de sus clases concretas.
+- «X de Y» es la frontera difícil. Si «de Y» solo dice a qué se aplica X en ese fragmento, es el mismo concepto que X: «Velocidad de propagación» y «Velocidad de propagación de la onda» se funden. Si «de Y» nombra una clase de X que el material enseña aparte, son dos: «Coste» y «Coste de oportunidad» no se funden.
 - NO fundas dos nombres solo porque pertenezcan al mismo tema, estén relacionados o aparezcan a menudo juntos. Compartir una palabra no es evidencia.
 - Usa las relaciones como evidencia: nombres con relaciones claramente distintas suelen ser conceptos distintos.
 - Cuando un nombre lleve detrás de « — » una definición tomada del material, léela como evidencia de QUÉ idea nombra, no como prueba de que sea otro concepto: cada fragmento definió lo suyo con sus propias palabras, así que dos redacciones distintas de UNA idea son lo normal y son un solo concepto; son dos conceptos solo cuando definen ideas de las que un alumno podría examinarse por separado, por mucho que los nombres se parezcan.
@@ -349,6 +351,7 @@ Tu tarea: lista los nodos que NO nombran un concepto de la materia y hay que eli
 
 # QUÉ CUENTA COMO NODO VÁLIDO
 Un nodo válido NOMBRA un concepto de la materia: un término que podría ser una entrada de un glosario o de un índice (una cosa, idea, técnica, categoría, estructura, fenómeno o entidad con nombre propio). NO es una frase que describa, explique o predique algo.
+Decide en dos pasos: primero la forma (¿es un sintagma nominal y no un trozo de oración?); después, solo para lo que la pasa, la prueba del glosario (¿sería una entrada del índice de la materia?).
 
 # ELIMINA
 - Metadatos del documento: títulos de sección, bibliografía, licencias, autores, elementos de
@@ -358,6 +361,8 @@ Un nodo válido NOMBRA un concepto de la materia: un término que podría ser un
 - Letras sueltas, símbolos aislados y valores desnudos.
 - Los objetos, personajes o escenarios de los ejemplos ilustrativos, que pertenecen al ejemplo
   y no a la materia.
+- Las anécdotas y los datos de contexto que el material cuenta de pasada (quién lo propuso, en
+  qué año, una curiosidad), cuando la asignatura no trata de ellos.
 
 Juzga únicamente si la cadena NOMBRA algo. Si lo que nombra sirve como ETIQUETA de ejercicios
 es otra pregunta, que se hace más tarde y con el perfil de ejemplares delante; no la respondas
@@ -370,8 +375,7 @@ algo, así que se quedan.
 
 # ANTE LA DUDA
 - Cuando un nodo lleve detrás de « — » una definición tomada del material, léela: un nombre torpe con una definición que enuncia una idea de la materia es un concepto y se queda.
-- Prueba del glosario: si NO lo pondrías como entrada en un índice de la materia, elimínalo.
-- Ante un FRAGMENTO, elimina incluso en la duda. Ante un CONCEPTO, conserva incluso en la duda.
+- Ante un FRAGMENTO (falla la forma), elimina incluso en la duda. Ante un sintagma que podría ser una entrada del índice, conserva incluso en la duda.
 
 # SALIDA
 Un único objeto JSON exactamente con esta forma:
