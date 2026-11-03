@@ -127,7 +127,7 @@ class KnowledgeGraphBuilder:
         # After `curate` and not inside it: `curate(cleaned)` is separately callable and
         # promises to be a transform from data to data, while this writes a second file.
         progress.checkpoint()
-        self.synthesize_context(graph)
+        self.synthesize_context(graph, cleaned.get("documents") or [])
         return graph
 
     def bootstrap(self) -> None:
@@ -172,24 +172,31 @@ class KnowledgeGraphBuilder:
             prompts=self.prompts,
         )
 
-    def synthesize_context(self, graph: dict) -> None:
+    def synthesize_context(self, graph: dict, documents: list[dict] | None = None) -> None:
         """Write the subject-context draft from what the graph alone knows about the subject.
 
-        The names of the blocks the syllabus is divided into, and how big it is — NOT the
-        concepts themselves: the prompt forbids enumerating them, and the graph is right
-        there for whoever wants the list.
+        The names of the blocks the syllabus is divided into, how big it is, and the names
+        and titles of its documents — NOT the concepts themselves: the prompt forbids
+        enumerating them, and the graph is right there for whoever wants the list. Without
+        the documents a two-block syllabus opening on «Introducción a Python» was read as a
+        Python course (F3, plan F9).
         """
         progress.phase("context")
         domains = list(graph.get("concepts_by_domains") or {})
         if not domains:
             return
         total = sum(len(members) for members in graph["concepts_by_domains"].values())
-        evidence = "\n".join(
-            [
-                self._wording.syllabus_blocks(len(domains), total),
-                *(f"- {domain}" for domain in domains),
+        lines = [
+            self._wording.syllabus_blocks(len(domains), total),
+            *(f"- {domain}" for domain in domains),
+        ]
+        if documents:
+            lines.append(self._wording.CORPUS_DOCUMENTS_HEADING)
+            lines += [
+                "- " + " · ".join([d.get("name", ""), *(d.get("titles") or [])]).strip(" ·")
+                for d in documents
             ]
-        )
+        evidence = "\n".join(lines)
         content_context_builder.synthesize(
             self.workspace,
             evidence,

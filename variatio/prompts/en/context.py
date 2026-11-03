@@ -39,8 +39,9 @@ You are not describing a syllabus or a course programme. You are describing the 
 # HOW TO MERGE
 - WHAT WAS ALREADY THERE IS KEPT. Every statement in the existing context survives into the final text, and if it can survive in its own words, it survives in its own words. A person may have written it by hand; paraphrasing it without need is losing it a little at a time.
 - YOU ONLY ADD WHAT THE NEW MATERIAL GENUINELY CONTRIBUTES. If it contributes nothing that was not already said, return the context that was already there, unchanged. That is a correct and frequent answer.
-- IF THEY CONTRADICT EACH OTHER, WHAT WAS ALREADY THERE WINS. The new material is a partial view of the subject; the existing context may come from somebody who knows the whole of it.
+- IF THEY CONTRADICT EACH OTHER, WHAT WAS ALREADY THERE WINS, unless the new material disproves it with direct evidence: the course's name written in a title, the language of all the material, or exercises showing a clearly different level. Then correct that fact and keep the rest. The new material is a partial view of the subject; the existing context may come from somebody who knows the whole of it.
 - DO NOT INVENT. No university, no academic year, no degree programme, no number of hours, no bibliography, nothing that is not in one of the two blocks above. When in doubt, leave it out.
+- DO NOT GENERALISE FROM A PART. A block or a document about one tool, language or topic does not make the whole course a course on it: the subject's name comes from the titles and from the blocks taken together. File names are clues: do not quote them.
 
 # WHAT THE TEXT MUST BE LIKE
 - CONTINUOUS PROSE, in the subject's language of instruction. One or two sentences running on; no lists, no bullets, no headings, no key-value pairs.

@@ -55,7 +55,7 @@ EXEMPLARS_PROFILE_SCHEMA_GRAMMAR = """\
 - `"type"`: uno de `"string"`, `"integer"`, `"number"`, `"boolean"`, `"array"`, `"object"`.
 - `"type"` como LISTA de esos mismos nombres, para valores que admiten ausencia: {"type": ["string", "null"]}. Dentro de `type` todo son NOMBRES DE TIPO entrecomillados, `"null"` incluido.
 - con `"type": "array"`, la clave `"items"` va DENTRO del schema: {"type": "array", "items": {"type": "string"}}. Una lista que puede faltar combina ambas formas: {"type": ["array", "null"], "items": {"type": "string"}}.
-- `"enum"`: lista no vacía de VALORES literales permitidos (no nombres de tipo), para campos categóricos: {"enum": ["básico", "intermedio", "avanzado"]}. SOLO aquí, y solo si el campo admite ausencia según la POLÍTICA DE NULOS, puede aparecer el literal JSON `null` como un valor más de la lista.
+- `"enum"`: lista no vacía de VALORES literales permitidos (no nombres de tipo), para campos categóricos: {"enum": ["corta", "larga"]}. SOLO aquí, y solo si el campo admite ausencia según la POLÍTICA DE NULOS, puede aparecer el literal JSON `null` como un valor más de la lista.
 - restricciones opcionales, dentro del mismo objeto: `"minLength"`, `"maxLength"`, `"minimum"`, `"maximum"`, `"default"`.
 
 Formas VÁLIDAS de `schema` — no hay ninguna más:
@@ -119,11 +119,11 @@ Un único objeto JSON:
 {{
   "types": [
     {{
-      "key": "<clave en espanol, snake_case, sin tildes>",
+      "key": "<clave en español, snake_case, sin tildes ni ñ>",
       "label": "<nombre legible de la modalidad, en el idioma del material>",
-      "signals": "<como se reconoce en el documento: rotulos, encabezados, estructura visible>",
+      "signals": "<cómo se reconoce en el documento: rótulos, encabezados, estructura visible>",
       "fields": ["<nombre_de_campo>", "..."],
-      "excerpt": "<hasta {excerpt_chars} caracteres literales del ejemplar mas representativo>"
+      "excerpt": "<hasta {excerpt_chars} caracteres literales del ejemplar más representativo>"
     }}
   ]
 }}
@@ -352,7 +352,16 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 - Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`) en el idioma del material.
 - Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` en todo campo copiado del documento que pueda faltar en algún ejercicio, y en ninguno deducible.
 - Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
-- ANTES DE RESPONDER, verifica las nueve cosas que más fallan: (1) el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista; (2) cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`; (3) el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`; (4) `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución; (5) no hay dos modalidades que se rellenen igual; (6) NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables; (7) cada campo COPIADO del documento distinto del `primary_field` admite `null`, salvo que sin él la modalidad no se sostenga; (8) TODAS las modalidades declaran `{DIFFICULTY_FIELD}` con exactamente `{_LEVELS_ENUM}`, con `decided_by` `"user"`, con un criterio propio de esa modalidad en su `description` —frase de entrada y los tres peldaños abiertos por su valor entre « » y dos puntos, cada uno con su ejemplo y su frontera— y fuera de `embed_fields`. (9) todo campo con `decided_by` `"user"` distinto de `{DIFFICULTY_FIELD}` es un `enum` de dos o más valores que el material muestra de verdad, se deduce del enunciado y no existe donde el material enseña una sola variante.
+- ANTES DE RESPONDER, verifica las nueve cosas que más fallan:
+  1. el valor de cada `schema` es un OBJETO `{{...}}`, nunca una lista.
+  2. cada clave de `fields` y cada clave de `item_types` casa con `^[a-z][a-z0-9_]*$`.
+  3. el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`.
+  4. `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución.
+  5. no hay dos modalidades que se rellenen igual.
+  6. NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables.
+  7. cada campo COPIADO del documento distinto del `primary_field` admite `null`, salvo que sin él la modalidad no se sostenga.
+  8. TODAS las modalidades declaran `{DIFFICULTY_FIELD}` con exactamente `{_LEVELS_ENUM}`, con `decided_by` `"user"`, con un criterio propio de esa modalidad en su `description` —frase de entrada y los tres peldaños abiertos por su valor entre « » y dos puntos, cada uno con su ejemplo y su frontera— y fuera de `embed_fields`.
+  9. todo campo con `decided_by` `"user"` distinto de `{DIFFICULTY_FIELD}` es un `enum` de dos o más valores que el material muestra de verdad, se deduce del enunciado y no existe donde el material enseña una sola variante.
 
 <<<INVENTARIO>>>
 {findings}
@@ -386,7 +395,7 @@ El siguiente PERFIL DE EJEMPLARES parsea como JSON válido pero no cumple el for
 
 # REGLAS
 - Conserva el contenido original (`label`, `description`, `guidance`, reglas) tal cual; corrige SOLO lo que incumple el formato. Si renombras un campo, renómbralo también donde se le referencie.
-- Clave de nivel superior exactamente una: `item_types`. Nada más a ese nivel. Si el perfil trae un `content_context`, DÉJALO donde está: es de una versión anterior y otro paso lo migra; no lo borres ni lo edites.
+- A nivel superior va `item_types` y nada más que añadas tú. Si el perfil ya trae un `content_context`, es de una versión anterior y otro paso lo migra: déjalo donde está, sin borrarlo ni editarlo.
 - `item_types` es un objeto NO VACÍO. Cada clave casa con `^[a-z][a-z0-9_]*$` y su valor declara al menos `primary_field` y `fields`, y opcionalmente `label`, `description` y `general_generation_rules`.
 - El `primary_field` de cada modalidad debe ser una de las claves de SUS PROPIOS `fields`.
 - NO BORRES `{DIFFICULTY_FIELD}` de ninguna modalidad ni le cambies el nombre, los valores del `enum` ni el `decided_by`. Es obligatorio en todas y su escala es común a todas; si a alguna le falta, añádeselo copiando la forma de otra y deja su `description` vacía.

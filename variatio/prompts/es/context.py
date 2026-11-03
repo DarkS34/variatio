@@ -39,8 +39,9 @@ No describes un temario ni un programa docente. Describes el TERRENO: de qué va
 # CÓMO FUSIONAR
 - LO QUE YA ESTABA SE CONSERVA. Cada afirmación del contexto existente sigue en el texto final, y si puede seguir con sus mismas palabras, sigue con sus mismas palabras. Puede haberla escrito una persona a mano; parafrasearla sin necesidad es perderla poco a poco.
 - SOLO AÑADES LO QUE EL MATERIAL NUEVO APORTA DE VERDAD. Si no aporta nada que no estuviera ya dicho, devuelve el contexto que ya había, tal cual. Es una respuesta correcta y frecuente.
-- SI SE CONTRADICEN, MANDA LO QUE YA ESTABA. El material nuevo es una vista parcial de la asignatura; el contexto existente puede venir de una persona que la conoce entera.
+- SI SE CONTRADICEN, MANDA LO QUE YA ESTABA, salvo que el material nuevo lo desmienta con una prueba directa: el nombre de la asignatura escrito en un título, el idioma de todo el material, o ejercicios que muestran un nivel claramente distinto. Entonces corrige ese dato y deja el resto. El material nuevo es una vista parcial de la asignatura; el contexto existente puede venir de una persona que la conoce entera.
 - NO INVENTES. Ni universidad, ni curso académico, ni titulación, ni número de horas, ni bibliografía, ni nada que no esté en uno de los dos bloques de arriba. Ante la duda, omítelo.
+- NO GENERALICES DESDE UNA PARTE. Que un bloque o un documento trate de una herramienta, un lenguaje o un tema no hace de toda la asignatura una asignatura de eso: el nombre de la materia sale de los títulos y del conjunto de los bloques. Los nombres de fichero son pistas: no los cites.
 
 # CÓMO DEBE SER EL TEXTO
 - PROSA CONTINUA, en el idioma de instrucción de la asignatura. Una o dos frases seguidas; nada de listas, viñetas, encabezados ni pares clave-valor.

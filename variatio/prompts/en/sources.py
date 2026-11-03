@@ -205,11 +205,11 @@ def format_content_prompt(
     return f"""\
 Extract the LEARNING ITEMS from a pre-segmented markdown fragment of teaching material.
 
-A learning item is any unit the material SETS THE STUDENT AS A TASK: an exercise, a problem, an activity, a question, a case study. Coming with its solution attached does not disqualify it — it is still an item, with its solution included.
+A learning item is any unit the material SETS THE STUDENT AS A TASK: an exercise, a problem, an activity, a question, a case study. Coming with its solution attached does not disqualify it: it is still an item, with its solution included. The reverse does not hold: a block that brings only a solution, with no statement setting the task, is not an item, and you do not invent its statement.
 
 These are NOT learning items and must not be extracted: the theoretical exposition of the syllabus, explanations and definitions, the examples the text uses to ILLUSTRATE an explanation without asking anything of the student, tables of contents, unit objectives, rubrics, bibliography and administrative notices. If the fragment sets no task, return `[]`.
 
-The input contains one or several items. If there are several, they come separated by `---` lines. Each block between separators (or the whole input if it is a single block) represents exactly ONE item. Within a block, everything you find — sub-questions, parts (a/b/c, i/ii/iii), embedded code blocks, follow-up instructions, explanatory paragraphs, tables, examples — belongs to that single item: the parts are a progression of the same task, not separate tasks.
+The fragment brings one or several blocks separated by `---` lines (or a single block, if there are no separators). Each block is AT MOST ONE item: it may be one or none, never two. Within a block, everything you find — sub-questions, parts (a/b/c, i/ii/iii), embedded code blocks, follow-up instructions, explanatory paragraphs, tables, examples — belongs to that single item: the parts are a progression of the same task, not separate tasks.
 
 # CLASSIFY FIRST, EXTRACT AFTERWARDS
 The course sets its tasks in several MODALITIES, and each one has its own field schema. For EACH item: decide first which modality it belongs to, and extract afterwards using the schema OF THAT modality and no other.
@@ -226,6 +226,7 @@ Choose the modality by what the item ASKS OF THE STUDENT, not by its topic or it
 - If a field admits null and the content does not appear in the source, set it to null. Never fabricate content to fill it in: a statement with no solution in the material is a legitimate item, one with an invented solution is false teaching material.
 - Do not mix fields from two modalities in the same object: the only valid fields are those of the modality you declared in `item_type`.
 - The material may come from a transcription that marks the correct option of a closed question with `{CORRECT_ANSWER_MARK}`. That mark is NOT part of the text: use it to know which answer is correct and remove it from the value you extract.
+- If the block neither marks nor gives the correct answer of a closed question, that field goes to null even if you know it: an answer you deduced is not material from the document.
 - Remove leading enumeration markers (`1.`, `2)`, `Exercise 3:`, `Ejercicio 4.`, `Problem 5 -`, `Part 6:`, `Section 7 –`, etc.) from the text fields. Values must start with the first real character of the content, not with a number or a label.
 - For multiline strings (code, prose with paragraphs): escape line breaks as `\\n` and inner quotes as `\\"`.
 - Non-ASCII characters — accents, «ñ», «→», «≤», typographic quotes — are written as themselves, as text, and NEVER as `\\uXXXX` escape sequences: a mis-escaped accent is not a formatting error, it is a letter lost from the material.

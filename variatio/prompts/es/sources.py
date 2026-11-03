@@ -203,40 +203,41 @@ def format_content_prompt(
     keys = ", ".join(f"`{k}`" for k in (type_keys or []))
 
     return f"""\
-Extrae los ITEMS DE APRENDIZAJE de un fragmento markdown pre-segmentado de material docente.
+Extrae los ÍTEMS DE APRENDIZAJE de un fragmento markdown pre-segmentado de material docente.
+{context_section}
+Un ítem de aprendizaje es toda unidad que el material PLANTEA AL ALUMNO COMO TAREA: un ejercicio, un problema, una actividad, una pregunta, un supuesto práctico. Que venga acompañado de su solución no lo descalifica: sigue siendo un ítem, con su solución incluida. Lo contrario no vale: un bloque que solo trae la solución, sin un enunciado que plantee la tarea, no es un ítem, y no le inventes el enunciado.
 
-Un item de aprendizaje es toda unidad que el material PLANTEA AL ALUMNO COMO TAREA: un ejercicio, un problema, una actividad, una pregunta, un supuesto práctico. Que venga acompañado de su solución no lo descalifica — sigue siendo un item, con su solución incluida.
+NO son ítems de aprendizaje y no deben extraerse: la exposición teórica del temario, las explicaciones y definiciones, los ejemplos que el texto usa para ILUSTRAR una explicación sin pedir nada al alumno, los índices, los objetivos de la unidad, las rúbricas, la bibliografía y los avisos administrativos. Si el fragmento no plantea ninguna tarea, devuelve `[]`.
 
-NO son items de aprendizaje y no deben extraerse: la exposición teórica del temario, las explicaciones y definiciones, los ejemplos que el texto usa para ILUSTRAR una explicación sin pedir nada al alumno, los índices, los objetivos de la unidad, las rúbricas, la bibliografía y los avisos administrativos. Si el fragmento no plantea ninguna tarea, devuelve `[]`.
-
-El input contiene uno o varios items. Si hay varios, vienen separados por líneas `---`. Cada bloque entre separadores (o el input completo si es un único bloque) representa exactamente UN item. Dentro de un bloque, todo lo que encuentres — sub-preguntas, apartados (a/b/c, i/ii/iii), bloques de código embebidos, instrucciones de seguimiento, párrafos explicativos, tablas, ejemplos — pertenece a ese único item: los apartados son una progresión de la misma tarea, no tareas distintas.
+El fragmento trae uno o varios bloques separados por líneas `---` (o un solo bloque, si no hay separadores). Cada bloque es COMO MUCHO UN ítem: puede ser uno o ninguno, nunca dos. Dentro de un bloque, todo lo que encuentres —subpreguntas, apartados (a/b/c, i/ii/iii), bloques de código embebidos, instrucciones de seguimiento, párrafos explicativos, tablas, ejemplos— pertenece a ese único ítem: los apartados son una progresión de la misma tarea, no tareas distintas.
 
 # PRIMERO CLASIFICA, DESPUÉS EXTRAE
-La asignatura plantea sus tareas en varias MODALIDADES, y cada una tiene su propio esquema de campos. Para CADA item: decide primero a qué modalidad pertenece, y extrae después usando el esquema DE ESA modalidad y ninguno otro.
+La asignatura plantea sus tareas en varias MODALIDADES, y cada una tiene su propio esquema de campos. Para CADA ítem: decide primero a qué modalidad pertenece, y extrae después usando el esquema DE ESA modalidad y ninguno otro.
 
-Cada objeto que devuelvas lleva una clave `item_type` con la clave de su modalidad ({keys}), MÁS los campos declarados por esa modalidad. Sin `item_type` el item se descarta.
+Cada objeto que devuelvas lleva una clave `item_type` con la clave de su modalidad ({keys}), MÁS los campos declarados por esa modalidad. Sin `item_type` el ítem se descarta.
 
-Elige la modalidad por lo que el item PIDE AL ALUMNO, no por su tema ni por su dificultad. Si un item encaja en dos, quédate con aquella cuyos campos puedas rellenar del todo con lo que hay en el texto. Si no encaja en ninguna, NO lo extraigas: es preferible perder un item que inventarle una anatomía.
+Elige la modalidad por lo que el ítem PIDE AL ALUMNO, no por su tema ni por su dificultad. Si un ítem encaja en dos, quédate con aquella cuyos campos puedas rellenar del todo con lo que hay en el texto. Si no encaja en ninguna, NO lo extraigas: es preferible perder un ítem que inventarle una anatomía.
 
 # MODALIDADES Y SUS ESQUEMAS
 {types_block}
 
 # REGLAS DE EXTRACCIÓN
 - Copia los valores literalmente del texto fuente. No reescribas, no traduzcas, no resumas, no inventes contenido. Lo que se extrae es material docente real: alterarlo destruye justamente lo que lo hace útil como ejemplo.
-- Si un campo admite null y el contenido no aparece en la fuente, ponlo a null. Nunca fabriques contenido para rellenar: un enunciado sin solución en el material es un item legítimo, uno con la solución inventada es material docente falso.
+- Si un campo admite null y el contenido no aparece en la fuente, ponlo a null. Nunca fabriques contenido para rellenar: un enunciado sin solución en el material es un ítem legítimo, uno con la solución inventada es material docente falso.
 - No mezcles campos de dos modalidades en un mismo objeto: los únicos campos válidos son los de la modalidad que has declarado en `item_type`.
 - El material puede venir de una transcripción que marca con `{CORRECT_ANSWER_MARK}` la opción correcta de una pregunta cerrada. Esa marca NO es parte del texto: úsala para saber cuál es la respuesta correcta y quítala del valor que extraigas.
+- Si el bloque no marca ni da la respuesta correcta de una pregunta cerrada, ese campo va a null aunque sepas cuál es: una respuesta deducida por ti no es material del documento.
 - Elimina marcadores de enumeración inicial (`1.`, `2)`, `Ejercicio 3:`, `Exercise 4.`, `Problema 5 -`, `Apartado 6:`, `Sección 7 –`, etc.) en los campos de texto. Los valores deben empezar con el primer carácter real del contenido, no con un número o etiqueta.
 - Para strings multilínea (código, prosa con párrafos): escapa saltos como `\\n` y comillas internas como `\\"`.
 - Los caracteres que no son ASCII —tildes, «ñ», «→», «≤», comillas tipográficas— se escriben tal cual, como texto, y NUNCA como secuencias `\\uXXXX`: una tilde mal escapada no es un error de formato, es una letra perdida del material.
-- Respeta los constraints del schema (`minLength`, `maxLength`, `pattern`, etc.).
+- Respeta las restricciones del esquema (`minLength`, `maxLength`, `pattern`, etc.).
 
 # REGLAS DE SALIDA
 - Un único JSON array. Nada antes, nada después.
 - Cada objeto lleva `item_type` más los campos de esa modalidad.
 - Sin ```json, sin backticks, sin comentarios.
 - Si el fragmento no plantea ninguna tarea al alumno, devuelve `[]`.
-{context_section}
+
 <<<CONTENT>>>
 {content}
 <<<END>>>

@@ -257,6 +257,7 @@ PASSAGE_CONCEPTS_HEADING: str = "CONCEPTS EXTRACTED FROM HERE: "
 DESCRIBING_MARK: str = " (the one you are describing)"
 CONTEXT_SOURCE_PROFILE: str = "THE EXEMPLARS PROFILE"
 CONTEXT_SOURCE_GRAPH: str = "THE SYLLABUS GRAPH"
+CORPUS_DOCUMENTS_HEADING: str = "The corpus documents, with their titles:"
 
 
 def syllabus_blocks(domains: int, concepts: int) -> str:

@@ -54,7 +54,7 @@ EXEMPLARS_PROFILE_SCHEMA_GRAMMAR = """\
 - `"type"`: one of `"string"`, `"integer"`, `"number"`, `"boolean"`, `"array"`, `"object"`.
 - `"type"` as a LIST of those same names, for values that admit absence: {"type": ["string", "null"]}. Inside `type` everything is a quoted TYPE NAME, `"null"` included.
 - with `"type": "array"`, the key `"items"` goes INSIDE the schema: {"type": "array", "items": {"type": "string"}}. A list that may be missing combines both forms: {"type": ["array", "null"], "items": {"type": "string"}}.
-- `"enum"`: a non-empty list of permitted literal VALUES (not type names), for categorical fields: {"enum": ["basic", "intermediate", "advanced"]}. ONLY here, and only if the field admits absence under the NULL POLICY, may the JSON literal `null` appear as one more value in the list.
+- `"enum"`: a non-empty list of permitted literal VALUES (not type names), for categorical fields: {"enum": ["short", "long"]}. ONLY here, and only if the field admits absence under the NULL POLICY, may the JSON literal `null` appear as one more value in the list.
 - optional constraints, inside the same object: `"minLength"`, `"maxLength"`, `"minimum"`, `"maximum"`, `"default"`.
 
 VALID shapes of `schema` — there is no other:
@@ -345,7 +345,16 @@ The list of fields that, TOGETHER, are read to decide which curriculum concept t
 - The field names (keys of `fields`) and the keys of `item_types` ALWAYS in English, snake_case, ASCII only. The rest of the human-facing text (`label`, `description`, `guidance`, `general_generation_rules`) in the language of the material.
 - Include only the ESSENTIAL fields: less is more, but without leaving out anything indispensable. None derivable from another. `null` on every field copied from the document that may be missing in some exercise, and on no deducible one.
 - Every text value on ONE SINGLE LINE: no real line breaks, no backticks and no code blocks inside the strings. Escape line breaks (`\\n`) and inner quotes (`\\"`).
-- BEFORE ANSWERING, check the nine things that go wrong most: (1) the value of every `schema` is an OBJECT `{{...}}`, never a list; (2) every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`; (3) each modality's `primary_field` is exactly one of the keys of ITS `fields`; (4) `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution; (5) there are no two modalities that would be filled in the same way; (6) NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`; (7) every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it; (8) EVERY modality declares `{DIFFICULTY_FIELD}` with exactly `{_LEVELS_ENUM}`, with `decided_by` `"user"`, with a criterion of its own in its `description` — an opening sentence and the three rungs each opened by its value between « » and a colon, each with its example and its border — and outside `embed_fields`. (9) every field with `decided_by` `"user"` other than `{DIFFICULTY_FIELD}` is an `enum` of two or more values the material actually shows, is deduced from the statement, and does not exist where the material shows a single variant.
+- BEFORE ANSWERING, check the nine things that go wrong most:
+  1. the value of every `schema` is an OBJECT `{{...}}`, never a list.
+  2. every key of `fields` and every key of `item_types` matches `^[a-z][a-z0-9_]*$`.
+  3. each modality's `primary_field` is exactly one of the keys of ITS `fields`.
+  4. `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution.
+  5. there are no two modalities that would be filled in the same way.
+  6. NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`.
+  7. every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it.
+  8. EVERY modality declares `{DIFFICULTY_FIELD}` with exactly `{_LEVELS_ENUM}`, with `decided_by` `"user"`, with a criterion of its own in its `description` — an opening sentence and the three rungs each opened by its value between « » and a colon, each with its example and its border — and outside `embed_fields`.
+  9. every field with `decided_by` `"user"` other than `{DIFFICULTY_FIELD}` is an `enum` of two or more values the material actually shows, is deduced from the statement, and does not exist where the material shows a single variant.
 
 <<<INVENTORY>>>
 {findings}
@@ -379,7 +388,7 @@ The following EXEMPLARS PROFILE parses as valid JSON but does not satisfy the re
 
 # RULES
 - Keep the original content (`label`, `description`, `guidance`, rules) as it is; correct ONLY what breaks the format. If you rename a field, rename it wherever it is referenced too.
-- Exactly one top-level key: `item_types`. Nothing else at that level. If the profile brings a `content_context`, LEAVE IT where it is: it comes from an earlier version and another step migrates it; do not delete it and do not edit it.
+- At the top level goes `item_types` and nothing else that you add. If the profile already brings a `content_context`, it comes from an earlier version and another step migrates it: leave it where it is, neither deleted nor edited.
 - `item_types` is a NON-EMPTY object. Each key matches `^[a-z][a-z0-9_]*$` and its value declares at least `primary_field` and `fields`, and optionally `label`, `description` and `general_generation_rules`.
 - Each modality's `primary_field` must be one of the keys of ITS OWN `fields`.
 - Do NOT delete `{DIFFICULTY_FIELD}` from any modality and do not change its name, its `enum` values or its `decided_by`. It is mandatory in all of them and its ladder is common to all; if one is missing it, add it by copying the shape from another and leave its `description` empty.
