@@ -111,9 +111,16 @@ def check_practises_later(concepts: list[str]) -> str:
     return f"practica lo que va después del objetivo: {', '.join(concepts)}"
 
 
-def check_too_similar(label: str, score: float) -> str:
-    """The item is too close to an exemplar or to another of its own batch."""
-    return f"muy parecida a {label} ({score:.2f})"
+def check_too_similar(label: str, score: float, opening: str) -> str:
+    """The item is too close to an exemplar or to another of its own batch.
+
+    The model writing the retry never saw the label, so the reason quotes how the close text
+    opens.
+    """
+    return (
+        f"muy parecida a {label} ({score:.2f}), que empieza así: «{opening}». "
+        "Cambia el planteamiento, no solo las palabras"
+    )
 
 
 def check_tagger_missed(targets: list[str], seen: str | None) -> str:

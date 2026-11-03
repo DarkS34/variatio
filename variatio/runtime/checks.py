@@ -22,6 +22,9 @@ from ..core.lexicon import mentions
 from .embedder import Embedder
 from ..loaders.exemplars_profile import ItemType
 
+# How much of a close text a similarity reason quotes: enough to recognise it (plan F5, G2).
+SIMILAR_OPENING_CHARS = 150
+
 RULE_MENTIONS = "mentions"
 RULE_PRACTISES = "practises"
 
@@ -84,7 +87,7 @@ def run(
     if later:
         reasons.append(wording.check_practises_later(later))
     if checks["similarity"] and checks["similarity"]["high"]:
-        reasons.append(wording.check_too_similar(close[0], close[1]))
+        reasons.append(wording.check_too_similar(close[0], close[1], _opening(dict(others)[close[0]])))
     flags = list(reasons)
     # Whether a target is among the tags AT ALL, never whether it was made primary: which of
     # several targets an item practises is the generator's business, the prompt asking for
@@ -98,6 +101,14 @@ def run(
     if flags:
         logger.warning(f"Variant flagged: {'; '.join(flags)}")
     return checks
+
+
+def _opening(text: str) -> str:
+    """Return the first words of `text`, about `SIMILAR_OPENING_CHARS` long, on one line."""
+    flat = " ".join(text.split())
+    if len(flat) <= SIMILAR_OPENING_CHARS:
+        return flat
+    return flat[:SIMILAR_OPENING_CHARS].rsplit(" ", 1)[0] + "…"
 
 
 def closure_rule(curriculum: list[str] | None) -> str:

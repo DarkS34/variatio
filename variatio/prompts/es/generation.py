@@ -19,6 +19,8 @@ _SLOT_LABELS = {
 
 # The one slot that binds the solution rather than the surface: it gets a section of its own.
 _CONSTRAINT_SLOT = "restricciones"
+# The slot that pins the setting, which then is not the model's to vary.
+_SETTING_SLOT = "ambito"
 
 
 def generate_content_prompt(
@@ -55,27 +57,29 @@ def generate_content_prompt(
     context_section = (
         "\n# CONTEXTO DOCENTE\n"
         f"{context_block}\n"
-        "Este contexto fija la materia, el nivel y el idioma de instrucción: ajusta a él el "
-        "registro, la terminología y la extensión del ejercicio. Es información para ti, no "
-        "texto que deba aparecer en el enunciado.\n"
+        "Fija la materia, el nivel y el idioma de instrucción: ajusta a él el registro, la "
+        "terminología y la extensión. Es información para ti; no se copia en el enunciado.\n"
         if context_block.strip()
         else ""
     )
 
     few_shot_section = (
         few_shot_block.strip()
-        or "(Ningún ejemplo disponible: redacta el ejercicio de cero respetando las reglas anteriores.)"
+        or "(Ningún ejemplo disponible: redacta el ejercicio de cero con las reglas anteriores.)"
     )
 
-    already_block = _already_used_block(already_generated)
+    # A pinned setting (a fixed scenario, or an «ámbito» the requester chose) leaves the model
+    # nothing to vary in the wrapping: asking for a new setting as well made the two clash.
+    pinned_setting = bool(scenario.strip()) or any(r.slot == _SETTING_SLOT for r in requests or ())
+    already_block = _already_used_block(already_generated, pinned_setting)
 
     prerequisites_section = ""
     if prerequisites_block.strip():
         prerequisites_section = (
             "\n# CONOCIMIENTO PREVIO: SE DA POR SABIDO\n"
             "El grafo del currículo sitúa estos conceptos antes del objetivo: el alumno ya los domina. "
-            "Son el andamiaje con el que construir el ejercicio, no el reto. Apóyate en ellos con "
-            "naturalidad; la dificultad viene del objetivo, y el ejercicio no puede reducirse a repasarlos:\n"
+            "Son el andamiaje del ejercicio, no el reto: apóyate en ellos con naturalidad, pero el "
+            "ejercicio no puede reducirse a repasarlos:\n"
             f"{prerequisites_block}\n"
         )
 
@@ -85,23 +89,31 @@ def generate_content_prompt(
     # that the exercise must not PRACTISE them: practicar ≠ usar, on the far side of the
     # scaffolding. `checks.closure_rule` keeps the same condition.
     excluded_section = ""
+    excluded_check = ""
     if excluded_concepts_block.strip() and curriculum_block.strip():
         excluded_section = (
             "\n# TODAVÍA NO IMPARTIDO: PROHIBIDO\n"
             "El grafo del currículo sitúa estos conceptos después del objetivo: el alumno aún no los ha visto. "
-            "No aparecen en el enunciado ni hacen falta para resolverlo; si tu primera idea los necesita, "
-            "cámbiala. Si uno de ellos es inseparable del propio objetivo (el currículo puede contradecirse), "
-            "el objetivo manda: úsalo en la medida mínima que el objetivo exige y nada más:\n"
+            "No aparecen en ningún campo de la salida (tampoco en el código ni en la solución) ni hacen "
+            "falta para resolverlo; si tu primera idea los necesita, cámbiala. Si uno es inseparable del "
+            "propio objetivo, manda el objetivo: úsalo en la medida mínima que exige:\n"
             f"{excluded_concepts_block}\n"
+        )
+        excluded_check = (
+            "- Ningún concepto de «todavía no impartido» aparece en ningún campo, tampoco en el código "
+            "ni en la solución, salvo el mínimo que el propio objetivo exige.\n"
         )
     elif excluded_concepts_block.strip():
         excluded_section = (
             "\n# VIENE DESPUÉS DEL OBJETIVO: NO ES EL RETO\n"
-            "El grafo del currículo sitúa estos conceptos después del objetivo. Nadie ha dicho hasta dónde "
-            "ha llegado la clase, así que pueden aparecer como andamiaje si el ejercicio los necesita, "
-            "pero el ejercicio no trata de ellos: ninguno puede ser lo que se practica ni la dificultad. "
-            "Si te sobra uno, quítalo; la dificultad viene del objetivo y de nada posterior:\n"
+            "El grafo del currículo sitúa estos conceptos después del objetivo. Pueden aparecer como "
+            "andamiaje si el ejercicio los necesita, pero ninguno es lo que se practica ni la fuente "
+            "de la dificultad. Si te sobra uno, quítalo:\n"
             f"{excluded_concepts_block}\n"
+        )
+        excluded_check = (
+            "- Ningún concepto de «viene después del objetivo» es lo que se practica ni la fuente de "
+            "la dificultad.\n"
         )
 
     curriculum_section = ""
@@ -128,9 +140,8 @@ def generate_content_prompt(
     if scenario.strip():
         scenario_section = (
             "\n# ESCENARIO FIJADO\n"
-            "El ejercicio se ambienta en este escenario, que viene decidido por quien lo pide y "
-            "sustituye a tu elección libre de envoltorio. Es solo el marco: el objetivo, el "
-            "conocimiento previo y la exigencia los fijan las secciones anteriores:\n"
+            "El ejercicio se ambienta en este escenario, decidido por quien lo pide. Es solo el marco: "
+            "el objetivo, el conocimiento previo y la exigencia los fijan las secciones anteriores:\n"
             f"{scenario.strip()}\n"
         )
 
@@ -143,74 +154,92 @@ def generate_content_prompt(
             "las cumple todas.\n"
         )
 
+    if pinned_setting:
+        variation_section = (
+            "\n# VARIACIÓN\n"
+            "El ámbito del enunciado viene fijado. Lo nuevo son los datos, los objetos y los valores "
+            "concretos, que no repiten los de ningún ejemplo de referencia ni los de los enunciados "
+            "ya producidos. La variación no añade datos ni reglas que haya que descifrar.\n"
+        )
+        variation_check = (
+            "- Los datos y los valores no repiten los de los ejemplos de referencia ni los de los "
+            "enunciados ya producidos.\n"
+        )
+    else:
+        variation_section = (
+            "\n# VARIACIÓN\n"
+            "El envoltorio (la situación concreta en la que se plantea la tarea) es tuyo y es nuevo. "
+            "Si los ejemplos de referencia plantean la tarea en un escenario, elige un ámbito "
+            "reconocible de la vida real que no aparezca en ellos ni en los enunciados ya producidos. "
+            "Si la plantean en seco, no inventes un escenario: varía los datos, los objetos y los "
+            "valores concretos. Cambiar el envoltorio y no la sustancia obliga a transferir el concepto "
+            "en vez de reconocer un patrón. La variación no añade datos ni reglas que haya que descifrar.\n"
+        )
+        variation_check = (
+            "- El ámbito, o los datos y los valores si la modalidad va en seco, no repite los ejemplos "
+            "de referencia ni los enunciados ya producidos.\n"
+        )
+
+    # The reasons travel last, right above the output, where the model reads them just before
+    # it writes; a reason that names a similar text quotes how that text opens.
     correction_section = ""
     if correction and correction.strip():
         correction_section = (
             "\n# CORRECCIÓN DE UN INTENTO ANTERIOR\n"
-            "Una versión anterior de este mismo ejercicio fue rechazada por estos motivos:\n"
+            "Una versión anterior de este mismo encargo fue rechazada por estos motivos:\n"
             f"{correction.strip()}\n"
-            "La nueva versión los evita todos. Todo lo demás del encargo se mantiene igual: "
-            "la modalidad, el objetivo, el conocimiento previo, lo prohibido, el currículo, los "
-            "valores fijos y la petición de quien pide el ejercicio.\n"
+            "La nueva versión los evita todos y mantiene todo lo demás del encargo.\n"
         )
 
     return f"""\
-Eres experto en la didáctica de la asignatura descrita abajo y redactas un ejercicio nuevo, conforme a la forma de salida indicada al final.
-
-No sabes quién te lo pide, y no lo necesitas: el ejercicio se dirige siempre a quien va a resolverlo.
+Eres experto en la didáctica de la asignatura descrita abajo y redactas un ejercicio nuevo para quien va a resolverlo, con la forma de salida indicada al final.
 
 # ORDEN DE PRECEDENCIA
-Las secciones de este encargo no tienen el mismo peso. Si dos chocan, manda la que está antes en esta lista:
+Si dos secciones chocan, manda la que está antes en esta lista:
 1. La modalidad y la forma de salida.
 2. El objetivo de aprendizaje.
-3. Lo todavía no impartido.
-4. El currículo ya cubierto y los valores fijos.
+3. Lo que viene después del objetivo.
+4. El currículo ya cubierto, los valores fijos y el escenario fijado.
 5. La petición de quien pide el ejercicio y sus restricciones de la solución.
-6. Las reglas de redacción de la modalidad.
-7. La calidad didáctica.
-8. La variación de contexto y los ejemplos de referencia.
+6. Las reglas de redacción, la calidad didáctica y la variación.
+Los ejemplos de referencia enseñan la forma; nunca mandan sobre lo anterior.
 {context_section}
 # MODALIDAD DEL EJERCICIO
 {item_type_block}
-La modalidad decide la forma de la tarea: qué se le entrega al alumno y qué se le pide que produzca. Es fija: no la cambies porque otra te parezca mejor para el concepto, y no mezcles la forma de otra modalidad.
+La modalidad decide qué se le entrega al alumno y qué se le pide que produzca. Es fija: no la cambies por otra que te parezca mejor para el concepto, y no mezcles la forma de otra modalidad.
 
 # OBJETIVO DE APRENDIZAJE
-El ejercicio se plantea para que el alumno PRACTIQUE estos conceptos del currículo, y son su única fuente legítima de dificultad. La descripción de cada uno es la definición operativa de qué significa practicarlo:
+El alumno PRACTICA estos conceptos, y son la única fuente legítima de dificultad. La descripción de cada uno define qué significa practicarlo:
 {target_concepts_block}
 
-PRUEBA DE VALIDEZ, aplicada a cada concepto objetivo por separado: un alumno que domine todo el currículo salvo ese concepto no debe poder resolver el ejercicio. Si podría, el ejercicio no lo practica, lo menciona. Nombrar un concepto, usarlo de pasada o citarlo en el enunciado no es practicarlo. Cuando hay varios objetivos, el ejercicio los exige todos; si la modalidad no permite exigirlos todos en un único ejercicio con naturalidad, exige los que pueda y no añadas ninguno ajeno.
-{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
+PRUEBA DE VALIDEZ, para cada concepto objetivo por separado: un alumno que domine todo el currículo salvo ese concepto no puede resolver el ejercicio. Si podría, el ejercicio solo lo menciona. Nombrarlo, usarlo de pasada o citarlo no es practicarlo. Con varios objetivos, el ejercicio los exige todos; si la modalidad no lo permite con naturalidad, exige los que pueda y no añadas ninguno ajeno.
+{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}{scenario_section}{instructions_section}
 # REGLAS DE REDACCIÓN DE ESTA MODALIDAD
-Convenciones observadas en el material real de la asignatura: cómo escribe esta asignatura esta modalidad. Son de obligado cumplimiento y describen la forma, no el contenido:
+Convenciones del material real de la asignatura. Son obligatorias y describen la forma, no el contenido:
 {rules_block}
 
 # CALIDAD DIDÁCTICA
-- Autosuficiencia: el enunciado se basta a sí mismo. Deja explícitos los datos de partida, su naturaleza y qué se espera como resultado. El alumno no necesita preguntar nada para empezar.
-- Una sola lectura: si una frase admite dos interpretaciones que llevan a soluciones distintas, reescríbela. La ambigüedad evalúa comprensión lectora, no el objetivo de aprendizaje.
-- Resoluble: existe una solución correcta alcanzable con el objetivo y el conocimiento previo, y con nada más.
-- Sin carga ajena: la dificultad del ejercicio es la del objetivo, no la de descifrarlo. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado; todo lo que el alumno deba desenredar antes de pensar en el concepto es ruido que falsea la evaluación.
-- Calibrado: ajusta alcance y exigencia al nivel del contexto docente y a lo que muestran los ejemplos de referencia. Ni un ejercicio trivial que no obligue a nada, ni uno que desborde lo que el objetivo permite.
-- Sin voz de aula: el enunciado plantea la tarea y nada más. Sin saludos, presentaciones, ánimos ni comentarios tuyos sobre el propio ejercicio; sin referencias a la clase, al profesor, a una entrega o a una calificación. Quien lo lee puede estar practicando por su cuenta.
-
-# VARIACIÓN DE CONTEXTO
-El envoltorio, la situación concreta en la que se plantea la tarea, es tuyo y debe ser nuevo. Si los ejemplos de referencia plantean la tarea en un escenario, elige un ámbito reconocible de la vida real que no aparezca en ellos ni en los escenarios ya usados, y plantea el ejercicio en él. Si la modalidad se plantea en seco — los ejemplos de referencia no envuelven la tarea en ningún escenario —, no le inventes uno: la variación está entonces en los datos, los objetos y los valores concretos, que no repiten los de ningún ejemplo. Cambiar el envoltorio y no la sustancia es lo que obliga al alumno a transferir el concepto en vez de reconocer un patrón memorizado. Lo que no cambia es la demanda cognitiva: el objetivo y su exigencia los fijan las secciones anteriores, y la variación elegida no añade datos ni reglas que haya que descifrar.
-{scenario_section}{instructions_section}{correction_section}
+- Autosuficiente: el enunciado da los datos de partida, su naturaleza y qué se espera como resultado. El alumno no necesita preguntar nada para empezar.
+- Una sola lectura: si una frase admite dos interpretaciones con soluciones distintas, reescríbela.
+- Resoluble: existe una solución correcta con el objetivo y el conocimiento previo, y con nada más. Si escribes la solución, compruébala una vez contra el enunciado.
+- Sin carga ajena: la dificultad es la del objetivo, no la de descifrar el enunciado. Fuera datos irrelevantes, rodeos narrativos, condiciones acumuladas y vocabulario rebuscado.
+- Calibrado: el alcance y la exigencia siguen el nivel del contexto docente y los ejemplos de referencia. Ni trivial ni desbordado.
+- Sin voz de aula: el enunciado plantea la tarea y nada más. Sin saludos, ánimos ni comentarios sobre el ejercicio; sin referencias a la clase, al profesor, a una entrega o a una calificación.
+{variation_section}
 # EJEMPLOS DE REFERENCIA
-Ejercicios reales del material docente de la asignatura, sobre conceptos próximos. Son referencia de forma, registro y extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
+Ejercicios reales de la asignatura sobre conceptos próximos. Enseñan la forma, el registro y la extensión; su temática, su estructura literal y sus escenarios no se reutilizan.
 {few_shot_section}
-{already_block}
+{already_block}{correction_section}
 # CAMPOS DE LA SALIDA
-Un objeto JSON con exactamente estas claves y ninguna otra. Un campo que clasifica el ejercicio (un nivel, una categoría) describe lo que has escrito, no lo decide de antemano: rellénalo al final, a partir del ejercicio terminado y de su criterio.
+Un objeto JSON con exactamente estas claves y ninguna otra. Un campo que clasifica el ejercicio (un nivel, una categoría) describe lo que has escrito: rellénalo al final, a partir del ejercicio terminado y de su criterio.
 {fields_block}
 
 Esqueleto exacto de la salida (rellena los valores):
 {instance_template}
 
 # ANTES DE RESPONDER, COMPRUEBA
-- Cada concepto objetivo supera la prueba de validez: sin él, el ejercicio no se resuelve.
-- Ningún concepto de lo todavía no impartido aparece ni hace falta, salvo el mínimo que el propio objetivo exige.
-- El ámbito del enunciado — o sus datos y valores, si la modalidad se plantea sin escenario — no repite los ejemplos de referencia ni los escenarios ya usados.
-- El enunciado se basta a sí mismo, admite una sola lectura y no tiene voz de aula.
+- Cada concepto objetivo supera la prueba de validez.
+{excluded_check}{variation_check}- El enunciado se basta a sí mismo, admite una sola lectura y no tiene voz de aula.
 {constraints_check}- Las claves son exactamente las del esqueleto y los valores fijos van copiados tal cual.
 
 # FORMA DE LA SALIDA
@@ -221,15 +250,24 @@ Esqueleto exacto de la salida (rellena los valores):
 JSON:"""
 
 
-def _already_used_block(already_generated: list[str]) -> str:
-    """Render the statements this commission has already produced, as settings to avoid."""
+def _already_used_block(already_generated: list[str], pinned_setting: bool) -> str:
+    """Render the statements this commission has already produced, as settings to avoid.
+
+    With the setting pinned the statements share it by design, so what they must not share
+    is their data.
+    """
     if not already_generated:
         return ""
     existing_lines = "\n".join(f"- {s.strip()}" for s in already_generated)
+    ask = (
+        "El ámbito está fijado: el tuyo cambia los datos y los valores."
+        if pinned_setting
+        else "El tuyo se plantea en un ámbito distinto de todos ellos."
+    )
     return (
-        "\n# ESCENARIOS YA USADOS\n"
+        "\n# ENUNCIADOS YA PRODUCIDOS\n"
         "Enunciados ya producidos en este mismo encargo o guardados antes en esta asignatura "
-        "sobre estos conceptos. El tuyo se plantea en un ámbito distinto de todos ellos:\n"
+        f"sobre estos conceptos. {ask}\n"
         f"{existing_lines}\n"
     )
 

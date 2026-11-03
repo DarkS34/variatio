@@ -25,15 +25,18 @@ def test_the_correction_section_is_absent_without_a_correction():
     assert "# CORRECCIÓN DE UN INTENTO ANTERIOR" not in _prompt("   ")
 
 
-def test_the_correction_section_sits_right_before_the_examples():
+def test_the_correction_section_sits_after_the_examples_right_before_the_output():
+    # Moved below the examples on 2026-11-02 (plan F5, G2): the reasons are the last thing
+    # the model reads before it writes.
     prompt = _prompt("- menciona lo no impartido: Memoización")
     heading = prompt.index("# CORRECCIÓN DE UN INTENTO ANTERIOR")
     examples = prompt.index("# EJEMPLOS DE REFERENCIA")
-    assert heading < examples
-    body = prompt[heading:examples]
+    fields = prompt.index("# CAMPOS DE LA SALIDA")
+    assert examples < heading < fields
+    body = prompt[heading:fields]
     assert "menciona lo no impartido: Memoización" in body
     assert "fue rechazada" in body
-    assert "Todo lo demás del encargo se mantiene igual" in body
+    assert "mantiene todo lo demás del encargo" in body
 
 
 class _Item:

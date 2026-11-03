@@ -81,6 +81,15 @@ def test_a_near_copy_asks_for_a_retry(ejercicio):
     assert result["verdict"] == "retry"
     assert len(result["reasons"]) == 1
     assert result["reasons"][0].startswith("muy parecida a ex1")
+    # The model writing the retry never saw "ex1": the reason quotes how that text opens.
+    assert f"«{twin}»" in result["reasons"][0]
+
+
+def test_a_long_close_text_is_quoted_by_its_opening_only():
+    text = "palabra " * 60
+    opening = checks._opening(text)
+    assert len(opening) <= checks.SIMILAR_OPENING_CHARS + 1
+    assert opening.endswith("…") and "  " not in opening
 
 
 def test_an_off_target_tagger_alone_is_a_flag_and_never_a_retry(ejercicio):

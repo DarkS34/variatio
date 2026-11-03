@@ -11,7 +11,7 @@ whoever is going to solve it and never speaks with a classroom voice.
 # only what is shown to the model does.
 _SLOT_LABELS = {
     "ambito": "Setting",
-    "elementos": "Elements of the statement",
+    "elementos": "Parts of the statement",
     "extension": "Length",
     "datos": "Specific data",
     "restricciones": "Constraints on the solution",
@@ -19,6 +19,8 @@ _SLOT_LABELS = {
 
 # The one slot that binds the solution rather than the surface: it gets a section of its own.
 _CONSTRAINT_SLOT = "restricciones"
+# The slot that pins the setting, which then is not the model's to vary.
+_SETTING_SLOT = "ambito"
 
 
 def generate_content_prompt(
@@ -55,28 +57,30 @@ def generate_content_prompt(
     context_section = (
         "\n# TEACHING CONTEXT\n"
         f"{context_block}\n"
-        "This context fixes the subject, the level and the language of instruction: adjust the "
-        "register, the terminology and the length of the exercise to it. It is information for "
-        "you, not text that should appear in the statement.\n"
+        "It fixes the subject, the level and the language of instruction: fit the register, the "
+        "terminology and the length to it. It is information for you; it is not copied into the "
+        "statement.\n"
         if context_block.strip()
         else ""
     )
 
     few_shot_section = (
         few_shot_block.strip()
-        or "(No example available: write the exercise from scratch respecting the rules above.)"
+        or "(No example available: write the exercise from scratch with the rules above.)"
     )
 
-    already_block = _already_used_block(already_generated)
+    # A pinned setting (a fixed scenario, or a setting the requester chose) leaves the model
+    # nothing to vary in the wrapping: asking for a new setting as well made the two clash.
+    pinned_setting = bool(scenario.strip()) or any(r.slot == _SETTING_SLOT for r in requests or ())
+    already_block = _already_used_block(already_generated, pinned_setting)
 
     prerequisites_section = ""
     if prerequisites_block.strip():
         prerequisites_section = (
             "\n# PRIOR KNOWLEDGE: TAKEN AS KNOWN\n"
             "The curriculum graph places these concepts before the objective: the student already "
-            "masters them. They are the scaffolding to build the exercise with, not the challenge. "
-            "Lean on them naturally; the difficulty comes from the objective, and the exercise cannot "
-            "be reduced to revising them:\n"
+            "masters them. They are the exercise's scaffolding, not its challenge: lean on them "
+            "naturally, but the exercise cannot come down to revising them:\n"
             f"{prerequisites_block}\n"
         )
 
@@ -86,25 +90,32 @@ def generate_content_prompt(
     # that the exercise must not PRACTISE them: practising ≠ using, on the far side of the
     # scaffolding. `checks.closure_rule` keeps the same condition.
     excluded_section = ""
+    excluded_check = ""
     if excluded_concepts_block.strip() and curriculum_block.strip():
         excluded_section = (
             "\n# NOT YET TAUGHT: FORBIDDEN\n"
             "The curriculum graph places these concepts after the objective: the student has not seen "
-            "them yet. They do not appear in the statement and are not needed to solve it; if your "
-            "first idea needs them, change it. If one of them is inseparable from the objective itself "
-            "(a curriculum may contradict itself), the objective wins: use it to the minimum extent the "
-            "objective demands and no further:\n"
+            "them yet. They appear in no field of the output (not in the code, not in the solution) "
+            "and are not needed to solve it; if your first idea needs them, change it. If one is "
+            "inseparable from the objective itself, the objective wins: use it to the minimum extent "
+            "it demands:\n"
             f"{excluded_concepts_block}\n"
+        )
+        excluded_check = (
+            "- No concept from \"not yet taught\" appears in any field, the code and the solution "
+            "included, beyond the minimum the objective itself demands.\n"
         )
     elif excluded_concepts_block.strip():
         excluded_section = (
             "\n# COMES AFTER THE OBJECTIVE: NOT THE CHALLENGE\n"
-            "The curriculum graph places these concepts after the objective. Nobody has said how far "
-            "the class has got, so they may appear as scaffolding if the exercise needs them, but the "
-            "exercise is not about them: none of them may be what is practised or the difficulty. If "
-            "one is superfluous, drop it; the difficulty comes from the objective and from nothing "
-            "later:\n"
+            "The curriculum graph places these concepts after the objective. They may appear as "
+            "scaffolding if the exercise needs them, but none of them is what is practised or the "
+            "source of the difficulty. If one is superfluous, drop it:\n"
             f"{excluded_concepts_block}\n"
+        )
+        excluded_check = (
+            "- No concept from \"comes after the objective\" is what is practised or the source of "
+            "the difficulty.\n"
         )
 
     curriculum_section = ""
@@ -131,9 +142,9 @@ def generate_content_prompt(
     if scenario.strip():
         scenario_section = (
             "\n# FIXED SCENARIO\n"
-            "The exercise is set in this scenario, decided by whoever is asking for it, which "
-            "replaces your own free choice of wrapper. It is only the frame: the objective, the "
-            "prior knowledge and the demand are fixed by the sections above:\n"
+            "The exercise is set in this scenario, decided by whoever is asking for it. It is only "
+            "the frame: the objective, the prior knowledge and the demand are fixed by the sections "
+            "above:\n"
             f"{scenario.strip()}\n"
         )
 
@@ -146,74 +157,93 @@ def generate_content_prompt(
             "output keeps all of them.\n"
         )
 
+    if pinned_setting:
+        variation_section = (
+            "\n# VARIATION\n"
+            "The statement's setting is pinned. What is new is the concrete data, objects and "
+            "values, which repeat those of no reference example and of no statement already "
+            "produced. The variation adds no data and no rules that have to be deciphered.\n"
+        )
+        variation_check = (
+            "- The data and values repeat neither the reference examples nor the statements "
+            "already produced.\n"
+        )
+    else:
+        variation_section = (
+            "\n# VARIATION\n"
+            "The wrapping (the concrete situation the task is set in) is yours and is new. If the "
+            "reference examples set the task in a scenario, choose a recognisable real-life setting "
+            "that appears neither in them nor in the statements already produced. If they set it "
+            "bare, do not invent a scenario: vary the concrete data, objects and values. Changing "
+            "the wrapping and not the substance makes the student transfer the concept instead of "
+            "recognising a pattern. The variation adds no data and no rules that have to be "
+            "deciphered.\n"
+        )
+        variation_check = (
+            "- The setting, or the data and values if the modality is set bare, repeats neither the "
+            "reference examples nor the statements already produced.\n"
+        )
+
+    # The reasons travel last, right above the output, where the model reads them just before
+    # it writes; a reason that names a similar text quotes how that text opens.
     correction_section = ""
     if correction and correction.strip():
         correction_section = (
             "\n# CORRECTION OF A PREVIOUS ATTEMPT\n"
-            "An earlier version of this same exercise was rejected for these reasons:\n"
+            "An earlier version of this same commission was rejected for these reasons:\n"
             f"{correction.strip()}\n"
-            "The new version avoids all of them. Everything else in the commission stays the same: "
-            "the modality, the objective, the prior knowledge, what is forbidden, the curriculum, the "
-            "pinned values and the request from whoever is asking for the exercise.\n"
+            "The new version avoids all of them and keeps everything else in the commission.\n"
         )
 
     return f"""\
-You are an expert in the didactics of the course described below and you are writing a new exercise, conforming to the output shape given at the end.
-
-You do not know who is asking, and you do not need to: the exercise always addresses whoever is going to solve it.
+You are an expert in the didactics of the course described below and you are writing a new exercise for whoever is going to solve it, in the output shape given at the end.
 
 # ORDER OF PRECEDENCE
-The sections of this commission do not carry the same weight. If two clash, the one earlier in this list wins:
+If two sections clash, the one earlier in this list wins:
 1. The modality and the output shape.
 2. The learning objective.
-3. What is not yet taught.
-4. The curriculum already covered and the pinned values.
+3. What comes after the objective.
+4. The curriculum already covered, the pinned values and the fixed scenario.
 5. The request from whoever is asking for the exercise and its constraints on the solution.
-6. The modality's writing rules.
-7. Didactic quality.
-8. Setting variation and the reference examples.
+6. The writing rules, didactic quality and variation.
+The reference examples teach the form; they never outrank anything above.
 {context_section}
 # MODALITY OF THE EXERCISE
 {item_type_block}
-The modality decides the shape of the task: what is handed to the student and what they are asked to produce. It is fixed: do not change it because another one seems better for the concept, and do not mix in the shape of another modality.
+The modality decides what is handed to the student and what they are asked to produce. It is fixed: do not swap it for another that seems better for the concept, and do not mix in the shape of another modality.
 
 # LEARNING OBJECTIVE
-The exercise is set so that the student PRACTISES these curriculum concepts, and they are its only legitimate source of difficulty. The description of each one is the operative definition of what practising it means:
+The student PRACTISES these concepts, and they are the only legitimate source of difficulty. Each one's description defines what practising it means:
 {target_concepts_block}
 
-VALIDITY TEST, applied to each target concept separately: a student who has mastered the whole curriculum except that concept must not be able to solve the exercise. If they could, the exercise does not practise it, it mentions it. Naming a concept, using it in passing or citing it in the statement is not practising it. When there are several objectives, the exercise demands them all; if the modality does not allow demanding them all in a single exercise naturally, demand the ones it can and do not add any outside ones.
-{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}
+VALIDITY TEST, for each target concept separately: a student who has mastered the whole curriculum except that concept cannot solve the exercise. If they could, the exercise only mentions it. Naming it, using it in passing or citing it is not practising it. With several objectives, the exercise demands them all; if the modality does not allow that naturally, demand the ones it can and add none from outside.
+{prerequisites_section}{excluded_section}{curriculum_section}{fixed_section}{scenario_section}{instructions_section}
 # WRITING RULES FOR THIS MODALITY
-Conventions observed in the course's real material: how this course writes this modality. They are mandatory and they describe the form, not the content:
+Conventions from the course's real material. They are mandatory and describe the form, not the content:
 {rules_block}
 
 # DIDACTIC QUALITY
-- Self-sufficiency: the statement stands on its own. Make the starting data explicit, what kind of thing it is, and what is expected as a result. The student needs to ask nothing in order to start.
-- A single reading: if a sentence admits two interpretations leading to different solutions, rewrite it. Ambiguity assesses reading comprehension, not the learning objective.
-- Solvable: a correct solution exists and is reachable with the objective and the prior knowledge, and with nothing else.
-- No extraneous load: the exercise's difficulty is the objective's, not that of deciphering it. Out with irrelevant data, narrative detours, accumulated conditions and convoluted vocabulary; everything the student has to untangle before thinking about the concept is noise that falsifies the assessment.
-- Calibrated: fit the scope and the demand to the level in the teaching context and to what the reference examples show. Neither a trivial exercise that forces nothing, nor one that overflows what the objective allows.
-- No classroom voice: the statement sets the task and nothing else. No greetings, no introductions, no encouragement, no comments of your own about the exercise itself; no references to the class, the teacher, a submission or a grade. Whoever reads it may be practising on their own.
-
-# SETTING VARIATION
-The wrapping, the concrete situation the task is set in, is yours and must be new. If the reference examples set the task in a scenario, choose a recognisable real-life setting that appears neither in them nor in the settings already used, and set the exercise in it. If the modality is set bare — the reference examples wrap the task in no scenario —, do not invent one for it: the variation then lies in the concrete data, objects and values, which repeat no example's. Changing the wrapping and not the substance is what forces the student to transfer the concept instead of recognising a memorised pattern. What does not change is the cognitive demand: the objective and its level are fixed by the previous sections, and the chosen variation adds no data and no rules that have to be deciphered.
-{scenario_section}{instructions_section}{correction_section}
+- Self-sufficient: the statement gives the starting data, what kind of thing it is and what is expected as a result. The student needs to ask nothing in order to start.
+- A single reading: if a sentence admits two interpretations with different solutions, rewrite it.
+- Solvable: a correct solution exists with the objective and the prior knowledge, and with nothing else. If you write the solution, check it once against the statement.
+- No extraneous load: the difficulty is the objective's, not that of deciphering the statement. Out with irrelevant data, narrative detours, accumulated conditions and convoluted vocabulary.
+- Calibrated: the scope and the demand follow the level in the teaching context and the reference examples. Neither trivial nor overflowing.
+- No classroom voice: the statement sets the task and nothing else. No greetings, encouragement or comments on the exercise; no references to the class, the teacher, a submission or a grade.
+{variation_section}
 # REFERENCE EXAMPLES
-Real exercises from the course's teaching material, on nearby concepts. They are a reference for form, register and length; their topic, their literal structure and their settings are not reused.
+Real exercises from the course on nearby concepts. They teach form, register and length; their topic, their literal structure and their settings are not reused.
 {few_shot_section}
-{already_block}
+{already_block}{correction_section}
 # OUTPUT FIELDS
-A JSON object with exactly these keys and no others. A field that classifies the exercise (a level, a category) describes what you have written, it does not decide it in advance: fill it in at the end, from the finished exercise and from its own criterion.
+A JSON object with exactly these keys and no others. A field that classifies the exercise (a level, a category) describes what you have written: fill it in at the end, from the finished exercise and from its own criterion.
 {fields_block}
 
 Exact skeleton of the output (fill in the values):
 {instance_template}
 
 # BEFORE ANSWERING, CHECK
-- Every target concept passes the validity test: without it, the exercise cannot be solved.
-- No concept from what is not yet taught appears or is needed, beyond the minimum the objective itself demands.
-- The statement's setting — or its data and values, if the modality is set with no scenario — repeats neither the reference examples nor the settings already used.
-- The statement stands on its own, admits a single reading and has no classroom voice.
+- Every target concept passes the validity test.
+{excluded_check}{variation_check}- The statement stands on its own, admits a single reading and has no classroom voice.
 {constraints_check}- The keys are exactly those of the skeleton and the pinned values are copied as they are.
 
 # OUTPUT SHAPE
@@ -224,15 +254,24 @@ Exact skeleton of the output (fill in the values):
 JSON:"""
 
 
-def _already_used_block(already_generated: list[str]) -> str:
-    """Render the statements this commission has already produced, as settings to avoid."""
+def _already_used_block(already_generated: list[str], pinned_setting: bool) -> str:
+    """Render the statements this commission has already produced, as settings to avoid.
+
+    With the setting pinned the statements share it by design, so what they must not share
+    is their data.
+    """
     if not already_generated:
         return ""
     existing_lines = "\n".join(f"- {s.strip()}" for s in already_generated)
+    ask = (
+        "The setting is pinned: yours changes the data and the values."
+        if pinned_setting
+        else "Yours is set in a setting different from all of them."
+    )
     return (
-        "\n# SETTINGS ALREADY USED\n"
+        "\n# STATEMENTS ALREADY PRODUCED\n"
         "Statements already produced in this same commission or saved earlier in this course "
-        "on these concepts. Yours is set in a setting different from all of them:\n"
+        f"on these concepts. {ask}\n"
         f"{existing_lines}\n"
     )
 
