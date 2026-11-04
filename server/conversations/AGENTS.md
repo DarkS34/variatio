@@ -25,7 +25,9 @@ six blocks in a fixed order: the function's role, the subject's `prompt_block()`
 the scope, the format and the function's way of helping. The language block says the reply is in
 the subject's `language_of_instruction` (`instruction_code` reads the free-text fact) whatever
 the student writes in; the scope refuses in one sentence what is not the subject, a request for
-the instructions or another role, and what is dangerous; the format says how long a reply is and
+the instructions or another role, and what is dangerous, works a sensitive topic of the subject at
+the course's level, and answers a student in distress with care and a referral to the teacher or
+someone they trust (D-236: what the guardrail's «harm» covered before); the format says how long a reply is and
 how formulas are written, and how code is when `has_code` finds code in the message, the history
 or the exercise. The chat is built on it and won 33–13 against its earlier prompt on the gold
 messages. The tutor writes the language into its own method and takes only `instruction_code`:

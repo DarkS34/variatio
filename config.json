@@ -119,7 +119,6 @@
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
-      "harm",
       "jailbreak"
     ]
   },

@@ -207,6 +207,11 @@ what each decision replaced.
 - **Date:** 2026-09-05 · **Commit:** `06f2dd3` · **Status:** in force
 - **Why:** The pipeline and the evaluation each carried the same thirty lines of order, error sentences and owners derivation.
 
+### D-236. The guardrail asks granite for jailbreak only
+- **Rule:** `generation.guardrail_criteria` is `["jailbreak"]`; granite's «harm» is not asked. Its gap is covered by the injection patterns, the scope judge of a commission, the tutor's `off_topic` kind, and the shared scope block and the tutor's method, which refuse what is dangerous, work a sensitive topic of the subject at the course's level, and answer a student in distress with care and a referral to the teacher or someone they trust.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's yes to the prompt tuning report's first proposal, «but be sure its absence can be mitigated». On 383 legitimate texts, «harm» flagged 14: an epidemics exercise, a warfarin overdose in nursing, a student saying «me quiero morir del agobio», a black market as the example of a price ceiling. On the gold, it blocked no attack that the patterns or «jailbreak» did not block: without it, the 12 attacks per language are still blocked, and the false positives go from 5 to 2 (es) and 3 to 1 (en). With the new rules, 7 of 8 replies to a student in distress name the teacher or someone they trust (1 of 8 before), and no reply to the gold's other 60 messages does; tutor 12–12 and chat 7–4 against the earlier prompts, blind.
+
 ## Prompts and the graph
 
 ### D-036. Two interchangeable prompt sets

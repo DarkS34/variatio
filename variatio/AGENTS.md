@@ -310,7 +310,9 @@ Take objects, return data, know no `Workspace`, write no files.
 - **Checks** (`checks.py`): `CHECK_MAX_RETRIES` = 2; a flag names something to look at; the
   tagger flag reads `targets_found` (a target among the tags), not the primary.
 - **Screening** (`runtime/screening/`): `guardrail` then `admissibility`, sequence in
-  `screen_instructions` (one copy, used by the pipeline and the evaluation). Admissibility is
+  `screen_instructions` (one copy, used by the pipeline and the evaluation). The guardrail asks
+  granite for «jailbreak» only (D-236): «harm» blocked a legitimate course topic 14 times in 383
+  texts and no attack the injection patterns or «jailbreak» let through. Admissibility is
   a catalogue of five fixed slots (`ambito`, `elementos`, `extension`, `datos`,
   `restricciones`) with owners derived per instance; answers are verified against those owners before belief; it **fails
   open** three ways. The modality owner shows the chosen modality apart (`Owner.chosen`) and
@@ -386,6 +388,8 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-033 — Strings whose language must match the workspace live in `wording/`.
 - D-034, D-035 — Screening is one package with two calls in fixed order (guardrail first); the
   sequence exists once.
+- D-236 — The guardrail asks granite for «jailbreak» only; the scope rules of the chat-like
+  functions cover what «harm» did.
 - D-228 — The document plumbing (files, markdown, chunking, page transcription, Office) is
   `documents/`, not a part of `builders/`.
 

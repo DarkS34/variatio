@@ -63,7 +63,23 @@ SETTINGS: list[Setting] = [
             minimum=1,
             doc="""El contexto de la asignatura entra en TODOS los prompts del sistema, así que su coste se paga una vez por llamada y en cada una de ellas. 900 caracteres son ~250 tokens: espacio de sobra para decir qué materia es, a qué nivel, en qué idioma y con qué convenciones, y poco suficiente como para que no compita con el material que el prompt lleva de verdad. También es lo que acota la síntesis: sin techo, cada reconstrucción añadiría un matiz más."""),
     Setting(key="generation.guardrail_criteria", name="GUARDRAIL_CRITERIA", kind="list[str]",
-            default=["harm", "jailbreak"], group="Etiquetado y generación", impact=Impact.NONE,
+            default=["jailbreak"], group="Etiquetado y generación", impact=Impact.NONE,
             stages=("generation",), phase="guardrail",
-            doc="""Los criterios contra los que el modelo guardarraíl examina una comisión antes de que el generador escriba la variante."""),
+            doc="""Los criterios contra los que el modelo guardarraíl examina una comisión antes de que el generador escriba la variante.
+
+SOLO «jailbreak» DESDE EL 2026-11 (decisión D-236). «harm» bloqueaba como daño 14 de 383 textos
+legítimos medidos (6 de ellos, mensajes delicados escritos para medirlo): un ejercicio de epidemias, una sobredosis de warfarina en enfermería, un alumno
+que dice «me quiero morir del agobio», el mercado negro como ejemplo de precio máximo. Y no
+bloqueaba ningún ataque del oro que no bloquearan ya los patrones de inyección o «jailbreak». Sin
+él siguen los 12 ataques bloqueados en cada idioma, y los falsos positivos bajan de 5 a 2 en
+español y de 3 a 1 en inglés.
+
+LO QUE CUBRE SU HUECO: los patrones de inyección, que no necesitan criterio; el juez de alcance
+de la comisión; la clase `off_topic` del tutor, con su respuesta fija; y en el tutor y el chat,
+la regla de alcance que rechaza lo peligroso, la de los temas delicados de la asignatura y la del
+alumno que dice que lo está pasando mal.
+
+LOS OTROS CRITERIOS DE GRANITE, sobre los mismos 383 textos: «violence» bloquea 3,
+«unethical_behavior» 12, «profanity» 1, «sexual_content» y «social_bias» 0. Cada criterio es una
+llamada más por texto."""),
 ]
