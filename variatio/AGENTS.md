@@ -127,8 +127,9 @@ names exist). A tree renamed so is no longer readable by a version from before t
   (`derived`), the temperature then follows the judging pair by `think`
   (`TEMPERATURE_DETERMINISTIC`/`_REASONING`), top-k/top-p are not sent. Transcription, variant,
   repair and scenario keep a temperature of their own (`TRANSCRIBE_TEMPERATURE`,
-  `TEMPERATURE_GENERATION`, `TEMPERATURE_REPAIR` are those keys' names). Cerebras drops a top-k
-  with one warning per model.
+  `TEMPERATURE_GENERATION`, `TEMPERATURE_REPAIR` are those keys' names). The taggability
+  judgement samples at 0 although it reasons (`_MEASURED_TEMPERATURE`): at 0.2 two draws over
+  the same graph changed half its list. Cerebras drops a top-k with one warning per model.
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and

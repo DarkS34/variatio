@@ -62,6 +62,14 @@ intento N+1 es la salida del intento N, así que un modelo voraz reconstruye el 
 idéntico y escribe la respuesta idéntica — el presupuesto entero gastado en una réplica
 byte a byte, que es el fallo que `parse_with_repair` documenta haber pagado una vez."""
 
+_TAGGABLE_DOC = """El juicio de etiquetabilidad, a 0 aunque razone: decide qué conceptos salen del
+etiquetado, y a la temperatura de razonamiento (0,2) la misma revisión del mismo grafo
+cambió casi la mitad de su lista de una tirada a otra (DAA: jaccard 0,46 contra la
+construcción de referencia). Medido en el afinado de 2026-11 sobre cinco asignaturas: a 0
+dos tiradas dan la misma lista, sin bucles ni respuestas cortadas, y deja fuera tantos
+principales de oro como la construcción de referencia (8, no todos los mismos). Encender o
+apagar su razonamiento ya no la mueve."""
+
 # The phases whose temperature is a value of their own and never inherited: what they
 # write is not a judgement, so the judging pair does not describe them. Each keeps the
 # `config` name it had before the triple existed.
@@ -71,10 +79,19 @@ _OWN_TEMPERATURE = {
     "repair": (0.2, "TEMPERATURE_REPAIR", _REPAIR_DOC),
 }
 
+# The judgements whose temperature was measured on its own and fixed; the judging pair
+# still describes the rest.
+_MEASURED_TEMPERATURE = {
+    "kg_taggable": (0.0, _TAGGABLE_DOC),
+}
+
 
 def _declare(phase) -> list[Setting]:
     """Declare a pipeline phase's triple, staged like the model setting it steers."""
     stages = _MODELS[phase.model].stages
+    if phase.key in _MEASURED_TEMPERATURE:
+        temperature, doc = _MEASURED_TEMPERATURE[phase.key]
+        return phase_sampling(phase.key, stages, temperature, temperature_doc=doc)
     if phase.key not in _OWN_TEMPERATURE:
         return phase_sampling(phase.key, stages)
     temperature, name, doc = _OWN_TEMPERATURE[phase.key]
