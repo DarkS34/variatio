@@ -132,3 +132,51 @@ def test_a_modality_that_is_not_an_object_is_left_for_the_validator():
     # one clear error with a confusing one.
     profile = {"item_types": {"roto": "no soy un objeto"}}
     assert guarantee_difficulty(profile, SETS["es"]) == profile
+
+
+def test_rules_written_beside_the_only_modality_are_read_as_its_own():
+    # The answer this project got once in seven profiles: the entry closed after the
+    # criterion and the rules came as a sibling of the modality's key.
+    from variatio.builders.exemplars_profile_builder import ExemplarsProfileBuilder
+
+    answer = (
+        '{"item_types": {"problema": {"nivel_dificultad": "Crece el número de pasos. '
+        '«basico»: uno. «intermedio»: dos. «avanzado»: tres."}, '
+        '"general_generation_rules": ["El enunciado debe nombrar la entrada."]}}'
+    )
+    parsed, err = ExemplarsProfileBuilder._parse_criteria(answer)
+    assert err is None
+    assert list(parsed) == ["problema"]
+    assert parsed["problema"]["general_generation_rules"] == ["El enunciado debe nombrar la entrada."]
+
+
+def test_the_second_call_writes_each_criterion_and_its_rules(monkeypatch):
+    # The two-call consolidation (D-238): a modality the answer names gets its criterion and
+    # rules; one it leaves out keeps the fallback criterion and no rules.
+    from types import SimpleNamespace
+
+    from variatio.builders import exemplars_profile_builder as builder_module
+
+    builder = object.__new__(builder_module.ExemplarsProfileBuilder)
+    builder.prompts = SETS["es"]
+    builder.consolidate_model = "modelo"
+    builder.max_repair_attempts = 0
+    builder._context_cache = ""
+    answer = (
+        '{"item_types": {"problema": {"nivel_dificultad": "Crece el número de pasos.", '
+        '"general_generation_rules": ["El enunciado debe nombrar la entrada.", " "]}}}'
+    )
+    monkeypatch.setattr(
+        builder_module.inference, "generate", lambda **kwargs: SimpleNamespace(response=answer)
+    )
+    monkeypatch.setattr(builder_module.inference, "supports_thinking", lambda model: False)
+
+    profile = guarantee_difficulty(_profile(problema={}, test={}), SETS["es"])
+    out = builder._write_criteria_and_rules(profile, "inventario")
+
+    problema, test = out["item_types"]["problema"], out["item_types"]["test"]
+    assert _field(out, "problema", "es")["description"] == "Crece el número de pasos."
+    assert problema["general_generation_rules"] == ["El enunciado debe nombrar la entrada."]
+    assert list(problema)[-1] == "fields", "the rules come before the fields"
+    assert _field(out, "test", "es")["description"] == SETS["es"].DIFFICULTY_FALLBACK_DESCRIPTION
+    assert "general_generation_rules" not in test

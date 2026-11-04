@@ -234,7 +234,9 @@ brings only a solution is none, and an answer the block neither marks nor gives 
 
 **Profile**: `guarantee_difficulty` runs on every consolidation route. The scan reads no subject
 context (D-237): it inventories each fragment from its own text, and the same corpus scans the
-same on a first build and on the next; the consolidation reads it.
+same on a first build and on the next; the consolidation reads it. The consolidation is two
+calls (D-238): the modalities and their fields, then each settled modality's difficulty
+criterion and rules (`criteria_and_rules_prompt`), which the builder writes in.
 
 ## Difficulty
 
@@ -404,6 +406,7 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   criterion's `«rung»:` shape is legislated by the prompt.
 - D-040 — `guidance.generation` is hand-written only; modality rules carry generation.
 - D-237 — The profile's scan reads no subject context; the consolidation does.
+- D-238 — The profile's consolidation is two calls: modalities and fields, then criteria and rules.
 - D-041, D-042 — Prerequisite lists are transitive closures bounded by the curriculum, with
   opposite set operations; without a curriculum, later concepts may be used, not practised.
 - D-043 — The curriculum is the course's progress, set by its teachers in «Clase»: a

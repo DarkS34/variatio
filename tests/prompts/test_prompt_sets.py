@@ -143,6 +143,7 @@ DRAWN_KEYS = {
     "tag_concepts_prompt": ("concepts", "primary_concept"),
     "scan_item_types_prompt": ("types", "key", "label", "fields", "excerpt"),
     "consolidate_exemplars_profile_prompt": ("item_types", "primary_field", "embed_fields"),
+    "criteria_and_rules_prompt": ("item_types", "general_generation_rules"),
     "synthesize_content_context_prompt": (
         "narrative",
         "subject",
@@ -243,6 +244,7 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
 # and with the context a first build and the next scanned the same corpus differently.
 CONTEXT_AWARE = [
     "consolidate_exemplars_profile_prompt",
+    "criteria_and_rules_prompt",
     "concept_description_prompt",
     "describe_domain_concepts_prompt",
 ]
@@ -323,9 +325,9 @@ def test_the_two_sets_agree_on_how_many_rungs_there_are():
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
-def test_the_consolidation_asks_for_its_own_field_and_its_own_rungs(code):
+def test_the_criterion_call_asks_for_its_own_field_and_its_own_rungs(code):
     module = prompts.of(code)
-    rendered = module.consolidate_exemplars_profile_prompt("x", 1)
+    rendered = module.criteria_and_rules_prompt("x", "{}")
     assert module.DIFFICULTY_FIELD in rendered
     for level in module.DIFFICULTY_LEVELS:
         assert f'"{level}"' in rendered, f"the rung «{level}» is never spelled out"
@@ -377,7 +379,7 @@ def test_the_criterion_is_asked_for_in_the_shape_the_browser_splits(code):
     the marker, so the prompt spells every rung as `"rung":` and the splitter looks for it.
     """
     module = prompts.of(code)
-    rendered = module.consolidate_exemplars_profile_prompt("x", 1)
+    rendered = module.criteria_and_rules_prompt("x", "{}")
     for level in module.DIFFICULTY_LEVELS:
         assert f"«{level}»:" in rendered, f"«{level}» is never shown in the shape asked for"
 

@@ -147,127 +147,12 @@ A single JSON object:
 JSON:"""
 
 
-def consolidate_exemplars_profile_prompt(
-    findings: str, max_types: int, context_block: str = ""
-) -> str:
-    """Ask for the definitive exemplars profile, merging the inventory the scan produced.
-
-    The answer is `item_types` and no other top-level key: at most `max_types` modalities,
-    each with `label`, `description`, `primary_field`, `embed_fields`, between 3 and 8
-    checkable `general_generation_rules` and its own `fields`. Nothing about the subject
-    itself is declared here — that is the content context's, written in prose elsewhere.
-    `guidance.generation` is deliberately never asked for: the modality's rules carry the
-    generation, and that field is the exception a person writes by hand for one field.
-
-    `difficulty_level` has a section of its own because it is the one field the answer may
-    not decide: the LADDER is fixed and shared by every modality, and only the CRITERION is
-    per-modality. See the Spanish set for what was measured; this half of the pair is
-    unmeasured, like the rest of the English prompts.
-
-    It receives the subject's context like every other prompt in the system. It did not,
-    and it is the only thing that separated it from the ones that come out right: measured
-    on a workspace whose material and `locale.json` are both English, the graph, the concept
-    descriptions and the bank all came back in English and only the profile's `description`
-    and `guidance` came back in Spanish. Declaring nothing about the subject is not the same
-    as not knowing which language it is taught in.
-    """
-    context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
-    return f"""\
-You have received the INVENTORY of exercise modalities that a previous scan found, fragment by fragment, in all the raw teaching material of a course. Consolidate it into the definitive EXEMPLARS PROFILE.
-
-The profile is the ONLY piece that instantiates the system for a particular course: the same engine generates programming exercises, physics problems, multiple-choice questions or case studies, but always learning material. It declares, abstractly, the anatomy of each exercise modality of this course: which fields make it up, what type they are, how they are extracted from a document and how a new one would be written.
-
-The inventory comes from fragments analysed separately, so it BRINGS DUPLICATES: the same modality will appear with different keys, with overlapping field sets and with similar labels. Unifying them is your main job.
-{context_section}
-# WHAT YOU MUST PRODUCE
-A single JSON object with EXACTLY these top-level keys:
-
-{{
-  "item_types": {{
-    "<modality_key>": {{
-      "label": "<readable name>",
-      "description": "<what this modality is and how it is recognised>",
-      "primary_field": "<name of one of its fields>",
-      "embed_fields": ["<primary_field>", "<another field the student RECEIVES>"],
-      "general_generation_rules": ["<rule>", "..."],
-      "fields": {{
-        "<field_name>": {{
-          "schema": {{ "type": "string" }},
-          "description": "...",
-          "guidance": {{ "extraction": "..." }}
-        }},
-        "{DIFFICULTY_FIELD}": {{ "...": "mandatory in every modality; see its section" }}
-      }}
-    }}
-  }}
-}}
-
-# WHAT YOU MUST NOT DECLARE
-Nothing about the subject itself: not the subject matter, not the educational level, not the language, not general conventions of the degree. That is written separately, in prose, in another step of the system. Here you describe ONLY the anatomy of the modalities. Do not add top-level keys: `item_types` is the only one.
-
-# item_types — HOW MANY MODALITIES
-- MERGE WITHOUT FEAR. Two inventory entries are the SAME modality if the same pieces are filled in when writing them. One carrying a solution and the other not, one being basic and the other advanced, their being in different units: none of that separates them. When merging, keep the clearest key and the UNION of their fields (the ones missing from one variant are fields that admit `null`, see NULL POLICY).
-- SEPARATE ONLY WHEN THE ANATOMY CHANGES. A different modality needs fields the other has no business having, or a clearly different way of being written. Test: if the two share `fields` and their `general_generation_rules` would come out nearly identical, it is one.
-- DISCARD THE ANECDOTAL. A modality appearing once in the whole corpus that fits reasonably inside another goes inside the other. Only what the material genuinely uses as a format of its own survives on its own.
-- AT MOST {max_types} modalities. If you get more, you are separating by topic or by difficulty instead of by anatomy: merge again. The usual is 1-3.
-- Order them from most frequent to least: the first is the one the system uses by default.
-
-For each modality:
-- `label`: its readable name, in the language of the material («Multiple-choice question», «Error correction»).
-- `description`: what it is and how it is recognised. It is read both by the extractor — to decide which modality each exercise in the document belongs to — and by the generator. Be discriminating: describe what distinguishes it from the profile's other modalities, not what they have in common.
-- `general_generation_rules`: how a NEW exercise of this modality is written. It is the most important part of what you produce and it has a section of its own below — read it before writing them.
-
-# fields — WHAT THEY ARE CALLED
-{EXEMPLARS_PROFILE_FIELD_NAMING}
-- CONSISTENCY ACROSS MODALITIES: if two modalities have a field with the same role, it must be called THE SAME in both (`statement` in all of them, not `statement` in one and `question` in another).
-
-# fields — WHICH ONES TO INCLUDE
-One field per ESSENTIAL piece of information that makes up an exercise of that modality.
-
-- LESS IS MORE: include the MINIMUM set of fields that fully captures an exercise. Each field has to earn its place: do NOT add speculative, redundant, derivable or merely anecdotal fields. At the same time, do NOT leave out anything essential to represent or write the exercise (at the very least, the one carrying the main semantic load). When in doubt between adding a marginal field and leaving it out, leave it out. The usual is 3-5 fields per modality.
-- DERIVABILITY TEST (apply it to EACH field before including it): if its value can be computed from the other fields without looking at the document again, it is NOT a field — it is deduced, and it does not belong. Discard in particular: flags that only indicate whether another field has a value or is empty (`is_solved`, `has_solution`: that is already said by `solution` being null); counters, lengths or sizes of another field; and fields whose value is a restatement of another. If in describing a field you need to mention another field to define it, that is a near-certain sign that it is derivable.
-- NO CONCEPTS AND NO TOPICS: do not declare concept, topic, subject or thematic-tag fields (`topics`, `concepts`, `keywords`…). Which curriculum concept each exercise practises is annotated downstream by the system against a knowledge graph, and such a field would overlap with that annotation. Whatever situates the course as a whole (subject, educational level, language) goes neither in `fields` nor anywhere else in this profile.
-- MINIMUM COVERAGE: the profile has to suffice to (a) represent the exercise, (b) retrieve it semantically and (c) write a new PARAMETERISED one. In practice that nearly always requires: the statement carrying the semantic load (the `primary_field`, mandatory) and the expected solution, when the material brings it or admits it. The classifying axis is already covered: `{DIFFICULTY_FIELD}` is mandatory in every modality and has a section of its own — do not count it among these fields and do not declare a second level, grade or category field saying the same thing.
-
-For each field:
-- `schema`: the shape of the value.
-{EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
-- `description`: the intrinsic NATURE of the field (what it represents), in the subject's language of instruction.
-- `guidance.extraction`: how to EXTRACT this field from a source document. **Write it in more detail and with more precision than the rest of the texts**: it feeds a later extraction process that has to be exact and deterministic, so be concrete and actionable, and lean on the literal fragments in the inventory. Cover, where they apply: what to copy and whether it goes VERBATIM or normalised; the BOUNDARIES with the neighbouring fields (what belongs to this field and what does NOT, so they do not overlap); the concrete markers or headings in the document that delimit it (e.g. "Solution:", "Proposed exercises"); what to EXCLUDE (enumeration labels, section headers, page artefacts); and, only in fields that admit absence under the NULL POLICY, when the field goes to null. It applies to every field that can be located in the material.
-- `guidance.generation`: **do NOT write it. Ever.** It exists in the format, but it is a field filled in by hand by whoever administers the course when a particular field needs a nuance the rules do not cover. You leave only `extraction` in `guidance`. Whatever you know about how this modality is WRITTEN goes entirely into `general_generation_rules`.
-
-# NULL POLICY — IT DEPENDS ON WHETHER THE FIELD IS COPIED OR DEDUCED
-The question is not "does this modality usually bring this field?", but "could ONE SINGLE exercise of this modality be missing it?". The answer depends on where the value comes from, and there are two cases with OPPOSITE rules.
-
-## Fields COPIED from the document (statement, solution, starting material, options, explanation)
-They admit `null` UNLESS the exercise does not stand up without them. The only safe exception is the `primary_field`: an exercise with no statement is not an exercise. Declare a copied field mandatory only when its absence would break the whole modality: the `options` of a closed question, the code to be fixed in an error correction.
-
-The two mistakes do NOT cost the same, and that asymmetry is the rule:
-- Declaring it nullable when the content is always there costs nothing: the extractor will always fill it in, because it always finds it.
-- Declaring it mandatory when it may be missing FORCES IT TO BE INVENTED. Downstream this field enters the extractor's grammar as mandatory, so faced with an exercise that does not bring it the model cannot answer "it is not there": it fabricates one, and out comes false teaching material indistinguishable from the real thing.
-
-Two signs that do NOT prove a copied field is always present:
-- The inventory not bringing a single exemplar without it. The inventory is a SAMPLE of fragments, not the whole corpus.
-- What the documents are called. A whole corpus of "solutions" files typically resolves the theory part and leaves the practical part's statements bare.
-
-## Fields DEDUCED by observing the exercise (the CLASSIFYING ones)
-Here `null` IS THE LAST RESORT, for the opposite reason: their value is not to be found in the document, it is to be judged, and it can always be judged. The document not LABELLING it explicitly is NOT a reason to admit `null`: it is a reason to define a criterion that allows it to be DEDUCED from the content itself. Never declare `null` on a deducible field, and always write in its `description` the criterion it is deduced by.
-
-The only classifying field this profile always carries is `{DIFFICULTY_FIELD}`, and it is not yours to decide: it has a section of its own immediately after this one. Everything in this part applies to it first.
-
-## A second classifying field, and only when the material asks for it: the VARIANT whoever commissions pins
-Sometimes a modality is filled in the same way in every exemplar and yet the material sets it in discrete VARIANTS that change the form of the deliverable and that whoever commissions a new exercise would want to pin beforehand: the kind of diagram asked for (class or use case), the notation or the language the answer is written in, the form of the answer (a table, a proof, a list). Same anatomy, different variant: they are NOT two modalities. But if the variant lives only in the wording of the statement it becomes invisible — nobody can ask for «a class one» and the system will always produce the most frequent variant.
-
-When the inventory shows that variant with TWO OR MORE values among a modality's exemplars, declare it as one more field of that modality:
-- `schema`: `{{"enum": [...]}}` with the values the material actually uses, in lower case, without accents, in the material's language and as they will read in a menu («class diagram», «use case diagram»); no value no exemplar shows, and no `null`.
-- `decided_by`: `"user"` — it is a choice of whoever commissions, like the difficulty.
-- `description`: what tells each value apart and which signal of the statement it is DEDUCED from at extraction («Draw a class diagram…» decides the value). It is a classifying field and the rules above govern it: never null, always deducible.
-- Outside `embed_fields`, and never the `primary_field`.
-
-Three limits, and all three matter. At most ONE such field per modality. Only when it changes the FORM of the deliverable: never the topic, the scope or the concept, which the system annotates against the syllabus. And none when the material shows a single value: a list of one option is not a decision.
-
+# The two sections the second consolidation call writes from (P-4 of the 2026-11 tuning):
+# the first call settles the modalities and their fields, this one what only the exemplars
+# of a settled modality can say.
+_DIFFICULTY_SECTION = f"""\
 # {DIFFICULTY_FIELD} — MANDATORY IN EVERY MODALITY, AND THE LADDER IS THE SAME IN ALL OF THEM
-Every modality carries a `{DIFFICULTY_FIELD}` field, without exception. It is not one of the «essential» fields you have just decided: it goes apart, it always goes, and it does not count towards the 3-5 of the previous section. It is the axis a later request turns («an easier one», «a more demanding one»), and the axis the whole bank is read and sorted along.
+Every modality carries a `{DIFFICULTY_FIELD}` field, without exception. It is the axis a later request turns («an easier one», «a more demanding one»), and the axis the whole bank is read and sorted along.
 
 ## The ladder is not yours to choose: it is this one, and it is the same in every modality
 "schema": {{"enum": {_LEVELS_ENUM}}}
@@ -301,21 +186,9 @@ Five rules, and all five are broken often:
 3. RUN THE TEST BEFORE WRITING IT. Apply your criterion to the exemplars the inventory brings for THIS modality. If they all fall on the same rung, the criterion does not separate: rewrite it with finer signals until it spreads them.
 4. NO GAPS AND NO OVERLAPS. Any exercise of the modality has to fall on one and only one rung. If two can fit at once, say so in the criterion itself and say which one wins (the natural one: the higher wins as soon as its signal appears).
 5. COMPARABLE ACROSS MODALITIES. Even though the criterion is its own, the rung reads the same in all of them: «{_LOW}» is always the way into its kind of exercise and «{_HIGH}» always the most demanding of its kind. Write it so that reading holds.
+"""
 
-## The field's other two keys
-- `guidance.extraction`: if the document brings an explicit difficulty label, that one is used; if it does not — which is the normal case — the criterion in `description` is applied to the exercise's content. NEVER «if there is no label, null»: this value is not looked for in the document, it is judged, and it can always be judged.
-- `decided_by`: `"user"`, always and in every modality. It is the field whoever commissions a new exercise pins.
-
-## How it ends up
-"{DIFFICULTY_FIELD}": {{
-  "schema": {{"enum": {_LEVELS_ENUM}}},
-  "description": "<opening sentence with the axis; then the three rungs in order, each with its observable signals, an example from THIS modality and its border>",
-  "guidance": {{"extraction": "<explicit label if there is one; if not, the criterion in description>"}},
-  "decided_by": "user"
-}}
-
-Two things you NEVER do with it: it NEVER goes into `embed_fields` — it carries no concept and adds the same noise to every exercise — and it is NEVER the `primary_field`.
-
+_RULES_SECTION = f"""\
 # general_generation_rules — HOW THIS COURSE WRITES (THE PART THAT MATTERS MOST)
 It is the ONLY thing the profile tells the generator about how an exercise of this modality is written. There is no second chance field by field here: whatever is not in these rules, the generator does not know. Give it more attention than any other part of the profile.
 
@@ -328,6 +201,121 @@ Write them looking at the inventory's `excerpt`s and asking yourself what ALL th
 - NO CONTENT. Do not fix the topic, the setting or the concepts of the exercises: each commission decides that against the curriculum graph. The rules talk about FORM.
 - ONLY ABOUT THIS MODALITY. A rule that only makes sense here (requiring a docstring and a test block, requiring the result with its units and significant figures) goes ONLY here. If it is true of all the modalities equally, then it describes the whole course and contributes nothing in any of them.
 - QUANTITY: between 3 and 8. Fewer than 3 nearly always means you have not looked at the specimens; more than 8, that you are breaking one rule into its consequences or slipping in generic didactics.
+"""
+
+
+def consolidate_exemplars_profile_prompt(
+    findings: str, max_types: int, context_block: str = ""
+) -> str:
+    """Ask for the definitive exemplars profile, merging the inventory the scan produced.
+
+    The first of the consolidation's two calls (P-4 of the 2026-11 tuning): the modalities and
+    their fields. The answer is `item_types` and no other top-level key: at most `max_types`
+    modalities, each with `label`, `description`, `primary_field`, `embed_fields` and its own
+    `fields`. Nothing about the subject itself is declared here — that is the content
+    context's, written in prose elsewhere. `guidance.generation` is deliberately never asked
+    for: the modality's rules carry the generation, and that field is the exception a person
+    writes by hand for one field. `difficulty_level` and the `general_generation_rules` are not
+    asked for here: `guarantee_difficulty` adds the field and `criteria_and_rules_prompt`
+    writes both texts, for modalities that no longer move.
+
+    It receives the subject's context: measured on a workspace whose material and
+    `locale.json` are both English, the graph, the concept descriptions and the bank came
+    back in English and only the profile's `description` and `guidance`, written here, came
+    back in Spanish. Declaring nothing about the subject is not the same as not knowing which
+    language it is taught in.
+    """
+    context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
+    return f"""\
+You have received the INVENTORY of exercise modalities that a previous scan found, fragment by fragment, in all the raw teaching material of a course. Consolidate it into the definitive EXEMPLARS PROFILE.
+
+The profile is the ONLY piece that instantiates the system for a particular course: the same engine generates programming exercises, physics problems, multiple-choice questions or case studies, but always learning material. It declares, abstractly, the anatomy of each exercise modality of this course: which fields make it up, what type they are, how they are extracted from a document and how a new one would be written.
+
+The inventory comes from fragments analysed separately, so it BRINGS DUPLICATES: the same modality will appear with different keys, with overlapping field sets and with similar labels. Unifying them is your main job.
+{context_section}
+# WHAT YOU MUST PRODUCE
+A single JSON object with EXACTLY these top-level keys:
+
+{{
+  "item_types": {{
+    "<modality_key>": {{
+      "label": "<readable name>",
+      "description": "<what this modality is and how it is recognised>",
+      "primary_field": "<name of one of its fields>",
+      "embed_fields": ["<primary_field>", "<another field the student RECEIVES>"],
+      "fields": {{
+        "<field_name>": {{
+          "schema": {{ "type": "string" }},
+          "description": "...",
+          "guidance": {{ "extraction": "..." }}
+        }}
+      }}
+    }}
+  }}
+}}
+
+# WHAT YOU MUST NOT DECLARE
+Nothing about the subject itself: not the subject matter, not the educational level, not the language, not general conventions of the degree. That is written separately, in prose, in another step of the system. Here you describe ONLY the anatomy of the modalities. Do not add top-level keys: `item_types` is the only one.
+
+# item_types — HOW MANY MODALITIES
+- MERGE WITHOUT FEAR. Two inventory entries are the SAME modality if the same pieces are filled in when writing them. One carrying a solution and the other not, one being basic and the other advanced, their being in different units: none of that separates them. When merging, keep the clearest key and the UNION of their fields (the ones missing from one variant are fields that admit `null`, see NULL POLICY).
+- SEPARATE ONLY WHEN THE ANATOMY CHANGES. A different modality needs fields the other has no business having, or a clearly different way of being written. Test: if the two share `fields` and their `general_generation_rules` would come out nearly identical, it is one.
+- DISCARD THE ANECDOTAL. A modality appearing once in the whole corpus that fits reasonably inside another goes inside the other. Only what the material genuinely uses as a format of its own survives on its own.
+- AT MOST {max_types} modalities. If you get more, you are separating by topic or by difficulty instead of by anatomy: merge again. The usual is 1-3.
+- Order them from most frequent to least: the first is the one the system uses by default.
+
+For each modality:
+- `label`: its readable name, in the language of the material («Multiple-choice question», «Error correction»).
+- `description`: what it is and how it is recognised. It is read both by the extractor — to decide which modality each exercise in the document belongs to — and by the generator. Be discriminating: describe what distinguishes it from the profile's other modalities, not what they have in common.
+
+# fields — WHAT THEY ARE CALLED
+{EXEMPLARS_PROFILE_FIELD_NAMING}
+- CONSISTENCY ACROSS MODALITIES: if two modalities have a field with the same role, it must be called THE SAME in both (`statement` in all of them, not `statement` in one and `question` in another).
+
+# fields — WHICH ONES TO INCLUDE
+One field per ESSENTIAL piece of information that makes up an exercise of that modality.
+
+- LESS IS MORE: include the MINIMUM set of fields that fully captures an exercise. Each field has to earn its place: do NOT add speculative, redundant, derivable or merely anecdotal fields. At the same time, do NOT leave out anything essential to represent or write the exercise (at the very least, the one carrying the main semantic load). When in doubt between adding a marginal field and leaving it out, leave it out. The usual is 3-5 fields per modality.
+- DERIVABILITY TEST (apply it to EACH field before including it): if its value can be computed from the other fields without looking at the document again, it is NOT a field — it is deduced, and it does not belong. Discard in particular: flags that only indicate whether another field has a value or is empty (`is_solved`, `has_solution`: that is already said by `solution` being null); counters, lengths or sizes of another field; and fields whose value is a restatement of another. If in describing a field you need to mention another field to define it, that is a near-certain sign that it is derivable.
+- NO CONCEPTS AND NO TOPICS: do not declare concept, topic, subject or thematic-tag fields (`topics`, `concepts`, `keywords`…). Which curriculum concept each exercise practises is annotated downstream by the system against a knowledge graph, and such a field would overlap with that annotation. Whatever situates the course as a whole (subject, educational level, language) goes neither in `fields` nor anywhere else in this profile.
+- MINIMUM COVERAGE: the profile has to suffice to (a) represent the exercise, (b) retrieve it semantically and (c) write a new PARAMETERISED one. In practice that nearly always requires: the statement carrying the semantic load (the `primary_field`, mandatory) and the expected solution, when the material brings it or admits it. The classifying axis is already covered: the system adds `{DIFFICULTY_FIELD}` to every modality and its criterion is written in another step — do not declare it yourself and do not declare a second level, grade or category field saying the same thing.
+
+For each field:
+- `schema`: the shape of the value.
+{EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
+- `description`: the intrinsic NATURE of the field (what it represents), in the subject's language of instruction.
+- `guidance.extraction`: how to EXTRACT this field from a source document. **Write it in more detail and with more precision than the rest of the texts**: it feeds a later extraction process that has to be exact and deterministic, so be concrete and actionable, and lean on the literal fragments in the inventory. Cover, where they apply: what to copy and whether it goes VERBATIM or normalised; the BOUNDARIES with the neighbouring fields (what belongs to this field and what does NOT, so they do not overlap); the concrete markers or headings in the document that delimit it (e.g. "Solution:", "Proposed exercises"); what to EXCLUDE (enumeration labels, section headers, page artefacts); and, only in fields that admit absence under the NULL POLICY, when the field goes to null. It applies to every field that can be located in the material.
+- `guidance.generation`: **do NOT write it. Ever.** It exists in the format, but it is a field filled in by hand by whoever administers the course when a particular field needs a nuance the rules do not cover. You leave only `extraction` in `guidance`. How this modality is WRITTEN is written by another step, in its generation rules.
+
+# NULL POLICY — IT DEPENDS ON WHETHER THE FIELD IS COPIED OR DEDUCED
+The question is not "does this modality usually bring this field?", but "could ONE SINGLE exercise of this modality be missing it?". The answer depends on where the value comes from, and there are two cases with OPPOSITE rules.
+
+## Fields COPIED from the document (statement, solution, starting material, options, explanation)
+They admit `null` UNLESS the exercise does not stand up without them. The only safe exception is the `primary_field`: an exercise with no statement is not an exercise. Declare a copied field mandatory only when its absence would break the whole modality: the `options` of a closed question, the code to be fixed in an error correction.
+
+The two mistakes do NOT cost the same, and that asymmetry is the rule:
+- Declaring it nullable when the content is always there costs nothing: the extractor will always fill it in, because it always finds it.
+- Declaring it mandatory when it may be missing FORCES IT TO BE INVENTED. Downstream this field enters the extractor's grammar as mandatory, so faced with an exercise that does not bring it the model cannot answer "it is not there": it fabricates one, and out comes false teaching material indistinguishable from the real thing.
+
+Two signs that do NOT prove a copied field is always present:
+- The inventory not bringing a single exemplar without it. The inventory is a SAMPLE of fragments, not the whole corpus.
+- What the documents are called. A whole corpus of "solutions" files typically resolves the theory part and leaves the practical part's statements bare.
+
+## Fields DEDUCED by observing the exercise (the CLASSIFYING ones)
+Here `null` IS THE LAST RESORT, for the opposite reason: their value is not to be found in the document, it is to be judged, and it can always be judged. The document not LABELLING it explicitly is NOT a reason to admit `null`: it is a reason to define a criterion that allows it to be DEDUCED from the content itself. Never declare `null` on a deducible field, and always write in its `description` the criterion it is deduced by.
+
+The only classifying field this profile always carries is `{DIFFICULTY_FIELD}`, and you do not declare it: the system adds it, and its criterion is written in another step.
+
+## A second classifying field, and only when the material asks for it: the VARIANT whoever commissions pins
+Sometimes a modality is filled in the same way in every exemplar and yet the material sets it in discrete VARIANTS that change the form of the deliverable and that whoever commissions a new exercise would want to pin beforehand: the kind of diagram asked for (class or use case), the notation or the language the answer is written in, the form of the answer (a table, a proof, a list). Same anatomy, different variant: they are NOT two modalities. But if the variant lives only in the wording of the statement it becomes invisible — nobody can ask for «a class one» and the system will always produce the most frequent variant.
+
+When the inventory shows that variant with TWO OR MORE values among a modality's exemplars, declare it as one more field of that modality:
+- `schema`: `{{"enum": [...]}}` with the values the material actually uses, in lower case, without accents, in the material's language and as they will read in a menu («class diagram», «use case diagram»); no value no exemplar shows, and no `null`.
+- `decided_by`: `"user"` — it is a choice of whoever commissions, like the difficulty.
+- `description`: what tells each value apart and which signal of the statement it is DEDUCED from at extraction («Draw a class diagram…» decides the value). It is a classifying field and the rules above govern it: never null, always deducible.
+- Outside `embed_fields`, and never the `primary_field`.
+
+Three limits, and all three matter. At most ONE such field per modality. Only when it changes the FORM of the deliverable: never the topic, the scope or the concept, which the system annotates against the syllabus. And none when the material shows a single value: a list of one option is not a decision.
 
 # primary_field
 One per modality. The name of the field carrying the exercise's main SEMANTIC LOAD: the statement, the text that sets the student the task. Downstream it is what is compared against the curriculum graph to decide which concept each exercise practises, so it must be the field you read to know what the exercise is about. It must be one of the keys of THAT modality's `fields`.
@@ -343,7 +331,7 @@ The list of fields that, TOGETHER, are read to decide which curriculum concept t
 # OUTPUT RULES
 - Return ONE SINGLE JSON object. Nothing before, nothing after.
 - No ```json, no backticks, no comments, no explanations.
-- The field names (keys of `fields`) and the keys of `item_types` ALWAYS in English, snake_case, ASCII only. The rest of the human-facing text (`label`, `description`, `guidance`, `general_generation_rules`) in the language of the material.
+- The field names (keys of `fields`) and the keys of `item_types` ALWAYS in English, snake_case, ASCII only. The rest of the human-facing text (`label`, `description`, `guidance`) in the language of the material.
 - Include only the ESSENTIAL fields: less is more, but without leaving out anything indispensable. None derivable from another. `null` on every field copied from the document that may be missing in some exercise, and on no deducible one.
 - Every text value on ONE SINGLE LINE: no real line breaks, no backticks and no code blocks inside the strings. Escape line breaks (`\\n`) and inner quotes (`\\"`).
 - BEFORE ANSWERING, check the nine things that go wrong most:
@@ -352,10 +340,65 @@ The list of fields that, TOGETHER, are read to decide which curriculum concept t
   3. each modality's `primary_field` is exactly one of the keys of ITS `fields`.
   4. `embed_fields` starts with the `primary_field`, names only fields from ITS `fields` and does not include the solution.
   5. there are no two modalities that would be filled in the same way.
-  6. NO `guidance` carries the key `generation`, and every modality brings between 3 and 8 checkable `general_generation_rules`.
+  6. NO `guidance` carries the key `generation`, and no modality brings `general_generation_rules`: another step writes them.
   7. every field COPIED from the document other than the `primary_field` admits `null`, unless the modality does not stand up without it.
-  8. EVERY modality declares `{DIFFICULTY_FIELD}` with exactly `{_LEVELS_ENUM}`, with `decided_by` `"user"`, with a criterion of its own in its `description` — an opening sentence and the three rungs each opened by its value between « » and a colon, each with its example and its border — and outside `embed_fields`.
+  8. no modality declares `{DIFFICULTY_FIELD}`: the system adds it.
   9. every field with `decided_by` `"user"` other than `{DIFFICULTY_FIELD}` is an `enum` of two or more values the material actually shows, is deduced from the statement, and does not exist where the material shows a single variant.
+
+<<<INVENTORY>>>
+{findings}
+<<<END>>>
+
+JSON:"""
+
+
+def criteria_and_rules_prompt(findings: str, profile: str, context_block: str = "") -> str:
+    """Ask, for every modality of a consolidated profile, its difficulty criterion and its rules.
+
+    The second call of the consolidation (P-4 of the 2026-11 tuning): the first one settles
+    the modalities and their fields, so this one writes, for modalities that no longer move,
+    the two texts that are only as good as the exemplars they are read from. The answer is
+    `item_types` keyed by the profile's own keys, each with the difficulty field's criterion
+    under the field's name and between 3 and 8 `general_generation_rules`; the builder writes
+    them into the profile, and everything else of the field is the builder's.
+
+    The criterion's section exists because it is the one text the answer may not skip: the
+    LADDER is fixed and shared by every modality, and only the CRITERION is per-modality.
+    See the Spanish set for what was measured.
+    """
+    context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
+    return f"""\
+You have received the INVENTORY of exercise modalities that a scan found in a course's teaching material, and the PROFILE consolidated from it: its modalities and their fields, already decided. What is left is to write, for EACH modality of the profile, two things: the criterion of its `{DIFFICULTY_FIELD}` and its `general_generation_rules`. Change nothing of the profile: no modality, no field, no key.
+{context_section}
+# WHAT YOU MUST PRODUCE
+A single JSON object:
+
+{{
+  "item_types": {{
+    "<key of one modality of the profile>": {{
+      "{DIFFICULTY_FIELD}": "<the criterion: opening sentence and the three rungs, each with its signals, an example from THIS modality and its border>",
+      "general_generation_rules": ["<rule>", "..."]
+    }}
+  }}
+}}
+
+- One entry for each modality of the profile, with its EXACT key. Not one more, not one fewer.
+- All the text in the language of the material.
+
+{_DIFFICULTY_SECTION}
+{_RULES_SECTION}
+# OUTPUT RULES
+- Return ONE SINGLE JSON object. Nothing before, nothing after.
+- No ```json, no backticks, no comments, no explanations.
+- Every text value on ONE SINGLE LINE: no real line breaks, no backticks and no code blocks inside the strings. Escape line breaks (`\\n`) and inner quotes (`\\"`).
+- BEFORE ANSWERING, check:
+  1. there is one entry for each modality of the profile, with its exact key.
+  2. every criterion opens with the sentence of the axis and goes on with the three rungs in order, each opened by its value between « » and a colon, and every rung brings its observable signals, its example from THIS modality and its border.
+  3. every modality brings between 3 and 8 checkable rules, about FORM and not content, particular to that modality, and each rule names the field it applies to when it is about a field.
+
+<<<PROFILE>>>
+{profile}
+<<<END>>>
 
 <<<INVENTORY>>>
 {findings}

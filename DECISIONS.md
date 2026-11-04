@@ -241,8 +241,13 @@ what each decision replaced.
 
 ### D-237. The profile's scan reads no subject context
 - **Rule:** `scan_item_types_prompt` takes no `context_block`: each fragment is inventoried from its own text. The consolidation keeps the context, since it writes the texts a person reads.
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `3d066ca` · **Status:** in force
 - **Why:** The user's yes to the prompt tuning report's third proposal. The scan is deterministic and a first build has no context yet, so with the context the next build scanned the same corpus differently; a context change alone had folded a Python workbook's memory diagrams into code writing (3 items of 40). Measured on seven profiles (33 fragments) with and without it: the same modalities in three, one modality grouped or split in the other four, the same time; one label of 33 came back in Spanish on an English subject, which the consolidation rewrites.
+
+### D-238. The profile's consolidation is two calls
+- **Rule:** The consolidation asks first for the modalities and their fields (`consolidate_exemplars_profile_prompt`, repaired until it validates), then, for those settled modalities, for each difficulty criterion and its `general_generation_rules` (`criteria_and_rules_prompt`). A modality the second answer leaves out keeps the fallback criterion and no rules, with a warning.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's yes to the prompt tuning report's fourth proposal (P-4). Blind on seven profiles against one call: two calls preferred 4 to 3, their rules 4 to 1, the criteria even (3–3); time ×1.17 (geometric mean of nine pairs). The one profile that came back with a single modality (technology, three in the gold) did so with one call too in a repeat: on that subject one call gave 2, 6 and 1 modalities and two calls 1, 2 and 1, so the count is the consolidation's sampling, not the split.
 
 ### D-041. Prerequisite lists are curriculum-bounded closures
 - **Rule:** Prerequisite lists are transitive closures bounded by the curriculum with opposite set operations: `assumed_known()` intersects the prerequisite closure with the curriculum and `forbidden()` subtracts it.

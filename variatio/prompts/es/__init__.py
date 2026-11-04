@@ -45,6 +45,7 @@ from .profile import (
     EXEMPLARS_PROFILE_FIELD_NAMING,
     EXEMPLARS_PROFILE_SCHEMA_GRAMMAR,
     consolidate_exemplars_profile_prompt,
+    criteria_and_rules_prompt,
     repair_exemplars_profile_prompt,
     scan_item_types_prompt,
 )
@@ -78,6 +79,7 @@ __all__ = [
     "classify_instructions_prompt",
     "concept_description_prompt",
     "consolidate_exemplars_profile_prompt",
+    "criteria_and_rules_prompt",
     "curate_graph_domains_prompt",
     "describe_domain_concepts_prompt",
     "extract_typed_graph_prompt",

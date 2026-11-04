@@ -148,133 +148,12 @@ Un único objeto JSON:
 JSON:"""
 
 
-def consolidate_exemplars_profile_prompt(
-    findings: str, max_types: int, context_block: str = ""
-) -> str:
-    """Ask for the definitive exemplars profile, merging the inventory the scan produced.
-
-    The answer is `item_types` and no other top-level key: at most `max_types` modalities,
-    each with `label`, `description`, `primary_field`, `embed_fields`, between 3 and 8
-    checkable `general_generation_rules` and its own `fields`. Nothing about the subject
-    itself is declared here — that is the content context's, written in prose elsewhere.
-    `guidance.generation` is deliberately never asked for: the modality's rules carry the
-    generation, and that field is the exception a person writes by hand for one field.
-
-    `nivel_dificultad` has a section of its own because it is the one field the answer may
-    not decide: the LADDER is fixed and shared by every modality, and only the CRITERION is
-    per-modality. What that section fixes was measured over four real profiles of two
-    workspaces, 17 modalities: 17 of 17 already declared the field and the same three rungs
-    unprompted, so the ladder costs nothing — but one draft's two modalities spelled a rung
-    `básico` with its accent, only the 3 hand-curated ones set `decided_by`, and the criteria
-    were three words a rung and unfalsifiable ("basico (reconocimiento), intermedio
-    (aplicacion), avanzado (analisis)" for a multiple-choice modality, which is generic Bloom
-    vocabulary and would fit any subject). `guarantee_difficulty` fixes the shape afterwards;
-    what only the prompt can produce is a criterion written from THIS modality's exemplars.
-
-    It receives the subject's context like every other prompt in the system. It did not,
-    and it is the only thing that separated it from the ones that come out right: measured
-    on a workspace whose material and `locale.json` are both English, the graph, the concept
-    descriptions and the bank all came back in English and only the profile's `description`
-    and `guidance` came back in Spanish. Declaring nothing about the subject is not the same
-    as not knowing which language it is taught in.
-    """
-    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
-    return f"""\
-Has recibido el INVENTARIO de modalidades de ejercicio que un escaneo previo encontró, fragmento a fragmento, en todo el material docente en bruto de una asignatura. Consolídalo en el PERFIL DE EJEMPLARES definitivo.
-
-El perfil es la ÚNICA pieza que instancia el sistema para una asignatura concreta: el mismo motor genera ejercicios de programación, problemas de física, preguntas de test o supuestos prácticos, pero siempre material de aprendizaje. Declara, de forma abstracta, la anatomía de cada modalidad de ejercicio de esta asignatura: qué campos la componen, de qué tipo son, cómo se extraen de un documento y cómo se redactaría uno nuevo.
-
-El inventario viene de fragmentos analizados por separado, así que TRAE DUPLICADOS: la misma modalidad aparecerá con claves distintas, con conjuntos de campos que se solapan y con etiquetas parecidas. Unificarlos es tu trabajo principal.
-{context_section}
-# QUÉ DEBES PRODUCIR
-Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
-
-{{
-  "item_types": {{
-    "<clave_de_modalidad>": {{
-      "label": "<nombre legible>",
-      "description": "<que es esta modalidad y como se reconoce>",
-      "primary_field": "<nombre de uno de sus campos>",
-      "embed_fields": ["<primary_field>", "<otro campo que el alumno RECIBE>"],
-      "general_generation_rules": ["<regla>", "..."],
-      "fields": {{
-        "<nombre_de_campo>": {{
-          "schema": {{ "type": "string" }},
-          "description": "...",
-          "guidance": {{ "extraction": "..." }}
-        }},
-        "{DIFFICULTY_FIELD}": {{ "...": "obligatorio en todas; ver su seccion" }}
-      }}
-    }}
-  }}
-}}
-
-# QUÉ NO DEBES DECLARAR
-Nada sobre la asignatura en sí: ni la materia, ni el nivel educativo, ni el idioma, ni convenciones generales de la carrera. Eso se escribe aparte, en prosa, en otro paso del sistema. Aquí describes ÚNICAMENTE la anatomía de las modalidades. No añadas claves de nivel superior: `item_types` es la única.
-
-# item_types — CUÁNTAS MODALIDADES
-- FUSIONA SIN MIEDO. Dos entradas del inventario son la MISMA modalidad si se rellenan las mismas piezas al redactarlas. Que una traiga solución y otra no, que una sea básica y otra avanzada, que estén en unidades distintas: nada de eso separa. Al fusionar, quédate con la clave más clara y con la UNIÓN de sus campos (los que falten en una variante son campos que admiten `null`, ver POLÍTICA DE NULOS).
-- SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `general_generation_rules` saldrían casi iguales, es una sola.
-- DESCARTA LO ANECDÓTICO. Una modalidad que aparece una vez en todo el corpus y que encaja razonablemente dentro de otra, va dentro de la otra. Solo sobrevive por su cuenta la que el material usa de verdad como formato propio.
-- COMO MUCHO {max_types} modalidades. Si te salen más, es que estás separando por tema o por dificultad en vez de por anatomía: vuelve a fusionar. Lo habitual son 1-3.
-- Ordénalas de más frecuente a menos: la primera es la que el sistema usa por defecto.
-
-Para cada modalidad:
-- `label`: su nombre legible, en el idioma del material («Pregunta tipo test», «Corrección de errores»).
-- `description`: qué es y cómo se reconoce. Lo lee tanto el extractor —para decidir a qué modalidad pertenece cada ejercicio del documento— como el generador. Sé discriminante: describe lo que la distingue de las demás modalidades del perfil, no lo que tienen en común.
-- `general_generation_rules`: cómo se redacta un ejercicio NUEVO de esta modalidad. Es la parte más importante de lo que produces y tiene sección propia más abajo — léela antes de escribirlas.
-
-# fields — CÓMO SE LLAMAN
-{EXEMPLARS_PROFILE_FIELD_NAMING}
-- COHERENCIA ENTRE MODALIDADES: si dos modalidades tienen un campo con el mismo papel, debe llamarse IGUAL en las dos (`enunciado` en todas, no `enunciado` en una y `pregunta` en otra).
-
-# fields — CUÁLES INCLUIR
-Un campo por cada pieza de información ESENCIAL que compone un ejercicio de esa modalidad.
-
-- MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un ejercicio. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica. Al mismo tiempo, NO omitas nada esencial para representar o redactar el ejercicio (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera. Lo habitual son 3-5 campos por modalidad.
-- PRUEBA DE DERIVABILIDAD (aplícala a CADA campo antes de incluirlo): si su valor puede calcularse a partir de los demás campos sin volver a mirar el documento, NO es un campo — se deduce, y sobra. Descarta en particular: banderas que solo indican si otro campo tiene valor o está vacío (`is_solved`, `tiene_solucion`: eso ya lo dice que `solucion` sea null); contadores, longitudes o tamaños de otro campo; y campos cuyo valor sea una reformulación de otro. Si al describir un campo necesitas mencionar otro campo para definirlo, es señal casi segura de que es derivable.
-- NADA DE CONCEPTOS NI TEMAS: no declares campos de conceptos, temas, materia o etiquetas temáticas (`temas`, `conceptos`, `palabras_clave`…). Qué concepto del currículo practica cada ejercicio lo anota el sistema aguas abajo contra un grafo de conocimiento, y un campo así se solaparía con esa anotación. Lo que sitúe a la asignatura entera (materia, nivel educativo, idioma) no va en `fields` ni en ningún otro sitio de este perfil.
-- COBERTURA MÍNIMA: el perfil debe bastar para (a) representar el ejercicio, (b) recuperarlo semánticamente y (c) redactar uno nuevo PARAMETRIZADO. En la práctica eso casi siempre exige: el enunciado que porta la carga semántica (el `primary_field`, obligatorio) y la solución esperada, cuando el material la trae o la admite. El eje clasificatorio ya lo tienes cubierto: `{DIFFICULTY_FIELD}` es obligatorio en todas las modalidades y tiene su propia sección — no lo cuentes entre estos campos ni declares un segundo campo de nivel, grado o categoría que diga lo mismo.
-
-Para cada campo:
-- `schema`: la forma del valor.
-{EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
-- `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma de instrucción de la asignatura.
-- `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable, y apóyate en los fragmentos literales del inventario. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
-- `guidance.generation`: **NO la escribas. Nunca.** Existe en el formato, pero es un campo que rellena a mano quien administra la asignatura cuando un campo concreto necesita un matiz que las reglas no cubren. Tú deja en `guidance` únicamente `extraction`. Lo que sepas sobre cómo se REDACTA esta modalidad va entero en `general_generation_rules`.
-
-# POLÍTICA DE NULOS — DEPENDE DE SI EL CAMPO SE COPIA O SE DEDUCE
-La pregunta no es «¿suele traer esta modalidad este campo?», sino «¿podría existir UN SOLO ejercicio de esta modalidad al que le falte?». La respuesta depende de dónde sale el valor, y son dos casos con reglas OPUESTAS.
-
-## Campos que se COPIAN del documento (enunciado, solución, material de partida, opciones, explicación)
-Admiten `null` SALVO que el ejercicio no se sostenga sin ellos. La única excepción segura es el `primary_field`: un ejercicio sin enunciado no es un ejercicio. Declara obligatorio un campo copiado solo cuando su ausencia rompería la modalidad entera: las `opciones` de una pregunta cerrada, el código que hay que arreglar en una corrección de errores.
-
-Los dos errores NO cuestan lo mismo, y esa asimetría es la regla:
-- Declararlo nulable cuando el contenido siempre está no cuesta nada: el extractor lo rellenará siempre, porque siempre lo encuentra.
-- Declararlo obligatorio cuando puede faltar OBLIGA A INVENTARLO. Aguas abajo este campo entra como obligatorio en la gramática del extractor, así que ante un ejercicio que no lo trae el modelo no puede responder «no está»: lo fabrica, y sale material docente falso indistinguible del real.
-
-Dos indicios que NO demuestran que un campo copiado esté siempre:
-- Que el inventario no traiga ni un ejemplar sin él. El inventario es una MUESTRA de fragmentos, no el corpus entero.
-- Cómo se llaman los documentos. Un corpus entero de archivos «soluciones» resuelve típicamente la parte teórica y deja los enunciados de la parte práctica en crudo.
-
-## Campos que se DEDUCEN observando el ejercicio (los CLASIFICATORIOS)
-Aquí `null` ES EL ÚLTIMO RECURSO, por la razón contraria: su valor no hay que encontrarlo en el documento, hay que juzgarlo, y siempre se puede juzgar. Que el documento no lo ETIQUETE explícitamente NO es motivo para admitir `null`: es motivo para definir un criterio que permita DEDUCIRLO del propio contenido. Nunca declares `null` en un campo deducible, y escribe siempre en su `description` el criterio con el que se deduce.
-
-El único campo clasificatorio que este perfil lleva SIEMPRE es `{DIFFICULTY_FIELD}`, y no lo decides tú: tiene sección propia inmediatamente después de esta. Todo lo de este apartado se aplica a él en primer lugar.
-
-## Un segundo campo clasificatorio, y solo si el material lo pide: la VARIANTE que fija quien encarga
-A veces una modalidad se rellena igual en todos sus ejemplares y, sin embargo, el material la pide en VARIANTES discretas que cambian la forma del entregable y que quien encarga un ejercicio nuevo querría fijar de antemano: el tipo de diagrama que se pide (de clases o de casos de uso), la notación o el lenguaje en que se responde, la forma de la respuesta (una tabla, una demostración, una lista). Misma anatomía, variante distinta: NO son dos modalidades. Pero si la variante solo vive en la redacción del enunciado, se vuelve invisible — nadie puede pedir «uno de clases» y el sistema sacará siempre la variante más frecuente.
-
-Cuando el inventario muestre esa variante con DOS O MÁS valores entre los ejemplares de una modalidad, declárala como un campo más de esa modalidad:
-- `schema`: `{{"enum": [...]}}` con los valores que el material usa de verdad, en minúsculas, sin tildes, en el idioma del material y tal como se leerán en un menú («diagrama de clases», «diagrama de casos de uso»); ni un valor que ningún ejemplar muestre, ni `null`.
-- `decided_by`: `"user"` — es una elección de quien encarga, igual que la dificultad.
-- `description`: qué distingue cada valor y con qué señal del enunciado se DEDUCE al extraer («Realiza un diagrama de clases…» decide el valor). Es un campo clasificatorio y se rige por lo de arriba: nunca nulo, siempre deducible.
-- Fuera de `embed_fields`, y nunca el `primary_field`.
-
-Tres límites, y los tres importan. Como mucho UN campo así por modalidad. Solo si cambia la FORMA del entregable: nunca el tema, el ámbito ni el concepto, que los anota el sistema contra el temario. Y ninguno si el material muestra un solo valor: una lista de una opción no es una decisión.
-
+# The two sections the second consolidation call writes from (P-4 of the 2026-11 tuning):
+# the first call settles the modalities and their fields, this one what only the exemplars
+# of a settled modality can say.
+_DIFFICULTY_SECTION = f"""\
 # {DIFFICULTY_FIELD} — OBLIGATORIO EN TODAS LAS MODALIDADES, Y LA ESCALA ES LA MISMA EN TODAS
-Toda modalidad lleva un campo `{DIFFICULTY_FIELD}`, sin excepción. No es uno de los campos «esenciales» que acabas de decidir: va aparte, va siempre, y no cuenta para los 3-5 de la sección anterior. Es el eje por el que después se pide «uno más sencillo» o «uno más exigente», y por el que se lee y se ordena el banco entero.
+Toda modalidad lleva un campo `{DIFFICULTY_FIELD}`, sin excepción. Es el eje por el que después se pide «uno más sencillo» o «uno más exigente», y por el que se lee y se ordena el banco entero.
 
 ## La escala no la eliges tú: es esta, y es la misma en todas las modalidades
 "schema": {{"enum": {_LEVELS_ENUM}}}
@@ -308,21 +187,9 @@ Cinco reglas, y las cinco se incumplen a menudo:
 3. HAZ LA PRUEBA ANTES DE ESCRIBIRLO. Aplica tu criterio a los ejemplares que el inventario trae de ESTA modalidad. Si te caen todos en el mismo peldaño, el criterio no separa: reescríbelo con señales más finas hasta que reparta.
 4. SIN HUECOS Y SIN SOLAPES. Cualquier ejercicio de la modalidad tiene que caer en uno y solo un peldaño. Si dos pueden encajar a la vez, dilo en el propio criterio y di cuál manda (lo natural: manda el más alto en cuanto aparece su señal).
 5. COMPARABLE ENTRE MODALIDADES. Aunque el criterio sea propio, el peldaño se lee igual en todas: «{_LOW}» es siempre la puerta de entrada de su clase de ejercicio y «{_HIGH}» siempre lo más exigente de su clase. Redáctalo para que esa lectura se sostenga.
+"""
 
-## Las otras dos claves del campo
-- `guidance.extraction`: si el documento trae una etiqueta explícita de dificultad, se usa esa; si no la trae —que es lo normal—, se aplica al contenido del ejercicio el criterio de `description`. NUNCA «si no hay etiqueta, null»: este valor no se busca en el documento, se juzga, y siempre se puede juzgar.
-- `decided_by`: `"user"`, siempre y en todas las modalidades. Es el campo que fija quien encarga un ejercicio nuevo.
-
-## Cómo queda
-"{DIFFICULTY_FIELD}": {{
-  "schema": {{"enum": {_LEVELS_ENUM}}},
-  "description": "<frase de entrada con el eje; luego los tres peldanos en orden, cada uno con sus senales observables, un ejemplo de ESTA modalidad y su frontera>",
-  "guidance": {{"extraction": "<etiqueta explicita si la hay; si no, el criterio de description>"}},
-  "decided_by": "user"
-}}
-
-Dos cosas que NO se hacen con él: no entra NUNCA en `embed_fields` —no aporta concepto y añade el mismo ruido a todos los ejercicios— y no es NUNCA el `primary_field`.
-
+_RULES_SECTION = f"""\
 # general_generation_rules — CÓMO ESCRIBE ESTA ASIGNATURA (LA PARTE QUE MÁS IMPORTA)
 Es lo ÚNICO que el perfil le dice al generador sobre cómo se redacta un ejercicio de esta modalidad. Aquí no hay una segunda oportunidad campo a campo: lo que no esté en estas reglas, el generador no lo sabe. Dedícale más atención que a ninguna otra parte del perfil.
 
@@ -335,6 +202,121 @@ Escríbelas mirando los `excerpt` del inventario y preguntándote qué tienen en
 - NADA DE CONTENIDO. No fijes el tema, el ámbito ni los conceptos de los ejercicios: eso lo decide cada encargo contra el grafo del currículo. Las reglas hablan de la FORMA.
 - SOLO DE ESTA MODALIDAD. Una regla que solo tiene sentido aquí (exigir docstring y bloque de prueba, exigir el resultado con sus unidades y cifras significativas) va SOLO aquí. Si es cierta de todas las modalidades por igual, es que describe la asignatura entera y no aporta nada en ninguna.
 - CANTIDAD: entre 3 y 8. Menos de 3 casi siempre significa que no has mirado los ejemplares; más de 8, que estás desmenuzando una regla en sus consecuencias o colando didáctica genérica.
+"""
+
+
+def consolidate_exemplars_profile_prompt(
+    findings: str, max_types: int, context_block: str = ""
+) -> str:
+    """Ask for the definitive exemplars profile, merging the inventory the scan produced.
+
+    The first of the consolidation's two calls (P-4 of the 2026-11 tuning): the modalities and
+    their fields. The answer is `item_types` and no other top-level key: at most `max_types`
+    modalities, each with `label`, `description`, `primary_field`, `embed_fields` and its own
+    `fields`. Nothing about the subject itself is declared here — that is the content
+    context's, written in prose elsewhere. `guidance.generation` is deliberately never asked
+    for: the modality's rules carry the generation, and that field is the exception a person
+    writes by hand for one field. `nivel_dificultad` and the `general_generation_rules` are not
+    asked for here: `guarantee_difficulty` adds the field and `criteria_and_rules_prompt`
+    writes both texts, for modalities that no longer move.
+
+    It receives the subject's context: measured on a workspace whose material and
+    `locale.json` are both English, the graph, the concept descriptions and the bank came
+    back in English and only the profile's `description` and `guidance`, written here, came
+    back in Spanish. Declaring nothing about the subject is not the same as not knowing which
+    language it is taught in.
+    """
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
+    return f"""\
+Has recibido el INVENTARIO de modalidades de ejercicio que un escaneo previo encontró, fragmento a fragmento, en todo el material docente en bruto de una asignatura. Consolídalo en el PERFIL DE EJEMPLARES definitivo.
+
+El perfil es la ÚNICA pieza que instancia el sistema para una asignatura concreta: el mismo motor genera ejercicios de programación, problemas de física, preguntas de test o supuestos prácticos, pero siempre material de aprendizaje. Declara, de forma abstracta, la anatomía de cada modalidad de ejercicio de esta asignatura: qué campos la componen, de qué tipo son, cómo se extraen de un documento y cómo se redactaría uno nuevo.
+
+El inventario viene de fragmentos analizados por separado, así que TRAE DUPLICADOS: la misma modalidad aparecerá con claves distintas, con conjuntos de campos que se solapan y con etiquetas parecidas. Unificarlos es tu trabajo principal.
+{context_section}
+# QUÉ DEBES PRODUCIR
+Un único objeto JSON con EXACTAMENTE estas claves de nivel superior:
+
+{{
+  "item_types": {{
+    "<clave_de_modalidad>": {{
+      "label": "<nombre legible>",
+      "description": "<que es esta modalidad y como se reconoce>",
+      "primary_field": "<nombre de uno de sus campos>",
+      "embed_fields": ["<primary_field>", "<otro campo que el alumno RECIBE>"],
+      "fields": {{
+        "<nombre_de_campo>": {{
+          "schema": {{ "type": "string" }},
+          "description": "...",
+          "guidance": {{ "extraction": "..." }}
+        }}
+      }}
+    }}
+  }}
+}}
+
+# QUÉ NO DEBES DECLARAR
+Nada sobre la asignatura en sí: ni la materia, ni el nivel educativo, ni el idioma, ni convenciones generales de la carrera. Eso se escribe aparte, en prosa, en otro paso del sistema. Aquí describes ÚNICAMENTE la anatomía de las modalidades. No añadas claves de nivel superior: `item_types` es la única.
+
+# item_types — CUÁNTAS MODALIDADES
+- FUSIONA SIN MIEDO. Dos entradas del inventario son la MISMA modalidad si se rellenan las mismas piezas al redactarlas. Que una traiga solución y otra no, que una sea básica y otra avanzada, que estén en unidades distintas: nada de eso separa. Al fusionar, quédate con la clave más clara y con la UNIÓN de sus campos (los que falten en una variante son campos que admiten `null`, ver POLÍTICA DE NULOS).
+- SEPARA SOLO CUANDO CAMBIA LA ANATOMÍA. Una modalidad distinta necesita campos que la otra no tiene sentido que tenga, o una forma de redactarse claramente distinta. Prueba: si las dos comparten `fields` y sus `general_generation_rules` saldrían casi iguales, es una sola.
+- DESCARTA LO ANECDÓTICO. Una modalidad que aparece una vez en todo el corpus y que encaja razonablemente dentro de otra, va dentro de la otra. Solo sobrevive por su cuenta la que el material usa de verdad como formato propio.
+- COMO MUCHO {max_types} modalidades. Si te salen más, es que estás separando por tema o por dificultad en vez de por anatomía: vuelve a fusionar. Lo habitual son 1-3.
+- Ordénalas de más frecuente a menos: la primera es la que el sistema usa por defecto.
+
+Para cada modalidad:
+- `label`: su nombre legible, en el idioma del material («Pregunta tipo test», «Corrección de errores»).
+- `description`: qué es y cómo se reconoce. Lo lee tanto el extractor —para decidir a qué modalidad pertenece cada ejercicio del documento— como el generador. Sé discriminante: describe lo que la distingue de las demás modalidades del perfil, no lo que tienen en común.
+
+# fields — CÓMO SE LLAMAN
+{EXEMPLARS_PROFILE_FIELD_NAMING}
+- COHERENCIA ENTRE MODALIDADES: si dos modalidades tienen un campo con el mismo papel, debe llamarse IGUAL en las dos (`enunciado` en todas, no `enunciado` en una y `pregunta` en otra).
+
+# fields — CUÁLES INCLUIR
+Un campo por cada pieza de información ESENCIAL que compone un ejercicio de esa modalidad.
+
+- MENOS ES MÁS: incluye el conjunto MÍNIMO de campos que capture por completo un ejercicio. Cada campo debe ganarse su sitio: NO añadas campos especulativos, redundantes, derivables de otros ni presentes solo de forma anecdótica. Al mismo tiempo, NO omitas nada esencial para representar o redactar el ejercicio (como mínimo, el que porta la carga semántica principal). Ante la duda entre añadir un campo marginal o dejarlo fuera, déjalo fuera. Lo habitual son 3-5 campos por modalidad.
+- PRUEBA DE DERIVABILIDAD (aplícala a CADA campo antes de incluirlo): si su valor puede calcularse a partir de los demás campos sin volver a mirar el documento, NO es un campo — se deduce, y sobra. Descarta en particular: banderas que solo indican si otro campo tiene valor o está vacío (`is_solved`, `tiene_solucion`: eso ya lo dice que `solucion` sea null); contadores, longitudes o tamaños de otro campo; y campos cuyo valor sea una reformulación de otro. Si al describir un campo necesitas mencionar otro campo para definirlo, es señal casi segura de que es derivable.
+- NADA DE CONCEPTOS NI TEMAS: no declares campos de conceptos, temas, materia o etiquetas temáticas (`temas`, `conceptos`, `palabras_clave`…). Qué concepto del currículo practica cada ejercicio lo anota el sistema aguas abajo contra un grafo de conocimiento, y un campo así se solaparía con esa anotación. Lo que sitúe a la asignatura entera (materia, nivel educativo, idioma) no va en `fields` ni en ningún otro sitio de este perfil.
+- COBERTURA MÍNIMA: el perfil debe bastar para (a) representar el ejercicio, (b) recuperarlo semánticamente y (c) redactar uno nuevo PARAMETRIZADO. En la práctica eso casi siempre exige: el enunciado que porta la carga semántica (el `primary_field`, obligatorio) y la solución esperada, cuando el material la trae o la admite. El eje clasificatorio ya lo tienes cubierto: `{DIFFICULTY_FIELD}` lo añade el sistema a todas las modalidades y su criterio se escribe en otro paso — no lo declares tú ni declares un segundo campo de nivel, grado o categoría que diga lo mismo.
+
+Para cada campo:
+- `schema`: la forma del valor.
+{EXEMPLARS_PROFILE_SCHEMA_GRAMMAR}
+- `description`: la NATURALEZA intrínseca del campo (qué representa), en el idioma de instrucción de la asignatura.
+- `guidance.extraction`: cómo EXTRAER este campo de un documento fuente. **Redáctala con más detalle y precisión que el resto de textos**: alimenta un proceso de extracción posterior que debe ser exacto y determinista, así que sé concreto y accionable, y apóyate en los fragmentos literales del inventario. Cubre, cuando apliquen: qué copiar y si va LITERAL o normalizado; los LÍMITES con los campos vecinos (qué pertenece a este campo y qué NO, para que no se solapen); los marcadores o encabezados concretos del documento que lo delimitan (p. ej. "Solución:", "Ejercicios propuestos"); qué EXCLUIR (etiquetas de enumeración, cabeceras de sección, artefactos de página); y, solo en campos que admitan ausencia según la POLÍTICA DE NULOS, cuándo el campo va a null. Aplica a todo campo que pueda localizarse en el material.
+- `guidance.generation`: **NO la escribas. Nunca.** Existe en el formato, pero es un campo que rellena a mano quien administra la asignatura cuando un campo concreto necesita un matiz que las reglas no cubren. Tú deja en `guidance` únicamente `extraction`. Cómo se REDACTA esta modalidad lo escribe otro paso, en sus reglas de generación.
+
+# POLÍTICA DE NULOS — DEPENDE DE SI EL CAMPO SE COPIA O SE DEDUCE
+La pregunta no es «¿suele traer esta modalidad este campo?», sino «¿podría existir UN SOLO ejercicio de esta modalidad al que le falte?». La respuesta depende de dónde sale el valor, y son dos casos con reglas OPUESTAS.
+
+## Campos que se COPIAN del documento (enunciado, solución, material de partida, opciones, explicación)
+Admiten `null` SALVO que el ejercicio no se sostenga sin ellos. La única excepción segura es el `primary_field`: un ejercicio sin enunciado no es un ejercicio. Declara obligatorio un campo copiado solo cuando su ausencia rompería la modalidad entera: las `opciones` de una pregunta cerrada, el código que hay que arreglar en una corrección de errores.
+
+Los dos errores NO cuestan lo mismo, y esa asimetría es la regla:
+- Declararlo nulable cuando el contenido siempre está no cuesta nada: el extractor lo rellenará siempre, porque siempre lo encuentra.
+- Declararlo obligatorio cuando puede faltar OBLIGA A INVENTARLO. Aguas abajo este campo entra como obligatorio en la gramática del extractor, así que ante un ejercicio que no lo trae el modelo no puede responder «no está»: lo fabrica, y sale material docente falso indistinguible del real.
+
+Dos indicios que NO demuestran que un campo copiado esté siempre:
+- Que el inventario no traiga ni un ejemplar sin él. El inventario es una MUESTRA de fragmentos, no el corpus entero.
+- Cómo se llaman los documentos. Un corpus entero de archivos «soluciones» resuelve típicamente la parte teórica y deja los enunciados de la parte práctica en crudo.
+
+## Campos que se DEDUCEN observando el ejercicio (los CLASIFICATORIOS)
+Aquí `null` ES EL ÚLTIMO RECURSO, por la razón contraria: su valor no hay que encontrarlo en el documento, hay que juzgarlo, y siempre se puede juzgar. Que el documento no lo ETIQUETE explícitamente NO es motivo para admitir `null`: es motivo para definir un criterio que permita DEDUCIRLO del propio contenido. Nunca declares `null` en un campo deducible, y escribe siempre en su `description` el criterio con el que se deduce.
+
+El único campo clasificatorio que este perfil lleva SIEMPRE es `{DIFFICULTY_FIELD}`, y no lo declaras tú: lo añade el sistema, y su criterio se escribe en otro paso.
+
+## Un segundo campo clasificatorio, y solo si el material lo pide: la VARIANTE que fija quien encarga
+A veces una modalidad se rellena igual en todos sus ejemplares y, sin embargo, el material la pide en VARIANTES discretas que cambian la forma del entregable y que quien encarga un ejercicio nuevo querría fijar de antemano: el tipo de diagrama que se pide (de clases o de casos de uso), la notación o el lenguaje en que se responde, la forma de la respuesta (una tabla, una demostración, una lista). Misma anatomía, variante distinta: NO son dos modalidades. Pero si la variante solo vive en la redacción del enunciado, se vuelve invisible — nadie puede pedir «uno de clases» y el sistema sacará siempre la variante más frecuente.
+
+Cuando el inventario muestre esa variante con DOS O MÁS valores entre los ejemplares de una modalidad, declárala como un campo más de esa modalidad:
+- `schema`: `{{"enum": [...]}}` con los valores que el material usa de verdad, en minúsculas, sin tildes, en el idioma del material y tal como se leerán en un menú («diagrama de clases», «diagrama de casos de uso»); ni un valor que ningún ejemplar muestre, ni `null`.
+- `decided_by`: `"user"` — es una elección de quien encarga, igual que la dificultad.
+- `description`: qué distingue cada valor y con qué señal del enunciado se DEDUCE al extraer («Realiza un diagrama de clases…» decide el valor). Es un campo clasificatorio y se rige por lo de arriba: nunca nulo, siempre deducible.
+- Fuera de `embed_fields`, y nunca el `primary_field`.
+
+Tres límites, y los tres importan. Como mucho UN campo así por modalidad. Solo si cambia la FORMA del entregable: nunca el tema, el ámbito ni el concepto, que los anota el sistema contra el temario. Y ninguno si el material muestra un solo valor: una lista de una opción no es una decisión.
 
 # primary_field
 Uno por modalidad. El nombre del campo que porta la CARGA SEMÁNTICA principal del ejercicio: el enunciado, el texto que plantea la tarea al alumno. Aguas abajo es lo que se compara contra el grafo del currículo para decidir qué concepto practica cada ejercicio, así que debe ser el campo que se lee para saber de qué va el ejercicio. Debe ser una de las claves de los `fields` de ESA modalidad.
@@ -350,7 +332,7 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
 # REGLAS DE SALIDA
 - Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
 - Sin ```json, sin backticks, sin comentarios, sin explicaciones.
-- Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`, `general_generation_rules`) en el idioma del material.
+- Los nombres de campo (claves de `fields`) y las claves de `item_types` SIEMPRE en español, snake_case, sin tildes ni ñ. El resto de texto de cara al humano (`label`, `description`, `guidance`) en el idioma del material.
 - Incluye solo los campos ESENCIALES: menos es más, pero sin dejar fuera nada imprescindible. Ninguno derivable de otro. `null` en todo campo copiado del documento que pueda faltar en algún ejercicio, y en ninguno deducible.
 - Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
 - ANTES DE RESPONDER, verifica las nueve cosas que más fallan:
@@ -359,10 +341,71 @@ La lista de campos que, JUNTOS, se leen para decidir qué concepto del currícul
   3. el `primary_field` de cada modalidad es exactamente una de las claves de SUS `fields`.
   4. `embed_fields` empieza por el `primary_field`, solo nombra campos de SUS `fields` y no incluye la solución.
   5. no hay dos modalidades que se rellenen igual.
-  6. NINGÚN `guidance` lleva la clave `generation`, y cada modalidad trae entre 3 y 8 `general_generation_rules` comprobables.
+  6. NINGÚN `guidance` lleva la clave `generation`, y ninguna modalidad trae `general_generation_rules`: las escribe otro paso.
   7. cada campo COPIADO del documento distinto del `primary_field` admite `null`, salvo que sin él la modalidad no se sostenga.
-  8. TODAS las modalidades declaran `{DIFFICULTY_FIELD}` con exactamente `{_LEVELS_ENUM}`, con `decided_by` `"user"`, con un criterio propio de esa modalidad en su `description` —frase de entrada y los tres peldaños abiertos por su valor entre « » y dos puntos, cada uno con su ejemplo y su frontera— y fuera de `embed_fields`.
+  8. ninguna modalidad declara `{DIFFICULTY_FIELD}`: lo añade el sistema.
   9. todo campo con `decided_by` `"user"` distinto de `{DIFFICULTY_FIELD}` es un `enum` de dos o más valores que el material muestra de verdad, se deduce del enunciado y no existe donde el material enseña una sola variante.
+
+<<<INVENTARIO>>>
+{findings}
+<<<FIN>>>
+
+JSON:"""
+
+
+def criteria_and_rules_prompt(findings: str, profile: str, context_block: str = "") -> str:
+    """Ask, for every modality of a consolidated profile, its difficulty criterion and its rules.
+
+    The second call of the consolidation (P-4 of the 2026-11 tuning): the first one settles
+    the modalities and their fields, so this one writes, for modalities that no longer move,
+    the two texts that are only as good as the exemplars they are read from. The answer is
+    `item_types` keyed by the profile's own keys, each with the difficulty field's criterion
+    under the field's name and between 3 and 8 `general_generation_rules`; the builder writes
+    them into the profile, and everything else of the field is the builder's.
+
+    The criterion's section exists because it is the one text the answer may not skip: the
+    LADDER is fixed and shared by every modality, and only the CRITERION is per-modality.
+    Measured over four real profiles of two workspaces, 17 modalities: 17 of 17 already
+    declared the field and the same three rungs unprompted — but one draft's two modalities
+    spelled a rung `básico` with its accent, only the 3 hand-curated ones set `decided_by`,
+    and the criteria were three words a rung and unfalsifiable ("basico (reconocimiento),
+    intermedio (aplicacion), avanzado (analisis)" for a multiple-choice modality, generic
+    Bloom vocabulary that would fit any subject). `guarantee_difficulty` fixes the shape;
+    what only the prompt can produce is a criterion written from THIS modality's exemplars.
+    """
+    context_section = f"\n# CONTEXTO DOCENTE\n{context_block}\n" if context_block.strip() else ""
+    return f"""\
+Has recibido el INVENTARIO de modalidades de ejercicio que un escaneo encontró en el material docente de una asignatura, y el PERFIL que se consolidó a partir de él: sus modalidades y sus campos, ya decididos. Te falta escribir, para CADA modalidad del perfil, dos cosas: el criterio de su `{DIFFICULTY_FIELD}` y sus `general_generation_rules`. No cambies nada del perfil: ni modalidades, ni campos, ni claves.
+{context_section}
+# QUÉ DEBES PRODUCIR
+Un único objeto JSON:
+
+{{
+  "item_types": {{
+    "<clave de una modalidad del perfil>": {{
+      "{DIFFICULTY_FIELD}": "<el criterio: frase de entrada y los tres peldaños, cada uno con sus señales, un ejemplo de ESTA modalidad y su frontera>",
+      "general_generation_rules": ["<regla>", "..."]
+    }}
+  }}
+}}
+
+- Una entrada por cada modalidad del perfil, con su clave EXACTA. Ni una más ni una menos.
+- Todo el texto, en el idioma del material.
+
+{_DIFFICULTY_SECTION}
+{_RULES_SECTION}
+# REGLAS DE SALIDA
+- Devuelve UN ÚNICO objeto JSON. Nada antes, nada después.
+- Sin ```json, sin backticks, sin comentarios, sin explicaciones.
+- Cada valor de texto en UNA SOLA LÍNEA: sin saltos de línea reales, sin backticks ni bloques de código dentro de los strings. Escapa saltos (`\\n`) y comillas internas (`\\"`).
+- ANTES DE RESPONDER, verifica:
+  1. hay una entrada por cada modalidad del perfil, con su clave exacta.
+  2. cada criterio abre con la frase del eje y sigue con los tres peldaños en orden, abiertos por su valor entre « » y dos puntos, y cada peldaño trae sus señales observables, su ejemplo de ESTA modalidad y su frontera.
+  3. cada modalidad trae entre 3 y 8 reglas comprobables, de FORMA y no de contenido, propias de esa modalidad, y cada regla nombra el campo al que se aplica cuando es de un campo.
+
+<<<PERFIL>>>
+{profile}
+<<<FIN>>>
 
 <<<INVENTARIO>>>
 {findings}

@@ -374,12 +374,108 @@ class ExemplarsProfileBuilder:
     # CONSOLIDATION -------------------------------------------------------------------------------
 
     def _consolidate(self, found: dict[str, dict]) -> dict:
-        """Turn the candidate modalities into one profile, under its own progress step."""
+        """Turn the candidate modalities into one profile, under its own progress step.
+
+        Two calls (D-238): the modalities and their fields, repaired until they validate;
+        then, for those settled modalities, each difficulty criterion and its generation
+        rules, which are only as good as the exemplars they are read from. Measured blind on
+        seven profiles against one call: preferred 4 to 3, the rules 4 to 1, the criteria
+        even, time x1.17.
+        """
         progress.phase("consolidate", f"{len(found)} candidate exercise type(s)")
+        findings = self._findings_block(found)
         with progress.step("consolidate", "Consolidating the exemplars profile"):
-            profile = guarantee_difficulty(self._infer(self._findings_block(found)), self.prompts)
+            profile = guarantee_difficulty(self._infer(findings), self.prompts)
+            if profile:
+                profile = self._write_criteria_and_rules(profile, findings)
         progress.advance(1.0)
         return profile
+
+    def _write_criteria_and_rules(self, profile: dict, findings: str) -> dict:
+        """Ask for every modality's difficulty criterion and rules, and write them in.
+
+        A modality the answer leaves out keeps the fallback criterion and no rules, said in a
+        warning: the profile still loads, and the profile screen shows what is missing.
+        """
+        item_types = profile["item_types"]
+        field = self.prompts.DIFFICULTY_FIELD
+        shown = {
+            key: {
+                name: value
+                for name, value in spec.items()
+                if name != "general_generation_rules"
+            }
+            | {"fields": {n: f for n, f in (spec.get("fields") or {}).items() if n != field}}
+            for key, spec in item_types.items()
+        }
+        prompt = self.prompts.criteria_and_rules_prompt(
+            findings,
+            json.dumps({"item_types": shown}, ensure_ascii=False, indent=2),
+            context_block=self._context_block(),
+        )
+        think = self._consolidation_think()
+        response = inference.generate(
+            model=self.consolidate_model,
+            think=think,
+            prompt=prompt,
+            sampling=inference.sampling("ep_consolidate", think),
+        ).response
+        answer, err = parse_with_repair(
+            response,
+            self._parse_criteria,
+            repair_model=config.REPAIR_LLM,
+            max_attempts=self.max_repair_attempts,
+            shape="object",
+            format="json",
+            log_prefix="[criteria] ",
+            prompts=self.prompts,
+        )
+        if answer is None:
+            logger.warning(f"No difficulty criterion or rules could be read ({err}); the fallbacks stay")
+            return profile
+
+        for key, spec in item_types.items():
+            written = answer.get(key)
+            if not isinstance(written, dict):
+                logger.warning(f"«{key}»: no criterion or rules written; the fallback criterion stays")
+                continue
+            criterion = str(written.get(field) or "").strip()
+            if criterion and isinstance(spec.get("fields", {}).get(field), dict):
+                spec["fields"][field]["description"] = criterion
+            else:
+                logger.warning(f"«{key}»: no difficulty criterion written; the fallback stays")
+            rules = [str(r).strip() for r in written.get("general_generation_rules") or [] if str(r).strip()]
+            if rules:
+                spec["general_generation_rules"] = rules
+            else:
+                logger.warning(f"«{key}»: no generation rules written")
+            # The rules before the fields, as a person reads a modality on screen.
+            item_types[key] = {name: value for name, value in spec.items() if name != "fields"} | {
+                "fields": spec["fields"]
+            }
+        return profile
+
+    @staticmethod
+    def _parse_criteria(response: str) -> tuple[dict | None, str | None]:
+        """Read the second call's answer as `{modality key: {criterion, rules}}`.
+
+        A text that is not a modality's entry but sits beside them goes into the one modality
+        that lacks it: measured once in seven profiles, a one-modality answer closed its
+        entry after the criterion and wrote the rules as a sibling of the key.
+        """
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
+        try:
+            raw = repair_json(cleaned, return_objects=True)
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            return None, f"{type(e).__name__}: {str(e)[:200]}"
+        if not isinstance(raw, dict) or not isinstance(raw.get("item_types"), dict):
+            return None, "missing 'item_types' object"
+        entries = {key: value for key, value in raw["item_types"].items() if isinstance(value, dict)}
+        for name, value in raw["item_types"].items():
+            lacking = [entry for entry in entries.values() if name not in entry]
+            if name not in entries and len(lacking) == 1:
+                lacking[0][name] = value
+        return entries, None
 
     def _infer(self, findings: str) -> dict:
         """Ask for the profile and repair it until it validates, or give up and keep it.
@@ -390,11 +486,7 @@ class ExemplarsProfileBuilder:
         prompt = self.prompts.consolidate_exemplars_profile_prompt(
             findings, self.max_item_types, context_block=self._context_block()
         )
-        think = (
-            config.THINK_EP_CONSOLIDATE
-            if inference.supports_thinking(self.consolidate_model)
-            else False
-        )
+        think = self._consolidation_think()
         logger.info(
             f"Consolidating with '{self.consolidate_model}' "
             f"(reasoning {'on' if think else 'off'})"
@@ -458,6 +550,12 @@ class ExemplarsProfileBuilder:
         except (ValueError, KeyError, TypeError) as e:
             return f"{type(e).__name__}: {str(e)[:200]}"
 
+    def _consolidation_think(self) -> bool | str:
+        """The consolidation's reasoning level, off on a model that cannot reason."""
+        if inference.supports_thinking(self.consolidate_model):
+            return config.THINK_EP_CONSOLIDATE
+        return False
+
 
 def _remember(values: list[str], value: str) -> None:
     """Append `value` once, ignoring an empty one."""
@@ -499,7 +597,8 @@ def guarantee_difficulty(profile: dict, prompts) -> dict:
         if not isinstance(entry, dict):
             entry = {}
         if found is None:
-            logger.warning(f"«{key}»: no difficulty field; adding '{field}' with no criterion")
+            # The ordinary case since the consolidation's first call stopped asking for it.
+            logger.debug(f"«{key}»: no difficulty field; adding '{field}' with no criterion")
         elif found != field:
             logger.warning(f"«{key}»: difficulty declared as '{found}'; renamed to '{field}'")
 
