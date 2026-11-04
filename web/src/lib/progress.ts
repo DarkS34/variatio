@@ -27,6 +27,26 @@ export function stepPercent(
 }
 
 /**
+ * Seconds left of the running phase, from the outermost running step with a measured rate.
+ *
+ * D-241 replaced "no time estimate, in any form" (D-156): the rates are the seconds one
+ * unit took with THIS engine and THESE models, published only where both match, so a model
+ * changed in the panel removes the time instead of turning it into a wrong one. Outermost,
+ * because the transcription and the bank count their units across documents in a step that
+ * opens before the per-document ones. `null`, and no time on screen, when no running step
+ * has a rate or a total.
+ */
+export function timeLeft(
+  steps: { id: string; status: string; current?: number; total?: number | null }[],
+  rates: Record<string, { seconds: number }> | undefined,
+): number | null {
+  if (!rates) return null;
+  const step = steps.find((s) => s.status === "running" && Boolean(s.total) && s.id in rates);
+  if (!step?.total) return null;
+  return Math.max(0, step.total - (step.current ?? 0)) * rates[step.id].seconds;
+}
+
+/**
  * How full a meter is, or `null` when the total is not known yet.
  *
  * "No sé cuánto hay" and "hay cero" are different facts and only the first one may sweep:

@@ -196,7 +196,8 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
   instance), `logs/`, `/.maintenance.json`, `/.invite_link_key` (a secret; back it up
   beside `.env`).
 - `config.json` at the root is versioned and holds no secrets; deleting it falls back to
-  registry defaults.
+  registry defaults. `rates/<engine>.json` beside it holds the measured seconds per unit of
+  the construction steps; an engine with no file shows no time left (D-241).
 - The working language with the user is Spanish, written as *Writing to the user* says;
   code, identifiers, comments and `variatio/` logs are English.
 

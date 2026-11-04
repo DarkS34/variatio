@@ -167,9 +167,14 @@ class ExemplarsBankBuilder:
 
         try:
             text_by_file = self._convert(files)
+            # Every document's batches, counted before the first call: the time left of the
+            # phase is counted in batches, and a per-document step only knows its own.
+            batches = sum(len(self._build_batches(t)) for t in text_by_file.values() if t.strip())
 
             progress.phase("extract", f"0/{len(files)} documento(s)")
-            with progress.step(
+            with progress.counter(
+                "bank_batches", "Extracting the items, batch by batch", batches
+            ), progress.step(
                 "extract", "Extracting and tagging the items", len(files)
             ) as reporter:
                 for idx, file_path in enumerate(files, 1):
@@ -295,7 +300,9 @@ class ExemplarsBankBuilder:
                     raise
                 except Exception as e:
                     logger.error(f"{b_tag} failed: {e}")
+                    progress.count()
                     continue
+                progress.count()
                 for raw in extracted:
                     key = self._identity(raw)
                     # The id is claimed AFTER the duplicate check: a repeat that consumed

@@ -21,6 +21,8 @@ __all__ = [
     "TokenBatch",
     "advance",
     "checkpoint",
+    "count",
+    "counter",
     "current_activity",
     "current_emitter",
     "emit",
@@ -179,6 +181,33 @@ def _finish(step_id: str, status: str, started: float, error: str | None = None)
 def tick(step_id: str, current: int, total: int | None = None, detail: str | None = None) -> None:
     """Report progress of a step by id, for a caller holding no handle."""
     emit("step.progress", id=step_id, current=current, total=total, detail=detail)
+
+
+_counter: contextvars.ContextVar["_StepHandle | None"] = contextvars.ContextVar(
+    "variatio_counter", default=None
+)
+
+
+@contextmanager
+def counter(step_id: str, label: str, total: int):
+    """Run a step whose units are done by nested work, each reported with `count()`.
+
+    For a total that spans loops of its own: the pages of a whole slot, read document by
+    document inside per-document steps that each know only their own pages.
+    """
+    with step(step_id, label, total) as handle:
+        token = _counter.set(handle)
+        try:
+            yield handle
+        finally:
+            _counter.reset(token)
+
+
+def count(detail: str | None = None) -> None:
+    """Report one more unit of the enclosing `counter()` done; a no-op outside one."""
+    handle = _counter.get()
+    if handle is not None:
+        handle.tick(detail=detail)
 
 
 # OVERALL PROGRESS --------------------------------------------------------------------------------

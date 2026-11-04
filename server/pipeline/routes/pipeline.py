@@ -17,6 +17,7 @@ from variatio.loaders import locale
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
 from variatio.entrypoints import build_phases as phases_of
+from variatio.entrypoints import step_rates
 
 from ... import auth
 from ...core import contexts, process
@@ -61,11 +62,14 @@ def build_phases() -> dict:
     """Answer the phase plan of every builder, which is what the progress bar draws.
 
     A weight is a share of the WORK and says nothing about time: what a share costs
-    depends on the models, and this project changes those to find out what they do.
+    depends on the models, and this project changes those to find out what they do. The
+    time is `rates`: the measured seconds per unit of the steps whose engine and models are
+    today's (D-241), and nothing for the rest.
     """
     return {
         "artifacts": {artifact: _plan(phases_of(artifact)) for artifact in approvals.ARTIFACTS},
         "jobs": {kind: _plan(phases) for kind, phases in JOB_PHASES.items()},
+        "rates": step_rates(),
     }
 
 

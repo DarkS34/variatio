@@ -1,0 +1,118 @@
+{
+  "engine": "ollama",
+  "measured": "2026-11-04",
+  "machine": "NVIDIA A40 48 GB, Ollama 0.40.13",
+  "how": "Seconds per unit of each construction step (the unit its progress step counts), per model. The 27b base: calls of the 2026-11 prompt tuning builds over six subjects. The MTP variant: the same calls with the decode speed measured on its own build. Transcription: a 40-page bench plus the seam reviews. A batch's size is a setting: changing it changes its seconds.",
+  "steps": {
+    "transcribe_pages": {
+      "unit": "page",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 19.1,
+        "qwen3.8:27b-q8_0": 37.0
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 40,
+        "qwen3.8:27b-q8_0": 40
+      }
+    },
+    "kg_extract": {
+      "unit": "chunk",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 24.5,
+        "qwen3.8:27b-q8_0": 62.7
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 6,
+        "qwen3.8:27b-q8_0": 154
+      }
+    },
+    "kg_merge": {
+      "unit": "batch",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 36.8,
+        "qwen3.8:27b-q8_0": 99.6
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 1,
+        "qwen3.8:27b-q8_0": 37
+      }
+    },
+    "kg_drop": {
+      "unit": "batch",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 43.9,
+        "qwen3.8:27b-q8_0": 117.9
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 1,
+        "qwen3.8:27b-q8_0": 39
+      }
+    },
+    "kg_link": {
+      "unit": "domain",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 278.3,
+        "qwen3.8:27b-q8_0": 751.5
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 3,
+        "qwen3.8:27b-q8_0": 34
+      }
+    },
+    "descriptions": {
+      "unit": "concept",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 2.2,
+        "qwen3.8:27b-q8_0": 4.0
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 5,
+        "qwen3.8:27b-q8_0": 618
+      }
+    },
+    "scan": {
+      "unit": "chunk",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 8.8,
+        "qwen3.8:27b-q8_0": 20.3
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 8,
+        "qwen3.8:27b-q8_0": 46
+      }
+    },
+    "bank_batches": {
+      "unit": "batch",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 26.4,
+        "qwen3.8:27b-q8_0": 78.4
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 8,
+        "qwen3.8:27b-q8_0": 47
+      }
+    },
+    "taggability": {
+      "unit": "domain",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 155.8,
+        "qwen3.8:27b-q8_0": 368.3
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 2,
+        "qwen3.8:27b-q8_0": 27
+      }
+    },
+    "tagging": {
+      "unit": "exercise",
+      "seconds": {
+        "qwen3.8:27b-mtp-q8_0": 5.8,
+        "qwen3.8:27b-q8_0": 12.0
+      },
+      "samples": {
+        "qwen3.8:27b-mtp-q8_0": 7,
+        "qwen3.8:27b-q8_0": 616
+      }
+    }
+  }
+}

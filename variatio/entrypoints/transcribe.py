@@ -338,7 +338,9 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
         # NOT "transcribe": `pages.py` already spends that id on the per-page loop nested
         # inside this one, and the client patches the LAST step carrying an id — so the two
         # loops overwrote each other's counter and neither could be drawn.
-        with progress.step(
+        with progress.counter(
+            "transcribe_pages", "Reading the pages", _pages_to_read(ws, slot, sources)
+        ), progress.step(
             "transcribe_documents", "Reading the documents", len(sources)
         ) as reporter:
             for idx, source in enumerate(sources, 1):
@@ -387,6 +389,24 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
 # touches the fingerprint: editing must never make the document look re-transcribable. What
 # they do drop are the SEAM records around the page they moved, which were decided against
 # text that is no longer there.
+
+
+def _pages_to_read(ws: Workspace, slot: str, sources: list[Path]) -> int:
+    """How many PDF pages this run will send to the model: what the time left counts.
+
+    A document not read yet or stale is read whole; an up-to-date one only for the pages that
+    failed or looped. Decks and Word files are not counted: their text costs no model call.
+    """
+    total = 0
+    for source in sources:
+        if source.suffix.lower() != ".pdf":
+            continue
+        status = _document_status(source, ws, slot)
+        if status["state"] == DONE:
+            total += status["retry_pages"]
+        else:
+            total += documents.page_count(source)
+    return total
 
 
 def document_pages_listing(ws: Workspace, slot: str, name: str) -> list[dict]:

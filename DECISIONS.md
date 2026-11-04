@@ -378,9 +378,14 @@ what each decision replaced.
 
 ### D-239. The use phases on Ollama run the MTP variant
 - **Rule:** In the `ollama` profile of `config.json`, the generation (and with it the tutor's and the chat's calls, which follow it when empty), the admissibility and the concept tagging run `qwen3.8:27b-mtp-q8_0`. The build phases, the tutor's criteria (`tutor.models.criteria`) and the repair keep `qwen3.8:27b-q8_0`, which stays the registry's default (D-061).
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `d10ce8e` · **Status:** superseded by D-240
 - **Why:** The user's decision, «for now», after R-D of the prompt tuning report. The same weights with a draft of 4 tokens: decoding 2.1 to 3.2 times faster (a tutor turn 25–30 s → 13 s, a generation 283 s → 115 s), and blind quality 30–17–33 (MTP–base–ties) over generation, tutor and chat; the admissibility and tagging answers are equal in 19/20, 20/20, 40/40 and 29/30. At temperature 0 it does not repeat itself on long outputs (one extraction prompt gave 4 700, 4 827 and 5 229 characters in three draws), and the build needs that; the tutor's criteria are drafted once per subject, like a build. Cost: a reload (8–17 s) when a build job and a use job alternate, since the A40 does not hold both.
 
+
+### D-240. On Ollama, only qwen3.8, with MTP where a build need not repeat itself
+- **Rule:** In the `ollama` profile every text model is a `qwen3.8:27b` variant; no `qwen3.6` model is named. `qwen3.8:27b-mtp-q8_0` runs every phase except the temperature-0 calls with long answers that a build must repeat — `kg_extract`, `eb_extract`, `ep_scan`, `kg_taggable` (sampled at 0 since `53ff103`), `description_generation` — and the tutor's criteria (`tutor.models.criteria`), which keep `qwen3.8:27b-q8_0`. The registry's default stays the base (D-061).
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request: no large models together on the A40 (the `qwen3.6:35b-a3b-q8_0` MoE, 39 GB, does not fit beside a 27b), transcription with MTP, MTP in every build phase where it can go, the use phases unchanged. Measured: MTP transcribes like the base at half the time (40 pages, R-F); at temperature 0 it does not repeat itself on long answers (one extraction prompt gave 4 700, 4 827 and 5 229 characters, and lost three must-have concepts), short answers barely change, and the phases that reason at 0.2 vary between builds anyway (R-D). In the F3 builds the calls kept on the base write 258–780 tokens (median; up to 4 397 at p90), the temperature-0 calls moved to MTP 35–230. Passing from one variant to the other reloads the model (9–10 s), a few times per build; switching MTP off per call (`draft_num_predict 0`, the base's bytes at its speed) reloads as well, so two model names cost the same and need no code.
 ### D-065. Domain naming call without reasoning
 - **Rule:** The call that names the graph's domains (`kg_domains`) runs with reasoning off.
 - **Date:** 2026-08-18 · **Commit:** `1a949c5` · **Status:** in force
@@ -852,8 +857,13 @@ what each decision replaced.
 
 ### D-156. No time estimates
 - **Rule:** No build or job time estimate is shown anywhere, in any form.
-- **Date:** 2026-08-17 · **Commit:** `5bdf914` · **Status:** in force
+- **Date:** 2026-08-17 · **Commit:** `5bdf914` · **Status:** superseded by D-241
 - **Why:** A seconds-per-unit rate is a claim about the models; changing a model tier turned a 55-minute build into a quoted 5 h 33 m.
+
+### D-241. The time left of a running phase, from measured rates only
+- **Rule:** A build shows the time left of its running phase as the units its outermost rated step has still to do times that step's seconds per unit. The seconds come from `rates/<engine>.json` (versioned, at the project root), and `/api/pipeline/phases` publishes a step's rate only while every phase whose model the step calls names the very model it was measured with. No file for the engine, another model, or a step never measured: no time on screen.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request, reversing D-156 knowingly, with the rates kept per engine and per model so that D-156's failure (a model change that turned a 55-minute build into a quoted 5 h 33 m) removes the time instead of falsifying it. The transcription and the bank count their units across documents (`progress.counter`), since a per-document step knows only its own. The ollama file holds the 2026-11 tuning's measures: the 27b base over six subjects' builds, MTP from its decode speed on its own build, the transcription from a 40-page bench.
 
 ### D-157. No «loading model» signal
 - **Rule:** No screen signals that a model is loading.

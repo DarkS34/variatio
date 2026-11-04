@@ -250,6 +250,7 @@ def _read_failed_pages_again(
             reporter.start(done, detail=f"page {number}/{count}")
             page = _transcribe_page(image, number, count, model, tag, prompts)
             pages[number - 1] = tidy_markdown(page) if page.strip() else ""
+            progress.count()
             touched.update((number, number + 1))
             seams = [record for record in seams if record["page"] not in touched]
             write_pages(cache_dir, pages, fingerprint, seams)
@@ -332,6 +333,7 @@ def transcribe_pdf(
             reporter.start(index, detail=f"page {index}/{count}")
             page = _transcribe_page(image, index, count, model, tag, prompts)
             pages.append(page)
+            progress.count()
             if fingerprint:
                 save_partial_page(cache_dir, index, page, fingerprint)
     kept = sum(1 for page in pages if page.strip())

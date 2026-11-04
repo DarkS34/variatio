@@ -151,6 +151,8 @@ const STEP_KEYS: Record<string, Key> = {
   consolidate: "step.consolidate.label",
   extract: "step.extract.label",
   transcribe_documents: "step.transcribe_documents.label",
+  transcribe_pages: "step.transcribe_pages.label",
+  bank_batches: "step.bank_batches.label",
   transcribe_seam: "step.transcribe_seam.label",
   taggability: "step.taggability.label",
   "eval.arms": "step.eval.arms.label",

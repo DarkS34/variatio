@@ -97,7 +97,10 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   quota). The queue card is one list of three moments — waiting (dimmed, hollow mark), running (ink)
   and the last 30 finished (settled; red where it failed), which the admin may clear: clearing
   moves a window (`POST /api/admin/jobs/history/clear`), it never deletes a job. No database card. One save bar for the tab; a part's row counts
-  its unsaved changes; the guardrail and embedder models are read-only. «Configuración» is **one section per stage**, named and
+  its unsaved changes; the guardrail and embedder models are read-only. Every change of which
+  model serves a phase or a function — a phase's select, the offered generation models, the
+  tutor's and the evaluation's — asks first, one dialog per change, before it enters the
+  draft (`useConfirmModelChange`, the user's request of 2026-11-04). «Configuración» is **one section per stage**, named and
   numbered as the bar (`features/admin/stages.ts` reads `lib/steps.ts`): the stage's calls
   down the page, each node with model, reasoning and sampling and its own settings under it;
   then «General de la etapa», «Común a todas las etapas», and folded what it reads of

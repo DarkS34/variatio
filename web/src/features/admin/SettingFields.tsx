@@ -18,6 +18,7 @@ import { settingHint } from "@/features/admin/hints";
 import { EFFORT_LABELS, fixedEffort, type EffortLevel } from "@/consumers/generation/effort";
 import { familyOf } from "@/consumers/generation/models";
 import { useT, type Key, type Translate } from "@/lib/i18n";
+import { useConfirmModelChange } from "@/features/admin/confirmModel";
 import type {
   ConfigImpact,
   ConfigPayload,
@@ -211,6 +212,7 @@ export function ModelSelect({
   const installed = models.installed;
   const known = installed.some((m) => m.model === value);
   const [other, setOther] = useState(() => Boolean(value) && !known);
+  const confirmChange = useConfirmModelChange();
   const residentVram = new Map(models.running.map((m) => [m.model, m.size_vram]));
 
   const describe = (model: InstalledModel) => {
@@ -233,8 +235,15 @@ export function ModelSelect({
         id={id}
         value={selectValue}
         disabled={disabled}
-        onChange={(event) => {
+        onChange={async (event) => {
           const next = event.target.value;
+          const to =
+            next === OTHER
+              ? t("cfg.modelChange.typed")
+              : next === ""
+                ? t(EMPTY_MEANS[setting.key] ?? "cfg.followMain")
+                : next;
+          if (!(await confirmChange(label, value, to))) return;
           if (next === OTHER) {
             setOther(true);
             return;
@@ -400,16 +409,21 @@ export function GenerationModelsField({
   const rows = [...selected, ...rest];
   const known = new Map(installed.map((m) => [m.model, m]));
 
+  const confirmChange = useConfirmModelChange();
+  // Every change of the list, ticking, unticking, promoting or adding, asks first.
+  const change = async (next: string[]) => {
+    if (await confirmChange(label, selected.join(", "), next.join(", "))) onChange(next);
+  };
   const toggle = (model: string, next: boolean) =>
-    onChange(next ? [...selected, model] : selected.filter((name) => name !== model));
-  const promote = (model: string) =>
-    onChange([model, ...selected.filter((name) => name !== model)]);
+    change(next ? [...selected, model] : selected.filter((name) => name !== model));
+  const promote = (model: string) => change([model, ...selected.filter((name) => name !== model)]);
 
   const [typed, setTyped] = useState("");
   const name = typed.trim();
   const addable = name !== "" && !selected.includes(name);
-  const add = () => {
+  const add = async () => {
     if (!addable) return;
+    if (!(await confirmChange(label, selected.join(", "), [...selected, name].join(", ")))) return;
     onChange([...selected, name]);
     setTyped("");
   };

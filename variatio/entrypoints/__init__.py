@@ -22,6 +22,7 @@ the document plumbing the three builders share.
     tag.py           assign graph concepts to bank items
     taggability.py   which concepts of the graph work as labels at all
     generate.py      phase 2: generate variants from a context
+    rates.py         the measured seconds per unit of a construction step, for the time left
 """
 
 from ._artifacts import (
@@ -61,6 +62,7 @@ from .descriptions import (
     save_concept_descriptions,
 )
 from .initialize import RuntimeContext, initialize
+from .rates import step_rates
 from .tag import save_bank, tag_bank
 from .taggability import TAGGABILITY_PHASES, review_taggability
 from .transcribe import (
@@ -117,6 +119,7 @@ __all__ = [
     "review_taggability",
     "save_bank",
     "save_concept_descriptions",
+    "step_rates",
     "tag_bank",
     "transcribe_slot",
     "transcription_status",

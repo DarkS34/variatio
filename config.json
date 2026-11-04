@@ -1,6 +1,6 @@
 {
   "engine": {
-    "name": "cerebras+ollama",
+    "name": "ollama",
     "cerebras_base_url": "https://api.cerebras.ai/v1",
     "cerebras_models": [
       "qwen-3.8-27b"
@@ -119,6 +119,7 @@
     "instructions_max_chars": 600,
     "content_context_max_chars": 900,
     "guardrail_criteria": [
+      "harm",
       "jailbreak"
     ]
   },
@@ -165,6 +166,12 @@
     "criteria_solutions": 6,
     "digest_max_messages": 40,
     "digest_max_concepts": 15
+  },
+  "chat": {
+    "message_max_chars": 12000,
+    "daily_messages": null,
+    "history_turns": 8,
+    "reply_max_tokens": 2048
   },
   "profiles": {
     "cerebras+ollama": {
@@ -247,25 +254,25 @@
         "guardrail": "granite4.1-guardian:8b-q4_K_M",
         "embedding": "qwen3-embedding:4b",
         "phases": {
-          "transcribe": "qwen3.6:35b-a3b-q8_0",
-          "transcribe_seam": "qwen3.8:27b-q8_0",
+          "transcribe": "qwen3.8:27b-mtp-q8_0",
+          "transcribe_seam": "qwen3.8:27b-mtp-q8_0",
           "ep_scan": "qwen3.8:27b-q8_0",
-          "ep_consolidate": "qwen3.8:27b-q8_0",
-          "ep_context": "qwen3.8:27b-q8_0",
-          "eb_extract": "qwen3.6:35b-a3b-q8_0",
-          "kg_extract": "qwen3.6:35b-a3b-q8_0",
-          "kg_clean_merge": "qwen3.8:27b-q8_0",
-          "kg_clean_drop": "qwen3.8:27b-q8_0",
-          "kg_units": "qwen3.8:27b-q8_0",
-          "kg_domains": "qwen3.8:27b-q8_0",
-          "kg_domains_leftovers": "qwen3.8:27b-q8_0",
-          "kg_link_domain": "qwen3.8:27b-q8_0",
-          "kg_link_cross_domain": "qwen3.8:27b-q8_0",
+          "ep_consolidate": "qwen3.8:27b-mtp-q8_0",
+          "ep_context": "qwen3.8:27b-mtp-q8_0",
+          "eb_extract": "qwen3.8:27b-q8_0",
+          "kg_extract": "qwen3.8:27b-q8_0",
+          "kg_clean_merge": "qwen3.8:27b-mtp-q8_0",
+          "kg_clean_drop": "qwen3.8:27b-mtp-q8_0",
+          "kg_units": "qwen3.8:27b-mtp-q8_0",
+          "kg_domains": "qwen3.8:27b-mtp-q8_0",
+          "kg_domains_leftovers": "qwen3.8:27b-mtp-q8_0",
+          "kg_link_domain": "qwen3.8:27b-mtp-q8_0",
+          "kg_link_cross_domain": "qwen3.8:27b-mtp-q8_0",
           "kg_taggable": "qwen3.8:27b-q8_0",
-          "kg_context": "qwen3.8:27b-q8_0",
+          "kg_context": "qwen3.8:27b-mtp-q8_0",
           "description_generation": "qwen3.8:27b-q8_0",
           "concept_tagger": "qwen3.8:27b-mtp-q8_0",
-          "repair": "qwen3.8:27b-q8_0",
+          "repair": "qwen3.8:27b-mtp-q8_0",
           "admissibility": "qwen3.8:27b-mtp-q8_0"
         }
       },

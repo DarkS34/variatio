@@ -71,10 +71,18 @@ export interface BuildPhase {
   weight: number;
 }
 
+/** The measured seconds one unit of a step takes on today's engine and models (D-241). */
+export interface StepRate {
+  unit: string | null;
+  seconds: number;
+}
+
 export interface BuildPlans {
   artifacts: Record<ArtifactName, BuildPhase[]>;
   /** Plans of jobs that write no artifact and still have phases. */
   jobs: Partial<Record<JobKind, BuildPhase[]>>;
+  /** Only the steps measured with this engine and the models configured now; absent, none. */
+  rates?: Record<string, StepRate>;
 }
 
 /**

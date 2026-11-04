@@ -32,8 +32,9 @@ del proyecto nombra una de estas tres:
 _RESIDENT_MODELS_DOC = """UN SOLO modelo generativo por trabajo: los tres niveles antiguos no cabían juntos en la A40
 (~45 GiB) y se desalojaban entre sí. Lo que queda residente son tres modelos que SÍ caben a
 la vez — medidos en 29.05 GiB de ~45 con las ventanas de abajo: este, el guardarraíl y el
-embebedor. Esa aritmética ya no describe los perfiles que se envían, donde las fases que
-leen documentos nombran un MoE de 34.88 GiB: vuelve a medir `/api/ps` antes de citarla.
+embebedor. En el perfil `ollama` hay dos variantes del 27b, la base y la MTP (D-240): las dos
+caben de una en una, nunca juntas, y pasar de una a otra recarga el modelo (8–17 s). Vuelve a
+medir `/api/ps` antes de citar la aritmética.
 
 Medición vigente frente a un MoE de clase 30B, sobre la misma llamada de curación
 (43 conceptos, 5 441 caracteres, temperatura 0, A40):
@@ -56,8 +57,8 @@ Tres cosas que leer ahí antes de tocar nada:
    etiquetabilidad, un MoE excluye de MENOS (66 frente a 75 sobre 73 no etiquetables), que
    es la dirección contra la que legisla `review_taggable_concepts_prompt`.
 
-La `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres, y
-por eso el MoE de transcripción es la q8_0 y no la q4."""
+La `qwen3.6:35b-a3b-q4_K_M` sigue rota en esta máquina por encima de ~4 490 caracteres. El
+MoE ya no figura en ningún perfil (D-240): no cabe junto al 27b en la A40."""
 
 _CONTEXT_WINDOW_DOC = """Son lo que hace que los tres modelos convivan, así que no son libres de crecer: medido en la
 A40 a través de `/api/ps`, el modelo de juicio a 65536 + guardarraíl + embebedor suman
@@ -77,9 +78,9 @@ _CONTEXT_WINDOW_OVERRIDES_DOC = """La ventana de todo modelo de fase que no sea 
 dimensiona la caché KV a partir del Modelfile, lo que para `qwen3.6:35b-a3b-q8_0` (34.88 GiB
 solo de pesos) es la diferencia entre caber junto al embebedor y no caber.
 
-Un único valor y no uno por fase: el MoE está en las fases que leen documentos y el modelo
-de juicio en las demás, y los dos nunca necesitan estar residentes a la vez — una
-construcción carga el MoE una vez y el 27b vuelve en la siguiente generación.
+Un único valor y no uno por fase: las fases nombran el 27b base o su variante MTP (D-240), y
+las dos nunca necesitan estar residentes a la vez — una construcción pasa de una a otra
+pocas veces, y cada paso recarga el modelo.
 
 65536 por la misma regla de arriba (prompt más deliberación allí donde una fase razona), y
 porque bajarla trunca en silencio."""
@@ -97,10 +98,13 @@ copia carácter a carácter de `transcribe_page_prompt`, gemma4:31b reescribió 
 `x = x + 1` — lo que invierte la respuesta de la pregunta que estaba transcribiendo.
 Debilitar esa instrucción reintroduce en silencio código corrupto en el banco.
 
-Que el modelo de este puesto transcriba con la misma fidelidad que el medido NO está
-comprobado. Es lo más barato de volver a comprobar de todo el pipeline (una página) y lo
-más dañino si se falla: una transcripción corrupta aterriza en el banco como un ejercicio
-cuya respuesta ha cambiado, y en el grafo como un concepto que el temario nunca enseñó."""
+Medido en 2026-11 sobre 40 páginas de ocho asignaturas: `qwen3.8:27b-mtp-q8_0` copia lo
+mismo que el 27b base (similitud 0,995, 17 de 19 bloques de código iguales, las 33 marcas)
+en la mitad de tiempo; un 9b y un 4b corrigieron código del original, y los modelos de OCR
+perdieron las marcas y los bloques. Otro modelo en este puesto NO está comprobado. Es lo
+más barato de volver a comprobar de todo el pipeline (una página) y lo más dañino si se
+falla: una transcripción corrupta aterriza en el banco como un ejercicio cuya respuesta ha
+cambiado, y en el grafo como un concepto que el temario nunca enseñó."""
 
 _TRANSCRIBE_SEAM_DOC = """La costura entre dos páginas transcritas por separado: el modelo CLASIFICA cómo se pegan
 —`none`/`space`/`newline`/`paragraph`— y cuántas líneas iniciales de la segunda son

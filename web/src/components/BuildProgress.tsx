@@ -5,12 +5,12 @@ import { RunTimeline } from "@/components/RunTimeline";
 import { Card, CardContent } from "@/components/ui/card";
 import { PhaseBar, Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
-import { duration } from "@/lib/format";
-import { isRebuild, stepPercent } from "@/lib/progress";
+import { duration, roughDuration } from "@/lib/format";
+import { isRebuild, stepPercent, timeLeft } from "@/lib/progress";
 import type { ArtifactName, BuildPhase } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { RunView } from "@/state/runStore";
-import { useArtifactRun, useBuildPhases, useElapsed } from "@/state/queries";
+import { useArtifactRun, useBuildPhases, useElapsed, useStepRates } from "@/state/queries";
 import { useT } from "@/lib/i18n";
 import { jobName, phaseName, phasePlan, stepName } from "@/lib/names";
 import { CancelButton } from "./CancelButton";
@@ -24,9 +24,11 @@ import { CancelButton } from "./CancelButton";
  * weighted plan and not from the running step, because steps nest and none of them knows
  * the size of the whole.
  *
- * What is deliberately NOT here is a countdown. It was, and it was a lie waiting to
- * happen: the seconds behind it were measured against one set of models, and this
- * instance's models are a config line away from being different ones.
+ * The time left of the running phase sits beside the percentage only where it can be true
+ * (D-241, replacing D-156): seconds per unit measured with this engine and these very models,
+ * published by the server only while both match. A countdown measured against one set of
+ * models was a lie waiting to happen once the config named different ones; now a changed
+ * model takes the time off the screen instead.
  */
 export function BuildProgress({
   artifact,
@@ -110,6 +112,7 @@ export function JobProgress({
   const status = run?.job?.status;
   const active = status === "running" || status === "queued";
   const elapsed = useElapsed(run?.job?.started_at ?? null, active);
+  const rates = useStepRates();
 
   if (!run || !run.job) {
     return (
@@ -132,6 +135,7 @@ export function JobProgress({
   // `build.progress` yet keeps saying "—": taking the step's number there would print a
   // percentage beside a segmented bar still drawn at zero, and the two would disagree.
   const percent = overall?.percent ?? (phases.length === 0 ? stepPercent(step) : null);
+  const left = active ? timeLeft(run.steps, rates) : null;
   // The running phase, or the running step when there is no plan. Both arrive with the
   // API's own sentence and are named here; a phase key only means something inside its
   // plan, which is the artifact a build writes or, for a job that writes none, its kind.
@@ -187,8 +191,15 @@ export function JobProgress({
               ) : null}
               {running}
             </p>
-            <span className="shrink-0 text-body font-medium nums">
-              {percent === null ? "—" : `${percent} %`}
+            <span className="flex shrink-0 items-baseline gap-2">
+              {left !== null ? (
+                <span className="text-small nums text-muted-foreground" title={t("progress.leftHint")}>
+                  {t("progress.left", { time: roughDuration(left) })}
+                </span>
+              ) : null}
+              <span className="text-body font-medium nums">
+                {percent === null ? "—" : `${percent} %`}
+              </span>
             </span>
           </div>
 

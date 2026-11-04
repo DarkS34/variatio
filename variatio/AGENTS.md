@@ -290,7 +290,11 @@ Mechanism, not policy: return data, raise `MissingArtifactError`, never print, n
 never auto-trigger heavier phases, and never import the engine. `_artifacts.py`,
 `transcribe.py`, `build.py` (profile before bank), `initialize.py` (loads artifacts, builds
 embedder, tags only pending items when `tag=True` — tagging BEFORE enrichment is the warm
-start; initialize once per process), `descriptions.py`, `taggability.py`, `generate.py`.
+start; initialize once per process), `descriptions.py`, `taggability.py`, `generate.py`,
+`rates.py` (D-241: a step's seconds per unit from `rates/<engine>.json`, only while the
+step's phases name the model it was measured with; `STEP_PHASES` says which phases a step
+calls). A step whose units span loops of their own — the slot's pages, the bank's batches —
+is a `progress.counter`, advanced by `progress.count()` from the nested work.
 
 ## Runtime components (`variatio/runtime/`)
 
@@ -431,8 +435,9 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-060 — No main model; every phase names its own.
 - D-061…D-064 — Judging/generating default `qwen3.8:27b-q8_0`, reasoning default `low`; `max`
   is `high` on that model; `qwen3.6:35b-a3b-q4_K_M` is broken — never re-add.
-- D-239 — On Ollama the use phases (generation, tutor, chat, admissibility, tagging) run
-  `qwen3.8:27b-mtp-q8_0`; the build, the tutor's criteria and the repair keep the base.
+- D-240 — On Ollama only `qwen3.8:27b`: the MTP variant everywhere but `kg_extract`,
+  `eb_extract`, `ep_scan`, `kg_taggable`, `description_generation` and the tutor's criteria,
+  which keep the base (temperature 0, long answers a build repeats). No `qwen3.6` model.
 - D-065, D-066 — The domains naming call runs without reasoning; the phase context window is
   65536.
 - D-067 — Embedding model fixed at `qwen3-embedding:4b`.

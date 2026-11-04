@@ -14,6 +14,8 @@ import type {
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
 
+import { useConfirmModelChange } from "./confirmModel";
+
 const FIXED_LABELS: Record<ReasoningFixed, Key> = {
   grammar: "pipe.fixed.grammar",
   commission: "pipe.fixed.commission",
@@ -205,6 +207,7 @@ function NodeModel({
   const installed = models?.installed ?? [];
   const known = installed.some((m) => m.model === value);
   const [other, setOther] = useState(() => Boolean(value) && !known);
+  const confirmChange = useConfirmModelChange();
   const residentVram = new Map((models?.running ?? []).map((m) => [m.model, m.size_vram]));
   const lockedByEnv = setting.source === "env";
   const disabled = !setting.editable || lockedByEnv;
@@ -235,8 +238,10 @@ function NodeModel({
         title={title}
         value={other ? OTHER : value ?? ""}
         disabled={disabled}
-        onChange={(event) => {
+        onChange={async (event) => {
           const next = event.target.value;
+          const to = next === OTHER ? t("cfg.modelChange.typed") : next;
+          if (!(await confirmChange(callName(phase, t), value, to))) return;
           if (next === OTHER) {
             setOther(true);
             return;

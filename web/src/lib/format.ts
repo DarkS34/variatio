@@ -13,6 +13,15 @@ export function duration(ms: number | null | undefined): string {
   return `${hours} h ${(minutes % 60).toString().padStart(2, "0")} min`;
 }
 
+/** A time left, rounded the way an estimate deserves: whole minutes, never seconds. */
+export function roughDuration(seconds: number): string {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} h ${rest.toString().padStart(2, "0")} min` : `${hours} h`;
+}
+
 export function bytes(value: number): string {
   if (value < 1024) return `${value} B`;
   const kb = value / 1024;

@@ -296,7 +296,8 @@ Archivo only. Six steps, every line a whole number of pixels:
   read only by `src/consumers/evaluation/` or `src/consumers/tutor/` lives in that folder's catalogue.
 - Vocabulary for teachers: «asignatura», «Temario», «Tipos de ejercicio», «Banco de
   ejercicios», «ejercicio(s) generado(s)». The app never speaks of itself in the first person.
-- No time estimates anywhere. A queued job is not a running one.
+- No time estimate but the time left of a running phase, and only where its rate was measured
+  with this engine and these models (D-241). A queued job is not a running one.
 - Fold, never drop; never fold the only copy of something.
 
 ## 11. Where each primitive lives

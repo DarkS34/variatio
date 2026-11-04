@@ -7,7 +7,14 @@ import { api, getScope } from "@/lib/api";
 import { useT, type Key } from "@/lib/i18n";
 import { phaseName } from "@/lib/names";
 import { isSplitEngine, readLanes } from "@/lib/queue";
-import type { ArtifactName, BuildPhase, CommissionScope, JobKind, Lanes } from "@/lib/types";
+import type {
+  ArtifactName,
+  BuildPhase,
+  BuildPlans,
+  CommissionScope,
+  JobKind,
+  Lanes,
+} from "@/lib/types";
 import { useHasWorkspace } from "../auth";
 import { useHealth } from "./core";
 import { keys, scoped, stageReviewKeys } from "./keys";
@@ -68,6 +75,11 @@ function namedPhases(
 ): BuildPhase[] {
   if (!phases) return [];
   return phases.map((phase) => ({ ...phase, label: phaseName(plan, phase.key, t, phase.label) }));
+}
+
+/** The measured seconds per unit of the steps this engine and its models were timed on. */
+export function useStepRates(): BuildPlans["rates"] {
+  return useBuildPlans().data?.rates;
 }
 
 /** The phases of one build, in order. Empty until the plan has arrived, which is what

@@ -107,7 +107,9 @@ this section explains; when the two disagree, fix both in the same change.
 - One `--attention` per screen, on the thing to act on. A control and a report never share a
   line. Fold, never drop, and never fold the only copy of something. An (i) and visible text
   never say the same thing.
-- No build time estimates anywhere, in any form.
+- A build shows the time left of its running phase only from measured rates (D-241): the
+  outermost running step with a rate in `/api/pipeline/phases`, times its units to do
+  (`lib/progress.timeLeft`). No rate, no time: never a guess, never a countdown of the whole.
 
 ## Specific screens
 
@@ -265,8 +267,10 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   the title on every step; no «Aprobar»/«Reabrir»; no rebuild except for document drift;
   after the last step «Continuar» is «Generar ejercicios». The bank's collection closes the
   bank itself.
-- D-155…D-159 — A queued job is not a running one. No time estimates, no «loading model»
-  signal, no log on screen, no run drawer.
+- D-155, D-157…D-159 — A queued job is not a running one. No «loading model» signal, no log
+  on screen, no run drawer.
+- D-241 — The time left of the running phase, only from rates measured with this engine and
+  these models; none otherwise (it replaced D-156, «no time estimates»).
 - D-160…D-164 — The generate screen belongs to the visit; its «Mis ejercicios» tab lists the
   subject in use; switching tabs keeps the run. Live feed of ten rows. Zero total ≠ unknown
   total. KaTeX for formulas.
