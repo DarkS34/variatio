@@ -264,14 +264,14 @@
           "kg_taggable": "qwen3.8:27b-q8_0",
           "kg_context": "qwen3.8:27b-q8_0",
           "description_generation": "qwen3.8:27b-q8_0",
-          "concept_tagger": "qwen3.8:27b-q8_0",
+          "concept_tagger": "qwen3.8:27b-mtp-q8_0",
           "repair": "qwen3.8:27b-q8_0",
-          "admissibility": "qwen3.8:27b-q8_0"
+          "admissibility": "qwen3.8:27b-mtp-q8_0"
         }
       },
       "generation": {
         "models": [
-          "qwen3.8:27b-q8_0"
+          "qwen3.8:27b-mtp-q8_0"
         ]
       },
       "context_window": {
@@ -301,6 +301,9 @@
         }
       },
       "tutor": {
+        "models": {
+          "criteria": "qwen3.8:27b-q8_0"
+        },
         "reasoning": {
           "reply": true
         }

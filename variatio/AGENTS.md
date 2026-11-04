@@ -431,6 +431,8 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-060 — No main model; every phase names its own.
 - D-061…D-064 — Judging/generating default `qwen3.8:27b-q8_0`, reasoning default `low`; `max`
   is `high` on that model; `qwen3.6:35b-a3b-q4_K_M` is broken — never re-add.
+- D-239 — On Ollama the use phases (generation, tutor, chat, admissibility, tagging) run
+  `qwen3.8:27b-mtp-q8_0`; the build, the tutor's criteria and the repair keep the base.
 - D-065, D-066 — The domains naming call runs without reasoning; the phase context window is
   65536.
 - D-067 — Embedding model fixed at `qwen3-embedding:4b`.
