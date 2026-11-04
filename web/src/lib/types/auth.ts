@@ -107,6 +107,10 @@ export type GatedName = FeatureName | "generate" | "chat";
 /** The two functions, in the order of their doors. */
 export const FEATURE_NAMES: readonly FeatureName[] = ["evaluation", "tutor"];
 
+/** Every function the administrator sets a mode for, in the order of the bar's doors
+ *  (`features.GATED`): what an invitation may list its holder for since 2026-11-04. */
+export const GATED_NAMES: readonly GatedName[] = ["generate", "evaluation", "tutor", "chat"];
+
 /** Who a function is for: nobody, every account, or the accounts on its list. */
 export type FeatureMode = "off" | "all" | "selected";
 

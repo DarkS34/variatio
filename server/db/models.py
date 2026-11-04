@@ -221,6 +221,8 @@ class User(Base):
     looks up the membership whatever it says, so a stale pointer costs a 403 and not a
     read of somebody else's instance. It sits on the account rather than on the session
     so it survives a login, while the `X-Workspace` header keeps two tabs independent.
+    `features_off` is read for an administrator alone: the functions they switched off for
+    their own account (D-245), since an administrator otherwise uses every one.
     """
 
     __tablename__ = "users"
@@ -233,6 +235,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(Text)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    features_off: Mapped[list] = mapped_column(Json, default=list, server_default="[]")
     evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
     ui_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
     email_verified_at: Mapped[datetime | None] = mapped_column(

@@ -70,15 +70,18 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   list of accounts), set in «Administración → Funciones» (`GET /api/admin/features`,
   `PUT /api/admin/features/{feature}`; the list is replaced only when `accounts` is sent and
   survives a change of mode). **The evaluation and the tutor are the optional functions**
-  (`FEATURES`): with no row they are off, and an invitation may list its holder for them.
+  (`FEATURES`): with no row they are off. An invitation may list its holder for any function
+  of `GATED` (D-246).
   Generating and the chat (D-233, 2026-10-19) are open to every account with no row, so an
   upgrading installation keeps them; the jobs route reads generating's mode, `auth.CHAT` the
   chat's.
   `auth.EVALUATION` and `auth.TUTOR` sit beside `auth.VIEW` on the routers of
   `/api/evaluation`, `/api/stage-evaluations` and `/api/tutor`, and `catalogue.FEATURE_OF`
-  closes `POST /api/jobs` for an `evaluate` job. **An administrator uses every function**
-  (D-242, 2026-11-04): `features.refusal` and `features.enabled` answer open for one whatever
-  the mode, the lists and a subject's switches. The admin's read routes are not behind it. A refusal is a 403 with
+  closes `POST /api/jobs` for an `evaluate` job. **An administrator uses every function but
+  the ones they switch off for themselves** (D-245, 2026-11-04): `features.refusal` and
+  `features.enabled` answer open for one whatever the mode, the lists and a subject's
+  switches, unless the function is in their `users.features_off` (`switch_own`,
+  `PUT /api/admin/features/{feature}/mine`; `GET /api/admin/features` answers `mine`). The admin's read routes are not behind it. A refusal is a 403 with
   `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its
   holder (`invites.features`), applied at registration. `GET /api/health` leaves out the
   models only a switched-off function names. **The tutor may list whole subjects too**
@@ -139,8 +142,10 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-123, D-124, D-125 — The evaluation and the tutor are switched by the administrator for
   nobody, everybody or a list of accounts (the tutor also of subjects); both start off; the
   tutor's daily limit is the account's.
-- D-242 — The administrator uses every function, whatever its mode (supersedes the
-  administrator's clause of D-123 and D-233).
+- D-245 — The administrator uses every function, whatever its mode, but the ones they switch
+  off for their own account (supersedes D-242 and the administrator's clause of D-123 and
+  D-233).
+- D-246 — An invitation lists its holder for any function, generating and the chat included.
 - D-243 — The registration asks for the name: `queries.username_from_name` makes the
   username (first name, a dot, the next word; the first free number after a taken one).
 - D-233 — Generating and the chat are switched the same way (also by subjects), and start

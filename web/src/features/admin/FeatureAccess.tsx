@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LoadError } from "@/components/ui/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { PersonName } from "@/components/ui/person";
 import { useRadioGroup } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
@@ -29,7 +30,7 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/state/auth";
-import { useAdminFeatures, useSetFeature } from "@/state/queries";
+import { useAdminFeatures, useSetFeature, useSwitchMine } from "@/state/queries";
 
 const MODES: { mode: FeatureMode; labelKey: Key }[] = [
   { mode: "off", labelKey: "feature.mode.off" },
@@ -69,8 +70,10 @@ export function useAccessDrafts(): AccessDrafts {
  * switching back finds them as they were. Only a list that changed is sent, because a write
  * without one leaves the server's as it is.
  *
- * The administrator uses every function whatever this says (D-242, `server/auth/features.py`):
- * an administrator's row is ticked and locked, with a badge «Siempre», and one line says so.
+ * An administrator uses every function whatever this says, but the ones they switch off for
+ * their own account (D-245, `server/auth/features.py`): a block of its own under the draft,
+ * «Tu cuenta», is that switch, saved at once. An administrator's row in the list is locked,
+ * ticked while they use the function, with a badge that says which.
  *
  * A class is ticked at once: under «Cuentas elegidas» a subject is chosen and every account
  * in it now (`accountsIn`, teachers included, paused memberships left out) is ticked, or
@@ -375,9 +378,15 @@ export function FeatureAccess({
               >
                 {rows.map((account) => {
                   const through = covered.get(account.id);
-                  const reason = account.is_admin ? t("feature.always") : through ? coverReason(through) : null;
-                  // A chosen subject gives it the function, and an administrator always has it
-                  // (D-242): ticked, and not to be unticked here.
+                  // An administrator uses it unless they switched it off for themselves
+                  // (D-245): their row says which, and this list does not change it.
+                  const adminUses = account.is_admin && !(account.features_off ?? []).includes(feature);
+                  const reason = account.is_admin
+                    ? t(adminUses ? "feature.admin.uses" : "feature.admin.off")
+                    : through
+                      ? coverReason(through)
+                      : null;
+                  // A chosen subject gives it the function: ticked, and not to be unticked here.
                   const locked = account.is_admin || (!!through && !ticked.has(account.id));
                   return (
                     <li key={account.id}>
@@ -389,7 +398,7 @@ export function FeatureAccess({
                         )}
                       >
                         <Checkbox
-                          checked={ticked.has(account.id) || locked}
+                          checked={account.is_admin ? adminUses : ticked.has(account.id) || locked}
                           disabled={!selecting || locked || write.isPending}
                           onCheckedChange={(on) => tick(account.id, on)}
                           label={reason ? `${account.username} · ${reason}` : account.username}
@@ -408,8 +417,8 @@ export function FeatureAccess({
                               {account.disabled ? (
                                 <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
                               ) : null}
-                              {account.is_admin ? (
-                                <Badge variant="function">{t("feature.always")}</Badge>
+                              {account.is_admin && reason ? (
+                                <Badge variant={adminUses ? "function" : "outline"}>{reason}</Badge>
                               ) : through && reason ? (
                                 // A subject's name is long, and on a phone it ate the person's:
                                 // with no basis of its own the badge takes only the room the
@@ -448,7 +457,44 @@ export function FeatureAccess({
           {t("feature.save")}
         </Button>
       </section>
+
+      <OwnSwitch feature={feature} name={name} on={query.data?.mine?.[feature] ?? true} />
     </>
+  );
+}
+
+/**
+ * «Tu cuenta»: whether the administrator looking uses this function, whatever the block above
+ * says (D-245). A block of its own because it is another question, about one account, and it
+ * saves at once: the block above is a draft for everybody.
+ */
+function OwnSwitch({ feature, name, on }: { feature: GatedName; name: string; on: boolean }) {
+  const { t } = useT();
+  const toast = useToast();
+  const write = useSwitchMine();
+  return (
+    <section className="surface space-y-4 p-5">
+      <div className="space-y-1">
+        <h3 className="text-heading">{t("feature.mine.title")}</h3>
+        <p className="text-small text-muted-foreground">{t("feature.mine.lead")}</p>
+      </div>
+      <Switch
+        checked={on}
+        disabled={write.isPending}
+        onCheckedChange={(next) =>
+          write.mutate(
+            { feature, on: next },
+            {
+              onSuccess: () =>
+                toast({ title: t(next ? "feature.mine.opened" : "feature.mine.closed", { name }) }),
+            },
+          )
+        }
+      >
+        {t("feature.mine.switch", { name })}
+      </Switch>
+      <FormError error={write.error} />
+    </section>
   );
 }
 

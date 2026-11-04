@@ -757,11 +757,11 @@ def _profile_of(invite: Invite) -> str:
 
 
 def _apply_features(session: DbSession, invite: Invite, user: User) -> None:
-    """List the new account for the optional functions its invitation named.
+    """List the new account for the functions its invitation named, any of `features.GATED`.
 
     A name this installation no longer knows is skipped: an invitation outlives the code
     that minted it.
     """
     for feature in invite.features or []:
-        if feature in features.FEATURES:
+        if feature in features.GATED:
             features.list_account(session, feature, user.id)

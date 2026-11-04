@@ -195,8 +195,8 @@ export function useAdminFeatures() {
 /**
  * Set who one optional function is for; `accounts` absent keeps its list as it is.
  *
- * The session is refreshed too: the change may open or close a door in the bar of an account
- * this tab shows, even though an administrator's own doors stay open (D-242).
+ * The session is refreshed too: an administrator's own doors do not follow the mode (D-245),
+ * but an older API's did, and a refetch costs one request.
  */
 export function useSetFeature() {
   const client = useQueryClient();
@@ -223,6 +223,25 @@ export function useSetFeature() {
       client.setQueryData(keys.adminFeatures, payload);
       client.invalidateQueries({ queryKey: keys.adminFeatures });
       client.invalidateQueries({ queryKey: authKeys.me });
+    },
+  });
+}
+
+/**
+ * Switch one function on or off for the administrator's own account (D-245).
+ *
+ * Saved at once, with no draft: it changes one account, the one looking. The session is
+ * refetched, since the door in this tab's bar opens or closes with it, and the accounts, whose
+ * administrator rows say which they use.
+ */
+export function useSwitchMine() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ feature, on }: { feature: GatedName; on: boolean }) => api.adminSwitchMine(feature, on),
+    onSuccess: (payload) => {
+      client.setQueryData(keys.adminFeatures, payload);
+      client.invalidateQueries({ queryKey: authKeys.me });
+      client.invalidateQueries({ queryKey: keys.adminOverview });
     },
   });
 }

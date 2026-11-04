@@ -42,8 +42,9 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
   marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
   under another mode because the server keeps the list; one sentence states the SAVED state,
-  an administrator's row is ticked and locked with a badge «Siempre» and one line says why
-  (D-242: an administrator uses every function), and another, for all but the evaluation,
+  an administrator's row is locked, ticked while they use the function, with a badge that
+  says which, and one line says why (D-245: an administrator uses every function but the ones
+  they switch off for their account, in a block «Tu cuenta» under the draft, saved at once), and another, for all but the evaluation,
   that a subject's teachers decide for its students after it; «Por asignatura» ticks or unticks at once
   every account in a subject now, `accounts.accountsIn`, paused memberships left out). **What a
   chosen subject covers is drawn in the accounts** (user's request, 2026-10-19: ticking a
@@ -59,8 +60,8 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   another stage opens it where it lives — «Configuración», or the door in «Funciones»:
   `AdminScreen` owns the tab, the open stage and the ONE draft of the stages' settings
   (`useStagesDraft`), so a change left pending follows the link and any save bar saves it. An invitation's form (new, recovered, edited) ticks the functions whose list its
-  holder joins at registration («Funciones»), and each row shows them as badges in the
-  functions' tones. The form opens on «Perfil de la cuenta» — «Docente» / «Alumno», a radio
+  holder joins at registration («Funciones»; all four since 2026-11-04, D-246, each with its
+  figure and the mode it is in now), and each row shows them as badges in the functions' colour. The form opens on «Perfil de la cuenta» — «Docente» / «Alumno», a radio
   group with NEITHER marked, the button waiting until one is — and each row shows the profile
   as a badge. «Cuentas» has one section per kind of account, then «Invitaciones», then, ruled off,
   «Acceso» (`AccessSection`: the school networks, a draft saved with «Guardar los cambios»,

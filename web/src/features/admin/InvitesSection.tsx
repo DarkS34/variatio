@@ -55,17 +55,20 @@ import {
 } from "@/lib/invites";
 import { doorOf, featureLabelKey } from "@/lib/steps";
 import {
-  FEATURE_NAMES,
+  GATED_NAMES,
+  featureAccessOf,
   type AdminOverview,
   type InviteImportOutcome,
   type InviteRow,
   type InviteState,
   type MintedInvite,
+  type FeatureMode,
   type Role,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS } from "@/state/auth";
 import {
+  useAdminFeatures,
   useAdminInvites,
   useCreateInvites,
   useEditInvite,
@@ -76,6 +79,13 @@ import {
 
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
+
+/** The mode a function is in now, as the invitation's form names it beside the function. */
+const MODE_KEYS: Record<FeatureMode, Key> = {
+  off: "feature.mode.off",
+  all: "feature.mode.all",
+  selected: "feature.mode.selected",
+};
 
 const PRESET_KEYS: Record<ExpiryPreset, Key> = {
   day: "acc.invite.preset.day",
@@ -361,6 +371,7 @@ function TermsFields({
   const moment = fromLocalInput(draft.expires);
   const ahead = isAhead(draft.expires);
   const profiles = useRadioGroup(PROFILES, draft.profile, (profile) => set({ profile }));
+  const access = useAdminFeatures();
 
   return (
     <div className="space-y-3">
@@ -492,9 +503,12 @@ function TermsFields({
         <legend className="text-micro font-condensed uppercase text-muted-foreground">
           {t("acc.invite.features")}
         </legend>
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-          {FEATURE_NAMES.map((feature) => {
+        {/* Every function since 2026-11-04, generating and the chat included, each with the
+            mode it is in now: a tick only counts under «Cuentas elegidas». */}
+        <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+          {GATED_NAMES.map((feature) => {
             const name = t(featureLabelKey(feature));
+            const mode = access.data ? featureAccessOf(access.data, feature).mode : null;
             return (
               // A label around the box: the function's name ticks it too.
               <label key={feature} className="flex cursor-pointer items-center gap-2 text-body">
@@ -503,7 +517,15 @@ function TermsFields({
                   onCheckedChange={(on) => onChange(withFeature(draft, feature, on))}
                   label={name}
                 />
-                {name}
+                <FunctionMark door={doorOf(feature).key} />
+                <span className="min-w-0">
+                  <span className="block truncate">{name}</span>
+                  {mode ? (
+                    <span className="block text-small text-muted-foreground">
+                      {t("acc.invite.featureMode", { mode: t(MODE_KEYS[mode]) })}
+                    </span>
+                  ) : null}
+                </span>
               </label>
             );
           })}

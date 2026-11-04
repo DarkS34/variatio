@@ -254,6 +254,7 @@ describe("inviteFeatures", () => {
   it("keeps the known functions, in door order", () => {
     expect(inviteFeatures({ features: ["tutor", "evaluation"] })).toEqual(["evaluation", "tutor"]);
     expect(inviteFeatures({ features: ["tutor", "nonsense"] })).toEqual(["tutor"]);
+    expect(inviteFeatures({ features: ["chat", "tutor", "generate"] })).toEqual(["generate", "tutor", "chat"]);
   });
 
   it("reads nothing from an older API or a malformed answer", () => {

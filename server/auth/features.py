@@ -11,10 +11,12 @@ NOT A MEMBERSHIP, AND CHECKED BESIDE ONE. `auth.VIEW` still decides whether an a
 enter the workspace a request names; `auth.EVALUATION`, `auth.TUTOR` and `auth.CHAT`, and the
 jobs route for generating, decide whether the function exists for that account at all.
 
-THE ADMINISTRATOR USES EVERY FUNCTION, ALWAYS (D-242, the user's request of 2026-11-04): whatever
-the mode, the lists and a subject's or a group's switches. Until then the administrator listed
-their own account like anybody's (D-123, D-233), and an installation's administrator met a
-door closed in the one place they set. The administrator's own READ routes (`/api/admin/...`) are not behind this, so what a function
+AN ADMINISTRATOR USES EVERY FUNCTION BUT THE ONES THEY SWITCH OFF (D-245, the user's requests of
+2026-11-04): whatever the mode, the lists and a subject's or a group's switches, an
+administrator's account opens a function unless it is in their own `users.features_off`
+(`switch_own`). Each administrator decides for their account alone. Until D-242 the
+administrator listed their own account like anybody's (D-123, D-233), and met a door closed in
+the one place they set; D-242 gave them every function with no way to put one away. The administrator's own READ routes (`/api/admin/...`) are not behind this, so what a function
 recorded stays readable while it is off.
 
 The list of a function is kept whatever its mode: switching to everybody and back to the list
@@ -50,8 +52,7 @@ from . import queries
 
 EVALUATION = "evaluation"
 TUTOR = "tutor"
-# The optional functions: off until the administrator opens them, and what an invitation may
-# list its holder for.
+# The optional functions: off until the administrator opens them.
 FEATURES: tuple[str, ...] = (EVALUATION, TUTOR)
 
 # Generating: open to every account until the administrator narrows it, and a subject's
@@ -138,10 +139,10 @@ def refusal(
     """Return why `feature` is closed to this account in this subject, or None when it is open.
 
     The administrator's mode first; then, for a student of the subject, the switch of their group when it says something, else the subject's. A teacher
-    never meets either, and an administrator meets nothing at all (D-242).
+    never meets either, and an administrator only the functions they switched off (D-245).
     """
     if user.is_admin:
-        return None
+        return REFUSALS.get(feature) if switched_off(user, feature) else None
     if feature in GATED and not enabled(session, user, feature, workspace):
         return REFUSALS[feature]
     column = SUBJECT_SWITCHES.get(feature)
@@ -203,10 +204,11 @@ def enabled(
     """Say whether `feature` is open to this account, in `workspace` when one is named.
 
     Under `selected`: the account is on the function's list, or — for a function a subject may
-    be listed for — the subject it is working in is. An administrator's is always open (D-242).
+    be listed for — the subject it is working in is. An administrator's is open unless they
+    switched it off (D-245).
     """
     if user.is_admin:
-        return True
+        return not switched_off(user, feature)
     current = mode(session, feature)
     if current == ALL:
         return True
@@ -220,6 +222,18 @@ def enabled(
     if listed_account is not None:
         return True
     return workspace is not None and subject_listed(session, feature, workspace)
+
+
+def switched_off(user: User, feature: str) -> bool:
+    """Say whether an administrator switched `feature` off for their own account."""
+    return feature in (user.features_off or [])
+
+
+def switch_own(session: Session, user: User, feature: str, on: bool) -> None:
+    """Switch one function on or off for an administrator's own account."""
+    off = [name for name in (user.features_off or []) if name != feature and name in GATED]
+    user.features_off = off if on else sorted([*off, feature])
+    session.flush()
 
 
 def subject_listed(session: Session, feature: str, workspace: Workspace) -> bool:
@@ -328,5 +342,9 @@ def list_account(session: Session, feature: str, user_id: int) -> None:
 
 
 def unknown(features: list[str]) -> list[str]:
-    """Return the names in `features` that are not optional functions of this installation."""
-    return [name for name in features if name not in FEATURES]
+    """Return the names in `features` that are not functions of this installation.
+
+    Every function an administrator sets a mode for (`GATED`), since 2026-11-04 generating
+    and the chat too: an invitation may list its holder for any of them.
+    """
+    return [name for name in features if name not in GATED]

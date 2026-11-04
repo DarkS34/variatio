@@ -745,6 +745,9 @@ export const api = {
     body: { mode: FeatureMode; accounts?: number[]; workspaces?: string[] },
   ) =>
     put<AdminFeaturesPayload>(`/api/admin/features/${feature}`, body),
+  // One function on or off for the administrator asking, and nobody else (D-245).
+  adminSwitchMine: (feature: GatedName, on: boolean) =>
+    put<AdminFeaturesPayload>(`/api/admin/features/${feature}/mine`, { on }),
 
   adminMaintenance: () => request<MaintenanceState>("/api/admin/maintenance"),
   setMaintenance: (active: boolean, message: string | null) =>

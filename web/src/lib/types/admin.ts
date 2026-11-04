@@ -1,6 +1,6 @@
 /** The administration panel: the accounts, the subjects, the engine, invitations, settings. */
 
-import type { EvaluatorProfile, FeatureAccessState, FeatureName, GatedName, Role } from "./auth";
+import type { EvaluatorProfile, FeatureAccessState, GatedName, Role } from "./auth";
 import type { ExemplarsProfile } from "./bank";
 import type { RunningModel } from "./core";
 import type { GenerationListing } from "./generations";
@@ -11,6 +11,9 @@ import type { SubjectPeople } from "./workspaces";
 /** What `/api/admin/features` answers, and what a write to one function answers too. */
 export interface AdminFeaturesPayload {
   features?: Partial<Record<GatedName, Partial<FeatureAccessState>>>;
+  /** Which functions the administrator asking uses in their own account (D-245); absent
+   *  from an older API, which read as every one. */
+  mine?: Partial<Record<GatedName, boolean>>;
 }
 
 /** Every account's exercises of one workspace, as the administrator's panel reads them. */
@@ -27,6 +30,8 @@ export interface AdminAccount {
   username: string;
   name: string;
   is_admin: boolean;
+  /** The functions an administrator switched off for their own account (D-245). */
+  features_off?: GatedName[];
   evaluator_profile: EvaluatorProfile | null;
   disabled: boolean;
   created_at: string | null;
@@ -241,7 +246,7 @@ export interface InviteTerms {
   role: Role;
   expires_at: string;
   label: string | null;
-  features: FeatureName[];
+  features: GatedName[];
   profile: EvaluatorProfile;
 }
 

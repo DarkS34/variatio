@@ -31,8 +31,8 @@ class InviteTerms(BaseModel):
 
     `workspace` may be absent — an invitation granting no membership creates an account
     and no access, which is the honest way to add somebody who will be given a workspace
-    later. `features` lists the new account for the optional functions named
-    (`server/auth/features.py`), which is access too. `profile` is what the account will be, a
+    later. `features` lists the new account for the functions named — any of
+    `features.GATED`, generating and the chat included since 2026-11-04 — which is access too. `profile` is what the account will be, a
     teacher or a student, and it is REQUIRED: nobody asks the person registering, and no
     default is presumed for them — a teacher creates subjects. An absent `expires_at` is
     the installation's default week, and a chosen one has no upper bound; `label` is the
@@ -334,13 +334,13 @@ def _profile(profile: str | None) -> str:
 
 
 def _features(names: list[str] | None) -> list[str]:
-    """Accept the optional functions an invitation lists its holder for, each once."""
+    """Accept the functions an invitation lists its holder for, each once."""
     names = list(dict.fromkeys(names or []))
     unknown = features.unknown(names)
     if unknown:
         raise HTTPException(
             422,
-            f"Función desconocida: {', '.join(unknown)}. Usa de {', '.join(features.FEATURES)}.",
+            f"Función desconocida: {', '.join(unknown)}. Usa de {', '.join(features.GATED)}.",
         )
     return names
 

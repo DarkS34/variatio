@@ -26,10 +26,46 @@ class FeatureBody(BaseModel):
     workspaces: list[str] | None = None
 
 
+class OwnSwitchBody(BaseModel):
+    """Whether the administrator asking uses one function in their own account."""
+
+    on: bool
+
+
 @router.get("/features")
-def read_features(db: DbSession = Depends(auth.db)) -> dict:
-    """Answer who each function is for: its mode and the accounts on its list."""
-    return {"features": features.snapshot(db)}
+def read_features(
+    admin: User = Depends(auth.require_admin), db: DbSession = Depends(auth.db)
+) -> dict:
+    """Answer who each function is for, and which the administrator asking uses (`mine`)."""
+    return _payload(db, admin)
+
+
+@router.put("/features/{feature}/mine")
+def switch_mine(
+    feature: str,
+    body: OwnSwitchBody,
+    admin: User = Depends(auth.require_admin),
+    db: DbSession = Depends(auth.db),
+) -> dict:
+    """Switch one function on or off for the administrator asking, and for nobody else (D-245)."""
+    if feature not in features.GATED:
+        raise HTTPException(404, f"No existe la función '{feature}'.")
+    features.switch_own(db, admin, feature, body.on)
+    logger.info(
+        "[funciones] {} se ha {} '{}' para su cuenta",
+        admin.username,
+        "abierto" if body.on else "cerrado",
+        feature,
+    )
+    return _payload(db, admin)
+
+
+def _payload(db: DbSession, admin: User) -> dict:
+    """Render every function's mode and lists, and what the administrator asking uses."""
+    return {
+        "features": features.snapshot(db),
+        "mine": {feature: not features.switched_off(admin, feature) for feature in features.GATED},
+    }
 
 
 @router.put("/features/{feature}")
@@ -76,4 +112,4 @@ def set_feature(
         len(features.listed(db, feature)),
         len(features.listed_subjects(db, feature)) if feature in features.SUBJECT_LISTED else 0,
     )
-    return {"features": features.snapshot(db)}
+    return _payload(db, admin)

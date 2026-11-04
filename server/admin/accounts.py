@@ -68,6 +68,8 @@ def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) 
         "username": user.username,
         "name": user.name,
         "is_admin": user.is_admin,
+        # The functions an administrator switched off for their own account (D-245).
+        "features_off": list(user.features_off or []) if user.is_admin else [],
         "evaluator_profile": user.evaluator_profile,
         "disabled": not user.active,
         "created_at": user.created_at.isoformat() if user.created_at else None,

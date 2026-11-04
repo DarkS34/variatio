@@ -165,6 +165,32 @@ def test_the_administrator_uses_every_function_whatever_its_mode(db):
     assert features.refusal(db, _user(db, "ana"), features.CHAT, closed, "viewer") is not None
 
 
+def test_an_administrator_switches_a_function_off_for_their_own_account_alone(db):
+    admin, other = _user(db, "admin", is_admin=True), _user(db, "otro", is_admin=True)
+
+    answer = admin_features.switch_mine(
+        "tutor", admin_features.OwnSwitchBody(on=False), admin=admin, db=db
+    )
+
+    assert answer["mine"] == {"generate": True, "evaluation": True, "tutor": False, "chat": True}
+    assert features.for_user(db, admin)["tutor"] is False
+    assert features.for_user(db, other)["tutor"] is True
+    with pytest.raises(HTTPException):
+        require_feature(features.TUTOR)(access=_here(admin, "owner"), session=db)
+
+    admin_features.switch_mine("tutor", admin_features.OwnSwitchBody(on=True), admin=admin, db=db)
+    assert features.for_user(db, admin)["tutor"] is True
+
+
+def test_an_administrator_cannot_switch_an_unknown_function(db):
+    admin = _user(db, "admin", is_admin=True)
+
+    with pytest.raises(HTTPException) as refused:
+        admin_features.switch_mine("class", admin_features.OwnSwitchBody(on=False), admin=admin, db=db)
+
+    assert refused.value.status_code == 404
+
+
 def test_the_routers_of_both_functions_declare_their_dependency():
     from consumers.evaluation.api import router as evaluation_router
     from consumers.evaluation.api import stages as stages_router
@@ -209,7 +235,7 @@ def test_the_administrator_sets_a_mode_and_its_list_from_the_panel(db):
     )
 
     assert answer["features"]["tutor"] == {"mode": "selected", "accounts": [ana.id], "workspaces": []}
-    assert admin_features.read_features(db=db) == answer
+    assert admin_features.read_features(admin=admin, db=db) == answer
 
 
 def test_a_mode_sent_alone_keeps_the_list(db):
@@ -285,11 +311,22 @@ def test_an_invitation_that_names_nothing_lists_nobody(db):
     assert not features.enabled(db, ana, features.TUTOR)
 
 
+def test_an_invitation_lists_its_holder_for_generating_and_the_chat_too(db):
+    admin = _user(db, "admin", is_admin=True)
+    for feature in (features.GENERATE, features.CHAT):
+        features.set_mode(db, feature, features.SELECTED)
+    minted = _invite(db, admin, features=["generate", "chat"])
+
+    ana = _redeem(db, minted["link"], "ana")
+
+    assert features.for_user(db, ana) == {"generate": True, "chat": True, "evaluation": False, "tutor": False}
+
+
 def test_an_invitation_refuses_a_function_that_does_not_exist(db):
     admin = _user(db, "admin", is_admin=True)
 
     with pytest.raises(HTTPException) as refused:
-        _invite(db, admin, features=["chat"])
+        _invite(db, admin, features=["class"])
 
     assert refused.value.status_code == 422
 

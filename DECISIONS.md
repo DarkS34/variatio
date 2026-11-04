@@ -680,22 +680,32 @@ what each decision replaced.
 
 ### D-123. Admin switches the optional functions
 - **Rule:** The administrator switches the evaluation and the tutor for nobody, everybody or a list of accounts; both start off; the administrator follows the same rule as any account; an invitation may list its holder.
-- **Date:** 2026-10-03 · **Commit:** `ebbe9fe` · **Status:** in force; its clause on the administrator superseded by D-242
+- **Date:** 2026-10-03 · **Commit:** `ebbe9fe` · **Status:** in force; its clause on the administrator superseded by D-242, then D-245
 - **Why:** One branch carries both optional functions, so each is switched from the installation; a function with no row is off, so an upgrading installation opens neither until its administrator does.
 
 ### D-233. The administrator chooses who generates and who chats
 - **Rule:** Generating and the free chat are switched by the administrator like the evaluation and the tutor — nobody, everybody, or a list of accounts and of subjects — with no exemption for the administrator; with no row both are open to every account. A subject's teachers still decide for its students after that.
-- **Date:** 2026-10-19 · **Commit:** `1cc849e` · **Status:** in force; its clause on the administrator superseded by D-242
+- **Date:** 2026-10-19 · **Commit:** `1cc849e` · **Status:** in force; its clause on the administrator superseded by D-242, then D-245
 - **Why:** The user's request: in «Funciones» every function must let the administrator choose who may use it. Open by default, so an installation that upgrades keeps generating and the chat as they were.
 
 ### D-242. The administrator uses every function
 - **Rule:** An administrator's account uses every function (generating, the evaluation, the tutor, the free chat) whatever its mode, its lists and a subject's or a group's switches. «Permisos de uso» draws an administrator's row ticked and locked, with a badge «Siempre».
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `37e4435` · **Status:** superseded by D-245
 - **Why:** The user's request («El admin tendrá siempre encendidos TODOS los features»), reversing the administrator's clause of D-123 and D-233 knowingly: the administrator met a door closed in the one place that sets it.
+
+### D-245. The administrator switches functions off for their own account
+- **Rule:** An administrator's account uses every function whatever its mode, its lists and a subject's or a group's switches, except the ones that administrator switches off for it (`users.features_off`, migration 0024; `PUT /api/admin/features/{feature}/mine`). Each administrator decides for their own account alone, from the block «Tu cuenta» under «Permisos de uso», saved at once; an administrator's row in the list is locked and says whether they use the function.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's correction of D-242 the same day: an administrator does not have to keep every function on, and chooses which to put away for themselves.
+
+### D-246. An invitation lists its holder for any function
+- **Rule:** An invitation may list its holder for every function the administrator sets a mode for — generating, the evaluation, the tutor and the free chat — and the form draws each with its figure and the mode it is in now.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request: since D-233 generating and the chat may be narrowed to chosen accounts too, and an invitation could not name them.
 
 ### D-243. The username is made from the name
 - **Rule:** The registration asks for the name alone and one password, with no confirmation field; the server makes the username from the name (`queries.username_from_name`: the first name and the next word, accents folded, particles and initials left out, the first free number after a taken one), the form shows it while the name is typed, and the screen after it shows the one made. The password's rules tick on the form as they are met (`lib/signup.passwordChecks`, the server's policy mirrored) and the button waits for them. A `username` an older client still sends is checked as before.
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `37e4435` · **Status:** in force
 - **Why:** The user's request: two fields for one identity, a hint about the password manager and a second password field made the teacher's registration longer than it had to be. A namesake's number says that the name is taken, which the 409 for a typed username already said to whoever held an invitation.
 
 ### D-124. Tutor opened for whole subjects
@@ -747,7 +757,7 @@ what each decision replaced.
 
 ### D-244. More than three doors fold into «Funciones», all in one colour
 - **Rule:** After the steps the bar draws one unnumbered door for each function open to the account while they are three or fewer; with more, one pill «Funciones» leads to `/functions`, which draws every function at full size, and the pill names the function in use. Every function is named from outside its screen in one colour, `--function` (the tutor's blue until then), with its own figure (`components/ui/function-mark.tsx`: a wand, a flask, a question in a bubble, two bubbles); the evaluation's green stays inside its own screens.
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `37e4435` · **Status:** in force
 - **Why:** The user's request: an administrator uses all four functions (D-242), and four doors in three colours beside three steps read as four kinds of thing and filled the header. A page, not a menu, because the user chose it and because it has room to say what each function does.
 
 ### D-133. As many doors as open functions

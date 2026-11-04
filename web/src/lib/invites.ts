@@ -1,8 +1,8 @@
 import { fold } from "@/lib/text";
 import {
-  FEATURE_NAMES,
+  GATED_NAMES,
   type EvaluatorProfile,
-  type FeatureName,
+  type GatedName,
   type InviteRow,
   type InviteState,
   type InviteTerms,
@@ -204,9 +204,9 @@ export function linkLines(minted: { invite: { label?: string | null }; link: str
  * An API older than the field sends nothing, and a malformed answer is read as nothing:
  * either way the row draws no badge rather than a name the panel cannot translate.
  */
-export function inviteFeatures(row: Pick<InviteRow, "features">): FeatureName[] {
+export function inviteFeatures(row: Pick<InviteRow, "features">): GatedName[] {
   const raw = row.features;
-  return Array.isArray(raw) ? FEATURE_NAMES.filter((name) => raw.includes(name)) : [];
+  return Array.isArray(raw) ? GATED_NAMES.filter((name) => raw.includes(name)) : [];
 }
 
 /**
@@ -229,7 +229,7 @@ export interface TermsDraft {
   role: Role;
   expires: string;
   /** In door order, whatever order they were ticked in, so a comparison is by value. */
-  features: FeatureName[];
+  features: GatedName[];
   profile: EvaluatorProfile | null;
 }
 
@@ -260,11 +260,11 @@ export function draftOf(
 }
 
 /** The draft with one function ticked or not, kept in door order. */
-export function withFeature(draft: TermsDraft, feature: FeatureName, on: boolean): TermsDraft {
+export function withFeature(draft: TermsDraft, feature: GatedName, on: boolean): TermsDraft {
   const chosen = new Set(draft.features);
   if (on) chosen.add(feature);
   else chosen.delete(feature);
-  return { ...draft, features: FEATURE_NAMES.filter((name) => chosen.has(name)) };
+  return { ...draft, features: GATED_NAMES.filter((name) => chosen.has(name)) };
 }
 
 /** What a new invitation is asked for with; null while the date names no moment or no
