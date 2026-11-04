@@ -12,6 +12,7 @@ import { useState, type FormEvent } from "react";
 
 import { ChoicePill } from "@/components/ui/choice";
 import { Badge } from "@/components/ui/badge";
+import { FunctionMark } from "@/components/ui/function-mark";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { Dialog } from "@/components/ui/dialog";
@@ -52,7 +53,7 @@ import {
   type ExpiryPreset,
   type TermsDraft,
 } from "@/lib/invites";
-import { featureLabelKey } from "@/lib/steps";
+import { doorOf, featureLabelKey } from "@/lib/steps";
 import {
   FEATURE_NAMES,
   type AdminOverview,
@@ -756,7 +757,12 @@ function InviteItem({
               </Badge>
             ) : null}
             {inviteFeatures(row).map((feature) => (
-              <Badge key={feature} variant={feature} className="shrink-0">
+              <Badge
+                key={feature}
+                variant="function"
+                className="shrink-0"
+                mark={<FunctionMark door={doorOf(feature).key} size="md" className="bg-transparent" />}
+              >
                 {t(featureLabelKey(feature))}
               </Badge>
             ))}

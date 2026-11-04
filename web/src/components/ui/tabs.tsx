@@ -2,32 +2,13 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-import type { FeatureTone } from "./tone";
-
 export interface TabItem {
   value: string;
   label: ReactNode;
   badge?: ReactNode;
-  /** Drawn in that function's own colour, as the navbar draws its door. */
-  tone?: FeatureTone;
   /** A vertical rule before the tab, setting it apart from the ones on its left. */
   separated?: boolean;
 }
-
-/** A tab in its function's colour, chosen and not: literal strings, so Tailwind finds them.
- *  Chosen is the sunk tint warmed with the colour, never a relief: a tab is a small thing. */
-const TAB_TONE: Record<FeatureTone, { chosen: string; idle: string }> = {
-  evaluation: {
-    chosen:
-      "bg-[color-mix(in_oklab,var(--evaluation)_12%,var(--sunk))] text-evaluation",
-    idle: "text-evaluation hover:bg-[color-mix(in_oklab,var(--evaluation)_8%,transparent)]",
-  },
-  tutor: {
-    chosen:
-      "bg-[color-mix(in_oklab,var(--tutor)_12%,var(--sunk))] text-tutor",
-    idle: "text-tutor hover:bg-[color-mix(in_oklab,var(--tutor)_8%,transparent)]",
-  },
-};
 
 export function Tabs({
   items,
@@ -97,13 +78,9 @@ export function Tabs({
           onClick={() => onChange(item.value)}
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            item.tone
-              ? value === item.value
-                ? TAB_TONE[item.tone].chosen
-                : TAB_TONE[item.tone].idle
-              : value === item.value
-                ? "bg-sunk text-foreground"
-                : "text-muted-foreground hover:text-foreground",
+            value === item.value
+              ? "bg-sunk text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           {item.label}

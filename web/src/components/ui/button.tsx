@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, Ref } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { DOOR_TONE } from "./tone";
+import { FUNCTION_TONE } from "./tone";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
@@ -21,13 +21,13 @@ const buttonVariants = cva(
         attention:
           "bg-attention-fill text-attention-fill-foreground hover:bg-[color-mix(in_oklab,var(--attention-fill)_90%,var(--attention-fill-foreground))]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        // The tutor's own colour, for a control outside its screen that opens it — «Trabajar
-        // con el tutor». Its door's colour as text (`DOOR_TONE`) inside an inset ring, never a
-        // fill: it sits on every saved exercise, and filled it was the loudest thing on the
-        // screen, competing with the one action the screen asks for. The ring is the
-        // button's own — a door in the bar is a word, a button needs an edge. Never inside
-        // the tutor's screen, where "act here" stays the attention's.
-        tutor: `${DOOR_TONE.tutor.face} ${DOOR_TONE.tutor.hover} ring-1 ring-inset ring-[color-mix(in_oklab,var(--tutor)_45%,transparent)]`,
+        // The functions' colour, for a control outside a function's screen that opens it —
+        // «Trabajar con el tutor». Its door's colour as text (`FUNCTION_TONE`) inside an inset
+        // ring, never a fill: it sits on every saved exercise, and filled it was the loudest
+        // thing on the screen, competing with the one action the screen asks for. The ring is
+        // the button's own — a door in the bar is a word, a button needs an edge. Never inside
+        // the function's screen, where "act here" stays the attention's.
+        function: `${FUNCTION_TONE.face} ${FUNCTION_TONE.hover} ring-1 ring-inset ring-[color-mix(in_oklab,var(--function)_45%,transparent)]`,
         // A hairline and no material: a small control is flat. At `lg`/`xl` the same button
         // stands out of its block instead (`compoundVariants` below).
         outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",

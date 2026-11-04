@@ -78,7 +78,7 @@ export const USES = [
   path: string;
   labelKey: Key;
   /** The optional function the door belongs to (`server/auth/features.py`), or null for the
-   *  product's own. The evaluation's is drawn in `--evaluation`, the tutor's in `--tutor`. */
+   *  product's own. Every door is drawn in `--function` since 2026-11-04 (`ui/tone.ts`). */
   feature: null | keyof Features;
   /** The name the administrator's choice of its users is kept under (`features.GATED`). */
   access: GatedName;
@@ -146,7 +146,12 @@ export function afterConstruction(features: Features & { generate?: boolean; cha
 
 /** The name a function goes by on screen: its door's. */
 export function featureLabelKey(feature: GatedName): Key {
-  return USES.find((door) => door.access === feature)!.labelKey;
+  return doorOf(feature).labelKey;
+}
+
+/** The door a function's users are chosen under, by the name of its access. */
+export function doorOf(feature: GatedName): Door {
+  return USES.find((door) => door.access === feature)!;
 }
 
 /**
@@ -160,6 +165,20 @@ export function usesFor(features: Features & { generate?: boolean; chat?: boolea
     if (door.key === "chat") return features.chat === true;
     return door.feature === null || features[door.feature];
   });
+}
+
+/**
+ * WHERE THE DOORS GO WHEN THEY ARE MANY (the user's request, 2026-11-04): with more than three
+ * open to the account, the bar draws one pill, «Funciones», and it leads to a screen with
+ * every function at full size. An administrator uses all four (D-242), and four doors beside
+ * three steps took the header's whole width. Three or fewer stay doors of their own.
+ */
+export const FUNCTIONS_PATH = "/functions";
+export const DOORS_GROUPED_ABOVE = 3;
+
+/** Whether the bar folds these doors into the one pill that leads to `FUNCTIONS_PATH`. */
+export function doorsGrouped(doors: readonly Door[]): boolean {
+  return doors.length > DOORS_GROUPED_ABOVE;
 }
 
 /** How a construction step is numbered on screen, from its index in `STEPS`. */

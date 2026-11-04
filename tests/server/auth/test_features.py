@@ -151,15 +151,18 @@ def test_a_route_refuses_an_account_the_function_is_not_open_to_with_a_stable_co
     assert refused.value.headers == {"X-Error-Code": features.OFF_CODE}
 
 
-def test_the_administrator_gets_no_bypass(db):
+def test_the_administrator_uses_every_function_whatever_its_mode(db):
     admin = _user(db, "admin", is_admin=True)
-    features.set_mode(db, features.TUTOR, features.SELECTED)
+    for feature in features.GATED:
+        features.set_mode(db, feature, features.OFF)
 
-    with pytest.raises(HTTPException):
-        require_feature(features.TUTOR)(access=_here(admin, "owner"), session=db)
-
-    features.list_account(db, features.TUTOR, admin.id)
+    assert all(features.for_user(db, admin).values())
     assert require_feature(features.TUTOR)(access=_here(admin, "owner"), session=db) is None
+    # A subject closed to its students does not close it to an administrator who is one there.
+    closed = SimpleNamespace(id="not-a-row", student_generate=False, student_chat=False, student_tutor=False)
+    for feature in features.SUBJECT_SWITCHES:
+        assert features.refusal(db, admin, feature, closed, "viewer") is None
+    assert features.refusal(db, _user(db, "ana"), features.CHAT, closed, "viewer") is not None
 
 
 def test_the_routers_of_both_functions_declare_their_dependency():

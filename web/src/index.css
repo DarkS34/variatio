@@ -76,11 +76,12 @@
   --attention-fill-foreground: oklch(0.201 0.054 36);
   --destructive: oklch(0.49 0.2 340);
   --destructive-foreground: oklch(0.93 0.03 340);
-  /* The two destinations keep their families — a green for the study, a blue for the
-     tutor — at the depths the search found against the arms (16.0 floor). */
+  /* The two destinations at the depths the search found against the arms (16.0 floor): a
+     green the evaluation keeps INSIDE its own screens, and the blue every function is named
+     in from outside them (`--function`, until 2026-11-04 the tutor's alone: `ui/tone.ts`). */
   --evaluation: oklch(0.36 0.11 140);
   --evaluation-foreground: oklch(0.93 0.03 140);
-  --tutor: oklch(0.36 0.07 240);
+  --function: oklch(0.36 0.07 240);
 
   /* A separator carries no information and WCAG asks nothing of it; the outline of a control
      does and has to clear 3:1. */
@@ -170,7 +171,7 @@
   --destructive-foreground: oklch(0.2 0.04 336);
   --evaluation: oklch(0.86 0.11 140);
   --evaluation-foreground: oklch(0.2 0.03 140);
-  --tutor: oklch(0.82 0.1 235);
+  --function: oklch(0.82 0.1 235);
 
   --border: oklch(0.395 0.023 209);
   --input: oklch(0.598 0.025 207);
@@ -217,7 +218,7 @@
   --color-attention-fill-foreground: var(--attention-fill-foreground);
   --color-evaluation: var(--evaluation);
   --color-evaluation-foreground: var(--evaluation-foreground);
-  --color-tutor: var(--tutor);
+  --color-function: var(--function);
   --shadow-raised: var(--elevation-raised);
   --shadow-overlay: var(--elevation-overlay);
   --shadow-drop: var(--drop);

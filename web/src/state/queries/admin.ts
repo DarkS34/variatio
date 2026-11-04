@@ -195,8 +195,8 @@ export function useAdminFeatures() {
 /**
  * Set who one optional function is for; `accounts` absent keeps its list as it is.
  *
- * The session is refreshed too: the administrator is not exempt from the rule, so the
- * change may open or close a door in their own bar.
+ * The session is refreshed too: the change may open or close a door in the bar of an account
+ * this tab shows, even though an administrator's own doors stay open (D-242).
  */
 export function useSetFeature() {
   const client = useQueryClient();

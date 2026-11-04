@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { SectionHeader, Sections, type SectionEntry } from "@/components/Sections";
-import { DOOR_TONE } from "@/components/ui/tone";
+import { FUNCTION_TONE } from "@/components/ui/tone";
 import { Tabs } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n";
 import { USES, type Door } from "@/lib/steps";
@@ -77,7 +77,7 @@ export function FunctionsTab({
     return {
       key: entry.key,
       label: t(entry.labelKey),
-      mark: <Icon className={cn("size-4", entry.feature && DOOR_TONE[entry.feature].face)} />,
+      mark: <Icon className={cn("size-4", FUNCTION_TONE.face)} />,
       detail: accessLine(entry.access),
       pending: (summary?.pending ?? 0) + (access.values[entry.access] ? 1 : 0),
     };

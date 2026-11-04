@@ -76,8 +76,9 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
   chat's.
   `auth.EVALUATION` and `auth.TUTOR` sit beside `auth.VIEW` on the routers of
   `/api/evaluation`, `/api/stage-evaluations` and `/api/tutor`, and `catalogue.FEATURE_OF`
-  closes `POST /api/jobs` for an `evaluate` job. **No administrator bypass**: the admin lists
-  their own account. The admin's read routes are not behind it. A refusal is a 403 with
+  closes `POST /api/jobs` for an `evaluate` job. **An administrator uses every function**
+  (D-242, 2026-11-04): `features.refusal` and `features.enabled` answer open for one whatever
+  the mode, the lists and a subject's switches. The admin's read routes are not behind it. A refusal is a 403 with
   `X-Error-Code: feature_off`. `/api/auth/me` carries `features`. An invitation may list its
   holder (`invites.features`), applied at registration. `GET /api/health` leaves out the
   models only a switched-off function names. **The tutor may list whole subjects too**
@@ -136,7 +137,11 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-108, D-109, D-110 — No «forgot password» on the login screen; no password generator; no
   session list.
 - D-123, D-124, D-125 — The evaluation and the tutor are switched by the administrator for
-  nobody, everybody or a list of accounts (the tutor also of subjects); both start off; no
-  exemption for the administrator; the tutor's daily limit is the account's.
+  nobody, everybody or a list of accounts (the tutor also of subjects); both start off; the
+  tutor's daily limit is the account's.
+- D-242 — The administrator uses every function, whatever its mode (supersedes the
+  administrator's clause of D-123 and D-233).
+- D-243 — The registration asks for the name: `queries.username_from_name` makes the
+  username (first name, a dot, the next word; the first free number after a taken one).
 - D-233 — Generating and the chat are switched the same way (also by subjects), and start
   open to every account.

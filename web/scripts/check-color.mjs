@@ -131,19 +131,19 @@ const TEXT = [
   "--code-string",
   "--code-number",
   "--evaluation",
-  "--tutor",
+  "--function",
 ];
 const SURFACES = ["--background", "--card"];
 // A separator carries no information, so WCAG asks nothing of it; a control outline does.
 const OUTLINE = { "--input": 3, "--border": 1.3 };
-const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--evaluation", "--tutor"];
+const SEMANTIC = ["--primary", "--attention", "--settled", "--destructive", "--evaluation", "--function"];
 const ARMS = ["--arm-naive", "--arm-rag", "--arm-system"];
 // The colours of a DESTINATION — a function with a door of its own — rather than of a state.
 // Each is checked against every arm as well as against the semantic colours, because a
 // destination drawn in an arm's colour claims to belong to that arm. --evaluation's first
 // draft sat ΔE 15.0 from --arm-rag and no line here read that distance. It is printed now;
 // the margin each token keeps above the floor is recorded in `index.css`.
-const DESTINATIONS = ["--evaluation", "--tutor"];
+const DESTINATIONS = ["--evaluation", "--function"];
 // One above the categorical floor, because the very green draft met 15 with nothing to spare.
 const DESTINATION_ARM_MIN = 16;
 
@@ -157,12 +157,12 @@ const TINTED = [
   ["--settled", 0.08],
   ["--destructive", 0.08],
   ["--evaluation", 0.08],
-  ["--tutor", 0.08],
-  // A door (`components/ui/tone.ts`) paints its label on 9 %, 16 % on hover and 18 % when it
+  ["--function", 0.08],
+  // A door (`components/ui/tone.ts`, every function's) paints its label on 9 %, 16 % on hover and 18 % when it
   // is the screen in use; the label only loses contrast as the tint rises, so the strongest
   // step stands for the three.
   ["--evaluation", 0.18],
-  ["--tutor", 0.18],
+  ["--function", 0.18],
 ];
 
 // EVERY `--X-foreground` AGAINST ITS `--X`. This is the pair the tables above cannot see:

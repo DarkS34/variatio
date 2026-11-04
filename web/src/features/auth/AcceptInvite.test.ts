@@ -85,6 +85,18 @@ describe("AcceptInvite", () => {
     expect(html).not.toContain("Unirme");
   });
 
+  it("asks a new account for its name and one password, and says first what it will be", () => {
+    const html = markup({ ...CLASS_LINK, kind: "personal", workspace: null, role: "owner", profile: "teacher" }, null);
+    expect(html).toContain("Cuenta de docente");
+    expect(html.indexOf("Cuenta de docente")).toBeLessThan(html.indexOf("Idioma de la interfaz"));
+    expect(html).toContain("Nombre y apellidos");
+    expect(html).not.toContain("confirm-password");
+    expect(html).not.toContain("Solo cambia lo que lees");
+    expect(html).toContain("Al menos 12 caracteres");
+    // Nothing typed yet: the button waits for a name and a password the server would take.
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Crear la cuenta/);
+  });
+
   it("says a paused link is paused and lets nothing through it", () => {
     const html = markup({ ...CLASS_LINK, paused: true }, null);
     expect(html).toContain("Este enlace está en pausa");

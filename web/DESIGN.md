@@ -73,7 +73,8 @@ else; `check:color` only sees what is in `src/index.css`.
 | `--attention` (text) / `--attention-fill` (fill) | **act here** — exactly **one per screen** |
 | dimmed / dashed | ahead, not reachable yet |
 | `--destructive` | damage (delete, remove, failed) |
-| `--evaluation`, `--tutor` | the two optional functions, only where something **outside** their screen names them (a door, a tab, a button that opens them) |
+| `--function` | every function (generating, the evaluation, the tutor, the chat), only where something **outside** its screen names it (a door, the «Funciones» page, a badge, a button that opens it), with its figure (`FunctionMark`, `ui/function-mark.tsx`) |
+| `--evaluation` | the evaluation inside its own screens |
 | `--arm-naive/rag/system` | the study's three arms: bars and rows only, order fixed |
 | `--qr` / `--qr-foreground` | a QR code: dark on light in both themes |
 
@@ -83,7 +84,7 @@ else; `check:color` only sees what is in `src/index.css`.
 - A border or a mark that must read in both themes uses `--primary` (the ink of a word),
   not `--ink`.
 - Buttons: `default` (ink fill, the screen's main ordinary action), `attention` (the one
-  frontier action), `outline`, `ghost`, `secondary`, `destructive`, `tutor` (opens the tutor
+  frontier action), `outline`, `ghost`, `secondary`, `destructive`, `function` (opens a function
   from outside it), `link`.
 
 ## 3. Blocks
@@ -325,12 +326,14 @@ Archivo only. Six steps, every line a whole number of pixels:
 ink on white, which the user found had no identity): a sea-glass ground, a deep-sea ink and a
 coral for the land where you act. Semantics still encode position relative to the knowledge
 frontier: `--settled` (behind you, grey), `--attention` (coral, act here), dimmed/dashed
-(ahead), `--destructive` (damage), `--evaluation` (deep green, the study), `--tutor` (deep
-blue, the tutor). The last two are destination colours: each marks its function where
-something OUTSIDE its own screen names it (its door, a tab, the stage questionnaire, «Trabajar
-con el tutor» = `Button variant="tutor"`; the tone is the feature's name,
-`components/ui/tone.ts`). A door is its colour as TEXT (`DOOR_TONE`), never a fill; the tutor's
-button adds an inset ring. Inside the tutor's screen `--attention` stays «act here».
+(ahead), `--destructive` (damage), `--evaluation` (deep green, the study inside its own
+screens and its stage questionnaire), `--function` (deep blue, every function). `--function` is
+the destination colour (D-244, 2026-11-04: until then each optional function had its own): it
+marks a function where something OUTSIDE its own screen names it (its door and its figure,
+`FunctionMark`; the «Funciones» page; a badge; «Trabajar con el tutor» = `Button
+variant="function"`; `components/ui/tone.ts`, `FUNCTION_TONE`). A door is its figure on a tint
+and its name in ink, never a fill; the button adds an inset ring. Inside a function's screen
+`--attention` stays «act here».
 `--success/--warning/--info` stay retired.
 
 - **No white anywhere**, the light half of a shadow included, in either mode: no token is

@@ -1,12 +1,13 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronRight, MessageCircle, MessagesSquare, Sparkles } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
+import { FUNCTION_ICONS } from "@/components/ui/function-mark";
 import { useEffect, useMemo, useState } from "react";
 
 import { stashDraft } from "@/consumers/generation/draft";
 import { useExerciseTotal } from "@/consumers/generation/GenerationsPanel";
 import { ItemFields } from "@/consumers/generation/ResultCard";
 import { ReadingScope } from "@/components/StageGate";
-import { DOOR_TONE } from "@/components/ui/tone";
+import { FUNCTION_TONE } from "@/components/ui/tone";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConceptBadge } from "@/components/ui/concept-chip";
@@ -32,6 +33,10 @@ import { useActiveWorkspace, useProfile } from "@/state/queries";
 import { commissionLike } from "./exercise";
 import { GeneratedList } from "./GeneratedList";
 import { Pager } from "./Pager";
+
+// The tutor and the chat are opened by the figure their doors carry.
+const TutorIcon = FUNCTION_ICONS.tutor;
+const ChatIcon = FUNCTION_ICONS.chat;
 
 type Tab = "bank" | "mine";
 
@@ -419,23 +424,24 @@ function ExerciseRow({
             <Button
               variant="ghost"
               size="icon-sm"
-              className={cn(DOOR_TONE.tutor.face, DOOR_TONE.tutor.hover)}
+              className={cn(FUNCTION_TONE.face, FUNCTION_TONE.hover)}
               onClick={onTutor}
               title={t("tutor.fromExercise.hint")}
               aria-label={t("tutor.fromExercise")}
             >
-              <MessagesSquare />
+              <TutorIcon />
             </Button>
           ) : null}
           {onChat ? (
             <Button
               variant="ghost"
               size="icon-sm"
+              className={cn(FUNCTION_TONE.face, FUNCTION_TONE.hover)}
               onClick={onChat}
               title={t("chat.fromExercise.hint")}
               aria-label={t("chat.fromExercise")}
             >
-              <MessageCircle />
+              <ChatIcon />
             </Button>
           ) : null}
           <Button

@@ -9,9 +9,12 @@ upgrading installation keeps them as they were until its administrator narrows t
 
 NOT A MEMBERSHIP, AND CHECKED BESIDE ONE. `auth.VIEW` still decides whether an account may
 enter the workspace a request names; `auth.EVALUATION`, `auth.TUTOR` and `auth.CHAT`, and the
-jobs route for generating, decide whether the function exists for that account at all. The administrator gets no bypass here: an
-installation's administrator who wants the tutor lists their own account, like anybody's.
-The administrator's own READ routes (`/api/admin/...`) are not behind this, so what a function
+jobs route for generating, decide whether the function exists for that account at all.
+
+THE ADMINISTRATOR USES EVERY FUNCTION, ALWAYS (D-242, the user's request of 2026-11-04): whatever
+the mode, the lists and a subject's or a group's switches. Until then the administrator listed
+their own account like anybody's (D-123, D-233), and an installation's administrator met a
+door closed in the one place they set. The administrator's own READ routes (`/api/admin/...`) are not behind this, so what a function
 recorded stays readable while it is off.
 
 The list of a function is kept whatever its mode: switching to everybody and back to the list
@@ -134,10 +137,11 @@ def refusal(
 ) -> str | None:
     """Return why `feature` is closed to this account in this subject, or None when it is open.
 
-    The administrator's mode first; then, for a student of the subject, the switch of their group when it says something, else the subject's. A teacher,
-    and an administrator entering through the bypass (who holds the owner's role), never meets
-    either.
+    The administrator's mode first; then, for a student of the subject, the switch of their group when it says something, else the subject's. A teacher
+    never meets either, and an administrator meets nothing at all (D-242).
     """
+    if user.is_admin:
+        return None
     if feature in GATED and not enabled(session, user, feature, workspace):
         return REFUSALS[feature]
     column = SUBJECT_SWITCHES.get(feature)
@@ -199,8 +203,10 @@ def enabled(
     """Say whether `feature` is open to this account, in `workspace` when one is named.
 
     Under `selected`: the account is on the function's list, or — for a function a subject may
-    be listed for — the subject it is working in is.
+    be listed for — the subject it is working in is. An administrator's is always open (D-242).
     """
+    if user.is_admin:
+        return True
     current = mode(session, feature)
     if current == ALL:
         return True

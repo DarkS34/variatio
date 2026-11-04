@@ -304,9 +304,9 @@ export const api = {
   invitePreview: (token: string) =>
     request<InvitePreview>(`/api/auth/invites/${encodeURIComponent(token)}`),
   // Nothing about what the account will be: the invitation says it, and nobody is asked.
+  // No username since 2026-11-04: the server makes it from the name (D-243).
   acceptInvite: (body: {
     token: string;
-    username: string;
     name: string;
     password: string;
     ui_language: string;

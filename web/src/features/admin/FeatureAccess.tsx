@@ -69,9 +69,8 @@ export function useAccessDrafts(): AccessDrafts {
  * switching back finds them as they were. Only a list that changed is sent, because a write
  * without one leaves the server's as it is.
  *
- * The administrator is not exempt (`server/auth/features.py`): under «Cuentas elegidas» their
- * own account opens the function only when it is ticked, like anybody's. One line says so,
- * because the panel is the one screen where an administrator expects to see everything.
+ * The administrator uses every function whatever this says (D-242, `server/auth/features.py`):
+ * an administrator's row is ticked and locked, with a badge «Siempre», and one line says so.
  *
  * A class is ticked at once: under «Cuentas elegidas» a subject is chosen and every account
  * in it now (`accountsIn`, teachers included, paused memberships left out) is ticked, or
@@ -376,9 +375,10 @@ export function FeatureAccess({
               >
                 {rows.map((account) => {
                   const through = covered.get(account.id);
-                  const reason = through ? coverReason(through) : null;
-                  // A chosen subject gives it the function: ticked, and not to be unticked here.
-                  const locked = !!through && !ticked.has(account.id);
+                  const reason = account.is_admin ? t("feature.always") : through ? coverReason(through) : null;
+                  // A chosen subject gives it the function, and an administrator always has it
+                  // (D-242): ticked, and not to be unticked here.
+                  const locked = account.is_admin || (!!through && !ticked.has(account.id));
                   return (
                     <li key={account.id}>
                       {/* A label around the box: the whole row ticks it, the name included. */}
@@ -408,7 +408,9 @@ export function FeatureAccess({
                               {account.disabled ? (
                                 <Badge variant="outline">{t("acc.badge.disabled")}</Badge>
                               ) : null}
-                              {through && reason ? (
+                              {account.is_admin ? (
+                                <Badge variant="function">{t("feature.always")}</Badge>
+                              ) : through && reason ? (
                                 // A subject's name is long, and on a phone it ate the person's:
                                 // with no basis of its own the badge takes only the room the
                                 // name leaves, up to its text, and cuts its text, not the name.

@@ -8,8 +8,8 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
 - «Administración» lives in the account menu (soft red), before «Tema», before «Salir».
   Five tabs: «Motor», «Configuración», «Cuentas», «Asignaturas», then, ruled off,
   «Funciones» (D-232, 2026-10-19): one row per door of the bar — «Generar ejercicios»,
-  «Evaluar el sistema», «Tutor socrático», «Chat libre» — each its door's icon (the optional
-  functions' in their tone, `DOOR_TONE`), drawn for the administrator whatever the function's
+  «Evaluar el sistema», «Tutor socrático», «Chat libre» — each its door's figure in the
+  functions' one colour (`FUNCTION_ICONS`, `FUNCTION_TONE`, D-244), drawn for the administrator whatever the function's
   mode; each row's line says who may use it. **Every tab is one
   list of its sections beside the section open** (`components/Sections.tsx`, user's
   request of 2026-10-04: «Motor» had a board of cells, «Configuración» a column of stages
@@ -42,7 +42,8 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   «Cuentas elegidas», the accounts ticked under the last one with the viewer's own row
   marked, a local draft and one «Guardar los cambios»; the ticks stay on screen, dimmed,
   under another mode because the server keeps the list; one sentence states the SAVED state,
-  one line says the administrator is not exempt, and another, for all but the evaluation,
+  an administrator's row is ticked and locked with a badge «Siempre» and one line says why
+  (D-242: an administrator uses every function), and another, for all but the evaluation,
   that a subject's teachers decide for its students after it; «Por asignatura» ticks or unticks at once
   every account in a subject now, `accounts.accountsIn`, paused memberships left out). **What a
   chosen subject covers is drawn in the accounts** (user's request, 2026-10-19: ticking a

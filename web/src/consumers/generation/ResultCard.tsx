@@ -1,4 +1,5 @@
-import { Check, Copy, MessageCircle, MessagesSquare, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
+import { FUNCTION_ICONS } from "@/components/ui/function-mark";
 import type { ReactNode } from "react";
 
 import { CodeBlock } from "@/components/CodeBlock";
@@ -14,6 +15,10 @@ import { fieldLabel, itemTypeOf, typeLabel } from "@/lib/profile";
 import type { ExemplarsProfile, ItemChecks, ItemTypeSpec } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
+
+// The tutor and the chat are opened by the figure their doors carry.
+const TutorIcon = FUNCTION_ICONS.tutor;
+const ChatIcon = FUNCTION_ICONS.chat;
 
 /** A value that already fences its own code carries markdown, not raw source. */
 function isFenced(value: string): boolean {
@@ -182,14 +187,14 @@ export function ResultCard({
           <div className="ml-auto flex flex-wrap justify-end gap-1">
             {actions}
             {onTutor ? (
-              <Button variant="tutor" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
-                <MessagesSquare />
+              <Button variant="function" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+                <TutorIcon />
                 {t("tutor.fromExercise")}
               </Button>
             ) : null}
             {onChat ? (
-              <Button variant="ghost" size="sm" className="h-7" title={t("chat.fromExercise.hint")} onClick={onChat}>
-                <MessageCircle />
+              <Button variant="function" size="sm" className="h-7" title={t("chat.fromExercise.hint")} onClick={onChat}>
+                <ChatIcon />
                 {t("chat.fromExercise")}
               </Button>
             ) : null}

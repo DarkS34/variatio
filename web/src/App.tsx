@@ -38,6 +38,9 @@ const EvaluationScreen = lazy(() =>
     default: m.EvaluationScreen,
   })),
 );
+const FunctionsScreen = lazy(() =>
+  import("@/features/functions/FunctionsScreen").then((m) => ({ default: m.FunctionsScreen })),
+);
 const KgScreen = lazy(() =>
   import("@/features/kg/KgScreen").then((m) => ({ default: m.KgScreen })),
 );
@@ -68,6 +71,7 @@ const NEEDS_WORKSPACE = [
   "/evaluate",
   "/tutor",
   "/chat",
+  "/functions",
   "/class",
 ];
 
@@ -151,6 +155,10 @@ export function App() {
         return <TutorScreen />;
       case "/chat":
         return <ChatScreen />;
+      // Every function at full size: the bar's one pill for them leads here when they are
+      // more than three (`lib/steps.doorsGrouped`). Typed by hand with fewer, it still lists them.
+      case "/functions":
+        return <FunctionsScreen />;
       // The class of the subject in use: its teachers' alone, whatever its construction.
       case "/class":
         return teaches && features.class ? <ClassScreen /> : <NotFound />;

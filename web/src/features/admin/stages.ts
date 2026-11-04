@@ -1,5 +1,6 @@
-import { MessageCircle, MessagesSquare, Play, Scale, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
+import { FUNCTION_ICONS } from "@/components/ui/function-mark";
 import type { Key } from "@/lib/i18n";
 import { STEPS, USES, stepNumber, type Door } from "@/lib/steps";
 import type { ConfigSetting, FeatureName, GatedName } from "@/lib/types";
@@ -49,19 +50,14 @@ const step = (index: number, key: string, descriptionKey: Key): ConfigStage => (
  * a screen whatever its function's mode, drawn in «Funciones», where the administrator
  * configures a function before opening it to anybody.
  */
-const door = (
-  use: Door["key"],
-  key: string,
-  icon: LucideIcon,
-  descriptionKey: Key,
-): ConfigStage => {
+const door = (use: Door["key"], key: string, descriptionKey: Key): ConfigStage => {
   const entry = USES.find((candidate) => candidate.key === use)!;
   return {
     key,
     labelKey: entry.labelKey,
     descriptionKey,
     number: null,
-    icon,
+    icon: FUNCTION_ICONS[use],
     door: use,
     feature: entry.feature,
     access: entry.access,
@@ -74,10 +70,10 @@ export const CONFIG_STAGES: ConfigStage[] = [
   // The types of exercise are the first part of the bank's step since 2026-10-08, and their
   // settings with them: one screen per step, as the bar draws the path.
   step(2, "bank", "cfg.stage.bank"),
-  door("generate", "generation", Play, "cfg.stage.generation"),
-  door("compare", "evaluation", Scale, "cfg.stage.evaluation"),
-  door("tutor", "tutoring", MessagesSquare, "cfg.stage.tutoring"),
-  door("chat", "chat", MessageCircle, "cfg.stage.chat"),
+  door("generate", "generation", "cfg.stage.generation"),
+  door("compare", "evaluation", "cfg.stage.evaluation"),
+  door("tutor", "tutoring", "cfg.stage.tutoring"),
+  door("chat", "chat", "cfg.stage.chat"),
 ];
 
 /** The stage «Funciones» draws for a door, by the door's key. */

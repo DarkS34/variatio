@@ -384,7 +384,7 @@ what each decision replaced.
 
 ### D-240. On Ollama, only qwen3.8, with MTP where a build need not repeat itself
 - **Rule:** In the `ollama` profile every text model is a `qwen3.8:27b` variant; no `qwen3.6` model is named. `qwen3.8:27b-mtp-q8_0` runs every phase except the temperature-0 calls with long answers that a build must repeat — `kg_extract`, `eb_extract`, `ep_scan`, `kg_taggable` (sampled at 0 since `53ff103`), `description_generation` — and the tutor's criteria (`tutor.models.criteria`), which keep `qwen3.8:27b-q8_0`. The registry's default stays the base (D-061).
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `e71b167` · **Status:** in force
 - **Why:** The user's request: no large models together on the A40 (the `qwen3.6:35b-a3b-q8_0` MoE, 39 GB, does not fit beside a 27b), transcription with MTP, MTP in every build phase where it can go, the use phases unchanged. Measured: MTP transcribes like the base at half the time (40 pages, R-F); at temperature 0 it does not repeat itself on long answers (one extraction prompt gave 4 700, 4 827 and 5 229 characters, and lost three must-have concepts), short answers barely change, and the phases that reason at 0.2 vary between builds anyway (R-D). In the F3 builds the calls kept on the base write 258–780 tokens (median; up to 4 397 at p90), the temperature-0 calls moved to MTP 35–230. Passing from one variant to the other reloads the model (9–10 s), a few times per build; switching MTP off per call (`draft_num_predict 0`, the base's bytes at its speed) reloads as well, so two model names cost the same and need no code.
 ### D-065. Domain naming call without reasoning
 - **Rule:** The call that names the graph's domains (`kg_domains`) runs with reasoning off.
@@ -680,13 +680,23 @@ what each decision replaced.
 
 ### D-123. Admin switches the optional functions
 - **Rule:** The administrator switches the evaluation and the tutor for nobody, everybody or a list of accounts; both start off; the administrator follows the same rule as any account; an invitation may list its holder.
-- **Date:** 2026-10-03 · **Commit:** `ebbe9fe` · **Status:** in force
+- **Date:** 2026-10-03 · **Commit:** `ebbe9fe` · **Status:** in force; its clause on the administrator superseded by D-242
 - **Why:** One branch carries both optional functions, so each is switched from the installation; a function with no row is off, so an upgrading installation opens neither until its administrator does.
 
 ### D-233. The administrator chooses who generates and who chats
 - **Rule:** Generating and the free chat are switched by the administrator like the evaluation and the tutor — nobody, everybody, or a list of accounts and of subjects — with no exemption for the administrator; with no row both are open to every account. A subject's teachers still decide for its students after that.
-- **Date:** 2026-10-19 · **Commit:** `1cc849e` · **Status:** in force
+- **Date:** 2026-10-19 · **Commit:** `1cc849e` · **Status:** in force; its clause on the administrator superseded by D-242
 - **Why:** The user's request: in «Funciones» every function must let the administrator choose who may use it. Open by default, so an installation that upgrades keeps generating and the chat as they were.
+
+### D-242. The administrator uses every function
+- **Rule:** An administrator's account uses every function (generating, the evaluation, the tutor, the free chat) whatever its mode, its lists and a subject's or a group's switches. «Permisos de uso» draws an administrator's row ticked and locked, with a badge «Siempre».
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request («El admin tendrá siempre encendidos TODOS los features»), reversing the administrator's clause of D-123 and D-233 knowingly: the administrator met a door closed in the one place that sets it.
+
+### D-243. The username is made from the name
+- **Rule:** The registration asks for the name alone and one password, with no confirmation field; the server makes the username from the name (`queries.username_from_name`: the first name and the next word, accents folded, particles and initials left out, the first free number after a taken one), the form shows it while the name is typed, and the screen after it shows the one made. The password's rules tick on the form as they are met (`lib/signup.passwordChecks`, the server's policy mirrored) and the button waits for them. A `username` an older client still sends is checked as before.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request: two fields for one identity, a hint about the password manager and a second password field made the teacher's registration longer than it had to be. A namesake's number says that the name is taken, which the 409 for a typed username already said to whoever held an invitation.
 
 ### D-124. Tutor opened for whole subjects
 - **Rule:** The tutor may also be switched on for a list of subjects: everybody in a listed subject uses it there, whoever joins later included, and nowhere else.
@@ -735,9 +745,14 @@ what each decision replaced.
 - **Date:** 2026-08-31 · **Commit:** `c3dec33` · **Status:** superseded by D-131
 - **Why:** The bar should say where a newcomer goes next; the profile led because finishing the syllabus (its taggability review) needed an approved profile.
 
+### D-244. More than three doors fold into «Funciones», all in one colour
+- **Rule:** After the steps the bar draws one unnumbered door for each function open to the account while they are three or fewer; with more, one pill «Funciones» leads to `/functions`, which draws every function at full size, and the pill names the function in use. Every function is named from outside its screen in one colour, `--function` (the tutor's blue until then), with its own figure (`components/ui/function-mark.tsx`: a wand, a flask, a question in a bubble, two bubbles); the evaluation's green stays inside its own screens.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request: an administrator uses all four functions (D-242), and four doors in three colours beside three steps read as four kinds of thing and filled the header. A page, not a menu, because the user chose it and because it has room to say what each function does.
+
 ### D-133. As many doors as open functions
 - **Rule:** After the steps the bar draws one unnumbered door for each function open to the account, with no cap.
-- **Date:** 2026-10-14 · **Commit:** `2591988` · **Status:** in force
+- **Date:** 2026-10-14 · **Commit:** `2591988` · **Status:** superseded by D-244
 - **Why:** The user never wanted the doors capped; the free chat added a fourth door («The cap of three doors goes»).
 
 ### D-134. Three doors at most
@@ -862,7 +877,7 @@ what each decision replaced.
 
 ### D-241. The time left of a running phase, from measured rates only
 - **Rule:** A build shows the time left of its running phase as the units its outermost rated step has still to do times that step's seconds per unit. The seconds come from `rates/<engine>.json` (versioned, at the project root), and `/api/pipeline/phases` publishes a step's rate only while every phase whose model the step calls names the very model it was measured with. No file for the engine, another model, or a step never measured: no time on screen.
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `e71b167` · **Status:** in force
 - **Why:** The user's request, reversing D-156 knowingly, with the rates kept per engine and per model so that D-156's failure (a model change that turned a 55-minute build into a quoted 5 h 33 m) removes the time instead of falsifying it. The transcription and the bank count their units across documents (`progress.counter`), since a per-document step knows only its own. The ollama file holds the 2026-11 tuning's measures: the 27b base over six subjects' builds, MTP from its decode speed on its own build, the transcription from a 40-page bench.
 
 ### D-157. No «loading model» signal

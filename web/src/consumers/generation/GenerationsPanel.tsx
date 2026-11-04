@@ -1,4 +1,5 @@
-import { Archive, Copy, Download, Library, MessageCircle, MessagesSquare, Search, Sparkles, Trash2 } from "lucide-react";
+import { Archive, Copy, Download, Library, Search, Sparkles, Trash2 } from "lucide-react";
+import { FUNCTION_ICONS } from "@/components/ui/function-mark";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,10 @@ import {
 } from "@/state/queries";
 import { useFeatures } from "@/state/auth";
 import { useT } from "@/lib/i18n";
+
+// The tutor and the chat are opened by the figure their doors carry.
+const TutorIcon = FUNCTION_ICONS.tutor;
+const ChatIcon = FUNCTION_ICONS.chat;
 
 /** How many of the newest exercises the list draws before a search is needed. */
 const PAGE = 60;
@@ -335,14 +340,14 @@ export function GenerationCard({
           </Button>
         ) : null}
         {onTutor ? (
-          <Button variant="tutor" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
-            <MessagesSquare />
+          <Button variant="function" size="sm" className="h-7" title={t("tutor.fromExercise.hint")} onClick={onTutor}>
+            <TutorIcon />
             {t("tutor.fromExercise")}
           </Button>
         ) : null}
         {onChat ? (
-          <Button variant="ghost" size="sm" className="h-7" title={t("chat.fromExercise.hint")} onClick={onChat}>
-            <MessageCircle />
+          <Button variant="function" size="sm" className="h-7" title={t("chat.fromExercise.hint")} onClick={onChat}>
+            <ChatIcon />
             {t("chat.fromExercise")}
           </Button>
         ) : null}

@@ -114,7 +114,11 @@ this section explains; when the two disagree, fix both in the same change.
 ## Specific screens
 
 - **`/invite`** (`features/auth/AcceptInvite.tsx`, two ways through one link, decided
-  2026-10-06). The lead line says who invites, where and as what («Te invita Ana Pérez a
+  2026-10-06). «Crear mi cuenta» (D-243, 2026-11-04) opens on what the account will be (a
+  strip: the profile, and what it lets the person do in the subject or the application), then
+  the language (`ChoicePill`s), «Nombre y apellidos» with the username it makes, and one
+  password with a way to see it and its three rules ticking under it; the button waits for
+  them. The answer opens «Tu cuenta está lista» with the username to copy and «Empezar». The lead line says who invites, where and as what («Te invita Ana Pérez a
   «Programación I» como alumno.»). With a session in the tab: «Entrar en «X» como luis»,
   «Unirme» (`/join`) and «No soy luis — salir»; a link that names no subject (an
   administrator's invitation to create an account) has nothing to join and says so. Without
@@ -256,9 +260,14 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-128 — The material is Atlas in clay: no white, two levels of depth, small things flat,
   careful edges; the palette measured; arm colours fixed; theme three-state.
 - D-130 — One base for blocks, tables, lists, lists of sections, controls, choices and tabs.
-- D-131, D-133, D-135, D-137, D-139, D-140 — The bar is the path: three numbered steps and the unnumbered doors open to
+- D-131, D-244, D-135, D-137, D-139, D-140 — The bar is the path: three numbered steps and the unnumbered doors open to
   the account, set apart by a rule, with no phase captions; the steps never fold; no
   dashboard; no rail. A student's bar draws «Temario» and «Banco de ejercicios» unnumbered.
+  More than three doors fold into one pill, «Funciones», that leads to `/functions`; every
+  function is named from outside in one colour, `--function`, with its figure
+  (`components/ui/function-mark.tsx`).
+- D-243 — The registration asks for the name and one password; the server makes the
+  username, the form previews it and ticks the password's rules live (`lib/signup.ts`).
 - D-234 — The walked path leads to the first door open to the account, in the bar's order, or
   to «Temario»: `/` (a student's at once) and the last step's «Continuar».
 - D-142 — Step 3 is two parts (types, then bank), one on screen, chosen from two cards at the

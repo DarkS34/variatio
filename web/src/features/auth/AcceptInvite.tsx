@@ -1,22 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
-import { Eye, EyeOff, LogIn, LogOut, RotateCcw } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  LogIn,
+  LogOut,
+  Presentation,
+  RotateCcw,
+} from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
+import { CopyButton } from "@/components/CopyLink";
 import { Button } from "@/components/ui/button";
+import { ChoicePill } from "@/components/ui/choice";
 import { LanguageFlag } from "@/components/ui/flag";
 import { Input, Label } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import { useRadioGroup } from "@/components/ui/radio";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api";
 import { LANGUAGES, LANGUAGE_NAMES, localeStore, useLanguage, type Language } from "@/lib/i18n";
 import { useRouter } from "@/lib/router";
+import {
+  PASSWORD_MIN,
+  passwordAccepted,
+  passwordChecks,
+  usernameFromName,
+  type PasswordChecks,
+} from "@/lib/signup";
 import { cn } from "@/lib/utils";
 import { useT, type Key } from "@/lib/i18n";
-import type { EvaluatorProfile, InvitePreview, Session } from "@/lib/types";
+import type { EvaluatorProfile, InvitePreview, Role, Session } from "@/lib/types";
 import {
-  ROLE_HINT_KEYS,
   ROLE_LABEL_KEYS,
   useAcceptInvite,
   useIsUnauthenticated,
@@ -31,9 +50,22 @@ import { FormError } from "@/components/ui/form-error";
 import { AuthLayout } from "./AuthLayout";
 import { useStripTokenFromUrl } from "./token";
 
-const PROFILE_IS_KEYS: Record<EvaluatorProfile, Key> = {
-  teacher: "invite.profileIs.teacher",
-  student: "invite.profileIs.student",
+const PROFILE_TITLE_KEYS: Record<EvaluatorProfile, Key> = {
+  teacher: "invite.profile.teacher",
+  student: "invite.profile.student",
+};
+
+/** What the role a link carries lets the person do in the subject it names. */
+const CAN_KEYS: Record<Role, Key> = {
+  viewer: "invite.can.viewer",
+  editor: "invite.can.editor",
+  owner: "invite.can.owner",
+};
+
+/** What the account does when the invitation names no subject: the application alone. */
+const APP_KEYS: Record<EvaluatorProfile, Key> = {
+  teacher: "invite.can.app.teacher",
+  student: "invite.can.app.student",
 };
 
 type Path = "create" | "existing";
@@ -66,10 +98,6 @@ export function AcceptInvite({ token }: { token: string }) {
   const joined = join.data ?? loginAndJoin.data;
 
   useEffect(() => {
-    if (accept.isSuccess) navigate("/", { replace: true });
-  }, [accept.isSuccess, navigate]);
-
-  useEffect(() => {
     if (!joined) return;
     // Named from the answer: adopting it dropped every query but the session, the preview too.
     const workspace =
@@ -83,12 +111,11 @@ export function AcceptInvite({ token }: { token: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joined, navigate]);
 
-  if (accept.isSuccess || joined) {
+  if (accept.isSuccess) return <AccountReady session={accept.data} />;
+
+  if (joined) {
     return (
-      <AuthLayout
-        title={accept.isSuccess ? t("invite.accountCreated") : t("invite.title")}
-        description={t("invite.alreadyIn")}
-      >
+      <AuthLayout title={t("invite.title")} description={t("invite.alreadyIn")}>
         <Spinner />
       </AuthLayout>
     );
@@ -155,7 +182,9 @@ export function AcceptInvite({ token }: { token: string }) {
 /** Who invites, to which subject and as what: the line both ways through the link open with. */
 function InvitedBy({ invite }: { invite: InvitePreview }) {
   const { t } = useT();
-  if (!invite.workspace) return <>{t("invite.toApp")}</>;
+  if (!invite.workspace) {
+    return <>{invite.inviter ? t("invite.toAppFrom", { inviter: invite.inviter }) : t("invite.toApp")}</>;
+  }
   const role = t(ROLE_LABEL_KEYS[invite.role]).toLowerCase();
   return (
     <>
@@ -275,6 +304,7 @@ function SignedOut({
 
   return (
     <AuthLayout
+      wide
       title={path === "create" ? t("invite.create") : t("invite.signIn")}
       description={<InvitedBy invite={invite} />}
     >
@@ -364,8 +394,16 @@ function SignInAndJoin({
 }
 
 /**
- * The registration the link was made for: language, username, name and password. Nothing
- * about what the account will be — the link decided it, and the form says it.
+ * The registration the link was made for: what the account will be, the language, the name
+ * and the password (the user's request, 2026-11-04).
+ *
+ * What the account will be comes FIRST and is said, never asked: the invitation decided it.
+ * The name is the one identity asked for: the server makes the username from it
+ * (`queries.username_from_name`), the form shows the one it will be as the name is typed,
+ * and the screen after it says the one it is. The password is typed once, with a way to see
+ * it, and its rules tick as they are met (`lib/signup.passwordChecks`, the server's rules
+ * mirrored): the button waits until they all are, so the server's refusal is never the first
+ * thing a person learns of a rule.
  */
 function CreateAccount({
   token,
@@ -380,85 +418,75 @@ function CreateAccount({
 }) {
   const { t } = useT();
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [repeat, setRepeat] = useState("");
   const [visible, setVisible] = useState(false);
   const [language, setLanguage] = useState<Language>(useLanguage());
-  const mismatch = repeat.length > 0 && password !== repeat;
+  const choose = (option: Language) => {
+    setLanguage(option);
+    localeStore.set(option);
+  };
+  const languages = useRadioGroup(LANGUAGES, language, choose);
+  const username = usernameFromName(name);
+  const checks = passwordChecks(password, { name: name.trim(), username });
+  const ready = name.trim().length > 0 && passwordAccepted(checks);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (mismatch) return;
-    accept.mutate({
-      token,
-      username: username.trim(),
-      name: name.trim(),
-      password,
-      ui_language: language,
-    });
+    if (!ready) return;
+    accept.mutate({ token, name: name.trim(), password, ui_language: language });
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit} className="flex flex-col gap-5">
+      <ProfileStrip invite={invite} />
+
       <div className="flex flex-col gap-1.5">
         <Label id="invite-language-label">{t("invite.language")}</Label>
-        <div role="group" aria-labelledby="invite-language-label" className="flex gap-1">
+        <div
+          role="radiogroup"
+          aria-labelledby="invite-language-label"
+          className="grid grid-cols-2 gap-2"
+          {...languages.group}
+        >
           {LANGUAGES.map((option) => (
-            <button
+            <ChoicePill
               key={option}
-              type="button"
-              onClick={() => {
-                setLanguage(option);
-                localeStore.set(option);
-              }}
-              aria-pressed={language === option}
-              className={cn(
-                "rounded-md inline-flex h-9 flex-1 items-center justify-center gap-2 border",
-                "text-small font-medium transition-colors",
-                language === option
-                  ? "border-ink bg-ink text-ink-foreground"
-                  : "border-border bg-card hover:bg-accent/60",
-              )}
+              {...languages.radio(option)}
+              chosen={language === option}
+              onClick={() => choose(option)}
             >
               <LanguageFlag language={option} />
               {LANGUAGE_NAMES[option]}
-            </button>
+            </ChoicePill>
           ))}
         </div>
-        <p className="text-small text-muted-foreground">
-          {t("invite.languageHint")}
-        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="invite-username">{t("auth.username")}</Label>
-        <Input
-          id="invite-username"
-          name="username"
-          autoComplete="username"
-          autoCapitalize="none"
-          spellCheck={false}
-          required
-          autoFocus
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-        />
-        <p className="text-small text-muted-foreground">
-          {t("invite.usernameHelp")}
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="invite-name">{t("invite.visibleName")}</Label>
+        <Label htmlFor="invite-name">{t("invite.name")}</Label>
         <Input
           id="invite-name"
           name="name"
           autoComplete="name"
+          maxLength={200}
           required
+          autoFocus
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
+        {/* For the password manager: the username it saves beside the new password. */}
+        <input type="text" name="username" autoComplete="username" value={username} readOnly hidden />
+        <p className="text-small text-muted-foreground" aria-live="polite">
+          {username ? (
+            <>
+              {t("invite.signInAs")}{" "}
+              <span className="rounded-sm bg-sunk px-1.5 py-0.5 font-mono text-foreground">{username}</span>
+              <span className="block pt-1">{t("invite.signInAsNote")}</span>
+            </>
+          ) : (
+            t("invite.nameHelp")
+          )}
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -469,6 +497,7 @@ function CreateAccount({
             name="new-password"
             type={visible ? "text" : "password"}
             autoComplete="new-password"
+            aria-describedby="invite-password-rules"
             className="pr-10"
             required
             value={password}
@@ -477,45 +506,130 @@ function CreateAccount({
           <button
             type="button"
             onClick={() => setVisible((was) => !was)}
+            aria-label={visible ? t("password.hide") : t("password.show")}
             title={visible ? t("password.hide") : t("password.show")}
-            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:text-foreground"
           >
             {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
-        <p className="text-small text-muted-foreground">
-          {t("invite.passwordHelp")}
-        </p>
+        <PasswordRules id="invite-password-rules" checks={checks} />
+        <p className="text-small text-muted-foreground">{t("invite.passwordTip")}</p>
       </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="invite-repeat">{t("password.repeat")}</Label>
-        <Input
-          id="invite-repeat"
-          name="confirm-password"
-          type={visible ? "text" : "password"}
-          autoComplete="new-password"
-          required
-          value={repeat}
-          onChange={(event) => setRepeat(event.target.value)}
-        />
-        {mismatch ? (
-          <p className="text-small text-destructive">{t("password.mismatch")}</p>
-        ) : null}
-      </div>
-
-      <p className="text-small text-muted-foreground">
-        {/* What the account will be, said and never asked: the invitation decided it. */}
-        {invite.profile ? `${t(PROFILE_IS_KEYS[invite.profile])} ` : ""}
-        {t(ROLE_HINT_KEYS[invite.role])}
-      </p>
 
       <FormError error={accept.error} />
 
-      <Button type="submit" disabled={accept.isPending || mismatch || paused}>
+      <Button type="submit" size="lg" disabled={accept.isPending || paused || !ready}>
         {accept.isPending ? <Spinner /> : null}
         {t("invite.createAccount")}
       </Button>
     </form>
+  );
+}
+
+/**
+ * What the account will be, at the head of the form: its profile as a title, and what it lets
+ * the person do, said for the subject the link names or for the application alone.
+ */
+function ProfileStrip({ invite }: { invite: InvitePreview }) {
+  const { t } = useT();
+  const profile = invite.profile ?? (invite.role === "viewer" ? "student" : "teacher");
+  const Icon = profile === "teacher" ? Presentation : GraduationCap;
+  const lines = invite.workspace
+    ? [
+        t(CAN_KEYS[invite.role], { workspace: invite.workspace }),
+        ...(profile === "teacher" ? [t("invite.can.ownSubjects")] : []),
+      ]
+    : [t(APP_KEYS[profile])];
+  return (
+    <div className="flex items-start gap-3 rounded-inner bg-sunk p-3">
+      <span
+        aria-hidden
+        className="flex size-9 shrink-0 items-center justify-center rounded-md bg-ink text-ink-foreground"
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-body font-medium">{t(PROFILE_TITLE_KEYS[profile])}</p>
+        <p className="text-small text-muted-foreground">{lines.join(" ")}</p>
+      </div>
+    </div>
+  );
+}
+
+/** The password's rules, each ticked as it is met: what the server would refuse, said first. */
+function PasswordRules({ id, checks }: { id: string; checks: PasswordChecks }) {
+  const { t } = useT();
+  const rules: { met: boolean; label: string; detail?: string }[] = [
+    {
+      met: checks.length,
+      label: t("password.rule.length", { n: PASSWORD_MIN }),
+      detail: checks.count > 0 && !checks.length ? `${checks.count}/${PASSWORD_MIN}` : undefined,
+    },
+    { met: checks.personal && checks.count > 0, label: t("password.rule.personal") },
+    { met: checks.obvious, label: t("password.rule.obvious") },
+  ];
+  return (
+    <ul id={id} aria-live="polite" className="space-y-1 pt-1">
+      {rules.map((rule) => (
+        <li
+          key={rule.label}
+          className={cn(
+            "flex items-start gap-2 text-small transition-colors",
+            rule.met ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full transition-colors",
+              rule.met ? "bg-settled text-background" : "border border-input",
+            )}
+          >
+            {rule.met ? <Check className="size-3" strokeWidth={3} /> : null}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="sr-only">{rule.met ? t("password.rule.met") : t("password.rule.unmet")} </span>
+            {rule.label}
+          </span>
+          {rule.detail ? <span className="nums shrink-0">{rule.detail}</span> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The account is made: the username the server chose, said once, big and copyable, because
+ * nobody typed it and it is what the next login asks for. «Empezar» goes in.
+ */
+function AccountReady({ session }: { session: Session }) {
+  const { t } = useT();
+  const { navigate } = useRouter();
+  const username = session.user.username;
+  // The form showed the name before its number: a namesake made it another, and that is said.
+  const previewed = usernameFromName(session.user.name ?? "");
+  const numbered = previewed !== "" && previewed !== username;
+  return (
+    <AuthLayout wide title={t("invite.ready.title")} description={t("invite.ready.lead")}>
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center gap-3 rounded-inner bg-sunk p-3">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="text-micro font-condensed uppercase text-muted-foreground">
+              {t("invite.ready.username")}
+            </p>
+            <p className="truncate font-mono text-heading">{username}</p>
+          </div>
+          <CopyButton text={username} />
+        </div>
+        {numbered ? (
+          <p className="text-small text-muted-foreground">{t("invite.ready.numbered", { previewed })}</p>
+        ) : null}
+        <Button size="lg" autoFocus onClick={() => navigate("/", { replace: true })}>
+          {t("invite.ready.go")}
+          <ArrowRight />
+        </Button>
+      </div>
+    </AuthLayout>
   );
 }

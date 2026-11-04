@@ -7,6 +7,7 @@ is it, so a duplicate differing in case cannot enter through a second door.
 """
 
 import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select, update
@@ -68,6 +69,38 @@ def username_error(username: str) -> str | None:
             "o guion bajo, y ni empieza ni acaba por un signo."
         )
     return None
+
+
+# The words of a name a username leaves out: «Ana de la Fuente» signs in as `ana.fuente`.
+_NAME_PARTICLES = frozenset({"de", "del", "la", "las", "los", "y", "e", "da", "das", "do", "dos", "di", "van", "von"})
+
+# Room left under the 64 characters for the number that tells two namesakes apart.
+_USERNAME_BASE_MAX = 58
+
+
+def username_from_name(session: Session, name: str) -> str:
+    """Return a free username made from a person's name: the first name, a dot, the next word.
+
+    The registration asks for the name alone (the user's request, 2026-11-04: two fields for
+    one identity confused people). Accents fold away and particles drop, so «Ana María de la
+    Peña» is `ana.maria`, «Ana de la Peña» `ana.pena` and «Ana M. Peña» `ana.pena`. A taken name gets the first free
+    number after it (`ana.pena2`): an invitation holder learnt the same from the 409 a typed
+    name met. A name with no letter left becomes `usuario`.
+    """
+    folded = unicodedata.normalize("NFKD", name.lower())
+    plain = "".join(char for char in folded if not unicodedata.combining(char))
+    words = [word for word in re.split(r"[^a-z0-9]+", plain) if word]
+    kept = [word for word in words if len(word) > 1 and word not in _NAME_PARTICLES] or words
+    base = ".".join(kept[:2])[:_USERNAME_BASE_MAX].strip("._-") or "usuario"
+    taken = set(
+        session.scalars(select(User.username).where(User.username.startswith(base, autoescape=True)))
+    )
+    if len(base) >= 3 and base not in taken:
+        return base
+    number = 1 if len(base) < 3 else 2
+    while f"{base}{number}" in taken:
+        number += 1
+    return f"{base}{number}"
 
 
 def profile_error(profile: str | None) -> str | None:

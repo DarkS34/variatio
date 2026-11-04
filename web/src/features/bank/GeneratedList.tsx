@@ -1,4 +1,5 @@
-import { ArrowRight, ChevronRight, Library, MessageCircle, MessagesSquare, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronRight, Library, Sparkles } from "lucide-react";
+import { FUNCTION_ICONS } from "@/components/ui/function-mark";
 import { useEffect, useMemo, useState } from "react";
 
 import { fromGeneration, stashDraft } from "@/consumers/generation/draft";
@@ -11,7 +12,7 @@ import { LoadError } from "@/components/ui/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
-import { DOOR_TONE } from "@/components/ui/tone";
+import { FUNCTION_TONE } from "@/components/ui/tone";
 import { fieldText } from "@/lib/fields";
 import { dayMonth, truncate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -29,6 +30,10 @@ import { typeSummaries } from "./exercise";
 
 import { Pager } from "./Pager";
 import { PromoteDialog } from "./Promote";
+
+// The tutor and the chat are opened by the figure their doors carry.
+const TutorIcon = FUNCTION_ICONS.tutor;
+const ChatIcon = FUNCTION_ICONS.chat;
 
 /** Which generated exercises: out of the bank (where the work is), in it, or all. */
 type Scope = "out" | "in" | "all";
@@ -362,23 +367,24 @@ function GeneratedRow({
             <Button
               variant="ghost"
               size="icon-sm"
-              className={cn(DOOR_TONE.tutor.face, DOOR_TONE.tutor.hover)}
+              className={cn(FUNCTION_TONE.face, FUNCTION_TONE.hover)}
               onClick={onTutor}
               title={t("tutor.fromExercise.hint")}
               aria-label={t("tutor.fromExercise")}
             >
-              <MessagesSquare />
+              <TutorIcon />
             </Button>
           ) : null}
           {onChat ? (
             <Button
               variant="ghost"
               size="icon-sm"
+              className={cn(FUNCTION_TONE.face, FUNCTION_TONE.hover)}
               onClick={onChat}
               title={t("chat.fromExercise.hint")}
               aria-label={t("chat.fromExercise")}
             >
-              <MessageCircle />
+              <ChatIcon />
             </Button>
           ) : null}
           <Button

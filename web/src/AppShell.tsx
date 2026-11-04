@@ -1,13 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Library,
-  MessageCircle,
-  MessagesSquare,
-  Network,
-  Play,
-  Scale,
-  Wrench,
-} from "lucide-react";
+import { LayoutGrid, Library, Network, Wrench } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -19,13 +11,16 @@ import {
 
 import { COUNTER_BOX, StepCounter } from "@/components/StepCounter";
 import { Lockup } from "@/components/ui/logo";
-import { DOOR_TONE } from "@/components/ui/tone";
+import { FunctionMark } from "@/components/ui/function-mark";
+import { FUNCTION_TONE } from "@/components/ui/tone";
 import { AccountMenu } from "@/features/auth/AccountMenu";
 import { WorkspaceSwitcher } from "@/features/workspaces/WorkspaceSwitcher";
 import { Link, useRouter } from "@/lib/router";
 import {
+  FUNCTIONS_PATH,
   STEPS,
   STUDENT_READS,
+  doorsGrouped,
   stepBusy,
   stepNumber,
   stepStates,
@@ -147,9 +142,10 @@ const PILL_HEIGHT = "min-h-[calc(0.5rem_+_22px_+_2px_+_1.0125rem)]";
  * names the stage in the way, so nothing is lost by the bar refusing. The name is centred
  * in a pill of the steps' own height, so nothing in the row moves when the doors open.
  *
- * The door of an optional function carries that function's colour, locked or not —
- * "Evaluar el sistema" `--evaluation`, "Tutor socrático" `--tutor`: the tint says "this is a
- * different kind of thing", which is true from wherever you look at it.
+ * Every door carries the one colour of the functions (`--function`, since 2026-11-04 the four
+ * alike: `ui/tone.ts`) in its figure (`FunctionMark`), locked or not: the tint says "this is a
+ * different kind of thing" than a step, and the figure says which function it is. What a
+ * student reads of the construction is no function: its icon stays in ink.
  */
 function DoorPill({
   door,
@@ -161,33 +157,38 @@ function DoorPill({
   /** A door of `USES`, or what a student reads of the construction, drawn the same way and
    *  no door. */
   door: Door | Reading;
-  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+  /** A reading's icon; a door's figure is its function's (`FunctionMark`). */
+  icon?: ComponentType<{ className?: string; strokeWidth?: number }>;
   active: boolean;
   /** Whether the whole construction is closed, which is what opens every door at once. */
   open: boolean;
   disabledReason?: string | null;
 }) {
   const { t } = useT();
-  const tone = door.feature ? DOOR_TONE[door.feature] : null;
-  const face = cn(PILL, PILL_HEIGHT, "justify-center", tone?.face);
+  // A door of `USES` is a function; a reading of the construction is not.
+  const fn = "access" in door;
+  const face = cn(PILL, PILL_HEIGHT, "justify-center");
   const body = (
     <>
       <span
         className={cn(
           PILL_NAME,
           "font-medium",
-          !open && "text-muted-foreground",
-          open && !tone && "text-foreground",
+          open ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        <span
-          className={cn(
-            COUNTER_BOX,
-            !open && "border border-dashed border-input text-muted-foreground",
-          )}
-        >
-          <Icon className="size-4" strokeWidth={2.25} />
-        </span>
+        {fn ? (
+          <FunctionMark door={door.key} locked={!open} />
+        ) : Icon ? (
+          <span
+            className={cn(
+              COUNTER_BOX,
+              !open && "border border-dashed border-input text-muted-foreground",
+            )}
+          >
+            <Icon className="size-4" strokeWidth={2.25} />
+          </span>
+        ) : null}
         {t(door.labelKey)}
       </span>
       {open ? null : (
@@ -214,12 +215,57 @@ function DoorPill({
       aria-current={active ? "page" : undefined}
       className={cn(
         face,
-        tone?.hover,
-        tone && active && tone.active,
-        !tone && active && "bg-sunk",
+        fn && FUNCTION_TONE.hover,
+        active && (fn ? FUNCTION_TONE.active : "bg-sunk"),
       )}
     >
       {body}
+    </Link>
+  );
+}
+
+/**
+ * THE DOORS FOLDED INTO ONE PILL, when they are more than three (`lib/steps.doorsGrouped`;
+ * the user's request, 2026-11-04). It leads to «Funciones», where every function is drawn at
+ * full size, and it is always a link: while the construction is open that screen says why
+ * each function waits.
+ *
+ * Its word under the name says where you are: the function in use, its name in the
+ * functions' colour, or how many there are. It is the chosen pill on «Funciones» and on every
+ * function's screen, so the bar never loses which phase you are in.
+ */
+function FunctionsPill({ doors, path, open }: { doors: Door[]; path: string; open: boolean }) {
+  const { t, plural } = useT();
+  const current = doors.find((door) => door.path === path);
+  const active = path === FUNCTIONS_PATH || current !== undefined;
+  return (
+    <Link
+      to={FUNCTIONS_PATH}
+      title={t("functions.title")}
+      aria-current={path === FUNCTIONS_PATH ? "page" : undefined}
+      className={cn(PILL, PILL_HEIGHT, FUNCTION_TONE.hover, active && FUNCTION_TONE.active)}
+    >
+      <span className={cn(PILL_NAME, "font-medium", open ? "text-foreground" : "text-muted-foreground")}>
+        <span
+          aria-hidden
+          className={cn(
+            COUNTER_BOX,
+            open
+              ? "bg-[color-mix(in_oklab,var(--function)_16%,transparent)] text-function"
+              : "border border-dashed border-input text-muted-foreground",
+          )}
+        >
+          <LayoutGrid className="size-3.5" strokeWidth={2.25} />
+        </span>
+        {t("functions.title")}
+      </span>
+      <span className={cn(PILL_WORD, current ? FUNCTION_TONE.face : "text-muted-foreground")}>
+        {current
+          ? t(current.labelKey)
+          : open
+            ? plural("functions.count", doors.length)
+            : t("nav.state.later")}
+      </span>
     </Link>
   );
 }
@@ -251,21 +297,10 @@ function NavRule() {
 /** How wide the fade over a cut strip's right edge is, in px: a pill under it is not in sight. */
 const FADE_PX = 32;
 
-/** The icon each door of «Fase de pruebas» carries where a step carries its number. */
 // What a student reads of the construction carries an icon where a step carries its number.
 const READING_ICONS: Record<Reading["key"], ComponentType<{ className?: string; strokeWidth?: number }>> = {
   syllabus: Network,
   bank: Library,
-};
-
-const DOOR_ICONS: Record<
-  Door["key"],
-  ComponentType<{ className?: string; strokeWidth?: number }>
-> = {
-  generate: Play,
-  compare: Scale,
-  tutor: MessagesSquare,
-  chat: MessageCircle,
 };
 
 /**
@@ -403,16 +438,19 @@ function MainNav({
       <NavRule />
 
       <PhaseGroup gap="wide">
-        {doors.map((door) => (
-          <DoorPill
-            key={door.key}
-            door={door}
-            icon={DOOR_ICONS[door.key]}
-            active={path === door.path}
-            open={locked === null}
-            disabledReason={student && locked !== null ? t("nav.subjectNotReady") : locked}
-          />
-        ))}
+        {doorsGrouped(doors) ? (
+          <FunctionsPill doors={doors} path={path} open={locked === null} />
+        ) : (
+          doors.map((door) => (
+            <DoorPill
+              key={door.key}
+              door={door}
+              active={path === door.path}
+              open={locked === null}
+              disabledReason={student && locked !== null ? t("nav.subjectNotReady") : locked}
+            />
+          ))
+        )}
       </PhaseGroup>
     </nav>
   );

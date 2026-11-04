@@ -55,6 +55,9 @@ BAD_CREDENTIALS = "Usuario o contraseña incorrectos."
 # on every route that reads one, so none of them tells a link that existed from one that did not.
 DEAD_LINK = "Esa invitación no existe, ya se usó o ha caducado."
 
+# The longest name an account keeps (`users.name`).
+NAME_MAX = 200
+
 # What a refused class link carries in `X-Error-Code`.
 CLASS_LINK_FULL = "class_link_full"
 CLASS_LINK_PAUSED = "class_link_paused"
@@ -83,11 +86,13 @@ class AcceptBody(BaseModel):
     """An invitation being redeemed: the link, and who the holder says they are.
 
     Nothing about what the account will be: the invitation says it. A field this model does
-    not name — an `evaluator_profile` an older form still sends — is ignored.
+    not name — an `evaluator_profile` an older form still sends — is ignored. The form sends
+    no `username` since 2026-11-04: the server makes one from the name
+    (`queries.username_from_name`). One still sent is used as it was, for an older client.
     """
 
     token: str
-    username: str
+    username: str = ""
     name: str = ""
     password: str
     # Absent is allowed here and nowhere else: a browser that never asked can still register,
@@ -430,14 +435,18 @@ def accept_invite(
         raise HTTPException(404, DEAD_LINK)
 
     username = _checked_credentials(session, body)
-    user = queries.create_user(
-        session,
-        username=username,
-        name=body.name.strip() or username,
-        password_hash=passwords.hash_password(body.password),
-        evaluator_profile=_profile_of(invite),
-        ui_language=body.ui_language,
-    )
+    try:
+        user = queries.create_user(
+            session,
+            username=username,
+            name=body.name.strip() or username,
+            password_hash=passwords.hash_password(body.password),
+            evaluator_profile=_profile_of(invite),
+            ui_language=body.ui_language,
+        )
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(409, _TAKEN_IN_BETWEEN) from None
     _apply_membership(session, invite, user)
     _apply_features(session, invite, user)
     queries.attribute_invite(session, invite, user.id)
@@ -548,7 +557,7 @@ def _accept_class(
         )
     except IntegrityError:
         session.rollback()
-        raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.") from None
+        raise HTTPException(409, _TAKEN_IN_BETWEEN) from None
     queries.grant(
         session,
         link.workspace_id,
@@ -563,14 +572,29 @@ def _accept_class(
     return _me(session, user)
 
 
+# Two people registering with one name at the same moment: the second meets the unique index.
+_TAKEN_IN_BETWEEN = "Alguien acaba de registrarse con ese nombre. Vuelve a pulsar «Crear la cuenta»."
+
+
 def _checked_credentials(session: DbSession, body: AcceptBody) -> str:
-    """Refuse a username, password or language a new account may not have; return the username."""
-    username = queries.normalise_username(body.username)
-    error = queries.username_error(username)
-    if error:
-        raise HTTPException(422, error)
-    if queries.get_user(session, username) is not None:
-        raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.")
+    """Refuse a name, password or language a new account may not have; return its username.
+
+    The username is made from the name (`queries.username_from_name`), so the name is required.
+    A username an older client still types is checked as it always was.
+    """
+    if not body.username.strip():
+        if not body.name.strip():
+            raise HTTPException(422, "Escribe tu nombre.")
+        if len(body.name.strip()) > NAME_MAX:
+            raise HTTPException(422, f"El nombre no puede pasar de {NAME_MAX} caracteres.")
+        username = queries.username_from_name(session, body.name)
+    else:
+        username = queries.normalise_username(body.username)
+        error = queries.username_error(username)
+        if error:
+            raise HTTPException(422, error)
+        if queries.get_user(session, username) is not None:
+            raise HTTPException(409, f"El usuario «{username}» ya está cogido. Elige otro.")
     error = passwords.policy_error(body.password, account=username, name=body.name)
     if error:
         raise HTTPException(422, error)

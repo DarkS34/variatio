@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Lockup } from "@/components/ui/logo";
+import { cn } from "@/lib/utils";
 
 /**
  * The shell the three unauthenticated screens share.
@@ -15,15 +16,18 @@ export function AuthLayout({
   description,
   children,
   footer,
+  wide = false,
 }: {
   title: string;
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  /** The registration's width: its form says more than a login, and at 384 px it wrapped every line. */
+  wide?: boolean;
 }) {
   return (
     <div className="flex min-h-full items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
+      <div className={cn("w-full", wide ? "max-w-md" : "max-w-sm")}>
         <Lockup className="mb-6" />
 
         <Card className="p-6">
