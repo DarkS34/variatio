@@ -63,6 +63,13 @@ def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> 
     naming canon is the longest section of the prompt: two chunks naming one idea differently
     produce two concepts that never reconcile. `location` is the heading path of the section
     the chunk came from, so neighbouring chunks name things as this part of the syllabus does.
+
+    A relation is stated when the text shows how the two concepts relate, every such one and
+    no other (K1 of the 2026-11 tuning). The earlier rule asked to be exhaustive and called
+    two concepts treated together a missing relation; on three subjects the new one states
+    7 % fewer relations, Python's prerequisites go from 16 to 7 (most of those dropped tied
+    one exercise's own quantities), and it covers as many of the gold's prerequisite pairs
+    (37 against 34 by any relation).
     """
     location_block = ""
     if location:
@@ -105,8 +112,8 @@ Each relation is a triple [source, type, target]. The direction matters: choose 
 # RELATION RULES
 - The source and the target must be DIFFERENT, and both must appear in your `concepts` list. Relating a concept to itself is forbidden.
 {_kg_type_preference_rule(schema)}
-- Extract only the relations SUPPORTED by the passage's text, not by outside knowledge.
-- Be exhaustive with the relations: when the passage explains one concept by leaning on another, that is a relation to state, even if the text does not phrase it as one. Two concepts on your list that the passage treats together with no relation between them is, almost always, a missing relation.
+- State EVERY relation the passage's text supports, and only those: none that comes from outside knowledge. A relation is supported when the passage shows HOW the two concepts relate — it explains one by leaning on the other, presents one as a case or a part of the other, needs one to teach the other — even if it does not phrase it in those words.
+- Two concepts appearing together is not enough: if the passage does not show how they relate, state no relation between them.
 
 {_KG_EXTRACT_OUTPUT}
 - If the passage yields no extractable concept, return {{"concepts": [], "relations": []}}.

@@ -63,6 +63,13 @@ def extract_typed_graph_prompt(source_text: str, schema, location: str = "") -> 
     naming canon is the longest section of the prompt: two chunks naming one idea differently
     produce two concepts that never reconcile. `location` is the heading path of the section
     the chunk came from, so neighbouring chunks name things as this part of the syllabus does.
+
+    A relation is stated when the text shows how the two concepts relate, every such one and
+    no other (K1 of the 2026-11 tuning). The earlier rule asked to be exhaustive and called
+    two concepts treated together a missing relation; on three subjects the new one states
+    7 % fewer relations, Python's prerequisites go from 16 to 7 (most of those dropped tied
+    one exercise's own quantities), and it covers as many of the gold's prerequisite pairs
+    (37 against 34 by any relation).
     """
     location_block = ""
     if location:
@@ -105,8 +112,8 @@ Cada relación es una terna [origen, tipo, destino]. La dirección importa: elig
 # REGLAS DE RELACIÓN
 - El origen y el destino deben ser DISTINTOS, y ambos deben aparecer en tu lista `concepts`. Está prohibido relacionar un concepto consigo mismo.
 {_kg_type_preference_rule(schema)}
-- Extrae solo las relaciones SOSTENIDAS por el texto del fragmento, no por conocimiento externo.
-- Sé exhaustivo con las relaciones: cuando el fragmento explique un concepto apoyándose en otro, eso es una relación que enunciar, aunque el texto no la formule como tal. Dos conceptos de tu lista que el fragmento trate juntos y sin ninguna relación entre ellos es, casi siempre, una relación que falta.
+- Enuncia TODA relación que el texto del fragmento sostiene, y solo esas: ninguna que venga de tu conocimiento externo. Una relación está sostenida cuando el fragmento muestra CÓMO se relacionan los dos conceptos —explica uno apoyándose en el otro, presenta uno como caso o parte del otro, necesita uno para enseñar el otro—, aunque no la formule con esas palabras.
+- Que dos conceptos aparezcan juntos no basta: si el fragmento no muestra cómo se relacionan, no enuncies ninguna relación entre ellos.
 
 {_KG_EXTRACT_OUTPUT}
 - Si el fragmento no da ningún concepto extraíble, devuelve {{"concepts": [], "relations": []}}.
