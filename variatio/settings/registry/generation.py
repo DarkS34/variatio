@@ -61,7 +61,7 @@ SETTINGS: list[Setting] = [
             kind="int", default=900, group="Etiquetado y generación", impact=Impact.REINDEX,
             stages=("bank", "graph"), phase="ep_context",
             minimum=1,
-            doc="""El contexto de la asignatura entra en TODOS los prompts del sistema, así que su coste se paga una vez por llamada y en cada una de ellas. 900 caracteres son ~250 tokens: espacio de sobra para decir qué materia es, a qué nivel, en qué idioma y con qué convenciones, y poco suficiente como para que no compita con el material que el prompt lleva de verdad. También es lo que acota la síntesis: sin techo, cada reconstrucción añadiría un matiz más."""),
+            doc="""El contexto de la asignatura entra en todos los prompts del sistema menos en el escaneo de modalidades del perfil (que lee solo su fragmento), así que su coste se paga una vez por llamada y en cada una de ellas. 900 caracteres son ~250 tokens: espacio de sobra para decir qué materia es, a qué nivel, en qué idioma y con qué convenciones, y poco suficiente como para que no compita con el material que el prompt lleva de verdad. También es lo que acota la síntesis: sin techo, cada reconstrucción añadiría un matiz más."""),
     Setting(key="generation.guardrail_criteria", name="GUARDRAIL_CRITERIA", kind="list[str]",
             default=["jailbreak"], group="Etiquetado y generación", impact=Impact.NONE,
             stages=("generation",), phase="guardrail",

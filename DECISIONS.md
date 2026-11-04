@@ -209,7 +209,7 @@ what each decision replaced.
 
 ### D-236. The guardrail asks granite for jailbreak only
 - **Rule:** `generation.guardrail_criteria` is `["jailbreak"]`; granite's «harm» is not asked. Its gap is covered by the injection patterns, the scope judge of a commission, the tutor's `off_topic` kind, and the shared scope block and the tutor's method, which refuse what is dangerous, work a sensitive topic of the subject at the course's level, and answer a student in distress with care and a referral to the teacher or someone they trust.
-- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-04 · **Commit:** `36c9d6c` · **Status:** in force
 - **Why:** The user's yes to the prompt tuning report's first proposal, «but be sure its absence can be mitigated». On 383 legitimate texts, «harm» flagged 14: an epidemics exercise, a warfarin overdose in nursing, a student saying «me quiero morir del agobio», a black market as the example of a price ceiling. On the gold, it blocked no attack that the patterns or «jailbreak» did not block: without it, the 12 attacks per language are still blocked, and the false positives go from 5 to 2 (es) and 3 to 1 (en). With the new rules, 7 of 8 replies to a student in distress name the teacher or someone they trust (1 of 8 before), and no reply to the gold's other 60 messages does; tutor 12–12 and chat 7–4 against the earlier prompts, blind.
 
 ## Prompts and the graph
@@ -238,6 +238,11 @@ what each decision replaced.
 - **Rule:** `guidance.generation` is never generated; the modality's `general_generation_rules` carry how an item is written, and `guidance.generation` is a hand-written exception for one field.
 - **Date:** 2026-08-22 · **Commit:** `54496b5` · **Status:** in force
 - **Why:** The consolidator emitted both per-field generation guidance and per-modality rules, and they said the same thing (three of four rules of one modality restated a field's guidance).
+
+### D-237. The profile's scan reads no subject context
+- **Rule:** `scan_item_types_prompt` takes no `context_block`: each fragment is inventoried from its own text. The consolidation keeps the context, since it writes the texts a person reads.
+- **Date:** 2026-11-04 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's yes to the prompt tuning report's third proposal. The scan is deterministic and a first build has no context yet, so with the context the next build scanned the same corpus differently; a context change alone had folded a Python workbook's memory diagrams into code writing (3 items of 40). Measured on seven profiles (33 fragments) with and without it: the same modalities in three, one modality grouped or split in the other four, the same time; one label of 33 came back in Spanish on an English subject, which the consolidation rewrites.
 
 ### D-041. Prerequisite lists are curriculum-bounded closures
 - **Rule:** Prerequisite lists are transitive closures bounded by the curriculum with opposite set operations: `assumed_known()` intersects the prerequisite closure with the curriculum and `forbidden()` subtracts it.

@@ -239,9 +239,9 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
 # they were the two whose output came back in the wrong language — measured on a workspace
 # whose material and `locale.json` are both English, where the graph, the concept
 # descriptions and the bank all came out English and only the profile's `description` and
-# `guidance` came out Spanish.
+# `guidance` came out Spanish. The profile's scan is the one exception: it reads one fragment,
+# and with the context a first build and the next scanned the same corpus differently.
 CONTEXT_AWARE = [
-    "scan_item_types_prompt",
     "consolidate_exemplars_profile_prompt",
     "concept_description_prompt",
     "describe_domain_concepts_prompt",
@@ -261,9 +261,15 @@ def test_the_subject_facing_prompts_take_the_context_block(code, name):
 def test_the_profile_prompts_render_the_context_they_are_given(code):
     module = prompts.of(code)
     block = "MATERIA: Física · IDIOMA DE INSTRUCCIÓN: English"
-    scan = module.scan_item_types_prompt("fragmento", context_block=block)
     consolidate = module.consolidate_exemplars_profile_prompt("hallazgos", 4, context_block=block)
-    assert block in scan and block in consolidate
+    assert block in consolidate
+
+
+@pytest.mark.parametrize("code", languages.LANGUAGES)
+def test_the_scan_reads_no_context(code):
+    """It inventories one fragment, whatever the subject's summary says (2026-11 tuning)."""
+    function = prompts.of(code).scan_item_types_prompt
+    assert "context_block" not in inspect.signature(function).parameters
 
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)

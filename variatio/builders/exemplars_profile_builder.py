@@ -273,9 +273,7 @@ class ExemplarsProfileBuilder:
 
     def _scan_chunk(self, body: str, location: str, tag: str) -> list[dict]:
         """Ask one chunk for its modalities, `[]` when the answer cannot be repaired."""
-        prompt = self.prompts.scan_item_types_prompt(
-            body, location, self.excerpt_chars, context_block=self._context_block()
-        )
+        prompt = self.prompts.scan_item_types_prompt(body, location, self.excerpt_chars)
         response = inference.generate(
             model=self.scan_model,
             think=config.THINK_EP_SCAN,
@@ -302,11 +300,12 @@ class ExemplarsProfileBuilder:
     def _context_block(self) -> str:
         """The subject's context, or an empty block on the build that has none yet.
 
-        Read once per build and cached, because both phases ask for it and the file does
-        not change while a build runs. Empty is the ordinary state of a FIRST build: the
-        context is synthesised in this same builder's last phase, so there is nothing to
-        pass until there has been one build. From the second onwards the two phases know
-        the subject, the level and — the reason this exists — the language it is taught in.
+        Only the consolidation asks for it: the scan inventories one fragment and reads no
+        context (`scan_item_types_prompt` says why). Empty is the ordinary state of a FIRST
+        build: the context is synthesised in this same builder's last phase, so there is
+        nothing to pass until there has been one build. From the second onwards the
+        consolidation knows the subject, the level and — the reason this exists — the
+        language it is taught in.
         """
         if self._context_cache is None:
             self._context_cache = content_context.load_for(self.workspace).prompt_block()

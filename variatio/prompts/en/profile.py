@@ -74,7 +74,6 @@ def scan_item_types_prompt(
     content: str,
     location: str = "",
     excerpt_chars: int = 400,
-    context_block: str = "",
 ) -> str:
     """Ask which exercise modalities appear in ONE fragment of the raw material.
 
@@ -85,22 +84,24 @@ def scan_item_types_prompt(
     what an item of that modality looks like. Two modalities are the same when the same
     pieces would be filled in to write them; when in doubt, group.
 
-    It receives the subject's context like every other prompt in the system. It did not,
-    and it is the only thing that separated it from the ones that come out right: measured
-    on a workspace whose material and `locale.json` are both English, the graph, the concept
-    descriptions and the bank all came back in English and only the profile's `description`
-    and `guidance` came back in Spanish. Declaring nothing about the subject is not the same
-    as not knowing which language it is taught in.
+    It reads no subject context, unlike the other prompts of the system: what it inventories
+    depends on the fragment alone. The scan is deterministic, and a first build has no
+    context yet, so with it the next build scanned the same corpus differently. Measured in
+    the 2026-11 tuning on seven profiles (33 fragments), with and without the context: the
+    same modalities in three, one modality grouped or split in the other four; a context
+    change alone had folded a Python workbook's memory diagrams into code writing (3 items
+    of 40), and without one they stay folded. One label of the 33 answers came back in
+    Spanish on an English subject: the consolidation keeps the context and writes the
+    labels a person reads.
     """
     where = f"\nFragment taken from: {location}\n" if location else ""
-    context_section = f"\n# TEACHING CONTEXT\n{context_block}\n" if context_block.strip() else ""
     return f"""\
 Analyse a FRAGMENT of raw teaching material (exercises, problems, activities, questions) and inventory the exercise MODALITIES that appear in it.
 
 A modality is a WAY of setting the student the task, defined by the exercise's anatomy: which pieces of information make it up. Examples of different modalities: a closed question with alternatives; a numerical problem asking for a result computed from given data; a commission to write a program from scratch; a piece of starting material (code, a text, a schematic) with a mistake to locate and correct; a practical case to analyse and solve with written reasoning.
 
 This fragment is ONLY ONE PART of the material: do not try to describe the whole course and do not guess modalities that are not here. Inventory what you SEE in this fragment, and nothing else. A later step will gather the inventories of all the fragments.
-{where}{context_section}
+{where}
 # WHAT COUNTS AS AN EXERCISE
 Any unit the material SETS THE STUDENT AS A TASK counts. These do not count: theoretical exposition, explanations and definitions, examples that illustrate an explanation without asking anything, tables of contents, unit objectives, rubrics and bibliography. If the fragment sets no task, return `{{"types": []}}`.
 

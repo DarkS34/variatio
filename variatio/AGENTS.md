@@ -231,7 +231,9 @@ for non-ASCII characters written as themselves. A block is at most one item; a b
 brings only a solution is none, and an answer the block neither marks nor gives is `null`
 (measured: 3 invented items → 1, 15 deduced answers → 0).
 
-**Profile**: `guarantee_difficulty` runs on every consolidation route.
+**Profile**: `guarantee_difficulty` runs on every consolidation route. The scan reads no subject
+context (D-237): it inventories each fragment from its own text, and the same corpus scans the
+same on a first build and on the next; the consolidation reads it.
 
 ## Difficulty
 
@@ -400,6 +402,7 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
 - D-038, D-039 — Every modality carries a difficulty; shared ladder, local criterion; the
   criterion's `«rung»:` shape is legislated by the prompt.
 - D-040 — `guidance.generation` is hand-written only; modality rules carry generation.
+- D-237 — The profile's scan reads no subject context; the consolidation does.
 - D-041, D-042 — Prerequisite lists are transitive closures bounded by the curriculum, with
   opposite set operations; without a curriculum, later concepts may be used, not practised.
 - D-043 — The curriculum is the course's progress, set by its teachers in «Clase»: a
