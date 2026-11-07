@@ -34,6 +34,44 @@ rule and precision conflict, precision wins. The rule covers what is said to the
 conversation (answers, summaries, plans, questions). It does not change code, commit
 messages, UI copy or this file, which keep their own conventions.
 
+## Working with agents (D-247)
+
+The principle: every line of the repo has a human author who can explain it without looking
+at the diff. A change the user cannot explain is not finished, even when the tests pass.
+
+- **Implement, do not design.** The user defines abstractions, signatures, module boundaries
+  and data models before code is written. When they do not exist, propose them in text and
+  wait; do not implement.
+- **Plan before code.** For any non-trivial task, say which files change, which decisions are
+  taken and which trade-offs are accepted, then wait for explicit approval.
+- **Small commits.** One conceptual change per commit, a diff of at most 150 lines excluding
+  tests and generated files. A task that does not fit is split, and the agent stops after
+  each part.
+- **Never commit.** Leave the working tree ready, the `version` bump of `pyproject.toml` (and
+  `uv lock`) included; the user runs `git commit`.
+- **Close with a summary** of 3–5 lines: what was decided, why, what was left out, what the
+  user should check. A task without one is not closed.
+- **Existing tests are not changed to make them pass.** When a test contradicts the change,
+  stop and explain. New tests go in a separate commit.
+- **Self-review is not approval.** Approval comes from the user or a second model.
+- **The manual zone.** Only `web/`, `migrations/` and `tests/` may be edited on the agent's
+  own initiative, under the rules above. Every other path (`variatio/`, `server/`,
+  `consumers/` and the root files) changes only on an explicit instruction that names the file
+  and the change; never on the agent's initiative, never «in passing».
+- **Explaining.** When asked to explain, give the data flow, the invariants and the
+  trade-offs, not lists of files.
+- **The comprehension map**, `plans/mapa-comprension.md` (git-ignored), marks each module
+  green (the user explains it without looking), yellow (explains it looking) or red (cannot
+  explain it); the user reviews it every two weeks. Read it before a change: a red module is
+  not extended until it is yellow; explain it instead.
+- **Alarm signals.** Name one when it shows: a diff accepted unread, a bug fixed without the
+  user knowing its cause, a commit that changes many tests at once, a module whose structure
+  the user cannot justify. Then stop: a diff over 150 lines or a session over two hours waits
+  for the next day or is split.
+
+The numbers (150 lines, two hours, two weeks) are a starting point, adjusted after a month of
+use, not before (adopted 2026-11-05).
+
 ## Project
 
 *Knowledge Graph-Guided LLM Content Generator* — TFM (Máster en IA) for adaptive
@@ -170,6 +208,9 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
   everywhere. The why of a folder lives in its `AGENTS.md`, of a decision in `DECISIONS.md`.
 - D-226 — Python import boundaries are import-linter contracts; the client's direction is
   `pnpm check:layers`. An exception is named in the contract, never added in silence.
+- D-247 — The agent implements and the user designs and commits; plan before code, small
+  commits, only `web/`, `migrations/` and `tests/` on the agent's initiative (*Working with
+  agents*).
 
 ## Code conventions
 

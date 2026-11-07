@@ -45,21 +45,21 @@ from .build import (
     build_models,
     build_phases,
 )
-from .generate import (
-    UnofferedModelError,
-    generate,
-    fixed_effort_levels,
-    fixed_effort_models,
-    generation_models,
-    resolve_generation_effort,
-    resolve_generation_model,
-)
 from .descriptions import (
     describe_concepts,
     load_concept_descriptions,
     load_concept_sources,
     restamp_descriptions,
     save_concept_descriptions,
+)
+from .generate import (
+    UnofferedModelError,
+    fixed_effort_levels,
+    fixed_effort_models,
+    generate,
+    generation_models,
+    resolve_generation_effort,
+    resolve_generation_model,
 )
 from .initialize import RuntimeContext, initialize
 from .rates import step_rates
@@ -102,9 +102,9 @@ __all__ = [
     "describe_concepts",
     "document_pages_listing",
     "exemplars_profile_path",
-    "generate",
     "fixed_effort_levels",
     "fixed_effort_models",
+    "generate",
     "generation_models",
     "initialize",
     "insert_document_page",

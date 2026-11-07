@@ -18,14 +18,14 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .. import config
 from .. import wording as wording_sets
-from . import checks, screening
-from .tagger import ConceptTagger
 from ..core import inference, progress
 from ..core.repair import parse_with_repair
-from .embedder import Embedder
 from ..loaders.content_context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from ..loaders.knowledge_graph import KnowledgeGraph
+from . import checks, screening
+from .embedder import Embedder
+from .tagger import ConceptTagger
 
 
 def _public_fields(item: dict) -> dict:

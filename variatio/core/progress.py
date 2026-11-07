@@ -11,7 +11,6 @@ into the threads serving HTTP requests.
 
 import contextvars
 import time
-from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Protocol
 

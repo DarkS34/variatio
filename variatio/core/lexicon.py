@@ -9,7 +9,9 @@ almost nothing.
 import re
 import unicodedata
 
-from .. import config, wording as wording_sets
+from .. import config
+from .. import wording as wording_sets
+
 
 def mentions(text: str, concept: str, wording=None) -> bool:
     """Return whether `text` mentions `concept`, tolerating accents and inflection.

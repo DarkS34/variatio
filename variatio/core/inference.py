@@ -60,21 +60,25 @@ class Sampling:
 
 
 def split_thinking(
-    text: str, sdk_thinking: str | None = None, truncated: bool = False, loop: str | None = None
+    text: str,
+    sdk_thinking: str | None = None,
+    truncated: bool = False,
+    loop: str | None = None,
 ) -> GenerationResponse:
     """Same split as the streaming path, for a response that arrived in one piece."""
     splitter = ThinkingSplitter()
     answer: list[str] = []
     thinking: list[str] = [sdk_thinking.strip()] if (sdk_thinking or "").strip() else []
+    
     for part, channel in [*splitter.feed(text or ""), *splitter.flush()]:
         (thinking if channel == "thinking" else answer).append(part)
+    
     return GenerationResponse(
         response="".join(answer).strip(),
         thinking="\n\n".join(p.strip() for p in thinking if p.strip()) or None,
         truncated=truncated,
         loop=loop,
     )
-
 
 
 class ThinkingSplitter:
@@ -237,7 +241,9 @@ def sampling(phase: str, think: bool | str = False) -> Sampling:
     own = config.SAMPLING[phase]
     temperature = own.get("temperature")
     if temperature is None:
-        temperature = config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+        temperature = (
+            config.TEMPERATURE_REASONING if think else config.TEMPERATURE_DETERMINISTIC
+        )
     return Sampling(float(temperature), own.get("top_k"), own.get("top_p"))
 
 
