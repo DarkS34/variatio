@@ -3,7 +3,7 @@ import os
 import pytest
 
 from variatio.runtime import screening
-from variatio.core import paths
+from variatio.utils import paths
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 from variatio.api import _artifacts

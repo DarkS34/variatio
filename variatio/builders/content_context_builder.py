@@ -12,7 +12,7 @@ from loguru import logger
 from .. import config, inference
 from .. import prompts as prompts_pkg
 from ..inference.repair import parse_with_repair
-from ..core.workspace import Workspace
+from ..utils.workspace import Workspace
 from ..loaders import locale
 from ..loaders.content_context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
 

@@ -14,7 +14,7 @@ import pytest
 from server.db import mirror
 from server.pipeline import approvals, slots
 from server.pipeline import jobs as handlers
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 DRAFT = {"concepts_by_domains": {"Tema I": ["A"]}, "relations": {}}
 

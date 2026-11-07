@@ -10,7 +10,7 @@ sentence naming the command that fixes it.
 Alembic is imported inside the functions, so `import server.db` stays free of it.
 """
 
-from variatio.core.paths import PROJECT_ROOT
+from variatio.utils.paths import PROJECT_ROOT
 
 from .session import engine
 

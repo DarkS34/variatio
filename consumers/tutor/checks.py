@@ -36,7 +36,7 @@ are right — stays the prompt's, and the retry's note cannot help with it.
 
 import re
 
-from variatio.core.lexicon import fold, mentions
+from variatio.utils.lexicon import fold, mentions
 
 _FENCE = re.compile(r"```[^\n]*\n(.*?)(?:```|\Z)", re.DOTALL)
 # A name in code: three characters at least, so `i`, `n` or `x` — any exercise's — never count.

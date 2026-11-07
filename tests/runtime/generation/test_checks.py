@@ -63,7 +63,7 @@ def test_forbidden_mentions_matches_a_short_keyword_literally():
 
 
 def test_a_negated_concept_is_mentioned_only_by_its_own_name():
-    from variatio.core.lexicon import mentions
+    from variatio.utils.lexicon import mentions
 
     assert not mentions("La recursividad final deja la llamada para el final.", "Recursividad no final")
     assert mentions("En la recursividad no final queda trabajo pendiente.", "Recursividad no final")

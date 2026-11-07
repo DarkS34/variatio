@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from variatio.core.json_io import write_json
+from variatio.utils.json_io import write_json
 
 DATA = {"b": "ñandú «ok»", "a": [1, 2, {"c": None}]}
 

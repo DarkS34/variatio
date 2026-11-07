@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from variatio.core.json_io import write_json
+from variatio.utils.json_io import write_json
 
 
 def written(tmp_path, data):

@@ -14,7 +14,7 @@ from server.bank import edit as bank_edit
 from server.bank import profile_edit
 from server.db import mirror
 from server.pipeline import approvals
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 PROFILE = {
     "item_types": {

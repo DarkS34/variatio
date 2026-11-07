@@ -14,7 +14,7 @@ import pytest
 from fastapi import HTTPException
 
 from server.kg import router as route
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 
 def access(tmp_path):

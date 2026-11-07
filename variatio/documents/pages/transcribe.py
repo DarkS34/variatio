@@ -8,7 +8,7 @@ from loguru import logger
 
 from ... import config, inference
 from ...prompts import wording as wording_sets
-from ...core import repetition
+from ...utils import repetition
 from ...prompts.marks import EMPTY_PAGE_MARK
 
 MD_FENCE_RE = re.compile(r"^```(?:markdown|md)?\s*\n(.*)\n```\s*$", re.DOTALL)

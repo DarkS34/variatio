@@ -128,7 +128,7 @@ def _isolated_database(tmp_path, monkeypatch):
 # subprocess reads the same root.
 @pytest.fixture(autouse=True, scope="session")
 def _isolated_workspaces(tmp_path_factory):
-    from variatio.core import paths
+    from variatio.utils import paths
 
     root = tmp_path_factory.mktemp("workspaces")
     logs = tmp_path_factory.mktemp("logs")

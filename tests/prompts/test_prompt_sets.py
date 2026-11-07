@@ -15,7 +15,7 @@ import inspect
 
 import pytest
 
-from variatio.core import languages
+from variatio.utils import languages
 from variatio import prompts
 
 SETS = {code: prompts.of(code) for code in languages.LANGUAGES}
@@ -202,7 +202,7 @@ def test_a_workspace_resolves_a_matching_prompt_set_and_relation_schema(tmp_path
     # resolved one from its file and the other from a global would render an English
     # definition under a Spanish heading — which is exactly what kept `RELATION_SCHEMA_EN`
     # unusable before this.
-    from variatio.core.workspace import Workspace
+    from variatio.utils.workspace import Workspace
     from variatio.loaders import locale
 
     ws = Workspace(root=tmp_path / code, slug=code)

@@ -2,7 +2,7 @@ import pytest
 
 from server.db.layout import locate
 from server.pipeline import context_edit, storage
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 
 @pytest.fixture

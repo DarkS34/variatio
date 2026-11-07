@@ -10,7 +10,7 @@ import threading
 from loguru import logger
 
 from server.jobs import joblog
-from variatio.core import paths
+from variatio.utils import paths
 
 
 def _read(path) -> str:

@@ -8,7 +8,7 @@ from variatio.inference.cerebras_budget import (
     Limits,
     estimate_tokens,
 )
-from variatio.core.paths import PROJECT_ROOT
+from variatio.utils.paths import PROJECT_ROOT
 
 LIMITS = Limits(requests_minute=5, tokens_minute=30_000, requests_day=2_400, tokens_day=1_000_000)
 

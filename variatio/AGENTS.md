@@ -46,7 +46,7 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
 The root holds three files only: `config.py`, `cli.py`, `__init__.py`. Everything else is one
 of three kinds:
 
-- **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `loaders/`, `prompts/`.
+- **Vocabulary** (consulted, never doing work): `utils/`, `settings/`, `loaders/`, `prompts/`.
 - **The engine**: `inference/`, every model call.
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
   `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
@@ -57,9 +57,9 @@ Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 **`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
 only to resolve their own paths, and `runtime/`, `prompts/` and `settings/` do
 not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and
-`documents/` import `inference/`** (D-250) — `documents/pages/` transcribes
+`documents/` import `inference/`** (D-230) — `documents/pages/` transcribes
 with the vision model, and `inference/repair.py` and `inference/vectors.py` call it on behalf of
-`builders/` and `runtime/`. `runtime/__init__.py` and `core/__init__.py`
+`builders/` and `runtime/`. `runtime/__init__.py` and `utils/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
 put a component back at the root.
@@ -70,7 +70,7 @@ put a component back at the root.
   `cerebras_budget`, `usage`, `repair` (`parse_with_repair`, requires an explicit `shape`),
   `vectors` (L2 normalisation, batched embedding, the query/document prefixes; shared by the
   builders, the embedder and the tutor).
-- `core/`: `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `languages`,
+- `utils/`: `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `languages`,
   `repetition`.
 - `loaders/`: `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`, `locale`
   (the package was `instance/` until 2026-10-08, the directory's old name).
@@ -80,9 +80,9 @@ put a component back at the root.
 
 ## `Workspace` — every per-instance path, as data
 
-[workspace.py](variatio/core/workspace.py) is a frozen dataclass over `root` deriving every
+[workspace.py](variatio/utils/workspace.py) is a frozen dataclass over `root` deriving every
 path (`artifacts/`, `cache/`, `raw/`, `generations/`, artifacts, derivations, host state). It imports nothing
-from the package. Root paths live in [paths.py](variatio/core/paths.py). **There is no
+from the package. Root paths live in [paths.py](variatio/utils/paths.py). **There is no
 default workspace**: `ws` is required everywhere, `paths.workspace("")` raises, an
 installation may hold zero workspaces and an account may belong to none. A component with a
 path parameter requires it. No cache key is a path, so a workspace is portable.
@@ -392,7 +392,7 @@ One line per rule of this folder. A number names an entry of the old register:
 
 **Structure**
 - D-013, D-014 — Settings in the registry + `config.json`; one writer (`store.write_file` →
-  `json_io`); the dotenv loader lives in `core/dotenv.py`.
+  `json_io`); the dotenv loader lives in `utils/dotenv.py`.
 - D-016 — Knowledge-graph extraction lives in this repo; no `kg-builder`; the web app is the
   only graph viewer.
 - D-024 — Content context is its own artifact, written by the other two builders; three named

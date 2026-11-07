@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from loguru import logger
 
-from variatio.core import json_io, paths
+from variatio.utils import json_io, paths
 
 STATE_PATH = paths.PROJECT_ROOT / ".maintenance.json"
 

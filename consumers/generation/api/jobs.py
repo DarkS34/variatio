@@ -19,8 +19,8 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from server.pipeline import approvals, storage
 from variatio import api, config, inference
-from variatio.core import progress
-from variatio.core.workspace import Workspace
+from variatio.utils import progress
+from variatio.utils.workspace import Workspace
 from variatio.loaders import locale
 
 # The kind this module handles.

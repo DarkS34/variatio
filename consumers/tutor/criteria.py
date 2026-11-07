@@ -23,8 +23,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.core.lexicon import fold
-from variatio.core.workspace import Workspace
+from variatio.utils.lexicon import fold
+from variatio.utils.workspace import Workspace
 
 from . import paths
 

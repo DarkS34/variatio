@@ -11,7 +11,7 @@ import json
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from variatio.core import languages
+from variatio.utils import languages
 
 from .models import CURATED, DRAFT, Approval, Artifact, RawDocument, Workspace
 

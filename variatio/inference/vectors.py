@@ -9,7 +9,7 @@ import numpy as np
 from loguru import logger
 
 from .. import config, inference
-from ..core import progress
+from ..utils import progress
 
 
 def l2_normalize(vector: np.ndarray) -> np.ndarray:

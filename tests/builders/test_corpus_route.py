@@ -5,7 +5,7 @@ import pytest
 from variatio.documents import pages
 from variatio.builders.knowledge_graph_builder import extraction
 from variatio.inference import GenerationResponse
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ..conftest import ES
 

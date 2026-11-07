@@ -33,8 +33,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.core import json_io
-from variatio.core.workspace import Workspace
+from variatio.utils import json_io
+from variatio.utils.workspace import Workspace
 
 FORMAT = 1
 AUTHOR_PREFIX = "user_"

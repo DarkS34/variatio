@@ -24,7 +24,7 @@ from server.jobs import catalogue, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from server.pipeline import approvals
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 PROFILE = {
     "item_types": {

@@ -17,7 +17,7 @@ place of the subject's.
 import json
 from datetime import datetime, timezone
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 

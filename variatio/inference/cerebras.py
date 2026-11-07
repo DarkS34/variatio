@@ -13,7 +13,7 @@ import httpx
 from loguru import logger
 
 from .. import config
-from ..core import progress, repetition
+from ..utils import progress, repetition
 from . import cerebras_budget, usage
 from . import (
     GenerationResponse,

@@ -8,8 +8,8 @@ nothing, the same trick `workspace.py` and `relations.py` use.
 
 import pytest
 
-from variatio.core import languages
-from variatio.core.workspace import Workspace
+from variatio.utils import languages
+from variatio.utils.workspace import Workspace
 
 
 def test_the_two_languages_are_the_declared_ones():

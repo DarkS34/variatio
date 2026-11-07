@@ -12,7 +12,7 @@ import pytest
 
 from server import generations as store
 from server.cli.generations import legacy_record
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 MOMENT = datetime(2026, 10, 1, 10, 15, 30, tzinfo=timezone.utc)
 

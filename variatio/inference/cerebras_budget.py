@@ -48,8 +48,8 @@ except ImportError:  # pragma: no cover - this project runs on Linux
 from loguru import logger
 
 from .. import config
-from ..core import progress
-from ..core.json_io import write_json
+from ..utils import progress
+from ..utils.json_io import write_json
 from . import InferenceError
 
 # The hour window is deliberately absent: measured, it never binds before the minute and the
@@ -677,7 +677,7 @@ def shared() -> Budget:
     """The account's ledger, at `paths.cerebras_budget_path()`."""
     global _shared
     if _shared is None:
-        from ..core.paths import cerebras_budget_path
+        from ..utils.paths import cerebras_budget_path
 
         _shared = Budget(cerebras_budget_path())
     return _shared

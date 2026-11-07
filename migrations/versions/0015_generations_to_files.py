@@ -82,7 +82,7 @@ def _unexported(bind) -> list[int]:
     The path is spelled out rather than read off `Workspace`: a migration is a snapshot,
     and it has to keep meaning what it meant when the property is renamed.
     """
-    from variatio.core import paths
+    from variatio.utils import paths
 
     rows = bind.execute(
         sa.text(

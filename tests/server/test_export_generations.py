@@ -18,7 +18,7 @@ from server import generations as store
 from server.auth import queries
 from server.cli.generations import export_generations
 from server.db import Base, repository, session
-from variatio.core import paths
+from variatio.utils import paths
 
 MIGRATION = Path(__file__).parents[2] / "migrations" / "versions" / "0015_generations_to_files.py"
 CREATED = datetime(2026, 9, 12, 8, 30, tzinfo=timezone.utc)

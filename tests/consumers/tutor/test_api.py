@@ -25,7 +25,7 @@ from consumers.tutor.api import admin as admin_module
 from consumers.tutor.api import jobs
 from consumers.tutor.api import router as router_module
 from consumers.tutor.api import store
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH, PROFILE
 

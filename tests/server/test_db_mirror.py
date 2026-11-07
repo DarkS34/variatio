@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from server.db import Approval, Artifact, Base, instance_io, repository
 from server.db import mirror
 from server.pipeline import approvals, storage
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 GRAPH = {"concepts_by_domains": {"D": ["A"]}, "relations": []}
 PROFILE = {"fields": {}, "primary_field": "x"}

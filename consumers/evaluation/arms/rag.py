@@ -24,7 +24,7 @@ import time
 from loguru import logger
 
 from variatio import config, inference
-from variatio.core import progress
+from variatio.utils import progress
 from variatio.inference.repair import parse_with_repair
 from variatio.api.transcribe import CORPUS, EXEMPLARS
 from variatio.runtime.generator import parse_item

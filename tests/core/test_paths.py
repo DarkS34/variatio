@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from variatio.core import paths
-from variatio.core.dotenv import load_dotenv
+from variatio.utils import paths
+from variatio.utils.dotenv import load_dotenv
 
 
 def test_load_dotenv_does_not_override_a_real_export(tmp_path, monkeypatch):

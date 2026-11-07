@@ -61,7 +61,7 @@ class PrivateRotatingFileHandler(RotatingFileHandler):
 
 def access_log_path() -> Path:
     """Return where the access log is written."""
-    from variatio.core.paths import LOGS_DIR
+    from variatio.utils.paths import LOGS_DIR
 
     return LOGS_DIR / "access.log"
 

@@ -11,7 +11,7 @@ event, and nothing is lost at the end of an answer — cut short or not.
 import pytest
 
 from variatio import inference
-from variatio.core import progress
+from variatio.utils import progress
 
 
 class _Host:

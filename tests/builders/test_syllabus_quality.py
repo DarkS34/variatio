@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from variatio import config
-from variatio.core.workspace import ARTIFACTS_DIRNAME, LEGACY_ARTIFACTS_DIRNAME
+from variatio.utils.workspace import ARTIFACTS_DIRNAME, LEGACY_ARTIFACTS_DIRNAME
 
 pytestmark = pytest.mark.corpus
 

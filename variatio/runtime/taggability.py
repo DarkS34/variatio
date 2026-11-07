@@ -11,7 +11,7 @@ from loguru import logger
 
 from .. import config, inference
 from ..builders.knowledge_graph_builder import blocks, parsing
-from ..core import progress
+from ..utils import progress
 from ..loaders.content_context import ContentContext
 
 BUILD_PHASES = (("taggable", "Reviewing which concepts work as labels", 100),)

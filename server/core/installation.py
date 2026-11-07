@@ -8,8 +8,8 @@ mail, limits) are `environment.py`, beside it.
 
 import re
 
-from variatio.core import paths
-from variatio.core.workspace import Workspace
+from variatio.utils import paths
+from variatio.utils.workspace import Workspace
 
 # `\A`/`\Z` and not `^`/`$`: Python's `$` also matches just before a trailing newline, so
 # `abc\n` would pass as a slug while `paths.workspace` stripped it back to `abc` — two rows

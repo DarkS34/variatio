@@ -29,7 +29,7 @@ import numpy as np
 from loguru import logger
 
 from variatio import inference
-from variatio.core import progress
+from variatio.utils import progress
 
 from . import EXERCISE, KINDS, OFF_TOPIC, SOCIAL, THEORY, calls
 

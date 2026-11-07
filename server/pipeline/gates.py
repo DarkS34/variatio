@@ -4,7 +4,7 @@ The route checks every link of a chain before queueing its head: a link the runn
 has no route, so a closed gate behind the head would be skipped in silence.
 """
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ..jobs.catalogue import JOB_ARTIFACT, SUBPROCESS_KINDS
 from . import approvals, readings, slots

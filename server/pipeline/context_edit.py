@@ -7,7 +7,7 @@ which is what wins on read — that pair is what stops a rebuild from paraphrasi
 words one more time.
 """
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.content_context import ContentContext
 
 from . import storage

@@ -3,8 +3,8 @@ import json
 import pytest
 
 from variatio.runtime.tagger import ConceptTagger
-from variatio.core.json_io import write_json
-from variatio.core.workspace import Workspace
+from variatio.utils.json_io import write_json
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.api import build
 

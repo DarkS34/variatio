@@ -31,7 +31,7 @@ collected with: types corrected while it ran leave the bank a draft.
 from loguru import logger
 
 from variatio import api
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ..core import installation
 from ..jobs.catalogue import JOB_LABELS, Job

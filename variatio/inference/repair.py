@@ -5,7 +5,7 @@ from collections.abc import Callable
 from loguru import logger
 
 from .. import config, inference
-from ..core import progress
+from ..utils import progress
 
 
 def parse_with_repair(

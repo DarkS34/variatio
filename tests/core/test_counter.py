@@ -1,6 +1,6 @@
 """A counter spans loops of its own: nested work advances it one unit at a time."""
 
-from variatio.core import progress
+from variatio.utils import progress
 
 from .test_step_start import _progress, _Recorder
 

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio.core import progress
+from variatio.utils import progress
 from variatio.documents import pages
 
 from ..conftest import ES

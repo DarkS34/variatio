@@ -15,8 +15,8 @@ from loguru import logger
 
 from ... import config, inference
 from ...prompts import wording as wording_sets
-from ...core import progress
-from ...core.json_io import write_json
+from ...utils import progress
+from ...utils.json_io import write_json
 from ...inference.repair import parse_with_repair
 from ...inference.vectors import embed_normalized
 from ...loaders.content_context import ContentContext

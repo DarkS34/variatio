@@ -1,6 +1,6 @@
 """The two bars of a build count the unit in flight the same way: as not done."""
 
-from variatio.core import progress
+from variatio.utils import progress
 
 
 class _Recorder:

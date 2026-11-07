@@ -19,7 +19,7 @@ from server.jobs import EventBus, JobRunner
 from server.pipeline import approvals, readings
 from server.pipeline.gates import gate_error, transcribing_slot, transcription_error
 from server.pipeline.view import NEXT_JOB
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH
 

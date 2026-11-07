@@ -12,7 +12,7 @@ the two prompt sets do, and `beside(prompts)` is what a component holding a prom
 so that the two can never be paired across languages.
 """
 
-from ..core import languages
+from ..utils import languages
 from .en import wording as en
 from .es import wording as es
 

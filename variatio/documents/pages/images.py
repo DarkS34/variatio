@@ -8,7 +8,7 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config, inference
-from ...core.json_io import write_json
+from ...utils.json_io import write_json
 from ...prompts.marks import EMPTY_IMAGE_MARK
 from .cache import sampling_record
 from .render import encode_page

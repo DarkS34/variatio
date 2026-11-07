@@ -16,7 +16,7 @@ from consumers.evaluation import config as evaluation_config
 from consumers.evaluation import run as evaluation_run
 from consumers.evaluation.api import store as evaluation_store
 from variatio import inference, prompts
-from variatio.core import languages
+from variatio.utils import languages
 
 
 # THE PROMPTS -----------------------------------------------------------------------------

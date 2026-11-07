@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from variatio.core import languages
+from variatio.utils import languages
 
 from ..db.models import (
     EDITOR,
@@ -119,7 +119,7 @@ def profile_error(profile: str | None) -> str | None:
     return f"Perfil desconocido: «{profile}». Usa uno de {', '.join(EVALUATOR_PROFILES)}."
 
 
-# Not written out here: the vocabulary is `variatio.core.languages` and the pipeline reads
+# Not written out here: the vocabulary is `variatio.utils.languages` and the pipeline reads
 # it too, so a second copy would be exactly the drift the two functions above prevent.
 # Unlike a profile, `None` is NOT valid — the caller resolves it rather than storing it.
 language_error = languages.error

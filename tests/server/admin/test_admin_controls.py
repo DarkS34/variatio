@@ -7,8 +7,8 @@ from server.core import tunnel
 from server.workspaces import trees
 from variatio import config
 from variatio import settings
-from variatio.core import paths
-from variatio.core.workspace import Workspace
+from variatio.utils import paths
+from variatio.utils.workspace import Workspace
 from variatio.settings import store
 
 

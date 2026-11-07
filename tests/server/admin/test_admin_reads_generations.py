@@ -17,7 +17,7 @@ from server.admin import workspaces as admin_workspaces
 from server.auth import queries
 from server.core import installation
 from server.db import repository
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 ANA, BEA, GONE = 1, 2, 3
 

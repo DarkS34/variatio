@@ -7,7 +7,7 @@ from server.jobs.catalogue import Job
 from server.pipeline import approvals
 from server.pipeline import jobs as handlers
 from variatio import api
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 CURATED = {"concepts_by_domains": {"Dominio inventado": ["A"]}, "relations": {}}
 DRAFT = {"concepts_by_domains": {"Tema I": ["A"], "Tema II": ["B"]}, "relations": {}}

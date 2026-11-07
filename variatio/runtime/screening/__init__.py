@@ -17,7 +17,7 @@ message of the tutor's conversation, which has no commission whose scope a judge
 """
 
 from ...prompts import wording as wording_sets
-from ...core import progress
+from ...utils import progress
 from . import admissibility, guardrail
 from .admissibility import (
     SLOT_KEYS,

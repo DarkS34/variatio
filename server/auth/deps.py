@@ -28,7 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.orm import Session as DbSession
 
-from variatio.core.workspace import Workspace as PathWorkspace
+from variatio.utils.workspace import Workspace as PathWorkspace
 
 from ..core import environment, installation, maintenance
 from ..db import repository, session_scope

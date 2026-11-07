@@ -21,8 +21,8 @@ from datetime import datetime, timezone
 
 from loguru import logger
 
-from variatio.core import progress
-from variatio.core.lexicon import fold
+from variatio.utils import progress
+from variatio.utils.lexicon import fold
 
 from . import calls
 from . import config as tutor_config

@@ -7,7 +7,7 @@ from server.jobs.catalogue import HANDLERS, JOB_ARTIFACT, Job
 from server.jobs.runner import JobRunner
 from server.pipeline import approvals
 from server.pipeline.approvals import Approvals
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 BANK = {"C001": {"enunciado": "Suma dos números.", "item_type": "ejercicio"}}
 

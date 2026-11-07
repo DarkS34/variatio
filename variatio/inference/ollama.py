@@ -14,7 +14,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from .. import config
-from ..core import progress, repetition
+from ..utils import progress, repetition
 from . import usage
 from . import (
     GenerationResponse,

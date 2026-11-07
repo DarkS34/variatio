@@ -37,7 +37,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 

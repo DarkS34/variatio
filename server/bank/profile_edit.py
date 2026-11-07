@@ -5,7 +5,7 @@ the file at runtime is the only honest judge of whether an edit is valid, and th
 gets the exact error the pipeline would raise.
 """
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 from ..core import contexts

@@ -12,7 +12,7 @@ import pytest
 from fastapi import HTTPException
 
 from server.bank.routes import bank as route
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 
 

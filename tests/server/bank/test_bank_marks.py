@@ -23,7 +23,7 @@ from server.bank import marks as bank_marks
 from server.bank.routes import bank as bank_routes
 from server.db import mirror
 from server.db.models import Base, User, Workspace as WorkspaceRow
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 PROFILE = {

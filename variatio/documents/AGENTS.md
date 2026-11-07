@@ -36,7 +36,7 @@ Both raw slots use the same VLM page route (quality over speed).
   pages were inserted/deleted by hand (`restructured`) or the page count changed.
 - **Truncation and loops**: `TRANSCRIBE_MAX_OUTPUT_TOKENS` (4096) caps each answer;
   `inference.generate(stop_on_loop=True)` cuts a repetition loop in the stream
-  (`core/repetition.py`). An unfinished answer is retried ONCE with a note naming the loop;
+  (`utils/repetition.py`). An unfinished answer is retried ONCE with a note naming the loop;
   if still unfinished the page keeps the text before the loop under the failed-page marker
   (pictures are not salvaged). Cached pages are scanned for loops and re-read. There is **no
   prompt version**: a prompt change re-reads nothing (`RETIRED_FIELDS` drops old fingerprint keys).

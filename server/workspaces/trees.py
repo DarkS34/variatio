@@ -8,8 +8,8 @@ mis-resolved path cannot be undone.
 import shutil
 from pathlib import Path
 
-from variatio.core import paths
-from variatio.core.workspace import Workspace
+from variatio.utils import paths
+from variatio.utils.workspace import Workspace
 
 
 def provision(ws: Workspace) -> None:

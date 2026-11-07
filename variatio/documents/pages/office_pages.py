@@ -10,7 +10,7 @@ from pathlib import Path
 from loguru import logger
 
 from ...prompts import wording as wording_sets
-from ...core import progress
+from ...utils import progress
 from .. import office
 from ..markdown import (
     convert,

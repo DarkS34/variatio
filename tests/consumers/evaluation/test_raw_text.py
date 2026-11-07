@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from consumers.evaluation import raw_text
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 
 def _pdf(lines: list[str]) -> bytes:

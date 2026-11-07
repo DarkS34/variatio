@@ -11,7 +11,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.core.workspace import Workspace as FsWorkspace
+from variatio.utils.workspace import Workspace as FsWorkspace
 
 from . import repository as repo
 from .layout import locate

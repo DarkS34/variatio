@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from server.cli import instances
-from variatio.core import paths
+from variatio.utils import paths
 
 # Both arguments of each command become a filesystem path: `paths.workspace('../etc')`
 # resolves outside `workspaces/` and `paths.workspace('/etc')` resolves to `/etc`.

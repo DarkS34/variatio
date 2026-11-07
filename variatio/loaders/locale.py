@@ -12,9 +12,9 @@ from loguru import logger
 
 from .. import prompts
 from ..prompts import wording as wording_sets
-from ..core import languages
-from ..core.json_io import write_json
-from ..core.workspace import Workspace
+from ..utils import languages
+from ..utils.json_io import write_json
+from ..utils.workspace import Workspace
 from . import relations
 
 PROMPT_LANGUAGE_KEY = "prompt_language"

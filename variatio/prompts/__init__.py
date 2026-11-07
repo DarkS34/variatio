@@ -5,7 +5,7 @@ them without knowing which. The marks are shared rather than declared twice: the
 protocol tokens, not prose.
 """
 
-from ..core import languages
+from ..utils import languages
 from . import en, es
 from .marks import CORRECT_ANSWER_MARK, EMPTY_IMAGE_MARK, EMPTY_PAGE_MARK, SEAM_SEPARATORS
 

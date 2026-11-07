@@ -8,8 +8,8 @@ its own: the graph and profile builders each synthesise it from what they know.
 import json
 from pathlib import Path
 
-from ..core.json_io import write_json
-from ..core.workspace import Workspace
+from ..utils.json_io import write_json
+from ..utils.workspace import Workspace
 
 CANONICAL_KEYS = ("subject", "educational_level", "language_of_instruction")
 

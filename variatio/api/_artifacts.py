@@ -8,7 +8,7 @@ had to name — nothing here falls back to an instance nobody asked for.
 import json
 from pathlib import Path
 
-from ..core.workspace import Workspace
+from ..utils.workspace import Workspace
 from ..loaders.content_context import ContentContext, load_for, resolve_path
 
 EXEMPLARS_PROFILE = "exemplars_profile"

@@ -13,8 +13,8 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config, inference
-from ...core import progress
-from ...core.lexicon import mentions
+from ...utils import progress
+from ...utils.lexicon import mentions
 from ...documents import (
     chunk_sections,
     document_markdown,

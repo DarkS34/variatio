@@ -7,7 +7,7 @@ import numpy as np
 from loguru import logger
 
 from ... import config, inference
-from ...core import progress
+from ...utils import progress
 from ...inference.vectors import l2_normalize, prefix_for
 from ...loaders.knowledge_graph import KnowledgeGraph
 from . import cache

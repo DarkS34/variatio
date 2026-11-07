@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from variatio import inference
-from variatio.core.lexicon import fold
+from variatio.utils.lexicon import fold
 
 from .calls import ask_object
 from .checks import longest_shared_run

@@ -14,8 +14,8 @@ from loguru import logger
 
 from .. import config
 from ..runtime.tagger import ConceptTagger
-from ..core import progress
-from ..core.workspace import Workspace
+from ..utils import progress
+from ..utils.workspace import Workspace
 from ..runtime.embedder import Embedder
 from ..loaders import locale
 from ..loaders.content_context import ContentContext

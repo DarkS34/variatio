@@ -11,8 +11,8 @@ from loguru import logger
 
 from variatio import api, config
 from variatio.runtime.tagger import ConceptTagger
-from variatio.core import json_io, progress
-from variatio.core.workspace import Workspace
+from variatio.utils import json_io, progress
+from variatio.utils.workspace import Workspace
 
 from ..bank import edit as bank_edit
 from ..core import contexts, installation

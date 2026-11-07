@@ -9,7 +9,7 @@ changed in the panel (the case D-156 was about) or an engine with no file shows 
 import json
 
 from .. import config
-from ..core.paths import PROJECT_ROOT
+from ..utils.paths import PROJECT_ROOT
 from ..settings.derived import PHASES
 
 RATES_DIR = PROJECT_ROOT / "rates"

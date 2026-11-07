@@ -2,8 +2,8 @@ import pytest
 
 from server.core import installation
 from server.workspaces import trees
-from variatio.core import paths
-from variatio.core.workspace import Workspace
+from variatio.utils import paths
+from variatio.utils.workspace import Workspace
 
 
 @pytest.mark.parametrize(

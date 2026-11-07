@@ -3,8 +3,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from variatio.core.dotenv import load_dotenv
-from variatio.core.paths import PROJECT_ROOT
+from variatio.utils.dotenv import load_dotenv
+from variatio.utils.paths import PROJECT_ROOT
 
 load_dotenv(PROJECT_ROOT / ".env")
 

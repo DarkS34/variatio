@@ -34,7 +34,7 @@ The interface speaks Spanish; the code speaks English. One word per thing on eac
 
 | Interface (es) | Code (en) | Where |
 |---|---|---|
-| asignatura | workspace (`Workspace`, `slug`) | `variatio/core/workspace.py` |
+| asignatura | workspace (`Workspace`, `slug`) | `variatio/utils/workspace.py` |
 | «Apuntes y ejercicios» (paso 1) | raw documents, two slots: `corpus` and `exemplars` | `raw/` of a workspace |
 | «Temario» (paso 2) | knowledge graph, `kg` | `artifacts/knowledge_graph.json` |
 | unidad | domain (`concepts_by_domains`) | the graph |
@@ -130,7 +130,7 @@ variatio/       the library          imports neither
 ```text
 api/                                 the door: one function per thing asked of a workspace
 builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
-loaders/  prompts/  settings/  core/                the vocabulary
+loaders/  prompts/  settings/  utils/               the vocabulary
 inference/                           the engine boundary: every model call
 ```
 
@@ -143,9 +143,9 @@ inference/                           the engine boundary: every model call
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `builders | runtime`,
-  `loaders | documents`, `prompts`, `inference`, then `core`, `settings` and `config`. Two crossings are
+  `loaders | documents`, `prompts`, `inference`, then `utils`, `settings` and `config`. Two crossings are
   named in it: `runtime/taggability.py` imports the graph builder's node block and parser
-  (`blocks`, `parsing`), and `core/lexicon.py` imports `prompts/wording.py`. The two rules above and
+  (`blocks`, `parsing`), and `utils/lexicon.py` imports `prompts/wording.py`. The two rules above and
   «only `inference/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
 **Inside `server/`.**
@@ -178,7 +178,7 @@ One line per folder: what it holds, and the file to open first.
 |---|---|---|
 | `variatio/` (root) | `cli.py`, `config.py`, `__init__.py` (logging) and nothing else | `cli.py` |
 | `inference/` | the engine boundary (`__init__.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), repair, usage meters | `__init__.py` |
-| `core/` | paths, `Workspace`, progress, JSON I/O, languages, lexicon, repetition, dotenv | `workspace.py` |
+| `utils/` | paths, `Workspace`, progress, JSON I/O, languages, lexicon, repetition, dotenv | `workspace.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `loaders/` | readers of the artifacts: graph, profile, context, relations, locale | `knowledge_graph.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
@@ -273,7 +273,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **Every package has a docstring**, its front page. `tests/boundaries/test_package_docstrings.py`.
 - **There is no default workspace**: every path takes one; `paths.workspace("")` raises.
   `tests/server/core/test_no_default_workspace.py`.
-- **One writer of persisted JSON**, `core/json_io.write_json` (atomic; approval hashes are
+- **One writer of persisted JSON**, `utils/json_io.write_json` (atomic; approval hashes are
   hashes of its bytes). `tests/core/test_json_io_atomic.py` tests the writer; the rule itself
   is a convention.
 - **Every route declares its access level**, and a new route with no row fails.
@@ -296,7 +296,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 
 ## 8. Cross-cutting concerns
 
-- **Subjects and paths.** A `Workspace` (`variatio/core/workspace.py`) is a frozen dataclass
+- **Subjects and paths.** A `Workspace` (`variatio/utils/workspace.py`) is a frozen dataclass
   that derives every path of one subject from its root. `paths.workspace(slug)` is the one
   door that opens one. The server resolves the request's subject once (`X-Workspace`) in
   `server/auth/deps.py` and hands `Access.ws` down.

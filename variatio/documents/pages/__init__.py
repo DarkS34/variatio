@@ -29,7 +29,7 @@ name patches the module that looks it up (`document` calls `page_images`, `page_
 """
 
 from ... import inference
-from ...core import progress
+from ...utils import progress
 from ..markdown import export_markdown, page_mark, tidy_markdown
 from .cache import (
     _LOOP_VERDICTS,

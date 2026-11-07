@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from variatio import api
     from variatio import inference
-    from variatio.core import paths, progress
+    from variatio.utils import paths, progress
     from variatio.inference import usage
 
     from . import joblog

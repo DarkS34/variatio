@@ -31,7 +31,7 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobRunner
 from server.pipeline import approvals
 from server.pipeline import jobs as handlers
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 PROFILE = {
     "item_types": {

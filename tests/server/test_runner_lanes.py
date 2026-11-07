@@ -23,7 +23,7 @@ from server.jobs import joblog, lanes
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from variatio import config
-from variatio.core import progress
+from variatio.utils import progress
 
 LOCAL = lanes.LOCAL
 REMOTE = lanes.REMOTE

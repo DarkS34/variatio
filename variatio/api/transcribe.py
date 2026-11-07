@@ -11,8 +11,8 @@ from loguru import logger
 
 from .. import config, documents
 from .. import prompts as prompts_pkg
-from ..core import paths, progress
-from ..core.workspace import Workspace
+from ..utils import paths, progress
+from ..utils.workspace import Workspace
 from ..documents.pages import META_NAME
 from ..loaders import locale
 

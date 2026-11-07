@@ -19,7 +19,7 @@ from pathlib import Path
 from loguru import logger
 
 from variatio import config
-from variatio.core import paths
+from variatio.utils import paths
 
 FILE_NAME = "jobs.log"
 FORMAT = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module} >> {message}"

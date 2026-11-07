@@ -17,7 +17,7 @@ from server.kg import edit as kg_edit
 from server.pipeline import approvals, taggability
 from server.pipeline import jobs as handlers
 from variatio import api
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH
 

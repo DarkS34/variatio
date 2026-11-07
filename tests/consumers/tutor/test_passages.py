@@ -5,7 +5,7 @@ import json
 import numpy as np
 
 from consumers.tutor import passages, paths
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from .conftest import SOURCES, vector_for
 

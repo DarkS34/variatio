@@ -20,8 +20,8 @@ import json
 from datetime import datetime
 
 from variatio import api
-from variatio.core import json_io
-from variatio.core.workspace import Workspace
+from variatio.utils import json_io
+from variatio.utils.workspace import Workspace
 
 from . import storage
 

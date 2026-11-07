@@ -10,7 +10,7 @@ from server.core import process
 from server.raw import documents
 from server.raw.router import router as raw_router
 from variatio import inference
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ...consumers.evaluation.test_route_order import _wildcard_shadows
 

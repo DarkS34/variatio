@@ -21,7 +21,7 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from variatio.core import progress
+from variatio.utils import progress
 from variatio.inference import usage
 
 from . import joblog, lanes, priority, usage_log

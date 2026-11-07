@@ -1,7 +1,7 @@
 import json
 
 from server.classroom import curriculum
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 
 from ...conftest import CHAIN_GRAPH

@@ -16,7 +16,7 @@ from loguru import logger
 
 from ... import config, inference
 from ...prompts import wording as wording_sets
-from ...core import progress
+from ...utils import progress
 from ...inference.vectors import embed_normalized
 from . import blocks, parsing
 from .schemas import DROP_SCHEMA, MERGE_SCHEMA

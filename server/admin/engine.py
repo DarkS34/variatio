@@ -390,7 +390,7 @@ def _head_revision() -> str | None:
         from alembic.config import Config
         from alembic.script import ScriptDirectory
 
-        from variatio.core.paths import PROJECT_ROOT
+        from variatio.utils.paths import PROJECT_ROOT
 
         script = ScriptDirectory.from_config(Config(str(PROJECT_ROOT / "alembic.ini")))
         return script.get_current_head()

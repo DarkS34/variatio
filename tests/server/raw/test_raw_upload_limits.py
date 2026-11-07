@@ -10,7 +10,7 @@ from server.auth.deps import Access
 from server.raw import documents
 from server.raw.router import router as raw_router
 from variatio import config
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 
 class _Upload:

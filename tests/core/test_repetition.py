@@ -7,8 +7,8 @@ functions of the text, so the engine can ask between two chunks and the cache in
 """
 
 from variatio import config
-from variatio.core import repetition
-from variatio.core.repetition import Loop, cut, detect, detect_tail, quoted
+from variatio.utils import repetition
+from variatio.utils.repetition import Loop, cut, detect, detect_tail, quoted
 
 ROW = "| | | |       | | | |"
 

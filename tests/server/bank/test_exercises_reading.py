@@ -28,7 +28,7 @@ from server.classroom import groups
 from server.classroom.routes import groups as group_routes
 from server.db import mirror, repository
 from server.db.models import OWNER, VIEWER, Base
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 PROFILE = {
     "item_types": {

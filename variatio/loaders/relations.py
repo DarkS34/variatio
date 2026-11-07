@@ -312,7 +312,7 @@ BUILTIN_SCHEMAS = {
     "es": RELATION_SCHEMA_ES,
 }
 
-# Keyed by the same codes `core.languages` declares: a workspace's prompt language is what
+# Keyed by the same codes `utils.languages` declares: a workspace's prompt language is what
 # selects the schema.
 RELATION_SCHEMAS = BUILTIN_SCHEMAS
 

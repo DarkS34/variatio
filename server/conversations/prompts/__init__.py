@@ -11,8 +11,8 @@ language nor in the one the student writes in (the user's decision P5, 2026-10-3
 
 import re
 
-from variatio.core import languages
-from variatio.core.lexicon import fold
+from variatio.utils import languages
+from variatio.utils.lexicon import fold
 
 from . import en, es
 

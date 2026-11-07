@@ -66,6 +66,6 @@ def serve(args) -> int:
 
 def serve_lock_path():
     """Return the lock file that keeps a second `serve` from starting."""
-    from variatio.core.paths import WORKSPACES_DIR
+    from variatio.utils.paths import WORKSPACES_DIR
 
     return WORKSPACES_DIR / ".serve.lock"

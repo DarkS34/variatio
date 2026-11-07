@@ -9,8 +9,8 @@ from pathlib import Path
 
 from ... import config, inference
 from ...prompts import wording as wording_sets
-from ...core import languages, repetition
-from ...core.json_io import write_json
+from ...utils import languages, repetition
+from ...utils.json_io import write_json
 from .. import office
 from ..files import source_hash
 from .seams import seams_failed, seams_merged, valid_seams

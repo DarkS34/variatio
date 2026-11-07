@@ -31,8 +31,8 @@ from loguru import logger
 
 from server.conversations import prompts as shared_prompts
 from variatio import inference
-from variatio.core import progress
-from variatio.core.lexicon import mentions
+from variatio.utils import progress
+from variatio.utils.lexicon import mentions
 from variatio.runtime import screening
 from variatio.prompts import wording as wording_sets
 

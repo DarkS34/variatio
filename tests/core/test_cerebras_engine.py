@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from variatio import config
-from variatio.core import progress
+from variatio.utils import progress
 from variatio.inference import cerebras, cerebras_budget
 from variatio.inference.cerebras import CerebrasEngine, HybridEngine
 from variatio.inference import Sampling

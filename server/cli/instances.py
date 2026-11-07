@@ -3,7 +3,7 @@
 
 def import_instance(args) -> int:
     """Load a workspace's directory into the database, and print what arrived."""
-    from variatio.core import paths
+    from variatio.utils import paths
 
     from ..db import session_scope
     from ..db.instance_io import import_instance as load
@@ -26,7 +26,7 @@ def import_instance(args) -> int:
 
 def export_instance(args) -> int:
     """Write a workspace of the database back out to disk, and print what was written."""
-    from variatio.core import paths
+    from variatio.utils import paths
 
     from ..db import session_scope
     from ..db.instance_io import export_instance as dump

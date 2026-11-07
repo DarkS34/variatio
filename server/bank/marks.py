@@ -27,9 +27,9 @@ from pydantic import BaseModel
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from variatio.core import json_io
-from variatio.core.lexicon import fold
-from variatio.core.workspace import Workspace
+from variatio.utils import json_io
+from variatio.utils.lexicon import fold
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile, ItemType
 
 from .. import auth

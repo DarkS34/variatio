@@ -10,7 +10,7 @@ import re
 
 from consumers.evaluation.arms import rag
 from consumers.evaluation.arms.vector_store import FlatIndex
-from variatio.core.paths import PROJECT_ROOT
+from variatio.utils.paths import PROJECT_ROOT
 
 WEB = PROJECT_ROOT / "web" / "src"
 

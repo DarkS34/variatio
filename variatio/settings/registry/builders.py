@@ -60,7 +60,7 @@ asignaturas de referencia la más larga son 6.871 caracteres (~1.900 tokens), y 
 `compiladores` el p99 son 739 y la mayor sana 1.397 — entre 1.397 y 40.960 no hay ni una.
 4.096 deja 2,1× de margen sobre la peor página real y corta la desbocada al 10 % de su
 coste. Desde el 2026-09-16 el techo es la segunda red y no la primera: el motor deja de leer
-la respuesta en cuanto su cola es una repetición (`core/repetition.py`), y una respuesta
+la respuesta en cuanto su cola es una repetición (`utils/repetition.py`), y una respuesta
 que no termina — por bucle o por techo — se pide UNA vez más con el prompt diciendo qué
 se repitió. Si tampoco termina, la página se marca como FALLIDA (`FAILED_PAGE_PREFIXES`) y
 conserva debajo lo que se leyó antes del bucle: una página cortada en silencio es la
@@ -741,7 +741,7 @@ Sin medir.""",
         impact=Impact.NONE,
         minimum=1,
         doc="""La palabra más corta del nombre de un concepto que cuenta al buscar si un texto lo menciona
-(`core/lexicon.py`). La usan el anclaje de los conceptos a sus pasajes del material y la
+(`utils/lexicon.py`). La usan el anclaje de los conceptos a sus pasajes del material y la
 comprobación de que un ejercicio generado no mencione un concepto aún no impartido. Sin
 medir.""",
     ),

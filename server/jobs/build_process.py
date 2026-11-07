@@ -7,7 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.core import paths, progress
+from variatio.utils import paths, progress
 from variatio.inference import usage
 
 from .protocol import MARKER
@@ -20,8 +20,8 @@ MAX_LOG_CHARS = 500
 # allowlist, a line starting with MARKER inside a PDF is an arbitrary event broadcast to
 # every member of the workspace, `worker.result` included.
 #
-# The list is what the worker ACTUALLY emits: `core/progress.py`'s four step events and its
-# percentage, the builders' `artifact.progress`, the `retrieval` / `item.tagged` / `repair`
+# The list is what the worker ACTUALLY emits: `variatio/utils/progress.py`'s four step events
+# and its percentage, the builders' `artifact.progress`, the `retrieval` / `item.tagged` / `repair`
 # the bank's tagging hook reaches, and the Cerebras budget's wait. Generation's own events
 # are emitted by no build, so they stay out; so does `log`, the child writing its loguru
 # output into `logs/<slug>/jobs.log` itself.

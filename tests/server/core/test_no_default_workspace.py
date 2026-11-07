@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from server.auth import deps
 from server.core import installation
-from variatio.core import paths
+from variatio.utils import paths
 
 
 @pytest.fixture

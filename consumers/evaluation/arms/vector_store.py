@@ -20,7 +20,7 @@ import numpy as np
 from loguru import logger
 
 from variatio import config, inference
-from variatio.core import progress
+from variatio.utils import progress
 
 CACHE_VERSION = 2
 

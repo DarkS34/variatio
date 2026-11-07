@@ -13,7 +13,7 @@ import pytest
 
 from variatio import config, inference
 from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 PROFILE = {

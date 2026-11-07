@@ -14,7 +14,7 @@ from server.raw import documents as raw_data
 from server.raw import originals
 from server.raw.router import router as raw_router
 from variatio import documents
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.documents.files import source_hash
 
 

@@ -19,7 +19,7 @@ from consumers.generation.api.router import router as generations_router
 from server import auth
 from server import generations as store
 from server.auth.deps import Access
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 ANA = 1
 BANK = "SOLUCIÓN DEL EJEMPLO DEL BANCO"

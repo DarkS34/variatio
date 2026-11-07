@@ -7,7 +7,7 @@ its text, never what it was about.
 """
 
 from server.classroom import activity
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from .store import STORE, STUDENT
 

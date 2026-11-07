@@ -17,9 +17,9 @@ from ..builders import (
 from ..builders.exemplars_bank_builder import ExemplarsBankBuilder
 from ..builders.exemplars_profile_builder import ExemplarsProfileBuilder
 from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
-from ..core import progress
-from ..core.json_io import write_json
-from ..core.workspace import Workspace
+from ..utils import progress
+from ..utils.json_io import write_json
+from ..utils.workspace import Workspace
 from ..loaders.exemplars_profile import ExemplarsProfile
 from ..loaders.knowledge_graph import KnowledgeGraph
 from . import _artifacts

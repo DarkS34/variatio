@@ -17,9 +17,9 @@ import uuid
 from datetime import datetime, timezone
 
 from variatio import config
-from variatio.core import json_io
+from variatio.utils import json_io
 from variatio.runtime.tagger import TRACE_KEY
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 

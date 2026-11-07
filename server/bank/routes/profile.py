@@ -6,7 +6,7 @@ Declares `auth.VIEW` for the whole router; validating and saving add `auth.EDIT`
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders import locale
 from variatio.loaders.exemplars_profile import profile_drift
 

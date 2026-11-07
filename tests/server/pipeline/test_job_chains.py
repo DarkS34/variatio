@@ -18,7 +18,7 @@ import pytest
 
 from server.jobs.catalogue import Job
 from server.pipeline import approvals, chain
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH
 

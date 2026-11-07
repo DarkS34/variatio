@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .. import config, inference
 from ..prompts import wording as wording_sets
-from ..core import progress
+from ..utils import progress
 from ..inference.repair import parse_with_repair
 from ..loaders.content_context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType

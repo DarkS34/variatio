@@ -10,8 +10,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..core.json_io import write_json
-from ..core.paths import PROJECT_ROOT
+from ..utils.json_io import write_json
+from ..utils.paths import PROJECT_ROOT
 from .types import Setting, SettingError, coerce
 
 CONFIG_PATH = PROJECT_ROOT / "config.json"

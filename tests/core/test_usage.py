@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 from variatio.inference import ollama as local
-from variatio.core import progress
+from variatio.utils import progress
 from variatio.inference import usage
 
 

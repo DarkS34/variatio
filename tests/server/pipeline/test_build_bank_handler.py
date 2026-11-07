@@ -12,8 +12,8 @@ import pytest
 
 from server.pipeline import approvals
 from server.pipeline import jobs as handlers
-from variatio.core import progress
-from variatio.core.workspace import Workspace
+from variatio.utils import progress
+from variatio.utils.workspace import Workspace
 
 BANK = {"C001": {"enunciado": "El de antes"}}
 

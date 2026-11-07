@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from variatio.core import languages
-from variatio.core.workspace import Workspace
+from variatio.utils import languages
+from variatio.utils.workspace import Workspace
 from variatio.loaders import locale
 
 

@@ -12,7 +12,7 @@ import pytest
 from consumers.generation.api import jobs as generation_jobs
 from server import generations as store
 from server.jobs.catalogue import Job
-from variatio.core import paths, progress
+from variatio.utils import paths, progress
 
 START = datetime(2026, 10, 1, 9, 0, tzinfo=timezone.utc)
 

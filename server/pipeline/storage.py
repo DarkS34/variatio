@@ -1,6 +1,6 @@
 """Every artifact write goes through here: atomic, backed up, reversible.
 
-`write_json` wraps `core.json_io.write_json` to add the history snapshot and the database
+`write_json` wraps `variatio.utils.json_io.write_json` to add the history snapshot and the database
 mirror, and it is the only permitted second writer of a persisted artifact — the approval
 hashes in the database are hashes of exactly those bytes.
 """
@@ -11,8 +11,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from variatio.core import json_io
-from variatio.core.workspace import Workspace
+from variatio.utils import json_io
+from variatio.utils.workspace import Workspace
 
 from ..db import mirror
 

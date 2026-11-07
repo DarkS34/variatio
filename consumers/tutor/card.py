@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from variatio.core.lexicon import fold, mentions
+from variatio.utils.lexicon import fold, mentions
 
 from . import ATTEMPT, EXERCISE, SOCIAL, SOLUTION, THEORY
 from . import config as tutor_config

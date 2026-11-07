@@ -4,7 +4,7 @@ import pytest
 
 from variatio import config
 from variatio.builders import content_context_builder
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.content_context import ContentContext
 
 

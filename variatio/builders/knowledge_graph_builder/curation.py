@@ -12,9 +12,9 @@ import networkx as nx
 from loguru import logger
 
 from ... import config, inference
-from ...core import progress
-from ...core.json_io import write_json
-from ...core.lexicon import fold
+from ...utils import progress
+from ...utils.json_io import write_json
+from ...utils.lexicon import fold
 from . import blocks, parsing
 from .schemas import DOMAIN_NAMES_SCHEMA, DOMAINS_SCHEMA, LINK_SCHEMA, UNITS_SCHEMA
 

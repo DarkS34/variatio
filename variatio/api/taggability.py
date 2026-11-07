@@ -12,8 +12,8 @@ import json
 from loguru import logger
 
 from .. import prompts as prompts_pkg
-from ..core import progress
-from ..core.workspace import Workspace
+from ..utils import progress
+from ..utils.workspace import Workspace
 from ..loaders import locale
 from ..loaders.exemplars_profile import ExemplarsProfile
 from ..loaders.knowledge_graph import KnowledgeGraph

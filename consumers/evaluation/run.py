@@ -15,7 +15,7 @@ from loguru import logger
 
 from variatio import api, config, inference
 from variatio.runtime import checks, screening
-from variatio.core import progress
+from variatio.utils import progress
 from variatio.api.initialize import RuntimeContext
 from variatio.runtime.generator import clean_fixed, forbidden
 

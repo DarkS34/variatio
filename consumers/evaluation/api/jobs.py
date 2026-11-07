@@ -13,7 +13,7 @@ from server.core.contexts import context_for
 from server.db import repository, session_scope
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
-from variatio.core import progress
+from variatio.utils import progress
 
 from .. import ARM_LABELS, SYSTEM, draw_session
 from .. import run as evaluation_run

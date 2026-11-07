@@ -9,7 +9,7 @@ conversations in a directory of their own, one per author, as the generated exer
 
 from pathlib import Path
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 CRITERIA_STEM = "tutor_criteria"
 

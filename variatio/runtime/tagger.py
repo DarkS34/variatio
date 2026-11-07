@@ -13,7 +13,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from .. import config, inference
-from ..core import progress
+from ..utils import progress
 from ..inference.repair import parse_with_repair
 from .embedder import Embedder
 from ..loaders.content_context import ContentContext

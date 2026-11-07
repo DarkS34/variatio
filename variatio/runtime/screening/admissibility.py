@@ -14,9 +14,9 @@ from loguru import logger
 
 from ... import config, inference
 from ...prompts import wording as wording_sets
-from ...core import progress
+from ...utils import progress
 from ...inference import InferenceError
-from ...core.lexicon import fold
+from ...utils.lexicon import fold
 
 
 @dataclass(frozen=True)

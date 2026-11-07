@@ -196,9 +196,10 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
 - **D-008 — Layout by artifact.** `variatio/` is being reorganised by artifact
   (`plans/plan-reestructura.md`; each part updates this entry). Today: `api/` is the public
   door; `inference/` is the engine boundary (`inference/__init__.py`) with the engines, usage,
-  vectors and repair, a layer between `prompts` and `core : settings : config`;
+  vectors and repair, a layer between `prompts` and `utils : settings : config`;
   `prompts/<language>/` holds each prompt set with its `wording.py`;
-  `builders/`, `runtime/`, `loaders/`, `documents/`, `settings/` and `core/` keep their roles.
+  `utils/` holds what knows nothing about the subject (paths, `Workspace`, progress, JSON I/O);
+  `builders/`, `runtime/`, `loaders/`, `documents/` and `settings/` keep their roles.
   `builders/` and `loaders/` take a `Workspace` only for their own paths; the package root holds
   `config.py`, `cli.py` and `__init__.py`. *Why:* a person new to the code finds a thing by name.
 - **D-009 — Renames.** Setting keys, on-disk names, URLs and job kinds do not follow module

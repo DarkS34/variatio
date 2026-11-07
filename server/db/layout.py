@@ -8,7 +8,7 @@ to disagree about what a directory holds.
 from pathlib import Path
 
 from variatio import api
-from variatio.core.workspace import Workspace as FsWorkspace
+from variatio.utils.workspace import Workspace as FsWorkspace
 
 from .models import CURATED, DRAFT
 

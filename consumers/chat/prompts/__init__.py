@@ -6,7 +6,7 @@ the fixed answer a student reads — the refusal of the guardrail — comes from
 the replies around it. Both sets export the same names with the same signatures.
 """
 
-from variatio.core import languages
+from variatio.utils import languages
 
 from . import en, es
 

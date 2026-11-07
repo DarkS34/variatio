@@ -5,7 +5,7 @@ Each one reads the queue through `core.process` when called, so a test that puts
 runner there is the one they see.
 """
 
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ..core import process
 from . import chain, slots

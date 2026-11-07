@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from variatio import api
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 

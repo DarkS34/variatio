@@ -16,7 +16,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.core import paths
+from variatio.utils import paths
 
 FILE_NAME = "usage.jsonl"
 

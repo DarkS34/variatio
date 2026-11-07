@@ -6,7 +6,7 @@ the fixed answers a student reads — the off-topic offer, the refusal, the fall
 come from the same set as the replies around them.
 """
 
-from variatio.core import languages
+from variatio.utils import languages
 
 from . import en, es
 

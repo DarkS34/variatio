@@ -19,7 +19,7 @@ from server.auth import rate_limit
 from server.core import contexts
 from server.core.routes import health
 from variatio import config
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.settings import store
 from variatio.settings.registry import REGISTRY
 from variatio.settings.registry.access import networks

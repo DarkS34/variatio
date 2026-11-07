@@ -22,7 +22,7 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from server.pipeline import storage
 from variatio import api
-from variatio.core import progress
+from variatio.utils import progress
 
 from .. import ATTEMPT, EXERCISE, SOLUTION, THEORY
 from .. import config as tutor_config

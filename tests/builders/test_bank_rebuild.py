@@ -11,9 +11,9 @@ import json
 import pytest
 
 from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
-from variatio.core import progress
-from variatio.core.json_io import write_json
-from variatio.core.workspace import Workspace
+from variatio.utils import progress
+from variatio.utils.json_io import write_json
+from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 
 PROFILE = {

@@ -10,7 +10,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from variatio.core import paths
+from variatio.utils import paths
 
 
 def _flag(name: str, default: bool = False) -> bool:

@@ -9,7 +9,7 @@ from server.jobs.catalogue import Job
 from consumers.tutor import paths
 from consumers.tutor.api import jobs, store
 from consumers.tutor.turn import TurnResult
-from variatio.core import progress
+from variatio.utils import progress
 
 from .conftest import SOURCES
 

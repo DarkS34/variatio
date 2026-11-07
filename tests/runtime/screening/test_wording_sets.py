@@ -11,7 +11,7 @@ import pytest
 
 from variatio.prompts import wording
 from variatio.runtime import screening
-from variatio.core import languages
+from variatio.utils import languages
 
 SETS = [wording.of(code) for code in languages.LANGUAGES]
 

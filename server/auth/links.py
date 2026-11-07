@@ -26,7 +26,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from variatio.core import paths
+from variatio.utils import paths
 
 from ..db.models import EDITOR, STUDENT, ClassLink, Invite
 from . import queries, tokens

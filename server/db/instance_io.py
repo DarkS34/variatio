@@ -18,8 +18,8 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from variatio import api
-from variatio.core import json_io
-from variatio.core.workspace import Workspace as FsWorkspace
+from variatio.utils import json_io
+from variatio.utils.workspace import Workspace as FsWorkspace
 from variatio.loaders import locale
 
 from . import repository as repo

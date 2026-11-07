@@ -9,7 +9,7 @@ file, when a teacher asks.
 """
 
 from server.classroom import activity
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from .. import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL
 from . import store

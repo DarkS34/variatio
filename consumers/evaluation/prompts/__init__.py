@@ -7,7 +7,7 @@ difference. Both sets are deliberately POOR, and translating one is not an occas
 improve it.
 """
 
-from variatio.core import languages
+from variatio.utils import languages
 
 from . import en, es
 

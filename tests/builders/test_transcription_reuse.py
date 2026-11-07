@@ -13,8 +13,8 @@ side must not rewrite the other.
 
 import pytest
 
-from variatio.core import paths
-from variatio.core.workspace import Workspace
+from variatio.utils import paths
+from variatio.utils.workspace import Workspace
 from variatio.documents import pages
 from variatio.api import transcribe
 

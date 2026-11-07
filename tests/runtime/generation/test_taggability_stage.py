@@ -5,7 +5,7 @@ import json
 import pytest
 
 from variatio import api
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH, PROFILE
 

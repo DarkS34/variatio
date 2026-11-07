@@ -13,7 +13,7 @@ from server.pipeline import chain
 from server.pipeline import jobs as handlers
 from server.pipeline.gates import GATES, NEEDS_APPROVED
 from variatio import api
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 
 
 @pytest.fixture(autouse=True)

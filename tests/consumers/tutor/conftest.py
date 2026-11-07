@@ -14,7 +14,7 @@ import pytest
 
 from ...conftest import CHAIN_GRAPH, CONTEXT, ES, PREREQUISITE, PROFILE
 from variatio import inference
-from variatio.core.workspace import Workspace
+from variatio.utils.workspace import Workspace
 from variatio.loaders.content_context import ContentContext
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.loaders.knowledge_graph import KnowledgeGraph
