@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from variatio.core.cerebras_budget import (
+from variatio.inference.cerebras_budget import (
     Budget,
     BudgetExhausted,
     Limits,
@@ -541,7 +541,7 @@ def test_two_processes_do_not_lose_each_others_calls(tmp_path):
     path = tmp_path / "budget.json"
     each = 12
     script = (
-        "from variatio.core.cerebras_budget import Budget, Limits;"
+        "from variatio.inference.cerebras_budget import Budget, Limits;"
         f"b = Budget({str(path)!r}, limits=lambda: Limits(5, 30000, 2400, 1000000));"
         f"[b.record('gemma-4-31b', 'kg_extract', 10, 5, {{}}) for _ in range({each})]"
     )
@@ -562,7 +562,7 @@ def test_two_processes_do_not_lose_each_others_calls(tmp_path):
 def test_the_wait_is_bounded_from_the_first_attempt(tmp_path, monkeypatch):
     import time as real_time
 
-    from variatio.core import cerebras_budget
+    from variatio.inference import cerebras_budget
 
     monkeypatch.setattr(cerebras_budget.time, "sleep", lambda _seconds: None)
     monkeypatch.setattr(cerebras_budget.config, "CEREBRAS_MAX_WAIT_SECONDS", 90, raising=False)

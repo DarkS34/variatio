@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio.core import inference
+from variatio import inference
 from variatio.documents import chunking, markdown, pages
 from variatio.prompts import SEAM_SEPARATORS
 

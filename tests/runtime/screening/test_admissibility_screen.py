@@ -84,7 +84,7 @@ def test_screen_fails_open_when_every_entry_is_discarded(owners_for, monkeypatch
 
 
 def test_screen_fails_open_when_the_engine_raises(owners_for, monkeypatch):
-    from variatio.core.inference import InferenceError
+    from variatio.inference import InferenceError
 
     monkeypatch.setattr(
         admissibility.inference, "generate", _fake_generate(InferenceError("motor caído"))

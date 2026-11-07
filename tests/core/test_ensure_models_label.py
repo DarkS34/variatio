@@ -46,6 +46,6 @@ def test_the_three_builders_are_the_only_callers():
         str(path.relative_to(ROOT))
         for path in ROOT.rglob("*.py")
         if "ensure_models(" in path.read_text(encoding="utf-8")
-        and path.name != "inference.py"
+        and path != ROOT / "inference" / "__init__.py"
     ]
     assert sorted(calling) == sorted(CALLERS)

@@ -10,7 +10,8 @@ event, and nothing is lost at the end of an answer — cut short or not.
 
 import pytest
 
-from variatio.core import inference, progress
+from variatio import inference
+from variatio.core import progress
 
 
 class _Host:

@@ -4,10 +4,11 @@ import httpx
 import pytest
 
 from variatio import config
-from variatio.core import cerebras, cerebras_budget, progress
-from variatio.core.cerebras import CerebrasEngine, HybridEngine
-from variatio.core.inference import Sampling
-from variatio.core.inference import InferenceError
+from variatio.core import progress
+from variatio.inference import cerebras, cerebras_budget
+from variatio.inference.cerebras import CerebrasEngine, HybridEngine
+from variatio.inference import Sampling
+from variatio.inference import InferenceError
 
 # Captured at collection, before the autouse fixture in `conftest.py` stubs it out.
 _REAL_KNOWN_MODELS = CerebrasEngine.known_models

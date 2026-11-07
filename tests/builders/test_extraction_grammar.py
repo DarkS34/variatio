@@ -11,9 +11,8 @@ import json
 
 import pytest
 
-from variatio import config
+from variatio import config, inference
 from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
-from variatio.core import inference
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 

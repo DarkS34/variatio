@@ -10,11 +10,10 @@ import json
 import httpx
 import pytest
 
-from variatio import config, settings
-from variatio.core import inference
-from variatio.core.cerebras import CerebrasEngine
-from variatio.core.inference import Sampling
-from variatio.core.ollama import OllamaEngine
+from variatio import config, inference, settings
+from variatio.inference.cerebras import CerebrasEngine
+from variatio.inference import Sampling
+from variatio.inference.ollama import OllamaEngine
 from variatio.documents import pages
 from variatio.api import transcribe
 from variatio.settings import derived, store

@@ -12,8 +12,7 @@ import pytest
 
 from server.jobs import lanes
 from server.jobs.catalogue import JOB_LABELS
-from variatio import config
-from variatio.core import inference
+from variatio import config, inference
 from variatio.settings import derived
 
 # `VARIANT_GENERATION_LLM` is derived rather than declared since the commission started

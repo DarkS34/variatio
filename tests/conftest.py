@@ -5,7 +5,7 @@ import pytest
 
 from variatio import prompts
 from variatio.runtime import screening
-from variatio.core import cerebras_budget
+from variatio.inference import cerebras_budget
 from variatio.loaders.content_context import ContentContext
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.loaders.knowledge_graph import KnowledgeGraph
@@ -63,7 +63,7 @@ def _isolated_cerebras_ledger(tmp_path):
 # `known_models` itself restore the real method on their own instance.
 @pytest.fixture(autouse=True)
 def _no_cerebras_catalogue(monkeypatch):
-    from variatio.core import cerebras
+    from variatio.inference import cerebras
 
     monkeypatch.setattr(cerebras.CerebrasEngine, "known_models", lambda self: frozenset())
 

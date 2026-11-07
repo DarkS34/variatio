@@ -12,7 +12,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-HEAVY = ("variatio.core.inference", "docling", "torch", "server", "fastapi", "sqlalchemy")
+HEAVY = ("variatio.inference", "docling", "torch", "server", "fastapi", "sqlalchemy")
 
 # What the settings registry reaches by its optional imports: each function's settings and
 # the packages that hold them, never more of a function.

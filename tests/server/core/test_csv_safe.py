@@ -64,7 +64,7 @@ def test_row_covers_every_column_it_is_given():
 def test_the_engine_export_defuses_a_phase_name(tmp_path, monkeypatch):
     from server.admin import engine as admin_engine
     from variatio import config
-    from variatio.core import cerebras_budget
+    from variatio.inference import cerebras_budget
 
     cerebras_budget.use(tmp_path / "budget.json")
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])

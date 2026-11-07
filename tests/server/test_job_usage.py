@@ -5,7 +5,8 @@ import time
 from server.jobs import usage_log
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
-from variatio.core import progress, usage
+from variatio.core import progress
+from variatio.inference import usage
 
 
 def _run(handler, monkeypatch):
