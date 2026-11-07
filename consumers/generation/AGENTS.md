@@ -1,6 +1,6 @@
 # AGENTS.md — `consumers/generation/` — «Generar ejercicios»
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 The client is `web/src/consumers/generation/` (rules in `web/AGENTS.md`).
 
 ## A commission's bounds

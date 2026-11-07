@@ -1,8 +1,8 @@
 # AGENTS.md — `server/bank/` — step 3, «Banco de ejercicios»
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`. The screen is `web/src/features/bank/AGENTS.md`; the chain that
-collects and closes the bank is `pipeline/AGENTS.md`.
+Read the root `AGENTS.md` and `server/AGENTS.md` first. The screen is
+`web/src/features/bank/AGENTS.md`; the chain that collects and closes the bank is
+`pipeline/AGENTS.md`.
 
 `routes/` holds `/api/bank` (the teacher's bank, `auth.EDIT`, reads included), `/api/exercises`
 (the class's reading, `auth.VIEW`) and `/api/profile` (the types of exercise). `edit.py` edits

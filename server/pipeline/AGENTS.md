@@ -1,7 +1,6 @@
 # AGENTS.md — `server/pipeline/` — the chain of the three steps
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`.
+Read the root `AGENTS.md` and `server/AGENTS.md` first.
 
 What is approved and what each artifact depends on (`approvals.py`), the one writer of an
 artifact's files (`storage.py`), the label review's record (`taggability.py`), the subject's
@@ -69,10 +68,10 @@ runs (`gates.py`), the chain as the bar reads it (`view.py`), the construction's
   erratum mid-course does not close generating and the tutor to the class. A draft stays a
   draft; editing the types still withdraws them and closes the doors.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in the root
-`DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-017, D-018 — A build writes only its final artifact; draft and curated stay two files. The
   bank's building file is the one exception.

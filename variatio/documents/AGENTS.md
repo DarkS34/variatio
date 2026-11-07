@@ -1,6 +1,6 @@
 # AGENTS.md — `variatio/documents/` — reading documents and transcription
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Rules for reading a raw document and transcribing it page by page. `pages/` is a package by
 step (`document`, `cache`, `render`, `transcribe`, `office_pages`, `images`, `seams`; its
 `__init__.py` is the map) and re-exports every name; a test patches a name in the module that
@@ -54,10 +54,10 @@ Both raw slots use the same VLM page route (quality over speed).
 - Docling's own escapes are undone on its output only (`markdown.undo_converter_escapes`),
   outside fences; never on a transcribed page or a hand-written `.md`.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-025, D-026, D-028…D-031 — Transcription is an accelerator and a step of `/raw`, never a
   gate or a stage; step 1 reads done only with every document read; both slots use the VLM

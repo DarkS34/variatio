@@ -1,8 +1,8 @@
 # AGENTS.md — `server/classroom/` — «Clase»
 
-Read the root `AGENTS.md`, `server/AGENTS.md` and `server/auth/AGENTS.md` first (roles,
-memberships and what a subject lets its students use are identity's). The closed decisions
-are numbered in the root `DECISIONS.md`. The screen is `web/src/features/class/AGENTS.md`.
+Read the root `AGENTS.md`, `server/AGENTS.md` and `server/auth/AGENTS.md` first (roles, memberships
+and what a subject lets its students use are identity's). The screen is
+`web/src/features/class/AGENTS.md`.
 
 `members.py` holds the gestures on a person, `groups.py` the class's groups, `curriculum.py`
 the course's progress and `activity.py` what the students do, counted. `routes/` holds
@@ -162,10 +162,10 @@ class's cut to the group's students, as for one student.
   reading is the class's digest cut to the themes their messages fall under, with how many
   are theirs.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in the root
-`DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-098, D-099 — A class may have groups, and with a group its teachers do what they do with
   the class; a student is in one group at most, teachers in none. One live class link per

@@ -1,6 +1,6 @@
 # AGENTS.md — `web/` — the client
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Before building or changing any UI, read `web/DESIGN.md`. Screens with rules of their own have
 an `AGENTS.md` in their folder: `src/features/bank/`, `src/features/class/`,
 `src/features/admin/`, `src/features/raw/`, `src/consumers/tutor/`, `src/landing/`.
@@ -251,10 +251,10 @@ this section explains; when the two disagree, fix both in the same change.
   one (`runStore.pruneRuns`): the socket carries every job of the workspace the account may
   see — the subject's builds and its own commissions, comparisons and tutor turns.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 **Interface**
 - D-128 — The material is Atlas in clay: no white, two levels of depth, small things flat,

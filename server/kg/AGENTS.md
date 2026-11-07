@@ -1,8 +1,7 @@
 # AGENTS.md — `server/kg/` — step 2, «Temario»
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`. Building and reading the graph are the library's
-(`variatio/AGENTS.md`); its chain and approval are `pipeline/AGENTS.md`.
+Read the root `AGENTS.md` and `server/AGENTS.md` first. Building and reading the graph are the
+library's (`variatio/AGENTS.md`); its chain and approval are `pipeline/AGENTS.md`.
 
 `router.py` is `/api/kg`: the graph, its concepts, domains and relations, the document
 verbatim, and the course's progress (`/api/kg/curriculum`, whose rules are in

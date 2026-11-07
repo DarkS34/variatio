@@ -1,6 +1,6 @@
 # AGENTS.md — `server/jobs/` — the job queue
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Rules for jobs, lanes, priority, privacy of a job's events, cancellation, job logs and measured
 usage.
 
@@ -72,10 +72,10 @@ usage.
   (`server/jobs/usage_log.py`). `system usage --workspace S [--days N]` sums it by kind and
   engine. Embeddings are not counted.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-075, D-076, D-077 — Queue per backend lane; local capacity 1 forever; remote capacity safe
   only with the ledger's claims. Three classes inside a lane, with aging, and a cap of

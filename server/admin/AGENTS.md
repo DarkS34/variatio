@@ -1,8 +1,8 @@
 # AGENTS.md — `server/admin/` — «Administración»
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`. The screen is `web/src/features/admin/AGENTS.md`; who an invitation
-makes and how it is sealed is `server/auth/AGENTS.md`.
+Read the root `AGENTS.md` and `server/AGENTS.md` first. The screen is
+`web/src/features/admin/AGENTS.md`; who an invitation makes and how it is sealed is
+`server/auth/AGENTS.md`.
 
 One route module per tab or section of the panel: `accounts.py` (the front page, `/overview`,
 and an account's gestures and memberships), `invites.py`, `class_links.py`, `workspaces.py`,

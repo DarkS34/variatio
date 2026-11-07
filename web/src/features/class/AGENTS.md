@@ -1,6 +1,6 @@
 # AGENTS.md — `web/src/features/class/` — «Clase»
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Read `web/AGENTS.md` and `web/DESIGN.md` first. The server's rules for people, links and groups
 are in `server/auth/AGENTS.md`; for the curriculum and the activity, in `server/AGENTS.md`.
 

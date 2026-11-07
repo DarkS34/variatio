@@ -5,10 +5,9 @@ Guidance for coding agents working in this repository.
 **How to read the rules.** This file holds what is true everywhere; each folder with rules
 of its own has an `AGENTS.md` beside its code (the index is under *Where the rules live*).
 `ARCHITECTURE.md` is the map. The *Closed decisions* are authoritative: if a request would
-reverse one, push back and ask before implementing; each has an entry in
-[`DECISIONS.md`](DECISIONS.md) with its date, commit and reason. Numbers quoted are
-measurements; re-measure before changing what they justify. Do not create a `CLAUDE.md`:
-Claude Code reads `AGENTS.md` only when there is none.
+reverse one, push back and ask before implementing; each carries its reason. Numbers
+quoted are measurements; re-measure before changing what they justify. Do not create a
+`CLAUDE.md`: Claude Code reads `AGENTS.md` only when there is none.
 
 ## Writing to the user
 
@@ -184,33 +183,60 @@ use `progress.step(...).tick(detail=…)` or `debug`. A fact is logged by one la
 
 ## Closed decisions (do not revert without explicit user request)
 
-The ones that hold everywhere, with their numbers in [`DECISIONS.md`](DECISIONS.md); each
-folder's `AGENTS.md` lists its own. To change one, follow «How to change a decision» there.
+These are the only closed decisions. To change one, ask the user, then edit its line here in
+the same commit as the code; git keeps the history. A number cited elsewhere (code, a folder's
+`AGENTS.md`) names an entry of the old register: `git show 6698e16:DECISIONS.md`.
 
-- D-001, D-003 — The code is PolyForm Noncommercial 1.0.0 (from 1.171.0); the history is not
-  rewritten to hide the MIT commits, and copies taken then keep MIT.
-- D-004, D-007 — The functions live in `consumers/`, outside `variatio/` and `server/`;
-  one-way import; the evaluation is not made removable. What the tutor and the chat share is
-  `server/conversations/`.
-- D-008, D-009 — `builders/` ↔ `runtime/` ↔ `api/`; root holds three files; setting
-  keys and on-disk names do not follow module renames. Renames go per importer, never `sed`.
-- D-010 — No default workspace; no reserved slug; a path is never a defaulted argument.
-- D-011 — A workspace's artifacts live in `artifacts/` and their loaders in
-  `variatio/loaders/`; an old tree is renamed the first time it is opened.
-- D-015 — One writer of persisted JSON: `json_io.write_json`.
-- D-248, D-250 — `api/` is the library's door; `builders/` and `loaders/` take a
-  `Workspace` only for their own paths. Inside `variatio/` only `cli.py`, `builders/`,
-  `runtime/` and `documents/` import `inference/`.
-- D-220 — Closed decisions are entries of `DECISIONS.md`; each `AGENTS.md` keeps rule and number.
-- D-222 — Work plans go in `plans/` (git-ignored); there is no `docs/`.
-- D-225 — There is no guide and no tutorial; their text is in git history.
-- D-223 — One `AGENTS.md` per folder for what is the folder's; this file for what holds
-  everywhere. The why of a folder lives in its `AGENTS.md`, of a decision in `DECISIONS.md`.
-- D-226 — Python import boundaries are import-linter contracts; the client's direction is
-  `pnpm check:layers`. An exception is named in the contract, never added in silence.
-- D-247 — The agent implements and the user designs and commits; plan before code, small
-  commits, only `web/`, `migrations/` and `tests/` on the agent's initiative (*Working with
-  agents*).
+- **D-001, D-003 — Licence.** The code is PolyForm Noncommercial 1.0.0 (from 1.171.0); the
+  history is not rewritten, and copies taken while it was MIT keep MIT. *Why:* free for any
+  noncommercial use, never sold; a rewrite would not take MIT back from existing copies.
+- **D-004, D-007 — Functions.** The functions live in `consumers/`, outside `variatio/` and
+  `server/`, with one-way imports; the evaluation is not made removable. What the tutor and
+  the chat share is `server/conversations/`. *Why:* they consume what the construction builds.
+- **D-008 — Layout by artifact.** `variatio/` is being reorganised by artifact
+  (`plans/plan-reestructura.md`; each part updates this entry). Today: `api/` is the public
+  door; `inference/` is the engine boundary (`inference/__init__.py`) with the engines, usage,
+  vectors and repair, a layer between `prompts` and `core : settings : config`;
+  `prompts/<language>/` holds each prompt set with its `wording.py`;
+  `builders/`, `runtime/`, `loaders/`, `documents/`, `settings/` and `core/` keep their roles.
+  `builders/` and `loaders/` take a `Workspace` only for their own paths; the package root holds
+  `config.py`, `cli.py` and `__init__.py`. *Why:* a person new to the code finds a thing by name.
+- **D-009 — Renames.** Setting keys, on-disk names, URLs and job kinds do not follow module
+  renames; renames go per importer, never with a global `sed`. *Why:* a renamed key silently
+  resets an installation's choice, and several module names name a second live module.
+- **D-010 — No default workspace.** No reserved slug; a path is never a defaulted argument.
+  *Why:* a component built without paths once wrote into another instance.
+- **D-011 — Artifacts on disk.** A workspace's artifacts live in `artifacts/`; an old tree is
+  renamed the first time it is opened. *Why:* «instance» named three different things.
+- **D-015 — One JSON writer.** Every persisted JSON goes through `json_io.write_json`.
+  *Why:* approval hashes are hashes of these bytes.
+- **D-036, D-037 — Languages.** Two interchangeable prompt sets, `es/` and `en/`, with the
+  same modules and signatures (pinned by test); the JSON keys a model emits are never
+  translated. The interface language is the account's, the prompt language the workspace's,
+  the language of instruction the corpus's. *Why:* the keys are the parsers' grammar, and what
+  a person reads differs from what the model is told.
+- **D-057, D-067 — Models.** Only open-weight models; the optional `cerebras+ollama` engine is
+  the one hosted exception, and no other hosted provider is added without asking. The embedder
+  is fixed at `qwen3-embedding:4b`. *Why:* the user's choice; a new embedder rebuilds every
+  index, and the thresholds are calibrated on this one (top-1 18/18 against 15/18).
+- **D-092, D-117, D-198 — Access and privacy.** Every route checks a membership row
+  (viewer/editor/owner). A generated exercise and a tutor conversation are private to their
+  author: anyone else gets the 404 of a missing one; the installation administrator reads
+  conversations read-only. *Why:* a filter is not privacy, and a 403 confirms the id exists.
+- **D-230 — Who calls the engine.** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`
+  and `documents/` import `inference/`. *Why:* `api/`, `loaders/`, `prompts/` and `settings/`
+  stay cheap to import and never call a model.
+- **D-220, D-223 — Documentation.** This section is the only register of closed decisions. One
+  `AGENTS.md` per folder holds that folder's rules and their why; this file holds what holds
+  everywhere, at most 200 lines. *Why:* the old register (1 295 lines) read as a history, and
+  `AGENTS.md` once grew to 192 KB in 14 days.
+- **D-222, D-225 — No docs.** Work plans go in `plans/` (git-ignored); there is no `docs/`,
+  no guide and no tutorial (their text is in git history). *Why:* `docs/` only held plans.
+- **D-226 — Import boundaries.** Python import boundaries are import-linter contracts; the
+  client's direction is `pnpm check:layers`. An exception is named in the contract, never added
+  in silence. *Why:* nothing else checks the layers.
+- **D-247 — Agents.** The agent implements; the user designs and commits (*Working with
+  agents*). *Why:* every line has a human author who can explain it without the diff.
 
 ## Code conventions
 

@@ -1,6 +1,6 @@
 # AGENTS.md — `server/` — the API
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Rules for the server outside its subpackages: the database, how a request finds its subject,
 and the generated exercises. What every area stands on is `core/AGENTS.md`, identity
 `auth/AGENTS.md`, the subjects of an account `workspaces/AGENTS.md`, the build chain
@@ -83,10 +83,10 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 The chain of the three steps, its approvals and gates, and the construction's jobs are
 `pipeline/AGENTS.md`.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-227 — `server/` is organised by areas (`core/`, `auth/`, `workspaces/`, `pipeline/`,
   `raw/`, `kg/`, `bank/`, `classroom/`, `admin/`), each with its routes, services,

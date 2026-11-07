@@ -1,6 +1,6 @@
 # AGENTS.md — `web/src/consumers/tutor/` — the tutor's screens
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Read `web/AGENTS.md` and `web/DESIGN.md` first. The tutor's server side is
 `consumers/tutor/AGENTS.md`.
 

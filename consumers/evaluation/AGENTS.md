@@ -1,6 +1,6 @@
 # AGENTS.md — `consumers/evaluation/` — the study
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 
 ## `consumers/evaluation/` — the TFM's study, outside the system it measures
 
@@ -52,10 +52,10 @@ attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never fro
   version and arm configuration produced each result; there is no version column, so change
   dates are boundaries.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-111, D-112 — The evaluator never sees the score; blind instruments come before the reveal.
 - D-113 — A session shows the system's proposal and one seed-drawn rival.

@@ -1,7 +1,6 @@
 # AGENTS.md — `server/workspaces/` — the subjects of an account
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`.
+Read the root `AGENTS.md` and `server/AGENTS.md` first.
 
 `router.py` is `/api/workspaces`: the selector's list, creating a subject, entering one,
 leaving it and deleting it. `trees.py` is a subject's tree on disk. Resolving a slug to its
@@ -21,10 +20,10 @@ paths is `core/installation.py`, and a request's subject is resolved once, by
   `WORKSPACES_DIR` (`_contained_root`). Emptying the cache keeps the concept descriptions and
   the corpus anchoring, which cost a long model run.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in the root
-`DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 - D-115 — A deletion that leaves no other member takes the subject's tree; if others remain,
   the files stay; the tree goes before the row.

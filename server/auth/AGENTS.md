@@ -1,6 +1,6 @@
 # AGENTS.md — `server/auth/` — identity and access
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Rules for accounts, sessions, invitations, roles, memberships, the optional functions and what
 a subject lets its students use. The code is `server/auth/` (with its queries,
 `queries.py`, the optional functions, `features.py`, and its routes, `router.py`) and the
@@ -116,10 +116,10 @@ Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 - Deleting an account: its generated exercises stay as files nobody reads any more;
   `evaluation_sessions` keep their rows (`SET NULL`); `stage_evaluations` cascade.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 **Identity and access**
 - D-087, D-088, D-089 — Invitation-only sign-up (single-use invitations, class-link seats,

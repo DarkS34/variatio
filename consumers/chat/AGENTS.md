@@ -1,6 +1,6 @@
 # AGENTS.md — `consumers/chat/` — the free chat
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 
 ## `consumers/chat/` — «Chat libre»
 

@@ -1,6 +1,6 @@
 # AGENTS.md — `variatio/` — the library
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Rules for the library: its engines, layout, settings, artifacts, builders, runtime, prompts and
 wording. The transcription's rules are in `documents/AGENTS.md`.
 
@@ -385,10 +385,10 @@ Each looks like a bug and is intentional:
   final», which failed every tutor reply on it as introducing a later concept.
 - `pending_ids()` treats an empty `concepts` list as untagged, so rejections are retried.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 **Structure**
 - D-013, D-014 — Settings in the registry + `config.json`; one writer (`store.write_file` →

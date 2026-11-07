@@ -1,6 +1,6 @@
 # AGENTS.md — `consumers/` — the functions
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Each function has its own `AGENTS.md`: `generation/`, `evaluation/`, `tutor/`, `chat/`. What
 the tutor and the chat share is `server/conversations/AGENTS.md`.
 

@@ -1,6 +1,6 @@
 # AGENTS.md — `consumers/tutor/` — the Socratic tutor
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 The client is `web/src/consumers/tutor/AGENTS.md`.
 
 ## `consumers/tutor/` — the Socratic tutor, beside the system it reads
@@ -174,10 +174,10 @@ admin's read.
   not move.
 - Logs in Spanish with `[tutor]`; never the message text.
 
-## Closed decisions
+## Rules
 
-One line per rule in force; the date, commit and reason of each are in
-the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
+One line per rule of this folder. A number names an entry of the old register:
+`git show 6698e16:DECISIONS.md`.
 
 **Tutor**
 - D-195 — As many doors after the construction as functions open to the account.

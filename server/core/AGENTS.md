@@ -1,7 +1,6 @@
 # AGENTS.md — `server/core/` — what every area stands on
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`; none is this folder's alone.
+Read the root `AGENTS.md` and `server/AGENTS.md` first.
 
 The pieces the server needs and that know no area: the process's live pieces (`process.py`),
 the warm contexts (`contexts.py`), resolving a subject (`installation.py`), the environment

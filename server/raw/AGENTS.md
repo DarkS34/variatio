@@ -1,8 +1,7 @@
 # AGENTS.md — `server/raw/` — step 1, «Apuntes y ejercicios»
 
-Read the root `AGENTS.md` and `server/AGENTS.md` first. The closed decisions are numbered in
-the root `DECISIONS.md`. The transcription itself is `variatio/documents/AGENTS.md`, and the
-screen `web/src/features/raw/AGENTS.md`.
+Read the root `AGENTS.md` and `server/AGENTS.md` first. The transcription itself is
+`variatio/documents/AGENTS.md`, and the screen `web/src/features/raw/AGENTS.md`.
 
 `router.py` is `/api/raw`: the two slots, uploading and deleting a document, and the
 transcription and its pages. `documents.py` lists and writes the slots' documents and reads

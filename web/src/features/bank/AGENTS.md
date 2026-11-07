@@ -1,6 +1,6 @@
 # AGENTS.md — `web/src/features/bank/` — step 3, «Banco de ejercicios»
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 Read `web/AGENTS.md` and `web/DESIGN.md` first. The server's side is `server/bank/`
 (`server/bank/AGENTS.md`).
 

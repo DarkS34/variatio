@@ -1,6 +1,6 @@
 # AGENTS.md — `server/conversations/` — what the tutor and the chat share
 
-Read the root `AGENTS.md` first. The closed decisions are numbered in the root `DECISIONS.md`.
+Read the root `AGENTS.md` first.
 
 ## `server/conversations/` — what the tutor and the chat share
 
