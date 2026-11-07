@@ -16,7 +16,7 @@ import pytest
 from variatio.core import paths
 from variatio.core.workspace import Workspace
 from variatio.documents import pages
-from variatio.entrypoints import transcribe
+from variatio.api import transcribe
 
 TEXT = "Un enunciado que ocupa una página entera."
 

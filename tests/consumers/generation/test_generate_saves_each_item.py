@@ -103,7 +103,7 @@ def _job(**params) -> Job:
 
 
 def test_each_validated_item_is_saved_as_it_arrives(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno", "dos"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno", "dos"))
     result, emitter, _ = _run(_job(n=2))
 
     records = _records()
@@ -118,7 +118,7 @@ def test_each_validated_item_is_saved_as_it_arrives(stubbed, monkeypatch):
 
 
 def test_the_file_is_under_the_author_and_names_the_run(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno", "dos"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno", "dos"))
     job = _job(n=2)
     _run(job)
 
@@ -132,7 +132,7 @@ def test_the_file_is_under_the_author_and_names_the_run(stubbed, monkeypatch):
 
 
 def test_the_record_keeps_the_prompt_the_provenance_and_the_inputs(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     _run(_job())
 
     [record] = _records()
@@ -164,7 +164,7 @@ def test_the_effort_asked_and_the_effort_that_ran_are_both_kept(stubbed, monkeyp
     monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-rapido", "el-fijo"])
     monkeypatch.setattr(generation_jobs.config, "FIXED_EFFORT_MODELS", ["el-fijo"])
     monkeypatch.setattr(generation_jobs.config, "FIXED_EFFORT_LEVELS", {"el-fijo": "medium"})
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     _run(_job(think="high", model="el-fijo"))
 
     [record] = _records()
@@ -178,7 +178,7 @@ def test_the_commission_curriculum_is_kept_as_it_was_asked(stubbed, monkeypatch)
         "resolve",
         lambda ws, kg, given, student=False: ["Bucles", "Variables"],
     )
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     _run(_job())
 
     [record] = _records()
@@ -188,7 +188,7 @@ def test_the_commission_curriculum_is_kept_as_it_was_asked(stubbed, monkeypatch)
 
 def test_the_record_names_the_model_the_commission_chose(stubbed, monkeypatch):
     monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     result, _, error = _run(_job(model="el-lento"))
 
     assert error is None
@@ -200,7 +200,7 @@ def test_the_record_names_the_model_the_commission_chose(stubbed, monkeypatch):
 
 def test_a_commission_naming_no_model_records_the_default_one(stubbed, monkeypatch):
     monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     result, _, _ = _run(_job())
 
     assert result["model"] == "el-rapido"
@@ -214,11 +214,11 @@ def test_a_commission_naming_no_model_records_the_default_one(stubbed, monkeypat
 # whatever the installation offers today.
 def test_a_model_that_stopped_being_offered_stops_the_job(stubbed, monkeypatch):
     monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-que-hay"])
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", lambda *a, **k: pytest.fail("no llega"))
+    monkeypatch.setattr(generation_jobs.api, "generate", lambda *a, **k: pytest.fail("no llega"))
     result, _, error = _run(_job(model="el-que-ya-no"))
 
     assert result is None
-    assert isinstance(error, generation_jobs.entrypoints.UnofferedModelError)
+    assert isinstance(error, generation_jobs.api.UnofferedModelError)
     assert _records() == []
 
 
@@ -228,7 +228,7 @@ def test_a_cancelled_run_keeps_what_it_validated(stubbed, monkeypatch):
         kwargs["on_accepted"](_variant("dos"), 2)
         raise Cancelled("cancelled by the user")
 
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", fake_generate)
+    monkeypatch.setattr(generation_jobs.api, "generate", fake_generate)
     result, _, error = _run(_job(n=5))
 
     assert result is None and isinstance(error, Cancelled)
@@ -240,7 +240,7 @@ def test_a_disk_failure_loses_the_record_and_nothing_else(stubbed, monkeypatch):
         raise OSError("No queda espacio en el dispositivo")
 
     monkeypatch.setattr(generation_jobs.generations_store, "save", full_disk)
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("uno"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     result, emitter, error = _run(_job())
 
     assert error is None
@@ -250,9 +250,9 @@ def test_a_disk_failure_loses_the_record_and_nothing_else(stubbed, monkeypatch):
 
 
 def test_two_accounts_write_to_two_directories(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("de Ana"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("de Ana"))
     _run(_job())
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", _accepting("de Luis"))
+    monkeypatch.setattr(generation_jobs.api, "generate", _accepting("de Luis"))
     _run(Job(kind="generate", params={"concepts": ["Bucles"]}, workspace="aula", user_id=8))
 
     assert [store.item_of(r)["enunciado"] for r in _records(7)] == ["de Ana"]
@@ -269,7 +269,7 @@ def test_a_count_of_zero_is_not_silently_turned_into_one(stubbed, monkeypatch):
         seen.update(kwargs)
         return []
 
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", fake_generate)
+    monkeypatch.setattr(generation_jobs.api, "generate", fake_generate)
     result, _, error = _run(_job(n=0))
 
     assert error is None
@@ -286,7 +286,7 @@ def test_an_absent_count_still_means_one(stubbed, monkeypatch):
         kwargs["on_accepted"](_variant("uno"), 1)
         return [_variant("uno")]
 
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", fake_generate)
+    monkeypatch.setattr(generation_jobs.api, "generate", fake_generate)
     job = Job(kind="generate", params={"concepts": ["Bucles"]}, workspace="aula", user_id=7)
     result, _, error = _run(job)
 
@@ -303,7 +303,7 @@ def test_the_parts_a_commission_leaves_out_reach_the_generator_and_the_file(stub
         seen.update(kwargs)
         return _accepting("uno")(context, **kwargs)
 
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", fake_generate)
+    monkeypatch.setattr(generation_jobs.api, "generate", fake_generate)
     _run(_job(omit=["solucion"]))
     assert seen["omit"] == ["solucion"]
     assert _records()[0]["commission"]["omit"] == ["solucion"]
@@ -316,7 +316,7 @@ def test_a_commission_that_leaves_nothing_out_says_so(stubbed, monkeypatch):
         seen.update(kwargs)
         return _accepting("uno")(context, **kwargs)
 
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", fake_generate)
+    monkeypatch.setattr(generation_jobs.api, "generate", fake_generate)
     _run(_job())
     assert seen["omit"] is None
     assert _records()[0]["commission"]["omit"] == []

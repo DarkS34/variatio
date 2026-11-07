@@ -1,6 +1,6 @@
 """The taggability job: the library judges, the server writes, translates and skips.
 
-The model pass is `entrypoints.review_taggability`; what stays in the handler is
+The model pass is `api.review_taggability`; what stays in the handler is
 `kg_edit.set_non_taggable` — which owns the history, the database mirror and the approval —
 turning the library's exception into a sentence somebody can act on, and skipping the pass
 when nothing it reads changed (`server/pipeline/taggability.py`). The review heads every
@@ -16,7 +16,7 @@ from server.jobs.catalogue import JOB_ARTIFACT, Job
 from server.kg import edit as kg_edit
 from server.pipeline import approvals, taggability
 from server.pipeline import jobs as handlers
-from variatio import entrypoints
+from variatio import api
 from variatio.core.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH
@@ -57,7 +57,7 @@ def job() -> Job:
 
 def test_it_writes_what_the_stage_judged_and_reports_both_counts(stub, monkeypatch):
     monkeypatch.setattr(
-        entrypoints,
+        api,
         "review_taggability",
         lambda ws: {"non_taggable": ["Notación asintótica", "Algoritmo"], "concepts": 5},
     )
@@ -69,17 +69,17 @@ def test_it_writes_what_the_stage_judged_and_reports_both_counts(stub, monkeypat
 @pytest.mark.parametrize(
     "artifact, said",
     [
-        (entrypoints.EXEMPLARS_PROFILE, "perfil de ejemplares"),
-        (entrypoints.KNOWLEDGE_GRAPH, "grafo de conocimiento"),
+        (api.EXEMPLARS_PROFILE, "perfil de ejemplares"),
+        (api.KNOWLEDGE_GRAPH, "grafo de conocimiento"),
     ],
 )
 def test_a_missing_artifact_reaches_the_person_as_a_sentence(stub, monkeypatch, artifact, said):
     """`MissingArtifactError` names the artifact; only this layer knows somebody is reading."""
 
     def refuse(ws):
-        raise entrypoints.MissingArtifactError(artifact)
+        raise api.MissingArtifactError(artifact)
 
-    monkeypatch.setattr(entrypoints, "review_taggability", refuse)
+    monkeypatch.setattr(api, "review_taggability", refuse)
 
     with pytest.raises(ValueError) as exc:
         handlers.handle_review_taggability(job(), None)
@@ -123,7 +123,7 @@ def judge(monkeypatch):
         calls.append(ws.slug)
         return {"non_taggable": ["Notación asintótica"], "concepts": 5}
 
-    monkeypatch.setattr(entrypoints, "review_taggability", review)
+    monkeypatch.setattr(api, "review_taggability", review)
     return calls
 
 

@@ -77,7 +77,7 @@ def test_retagging_keeps_a_closed_bank_closed_and_a_draft_a_draft(monkeypatch, w
     monkeypatch.setattr(
         handlers, "context_for", lambda _job: SimpleNamespace(exemplars_bank=dict(BANK))
     )
-    monkeypatch.setattr(handlers.entrypoints, "tag_bank", tag_bank)
+    monkeypatch.setattr(handlers.api, "tag_bank", tag_bank)
 
     handlers.handle_tag(Job(kind="tag", params={"all": True}, workspace="aula"), None)
 

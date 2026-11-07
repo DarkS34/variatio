@@ -6,7 +6,7 @@ from variatio.runtime.tagger import ConceptTagger
 from variatio.core.json_io import write_json
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ExemplarsProfile
-from variatio.entrypoints import build
+from variatio.api import build
 
 from ..conftest import CHAIN_GRAPH, PROFILE
 

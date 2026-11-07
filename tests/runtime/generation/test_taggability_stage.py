@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from variatio import entrypoints
+from variatio import api
 from variatio.core.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH, PROFILE
@@ -33,23 +33,23 @@ def record(monkeypatch) -> list[tuple]:
         calls.append((graph, profile, prompts, bank, context))
         return ["Notación asintótica"]
 
-    monkeypatch.setattr(entrypoints.taggability, "review", fake_review)
+    monkeypatch.setattr(api.taggability, "review", fake_review)
     return calls
 
 
 def test_it_refuses_without_a_graph(ws):
     write_profile(ws)
-    with pytest.raises(entrypoints.MissingArtifactError) as exc:
-        entrypoints.review_taggability(ws)
-    assert exc.value.artifact == entrypoints.KNOWLEDGE_GRAPH
+    with pytest.raises(api.MissingArtifactError) as exc:
+        api.review_taggability(ws)
+    assert exc.value.artifact == api.KNOWLEDGE_GRAPH
 
 
 def test_it_refuses_without_a_profile(ws):
     """The judgement is relative to the shapes of item, so the graph alone cannot answer."""
     write_graph(ws)
-    with pytest.raises(entrypoints.MissingArtifactError) as exc:
-        entrypoints.review_taggability(ws)
-    assert exc.value.artifact == entrypoints.EXEMPLARS_PROFILE
+    with pytest.raises(api.MissingArtifactError) as exc:
+        api.review_taggability(ws)
+    assert exc.value.artifact == api.EXEMPLARS_PROFILE
 
 
 def test_it_reports_the_verdict_with_the_size_of_the_graph(ws, monkeypatch):
@@ -57,7 +57,7 @@ def test_it_reports_the_verdict_with_the_size_of_the_graph(ws, monkeypatch):
     write_profile(ws)
     record(monkeypatch)
 
-    assert entrypoints.review_taggability(ws) == {
+    assert api.review_taggability(ws) == {
         "non_taggable": ["Notación asintótica"],
         "concepts": 5,
     }
@@ -69,7 +69,7 @@ def test_it_hands_the_review_the_workspace_own_prompt_set(ws, monkeypatch):
     ws.locale_path.write_text(json.dumps({"prompt_language": "en"}), encoding="utf-8")
     calls = record(monkeypatch)
 
-    entrypoints.review_taggability(ws)
+    api.review_taggability(ws)
 
     assert calls[0][2].LANGUAGE == "en"
 
@@ -80,9 +80,9 @@ def test_the_bank_is_evidence_and_never_a_condition(ws, monkeypatch):
     write_profile(ws)
     calls = record(monkeypatch)
 
-    entrypoints.review_taggability(ws)
+    api.review_taggability(ws)
     ws.exemplars_bank_path.write_text("{ not json", encoding="utf-8")
-    entrypoints.review_taggability(ws)
+    api.review_taggability(ws)
 
     assert [call[3] for call in calls] == [{}, {}]
 
@@ -94,6 +94,6 @@ def test_the_bank_reaches_the_review_when_it_is_there(ws, monkeypatch):
     ws.exemplars_bank_path.write_text(json.dumps(bank, ensure_ascii=False), encoding="utf-8")
     calls = record(monkeypatch)
 
-    entrypoints.review_taggability(ws)
+    api.review_taggability(ws)
 
     assert calls[0][3] == bank

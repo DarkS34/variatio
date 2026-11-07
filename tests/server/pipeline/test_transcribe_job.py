@@ -12,7 +12,7 @@ from server.jobs.catalogue import JOB_ARTIFACT, JOB_LABELS, SUBPROCESS_KINDS, Jo
 from server.pipeline import chain
 from server.pipeline import jobs as handlers
 from server.pipeline.gates import GATES, NEEDS_APPROVED
-from variatio import entrypoints
+from variatio import api
 from variatio.core.workspace import Workspace
 
 
@@ -34,7 +34,7 @@ def stub(monkeypatch, tmp_path):
         calls.append((ws.slug, slot))
         return {"slot": slot, "documents": 2, "pages": 7}
 
-    monkeypatch.setattr(entrypoints, "transcribe_slot", transcribe_slot, raising=False)
+    monkeypatch.setattr(api, "transcribe_slot", transcribe_slot, raising=False)
     return calls
 
 

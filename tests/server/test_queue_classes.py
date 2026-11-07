@@ -247,7 +247,7 @@ def queue(monkeypatch, runner):
     monkeypatch.setattr(jobs_router, "gate_error", lambda ws, kind: None)
     monkeypatch.setattr(jobs_router, "transcription_error", lambda ws, kind: None)
     monkeypatch.setitem(catalogue.ADMISSIONS, "generate", limits.admit)
-    monkeypatch.setattr(limits.entrypoints, "resolve_generation_model", lambda name: "m")
+    monkeypatch.setattr(limits.api, "resolve_generation_model", lambda name: "m")
     monkeypatch.setattr(config, "GENERATION_MAX_ITEMS", 20)
     monkeypatch.setattr(config, "GENERATION_STUDENT_MAX_ITEMS", 5)
     monkeypatch.setattr(config, "GENERATION_STUDENT_DAILY_ITEMS", None)

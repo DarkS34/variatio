@@ -60,7 +60,7 @@ def test_one_engine_means_one_lane_for_every_component(ollama):
 
 
 # Separate from the components because a build's models are the BUILDER's declaration, not
-# a table here: this is the one test that reads `entrypoints.build_models`, and it is where a
+# a table here: this is the one test that reads `api.build_models`, and it is where a
 # builder that stops resolving its own phase models shows up.
 def test_one_engine_means_one_lane_for_every_build(ollama):
     for kind in BUILD_KINDS:

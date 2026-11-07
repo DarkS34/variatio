@@ -5,7 +5,7 @@ import json
 import pytest
 
 from variatio import config
-from variatio.entrypoints import rates
+from variatio.api import rates
 
 
 @pytest.fixture

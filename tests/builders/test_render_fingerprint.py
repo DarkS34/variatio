@@ -7,7 +7,7 @@ before reads as made with those values, so recording them expired nothing.
 from variatio import config
 from variatio.core import repetition
 from variatio.documents import pages
-from variatio.entrypoints import transcribe
+from variatio.api import transcribe
 
 
 def test_the_defaults_are_the_values_every_older_page_was_read_with():

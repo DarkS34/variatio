@@ -16,7 +16,7 @@ import pytest
 from variatio import wording
 from variatio.core.workspace import Workspace
 from variatio.documents import pages
-from variatio.entrypoints import transcribe
+from variatio.api import transcribe
 
 from ..conftest import ES
 

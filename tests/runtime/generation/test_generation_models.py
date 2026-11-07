@@ -10,7 +10,7 @@ request carries would let a job run on a model the installation stopped offering
 
 import pytest
 
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.settings.registry import BY_KEY
 from variatio.settings.types import SettingError, coerce
 
@@ -22,27 +22,27 @@ def offered(monkeypatch):
 
 
 def test_a_commission_that_names_nothing_gets_the_first_offered(offered):
-    assert entrypoints.resolve_generation_model(None) == "el-rapido"
-    assert entrypoints.resolve_generation_model("") == "el-rapido"
+    assert api.resolve_generation_model(None) == "el-rapido"
+    assert api.resolve_generation_model("") == "el-rapido"
 
 
 def test_a_commission_may_name_any_of_the_offered_models(offered):
     for model in offered:
-        assert entrypoints.resolve_generation_model(model) == model
+        assert api.resolve_generation_model(model) == model
 
 
 def test_a_model_nobody_offers_is_refused_and_not_substituted(offered):
-    with pytest.raises(entrypoints.UnofferedModelError) as error:
-        entrypoints.resolve_generation_model("el-de-otra-instalacion")
+    with pytest.raises(api.UnofferedModelError) as error:
+        api.resolve_generation_model("el-de-otra-instalacion")
     # The message names what IS offered: the screen shows it verbatim as a 422.
     assert "el-rapido" in str(error.value)
 
 
 def test_the_offered_listing_is_a_copy_of_the_setting(offered):
-    listing = entrypoints.generation_models()
+    listing = api.generation_models()
     assert listing == offered
     listing.append("intruso")
-    assert entrypoints.generation_models() == offered
+    assert api.generation_models() == offered
 
 
 # `settings.derived` indexes the list without a guard, so what keeps it from ever being
@@ -61,17 +61,17 @@ def test_the_offered_list_may_not_be_emptied():
 # dropping the measurement with it would force a re-run.
 def test_the_fixed_effort_listing_is_a_copy_of_the_setting(monkeypatch):
     monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
-    listing = entrypoints.fixed_effort_models()
+    listing = api.fixed_effort_models()
     assert listing == ["el-rapido"]
     listing.append("intruso")
-    assert entrypoints.fixed_effort_models() == ["el-rapido"]
+    assert api.fixed_effort_models() == ["el-rapido"]
 
 
 def test_naming_a_model_nobody_offers_as_fixed_effort_is_not_an_error(offered, monkeypatch):
     monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-que-se-retiro-un-rato"])
-    assert entrypoints.fixed_effort_models() == ["el-que-se-retiro-un-rato"]
+    assert api.fixed_effort_models() == ["el-que-se-retiro-un-rato"]
     # And it changes nothing about what may be generated with.
-    assert entrypoints.resolve_generation_model(None) == "el-rapido"
+    assert api.resolve_generation_model(None) == "el-rapido"
 
 
 def test_the_hybrid_engine_offers_a_model_cerebras_serves_and_locks_none():
@@ -110,18 +110,18 @@ def locked(monkeypatch):
 
 
 def test_a_locked_model_is_called_with_the_declared_level(locked):
-    assert entrypoints.resolve_generation_effort("el-rapido", "low") == "high"
-    assert entrypoints.resolve_generation_effort("el-rapido", True) == "high"
+    assert api.resolve_generation_effort("el-rapido", "low") == "high"
+    assert api.resolve_generation_effort("el-rapido", True) == "high"
 
 
 def test_resolving_the_effort_twice_says_the_same_thing(locked):
-    once = entrypoints.resolve_generation_effort("el-rapido", "low")
-    assert entrypoints.resolve_generation_effort("el-rapido", once) == once
+    once = api.resolve_generation_effort("el-rapido", "low")
+    assert api.resolve_generation_effort("el-rapido", once) == once
 
 
 def test_a_model_whose_effort_is_not_locked_keeps_what_arrived(locked):
-    assert entrypoints.resolve_generation_effort("el-que-delibera", "max") == "max"
-    assert entrypoints.resolve_generation_effort("el-que-delibera", True) is True
+    assert api.resolve_generation_effort("el-que-delibera", "max") == "max"
+    assert api.resolve_generation_effort("el-que-delibera", True) is True
 
 
 def test_a_locked_model_with_no_level_declared_is_left_to_the_engine(monkeypatch):
@@ -129,19 +129,19 @@ def test_a_locked_model_with_no_level_declared_is_left_to_the_engine(monkeypatch
     monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {})
     # `True`, and not a level this layer picked: `inference._think_option` is the one place
     # that turns it into `DEFAULT_THINK_EFFORT`, which is what the lock has always promised.
-    assert entrypoints.resolve_generation_effort("el-rapido", "max") is True
+    assert api.resolve_generation_effort("el-rapido", "max") is True
 
 
 def test_reasoning_switched_off_is_never_turned_back_on(locked):
     # The lock is about how much a model deliberates, never about whether it does.
-    assert entrypoints.resolve_generation_effort("el-rapido", False) is False
+    assert api.resolve_generation_effort("el-rapido", False) is False
 
 
 def test_the_level_of_a_model_nobody_locked_is_kept_and_not_read(monkeypatch):
     monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", [])
     monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
-    assert entrypoints.fixed_effort_levels() == {"el-rapido": "high"}
-    assert entrypoints.resolve_generation_effort("el-rapido", "low") == "low"
+    assert api.fixed_effort_levels() == {"el-rapido": "high"}
+    assert api.resolve_generation_effort("el-rapido", "low") == "low"
 
 
 def test_a_level_outside_the_scale_is_refused_by_the_setting():

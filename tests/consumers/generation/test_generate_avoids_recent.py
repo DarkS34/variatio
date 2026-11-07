@@ -83,7 +83,7 @@ def _run(job: Job, monkeypatch) -> dict:
         seen.update(kwargs)
         return []
 
-    monkeypatch.setattr(generation_jobs.entrypoints, "generate", fake_generate)
+    monkeypatch.setattr(generation_jobs.api, "generate", fake_generate)
     with progress.emitting(_Emitter()):
         generation_jobs.handle_generate(job, None)
     return seen

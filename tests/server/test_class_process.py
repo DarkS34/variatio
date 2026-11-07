@@ -156,7 +156,7 @@ def test_a_subject_warming_up_never_holds_up_another(monkeypatch, registry):
         built[ws.slug] = object()
         return built[ws.slug]
 
-    monkeypatch.setattr(contexts.entrypoints, "initialize", initialize)
+    monkeypatch.setattr(contexts.api, "initialize", initialize)
     warm_b = contexts.get_context(registry.b)
     worker = threading.Thread(target=contexts.get_context, args=(registry.a,))
     worker.start()
@@ -180,7 +180,7 @@ def test_two_jobs_of_one_subject_share_one_build(monkeypatch, registry):
         release.wait(5)
         return object()
 
-    monkeypatch.setattr(contexts.entrypoints, "initialize", initialize)
+    monkeypatch.setattr(contexts.api, "initialize", initialize)
     results = []
     workers = [
         threading.Thread(target=lambda: results.append(contexts.get_context(registry.a)))
@@ -205,7 +205,7 @@ def test_a_build_invalidated_while_it_ran_is_not_kept(monkeypatch, registry):
         release.wait(5)
         return object()
 
-    monkeypatch.setattr(contexts.entrypoints, "initialize", initialize)
+    monkeypatch.setattr(contexts.api, "initialize", initialize)
     worker = threading.Thread(target=contexts.get_context, args=(registry.a,))
     worker.start()
     assert started.wait(5)

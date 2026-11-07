@@ -6,7 +6,7 @@ from variatio.runtime import screening
 from variatio.core import paths
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.loaders.knowledge_graph import KnowledgeGraph
-from variatio.entrypoints import _artifacts
+from variatio.api import _artifacts
 
 from ...conftest import ES
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from variatio import cli, entrypoints
+from variatio import api, cli
 
 
 @pytest.fixture
@@ -15,18 +15,18 @@ def read(monkeypatch):
         seen.append(slot)
         return {"failed_pages": failed}
 
-    monkeypatch.setattr(entrypoints, "transcribe_slot", transcribe_slot)
+    monkeypatch.setattr(api, "transcribe_slot", transcribe_slot)
     return seen
 
 
 def test_it_reads_both_origins_by_default(read):
     assert cli.main(["transcribe", "--workspace", "w"]) == 0
-    assert read == ["engine", *entrypoints.SLOTS]
+    assert read == ["engine", *api.SLOTS]
 
 
 def test_one_origin_can_be_asked_for_alone(read):
     assert cli.main(["transcribe", "--workspace", "w", "--slot", "corpus"]) == 0
-    assert read[1:] == [entrypoints.CORPUS]
+    assert read[1:] == [api.CORPUS]
 
 
 def test_it_demands_a_live_engine(monkeypatch):
@@ -36,12 +36,12 @@ def test_it_demands_a_live_engine(monkeypatch):
         raise RuntimeError("engine is down")
 
     monkeypatch.setattr(cli.inference, "require_engine", down)
-    monkeypatch.setattr(entrypoints, "transcribe_slot", lambda ws, slot: pytest.fail("no engine"))
+    monkeypatch.setattr(api, "transcribe_slot", lambda ws, slot: pytest.fail("no engine"))
     assert cli.main(["transcribe", "--workspace", "w"]) == 1
 
 
 def test_a_page_nobody_could_read_is_a_warning_and_not_a_failure(monkeypatch):
     """A failed page is marked inside its document and corrected by hand; the run stands."""
     monkeypatch.setattr(cli.inference, "require_engine", lambda: None)
-    monkeypatch.setattr(entrypoints, "transcribe_slot", lambda ws, slot: {"failed_pages": 3})
+    monkeypatch.setattr(api, "transcribe_slot", lambda ws, slot: {"failed_pages": 3})
     assert cli.main(["transcribe", "--workspace", "w"]) == 0

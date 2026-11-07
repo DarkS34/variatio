@@ -195,7 +195,7 @@ def test_the_deck_version_is_in_the_fingerprint_of_a_deck_only(tmp_path):
     assert of_deck["deck"] == pages.DECK_VERSION
     assert "deck" not in of_docx
     # A deck read as one page (layout 1, or none at all) is stale, and the reason is named.
-    from variatio.entrypoints import transcribe
+    from variatio.api import transcribe
 
     stored = {k: v for k, v in of_deck.items() if k != "deck"}
     assert not pages.same_document(stored, of_deck)

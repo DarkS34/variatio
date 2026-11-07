@@ -16,7 +16,7 @@ from variatio.core.cerebras import CerebrasEngine
 from variatio.core.inference import Sampling
 from variatio.core.ollama import OllamaEngine
 from variatio.documents import pages
-from variatio.entrypoints import transcribe
+from variatio.api import transcribe
 from variatio.settings import derived, store
 from variatio.settings.registry import BY_KEY, reasoning
 
