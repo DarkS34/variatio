@@ -8,7 +8,7 @@ LOOKS IT UP, which for `page_images`, `page_count` and `_transcribe_page` is `pa
 The server's side is `server/raw/documents.py` and `server/raw/originals.py`
 (`server/raw/AGENTS.md`); the reader is `web/src/features/raw/AGENTS.md`.
 
-## Transcription (`server/raw/documents.py`, `entrypoints/transcribe.py`)
+## Transcription (`server/raw/documents.py`, `api/transcribe.py`)
 
 **An accelerator, never a gate**: every builder keeps its own conversion phase; `transcribe`
 has no `GATES`/`NEEDS_APPROVED` entry, nothing chains after it, and it writes no artifact.

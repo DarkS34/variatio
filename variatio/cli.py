@@ -9,7 +9,7 @@ import json
 
 from loguru import logger
 
-from . import entrypoints
+from . import api
 from .core import inference, paths
 
 
@@ -28,22 +28,22 @@ def main(argv: list[str] | None = None) -> int:
             case "transcribe":
                 _transcribe_and_report(args, ws)
             case "build":
-                built = entrypoints.build_missing(ws)
+                built = api.build_missing(ws)
                 if built:
                     logger.success(f"Artifacts built: {', '.join(built)}")
                 else:
                     logger.info("Every artifact of the instance already exists")
             case "init":
-                entrypoints.initialize(tag=True, ws=ws)
+                api.initialize(tag=True, ws=ws)
             case "restamp-descriptions":
-                changed, total = entrypoints.restamp_descriptions(ws=ws, dry_run=args.dry_run)
+                changed, total = api.restamp_descriptions(ws=ws, dry_run=args.dry_run)
                 logger.info(f"{changed} of {total} description(s) {'would be rewritten' if args.dry_run else 're-stamped'}")
             case "generate":
                 _generate_and_report(args, ws)
             case "all":
-                entrypoints.build_missing(ws)
+                api.build_missing(ws)
                 _generate_and_report(args, ws)
-    except entrypoints.MissingArtifactError as e:
+    except api.MissingArtifactError as e:
         logger.error(f"{e}; run `variatio build` first")
         return 1
     except (RuntimeError, ImportError, OSError, ValueError) as e:
@@ -77,7 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     transcribe.add_argument(
         "--slot",
-        choices=(*entrypoints.SLOTS, "all"),
+        choices=(*api.SLOTS, "all"),
         default="all",
         help="which raw origin to read (default: both)",
     )
@@ -160,12 +160,12 @@ def _transcribe_and_report(args: argparse.Namespace, ws) -> None:
     phase, which finds this cache done or does the work itself, so nothing chains off this
     subcommand and no build refuses to run for want of it.
     """
-    slots = entrypoints.SLOTS if args.slot == "all" else (args.slot,)
+    slots = api.SLOTS if args.slot == "all" else (args.slot,)
     failed = 0
     for slot in slots:
         # The stage logs each slot's totals as it closes it; the one thing it does not say is
         # what a person still has to do, which is this layer's job.
-        failed += entrypoints.transcribe_slot(ws, slot)["failed_pages"]
+        failed += api.transcribe_slot(ws, slot)["failed_pages"]
     if failed:
         logger.warning(
             f"{failed} page(s) could not be read: each is marked inside its document and can "
@@ -192,8 +192,8 @@ def _generate_and_report(args: argparse.Namespace, ws) -> None:
                 fixed[field] = value
         return fixed
     
-    context = entrypoints.initialize(tag=True, ws=ws)
-    results = entrypoints.generate(
+    context = api.initialize(tag=True, ws=ws)
+    results = api.generate(
         context,
         concepts=args.concepts,
         item_type=args.item_type,

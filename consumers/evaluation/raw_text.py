@@ -25,7 +25,7 @@ from loguru import logger
 from variatio.core.json_io import write_json
 from variatio.documents.chunking import chunk_text
 from variatio.documents.files import list_source_files
-from variatio.entrypoints.transcribe import SLOTS, slot_dir
+from variatio.api.transcribe import SLOTS, slot_dir
 
 TEXT_VERSION = 1
 META_NAME = "_meta.json"

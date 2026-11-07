@@ -24,7 +24,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio import entrypoints
+from variatio import api
 from variatio.core import json_io
 from variatio.core.workspace import Workspace
 from variatio.documents import SUPPORTED_EXTS
@@ -32,9 +32,9 @@ from variatio.documents import SUPPORTED_EXTS
 from ..db import mirror
 from . import storage
 
-EXEMPLARS_PROFILE = entrypoints.EXEMPLARS_PROFILE
-KNOWLEDGE_GRAPH = entrypoints.KNOWLEDGE_GRAPH
-EXEMPLARS_BANK = entrypoints.EXEMPLARS_BANK
+EXEMPLARS_PROFILE = api.EXEMPLARS_PROFILE
+KNOWLEDGE_GRAPH = api.KNOWLEDGE_GRAPH
+EXEMPLARS_BANK = api.EXEMPLARS_BANK
 
 # The chain in the order a person works it: the navbar and the panel's cards read this tuple.
 # The graph leads, because the bank is tagged with it; the profile and the bank are the two
@@ -121,9 +121,9 @@ def working_path(ws: Workspace, artifact: str) -> Path | None:
 def current_path(ws: Workspace, artifact: str) -> Path | None:
     """The file actually read for an artifact: the curated one, else its draft."""
     if artifact == EXEMPLARS_PROFILE:
-        return entrypoints.exemplars_profile_path(ws)
+        return api.exemplars_profile_path(ws)
     if artifact == KNOWLEDGE_GRAPH:
-        return entrypoints.knowledge_graph_path(ws)
+        return api.knowledge_graph_path(ws)
     path = ws.exemplars_bank_path
     return path if path.is_file() else None
 

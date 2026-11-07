@@ -21,7 +21,7 @@ from server.core.contexts import context_for
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from server.pipeline import storage
-from variatio import entrypoints
+from variatio import api
 from variatio.core import progress
 
 from .. import ATTEMPT, EXERCISE, SOLUTION, THEORY
@@ -66,7 +66,7 @@ def handle_turn(job: Job, control: JobControl) -> dict:
         contexts.require_inference()
         context = context_for(job)
         tutor_prompts = tutor_prompts_pkg.of(context.language)
-        sources = entrypoints.load_concept_sources(ws)
+        sources = api.load_concept_sources(ws)
         criteria = criteria_store.load(
             ws, context.knowledge_graph, tutor_prompts.DEFAULT_ADMINISTRATIVE_REPLY
         )
@@ -131,7 +131,7 @@ def handle_criteria(job: Job, control: JobControl) -> dict:
     ws = installation.workspace_for(job.workspace)
     context = context_for(job)
     tutor_prompts = tutor_prompts_pkg.of(context.language)
-    sources = entrypoints.load_concept_sources(ws)
+    sources = api.load_concept_sources(ws)
     drafted = build_criteria(context, sources, cut_corpus(ws, sources, tutor_config.PASSAGE_CHARS))
     clean, warnings = criteria_store.normalize(
         drafted, context.knowledge_graph, tutor_prompts.DEFAULT_ADMINISTRATIVE_REPLY

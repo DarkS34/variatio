@@ -69,7 +69,7 @@ what each decision replaced.
 
 ### D-008. Library split into builders, runtime, entrypoints
 - **Rule:** The library is split into `builders/`, `runtime/` and `entrypoints/`, and the package root holds three files only (`config.py`, `cli.py`, `__init__.py`).
-- **Date:** 2026-09-06 · **Commit:** `8bdc568` · **Status:** in force
+- **Date:** 2026-09-06 · **Commit:** `8bdc568` · **Status:** in force (its `entrypoints/` is `api/` since D-248)
 - **Why:** Loose root files that run when an exercise is asked for had no home; `builders` against `runtime` is the authoring/execution split.
 
 ### D-009. Renames keep keys and use per-importer edits
@@ -1201,8 +1201,13 @@ what each decision replaced.
 
 ### D-216. The library's door and its Workspace
 - **Rule:** `entrypoints/` is the library's public door. `builders/` and `loaders/` take a `Workspace` only to resolve their own paths; `runtime/`, `prompts/`, `wording/` and `settings/` do not import it.
-- **Date:** 2026-10-16 · **Commit:** `18e03df` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `18e03df` · **Status:** superseded by D-248
 - **Why:** The earlier rule was never true: six modules of `builders/` and `loaders/` took a `Workspace` from before the rule was written, and no test checked it. The new rule says what the code does; an import contract will check it (plan phase F5).
+
+### D-248. The library's door is api/
+- **Rule:** `api/` is the library's public door (it was `entrypoints/`). `builders/` and `loaders/` take a `Workspace` only to resolve their own paths; `runtime/`, `prompts/`, `wording/` and `settings/` do not import it.
+- **Date:** 2026-11-07 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request, part 1 of the restructuring by artifact (`plans/plan-reestructura.md`): a person new to the code finds the door by its usual name. The rule of D-216 does not change; only the name. D-008's `entrypoints/` reads `api/` until a later part supersedes it.
 
 ### D-217. Only entrypoints take a Workspace
 - **Rule:** Only `entrypoints/` takes a `Workspace`.
@@ -1276,5 +1281,5 @@ what each decision replaced.
 
 ### D-247. The agent implements; the user designs and commits
 - **Rule:** A coding agent implements what the user designed: it proposes in text and waits when abstractions, signatures, module boundaries or data models are missing; it plans before any non-trivial code and waits for approval; it keeps one conceptual change per commit within 150 lines (tests and generated files apart); it never commits, closes every task with a summary of 3–5 lines, never changes an existing test to make it pass, and does not count its own review as approval. Only `web/`, `migrations/` and `tests/` may be edited on the agent's initiative; every other path (`variatio/`, `server/`, `consumers/`, the root files) changes on an explicit instruction naming the file and the change. The user keeps a comprehension map in `plans/mapa-comprension.md`, and a red module is not extended. The rules are *Working with agents* in `AGENTS.md`.
-- **Date:** 2026-11-05 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-05 · **Commit:** `6ea1c4b` · **Status:** in force
 - **Why:** The user's rules for working with coding agents: every line of the repo must have a human author who can explain it without looking at the diff, and a change the user cannot explain is not finished even when the tests pass. The numbers are a starting point, adjusted after a month of use.

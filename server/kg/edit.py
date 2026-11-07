@@ -10,7 +10,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from variatio import entrypoints
+from variatio import api
 from variatio.core.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
 from variatio.loaders.knowledge_graph import KnowledgeGraph
@@ -32,7 +32,7 @@ def summary(ws: Workspace) -> dict:
     """Return the graph as the screen reads it: domains, concepts with counts, relations."""
     graph_raw = raw(ws)
     graph = _load(graph_raw)
-    descriptions = entrypoints.load_concept_descriptions(ws)
+    descriptions = api.load_concept_descriptions(ws)
     exemplars, by_type = _exemplar_counts(_bank(ws))
     degrees = _degrees(graph)
 
@@ -118,8 +118,8 @@ def descriptions(ws: Workspace) -> dict:
     model already knew.
     """
     graph = _load(raw(ws))
-    stored = entrypoints.load_concept_descriptions(ws)
-    sources = entrypoints.load_concept_sources(ws)
+    stored = api.load_concept_descriptions(ws)
+    sources = api.load_concept_sources(ws)
     anchored = sources["concepts"]
     return {
         "descriptions": {c: stored.get(c) for c in graph.taggable_concepts},
@@ -135,9 +135,9 @@ def set_description(ws: Workspace, concept: str, text: str) -> dict:
     graph = _load(raw(ws))
     if concept not in graph.all_concepts:
         raise KGError(f"'{concept}' no existe en el grafo")
-    stored = entrypoints.load_concept_descriptions(ws)
+    stored = api.load_concept_descriptions(ws)
     stored[concept] = text
-    entrypoints.save_concept_descriptions(stored, ws)
+    api.save_concept_descriptions(stored, ws)
     # The embedding cache fingerprints the descriptions and invalidates itself; the
     # in-memory context does not, hence the explicit drop.
     contexts.invalidate(ws.slug, f"descripción de '{concept}' editada")
@@ -397,10 +397,10 @@ def _move_description(ws: Workspace, name: str, new_name: str) -> None:
     Both caches are keyed by concept name and nothing else invalidates them, so a rename
     without this strands the text and the passages under a key nobody will ask for again.
     """
-    stored = entrypoints.load_concept_descriptions(ws)
+    stored = api.load_concept_descriptions(ws)
     if name in stored:
         stored[new_name] = stored.pop(name)
-        entrypoints.save_concept_descriptions(stored, ws)
+        api.save_concept_descriptions(stored, ws)
     _rekey_sources(ws, name, new_name)
 
 
@@ -445,15 +445,15 @@ def _purge_concept(ws: Workspace, graph_raw: dict, name: str) -> None:
 
 def _forget_description(ws: Workspace, name: str) -> None:
     """Drop a deleted concept's description and corpus anchoring."""
-    stored = entrypoints.load_concept_descriptions(ws)
+    stored = api.load_concept_descriptions(ws)
     if stored.pop(name, None) is not None:
-        entrypoints.save_concept_descriptions(stored, ws)
+        api.save_concept_descriptions(stored, ws)
     _rekey_sources(ws, name, None)
 
 
 def _rekey_sources(ws: Workspace, name: str, new_name: str | None) -> None:
     """Move a concept's corpus passages to a new name, or drop them when it is `None`."""
-    sources = entrypoints.load_concept_sources(ws)
+    sources = api.load_concept_sources(ws)
     entries = sources["concepts"].pop(name, None)
     definition = sources.get("definitions", {}).pop(name, None)
     if entries is None and definition is None:

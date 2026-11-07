@@ -157,7 +157,7 @@ the product lives, and the invariants with the test that pins each one. The impo
 (`uv run lint-imports`, configured in `pyproject.toml`): `consumers` imports `variatio` and
 `server`, never the reverse. Importing `variatio` pulls in neither Docling nor the server
 (`tests/boundaries/`), and secrets live only in `.env`, never in `config.json`.
-Inside `variatio/`, `entrypoints/` is the public door (`builders/` and `loaders/` take a
+Inside `variatio/`, `api/` is the public door (`builders/` and `loaders/` take a
 `Workspace` only for their own paths), and only `cli.py`, `builders/`, `runtime/`,
 `documents/` and `core/` import the engine boundary.
 

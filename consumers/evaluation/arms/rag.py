@@ -26,7 +26,7 @@ from loguru import logger
 from variatio import config
 from variatio.core import inference, progress
 from variatio.core.repair import parse_with_repair
-from variatio.entrypoints.transcribe import CORPUS, EXEMPLARS
+from variatio.api.transcribe import CORPUS, EXEMPLARS
 from variatio.runtime.generator import parse_item
 
 from .. import FAILED, OK, ArmResult, Commission, rag_index_path, raw_text

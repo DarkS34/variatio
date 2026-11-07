@@ -17,7 +17,7 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.core import inference
 
 LOCAL = "local"
@@ -45,12 +45,12 @@ def capacity(backend: str) -> int:
     except (AttributeError, TypeError, ValueError):
         return 1
 
-# `entrypoints.build_models` is the builder's own declaration, so the phases and the lane cannot
+# `api.build_models` is the builder's own declaration, so the phases and the lane cannot
 # drift apart.
 _BUILD_ARTIFACT = {
-    "build_profile": entrypoints.EXEMPLARS_PROFILE,
-    "build_kg": entrypoints.KNOWLEDGE_GRAPH,
-    "build_bank": entrypoints.EXEMPLARS_BANK,
+    "build_profile": api.EXEMPLARS_PROFILE,
+    "build_kg": api.KNOWLEDGE_GRAPH,
+    "build_bank": api.EXEMPLARS_BANK,
 }
 
 # The components, by the `config` name holding each model. Written out rather than
@@ -134,7 +134,7 @@ def _remote_models() -> frozenset[str]:
 def models_for(kind: str, params: dict | None = None) -> list[str]:
     """Return the generative models a job of this kind will call, in declaration order."""
     if kind in _BUILD_ARTIFACT:
-        models = entrypoints.build_models(_BUILD_ARTIFACT[kind])
+        models = api.build_models(_BUILD_ARTIFACT[kind])
     elif kind in EXTRA_MODELS:
         models = EXTRA_MODELS[kind](params)
     else:
@@ -158,8 +158,8 @@ def _writer(params: dict | None) -> str:
     """
     requested = (params or {}).get("model")
     try:
-        return entrypoints.resolve_generation_model(requested if isinstance(requested, str) else None)
-    except entrypoints.UnofferedModelError:
+        return api.resolve_generation_model(requested if isinstance(requested, str) else None)
+    except api.UnofferedModelError:
         return config.VARIANT_GENERATION_LLM
 
 

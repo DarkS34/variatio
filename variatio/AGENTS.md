@@ -49,11 +49,11 @@ of three kinds:
 - **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `loaders/`, `prompts/`, `wording/`.
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
   `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
-- **The door**: `entrypoints/`.
+- **The door**: `api/`.
 
-Two rules (rewritten 2026-10-16: the earlier wording, «only `entrypoints/` takes a
+Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
-**`entrypoints/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
+**`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
 only to resolve their own paths, and `runtime/`, `prompts/`, `wording/` and `settings/` do
 not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`,
 `documents/` and `core/` import `core.inference`** (D-230) — `documents/pages/` transcribes
@@ -72,7 +72,7 @@ put a component back at the root.
   the embedder and the tutor).
 - `loaders/`: `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`, `locale`
   (the package was `instance/` until 2026-10-08, the directory's old name).
-  The bank has no loader module; `entrypoints/initialize.py` reads it inline.
+  The bank has no loader module; `api/initialize.py` reads it inline.
 - Import `config` from the root and read `config.X` by module attribute; **never
   `from ..config import X`** — the hot rewrite depends on it.
 
@@ -145,10 +145,10 @@ names exist). A tree renamed so is no longer readable by a version from before t
 
 `generation.models` is the offered shortlist (engine-scoped, `min_items=1`);
 `VARIANT_GENERATION_LLM` is its first entry and is what the CLI and the evaluation use. The
-commission picks the model (checked twice: 422 at submit, `entrypoints.resolve_generation_model`
+commission picks the model (checked twice: 422 at submit, `api.resolve_generation_model`
 in the handler). Every offered model gets the context override and is protected by
 `required_models()`. `generation.fixed_effort` + `generation.fixed_effort_levels` let the
-installation lock and set a model's effort; `entrypoints.resolve_generation_effort` has the
+installation lock and set a model's effort; `api.resolve_generation_effort` has the
 last word; reasoning switched off is never turned on. `GET /api/health` carries
 `models.offered`.
 
@@ -186,7 +186,7 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
 
 ## Builders (`variatio/builders/`)
 
-`entrypoints/build.py` is the only importer. The document plumbing they read through is
+`api/build.py` is the only importer. The document plumbing they read through is
 `variatio/documents/` (`files`, `markdown`, `chunking`, `pages`, `office`; outside `builders/`
 since 2026-10-16, D-228, as the transcription and the server read it too); only its `pages/`
 package talks to a model.
@@ -279,12 +279,12 @@ whole exercises (`toEvaluationParams` strips `omit`, and its form does not ask).
 Not part of the builder: a job (`review_taggability`) judged per domain against the
 profile's modalities and real bank samples; operative test is discrimination, tie-break
 «exclude when in doubt». A build writes `taggability_reviewed: false`; the library states the
-flag and does not enforce it. `entrypoints/taggability.review_taggability(ws)` assembles it and
+flag and does not enforce it. `api/taggability.review_taggability(ws)` assembles it and
 returns data; the handler writes through `kg_edit.set_non_taggable`. Since 2026-10-08 it runs
 at the head of every collection of the bank and nowhere else, skipped when its inputs did not
 change (see *Build chain and approvals* in `server/AGENTS.md`); no screen names it but the collection's own rows.
 
-## Entry points (`variatio/entrypoints/`)
+## The API (`variatio/api/`)
 
 Mechanism, not policy: return data, raise `MissingArtifactError`, never print, never exit,
 never auto-trigger heavier phases, and never import the engine. `_artifacts.py`,

@@ -1,6 +1,6 @@
 """One commission, two architectures — the system and one drawn rival — one blind comparison.
 
-Mechanism, not policy, in the way `variatio.entrypoints` is: it returns an `EvaluationSession`,
+Mechanism, not policy, in the way `variatio.api` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
 `consumers/evaluation/api/store.py`'s job, which is what lets a batch mode reuse this untouched.
 """
@@ -13,10 +13,10 @@ from dataclasses import replace
 
 from loguru import logger
 
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.runtime import checks, screening
 from variatio.core import inference, progress
-from variatio.entrypoints.initialize import RuntimeContext
+from variatio.api.initialize import RuntimeContext
 from variatio.runtime.generator import clean_fixed, forbidden
 
 from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_session, run_arm
@@ -72,7 +72,7 @@ def evaluate(
         instructions=(instructions or "").strip(),
         think=think,
         model=writer,
-        effort=entrypoints.resolve_generation_effort(writer, think),
+        effort=api.resolve_generation_effort(writer, think),
     )
     _validate(context, target_type, commission)
 

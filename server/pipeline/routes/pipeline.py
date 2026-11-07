@@ -15,9 +15,9 @@ from pydantic import BaseModel
 from variatio.runtime import screening
 from variatio.loaders import locale
 from variatio.loaders.exemplars_profile import ExemplarsProfile
-from variatio.entrypoints import TAGGABILITY_PHASES, _artifacts
-from variatio.entrypoints import build_phases as phases_of
-from variatio.entrypoints import step_rates
+from variatio.api import TAGGABILITY_PHASES, _artifacts
+from variatio.api import build_phases as phases_of
+from variatio.api import step_rates
 
 from ... import auth
 from ...core import contexts, process

@@ -107,7 +107,7 @@ class RuntimeContext:
 def initialize(ws: Workspace, tag: bool = False) -> RuntimeContext:
     """Load the instance and warm the indices.
 
-    Read-only by default: tagging is a separate, explicit act (`entrypoints.tag_bank`)
+    Read-only by default: tagging is a separate, explicit act (`api.tag_bank`)
     because it rewrites the exemplars bank. `tag=True` restores the old all-in-one
     behaviour the CLI relies on.
     """

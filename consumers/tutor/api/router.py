@@ -34,7 +34,7 @@ from server.bank.reading import reader_of
 from server.core import process
 from server.jobs.catalogue import Job
 from server.pipeline import approvals, readings, storage
-from variatio import entrypoints
+from variatio import api
 from variatio.core import inference
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
@@ -388,7 +388,7 @@ def _criteria_job(slug: str) -> Job | None:
 
 def _graph(access: auth.Access) -> KnowledgeGraph:
     """Return the workspace's graph as the tutor validates against it, loaded from its file."""
-    path = entrypoints.knowledge_graph_path(access.ws)
+    path = api.knowledge_graph_path(access.ws)
     if path is None:
         raise HTTPException(409, "Esta asignatura no tiene temario todavía.")
     return KnowledgeGraph(path)

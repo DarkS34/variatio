@@ -138,7 +138,7 @@ class ExemplarsBankBuilder:
 
         `on_items(bank, new_ids)` is the hook tagging comes in through: it is called with the
         whole bank right after a document's items are written and returns that same bank
-        annotated. The builder knows neither the graph nor the tagger — `entrypoints/build.py`
+        annotated. The builder knows neither the graph nor the tagger — `api/build.py`
         wires it, being the layer whose job is to orchestrate.
 
         `keep` is what the new bank starts from: exercises a person added, which no document
@@ -224,7 +224,7 @@ class ExemplarsBankBuilder:
                                 "artifact.progress", name="exemplars_bank", count=len(bank)
                             )
 
-            # An extraction that produced nothing may not replace what is there: `entrypoints`
+            # An extraction that produced nothing may not replace what is there: `api`
             # turns it into an error, and the bank the workspace already had is what its
             # screen goes back to.
             if bank:

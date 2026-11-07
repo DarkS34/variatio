@@ -19,7 +19,7 @@ import hashlib
 import json
 from datetime import datetime
 
-from variatio import entrypoints
+from variatio import api
 from variatio.core import json_io
 from variatio.core.workspace import Workspace
 
@@ -36,7 +36,7 @@ def up_to_date(ws: Workspace) -> bool:
     graph = _graph(ws)
     if graph is None or not graph.get("taggability_reviewed"):
         return False
-    if entrypoints.exemplars_profile_path(ws) is None:
+    if api.exemplars_profile_path(ws) is None:
         return False
     current = fingerprint(ws)
     stored = record(ws)
@@ -56,9 +56,9 @@ def fingerprint(ws: Workspace) -> str:
     graph = _graph(ws)
     return _digest(
         {
-            "profile": storage.sha256_of(entrypoints.exemplars_profile_path(ws)),
+            "profile": storage.sha256_of(api.exemplars_profile_path(ws)),
             "graph": _digest(graph.get("concepts_by_domains")) if graph else None,
-            "context": storage.sha256_of(entrypoints.content_context_path(ws)),
+            "context": storage.sha256_of(api.content_context_path(ws)),
         }
     )
 
@@ -91,7 +91,7 @@ def write_record(ws: Workspace, digest: str, non_taggable: list[str], concepts: 
 
 def _graph(ws: Workspace) -> dict | None:
     """Read the graph that wins, curated over draft, or nothing."""
-    path = entrypoints.knowledge_graph_path(ws)
+    path = api.knowledge_graph_path(ws)
     if path is None:
         return None
     try:

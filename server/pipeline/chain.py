@@ -30,7 +30,7 @@ collected with: types corrected while it ran leave the bank a draft.
 
 from loguru import logger
 
-from variatio import entrypoints
+from variatio import api
 from variatio.core.workspace import Workspace
 
 from ..core import installation
@@ -68,13 +68,13 @@ def head(job: Job) -> str:
 def _graph_exists(ws: Workspace) -> str | None:
     """Why describing cannot follow, or `None` when it can.
 
-    THE GRAPH AND NOT THE PROFILE. `entrypoints.describe_concepts` builds its describer from the
+    THE GRAPH AND NOT THE PROFILE. `api.describe_concepts` builds its describer from the
     graph and the subject context alone — `approvals.UPSTREAM[KNOWLEDGE_GRAPH]` is empty and
-    `entrypoints/descriptions._describer` exists to keep it that way — so gating it on the profile
+    `api/descriptions._describer` exists to keep it that way — so gating it on the profile
     withheld the one derivation this chain calls mandatory in exactly the state it was
     written for: a workspace whose graph is its first artifact.
     """
-    if entrypoints.knowledge_graph_path(ws) is None:
+    if api.knowledge_graph_path(ws) is None:
         return "esta asignatura todavía no tiene grafo de conocimiento"
     return None
 
@@ -95,7 +95,7 @@ def _bank_buildable(ws: Workspace) -> str | None:
 
 def _indexable(ws: Workspace) -> str | None:
     """Why indexing cannot follow, or `None` when it can."""
-    if entrypoints.exemplars_profile_path(ws) is None:
+    if api.exemplars_profile_path(ws) is None:
         return "esta asignatura todavía no tiene perfil de ejemplares"
     if not ws.exemplars_bank_path.is_file():
         return "todavía no hay banco de ejemplares que indexar"

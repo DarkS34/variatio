@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from loguru import logger
 
-    from variatio import entrypoints
+    from variatio import api
     from variatio.core import inference, paths, progress, usage
 
     from . import joblog
@@ -61,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
         keep = json.loads(Path(args.keep).read_text(encoding="utf-8")) if args.keep else None
         # What the build's calls cost, sent with its result: the parent's job keeps it.
         with usage.metering() as meter:
-            result = entrypoints.build_artifact(args.artifact, paths.workspace(args.workspace), keep=keep)
+            result = api.build_artifact(args.artifact, paths.workspace(args.workspace), keep=keep)
     except progress.Cancelled:
         send("worker.cancelled")
         return 2

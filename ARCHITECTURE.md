@@ -128,12 +128,12 @@ variatio/       the library          imports neither
 **Inside `variatio/`.**
 
 ```text
-entrypoints/                         the door: one function per thing asked of a workspace
+api/                                 the door: one function per thing asked of a workspace
 builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
 loaders/  prompts/  wording/  settings/  core/      the vocabulary
 ```
 
-- **`entrypoints/` is the library's public door.** `builders/` and `loaders/` take a
+- **`api/` is the library's public door.** `builders/` and `loaders/` take a
   `Workspace` only to resolve their own paths. `runtime/`, `prompts/`, `wording/` and
   `settings/` do not import it.
 - **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/`
@@ -141,7 +141,7 @@ loaders/  prompts/  wording/  settings/  core/      the vocabulary
   `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
-- The layers above are an import contract: `cli`, `entrypoints`, `builders | runtime`,
+- The layers above are an import contract: `cli`, `api`, `builders | runtime`,
   `loaders | documents`, `prompts | wording`, then `core`, `settings` and `config`. Two crossings are
   named in it: `runtime/taggability.py` imports the graph builder's node block and parser
   (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and
@@ -186,7 +186,7 @@ One line per folder: what it holds, and the file to open first.
 | `runtime/` | artifacts → exercises: generator, tagger, taggability, checks | `generator.py` |
 | `runtime/embedder/` | concept descriptions and the two vector indices | `embedder/__init__.py` |
 | `runtime/screening/` | the guardrail and the admissibility judge | `screening/__init__.py` |
-| `entrypoints/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `entrypoints/__init__.py` |
+| `api/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `api/__init__.py` |
 
 **Server: `server/`**
 
@@ -247,11 +247,11 @@ there.
 
 | Area | Client | Server | Library | Jobs | Tests |
 |---|---|---|---|---|---|
-| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `entrypoints/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
+| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
 | Step 2 «Temario» | `features/kg/` | `kg/` | `builders/knowledge_graph_builder/`, `loaders/knowledge_graph.py`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `runtime/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/runtime/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
-| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `entrypoints/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
+| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |

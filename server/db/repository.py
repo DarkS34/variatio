@@ -71,7 +71,7 @@ def create_workspace(
 def current_artifact(session: Session, workspace_id: int, kind: str) -> Artifact | None:
     """Return the curated version of an artifact, or the draft when there is none.
 
-    The same rule `entrypoints._artifacts` applies to files, so both storage backends answer
+    The same rule `api._artifacts` applies to files, so both storage backends answer
     identically.
     """
     return latest_artifact(session, workspace_id, kind, CURATED) or latest_artifact(

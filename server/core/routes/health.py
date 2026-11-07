@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DbSession
 
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.core import inference
 
 from ... import auth
@@ -132,13 +132,13 @@ def health(access: auth.Access = auth.VIEW, db: DbSession = Depends(auth.db)) ->
             # What a commission may choose between, the default first. It is read by the
             # generate screen, so it travels here rather than on a route of its own: the
             # form already polls this one to know whether the engine answers at all.
-            "offered": entrypoints.generation_models(),
+            "offered": api.generation_models(),
             # Which of those may not have their effort adjusted per commission. It rides
             # here for the same reason `offered` does: the form already polls this route.
-            "fixed_effort": entrypoints.fixed_effort_models(),
+            "fixed_effort": api.fixed_effort_models(),
             # And with which level each of those is called, so the form shows the one the
             # installation declared instead of the last one its own slider held.
-            "fixed_effort_levels": entrypoints.fixed_effort_levels(),
+            "fixed_effort_levels": api.fixed_effort_levels(),
             "installed": installed,
             "missing": _missing_models(required, installed, remote),
             "remote": sorted(remote & set(required.values())),

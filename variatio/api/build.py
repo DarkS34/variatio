@@ -85,7 +85,7 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile, path: Path
     """Return the callback that tags each freshly extracted document, or None.
 
     Without a graph there is nothing to tag with, and that is not an error: the bank is
-    extracted anyway and stays pending for `entrypoints.tag_bank`.
+    extracted anyway and stays pending for `api.tag_bank`.
 
     `path` is the file the build is writing, which is not the artifact: the tags land where
     the items they belong to are, and reach `exemplars_bank.json` when the build promotes

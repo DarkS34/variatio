@@ -9,7 +9,7 @@ The construction's own register the same way, in `install()`.
 
 from loguru import logger
 
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.runtime.tagger import ConceptTagger
 from variatio.core import json_io, progress
 from variatio.core.workspace import Workspace
@@ -47,11 +47,11 @@ def install() -> None:
 # `MissingArtifactError` names the artifact and nothing else, which is right for a library
 # and useless on a screen: only this layer knows a person is reading the job's error.
 _TAGGABILITY_MISSING = {
-    entrypoints.EXEMPLARS_PROFILE: (
+    api.EXEMPLARS_PROFILE: (
         "La etiquetabilidad se decide contra el perfil de ejemplares, y esta asignatura "
         "no lo tiene todavía: constrúyelo antes."
     ),
-    entrypoints.KNOWLEDGE_GRAPH: "No hay grafo de conocimiento que revisar.",
+    api.KNOWLEDGE_GRAPH: "No hay grafo de conocimiento que revisar.",
 }
 
 
@@ -128,7 +128,7 @@ def handle_transcribe(job: Job, control: JobControl) -> dict:
         raise ValueError(f"Ranura desconocida: '{slot}'; esperaba una de {list(_SLOTS)}")
 
     from consumers.evaluation import raw_text
-    from variatio.entrypoints import transcribe_slot
+    from variatio.api import transcribe_slot
 
     # The evaluation's plain reading of the same slot, first and best effort: seconds, and it
     # must not be lost to a cancelled transcription nor stop one.
@@ -156,7 +156,7 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
         )
         + (", reescribiendo las existentes" if overwrite else ", solo las que faltan")
     )
-    descriptions = entrypoints.describe_concepts(concepts=concepts, overwrite=overwrite, ws=ws)
+    descriptions = api.describe_concepts(concepts=concepts, overwrite=overwrite, ws=ws)
     # New prose means new embeddings; the cached context would keep matching the old.
     contexts.invalidate(ws.slug, "descripciones de conceptos regeneradas")
     return {"described": len(descriptions)}
@@ -191,7 +191,7 @@ def handle_tag(job: Job, control: JobControl) -> dict:
         f"A etiquetar: {len(pending)} de {len(context.exemplars_bank)} ítem(s), "
         f"verificados con '{config.CONCEPT_TAGGER_LLM}'"
     )
-    bank = entrypoints.tag_bank(context, ids=ids)
+    bank = api.tag_bank(context, ids=ids)
     untagged = [i for i, item in bank.items() if not item.get("concepts")]
     logger.success(
         f"Banco etiquetado: {len(bank) - len(untagged)} con conceptos, {len(untagged)} sin ellos"
@@ -236,7 +236,7 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
     The review heads every collection of the bank (`chain.py`). When the profile, the
     syllabus and the context are what the last review read (`taggability.up_to_date`) it is
     skipped: no model call, and what a teacher switched by hand since stays as it is. The
-    judgement is `entrypoints.review_taggability`; what stays here is the writing, because
+    judgement is `api.review_taggability`; what stays here is the writing, because
     `kg_edit` owns the history, the database mirror and the approval — which the review
     seals again, being the system's derivation and not a teacher's edit.
     """
@@ -254,8 +254,8 @@ def handle_review_taggability(job: Job, control: JobControl) -> dict:
 
     contexts.require_inference()
     try:
-        verdict = entrypoints.review_taggability(ws)
-    except entrypoints.MissingArtifactError as exc:
+        verdict = api.review_taggability(ws)
+    except api.MissingArtifactError as exc:
         raise ValueError(_TAGGABILITY_MISSING[exc.artifact]) from exc
 
     saved = kg_edit.set_non_taggable(ws, verdict["non_taggable"], reseal=True)

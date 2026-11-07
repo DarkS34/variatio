@@ -17,7 +17,7 @@ from pathlib import Path
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from variatio import entrypoints
+from variatio import api
 from variatio.core import json_io
 from variatio.core.workspace import Workspace as FsWorkspace
 from variatio.loaders import locale
@@ -148,11 +148,11 @@ def _approval_is_current(ws: FsWorkspace, kind: str, record: dict) -> bool:
 
 def _current_file(ws: FsWorkspace, kind: str) -> Path | None:
     """Return the file the entry points would read for this kind, or None."""
-    if kind == entrypoints.KNOWLEDGE_GRAPH:
-        return entrypoints.knowledge_graph_path(ws)
-    if kind == entrypoints.EXEMPLARS_PROFILE:
-        return entrypoints.exemplars_profile_path(ws)
-    if kind == entrypoints.EXEMPLARS_BANK:
+    if kind == api.KNOWLEDGE_GRAPH:
+        return api.knowledge_graph_path(ws)
+    if kind == api.EXEMPLARS_PROFILE:
+        return api.exemplars_profile_path(ws)
+    if kind == api.EXEMPLARS_BANK:
         return ws.exemplars_bank_path if ws.exemplars_bank_path.is_file() else None
     return None
 

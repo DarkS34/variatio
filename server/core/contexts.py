@@ -7,7 +7,7 @@ next job rebuilds it. What bounds `MAX_CONTEXTS` is not memory but that rebuildi
 costs minutes.
 
 Two jobs of the same workspace can run at once on different lanes and share one context.
-Each workspace has its own lock, held across `entrypoints.initialize`, so the second job waits
+Each workspace has its own lock, held across `api.initialize`, so the second job waits
 instead of starting a second build — and a job of ANOTHER workspace never waits for it: one
 lock for every context made a class's tutor turns wait while a teacher's subject warmed up.
 `_lock` itself only guards the registry's dicts and is never held across a build. The
@@ -25,10 +25,10 @@ from collections import OrderedDict
 
 from loguru import logger
 
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.core import inference, progress
 from variatio.core.workspace import Workspace
-from variatio.entrypoints import RuntimeContext
+from variatio.api import RuntimeContext
 
 from . import installation
 
@@ -103,7 +103,7 @@ def get_context(ws: Workspace) -> RuntimeContext:
         if reason:
             logger.info(f"Reconstruyendo el contexto de «{ws.slug}»: {reason}")
 
-        context = entrypoints.initialize(tag=False, ws=ws)
+        context = api.initialize(tag=False, ws=ws)
         with _lock:
             if _generations.get(ws.slug, 0) == generation:
                 _contexts[ws.slug] = context

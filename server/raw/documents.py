@@ -278,7 +278,7 @@ def delete_page(ws: Workspace, kind: str, name: str, index: int) -> None:
 
 def _stage():
     """Import the transcription stage lazily, so listing a slot costs no pipeline import."""
-    from variatio.entrypoints import transcribe
+    from variatio.api import transcribe
 
     return transcribe
 

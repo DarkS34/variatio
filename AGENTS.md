@@ -192,13 +192,13 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
 - D-004, D-007 — The functions live in `consumers/`, outside `variatio/` and `server/`;
   one-way import; the evaluation is not made removable. What the tutor and the chat share is
   `server/conversations/`.
-- D-008, D-009 — `builders/` ↔ `runtime/` ↔ `entrypoints/`; root holds three files; setting
+- D-008, D-009 — `builders/` ↔ `runtime/` ↔ `api/`; root holds three files; setting
   keys and on-disk names do not follow module renames. Renames go per importer, never `sed`.
 - D-010 — No default workspace; no reserved slug; a path is never a defaulted argument.
 - D-011 — A workspace's artifacts live in `artifacts/` and their loaders in
   `variatio/loaders/`; an old tree is renamed the first time it is opened.
 - D-015 — One writer of persisted JSON: `json_io.write_json`.
-- D-216, D-230 — `entrypoints/` is the library's door; `builders/` and `loaders/` take a
+- D-248, D-230 — `api/` is the library's door; `builders/` and `loaders/` take a
   `Workspace` only for their own paths. Inside `variatio/` only `cli.py`, `builders/`,
   `runtime/`, `documents/` and `core/` import `core.inference`.
 - D-220 — Closed decisions are entries of `DECISIONS.md`; each `AGENTS.md` keeps rule and number.

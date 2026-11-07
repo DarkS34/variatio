@@ -18,7 +18,7 @@ from server.jobs import lanes
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from server.pipeline import approvals, storage
-from variatio import config, entrypoints
+from variatio import api, config
 from variatio.core import inference, progress
 from variatio.core.workspace import Workspace
 from variatio.loaders import locale
@@ -60,11 +60,11 @@ def handle_generate(job: Job, control: JobControl) -> dict:
     # log line, the file saved for each item, and the call itself. An unoffered name
     # raises and the job fails with it said in one sentence — the submit route refused it
     # already, so getting here means the offered list changed under a queued job.
-    model = entrypoints.resolve_generation_model(params.get("model"))
+    model = api.resolve_generation_model(params.get("model"))
     # And with it the effort, because a model whose level the installation has locked is
-    # not the requester's to adjust. Resolved here as well as inside `entrypoints.generate` —
+    # not the requester's to adjust. Resolved here as well as inside `api.generate` —
     # the call is idempotent — so the log line and the file say what actually ran.
-    think = entrypoints.resolve_generation_effort(model, asked_think)
+    think = api.resolve_generation_effort(model, asked_think)
 
     resolved_type = context.exemplars_profile.item_type(item_type)
     detail = _commission_detail(fixed, omit, curriculum, instructions, think)
@@ -96,7 +96,7 @@ def handle_generate(job: Job, control: JobControl) -> dict:
         saved_ids[index] = generation_id
         progress.emit("item.saved", index=index, id=generation_id)
 
-    results = entrypoints.generate(
+    results = api.generate(
         context,
         concepts=concepts,
         item_type=resolved_type.key,
@@ -265,7 +265,7 @@ def _inputs(ws: Workspace) -> dict[str, str | None]:
         artifact: storage.sha256_of(approvals.current_path(ws, artifact))
         for artifact in approvals.ARTIFACTS
     }
-    hashes["content_context"] = storage.sha256_of(entrypoints.content_context_path(ws))
+    hashes["content_context"] = storage.sha256_of(api.content_context_path(ws))
     hashes["concept_descriptions"] = storage.sha256_of(ws.concept_descriptions_path)
     return hashes
 

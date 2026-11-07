@@ -322,7 +322,7 @@ class VariantGenerator:
         the admissibility judge once for the three arms. `on_accepted` fires per item,
         so a cancelled run keeps whatever had already validated. `model` overrides the
         installation's default writer for this commission alone — the caller checks it
-        against what the installation offers (`entrypoints.resolve_generation_model`); nothing
+        against what the installation offers (`api.resolve_generation_model`); nothing
         here does, so the evaluation's arms keep passing none and get the default.
         `scenario` pins the setting the item is placed in; the evaluation hands the same
         sentence to every arm, and a plain commission leaves it to the prompt's own choice.

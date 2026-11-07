@@ -18,7 +18,7 @@ from server import auth
 from server.core import process
 from server.db.models import VIEWER
 from server.jobs.catalogue import Job
-from variatio import config, entrypoints
+from variatio import api, config
 
 from . import usage
 
@@ -72,8 +72,8 @@ def check(params: dict, student: bool = False) -> int:
     commission names none) and what a student's day is charged.
     """
     try:
-        entrypoints.resolve_generation_model(params.get("model"))
-    except entrypoints.UnofferedModelError as error:
+        api.resolve_generation_model(params.get("model"))
+    except api.UnofferedModelError as error:
         raise HTTPException(422, str(error)) from None
 
     count = 1
