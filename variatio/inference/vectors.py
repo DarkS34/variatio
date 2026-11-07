@@ -8,8 +8,8 @@ normalisation and the same "warn and carry on without the signal". The model is 
 import numpy as np
 from loguru import logger
 
-from .. import config
-from . import inference, progress
+from .. import config, inference
+from ..core import progress
 
 
 def l2_normalize(vector: np.ndarray) -> np.ndarray:

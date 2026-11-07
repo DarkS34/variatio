@@ -13,9 +13,8 @@ import re
 
 from loguru import logger
 
-from variatio import config as pipeline_config
-from variatio.core import inference
-from variatio.core.repair import parse_with_repair
+from variatio import config as pipeline_config, inference
+from variatio.inference.repair import parse_with_repair
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
 

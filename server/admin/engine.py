@@ -21,8 +21,8 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session as DbSession
 
-from variatio import config
-from variatio.core import cerebras_budget, inference
+from variatio import config, inference
+from variatio.inference import cerebras_budget
 
 from .. import auth, jobs
 from ..core import contexts, csv_safe, process

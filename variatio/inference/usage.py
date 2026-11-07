@@ -19,7 +19,7 @@ import contextvars
 import threading
 from contextlib import contextmanager
 
-from . import progress
+from ..core import progress
 
 # What a meter is told when a call made under no phase: still counted, under this name.
 NO_PHASE = "-"

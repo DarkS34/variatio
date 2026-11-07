@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session as DbSession
 from server import auth
 from server.core import process
 from server.jobs.catalogue import Job
-from variatio.core import inference
+from variatio import inference
 
 from .store import Store, mark_failed
 from .usage import Limit

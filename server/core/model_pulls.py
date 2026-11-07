@@ -9,7 +9,7 @@ import time
 
 from loguru import logger
 
-from variatio.core import inference
+from variatio import inference
 
 KEEP_FINISHED = 10
 

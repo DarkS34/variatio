@@ -1,7 +1,7 @@
 """The package root: the logging configuration, and nothing else.
 
 Importing `variatio` is side-effect-free apart from the logging setup below, and it must
-stay that way: the engine check lives in `core.inference.require_engine()`, which every
+stay that way: the engine check lives in `inference.require_engine()`, which every
 entry point that talks to a model calls, so nothing here pulls the ollama SDK, httpx and
 tqdm into a caller that only wanted a loader.
 """

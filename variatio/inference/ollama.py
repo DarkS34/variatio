@@ -1,8 +1,8 @@
 """The local engine: Ollama, reached through its Python SDK and nowhere else.
 
-`core/inference.py` is the boundary every model call goes through; this is the engine it
+`inference/__init__.py` is the boundary every model call goes through; this is the engine it
 builds when `config.INFERENCE_ENGINE` is `ollama`, and the half of the hybrid engine
-(`core/cerebras.py`) that stays local — the guardrail, the embedder and every model Cerebras
+(`inference/cerebras.py`) that stays local — the guardrail, the embedder and every model Cerebras
 does not serve. The only module that imports the `ollama` SDK.
 """
 
@@ -14,8 +14,9 @@ from loguru import logger
 from tqdm import tqdm
 
 from .. import config
-from . import progress, repetition, usage
-from .inference import (
+from ..core import progress, repetition
+from . import usage
+from . import (
     GenerationResponse,
     InferenceError,
     ProgressSink,

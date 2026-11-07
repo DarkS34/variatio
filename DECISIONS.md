@@ -199,7 +199,7 @@ what each decision replaced.
 
 ### D-249. Workspace-language strings live beside their prompt set
 - **Rule:** Strings whose language must match the workspace live in `prompts/<language>/wording.py`, beside that language's prompt set; `prompts/wording.py` resolves them (`of`, `beside`) and `prompts/shared.py` holds what every language shares. There is no `wording/` package: where D-230 and D-248 name `wording/`, read `prompts/`.
-- **Date:** 2026-11-08 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-08 · **Commit:** `6fc6720` · **Status:** in force
 - **Why:** The user's request, part 2 of the restructuring by artifact (`plans/plan-reestructura.md`): the text a model reads, whole or in fragments, is in one place per language. The rule of D-033 does not change; only the place.
 
 ### D-034. Guardrail runs before the scope judge
@@ -1281,8 +1281,13 @@ what each decision replaced.
 
 ### D-230. Who imports the engine boundary, with documents/
 - **Rule:** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/` import `core.inference`; `documents/pages/` transcribes with the vision model, and `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
-- **Date:** 2026-10-16 · **Commit:** `ed3abf7` · **Status:** in force
+- **Date:** 2026-10-16 · **Commit:** `ed3abf7` · **Status:** superseded by D-250
 - **Why:** D-228 moved the document code, page transcription included, out of `builders/`: the rule names the package the transcription now lives in, and the contracts still keep `entrypoints/`, `loaders/`, `prompts/`, `wording/` and `settings/` away from the engine.
+
+### D-250. The engine boundary is its own package, inference/
+- **Rule:** The engine boundary and everything that talks to an engine live in `inference/`: the boundary in `inference/__init__.py`, the engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), `usage.py`, `vectors.py` and `repair.py`. Inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `documents/` import it; `inference/repair.py` and `inference/vectors.py` call it on behalf of `builders/` and `runtime/`. `inference` is a layer of its own between `prompts` and `core : settings : config`.
+- **Date:** 2026-11-08 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request, part 3a of the restructuring by artifact (`plans/plan-reestructura.md`): a person new to the code looks for where the model is called under its name, not among utilities. The boundary is the package's `__init__` so that every call site keeps reading `inference.generate(...)`.
 
 ### D-247. The agent implements; the user designs and commits
 - **Rule:** A coding agent implements what the user designed: it proposes in text and waits when abstractions, signatures, module boundaries or data models are missing; it plans before any non-trivial code and waits for approval; it keeps one conceptual change per commit within 150 lines (tests and generated files apart); it never commits, closes every task with a summary of 3–5 lines, never changes an existing test to make it pass, and does not count its own review as approval. Only `web/`, `migrations/` and `tests/` may be edited on the agent's initiative; every other path (`variatio/`, `server/`, `consumers/`, the root files) changes on an explicit instruction naming the file and the change. The user keeps a comprehension map in `plans/mapa-comprension.md`, and a red module is not extended. The rules are *Working with agents* in `AGENTS.md`.

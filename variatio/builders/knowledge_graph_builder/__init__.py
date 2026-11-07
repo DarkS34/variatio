@@ -24,7 +24,7 @@ from ... import config, documents
 from ... import prompts as prompts_pkg
 from ...prompts import wording as wording_sets
 from ...core import progress
-from ...core.inference import ensure_models
+from ...inference import ensure_models
 from ...core.workspace import Workspace
 from ...loaders import locale
 from ...loaders.relations import RelationSchema

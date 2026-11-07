@@ -7,7 +7,7 @@ watches the concepts arrive. Passing a generated exercise into the bank
 
 from fastapi import HTTPException
 
-from variatio.core import inference
+from variatio import inference
 
 from .. import auth
 from ..core import process

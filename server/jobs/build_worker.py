@@ -40,7 +40,9 @@ def main(argv: list[str] | None = None) -> int:
     from loguru import logger
 
     from variatio import api
-    from variatio.core import inference, paths, progress, usage
+    from variatio import inference
+    from variatio.core import paths, progress
+    from variatio.inference import usage
 
     from . import joblog
 

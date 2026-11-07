@@ -48,9 +48,9 @@ except ImportError:  # pragma: no cover - this project runs on Linux
 from loguru import logger
 
 from .. import config
-from . import progress
-from .inference import InferenceError
-from .json_io import write_json
+from ..core import progress
+from ..core.json_io import write_json
+from . import InferenceError
 
 # The hour window is deliberately absent: measured, it never binds before the minute and the
 # day do — gemma reported 44 999 994 tokens left of the hour against 999 994 of the day.
@@ -677,7 +677,7 @@ def shared() -> Budget:
     """The account's ledger, at `paths.cerebras_budget_path()`."""
     global _shared
     if _shared is None:
-        from .paths import cerebras_budget_path
+        from ..core.paths import cerebras_budget_path
 
         _shared = Budget(cerebras_budget_path())
     return _shared

@@ -20,8 +20,7 @@ import threading
 
 from loguru import logger
 
-from variatio import config
-from variatio.core import inference
+from variatio import config, inference
 
 from .runner import JobRunner
 

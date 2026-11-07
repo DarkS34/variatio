@@ -5,11 +5,11 @@
     index.py         `Embedder`: the concept centroids, the bank, and the two-signal score
 
 Every public name is re-exported here, so splitting the package cost no caller an import.
-The vector arithmetic and the batched embedding calls are `core/vectors.py`, shared with the
+The vector arithmetic and the batched embedding calls are `inference/vectors.py`, shared with the
 builders and the tutor.
 """
 
-from ...core.vectors import embed_normalized, l2_normalize
+from ...inference.vectors import embed_normalized, l2_normalize
 from . import cache, descriptions, index
 from .descriptions import (
     ConceptDescriber,

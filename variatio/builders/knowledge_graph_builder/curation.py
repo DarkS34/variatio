@@ -11,8 +11,8 @@ from pathlib import Path
 import networkx as nx
 from loguru import logger
 
-from ... import config
-from ...core import inference, progress
+from ... import config, inference
+from ...core import progress
 from ...core.json_io import write_json
 from ...core.lexicon import fold
 from . import blocks, parsing

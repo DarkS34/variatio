@@ -18,8 +18,8 @@ from server.jobs import lanes
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from server.pipeline import approvals, storage
-from variatio import api, config
-from variatio.core import inference, progress
+from variatio import api, config, inference
+from variatio.core import progress
 from variatio.core.workspace import Workspace
 from variatio.loaders import locale
 

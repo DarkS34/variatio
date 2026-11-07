@@ -19,7 +19,7 @@ from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from loguru import logger
 from pydantic import BaseModel
 
-from variatio.core import inference
+from variatio import inference
 
 from .. import auth
 from ..core import process

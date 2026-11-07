@@ -12,9 +12,9 @@ from collections.abc import Callable
 from json_repair import repair_json
 from loguru import logger
 
-from .. import config
-from ..core import inference, progress
-from ..core.repair import parse_with_repair
+from .. import config, inference
+from ..core import progress
+from ..inference.repair import parse_with_repair
 from .embedder import Embedder
 from ..loaders.content_context import ContentContext
 

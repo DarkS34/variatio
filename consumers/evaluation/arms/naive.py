@@ -13,7 +13,7 @@ import time
 from loguru import logger
 
 from variatio import config
-from variatio.core.repair import parse_with_repair
+from variatio.inference.repair import parse_with_repair
 from variatio.runtime.generator import parse_item
 
 from .. import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission

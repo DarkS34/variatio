@@ -4,7 +4,7 @@ Not one queue: Ollama serves from a single GPU while Cerebras serves over the ne
 between the two there is no contention at all — one queue made every job wait for a machine
 it was never going to use. Nor one job per lane: a lane has a CAPACITY (`lanes.capacity`),
 one locally and always, `CEREBRAS_MAX_CONCURRENT_JOBS` remotely, because what is scarce
-remotely is a rolling budget that `core/cerebras_budget` already books call by call.
+remotely is a rolling budget that `inference/cerebras_budget` already books call by call.
 
 A job reserves the lanes of the generative models it calls (`jobs/lanes.py`) and runs as
 soon as every one of them has a free slot. What waits goes out by class and then by arrival
@@ -21,7 +21,8 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from variatio.core import progress, usage
+from variatio.core import progress
+from variatio.inference import usage
 
 from . import joblog, lanes, priority, usage_log
 from .bus import EventBus

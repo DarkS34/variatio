@@ -10,8 +10,8 @@ from collections.abc import Iterator
 from json_repair import repair_json
 from loguru import logger
 
-from ... import config
-from ...core import inference, progress
+from ... import config, inference
+from ...core import progress
 from ...prompts.marks import SEAM_SEPARATORS
 from ..markdown import page_mark
 

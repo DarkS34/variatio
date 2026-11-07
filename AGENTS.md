@@ -150,7 +150,7 @@ dependency needs `uv sync` and `uv run alembic upgrade head` before the restart.
 
 ### Runtime prerequisites
 
-`import variatio` is side-effect-free and never reaches `core.inference`; every model call of
+`import variatio` is side-effect-free and never reaches `inference/`; every model call of
 the API goes through a job; nothing is warmed. The engines, the Cerebras ledger and Ollama are
 in `variatio/AGENTS.md`.
 
@@ -198,9 +198,9 @@ folder's `AGENTS.md` lists its own. To change one, follow «How to change a deci
 - D-011 — A workspace's artifacts live in `artifacts/` and their loaders in
   `variatio/loaders/`; an old tree is renamed the first time it is opened.
 - D-015 — One writer of persisted JSON: `json_io.write_json`.
-- D-248, D-230 — `api/` is the library's door; `builders/` and `loaders/` take a
+- D-248, D-250 — `api/` is the library's door; `builders/` and `loaders/` take a
   `Workspace` only for their own paths. Inside `variatio/` only `cli.py`, `builders/`,
-  `runtime/`, `documents/` and `core/` import `core.inference`.
+  `runtime/` and `documents/` import `inference/`.
 - D-220 — Closed decisions are entries of `DECISIONS.md`; each `AGENTS.md` keeps rule and number.
 - D-222 — Work plans go in `plans/` (git-ignored); there is no `docs/`.
 - D-225 — There is no guide and no tutorial; their text is in git history.

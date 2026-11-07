@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy.orm import Session as DbSession
 
-from variatio.core import inference
+from variatio import inference
 
 from ... import auth
 from ...auth import features

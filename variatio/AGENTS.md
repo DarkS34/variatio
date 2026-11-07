@@ -7,10 +7,10 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
 ## Runtime prerequisites
 
 - `import variatio` is side-effect-free; `variatio/__init__.py` holds only logging setup and
-  **must never reach `core.inference`** (it costs ~220 ms per import). Entry points that talk
-  to models call `core.inference.require_engine()` (today `cli.main()` and
+  **must never reach `inference/`** (it costs ~220 ms per import). Entry points that talk
+  to models call `inference.require_engine()` (today `cli.main()` and
   `build_worker.main()`); stages never do.
-- Engines: `ollama` (default) and `cerebras+ollama` ([core/cerebras.py](variatio/core/cerebras.py)).
+- Engines: `ollama` (default) and `cerebras+ollama` ([inference/cerebras.py](variatio/inference/cerebras.py)).
   Every model Cerebras' catalogue lists (or `CEREBRAS_MODELS`, the fallback) is routed
   remotely; the guardrail and the embedder always stay on Ollama. `known_models()` never
   raises and remembers its last read.
@@ -20,7 +20,7 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
   and drops `strict` above 5 000 chars or on open-ended maps. Each degradation is warned once
   per schema per process. Images travel before text in the body.
 - **The Cerebras rate limit is enforced before the call** from a flock'ed file ledger
-  ([core/cerebras_budget.py](variatio/core/cerebras_budget.py)). **The ledger is the
+  ([inference/cerebras_budget.py](variatio/inference/cerebras_budget.py)). **The ledger is the
   account's, not the tree's**: Cerebras limits the organisation, not the key, so it lives at
   `paths.cerebras_budget_path()` — `~/.local/state/variatio/cerebras_budget.json`
   (`$XDG_STATE_HOME` honoured), shared by every installation of this user — and
@@ -47,6 +47,7 @@ The root holds three files only: `config.py`, `cli.py`, `__init__.py`. Everythin
 of three kinds:
 
 - **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `loaders/`, `prompts/`.
+- **The engine**: `inference/`, every model call.
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
   `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
 - **The door**: `api/`.
@@ -55,21 +56,22 @@ Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
 **`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
 only to resolve their own paths, and `runtime/`, `prompts/` and `settings/` do
-not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`,
-`documents/` and `core/` import `core.inference`** (D-230) — `documents/pages/` transcribes
-with the vision model, and `core/repair.py` and `core/vectors.py` call it on behalf of
+not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and
+`documents/` import `inference/`** (D-250) — `documents/pages/` transcribes
+with the vision model, and `inference/repair.py` and `inference/vectors.py` call it on behalf of
 `builders/` and `runtime/`. `runtime/__init__.py` and `core/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
 put a component back at the root.
 
-- `core/`: `inference` (engine boundary: all model traffic via `generate()`/`embed()`/
-  `embed_batch()`; never call an SDK from business logic), `ollama` (the local engine, the one
-  importer of the `ollama` SDK; `inference` reaches it lazily), `cerebras`, `cerebras_budget`,
-  `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `repair`
-  (`parse_with_repair`, requires an explicit `shape`), `repetition`, `vectors` (L2
-  normalisation, batched embedding, the query/document prefixes; shared by the builders,
-  the embedder and the tutor).
+- `inference/`: the engine boundary in `__init__.py` (all model traffic via `generate()`/
+  `embed()`/`embed_batch()`; never call an SDK from business logic), `ollama` (the local
+  engine, the one importer of the `ollama` SDK; the boundary reaches it lazily), `cerebras`,
+  `cerebras_budget`, `usage`, `repair` (`parse_with_repair`, requires an explicit `shape`),
+  `vectors` (L2 normalisation, batched embedding, the query/document prefixes; shared by the
+  builders, the embedder and the tutor).
+- `core/`: `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `languages`,
+  `repetition`.
 - `loaders/`: `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`, `locale`
   (the package was `instance/` until 2026-10-08, the directory's old name).
   The bank has no loader module; `api/initialize.py` reads it inline.

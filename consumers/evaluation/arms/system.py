@@ -17,8 +17,8 @@ import time
 
 from loguru import logger
 
-from variatio import config
-from variatio.core import inference, progress
+from variatio import config, inference
+from variatio.core import progress
 
 from .. import FAILED, OK, ArmResult, Commission
 

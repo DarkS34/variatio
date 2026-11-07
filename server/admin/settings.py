@@ -12,10 +12,10 @@ invalidate every warm context.
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from variatio import config as vg_config
+from variatio import config as vg_config, inference
 from variatio import settings
-from variatio.core import cerebras, inference
-from variatio.core.inference import InferenceError
+from variatio.inference import cerebras
+from variatio.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
 from .. import auth

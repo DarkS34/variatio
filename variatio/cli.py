@@ -9,8 +9,8 @@ import json
 
 from loguru import logger
 
-from . import api
-from .core import inference, paths
+from . import api, inference
+from .core import paths
 
 
 def main(argv: list[str] | None = None) -> int:

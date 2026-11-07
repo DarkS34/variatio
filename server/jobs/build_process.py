@@ -7,7 +7,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from variatio.core import paths, progress, usage
+from variatio.core import paths, progress
+from variatio.inference import usage
 
 from .protocol import MARKER
 from .runner import JobControl

@@ -13,8 +13,9 @@ import httpx
 from loguru import logger
 
 from .. import config
-from . import cerebras_budget, progress, repetition, usage
-from .inference import (
+from ..core import progress, repetition
+from . import cerebras_budget, usage
+from . import (
     GenerationResponse,
     InferenceError,
     Sampling,

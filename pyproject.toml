@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.3"
+version = "1.185.4"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -174,6 +174,7 @@ layers = [
     "builders | runtime",
     "loaders | documents",
     "prompts",
+    "inference",
     "core : settings : config",
 ]
 ignore_imports = [
@@ -198,7 +199,7 @@ source_modules = [
     "variatio.prompts",
     "variatio.settings",
 ]
-forbidden_modules = ["variatio.core.inference"]
+forbidden_modules = ["variatio.inference"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
@@ -206,7 +207,7 @@ name = "Only the local engine imports the Ollama SDK"
 type = "forbidden"
 source_modules = ["variatio", "server", "consumers"]
 forbidden_modules = ["ollama"]
-ignore_imports = ["variatio.core.ollama -> ollama"]
+ignore_imports = ["variatio.inference.ollama -> ollama"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

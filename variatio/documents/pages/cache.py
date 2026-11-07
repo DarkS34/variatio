@@ -7,9 +7,9 @@ import json
 import re
 from pathlib import Path
 
-from ... import config
+from ... import config, inference
 from ...prompts import wording as wording_sets
-from ...core import inference, languages, repetition
+from ...core import languages, repetition
 from ...core.json_io import write_json
 from .. import office
 from ..files import source_hash

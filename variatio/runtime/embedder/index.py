@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from ... import config
-from ...core import inference, progress
-from ...core.vectors import l2_normalize, prefix_for
+from ... import config, inference
+from ...core import progress
+from ...inference.vectors import l2_normalize, prefix_for
 from ...loaders.knowledge_graph import KnowledgeGraph
 from . import cache
 from .descriptions import ConceptDescriber

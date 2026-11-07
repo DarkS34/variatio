@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from variatio.core import inference
+from variatio import inference
 from variatio.core.lexicon import fold
 
 from .calls import ask_object

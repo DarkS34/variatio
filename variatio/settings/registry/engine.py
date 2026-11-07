@@ -274,7 +274,7 @@ SETTINGS: list[Setting] = [
         impact=Impact.ENGINE,
         choices=("ollama", "cerebras+ollama"),
         doc="""Qué implementación respalda generate()/embed()/embed_batch(). La lógica de negocio nunca
-llama a un SDK: todo pasa por `variatio.core.inference`.
+llama a un SDK: todo pasa por `variatio.inference`.
 
 'cerebras+ollama' es un motor compuesto — el catálogo de Cerebras y lo que nombre
 CEREBRAS_MODELS van a su API, y todo lo demás, guardarraíl y embebedor incluidos, sigue en

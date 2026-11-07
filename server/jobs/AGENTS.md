@@ -60,7 +60,7 @@ usage.
 - Job logs are **files**, `logs/<slug>/jobs.log` (one shared sink per workspace, filtered by
   thread; the build worker writes the same file). No `log` event on the bus, no log viewer.
 - **What a job's model calls cost is measured** (2026-10-15, the plan's phase 9;
-  `variatio/core/usage.py`): the runner opens a meter around every handler, and every call of
+  `variatio/inference/usage.py`): the runner opens a meter around every handler, and every call of
   the engine boundary counts on the meters open on its thread — the prompt's tokens and the
   answer's, exact (Ollama's last chunk, `prompt_eval_count`/`eval_count`; Cerebras' `usage`),
   under its phase (`progress.current_activity()`, the ledger's name), engine and model; a

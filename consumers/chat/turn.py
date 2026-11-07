@@ -17,7 +17,8 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from variatio.core import inference, progress
+from variatio import inference
+from variatio.core import progress
 from variatio.runtime import screening
 
 from server.conversations import prompts as shared_prompts

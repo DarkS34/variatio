@@ -16,10 +16,10 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from .. import config
+from .. import config, inference
 from ..prompts import wording as wording_sets
-from ..core import inference, progress
-from ..core.repair import parse_with_repair
+from ..core import progress
+from ..inference.repair import parse_with_repair
 from ..loaders.content_context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from ..loaders.knowledge_graph import KnowledgeGraph

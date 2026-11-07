@@ -7,7 +7,7 @@ The engine is read once every `READ_EVERY` seconds for the whole process, by one
 a time, and every request in between takes that reading: a class has a hundred tabs open, each
 polling this route every 15 s, and each poll crossed the SSH tunnel three times. While one
 thread reads, the others answer with the reading before it, and only the very first waits.
-The installed listing is also cached for 30 s inside `core.inference`. The panel's «Motor»
+The installed listing is also cached for 30 s inside `variatio.inference`. The panel's «Motor»
 tab reads the engine live from `/api/admin/engine`, so what it shows of the GPU is never
 five seconds old.
 """
@@ -19,8 +19,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DbSession
 
-from variatio import api, config
-from variatio.core import inference
+from variatio import api, config, inference
 
 from ... import auth
 from ...auth import features

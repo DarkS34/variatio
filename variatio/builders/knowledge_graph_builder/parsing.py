@@ -9,7 +9,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from ... import config
-from ...core.repair import parse_with_repair
+from ...inference.repair import parse_with_repair
 
 
 def parse_object(

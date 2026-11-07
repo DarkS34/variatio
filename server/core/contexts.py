@@ -25,8 +25,8 @@ from collections import OrderedDict
 
 from loguru import logger
 
-from variatio import api, config
-from variatio.core import inference, progress
+from variatio import api, config, inference
+from variatio.core import progress
 from variatio.core.workspace import Workspace
 from variatio.api import RuntimeContext
 

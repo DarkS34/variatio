@@ -28,7 +28,8 @@ from dataclasses import dataclass
 import numpy as np
 from loguru import logger
 
-from variatio.core import inference, progress
+from variatio import inference
+from variatio.core import progress
 
 from . import EXERCISE, KINDS, OFF_TOPIC, SOCIAL, THEORY, calls
 

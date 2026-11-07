@@ -34,8 +34,7 @@ from server.bank.reading import reader_of
 from server.core import process
 from server.jobs.catalogue import Job
 from server.pipeline import approvals, readings, storage
-from variatio import api
-from variatio.core import inference
+from variatio import api, inference
 from variatio.loaders import locale
 from variatio.loaders.knowledge_graph import KnowledgeGraph
 

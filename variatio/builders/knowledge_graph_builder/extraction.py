@@ -12,8 +12,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from ... import config
-from ...core import inference, progress
+from ... import config, inference
+from ...core import progress
 from ...core.lexicon import mentions
 from ...documents import (
     chunk_sections,

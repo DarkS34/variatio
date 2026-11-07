@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from .. import config
-from . import inference, progress
+from .. import config, inference
+from ..core import progress
 
 
 def parse_with_repair(

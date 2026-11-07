@@ -14,14 +14,14 @@ from json_repair import repair_json
 from loguru import logger
 from pydantic import ValidationError
 
-from .. import config, documents
+from .. import config, documents, inference
 from .. import prompts as prompts_pkg
 from ..prompts import wording as wording_sets
-from ..core import inference, progress
-from ..core.inference import ensure_models
+from ..core import progress
+from ..inference import ensure_models
 from ..core.json_io import write_json
 from ..core.lexicon import fold
-from ..core.repair import parse_with_repair
+from ..inference.repair import parse_with_repair
 from ..core.workspace import Workspace
 from ..loaders import locale
 from ..loaders.content_context import ContentContext

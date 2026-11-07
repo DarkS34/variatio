@@ -32,7 +32,7 @@ from variatio import config as pipeline_config
 from variatio import documents
 from variatio.core import progress
 from variatio.core.lexicon import fold
-from variatio.core.vectors import embed_normalized, prefix_for
+from variatio.inference.vectors import embed_normalized, prefix_for
 from variatio.core.workspace import Workspace
 from variatio.documents.chunking import is_navigation, split_sections
 

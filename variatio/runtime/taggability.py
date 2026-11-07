@@ -9,9 +9,9 @@ a second copy of them would desynchronise this block format from the graph's own
 
 from loguru import logger
 
-from .. import config
+from .. import config, inference
 from ..builders.knowledge_graph_builder import blocks, parsing
-from ..core import inference, progress
+from ..core import progress
 from ..loaders.content_context import ContentContext
 
 BUILD_PHASES = (("taggable", "Reviewing which concepts work as labels", 100),)

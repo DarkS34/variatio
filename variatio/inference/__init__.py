@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from .. import config
-from . import progress
+from ..core import progress
 
 TokenSink = Callable[[str, str], None]
 ProgressSink = Callable[[int, int], None]

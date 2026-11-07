@@ -17,8 +17,7 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from variatio import api, config
-from variatio.core import inference
+from variatio import api, config, inference
 
 LOCAL = "local"
 REMOTE = "remote"
@@ -27,7 +26,7 @@ BACKENDS = (LOCAL, REMOTE)
 
 # One, and not a setting: the GPU is one, and two jobs on it would do nothing but swap
 # weights. The remote lane holds more than one because what is scarce there is a quota, not
-# a machine, and `core/cerebras_budget.py` already books it call by call.
+# a machine, and `inference/cerebras_budget.py` already books it call by call.
 LOCAL_CAPACITY = 1
 
 

@@ -19,8 +19,8 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from variatio import config
-from variatio.core import inference, progress
+from variatio import config, inference
+from variatio.core import progress
 
 CACHE_VERSION = 2
 

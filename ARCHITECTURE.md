@@ -113,7 +113,7 @@ variatio/       the library          imports neither
   `tests/consumers/test_consumers_boundary.py` pins that a function's library half imports
   neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
-  `core.inference` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
+  `inference/` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
 - **Only `server/routing.py` imports a route module** (an area's `router.py` or `routes/`, and
   the panel's modules), and the route modules do not import each other. Neither contract has
   an exception: a function reads an area's services, never its routes.
@@ -131,21 +131,22 @@ variatio/       the library          imports neither
 api/                                 the door: one function per thing asked of a workspace
 builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
 loaders/  prompts/  settings/  core/                the vocabulary
+inference/                           the engine boundary: every model call
 ```
 
 - **`api/` is the library's public door.** `builders/` and `loaders/` take a
   `Workspace` only to resolve their own paths. `runtime/`, `prompts/` and `settings/` do
   not import it.
-- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/`
-  import `core.inference`.** `documents/pages/` asks the vision model for each page;
-  `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
+- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and `documents/` import
+  `inference/`.** `documents/pages/` asks the vision model for each page;
+  `inference/repair.py` and `inference/vectors.py` call it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `builders | runtime`,
-  `loaders | documents`, `prompts`, then `core`, `settings` and `config`. Two crossings are
+  `loaders | documents`, `prompts`, `inference`, then `core`, `settings` and `config`. Two crossings are
   named in it: `runtime/taggability.py` imports the graph builder's node block and parser
   (`blocks`, `parsing`), and `core/lexicon.py` imports `prompts/wording.py`. The two rules above and
-  «only `core/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
+  «only `inference/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
 **Inside `server/`.**
 
@@ -176,7 +177,8 @@ One line per folder: what it holds, and the file to open first.
 | Folder | Holds | Start at |
 |---|---|---|
 | `variatio/` (root) | `cli.py`, `config.py`, `__init__.py` (logging) and nothing else | `cli.py` |
-| `core/` | the engine boundary (`inference.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), paths, `Workspace`, progress, JSON I/O, repair, usage meters | `workspace.py`, then `inference.py` |
+| `inference/` | the engine boundary (`__init__.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), repair, usage meters | `__init__.py` |
+| `core/` | paths, `Workspace`, progress, JSON I/O, languages, lexicon, repetition, dotenv | `workspace.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `loaders/` | readers of the artifacts: graph, profile, context, relations, locale | `knowledge_graph.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
@@ -319,11 +321,11 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   route checks a membership row: `auth.VIEW`, `EDIT` or `MANAGE` (`server/auth/deps.py`); the
   administrator's bypass lives there alone. An optional function adds its own guard
   (`server/auth/features.py`).
-- **Model calls.** One boundary, `variatio/core/inference.py` (`generate()`, `embed()`,
-  `embed_batch()`), over two engines: `core/ollama.py` (local) and `core/cerebras.py` (hybrid).
+- **Model calls.** One boundary, `variatio/inference/__init__.py` (`generate()`, `embed()`,
+  `embed_batch()`), over two engines: `inference/ollama.py` (local) and `inference/cerebras.py` (hybrid).
   Business code never calls an SDK; the evaluation's naive arm alone calls commercial APIs
   over `httpx`, outside the boundary, because it measures them. Every call has its own model,
-  reasoning and sampling per phase. `variatio/core/usage.py` counts the tokens of every job.
+  reasoning and sampling per phase. `variatio/inference/usage.py` counts the tokens of every job.
 - **Logging.** loguru, configured once in `variatio/__init__.py`. `variatio/` logs in
   English; `server/` and `consumers/` in Spanish. Format `[scope] Message`. A job logs to
   `logs/<slug>/jobs.log`.

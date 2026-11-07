@@ -15,7 +15,7 @@ import re
 
 from loguru import logger
 
-from variatio.core import inference
+from variatio import inference
 
 from .calls import ask_object
 
