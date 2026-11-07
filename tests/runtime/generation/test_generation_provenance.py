@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio import wording as wording_sets
+from variatio.prompts import wording as wording_sets
 from variatio.runtime import checks, generator as generator_module, screening
 from variatio.runtime.generator import NEIGHBOUR, VariantGenerator
 

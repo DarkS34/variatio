@@ -194,8 +194,13 @@ what each decision replaced.
 
 ### D-033. Workspace-language strings live in wording
 - **Rule:** Strings whose language must match the workspace live in `wording/`.
-- **Date:** 2026-09-05 · **Commit:** `ffef620` · **Status:** in force
+- **Date:** 2026-09-05 · **Commit:** `ffef620` · **Status:** superseded by D-249
 - **Why:** Code-composed strings were Spanish literals, so an English workspace was screened by a Spanish regex and given half-Spanish prompt blocks.
+
+### D-249. Workspace-language strings live beside their prompt set
+- **Rule:** Strings whose language must match the workspace live in `prompts/<language>/wording.py`, beside that language's prompt set; `prompts/wording.py` resolves them (`of`, `beside`) and `prompts/shared.py` holds what every language shares. There is no `wording/` package: where D-230 and D-248 name `wording/`, read `prompts/`.
+- **Date:** 2026-11-08 · **Commit:** `pending` · **Status:** in force
+- **Why:** The user's request, part 2 of the restructuring by artifact (`plans/plan-reestructura.md`): the text a model reads, whole or in fragments, is in one place per language. The rule of D-033 does not change; only the place.
 
 ### D-034. Guardrail runs before the scope judge
 - **Rule:** Screening makes two calls in a fixed order, the guardrail first and then admissibility.
@@ -1206,7 +1211,7 @@ what each decision replaced.
 
 ### D-248. The library's door is api/
 - **Rule:** `api/` is the library's public door (it was `entrypoints/`). `builders/` and `loaders/` take a `Workspace` only to resolve their own paths; `runtime/`, `prompts/`, `wording/` and `settings/` do not import it.
-- **Date:** 2026-11-07 · **Commit:** `pending` · **Status:** in force
+- **Date:** 2026-11-07 · **Commit:** `5acb75b` · **Status:** in force
 - **Why:** The user's request, part 1 of the restructuring by artifact (`plans/plan-reestructura.md`): a person new to the code finds the door by its usual name. The rule of D-216 does not change; only the name. D-008's `entrypoints/` reads `api/` until a later part supersedes it.
 
 ### D-217. Only entrypoints take a Workspace

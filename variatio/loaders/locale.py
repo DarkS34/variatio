@@ -10,7 +10,8 @@ import json
 
 from loguru import logger
 
-from .. import prompts, wording as wording_sets
+from .. import prompts
+from ..prompts import wording as wording_sets
 from ..core import languages
 from ..core.json_io import write_json
 from ..core.workspace import Workspace

@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.2"
+version = "1.185.3"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -173,19 +173,19 @@ layers = [
     "api",
     "builders | runtime",
     "loaders | documents",
-    "prompts | wording",
+    "prompts",
     "core : settings : config",
 ]
 ignore_imports = [
     "variatio.runtime.taggability -> variatio.builders.knowledge_graph_builder.blocks",
     "variatio.runtime.taggability -> variatio.builders.knowledge_graph_builder.parsing",
-    "variatio.core.lexicon -> variatio.wording",
+    "variatio.core.lexicon -> variatio.prompts.wording",
 ]
 
 [[tool.importlinter.contracts]]
 name = "Only the door and the work know what a workspace is"
 type = "forbidden"
-source_modules = ["variatio.runtime", "variatio.prompts", "variatio.wording", "variatio.settings"]
+source_modules = ["variatio.runtime", "variatio.prompts", "variatio.settings"]
 forbidden_modules = ["variatio.core.workspace"]
 allow_indirect_imports = true
 
@@ -196,7 +196,6 @@ source_modules = [
     "variatio.api",
     "variatio.loaders",
     "variatio.prompts",
-    "variatio.wording",
     "variatio.settings",
 ]
 forbidden_modules = ["variatio.core.inference"]

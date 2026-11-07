@@ -4,7 +4,7 @@ from variatio import config
 from variatio.core.workspace import Workspace
 from variatio.documents import pages
 from variatio.api import transcribe
-from variatio.wording import es as ES_WORDING
+from variatio.prompts.es import wording as ES_WORDING
 
 
 @pytest.fixture

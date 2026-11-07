@@ -46,7 +46,7 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
 The root holds three files only: `config.py`, `cli.py`, `__init__.py`. Everything else is one
 of three kinds:
 
-- **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `loaders/`, `prompts/`, `wording/`.
+- **Vocabulary** (consulted, never doing work): `core/`, `settings/`, `loaders/`, `prompts/`.
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
   `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
 - **The door**: `api/`.
@@ -54,7 +54,7 @@ of three kinds:
 Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
 **`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
-only to resolve their own paths, and `runtime/`, `prompts/`, `wording/` and `settings/` do
+only to resolve their own paths, and `runtime/`, `prompts/` and `settings/` do
 not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`,
 `documents/` and `core/` import `core.inference`** (D-230) — `documents/pages/` transcribes
 with the vision model, and `core/repair.py` and `core/vectors.py` call it on behalf of
@@ -345,9 +345,10 @@ Take objects, return data, know no `Workspace`, write no files.
   everything except this concept still solve it?»).
 - Didactic stance, not a teacher persona: solver is `el alumno`, requester is `quien pide el
   ejercicio`, never `el docente`; no classroom voice in items.
-- `variatio/wording/` holds every code-composed string whose language must match the
+- `prompts/es/wording.py` and `prompts/en/wording.py` hold every code-composed string whose language must match the
   workspace (injection patterns, stopwords, labels, reasons, marks, prompt fragments);
-  `beside(prompts)` resolves it. English attack vocabulary lives in `shared.py` for both sets.
+  `prompts/wording.py`'s `beside(prompts)` resolves it. English attack vocabulary lives in
+  `prompts/shared.py` for both sets.
   The settings registry and error messages are NOT in it (Spanish UI copy).
 
 ## Pipeline shape
@@ -394,7 +395,7 @@ the root `DECISIONS.md`. Do not reverse one without the user's explicit request.
   only graph viewer.
 - D-024 — Content context is its own artifact, written by the other two builders; three named
   facts and one renderer.
-- D-033 — Strings whose language must match the workspace live in `wording/`.
+- D-249 — Strings whose language must match the workspace live in `prompts/<language>/wording.py`.
 - D-034, D-035 — Screening is one package with two calls in fixed order (guardrail first); the
   sequence exists once.
 - D-236 — The guardrail asks granite for «jailbreak» only; the scope rules of the chat-like

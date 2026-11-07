@@ -17,7 +17,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .. import config
-from .. import wording as wording_sets
+from ..prompts import wording as wording_sets
 from ..core import inference, progress
 from ..core.repair import parse_with_repair
 from ..loaders.content_context import ContentContext

@@ -22,7 +22,7 @@ from loguru import logger
 
 from ... import config, documents
 from ... import prompts as prompts_pkg
-from ... import wording as wording_sets
+from ...prompts import wording as wording_sets
 from ...core import progress
 from ...core.inference import ensure_models
 from ...core.workspace import Workspace

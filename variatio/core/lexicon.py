@@ -10,7 +10,7 @@ import re
 import unicodedata
 
 from .. import config
-from .. import wording as wording_sets
+from ..prompts import wording as wording_sets
 
 
 def mentions(text: str, concept: str, wording=None) -> bool:

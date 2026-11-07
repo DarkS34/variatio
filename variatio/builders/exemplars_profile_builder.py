@@ -22,7 +22,7 @@ from ..core.workspace import Workspace
 from ..loaders import content_context, locale
 from ..loaders.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
-from .. import wording as wording_sets
+from ..prompts import wording as wording_sets
 from .. import documents
 from . import content_context_builder
 

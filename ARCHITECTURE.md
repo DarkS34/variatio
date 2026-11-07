@@ -130,21 +130,21 @@ variatio/       the library          imports neither
 ```text
 api/                                 the door: one function per thing asked of a workspace
 builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
-loaders/  prompts/  wording/  settings/  core/      the vocabulary
+loaders/  prompts/  settings/  core/                the vocabulary
 ```
 
 - **`api/` is the library's public door.** `builders/` and `loaders/` take a
-  `Workspace` only to resolve their own paths. `runtime/`, `prompts/`, `wording/` and
-  `settings/` do not import it.
+  `Workspace` only to resolve their own paths. `runtime/`, `prompts/` and `settings/` do
+  not import it.
 - **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and `core/`
   import `core.inference`.** `documents/pages/` asks the vision model for each page;
   `core/repair.py` and `core/vectors.py` call it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `builders | runtime`,
-  `loaders | documents`, `prompts | wording`, then `core`, `settings` and `config`. Two crossings are
+  `loaders | documents`, `prompts`, then `core`, `settings` and `config`. Two crossings are
   named in it: `runtime/taggability.py` imports the graph builder's node block and parser
-  (`blocks`, `parsing`), and `core/lexicon.py` imports `wording/`. The two rules above and
+  (`blocks`, `parsing`), and `core/lexicon.py` imports `prompts/wording.py`. The two rules above and
   «only `core/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
 **Inside `server/`.**
@@ -179,8 +179,7 @@ One line per folder: what it holds, and the file to open first.
 | `core/` | the engine boundary (`inference.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), paths, `Workspace`, progress, JSON I/O, repair, usage meters | `workspace.py`, then `inference.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `loaders/` | readers of the artifacts: graph, profile, context, relations, locale | `knowledge_graph.py` |
-| `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, and `marks.py`, shared by both; each function keeps its own in `consumers/<function>/prompts/` | `prompts/__init__.py` |
-| `wording/` | strings the code composes in the workspace's language | `wording/__init__.py` |
+| `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
 | `builders/` | raw → artifacts: the graph, profile and bank builders, the context synthesis | `knowledge_graph_builder/__init__.py` |
 | `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
 | `runtime/` | artifacts → exercises: generator, tagger, taggability, checks | `generator.py` |
@@ -329,8 +328,8 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   English; `server/` and `consumers/` in Spanish. Format `[scope] Message`. A job logs to
   `logs/<slug>/jobs.log`.
 - **Languages.** Three axes: the interface language is the account's (`web/src/lib/i18n/`),
-  the prompt language is the workspace's (`artifacts/locale.json`, `variatio/prompts/`,
-  `variatio/wording/`), and the language of instruction is the corpus's
+  the prompt language is the workspace's (`artifacts/locale.json`, `variatio/prompts/`, its
+  `wording.py`), and the language of instruction is the corpus's
   (`content_context.json`).
 
 ## 9. Where to go next

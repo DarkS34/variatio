@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from ... import config
-from ... import wording as wording_sets
+from ...prompts import wording as wording_sets
 from ...core import inference, languages, repetition
 from ...core.json_io import write_json
 from .. import office

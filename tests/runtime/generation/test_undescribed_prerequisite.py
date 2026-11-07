@@ -5,7 +5,7 @@ what the graph says about it. That fallback used to raise `NameError` — a stat
 reaching for `self` — so one missing description failed a whole generate job.
 """
 
-from variatio import wording as wording_sets
+from variatio.prompts import wording as wording_sets
 from variatio.runtime.generator import VariantGenerator
 
 from ...conftest import ES

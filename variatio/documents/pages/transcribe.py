@@ -7,7 +7,7 @@ import re
 from loguru import logger
 
 from ... import config
-from ... import wording as wording_sets
+from ...prompts import wording as wording_sets
 from ...core import inference, repetition
 from ...prompts.marks import EMPTY_PAGE_MARK
 

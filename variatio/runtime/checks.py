@@ -16,7 +16,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from .. import config
-from .. import wording as wording_sets
+from ..prompts import wording as wording_sets
 from .tagger import TRACE_KEY, ConceptTagger
 from ..core.lexicon import mentions
 from .embedder import Embedder

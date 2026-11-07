@@ -15,7 +15,7 @@ import numpy as np
 from loguru import logger
 
 from ... import config
-from ... import wording as wording_sets
+from ...prompts import wording as wording_sets
 from ...core import inference, progress
 from ...core.vectors import embed_normalized
 from . import blocks, parsing

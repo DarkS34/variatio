@@ -21,7 +21,7 @@ from variatio.core import inference
 from variatio.prompts.marks import EMPTY_IMAGE_MARK
 
 from ..conftest import ES
-from variatio.wording import es as ES_WORDING
+from variatio.prompts.es import wording as ES_WORDING
 
 docling = pytest.importorskip("docling_core.types.doc")
 

@@ -1,4 +1,4 @@
-from variatio import wording
+from variatio.prompts import wording
 from variatio.runtime import screening
 
 

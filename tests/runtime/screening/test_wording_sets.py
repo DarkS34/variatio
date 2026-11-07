@@ -9,7 +9,7 @@ import inspect
 
 import pytest
 
-from variatio import wording
+from variatio.prompts import wording
 from variatio.runtime import screening
 from variatio.core import languages
 

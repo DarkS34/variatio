@@ -73,7 +73,7 @@ def test_the_prompt_labels_match_the_catalog():
 def test_the_english_prompt_labels_match_the_english_catalog():
     # The English generation prompt said "Elements of the statement" where the catalogue the
     # judge reads says "Parts of the statement" (plan F6, A4): one slot, one name.
-    from variatio import wording
+    from variatio.prompts import wording
     from variatio.prompts.en.generation import _SLOT_LABELS
 
     assert _SLOT_LABELS == {s.key: s.label for s in screening.catalog(wording.of("en"))}

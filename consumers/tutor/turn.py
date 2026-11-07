@@ -33,7 +33,7 @@ from server.conversations import prompts as shared_prompts
 from variatio.core import inference, progress
 from variatio.core.lexicon import mentions
 from variatio.runtime import screening
-from variatio import wording as wording_sets
+from variatio.prompts import wording as wording_sets
 
 from . import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL, card, checks, classify, concept_map, focus
 from . import config as tutor_config

@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from variatio import wording
+from variatio.prompts import wording
 from variatio.core.workspace import Workspace
 from variatio.documents import pages
 from variatio.api import transcribe

@@ -15,7 +15,8 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from ... import config, wording as wording_sets
+from ... import config
+from ...prompts import wording as wording_sets
 from ...core import inference, progress
 from ...core.inference import InferenceError
 from ...core.lexicon import fold

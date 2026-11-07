@@ -5,7 +5,7 @@ like the rest of `prompts/en/` — none of the numbers this project quotes about
 or the scope judge was taken on it.
 """
 
-from . import shared
+from .. import shared
 
 LANGUAGE = "en"
 

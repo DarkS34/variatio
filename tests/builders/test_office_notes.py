@@ -15,8 +15,8 @@ import pytest
 
 from variatio.core import inference
 from variatio.documents import office, pages
-from variatio.wording import en as EN_WORDING
-from variatio.wording import es as ES_WORDING
+from variatio.prompts.en import wording as EN_WORDING
+from variatio.prompts.es import wording as ES_WORDING
 
 from ..conftest import ES
 

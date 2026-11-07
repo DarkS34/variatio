@@ -14,7 +14,7 @@ from variatio import config
 from variatio.core.inference import GenerationResponse
 from variatio.documents import pages
 from variatio.prompts import of as prompts_of
-from variatio.wording import es as ES_WORDING
+from variatio.prompts.es import wording as ES_WORDING
 
 ROW = "| | | |       | | | |"
 GRID = "# Sumador\n\n```\n1 0 0 0\n" + (ROW + "\n") * 40

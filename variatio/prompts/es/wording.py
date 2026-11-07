@@ -5,7 +5,7 @@ what lets a component hold one without knowing which. Every string here was a li
 somewhere under `variatio/` before this module existed, and is preserved verbatim.
 """
 
-from . import shared
+from .. import shared
 
 LANGUAGE = "es"
 
