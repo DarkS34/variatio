@@ -42,8 +42,8 @@ stream (`/ws`).
 
 ## Health, the tunnel and the downloads
 
-- `GET /api/health` reads the engine once every `READ_EVERY` (5) seconds for the whole
-  process, one thread at a time (`routes/health.engine_reading`): the others answer with the
+- `GET /api/health` reads each engine once every `READ_EVERY` (5) seconds for the whole
+  process, one reading per engine, one thread at a time (`routes/health.engine_reading`): the others answer with the
   reading before, and only the first request ever waits. A class's hundred tabs poll it. The
   panel's «Motor» reads the engine live (`/api/admin/engine`).
 - The API owns the SSH tunnel to the GPU box (`tunnel.py`, system `ssh -N -L`,

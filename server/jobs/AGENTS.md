@@ -34,6 +34,10 @@ usage.
   A blocked job holds one slot of each of its lanes. `backends_for` fails closed (reserve
   both). A `generate` job's writer lane comes from the commission's model; an `evaluate`
   job's from `evaluation.local_model`.
+- **A job runs on the engine it was accepted on** (`Job.engine`): the engine of the context
+  that queued it — the request's person, or the parent job for a chained one. The lanes are
+  read on that engine at submission; the runner holds it while the job runs and passes it to
+  the build worker (`--engine`). Moving the account to another engine does not move a job.
 - **What waits goes out by class, then by arrival** (`jobs/priority.py`, decided 2026-10-06):
   A a tutor's or a chat's turn (~30 s, somebody waits in a chat), B a commission, a comparison or the
   tagging of the exercises a teacher just wrote (`tag_item`; somebody watches the bar or the

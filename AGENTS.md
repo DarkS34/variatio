@@ -196,8 +196,10 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   builds.
 - **D-008 — Layout by artifact.** `variatio/` is being reorganised by artifact
   (`plans/plan-reestructura.md`; each part updates this entry). Today: `api/` is the public
-  door; `inference/` is the engine boundary (`inference/__init__.py`) with the engines, usage,
-  vectors and repair, a layer between `prompts` and `utils : settings : config`;
+  door; `inference/` is the engine boundary (`inference/__init__.py`) with the interface every
+  engine implements (`interface.py`), the engines of a process (`engines.py`), one package per
+  engine (`ollama/`, `cerebras_ollama/`), usage, vectors and repair, a layer between `prompts`
+  and `utils : settings : config`;
   `prompts/<language>/` holds each prompt set with its `wording.py` and `conversation.py`;
   `utils/` holds what knows nothing about the subject (paths, `Workspace`, progress, JSON I/O,
   the workspace's language in `locale.py`);

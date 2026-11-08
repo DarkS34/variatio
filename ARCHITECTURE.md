@@ -151,7 +151,7 @@ inference/                           the engine boundary: every model call
 - The layers above are an import contract: `cli`, `api`, `functionalities`,
   `exemplars_bank`, `retrieval`, `knowledge_graph`, `documents`, `prompts`, `inference`, then `utils`, `settings` and
   `config`. One crossing is named in it: `utils/lexicon.py` imports `prompts/wording.py`. The two rules above and
-  «only `inference/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
+  «only `inference/ollama/engine.py`, the local engine, imports the Ollama SDK» are contracts too.
 
 **Inside `server/`.**
 
@@ -182,7 +182,7 @@ One line per folder: what it holds, and the file to open first.
 | Folder | Holds | Start at |
 |---|---|---|
 | `variatio/` (root) | `cli.py`, `config.py`, `__init__.py` (logging) and nothing else | `cli.py` |
-| `inference/` | the engine boundary (`__init__.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), repair, usage meters | `__init__.py` |
+| `inference/` | the engine boundary (`__init__.py`), the engine interface (`interface.py`) and a process's engines (`engines.py`), one package per engine (`ollama/`, `cerebras_ollama/`), batched embedding (`vectors.py`), repair, usage meters | `__init__.py` |
 | `utils/` | paths, `Workspace`, progress, JSON I/O, languages, the workspace's language (`locale.py`), lexicon, repetition, dotenv | `workspace.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `knowledge_graph/` | the graph (`graph.py`, `KnowledgeGraph`), the subject's context (`context.py`, `ContentContext`), the relation vocabulary (`relations.py`), their build (`build/`: extract, clean, curate, and the context synthesis), the concept descriptions and the taggability review | `__init__.py`, then `build/__init__.py` |
@@ -289,6 +289,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   `tests/prompts/test_prompt_sets.py` (the functions' prompt sets are not covered).
 - **Every PDFium call holds one process-wide lock.** `tests/documents/test_pdfium_lock.py`.
 - **No header raises the Cerebras ceilings.** `tests/inference/test_cerebras_budget.py`.
+- **No engine without an account, one Ollama per host.** `tests/inference/test_engine_set.py`.
 - **The ORM models describe what the migrations built**: `alembic` autogenerate against the
   live schema reports zero differences. Checked by hand; `serve` refuses a schema behind or
   ahead of the migrations (`server/db/schema.py`).
@@ -324,7 +325,10 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   administrator's bypass lives there alone. An optional function adds its own guard
   (`server/auth/features.py`).
 - **Model calls.** One boundary, `variatio/inference/__init__.py` (`generate()`, `embed()`,
-  `embed_batch()`), over two engines: `inference/ollama.py` (local) and `inference/cerebras.py` (hybrid).
+  `embed_batch()`), over two engines: `inference/ollama/` (local) and `inference/cerebras_ollama/`
+  (hybrid). The boundary holds no engine: a job runs on its account's (`users.inference_engine`,
+  the installation's default when NULL), fixed with `inference.using`, and a request on its
+  person's (`server/auth/engines.py`).
   Business code never calls an SDK; the evaluation's naive arm alone calls commercial APIs
   over `httpx`, outside the boundary, because it measures them. Every call has its own model,
   reasoning and sampling per phase. `variatio/inference/usage.py` counts the tokens of every job.

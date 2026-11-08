@@ -11,6 +11,14 @@ groups of a class are `server/classroom/AGENTS.md`.
 
 Own passwords, own server-side sessions, no OAuth/IdP/JWT.
 
+- **Each account runs on one inference engine** (`users.inference_engine`, `engines.py`,
+  2026-11-08): NULL is the installation's default (`engine.name`); the administrator assigns
+  one of `engines.offered()` (the default plus `engine.available`) from the panel. A request
+  fixes its person's engine deferred (`engines.EngineContext`): the session is read only if a
+  route asks the engine or an engine-scoped setting. `engines.sync()` keeps an instance of every
+  engine some active account runs on and of no other; it runs at start, on an assignment and
+  after an engine setting changes (a disabled or deleted account's engine closes at the next).
+
 - **No registration endpoint, ever.** Accounts come from single-use invitations or
   `create-user`. The person registering chooses their username and language, and nothing
   else: the account's profile is the invitation's.

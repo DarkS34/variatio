@@ -10,21 +10,39 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
   **must never reach `inference/`** (it costs ~220 ms per import). Entry points that talk
   to models call `inference.require_engine()` (today `cli.main()` and
   `build_worker.main()`); stages never do.
-- Engines: `ollama` (default) and `cerebras+ollama` ([inference/cerebras.py](variatio/inference/cerebras.py)).
+- **No module holds an engine** (decided 2026-11-08). The owner of a process builds an
+  `inference.engines.EngineSet` (`cli.main`, `build_worker.main`, the server's
+  `core/process.py`) and fixes the engine of each piece of work with `inference.using(engine)`,
+  a context variable per thread, as `progress` and `usage` are; a call with none raises. A
+  thread the work starts takes the context along (`contextvars.copy_context()`). `using` fixes
+  the engine's settings profile too.
+- **Each engine implements `inference/interface.py`** (`Engine`) and lives in its own package:
+  `ollama/` and `cerebras_ollama/` (`hybrid.py` routes per model, `remote.py` is the Cerebras
+  client, `schema.py` its strict mode, `budget.py` the ledger). A new engine (vLLM, SGLang) is
+  a package and a row of `engines.ENGINE_NAMES`; no engine package imports another but the
+  hybrid, which takes an `OllamaEngine`. Engines take their settings and their ledger in the
+  constructor and read no connection setting from `config`.
+- **One `OllamaEngine` per host.** Two engines over one Ollama server share the instance (the
+  `ollama` engine is the hybrid's local half), so its client and caches are one; it closes with
+  the last engine of its host. An engine nobody runs on has no instance (`EngineSet.keep`), and
+  a job holds its engine until it ends (`hold`/`release`).
+- Engines: `ollama` (default) and `cerebras+ollama` ([inference/cerebras_ollama/](variatio/inference/cerebras_ollama/)).
   Every model Cerebras' catalogue lists (or `CEREBRAS_MODELS`, the fallback) is routed
   remotely; the guardrail and the embedder always stay on Ollama. `known_models()` never
   raises and remembers its last read.
-- Cerebras strict mode: `cerebras.strict_schema` adapts every grammar (drops refused
+- Cerebras strict mode: `schema.strict_schema` adapts every grammar (drops refused
   keywords and `title`, rewrites `const` as a one-item `enum`, closes objects that do not
   declare `additionalProperties`), wraps a root array as `{"items": …}` and unwraps the reply,
   and drops `strict` above 5 000 chars or on open-ended maps. Each degradation is warned once
-  per schema per process. Images travel before text in the body.
+  per schema per engine instance. Images travel before text in the body.
 - **The Cerebras rate limit is enforced before the call** from a flock'ed file ledger
-  ([inference/cerebras_budget.py](variatio/inference/cerebras_budget.py)). **The ledger is the
+  ([inference/cerebras_ollama/budget.py](variatio/inference/cerebras_ollama/budget.py)). **The ledger is the
   account's, not the tree's**: Cerebras limits the organisation, not the key, so it lives at
   `paths.cerebras_budget_path()` — `~/.local/state/variatio/cerebras_budget.json`
   (`$XDG_STATE_HOME` honoured), shared by every installation of this user — and
   `CEREBRAS_BUDGET_PATH` is only for an installation whose key belongs to another account.
+  The FILE is the ledger: `budget.account_ledger()` opens a `Budget` over it, and two of them
+  in one process exclude each other through the same `flock` (pinned by test).
   Per-model buckets, rolling minute and day windows, `usage` charges tokens, and **a header may
   only lower what is believed left — never raise the configured `CEREBRAS_MAX_*` ceilings**
   (reading `limit-*`/`remaining-*` as the account's budget once disabled the throttle).
@@ -33,6 +51,12 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
   than a whole window.
 - `config.json` holds one settings profile per engine (`profiles.<engine>`); switching engine
   swaps the whole model set and switching back recovers it.
+- **An engine-scoped setting is read from the engine's profile, never from `config`**:
+  `settings.engine_profile().KG_EXTRACT_MODEL` (`settings/profile.py`). Several engines serve at
+  once (each account has one), so `config` holds only the installation's settings and a read of
+  an engine-scoped name there fails. `settings.profile_of(engine)` resolves any engine's. The
+  guardrail, the embedder and their context windows are read from the `ollama` profile by every
+  engine, and the panel writes them there.
 - Ollama at `OLLAMA_HOST` (`localhost:13434`, a forwarded port to a remote A40). Read VRAM
   through `/api/ps`, never `nvidia-smi` (that is this machine's card). `OLLAMA_MAX_LOADED_MODELS ≥ 3`.
 - The API unloads models after 30 min idle (`server/jobs/idle.py`), reading only the job
@@ -71,9 +95,9 @@ job becomes a package named after itself whose `__init__` re-exports the public 
 put a component back at the root.
 
 - `inference/`: the engine boundary in `__init__.py` (all model traffic via `generate()`/
-  `embed()`/`embed_batch()`; never call an SDK from business logic), `ollama` (the local
-  engine, the one importer of the `ollama` SDK; the boundary reaches it lazily), `cerebras`,
-  `cerebras_budget`, `usage`, `repair` (`parse_with_repair`, requires an explicit `shape`),
+  `embed()`/`embed_batch()`; never call an SDK from business logic; `using`), `types.py`,
+  `thinking.py`, `interface.py`, `engines.py`, `ollama/` (the local engine, the one importer of
+  the `ollama` SDK; reached lazily), `cerebras_ollama/`, `usage`, `repair` (`parse_with_repair`, requires an explicit `shape`),
   `vectors` (L2 normalisation, batched embedding, the query/document prefixes; shared by the
   builders, the embedder and the tutor).
 - `utils/`: `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `languages`,
