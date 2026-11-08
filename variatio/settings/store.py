@@ -130,13 +130,21 @@ def profiles_in(file_values: dict[str, object]) -> dict[str, dict[str, object]]:
 
 
 def resolve(
-    settings: list[Setting], file_values: dict[str, object], environ: dict[str, str]
+    settings: list[Setting],
+    file_values: dict[str, object],
+    environ: dict[str, str],
+    engine: str | None = None,
 ) -> tuple[dict[str, object], dict[str, str]]:
-    """Resolve every setting, returning its value and the layer that supplied it."""
+    """Resolve every setting, returning its value and the layer that supplied it.
+
+    The engine-scoped settings resolve from `engine`'s profile, or from the profile of the
+    engine the file and the environment name when `engine` is None.
+    """
     values: dict[str, object] = {}
     sources: dict[str, str] = {}
     file_values = _rename_legacy(file_values)
-    engine = active_engine(settings, file_values, environ)
+    if engine is None:
+        engine = active_engine(settings, file_values, environ)
     _warn_unknown(settings, file_values)
 
     for setting in settings:

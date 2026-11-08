@@ -5,12 +5,42 @@ import os
 from loguru import logger
 
 from . import derived, store
+from .profile import DERIVED_NAMES, Profile, current_engine
+from .profile import use as use_profile
 from .registry import BY_KEY, BY_NAME, GROUPS, PIPELINE, REGISTRY, STAGES
 from .types import Impact, Setting, SettingError
 
 _values: dict[str, object] = {}
 _sources: dict[str, str] = {}
 _namespace: dict | None = None
+# One resolved profile per engine, dropped whenever the settings are re-read.
+_profiles: dict[str, Profile] = {}
+
+# Every `config` name whose value depends on the engine: what `engine_profile()` holds.
+SCOPED_NAMES = frozenset(
+    {s.name for s in REGISTRY if s.scope == "engine" and s.name} | DERIVED_NAMES
+)
+
+
+def engine_profile() -> Profile:
+    """The profile of the engine fixed for this context (`inference.using`)."""
+    return profile_of(current_engine())
+
+
+def profile_of(engine: str) -> Profile:
+    """The profile of `engine`, resolved from the file and the environment and kept."""
+    cached = _profiles.get(engine)
+    if cached is None:
+        cached = _profiles[engine] = _build_profile(engine)
+    return cached
+
+
+def _build_profile(engine: str) -> Profile:
+    """Resolve every setting as `engine` reads it and keep its engine-scoped names."""
+    resolved, _ = store.resolve(list(REGISTRY), _read_file(), dict(os.environ), engine)
+    namespace = {s.name: resolved[s.key] for s in REGISTRY if s.name}
+    namespace.update(derived.derive(resolved))
+    return Profile(engine, {name: namespace[name] for name in SCOPED_NAMES})
 
 
 def values() -> dict[str, object]:
@@ -116,6 +146,7 @@ def load() -> None:
     _values, _sources = store.resolve(
         list(REGISTRY), _read_file(), dict(os.environ)
     )
+    _profiles.clear()
 
 
 def _read_file() -> dict[str, object]:

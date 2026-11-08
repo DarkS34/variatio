@@ -20,7 +20,7 @@ from contextlib import contextmanager
 
 from loguru import logger
 
-from .. import config
+from .. import config, settings
 from ..utils import progress
 from .thinking import ThinkingSplitter, split_thinking
 from .interface import Engine
@@ -33,10 +33,15 @@ _current: contextvars.ContextVar[Engine | None] = contextvars.ContextVar(
 
 @contextmanager
 def using(engine: Engine) -> Iterator[Engine]:
-    """Fix `engine` as the one every call of this context makes, for the block."""
+    """Fix `engine` as the one every call of this context makes, for the block.
+
+    It fixes the engine's settings profile too (`settings.engine_profile()`): which model a
+    phase calls, and how, is the engine's.
+    """
     token = _current.set(engine)
     try:
-        yield engine
+        with settings.use_profile(engine.name):
+            yield engine
     finally:
         _current.reset(token)
 
