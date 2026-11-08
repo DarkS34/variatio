@@ -139,3 +139,9 @@ def test_what_one_ledger_records_the_other_reads(tmp_path):
     first.record("gemma-4-31b", "fase", prompt_tokens=10, completion_tokens=5, headers={})
     [model] = second.snapshot()["models"]
     assert model["windows"]["day"]["requests_used"] == 1
+
+
+def test_the_local_engine_tells_an_embedder_outside_any_job(engines):
+    local = engines.get("ollama")
+    embedder = settings.profile_of("ollama").EMBEDDING_LLM
+    assert contextvars.Context().run(local._looks_like_embedding, embedder) is True
