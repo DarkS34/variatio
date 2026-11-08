@@ -9,7 +9,7 @@ import unicodedata
 from collections import defaultdict
 from datetime import datetime
 
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 from variatio.loaders.relations import RelationSchema
 
 

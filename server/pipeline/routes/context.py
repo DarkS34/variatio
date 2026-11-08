@@ -8,7 +8,7 @@ edited from the panel rather than from a stage screen.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from variatio.loaders.content_context import CANONICAL_KEYS
+from variatio.knowledge_graph.context import CANONICAL_KEYS
 
 from ... import auth
 from .. import context_edit

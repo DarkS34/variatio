@@ -253,7 +253,7 @@ def test_a_group_may_follow_its_own_progress_and_its_student_reads_it(db, aula):
 
 
 def _graph(aula):
-    from variatio.loaders.knowledge_graph import KnowledgeGraph
+    from variatio.knowledge_graph.graph import KnowledgeGraph
 
     return KnowledgeGraph(str(aula.ws.kg_path))
 

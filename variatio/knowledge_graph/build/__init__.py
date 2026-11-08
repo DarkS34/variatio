@@ -28,7 +28,7 @@ from ...inference import ensure_models
 from ...utils.workspace import Workspace
 from ...loaders import locale
 from ...loaders.relations import RelationSchema
-from .. import content_context_builder
+from . import context as content_context_builder
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
 __all__ = [

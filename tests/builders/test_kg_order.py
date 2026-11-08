@@ -2,13 +2,7 @@ import json
 from types import SimpleNamespace
 
 from variatio import config
-from variatio.builders.knowledge_graph_builder import (
-    blocks,
-    cleaning,
-    curation,
-    extraction,
-    parsing,
-)
+from variatio.knowledge_graph.build import blocks, cleaning, curation, extraction, parsing
 from variatio.loaders.relations import RELATION_SCHEMA_ES as SCHEMA
 
 from ..conftest import ES

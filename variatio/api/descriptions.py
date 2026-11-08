@@ -17,7 +17,7 @@ from ..runtime.embedder import (
     save_descriptions,
 )
 from ..loaders import locale
-from ..loaders.knowledge_graph import KnowledgeGraph
+from ..knowledge_graph.graph import KnowledgeGraph
 from . import _artifacts
 
 

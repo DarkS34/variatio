@@ -3,9 +3,9 @@ import json
 import pytest
 
 from variatio import config
-from variatio.builders import content_context_builder
+from variatio.knowledge_graph.build import context as content_context_builder
 from variatio.utils.workspace import Workspace
-from variatio.loaders.content_context import ContentContext
+from variatio.knowledge_graph.context import ContentContext
 
 
 class FakeResponse:

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2] / "variatio"
 CALLERS = [
     "builders/exemplars_bank_builder.py",
     "builders/exemplars_profile_builder.py",
-    "builders/knowledge_graph_builder/__init__.py",
+    "knowledge_graph/build/__init__.py",
 ]
 # An English noun phrase: ASCII lowercase words. It is not a style rule — the label lands
 # inside "Checking the {label} models", and a Spanish genitive produced "Checking the del

@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from variatio import config
-from variatio.builders.knowledge_graph_builder import curation
+from variatio.knowledge_graph.build import curation
 from variatio.prompts.es import curate_graph_domains_prompt
 
 from ..conftest import ES

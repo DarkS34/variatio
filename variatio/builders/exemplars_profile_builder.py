@@ -19,12 +19,13 @@ from ..inference import ensure_models
 from ..utils.json_io import write_json
 from ..inference.repair import parse_with_repair
 from ..utils.workspace import Workspace
-from ..loaders import content_context, locale
+from ..knowledge_graph import context as content_context
+from ..loaders import locale
 from ..loaders.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
 from ..prompts import wording as wording_sets
 from .. import documents
-from . import content_context_builder
+from ..knowledge_graph.build import context as content_context_builder
 
 
 BUILD_PHASES = (

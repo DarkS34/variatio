@@ -21,7 +21,7 @@ from variatio.utils import json_io
 from variatio.runtime.tagger import TRACE_KEY
 from variatio.utils.workspace import Workspace
 from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from .. import auth
 from ..core import contexts

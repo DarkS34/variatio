@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 from variatio.utils.workspace import Workspace
 from variatio.loaders import locale
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ..pipeline import storage
 

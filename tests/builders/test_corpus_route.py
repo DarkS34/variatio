@@ -3,7 +3,7 @@ import json
 import pytest
 
 from variatio.documents import pages
-from variatio.builders.knowledge_graph_builder import extraction
+from variatio.knowledge_graph.build import extraction
 from variatio.inference import GenerationResponse
 from variatio.utils.workspace import Workspace
 

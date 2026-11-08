@@ -16,7 +16,7 @@ from .. import config, inference
 from ..utils import progress
 from ..inference.repair import parse_with_repair
 from .embedder import Embedder
-from ..loaders.content_context import ContentContext
+from ..knowledge_graph.context import ContentContext
 
 TRACE_KEY = "_tagging"
 

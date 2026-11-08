@@ -9,19 +9,16 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..builders import (
-    exemplars_bank_builder,
-    exemplars_profile_builder,
-    knowledge_graph_builder,
-)
+from ..builders import exemplars_bank_builder, exemplars_profile_builder
+from ..knowledge_graph import build as knowledge_graph_builder
 from ..builders.exemplars_bank_builder import ExemplarsBankBuilder
 from ..builders.exemplars_profile_builder import ExemplarsProfileBuilder
-from ..builders.knowledge_graph_builder import KnowledgeGraphBuilder
+from ..knowledge_graph.build import KnowledgeGraphBuilder
 from ..utils import progress
 from ..utils.json_io import write_json
 from ..utils.workspace import Workspace
 from ..loaders.exemplars_profile import ExemplarsProfile
-from ..loaders.knowledge_graph import KnowledgeGraph
+from ..knowledge_graph.graph import KnowledgeGraph
 from . import _artifacts
 from .initialize import make_embedder, make_tagger
 

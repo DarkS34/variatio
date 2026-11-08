@@ -1,6 +1,6 @@
 """The mechanical merge key singularises the head of a noun phrase as well as its last word."""
 
-from variatio.builders.knowledge_graph_builder import cleaning
+from variatio.knowledge_graph.build import cleaning
 
 
 def test_a_plural_head_before_de_merges_with_its_singular():

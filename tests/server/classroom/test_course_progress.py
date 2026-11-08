@@ -25,7 +25,7 @@ from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs import router as jobs_routes
 from variatio.utils.workspace import Workspace
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ...conftest import CHAIN_GRAPH
 

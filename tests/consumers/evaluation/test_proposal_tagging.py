@@ -14,7 +14,7 @@ import pytest
 from consumers.evaluation import FAILED, OK, ArmResult, Commission
 from consumers.evaluation.run import _tag, off_limits
 from variatio.utils import progress
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ...conftest import CHAIN_GRAPH, PREREQUISITE
 

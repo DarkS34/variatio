@@ -20,9 +20,9 @@ from .. import config, inference
 from ..prompts import wording as wording_sets
 from ..utils import progress
 from ..inference.repair import parse_with_repair
-from ..loaders.content_context import ContentContext
+from ..knowledge_graph.context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
-from ..loaders.knowledge_graph import KnowledgeGraph
+from ..knowledge_graph.graph import KnowledgeGraph
 from . import checks, screening
 from .embedder import Embedder
 from .tagger import ConceptTagger

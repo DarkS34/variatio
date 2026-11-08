@@ -1,17 +1,19 @@
-"""Two indices and the prose one of them is built from.
+"""Two indices, and a re-export of the prose one of them is built from.
 
-    descriptions.py  the retrieval surface: LLM-written concept descriptions and their cache
     cache.py         the two `.npz` and the fingerprints that decide they are still valid
     index.py         `Embedder`: the concept centroids, the bank, and the two-signal score
 
+The prose is `knowledge_graph/descriptions.py`: LLM-written concept descriptions and their cache.
+
 Every public name is re-exported here, so splitting the package cost no caller an import.
-The vector arithmetic and the batched embedding calls are `inference/vectors.py`, shared with the
-builders and the tutor.
+The vector arithmetic and the batched embedding calls are `inference/vectors.py`, shared with
+the builders and the tutor.
 """
 
 from ...inference.vectors import embed_normalized, l2_normalize
-from . import cache, descriptions, index
-from .descriptions import (
+from . import cache, index
+from ...knowledge_graph import descriptions
+from ...knowledge_graph.descriptions import (
     ConceptDescriber,
     load_descriptions,
     load_sources,

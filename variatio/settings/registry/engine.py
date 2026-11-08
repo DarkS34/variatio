@@ -250,7 +250,7 @@ comparte con las demás pasó a ser uno que razona: pedirle que particionase el 
 respondiera dentro del canal de razonamiento y no devolviera nada. Ahora solo nombra los
 dominios — `assign_round` coloca los conceptos, tanda a tanda — y las dos llamadas siguen
 acotadas por una gramática y por tanto sin pensar. La medición está en el sitio de la
-llamada, en `knowledge_graph_builder/curation.py:curate_domains`. Aquí el que estaba mal no
+llamada, en `knowledge_graph/build/curation.py:curate_domains`. Aquí el que estaba mal no
 era el modelo, así que esto sigue apuntando al mismo que las demás; era el pensar."""
 
 _REPAIR_DOC = """Reparar es la única llamada que se dispara DESDE DENTRO de un bucle por elemento, así que

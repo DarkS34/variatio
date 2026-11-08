@@ -1,6 +1,6 @@
 import json
 
-from variatio.builders.knowledge_graph_builder import extraction
+from variatio.knowledge_graph.build import extraction
 from variatio.documents import chunking
 
 from ..conftest import ES
@@ -205,7 +205,7 @@ def test_excerpt_returns_nothing_for_an_all_navigation_chunk():
 
 
 def test_write_sources_records_the_outline_and_the_units(tmp_path):
-    from variatio.builders.knowledge_graph_builder import curation
+    from variatio.knowledge_graph.build import curation
 
     path = tmp_path / "concept_sources.json"
     outline = [{"document": 0, "heading": "Tema I", "chunk": 2}]
@@ -224,7 +224,7 @@ def test_write_sources_records_the_outline_and_the_units(tmp_path):
 
 
 def test_write_sources_omits_the_two_keys_when_there_is_no_syllabus(tmp_path):
-    from variatio.builders.knowledge_graph_builder import curation
+    from variatio.knowledge_graph.build import curation
 
     path = tmp_path / "concept_sources.json"
     curation.write_sources(path, {"passages": {}, "definitions": {}, "documents": []}, set())
@@ -259,8 +259,8 @@ def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
 
 def test_restamp_adopts_the_new_fingerprints_without_touching_the_texts(tmp_path):
     from variatio.runtime.embedder import ConceptDescriber, load_descriptions
-    from variatio.loaders.content_context import ContentContext
-    from variatio.loaders.knowledge_graph import KnowledgeGraph
+    from variatio.knowledge_graph.context import ContentContext
+    from variatio.knowledge_graph.graph import KnowledgeGraph
 
     graph_path = tmp_path / "kg.json"
     graph_path.write_text(

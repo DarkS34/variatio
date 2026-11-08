@@ -13,14 +13,14 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from ... import config, inference
-from ...prompts import wording as wording_sets
-from ...utils import progress
-from ...utils.json_io import write_json
-from ...inference.repair import parse_with_repair
-from ...inference.vectors import embed_normalized
-from ...loaders.content_context import ContentContext
-from ...loaders.knowledge_graph import KnowledgeGraph
+from .. import config, inference
+from ..prompts import wording as wording_sets
+from ..utils import progress
+from ..utils.json_io import write_json
+from ..inference.repair import parse_with_repair
+from ..inference.vectors import embed_normalized
+from .context import ContentContext
+from .graph import KnowledgeGraph
 
 # Grammar-constrained decoding, not a bare `think=False`: with the reasoning channel closed
 # this model reasons INSIDE the answer, and thousands of characters of deliberation end up

@@ -16,9 +16,9 @@ from ..utils import progress
 from ..utils.workspace import Workspace
 from ..loaders import locale
 from ..loaders.exemplars_profile import ExemplarsProfile
-from ..loaders.knowledge_graph import KnowledgeGraph
-from ..runtime.taggability import BUILD_PHASES as TAGGABILITY_PHASES
-from ..runtime.taggability import review
+from ..knowledge_graph.graph import KnowledgeGraph
+from ..knowledge_graph.taggability import BUILD_PHASES as TAGGABILITY_PHASES
+from ..knowledge_graph.taggability import review
 from . import _artifacts
 
 

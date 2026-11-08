@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 from variatio.loaders.relations import RELATION_SCHEMA_ES
 
 # The domains are deliberately NOT in size order, NOT alphabetical and NOT in the order

@@ -27,7 +27,7 @@ from consumers.tutor.api import digest as digest_job
 from consumers.tutor.digest import Asked, clean_themes, names_someone
 from consumers.tutor.turn import TurnResult
 from variatio.utils.workspace import Workspace
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ...conftest import CHAIN_GRAPH
 

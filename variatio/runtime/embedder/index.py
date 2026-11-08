@@ -9,9 +9,9 @@ from loguru import logger
 from ... import config, inference
 from ...utils import progress
 from ...inference.vectors import l2_normalize, prefix_for
-from ...loaders.knowledge_graph import KnowledgeGraph
+from ...knowledge_graph.graph import KnowledgeGraph
 from . import cache
-from .descriptions import ConceptDescriber
+from ...knowledge_graph.descriptions import ConceptDescriber
 
 
 class Embedder:

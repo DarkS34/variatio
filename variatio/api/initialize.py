@@ -18,10 +18,10 @@ from ..utils import progress
 from ..utils.workspace import Workspace
 from ..runtime.embedder import Embedder
 from ..loaders import locale
-from ..loaders.content_context import ContentContext
+from ..knowledge_graph.context import ContentContext
 from .. import prompts as prompts_pkg
 from ..loaders.exemplars_profile import ExemplarsProfile
-from ..loaders.knowledge_graph import KnowledgeGraph
+from ..knowledge_graph.graph import KnowledgeGraph
 from ..runtime.generator import VariantGenerator
 from . import _artifacts
 

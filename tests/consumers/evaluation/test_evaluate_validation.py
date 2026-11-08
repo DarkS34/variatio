@@ -4,7 +4,7 @@ import pytest
 
 from consumers.evaluation import Commission
 from consumers.evaluation.run import _validate
-from variatio.loaders.knowledge_graph import KnowledgeGraph
+from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ...conftest import CHAIN_GRAPH
 

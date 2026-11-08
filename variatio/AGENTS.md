@@ -48,16 +48,18 @@ of three kinds:
 
 - **Vocabulary** (consulted, never doing work): `utils/`, `settings/`, `loaders/`, `prompts/`.
 - **The engine**: `inference/`, every model call.
+- **An artifact**: `knowledge_graph/` (the graph and the subject's context: their classes, their
+  build, the concept descriptions and the taggability review).
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
-  `generator.py`, `tagger.py`, `taggability.py`, `checks.py`, `embedder/`, `screening/`).
+  `generator.py`, `tagger.py`, `checks.py`, `embedder/`, `screening/`).
 - **The door**: `api/`.
 
 Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
 **`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
 only to resolve their own paths, and `runtime/`, `prompts/` and `settings/` do
-not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/` and
-`documents/` import `inference/`** (D-230) — `documents/pages/` transcribes
+not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and
+`knowledge_graph/` (not its readers `graph.py` and `context.py`) import `inference/`** (D-230) — `documents/pages/` transcribes
 with the vision model, and `inference/repair.py` and `inference/vectors.py` call it on behalf of
 `builders/` and `runtime/`. `runtime/__init__.py` and `utils/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
@@ -72,7 +74,9 @@ put a component back at the root.
   builders, the embedder and the tutor).
 - `utils/`: `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `languages`,
   `repetition`.
-- `loaders/`: `knowledge_graph`, `exemplars_profile`, `content_context`, `relations`, `locale`
+- `knowledge_graph/`: `graph` (`KnowledgeGraph`), `context` (`ContentContext`), `build/`,
+  `descriptions`, `taggability`.
+- `loaders/`: `exemplars_profile`, `relations`, `locale`
   (the package was `instance/` until 2026-10-08, the directory's old name).
   The bank has no loader module; `api/initialize.py` reads it inline.
 - Import `config` from the root and read `config.X` by module attribute; **never
@@ -194,7 +198,7 @@ since 2026-10-16, D-228, as the transcription and the server read it too); only 
 package talks to a model.
 Builders use `inference.generate()`, never `generate_stream()` (a build runs out of process).
 
-**Knowledge graph** ([knowledge_graph_builder/](variatio/builders/knowledge_graph_builder/)):
+**Knowledge graph** ([knowledge_graph/build/](variatio/knowledge_graph/build/)):
 extract → clean → curate, handing dicts in memory; only `curate()` writes.
 
 - Relation vocabulary is `loaders/relations.py` per language. The `verbose` labels
@@ -276,7 +280,7 @@ the profile and in the bank. The record keeps `commission.omit` as asked and
 `resolved.omitted` as run. The evaluation never leaves a field out: a comparison is of
 whole exercises (`toEvaluationParams` strips `omit`, and its form does not ask).
 
-## Taggability
+## Taggability (`variatio/knowledge_graph/taggability.py`)
 
 Not part of the builder: a job (`review_taggability`) judged per domain against the
 profile's modalities and real bank samples; operative test is discrimination, tie-break

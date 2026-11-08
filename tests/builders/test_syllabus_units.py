@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 
 from variatio import config
-from variatio.builders.knowledge_graph_builder import blocks, curation
+from variatio.knowledge_graph.build import blocks, curation
 from variatio.prompts.es import segment_syllabus_prompt
 
 from ..conftest import ES

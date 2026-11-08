@@ -2,7 +2,7 @@ import inspect
 
 import pytest
 
-from variatio.builders.knowledge_graph_builder import cleaning, curation, extraction
+from variatio.knowledge_graph.build import cleaning, curation, extraction
 
 
 def _binds(fn, *args, **kwargs):
