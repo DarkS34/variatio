@@ -47,6 +47,10 @@ class CerebrasEngine:
         self._catalog: tuple[float, list[str]] | None = None
         self._catalog_failed_at: float | None = None
 
+    def close(self) -> None:
+        """Close the HTTP connection pool."""
+        self._client.close()
+
     def is_available(self) -> bool:
         """Whether the API answers at all."""
         try:

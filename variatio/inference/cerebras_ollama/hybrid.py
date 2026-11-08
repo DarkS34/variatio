@@ -8,12 +8,13 @@ only ever mean the local half.
 from loguru import logger
 
 from ... import config
+from ..interface import Engine
 from ..ollama import OllamaEngine
 from ..types import GenerationResponse, InferenceError
 from .remote import CerebrasEngine
 
 
-class HybridEngine:
+class HybridEngine(Engine):
     """One engine over two backends, routed per model by `CEREBRAS_MODELS`.
 
     Everything not named there — the guardrail and the embedder included — stays on Ollama,
@@ -35,6 +36,11 @@ class HybridEngine:
         costing every open tab a transatlantic round trip every 15 s.
         """
         return self._ollama.is_available()
+
+    def close(self) -> None:
+        """Close both backends."""
+        self._cerebras.close()
+        self._ollama.close()
 
     def generate(self, model: str, prompt: str, **kwargs) -> GenerationResponse:
         """Ask the backend that serves `model` for one answer."""

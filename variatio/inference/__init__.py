@@ -201,8 +201,7 @@ def remote_models() -> frozenset[str]:
     It is what lets a screen say "remoto" instead of pretending a hosted model sits on the
     disk.
     """
-    remote = getattr(engine(), "remote_models", None)
-    return remote() if callable(remote) else frozenset()
+    return engine().remote_models()
 
 
 def unload(model: str, is_embedding: bool = False) -> bool:

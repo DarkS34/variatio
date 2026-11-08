@@ -16,6 +16,7 @@ from tqdm import tqdm
 from ... import config
 from ...utils import progress, repetition
 from .. import usage
+from ..interface import Engine
 from ..thinking import ThinkingSplitter, split_thinking
 from ..types import (
     GenerationResponse,
@@ -31,7 +32,7 @@ from ..types import (
 _INSTALLED_TTL_SECONDS = 30.0
 
 
-class OllamaEngine:
+class OllamaEngine(Engine):
     """The local half: an Ollama server, reached over `config.OLLAMA_HOST`."""
 
     name = "ollama"
@@ -247,6 +248,17 @@ class OllamaEngine:
                 capabilities = []
             self._capabilities[model] = capabilities
         return self._capabilities[model]
+
+    def remote_models(self) -> frozenset[str]:
+        """None: every model this engine serves is on the local server."""
+        return frozenset()
+
+    def close(self) -> None:
+        """Close the SDK's HTTP connection pool.
+
+        The SDK exposes no close of its own; its `_client` is the `httpx.Client` it opened.
+        """
+        self._client._client.close()
 
     def supports_thinking(self, model: str) -> bool:
         """Whether the model has a reasoning mode to ask for."""
