@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 from variatio.utils import json_io
 from variatio.utils.lexicon import fold
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ExemplarsProfile, ItemType
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile, ItemType
 
 from .. import auth
 from ..classroom import groups

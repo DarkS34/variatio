@@ -297,7 +297,10 @@ def test_no_context_renders_no_empty_heading(code):
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
 def test_each_set_declares_a_difficulty_field_that_could_be_a_field_name(code):
-    from variatio.loaders.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
+    from variatio.exemplars_bank.exemplars_profile.profile import (
+        DIFFICULTY_FIELDS,
+        ExemplarsProfile,
+    )
 
     module = prompts.of(code)
     assert module.DIFFICULTY_FIELD in DIFFICULTY_FIELDS, (

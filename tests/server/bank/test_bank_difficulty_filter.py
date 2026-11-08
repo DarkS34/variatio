@@ -13,7 +13,7 @@ from fastapi import HTTPException
 
 from server.bank.routes import bank as route
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
+from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY
 
 
 def _type(primary: str, levels=("basico", "intermedio", "avanzado")) -> dict:

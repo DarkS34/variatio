@@ -1,6 +1,6 @@
 """What runs when an exercise is asked for: the components that read the artifacts.
 
-The other half of `builders/`. A builder turns raw documents into the four artifacts of
+The other half of the builds. A build turns raw documents into the four artifacts of
 `artifacts/`; everything here consumes them — the generator, the tagger, the two
 screens over the free text and the checks a variant is held to. All of them take OBJECTS and
 return data: not one knows what a `Workspace` is, and not one writes a file. That is `api/`'s

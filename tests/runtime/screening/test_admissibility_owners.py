@@ -2,7 +2,7 @@ import json
 
 from variatio.runtime import screening
 from variatio.utils.lexicon import fold
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
 from ...conftest import PROFILE
 

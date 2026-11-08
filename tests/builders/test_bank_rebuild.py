@@ -10,11 +10,11 @@ import json
 
 import pytest
 
-from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
+from variatio.exemplars_bank.build import ExemplarsBankBuilder
 from variatio.utils import progress
 from variatio.utils.json_io import write_json
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
 PROFILE = {
     "item_types": {

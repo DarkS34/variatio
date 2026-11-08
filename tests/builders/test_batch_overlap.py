@@ -5,10 +5,10 @@ from types import SimpleNamespace
 import pytest
 
 from variatio import config
-from variatio.builders import exemplars_bank_builder
-from variatio.builders.exemplars_bank_builder import ExemplarsBankBuilder
+from variatio.exemplars_bank import build as exemplars_bank_builder
+from variatio.exemplars_bank.build import ExemplarsBankBuilder
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
 PROFILE = {
     "item_types": {

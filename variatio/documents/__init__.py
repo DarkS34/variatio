@@ -4,7 +4,7 @@ Shared by all three builders — anything about reading a source file belongs he
 duplicated into one of them — and by whatever else reads a raw document: the transcription
 (`api/transcribe.py`), the server (`server/raw_data.py`, `server/originals.py`,
 `server/pipeline/approvals.py`), the tutor's passages and the evaluation's plain reading. That
-is why it sits beside `builders/` and not inside it (until 2026-10-16 it was
+is why it sits beside the builds and not inside one (until 2026-10-16 it was
 `builders/source_docs/`).
 
 `pages` (a package, one module per step of a transcription) is the only part that talks to a

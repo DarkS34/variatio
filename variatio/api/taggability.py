@@ -14,7 +14,7 @@ from loguru import logger
 from .. import prompts as prompts_pkg
 from ..utils import locale, progress
 from ..utils.workspace import Workspace
-from ..loaders.exemplars_profile import ExemplarsProfile
+from ..exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from ..knowledge_graph.graph import KnowledgeGraph
 from ..knowledge_graph.taggability import BUILD_PHASES as TAGGABILITY_PHASES
 from ..knowledge_graph.taggability import review

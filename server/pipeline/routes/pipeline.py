@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from variatio.runtime import screening
 from variatio.prompts import wording as wording_sets
 from variatio.utils import locale
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.api import TAGGABILITY_PHASES, _artifacts
 from variatio.api import build_phases as phases_of
 from variatio.api import step_rates

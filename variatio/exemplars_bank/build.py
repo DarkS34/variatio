@@ -24,7 +24,7 @@ from ..utils.lexicon import fold
 from ..inference.repair import parse_with_repair
 from ..utils.workspace import Workspace
 from ..knowledge_graph.context import ContentContext
-from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
+from .exemplars_profile.profile import ITEM_TYPE_KEY, ExemplarsProfile
 
 # Shares of a whole build, and an estimate: transcribing a PDF is one model call per page
 # plus a short one per seam, and `extract` also tags each document as it comes out.

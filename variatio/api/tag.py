@@ -4,7 +4,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..runtime.tagger import ConceptTagger
+from ..exemplars_bank.tagging import ConceptTagger
 from ..utils.json_io import write_json
 from .initialize import RuntimeContext
 

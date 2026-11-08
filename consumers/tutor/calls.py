@@ -2,7 +2,7 @@
 
 One helper for the criteria builder and the classifier, so the rule about grammars lives once:
 a call that reasons cannot keep a grammar in this stack, and a remotely served model drops it
-for the heavier reason `exemplars_bank_builder` measured — Cerebras' constrained decoding
+for the heavier reason `exemplars_bank/build.py` measured — Cerebras' constrained decoding
 writes every non-ASCII character as a broken `\\u00XX`, and both calls here write Spanish. A
 call without its grammar is shown the schema in the prompt instead, and its answer goes
 through the repair like any other.

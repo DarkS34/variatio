@@ -13,14 +13,14 @@ from pathlib import Path
 from loguru import logger
 
 from .. import config
-from ..runtime.tagger import ConceptTagger
+from ..exemplars_bank.tagging import ConceptTagger
 from ..utils import locale, progress
 from ..utils.workspace import Workspace
 from ..retrieval import Embedder
 from ..knowledge_graph import relations
 from ..knowledge_graph.context import ContentContext
 from .. import prompts as prompts_pkg
-from ..loaders.exemplars_profile import ExemplarsProfile
+from ..exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from ..knowledge_graph.graph import KnowledgeGraph
 from ..runtime.generator import VariantGenerator
 from . import _artifacts

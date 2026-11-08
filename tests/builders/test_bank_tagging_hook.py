@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from variatio.runtime.tagger import ConceptTagger
+from variatio.exemplars_bank.tagging import ConceptTagger
 from variatio.utils.json_io import write_json
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.api import build
 
 from ..conftest import CHAIN_GRAPH, PROFILE

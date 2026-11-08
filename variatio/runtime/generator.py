@@ -21,11 +21,11 @@ from ..prompts import wording as wording_sets
 from ..utils import progress
 from ..inference.repair import parse_with_repair
 from ..knowledge_graph.context import ContentContext
-from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
+from ..exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from ..knowledge_graph.graph import KnowledgeGraph
 from . import checks, screening
 from ..retrieval import Embedder
-from .tagger import ConceptTagger
+from ..exemplars_bank.tagging import ConceptTagger
 
 
 def _public_fields(item: dict) -> dict:

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from variatio.utils.workspace import Workspace
 from variatio import prompts
 from variatio.utils import locale
-from variatio.loaders.exemplars_profile import profile_drift
+from variatio.exemplars_bank.exemplars_profile.profile import profile_drift
 
 from ... import auth
 from ...pipeline import approvals, storage

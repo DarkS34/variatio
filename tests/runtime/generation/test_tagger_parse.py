@@ -1,7 +1,7 @@
 import json
 
-from variatio.runtime import tagger as tagger_module
-from variatio.runtime.tagger import ConceptTagger
+from variatio.exemplars_bank import tagging as tagger_module
+from variatio.exemplars_bank.tagging import ConceptTagger
 
 NAMES = ["A", "B", "C", "D", "E", "F"]
 

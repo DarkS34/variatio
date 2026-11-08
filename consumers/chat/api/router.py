@@ -25,7 +25,7 @@ from server.conversations import routes as shared
 from server.conversations import store as shared_store
 from server.core import process
 from server.pipeline import approvals
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
 from .. import config as chat_config
 from . import jobs, usage

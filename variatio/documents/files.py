@@ -38,10 +38,10 @@ def default_converter(ocr: bool = False, table_structure: bool = True):
     # `builders` extra, and these imports cost ~700 MB (torch, transformers, opencv).
     try:
         from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+        from docling.datamodel.base_models import InputFormat
         from docling.datamodel.pipeline_options import PdfPipelineOptions
         from docling.document_converter import (
             DocumentConverter,
-            InputFormat,
             PdfFormatOption,
         )
     except ImportError as e:

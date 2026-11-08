@@ -10,7 +10,7 @@ The construction's own register the same way, in `install()`.
 from loguru import logger
 
 from variatio import api, config
-from variatio.runtime.tagger import ConceptTagger
+from variatio.exemplars_bank.tagging import ConceptTagger
 from variatio.utils import json_io, progress
 from variatio.utils.workspace import Workspace
 

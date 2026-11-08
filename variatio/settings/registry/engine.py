@@ -713,7 +713,7 @@ valor por defecto es el extremo local del túnel SSH; con Ollama en esta misma m
         scope="engine",
         engine_defaults=_MAIN_BY_ENGINE,
         doc=_phase_doc(
-            "Fase de escaneo del generador de perfil de ejemplares (exemplars_profile_builder)."
+            "Fase de escaneo del generador de perfil de ejemplares (exemplars_profile/build.py)."
         ),
     ),
     Setting(

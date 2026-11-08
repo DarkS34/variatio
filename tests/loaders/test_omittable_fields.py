@@ -12,7 +12,7 @@ import json
 import pytest
 
 from variatio.prompts import wording
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.runtime import checks
 from variatio.runtime.generator import (
     VariantGenerator,

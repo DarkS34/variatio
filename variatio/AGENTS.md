@@ -46,24 +46,24 @@ wording. The transcription's rules are in `documents/AGENTS.md`.
 The root holds three files only: `config.py`, `cli.py`, `__init__.py`. Everything else is one
 of three kinds:
 
-- **Vocabulary** (consulted, never doing work): `utils/`, `settings/`, `loaders/`, `prompts/`.
+- **Vocabulary** (consulted, never doing work): `utils/`, `settings/`, `prompts/`.
 - **The engine**: `inference/`, every model call.
 - **An artifact**: `knowledge_graph/` (the graph and the subject's context: their classes, their
-  build, the concept descriptions and the taggability review).
-- **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
-  `generator.py`, `tagger.py`, `checks.py`, `screening/`) and `retrieval/` (the two vector
-  indices, `Embedder`, that `runtime/` searches).
+  build, the concept descriptions and the taggability review) and `exemplars_bank/` (the bank's
+  build and tagging; the profile in `exemplars_profile/`, its class and its build).
+- **Work**: `runtime/` (artifacts → exercises: `generator.py`, `checks.py`, `screening/`) and
+  `retrieval/` (the two vector indices, `Embedder`, that the tagger and `runtime/` search).
 - **The door**: `api/`.
 
 Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
-**`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
-only to resolve their own paths, and `runtime/`, `retrieval/`, `prompts/` and `settings/` do
-not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `retrieval/`, `documents/`
-and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import
+**`api/` is the library's public door; the builds take a `Workspace` only to resolve their own
+paths, and `runtime/`, `retrieval/`, `exemplars_bank/tagging.py`, `prompts/` and `settings/` do
+not import it**; and **inside `variatio/`, only `cli.py`, `runtime/`, `retrieval/`, `documents/`,
+`exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import
 `inference/`** (D-230) — `documents/pages/` transcribes
 with the vision model, and `inference/repair.py` and `inference/vectors.py` call it on behalf of
-`builders/` and `runtime/`. `runtime/__init__.py` and `utils/__init__.py`
+the builds and `runtime/`. `runtime/__init__.py` and `utils/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
 put a component back at the root.
@@ -78,9 +78,9 @@ put a component back at the root.
   `locale`, `repetition`.
 - `knowledge_graph/`: `graph` (`KnowledgeGraph`), `context` (`ContentContext`), `relations`,
   `build/`, `descriptions`, `taggability`.
-- `loaders/`: `exemplars_profile`
-  (the package was `instance/` until 2026-10-08, the directory's old name).
-  The bank has no loader module; `api/initialize.py` reads it inline.
+- `exemplars_bank/`: `build`, `tagging` (`ConceptTagger`), `exemplars_profile/` (`profile`,
+  `ExemplarsProfile`; `build`). The bank has no reader module; `api/initialize.py` reads it
+  inline. (The profile's reader was in `loaders/`, called `instance/` until 2026-10-08.)
 - Import `config` from the root and read `config.X` by module attribute; **never
   `from ..config import X`** — the hot rewrite depends on it.
 
@@ -164,8 +164,9 @@ last word; reasoning switched off is never turned on. `GET /api/health` carries
 
 ## Artifacts
 
-Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
-`variatio/builders/<stem>_builder` → `artifacts/<stem>.json` → loader.
+Each artifact has a stem threaded through by role: `raw/raw_<stem>/` → its build
+(`knowledge_graph/build/`, `exemplars_bank/build.py`, `exemplars_bank/exemplars_profile/build.py`)
+→ `artifacts/<stem>.json` → its reader.
 
 - `knowledge_graph.json` — curated schema (`concepts_by_domains`,
   `generic_non_taggable_concepts`, `taggability_reviewed`, typed `relations`). The number and
@@ -192,10 +193,10 @@ Each artifact has a stem threaded through by role: `raw/raw_<stem>/` →
 - `artifacts/locale.json` — the workspace's prompt language, chosen at creation and never
   after (relation labels are baked into the graph).
 
-## Builders (`variatio/builders/`)
+## Builders (`exemplars_bank/build.py`, `exemplars_bank/exemplars_profile/build.py`)
 
 `api/build.py` is the only importer. The document plumbing they read through is
-`variatio/documents/` (`files`, `markdown`, `chunking`, `pages`, `office`; outside `builders/`
+`variatio/documents/` (`files`, `markdown`, `chunking`, `pages`, `office`; outside the builders
 since 2026-10-16, D-228, as the transcription and the server read it too); only its `pages/`
 package talks to a model.
 Builders use `inference.generate()`, never `generate_stream()` (a build runs out of process).

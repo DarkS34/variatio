@@ -1,6 +1,6 @@
 import copy
 
-from variatio.loaders.exemplars_profile import profile_drift
+from variatio.exemplars_bank.exemplars_profile.profile import profile_drift
 
 EMPTY = {"added": [], "removed": [], "changed": []}
 

@@ -8,8 +8,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2] / "variatio"
 CALLERS = [
-    "builders/exemplars_bank_builder.py",
-    "builders/exemplars_profile_builder.py",
+    "exemplars_bank/build.py",
+    "exemplars_bank/exemplars_profile/build.py",
     "knowledge_graph/build/__init__.py",
 ]
 # An English noun phrase: ASCII lowercase words. It is not a style rule — the label lands

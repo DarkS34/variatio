@@ -9,7 +9,7 @@ hand still sorts the way its own declaration reads.
 
 import pytest
 
-from variatio.loaders.exemplars_profile import UNRANKED_DIFFICULTY, ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import UNRANKED_DIFFICULTY, ExemplarsProfile
 
 
 def _profile(tmp_path, name="nivel_dificultad", levels=("basico", "intermedio", "avanzado"), **extra):

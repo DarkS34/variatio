@@ -202,12 +202,12 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   the workspace's language in `locale.py`);
   `knowledge_graph/` holds the graph (`graph.py`), the subject's context (`context.py`), the
   relation vocabulary (`relations.py`), their build (`build/`), the concept descriptions and
-  the taggability review, a layer between `retrieval` and `loaders | documents`;
-  `retrieval/` holds the two vector indices (`Embedder`), a layer between `builders | runtime`
-  and `knowledge_graph`; `builders/`, `runtime/`, `loaders/` (the profile), `documents/` and
-  `settings/` keep their roles.
-  `builders/`, `loaders/` and the graph's build and loaders take a `Workspace` only for their own
-  paths; the package root holds
+  the taggability review, a layer between `retrieval` and `documents`;
+  `exemplars_bank/` holds the bank's build (`build.py`), its tagging (`tagging.py`) and the
+  profile (`exemplars_profile/`: `profile.py` and its `build.py`), a layer between `runtime` and
+  `retrieval`; `retrieval/` holds the two vector indices (`Embedder`); `runtime/`,
+  `documents/` and `settings/` keep their roles. The three builds take a `Workspace` only for
+  their own paths; the package root holds
   `config.py`, `cli.py` and `__init__.py`. *Why:* a person new to the code finds a thing by name.
 - **D-009 — Renames.** Setting keys, on-disk names, URLs and job kinds do not follow module
   renames; renames go per importer, never with a global `sed`. *Why:* a renamed key silently
@@ -231,10 +231,11 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   (viewer/editor/owner). A generated exercise and a tutor conversation are private to their
   author: anyone else gets the 404 of a missing one; the installation administrator reads
   conversations read-only. *Why:* a filter is not privacy, and a 403 confirms the id exists.
-- **D-230 — Who calls the engine.** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`,
-  `retrieval/`, `documents/` and `knowledge_graph/` (its build, descriptions and taggability review) import
-  `inference/`. *Why:* `api/`, `loaders/`, `prompts/`, `settings/` and the graph's three readers
-  (`knowledge_graph/graph.py`, `context.py`, `relations.py`) stay cheap to import and never call a model.
+- **D-230 — Who calls the engine.** Inside `variatio/`, only `cli.py`, `runtime/`, `retrieval/`,
+  `documents/`, `exemplars_bank/` (its builds and tagging) and `knowledge_graph/` (its build,
+  descriptions and taggability review) import `inference/`. *Why:* `api/`, `prompts/`,
+  `settings/`, the profile reader (`exemplars_bank/exemplars_profile/profile.py`) and the graph's
+  three readers (`knowledge_graph/graph.py`, `context.py`, `relations.py`) stay cheap to import and never call a model.
 - **D-220, D-223 — Documentation.** This section is the only register of closed decisions. One
   `AGENTS.md` per folder holds that folder's rules and their why; this file holds what holds
   everywhere, at most 200 lines. *Why:* the old register (1 295 lines) read as a history, and

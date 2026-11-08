@@ -6,7 +6,7 @@ from server.bank import edit as bank_edit
 from server.bank.edit import BankError
 from server.db import mirror
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
+from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY
 
 PROFILE = {
     "item_types": {

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from variatio import api
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
+from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ..core import contexts

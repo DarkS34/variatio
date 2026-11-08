@@ -129,22 +129,24 @@ variatio/       the library          imports neither
 
 ```text
 api/                                 the door: one function per thing asked of a workspace
-builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
+knowledge_graph/   exemplars_bank/   the artifacts: each one's class, its build and its readers
+runtime/   documents/                the work: artifacts → exercises, files → pages
 retrieval/                           the two vector indices the work searches
-loaders/  prompts/  settings/  utils/               the vocabulary
+prompts/  settings/  utils/          the vocabulary
 inference/                           the engine boundary: every model call
 ```
 
-- **`api/` is the library's public door.** `builders/` and `loaders/` take a
+- **`api/` is the library's public door.** The builds (`knowledge_graph/build/`,
+  `exemplars_bank/build.py`, `exemplars_bank/exemplars_profile/build.py`) take a
   `Workspace` only to resolve their own paths. `runtime/`, `retrieval/`, `prompts/` and
   `settings/` do not import it.
-- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `retrieval/`, `documents/` and
-  `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
-  `inference/repair.py` and `inference/vectors.py` call it on behalf of `builders/` and `runtime/`.
+- **Inside `variatio/`, only `cli.py`, `runtime/`, `retrieval/`, `documents/`,
+  `exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
+  `inference/repair.py` and `inference/vectors.py` call it on behalf of the builds and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
-- The layers above are an import contract: `cli`, `api`, `builders | runtime`,
-  `retrieval`, `knowledge_graph`, `loaders | documents`, `prompts`, `inference`, then `utils`, `settings` and
+- The layers above are an import contract: `cli`, `api`, `runtime`,
+  `exemplars_bank`, `retrieval`, `knowledge_graph`, `documents`, `prompts`, `inference`, then `utils`, `settings` and
   `config`. One crossing is named in it: `utils/lexicon.py` imports `prompts/wording.py`. The two rules above and
   «only `inference/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
@@ -181,11 +183,10 @@ One line per folder: what it holds, and the file to open first.
 | `utils/` | paths, `Workspace`, progress, JSON I/O, languages, the workspace's language (`locale.py`), lexicon, repetition, dotenv | `workspace.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `knowledge_graph/` | the graph (`graph.py`, `KnowledgeGraph`), the subject's context (`context.py`, `ContentContext`), the relation vocabulary (`relations.py`), their build (`build/`: extract, clean, curate, and the context synthesis), the concept descriptions and the taggability review | `__init__.py`, then `build/__init__.py` |
-| `loaders/` | the exemplars profile reader | `exemplars_profile.py` |
+| `exemplars_bank/` | the bank's build (`build.py`) and tagging (`tagging.py`, `ConceptTagger`); the profile in `exemplars_profile/` (`profile.py`, `ExemplarsProfile`; `build.py`) | `__init__.py`, then `build.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
-| `builders/` | raw → artifacts: the profile and bank builders | `exemplars_profile_builder.py` |
 | `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
-| `runtime/` | artifacts → exercises: generator, tagger, checks | `generator.py` |
+| `runtime/` | artifacts → exercises: generator, checks | `generator.py` |
 | `retrieval/` | the two vector indices (`Embedder`) and their caches | `index.py` |
 | `runtime/screening/` | the guardrail and the admissibility judge | `screening/__init__.py` |
 | `api/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `api/__init__.py` |
@@ -251,7 +252,7 @@ there.
 |---|---|---|---|---|---|
 | Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
 | Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
-| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `knowledge_graph/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/runtime/generation/test_taggability*` |
+| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/runtime/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |

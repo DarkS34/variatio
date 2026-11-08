@@ -16,7 +16,7 @@ from ...conftest import CHAIN_GRAPH, CONTEXT, ES, PREREQUISITE, PROFILE
 from variatio import inference
 from variatio.utils.workspace import Workspace
 from variatio.knowledge_graph.context import ContentContext
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 CONCEPTS = [c for listed in CHAIN_GRAPH["concepts_by_domains"].values() for c in listed]

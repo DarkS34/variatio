@@ -1,7 +1,7 @@
 import numpy as np
 
 from variatio.runtime import checks
-from variatio.loaders.exemplars_profile import ItemType
+from variatio.exemplars_bank.exemplars_profile.profile import ItemType
 from variatio.runtime.generator import parse_item
 
 PROFILE = {

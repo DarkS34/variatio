@@ -8,7 +8,7 @@ the chat open a conversation on an exercise of the bank only through `readable`.
 from sqlalchemy.orm import Session as DbSession
 
 from variatio.utils.workspace import Workspace
-from variatio.loaders.exemplars_profile import ITEM_TYPE_KEY
+from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY
 
 from .. import auth
 from ..auth import queries

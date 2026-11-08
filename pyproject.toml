@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.9"
+version = "1.185.10"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -160,10 +160,11 @@ containers = ["variatio"]
 layers = [
     "cli",
     "api",
-    "builders | runtime",
+    "runtime",
+    "exemplars_bank",
     "retrieval",
     "knowledge_graph",
-    "loaders | documents",
+    "documents",
     "prompts",
     "inference",
     "utils : settings : config",
@@ -178,6 +179,7 @@ type = "forbidden"
 source_modules = [
     "variatio.runtime",
     "variatio.retrieval",
+    "variatio.exemplars_bank.tagging",
     "variatio.knowledge_graph.descriptions",
     "variatio.knowledge_graph.taggability",
     "variatio.prompts",
@@ -194,7 +196,7 @@ source_modules = [
     "variatio.knowledge_graph.context",
     "variatio.knowledge_graph.graph",
     "variatio.knowledge_graph.relations",
-    "variatio.loaders",
+    "variatio.exemplars_bank.exemplars_profile.profile",
     "variatio.prompts",
     "variatio.settings",
 ]

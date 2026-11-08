@@ -17,10 +17,10 @@ from pydantic import BaseModel
 
 from .. import config
 from ..prompts import wording as wording_sets
-from .tagger import TRACE_KEY, ConceptTagger
+from ..exemplars_bank.tagging import TRACE_KEY, ConceptTagger
 from ..utils.lexicon import mentions
 from ..retrieval import Embedder
-from ..loaders.exemplars_profile import ItemType
+from ..exemplars_bank.exemplars_profile.profile import ItemType
 
 # How much of a close text a similarity reason quotes: enough to recognise it (plan F5, G2).
 SIMILAR_OPENING_CHARS = 150

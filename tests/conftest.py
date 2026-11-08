@@ -7,7 +7,7 @@ from variatio import prompts
 from variatio.runtime import screening
 from variatio.inference import cerebras_budget
 from variatio.knowledge_graph.context import ContentContext
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 # The Spanish set, which is what every measurement in this suite was taken against.

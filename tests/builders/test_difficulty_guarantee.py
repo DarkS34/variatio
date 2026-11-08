@@ -13,9 +13,9 @@ the same corpus — and none of the four drafts set `decided_by`.
 import pytest
 
 from variatio import prompts
-from variatio.builders.exemplars_profile_builder import guarantee_difficulty
+from variatio.exemplars_bank.exemplars_profile.build import guarantee_difficulty
 from variatio.utils import languages
-from variatio.loaders.exemplars_profile import ExemplarsProfile
+from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
 SETS = {code: prompts.of(code) for code in languages.LANGUAGES}
 
@@ -137,7 +137,7 @@ def test_a_modality_that_is_not_an_object_is_left_for_the_validator():
 def test_rules_written_beside_the_only_modality_are_read_as_its_own():
     # The answer this project got once in seven profiles: the entry closed after the
     # criterion and the rules came as a sibling of the modality's key.
-    from variatio.builders.exemplars_profile_builder import ExemplarsProfileBuilder
+    from variatio.exemplars_bank.exemplars_profile.build import ExemplarsProfileBuilder
 
     answer = (
         '{"item_types": {"problema": {"nivel_dificultad": "Crece el número de pasos. '
@@ -155,7 +155,7 @@ def test_the_second_call_writes_each_criterion_and_its_rules(monkeypatch):
     # rules; one it leaves out keeps the fallback criterion and no rules.
     from types import SimpleNamespace
 
-    from variatio.builders import exemplars_profile_builder as builder_module
+    from variatio.exemplars_bank.exemplars_profile import build as builder_module
 
     builder = object.__new__(builder_module.ExemplarsProfileBuilder)
     builder.prompts = SETS["es"]

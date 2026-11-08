@@ -3,7 +3,7 @@ import pytest
 
 from variatio import config
 from variatio.runtime import checks
-from variatio.runtime.tagger import TRACE_KEY
+from variatio.exemplars_bank.tagging import TRACE_KEY
 
 
 class _FakeEmbedder:
