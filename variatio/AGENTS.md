@@ -73,10 +73,10 @@ put a component back at the root.
   `vectors` (L2 normalisation, batched embedding, the query/document prefixes; shared by the
   builders, the embedder and the tutor).
 - `utils/`: `progress`, `json_io`, `paths`, `dotenv`, `workspace`, `lexicon`, `languages`,
-  `repetition`.
-- `knowledge_graph/`: `graph` (`KnowledgeGraph`), `context` (`ContentContext`), `build/`,
-  `descriptions`, `taggability`.
-- `loaders/`: `exemplars_profile`, `relations`, `locale`
+  `locale`, `repetition`.
+- `knowledge_graph/`: `graph` (`KnowledgeGraph`), `context` (`ContentContext`), `relations`,
+  `build/`, `descriptions`, `taggability`.
+- `loaders/`: `exemplars_profile`
   (the package was `instance/` until 2026-10-08, the directory's old name).
   The bank has no loader module; `api/initialize.py` reads it inline.
 - Import `config` from the root and read `config.X` by module attribute; **never
@@ -201,7 +201,7 @@ Builders use `inference.generate()`, never `generate_stream()` (a build runs out
 **Knowledge graph** ([knowledge_graph/build/](variatio/knowledge_graph/build/)):
 extract → clean → curate, handing dicts in memory; only `curate()` writes.
 
-- Relation vocabulary is `loaders/relations.py` per language. The `verbose` labels
+- Relation vocabulary is `knowledge_graph/relations.py` per language. The `verbose` labels
   («tiene como prerrequisito», «se engloba en», «se relaciona con») are load-bearing: the
   loader indexes by them. `ORIGEN`/`DESTINO` (SOURCE/TARGET) slot names live in
   `CATALOG_WORDS` and in the prompts' prose. The hierarchy is ONE relation, `se_engloba_en`.
@@ -249,7 +249,7 @@ criterion and rules (`criteria_and_rules_prompt`), which the builder writes in.
 Every modality carries a difficulty field; **the ladder is shared, only the criterion is the
 modality's own**. The artifact shape is an ordinary field (`schema.enum`, `description`,
 `guidance.extraction`, `decided_by: "user"`). The field name is the prompt set's
-(`nivel_dificultad` / `difficulty_level`); writers resolve it via `locale.difficulty(ws)`,
+(`nivel_dificultad` / `difficulty_level`); writers resolve it via `prompts.difficulty(language)`,
 readers via `ItemType.difficulty_field`. Rank = position in the modality's own enum;
 unranked sorts last. The criterion has a shape the client splits (`«rung»:` markers,
 `web/src/lib/difficulty.ts`, needs ≥2 marks else shown whole) and writes back: the types of

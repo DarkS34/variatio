@@ -11,9 +11,9 @@ from loguru import logger
 
 from ... import config, inference
 from ... import prompts as prompts_pkg
+from ...utils import locale
 from ...inference.repair import parse_with_repair
 from ...utils.workspace import Workspace
-from ...loaders import locale
 from ..context import CANONICAL_KEYS, NARRATIVE_KEY, ContentContext, load_for
 
 CONTENT_CONTEXT_SCHEMA = {

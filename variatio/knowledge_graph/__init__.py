@@ -2,6 +2,7 @@
 
     graph.py          `KnowledgeGraph`, the curated graph loaded as one NetworkX graph per relation
     context.py        `ContentContext`, what subject the instance is about
+    relations.py      the relation vocabulary, one schema per language
     build/            corpus → the draft graph, and the subject's context
     descriptions.py   the concept descriptions the bank is compared against
     taggability.py    which concepts are any use as a label

@@ -3,9 +3,13 @@
 A schema declares the relation types, which of them is the prerequisite and which is the
 fallback, and the words its catalogue is framed in. The `verbose` labels are what the graph
 loader indexes by, so they are baked into `knowledge_graph.json` at build time.
+`relation_schema(ws)` returns the one a workspace's prompts go with.
 """
 
 from dataclasses import dataclass
+
+from ..utils import locale
+from ..utils.workspace import Workspace
 
 # The two slot names of a triple, and the words framing a catalogue entry. They live here
 # and not in the prompts because a relation's `definition` and `reading` are written using
@@ -320,3 +324,17 @@ RELATION_SCHEMAS = BUILTIN_SCHEMAS
 def schema_for(language: str | None) -> RelationSchema:
     """Return the relation vocabulary of one language, falling back to Spanish."""
     return BUILTIN_SCHEMAS.get(str(language or ""), RELATION_SCHEMA_ES)
+
+
+def relation_schema(ws: Workspace) -> RelationSchema:
+    """Return the relation vocabulary that goes with this workspace's prompts.
+
+    Resolved here so no caller pairs a schema with a prompt set of the other language: the
+    catalogue's definitions and slot names are prose the prompts interpolate.
+    """
+    return schema_for(locale.prompt_language(ws))
+
+
+def prerequisite_relation(ws: Workspace) -> str | None:
+    """Return the verbose label of the relation that orders the curriculum."""
+    return relation_schema(ws).prerequisite_verbose

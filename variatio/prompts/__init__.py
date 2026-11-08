@@ -17,10 +17,21 @@ def of(language: str | None):
     return _SETS[languages.resolve(language)]
 
 
+def difficulty(language: str | None) -> tuple[str, list[str]]:
+    """Return the difficulty field name and its rungs, as the prompt set of `language` writes them.
+
+    One call returns both so no caller pairs one set's field NAME — `nivel_dificultad` in
+    Spanish, `difficulty_level` in English — with the other set's ladder.
+    """
+    module = of(language)
+    return module.DIFFICULTY_FIELD, list(module.DIFFICULTY_LEVELS)
+
+
 __all__ = [
     "CORRECT_ANSWER_MARK",
     "EMPTY_IMAGE_MARK",
     "EMPTY_PAGE_MARK",
     "SEAM_SEPARATORS",
+    "difficulty",
     "of",
 ]

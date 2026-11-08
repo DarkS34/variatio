@@ -14,10 +14,10 @@ from loguru import logger
 
 from .. import config
 from ..runtime.tagger import ConceptTagger
-from ..utils import progress
+from ..utils import locale, progress
 from ..utils.workspace import Workspace
 from ..runtime.embedder import Embedder
-from ..loaders import locale
+from ..knowledge_graph import relations
 from ..knowledge_graph.context import ContentContext
 from .. import prompts as prompts_pkg
 from ..loaders.exemplars_profile import ExemplarsProfile
@@ -172,7 +172,7 @@ def initialize(ws: Workspace, tag: bool = False) -> RuntimeContext:
         content_context=content_context,
         generator_model=config.VARIANT_GENERATION_LLM,
         prompts=prompts_pkg.of(language),
-        prerequisite_relation=locale.prerequisite_relation(ws),
+        prerequisite_relation=relations.prerequisite_relation(ws),
         tagger=tagger,
     )
 

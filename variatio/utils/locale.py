@@ -1,0 +1,54 @@
+"""The workspace's own language: the one its prompts and relation vocabulary are written in.
+
+`artifacts/locale.json` is undotted because it travels with `export-instance`; the database
+column beside it is a mirror, so the panel can list without touching disk. A workspace's
+language is chosen at creation and never after — the relation `verbose` labels are written
+into `knowledge_graph.json` and the loader indexes by them.
+"""
+
+import json
+
+from loguru import logger
+
+from . import languages
+from .json_io import write_json
+from .workspace import Workspace
+
+PROMPT_LANGUAGE_KEY = "prompt_language"
+
+
+def prompt_language(ws: Workspace) -> str:
+    """Return the language this workspace's prompts are written in.
+
+    Tolerant on the way out: an unreadable or unknown value warns and falls back to the
+    default, because a corrupt config file must never stop the process starting.
+    """
+    path = ws.locale_path
+    if not path.is_file():
+        return languages.DEFAULT
+    try:
+        with path.open(encoding="utf-8") as f:
+            raw = json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning(f"[locale] Could not read '{path}': {exc}; using «{languages.DEFAULT}»")
+        return languages.DEFAULT
+    stored = raw.get(PROMPT_LANGUAGE_KEY) if isinstance(raw, dict) else None
+    resolved = languages.normalise(stored)
+    if resolved is None:
+        logger.warning(
+            f"[locale] «{stored}» is not a known language in '{path}'; "
+            f"using «{languages.DEFAULT}»"
+        )
+        return languages.DEFAULT
+    return resolved
+
+
+def set_prompt_language(ws: Workspace, language: str) -> str:
+    """Write the workspace's prompt language, refusing an unknown one."""
+    problem = languages.error(language)
+    if problem:
+        raise ValueError(problem)
+    resolved = languages.normalise(language)
+    write_json(ws.locale_path, {PROMPT_LANGUAGE_KEY: resolved})
+    return resolved
+

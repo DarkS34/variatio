@@ -23,11 +23,11 @@ from loguru import logger
 from ... import config, documents
 from ... import prompts as prompts_pkg
 from ...prompts import wording as wording_sets
-from ...utils import progress
+from ...utils import locale, progress
 from ...inference import ensure_models
 from ...utils.workspace import Workspace
-from ...loaders import locale
-from ...loaders.relations import RelationSchema
+from .. import relations
+from ..relations import RelationSchema
 from . import context as content_context_builder
 from . import blocks, cleaning, curation, extraction, parsing, schemas
 
@@ -98,7 +98,7 @@ class KnowledgeGraphBuilder:
         # are the two words the prompts' own text uses.
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
         self._wording = wording_sets.beside(self.prompts)
-        self.schema = schema or locale.relation_schema(workspace)
+        self.schema = schema or relations.relation_schema(workspace)
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES
         self.chunk_size = config.KG_BUILDER_CHUNK_SIZE
 

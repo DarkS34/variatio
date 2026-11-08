@@ -17,13 +17,12 @@ from pydantic import ValidationError
 from .. import config, documents, inference
 from .. import prompts as prompts_pkg
 from ..prompts import wording as wording_sets
-from ..utils import progress
+from ..utils import locale, progress
 from ..inference import ensure_models
 from ..utils.json_io import write_json
 from ..utils.lexicon import fold
 from ..inference.repair import parse_with_repair
 from ..utils.workspace import Workspace
-from ..loaders import locale
 from ..knowledge_graph.context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile
 

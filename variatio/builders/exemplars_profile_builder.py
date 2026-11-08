@@ -14,13 +14,12 @@ from json_repair import repair_json
 from loguru import logger
 
 from .. import config, inference
-from ..utils import progress
+from ..utils import locale, progress
 from ..inference import ensure_models
 from ..utils.json_io import write_json
 from ..inference.repair import parse_with_repair
 from ..utils.workspace import Workspace
 from ..knowledge_graph import context as content_context
-from ..loaders import locale
 from ..loaders.exemplars_profile import DIFFICULTY_FIELDS, ExemplarsProfile
 from .. import prompts as prompts_pkg
 from ..prompts import wording as wording_sets

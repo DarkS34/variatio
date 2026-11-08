@@ -9,6 +9,7 @@ upstream — and it failed in exactly the state a new workspace starts in.
 from loguru import logger
 
 from .. import prompts as prompts_pkg
+from ..utils import locale
 from ..utils.workspace import Workspace
 from ..runtime.embedder import (
     ConceptDescriber,
@@ -16,7 +17,6 @@ from ..runtime.embedder import (
     load_sources,
     save_descriptions,
 )
-from ..loaders import locale
 from ..knowledge_graph.graph import KnowledgeGraph
 from . import _artifacts
 
