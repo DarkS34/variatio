@@ -5,7 +5,7 @@ Read the root `AGENTS.md` first.
 ## `server/functionalities/shared/conversations/` — what the tutor and the chat share
 
 Decided 2026-10-14 with the chat («nothing copied»); in `apps/conversations/` until 2026-10-16,
-when the user moved it out: `consumers/` keeps the functions that work on the artifacts, and this
+when the user moved it out, and in `server/conversations/` until 2026-11-08: this
 is no function (no route, job, setting or `install`). `store.Store` keeps one function's
 conversations under `<workspace>/<folder>/user_<id>/<id>.json` (folder, reply role, initial
 state and log scope are the function's), one lock per file, `pending` naming the job.
@@ -16,7 +16,7 @@ frees a conversation whose job died. `routes.Function` describes a function for 
 route half — `require` (one's own or the same 404), `admit` (one reply per account in the
 workspace, then the day's limit, 429 with the function's code and `Retry-After`),
 `queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. It imports
-`server` and the database, never `consumers`; the two functions' `api` packages import its
+`server` and the database, never a function; the two functions' server halves import its
 store, usage, jobs and routes. The chat's prompts and both turns import the blocks below.
 
 **The blocks of a chat-like system prompt**, in the library since 2026-11-08:

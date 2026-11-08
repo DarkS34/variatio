@@ -165,11 +165,11 @@ def _writer(params: dict | None) -> str:
 def _evaluation_writer() -> str:
     """Return the model an evaluation's two local proposals are written with.
 
-    The evaluation's own setting, read through `consumers.evaluation.config` at dispatch time like
+    The evaluation's own setting, read through `variatio.functionalities.evaluation.config` at dispatch time like
     everything else here — the panel edits it hot. Imported inside the function: the evaluation is
     mounted from `server/app.py` and nothing else under `server/` names it at module scope.
     """
-    from consumers.evaluation import config as evaluation_config
+    from variatio.functionalities.evaluation import config as evaluation_config
 
     return evaluation_config.LOCAL_MODEL
 

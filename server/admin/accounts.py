@@ -17,7 +17,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from consumers.evaluation.api import store as evaluation_store
+from server.functionalities.evaluation import store as evaluation_store
 
 from .. import auth
 from ..functionalities.shared import generations as generations_store

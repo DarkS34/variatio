@@ -22,11 +22,13 @@ subject to make new exercises and to talk to students.
   free chat and the blind evaluation of the system (the master's thesis study).
 - **The library** (`variatio/`) does both kinds of work and knows no HTTP and no database. The
   **server** (`server/`) gives it accounts, subjects, a job queue and a database. The
-  **functions** (`consumers/`) are packages that plug into the server. The **client**
+  **functions** (generation, tutor, chat, evaluation) each have a library half
+  (`variatio/functionalities/`) and a server half (`server/functionalities/`) that plugs into
+  the server. The **client**
   (`web/`) is a React application the server serves.
 - Every model call goes through one engine boundary to Ollama (local, open weights) or,
   optionally, to Cerebras. The one exception is the evaluation's naive arm, which calls
-  commercial APIs directly (`consumers/evaluation/arms/external.py`).
+  commercial APIs directly (`variatio/functionalities/evaluation/arms/external.py`).
 
 ## 2. Glossary
 
@@ -45,7 +47,7 @@ The interface speaks Spanish; the code speaks English. One word per thing on eac
 | descripción de la asignatura | content context | `artifacts/content_context.json` |
 | «Fase de construcción» / «Fase de pruebas» | `STEPS` / `USES` | `web/src/lib/steps.ts` |
 | puerta | one entry of `USES` | `web/src/lib/steps.ts` |
-| función | a package of `consumers/` | `consumers/` |
+| función | a package of `functionalities/`, in the library and in the server | `variatio/functionalities/`, `server/functionalities/` |
 | encargo | commission: the parameters of a `generate` job | `server/functionalities/generation/` |
 | ejercicio generado | generation, variant | `server/functionalities/shared/generations.py` |
 | «Avance de la asignatura» | curriculum | `server/classroom/curriculum.py` |
@@ -76,7 +78,7 @@ flowchart LR
 flowchart TB
   browser[React client<br/>web/src] -->|HTTP + WebSocket| api
   subgraph api[API process: uv run system]
-    routes[FastAPI routes<br/>each area of server/, consumers/*/api]
+    routes[FastAPI routes<br/>each area of server/, server/functionalities/*]
     queue[Job queue and bus<br/>server/jobs]
   end
   queue -->|one subprocess per build| worker[Build worker<br/>server/jobs/build_worker.py]
@@ -95,21 +97,22 @@ flowchart TB
   accounts, memberships, sessions, invitations and daily counts.
 - The library's CLI (`uv run variatio`) runs the same pipeline with no API and no database.
 
-## 4. The four parts and the direction of imports
+## 4. The three parts and the direction of imports
 
 ```text
 web/            React client         talks to the server over HTTP only
-consumers/      the functions        imports server/ and variatio/
 server/         API, queue, DB       imports variatio/
 variatio/       the library          imports neither
 ```
 
-- **`consumers` imports `variatio` and `server`; neither imports `consumers` back.** The
-  exceptions are named one by one in the import contracts (`[tool.importlinter]` in
-  `pyproject.toml`, `uv run lint-imports`): the settings registry's optional imports of each
-  function's `settings.py`, and four reads of the evaluation older than `consumers/`
-  (`server/jobs/lanes.py`, `server/pipeline/jobs.py`, `server/raw/documents.py`,
-  `server/admin/accounts.py`). No function imports another.
+- **`server` imports `variatio`; `variatio` never imports `server`.** Each function is split
+  the same way: its library half in `variatio/functionalities/<function>/` (no FastAPI, no
+  SQLAlchemy) and its server half in `server/functionalities/<function>/`, whose `install(app)`
+  the composition root calls. No function imports another; what several use lives in
+  `functionalities/shared/` on each side. The exceptions are named one by one in the import
+  contracts (`[tool.importlinter]` in `pyproject.toml`, `uv run lint-imports`): the settings
+  registry's optional imports of each function's `settings.py`, and the evaluation, which runs
+  the whole system through `variatio.api` and reuses the generator.
   `tests/consumers/test_consumers_boundary.py` pins that a function's library half imports
   neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
@@ -144,7 +147,7 @@ inference/                           the engine boundary: every model call
   `exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
   `inference/repair.py` and `inference/vectors.py` call it on behalf of the builds and the functions.
   Outside the library the functions call it too (`variatio/functionalities/tutor/`, `functionalities/chat/`,
-  `consumers/evaluation/`).
+  `variatio/functionalities/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `functionalities`,
   `exemplars_bank`, `retrieval`, `knowledge_graph`, `documents`, `prompts`, `inference`, then `utils`, `settings` and
   `config`. One crossing is named in it: `utils/lexicon.py` imports `prompts/wording.py`. The two rules above and
@@ -190,6 +193,8 @@ One line per folder: what it holds, and the file to open first.
 | `retrieval/` | the two vector indices (`Embedder`) and their caches | `index.py` |
 | `functionalities/shared/screening/` | the guardrail and the admissibility judge, used by several functions | `screening/__init__.py` |
 | `functionalities/chat/` | the free chat's library half: one guarded call per turn | `turn.py` |
+| `functionalities/tutor/` | the Socratic tutor's library half: card, turn, focus, checks, criteria, digest | `turn.py` |
+| `functionalities/evaluation/` | the study's library half: arms, sessions, statistics | `run.py` |
 | `api/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `api/__init__.py` |
 
 **Server: `server/`**
@@ -210,16 +215,10 @@ One line per folder: what it holds, and the file to open first.
 | `pipeline/` | the chain of the three steps: approvals, artifact writes, the label review, the context, what a job chains and what must be settled before it runs, the construction's jobs (`jobs.py`); `routes/` holds `/api/pipeline` and `/api/context` | `approvals.py`, then `chain.py` |
 | `functionalities/generation/` | the commission: its routes, the `generate` job and its bounds | `__init__.py` |
 | `functionalities/chat/` | the free chat's server half: routes, turn job, store, daily count | `router.py` |
+| `functionalities/tutor/` | the tutor's server half: routes, jobs, store, count, activity, panel | `router.py` |
+| `functionalities/evaluation/` | the study's server half: routes, job, store, instruments, stage questionnaires | `router.py` |
 | `functionalities/shared/` | what the tutor and the chat share (`conversations/`: store, daily count, quiet stream, route half) and the store of the generated exercises (`generations.py`) | `conversations/store.py` |
 | `cli/` | the `system` command | `main.py` |
-
-**Functions: `consumers/`** — each package has a library half (no FastAPI, no SQLAlchemy) and
-an `api/` package whose `install(app)` the composition root calls.
-
-| Folder | Holds | Start at |
-|---|---|---|
-| `consumers/evaluation/` | the study: arms, sessions, instruments, statistics | `run.py` |
-| `variatio/functionalities/tutor/` | the Socratic tutor: card, turn, focus, checks, criteria, digest | `turn.py` |
 
 **Client: `web/`**
 
@@ -257,15 +256,15 @@ there.
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `functionalities/generation/`, `functionalities/shared/generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
-| Tutor | `variatio/functionalities/tutor/` | `variatio/functionalities/tutor/`, `functionalities/shared/conversations/` | the embedder, and the guardrail on the student's message (`variatio/functionalities/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
-| Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
-| Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
+| Tutor | `consumers/tutor/` | `functionalities/tutor/`, `functionalities/shared/conversations/` | `functionalities/tutor/`, the embedder, and the guardrail on the student's message (`functionalities/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
+| Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | `functionalities/chat/` and the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
+| Evaluation | `consumers/evaluation/` | `functionalities/evaluation/` | `functionalities/evaluation/`, and the whole pipeline as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
 | Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `admin/`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/admin/`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
 
-Client paths are under `web/src/`; server paths under `server/` unless they start with
-`consumers/`; library paths under `variatio/`.
+Client paths are under `web/src/`; server paths under `server/`; library paths under
+`variatio/`.
 
 ## 7. Invariants
 
@@ -330,7 +329,8 @@ Each rule holds everywhere. The check after it is what fails when the rule break
   over `httpx`, outside the boundary, because it measures them. Every call has its own model,
   reasoning and sampling per phase. `variatio/inference/usage.py` counts the tokens of every job.
 - **Logging.** loguru, configured once in `variatio/__init__.py`. `variatio/` logs in
-  English; `server/` and `consumers/` in Spanish. Format `[scope] Message`. A job logs to
+  English, but for the tutor's, the chat's and the evaluation's library halves; those and
+  `server/` log in Spanish. Format `[scope] Message`. A job logs to
   `logs/<slug>/jobs.log`.
 - **Languages.** Three axes: the interface language is the account's (`web/src/lib/i18n/`),
   the prompt language is the workspace's (`artifacts/locale.json`, `variatio/prompts/`, its
@@ -340,7 +340,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 ## 9. Where to go next
 
 - `AGENTS.md`: the rules that hold everywhere, the closed decisions, and the index of the `AGENTS.md` beside each
-  folder with rules of its own (`variatio/`, `server/`, `consumers/<function>/`, `web/`, …).
+  folder with rules of its own (`variatio/`, `server/`, `variatio/functionalities/<function>/`, `web/`, …).
 - `web/DESIGN.md`: the rulebook for every element of the interface.
 - The docstring of each package's `__init__.py`: what it holds and its modules.
 - `README.md`: what the system does and how to start it.

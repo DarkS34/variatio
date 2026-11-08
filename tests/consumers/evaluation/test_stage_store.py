@@ -8,9 +8,9 @@ import csv
 import io
 
 from server.pipeline import approvals
-from consumers.evaluation.api import stage_instruments as instruments
-from consumers.evaluation.api import stage_store as store
-from consumers.evaluation.api.admin import PROFILE_FILTERS, _narrow
+from server.functionalities.evaluation import stage_instruments as instruments
+from server.functionalities.evaluation import stage_store as store
+from server.functionalities.evaluation.admin import PROFILE_FILTERS, _narrow
 
 GRAPH = approvals.KNOWLEDGE_GRAPH
 PROFILE = approvals.EXEMPLARS_PROFILE
@@ -247,7 +247,7 @@ def test_deleting_an_evaluators_records_takes_both_instruments_and_leaves_the_re
 
     from server.db import Base, repository
     from server.db.models import EvalSession, StageEvaluation, User
-    from consumers.evaluation.api import queries, stage_queries
+    from server.functionalities.evaluation import queries, stage_queries
 
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool

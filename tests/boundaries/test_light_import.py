@@ -20,8 +20,8 @@ FUNCTION_SETTINGS = {
     "consumers",
     "variatio.functionalities.chat",
     "variatio.functionalities.chat.settings",
-    "consumers.evaluation",
-    "consumers.evaluation.settings",
+    "variatio.functionalities.evaluation",
+    "variatio.functionalities.evaluation.settings",
     "variatio.functionalities.tutor",
     "variatio.functionalities.tutor.settings",
 }

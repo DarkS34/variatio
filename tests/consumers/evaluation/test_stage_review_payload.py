@@ -11,7 +11,7 @@ Pinned on the shapes rather than on the screen, because that is where the two ca
 
 import inspect
 
-from consumers.evaluation.api import stages
+from server.functionalities.evaluation import stages
 
 READ_KEYS = {"artifact", "built", "hash", "instrument", "mine"}
 

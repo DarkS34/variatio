@@ -2,7 +2,7 @@
 
 Mechanism, not policy, in the way `variatio.api` is: it returns an `EvaluationSession`,
 raises exceptions and NEVER writes to disk or knows about a database. Persisting is
-`consumers/evaluation/api/store.py`'s job, which is what lets a batch mode reuse this untouched.
+`server/functionalities/evaluation/store.py`'s job, which is what lets a batch mode reuse this untouched.
 """
 
 import random
@@ -22,7 +22,7 @@ from variatio.functionalities.generation.generator import clean_fixed, forbidden
 
 from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_session, run_arm
 from . import config as evaluation_config
-from . import prompts as evaluation_prompts
+from ...prompts import evaluation as evaluation_prompts
 
 
 def evaluate(
@@ -51,7 +51,7 @@ def evaluate(
     call — a commercial one, half the time — for a datum no judgement ever touches.
 
     The writer of the two local arms is the installation's (`evaluation.local_model`, read
-    through `consumers.evaluation.config.LOCAL_MODEL`), never the commission's: what is compared is
+    through `variatio.functionalities.evaluation.config.LOCAL_MODEL`), never the commission's: what is compared is
     architectures, and the person asking for a comparison does not pick the model.
     """
     target_type = context.exemplars_profile.item_type(item_type)

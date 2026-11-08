@@ -6,7 +6,7 @@ programming language included — so a session measured that guess instead of th
 
 import pytest
 
-from consumers.evaluation import prompts as evaluation_prompts
+from variatio.prompts import evaluation as evaluation_prompts
 
 BLOCK = "Curso de primer año de programación en Python. Los enunciados van en castellano."
 

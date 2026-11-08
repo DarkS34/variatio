@@ -10,11 +10,11 @@ trace and the CSV.
 
 import pytest
 
-from consumers.evaluation import Commission, EvaluationSession
-from consumers.evaluation import prompts as evaluation_prompts
-from consumers.evaluation import config as evaluation_config
-from consumers.evaluation import run as evaluation_run
-from consumers.evaluation.api import store as evaluation_store
+from variatio.functionalities.evaluation import Commission, EvaluationSession
+from variatio.prompts import evaluation as evaluation_prompts
+from variatio.functionalities.evaluation import config as evaluation_config
+from variatio.functionalities.evaluation import run as evaluation_run
+from server.functionalities.evaluation import store as evaluation_store
 from variatio import inference, prompts
 from variatio.utils import languages
 

@@ -11,8 +11,8 @@ import json
 
 import pytest
 
-from consumers.evaluation import FAILED, OK, ArmResult, Commission
-from consumers.evaluation.run import _tag, off_limits
+from variatio.functionalities.evaluation import FAILED, OK, ArmResult, Commission
+from variatio.functionalities.evaluation.run import _tag, off_limits
 from variatio.utils import progress
 from variatio.knowledge_graph.graph import KnowledgeGraph
 

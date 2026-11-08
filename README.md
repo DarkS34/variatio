@@ -17,7 +17,7 @@ Developed as the final thesis (TFM) of a Master's degree in Artificial Intellige
 - **Generates grounded items, not loose text.** Every commission draws on few-shot examples from the bank, on the prerequisite scaffolding derived from the graph (transitive closure: what is assumed known, what is not yet taught) and on the course curriculum. A guardrail model and an admissibility judge screen the free-text instructions, every item is validated against the profile's schema, and a batch of checks decides whether an item is returned or asked for again.
 - **Serves several subjects at once.** Each *workspace* is a complete instance — artifacts, cache, raw documents and history — with its own members and roles. Artifacts are versioned in the database, and every step of the construction goes through explicit review and approval.
 - **Tutors from the subject's own material.** The `variatio/functionalities/tutor/` package answers a student the Socratic way: every reply is written from a card that code assembles out of the artifacts — the concept asked about, its prerequisites taken as known, the passages of the notes nearest the message, the subject's criteria — and is checked by code before it is shown. The concept map beside a reply is drawn from the graph, never by the model.
-- **Evaluates itself blind.** The `consumers/evaluation/` package compares the full system against one of two alternatives — a commercial model, or retrieval over the teacher's own raw documents — drawn per session, in blind two-card sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
+- **Evaluates itself blind.** The `variatio/functionalities/evaluation/` package compares the full system against one of two alternatives — a commercial model, or retrieval over the teacher's own raw documents — drawn per session, in blind two-card sessions with per-card triage, forced choice and a post-reveal rubric, computing the statistics with exact methods (two-sided binomial, Wilson intervals, positional χ², Scott's π between evaluators).
 
 ## How it works
 
@@ -145,17 +145,16 @@ app → features → components → state → lib).
 ## Repository layout
 
 ```
-variatio/       the library: builders (raw → artifacts) and runtime (artifacts → items)
-server/         API, database, identity, job queue, the «system» CLI
-consumers/      the functions on the artifacts: generation, evaluation, tutor, chat
+variatio/       the library: each artifact's class and build, and the functions' library halves
+server/         API, database, identity, job queue, the «system» CLI, the functions' server halves
 web/            the React front end (its functions in web/src/consumers/)
 tests/  migrations/  workspaces/ (git-ignored)
 ```
 
 [`ARCHITECTURE.md`](ARCHITECTURE.md) is the map: what each folder holds, where each area of
 the product lives, and the invariants with the test that pins each one. The import boundaries are contracts
-(`uv run lint-imports`, configured in `pyproject.toml`): `consumers` imports `variatio` and
-`server`, never the reverse. Importing `variatio` pulls in neither Docling nor the server
+(`uv run lint-imports`, configured in `pyproject.toml`): `server` imports `variatio`, never
+the reverse, and no function imports another. Importing `variatio` pulls in neither Docling nor the server
 (`tests/boundaries/`), and secrets live only in `.env`, never in `config.json`.
 Inside `variatio/`, `api/` is the public door (the builds take a `Workspace` only for their
 own paths), and only `cli.py`, `functionalities/`, `retrieval/`, `documents/`, `exemplars_bank/` and

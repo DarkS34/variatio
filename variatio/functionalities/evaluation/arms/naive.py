@@ -17,7 +17,7 @@ from variatio.inference.repair import parse_with_repair
 from variatio.functionalities.generation.generator import parse_item
 
 from .. import FAILED, OK, UNAVAILABLE, ArmResult, ArmUnavailable, Commission
-from .. import prompts as evaluation_prompts
+from ....prompts import evaluation as evaluation_prompts
 from . import external
 
 

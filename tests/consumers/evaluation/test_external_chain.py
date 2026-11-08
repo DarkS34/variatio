@@ -3,8 +3,8 @@
 import httpx
 import pytest
 
-from consumers.evaluation import ArmUnavailable
-from consumers.evaluation.arms import external
+from variatio.functionalities.evaluation import ArmUnavailable
+from variatio.functionalities.evaluation.arms import external
 
 
 def _http_error(status: int) -> httpx.HTTPStatusError:

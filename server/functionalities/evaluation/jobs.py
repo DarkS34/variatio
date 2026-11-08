@@ -1,6 +1,6 @@
 """The `evaluate` job, and the one filter that keeps the run drawer from breaking the blind.
 
-Registered on `server.jobs.catalogue.HANDLERS` by `consumers.evaluation.api.install`, not declared
+Registered on `server.jobs.catalogue.HANDLERS` by `server.functionalities.evaluation.install`, not declared
 there: the queue is the installation's and the job is the evaluation's.
 """
 
@@ -15,9 +15,9 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from variatio.utils import progress
 
-from .. import ARM_LABELS, SYSTEM, draw_session
-from .. import run as evaluation_run
-from ..arms import rag as rag_arm
+from variatio.functionalities.evaluation import ARM_LABELS, SYSTEM, draw_session
+from variatio.functionalities.evaluation import run as evaluation_run
+from variatio.functionalities.evaluation.arms import rag as rag_arm
 from . import store as evaluation_store
 
 

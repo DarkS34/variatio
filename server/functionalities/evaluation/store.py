@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session as DbSession
 from server.core import csv_safe
 from server.db.models import EvalSession
 
-from .. import ARMS, RIVALS, SYSTEM, EvaluationSession
+from variatio.functionalities.evaluation import ARMS, RIVALS, SYSTEM, EvaluationSession
 from . import queries
 from .instruments import RATING_SCALES, TRIAGE_VALUES
 

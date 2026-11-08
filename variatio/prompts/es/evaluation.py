@@ -111,7 +111,7 @@ def rag_generation_prompt(
 ) -> str:
     """Wrap the naive prompt with retrieved pieces of the documents and the bare output schema.
 
-    Two sections, one per raw slot, each holding the pieces `consumers.evaluation.raw_text` cut and
+    Two sections, one per raw slot, each holding the pieces `variatio.functionalities.evaluation.raw_text` cut and
     the index ranked — verbatim, under the document and position they came from, with no
     cleaning and no formatting. The schema is the item type's shape and nothing more: no
     field descriptions, no difficulty criterion, no writing rules, since those are the

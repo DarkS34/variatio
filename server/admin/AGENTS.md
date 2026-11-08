@@ -8,7 +8,7 @@ One route module per tab or section of the panel: `accounts.py` (the front page,
 and an account's gestures and memberships), `invites.py`, `class_links.py`, `workspaces.py`,
 `queue.py`, `maintenance.py`, `features.py`, `engine.py` and `settings.py`. What two of them
 share is `shared.py`, since no route module imports another. The evaluation mounts its own tab
-beside them (`consumers/evaluation/api/admin.py`).
+beside them (`server/functionalities/evaluation/admin.py`).
 
 - **Every route is behind `require_admin`, under `/api/admin`.** The nine routers are mounted
   one after the other (`server/routing.py`): a fixed path of one is never a wildcard of

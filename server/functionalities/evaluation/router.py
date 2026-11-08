@@ -28,8 +28,8 @@ from server.db.models import EDITOR, VIEWER, EvalSession
 from server.kg import edit as kg_edit
 from server.pipeline.gates import gate_error
 
-from .. import ARM_LABELS, ARMS, EvaluationSession
-from ..arms import external
+from variatio.functionalities.evaluation import ARM_LABELS, ARMS, EvaluationSession
+from variatio.functionalities.evaluation.arms import external
 from . import instruments, queries
 from . import store as evaluation_store
 

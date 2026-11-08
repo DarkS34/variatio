@@ -7,10 +7,10 @@ model runs at the level the installation declared, exactly as a generation does.
 
 import pytest
 
-from consumers.evaluation import Commission
-from consumers.evaluation import config as evaluation_config
-from consumers.evaluation import run as evaluation_run
-from consumers.evaluation.arms import system as system_arm
+from variatio.functionalities.evaluation import Commission
+from variatio.functionalities.evaluation import config as evaluation_config
+from variatio.functionalities.evaluation import run as evaluation_run
+from variatio.functionalities.evaluation.arms import system as system_arm
 from variatio import config, settings
 
 
@@ -56,7 +56,7 @@ def _run_capturing(monkeypatch) -> list[Commission]:
 
     def fake_arm(arm, commission, context):
         seen.append(commission)
-        from consumers.evaluation import FAILED, ArmResult
+        from variatio.functionalities.evaluation import FAILED, ArmResult
 
         return ArmResult(arm, FAILED, None, "", "", "", "", [], 0)
 

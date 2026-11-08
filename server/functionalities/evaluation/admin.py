@@ -1,7 +1,7 @@
 """The evaluation's own tab of the installation panel.
 
 Same prefix and same `require_admin` as the panel's own routes (`server/admin/`), and mounted
-beside them by `consumers.evaluation.api.install`: the routes are the administrator's, the
+beside them by `server.functionalities.evaluation.install`: the routes are the administrator's, the
 arithmetic behind them is the evaluation's, and this is the seam between the two.
 """
 
@@ -20,7 +20,7 @@ from server.kg import edit as kg_edit
 from server.pipeline import readings
 from server.pipeline.gates import gate_error
 
-from .. import ARM_LABELS, ARMS
+from variatio.functionalities.evaluation import ARM_LABELS, ARMS
 from . import queries
 from . import stage_queries
 from . import stage_store

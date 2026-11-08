@@ -128,7 +128,7 @@ así que la memoria puede decirlo sesión a sesión.""",
         phase="external_arm",
         impact=Impact.NONE,
         env="EVAL_EXTERNAL_PROVIDER",
-        doc="""Este bloque lo declara `consumers/evaluation/settings.py` y lo lee `consumers/evaluation/config.py`: vive con el
+        doc="""Este bloque lo declara `variatio/functionalities/evaluation/settings.py` y lo lee `variatio/functionalities/evaluation/config.py`: vive con el
 código que lo consume, fuera del paquete que mide.
 
 Los nombres `*_MODEL_ID` no terminan ni en `_MODEL` ni en `_LLM` a propósito: esos sufijos

@@ -1,13 +1,16 @@
-# AGENTS.md — `consumers/evaluation/` — the study
+# AGENTS.md — `variatio/functionalities/evaluation/` — the study
 
 Read the root `AGENTS.md` first.
 
-## `consumers/evaluation/` — the TFM's study, outside the system it measures
+## `variatio/functionalities/evaluation/` — the TFM's study, outside the system it measures
 
-Always mounted. **`consumers.evaluation` imports `variatio`, never the reverse** (one exception:
-the settings registry's optional import); `consumers/evaluation/__init__.py` never imports
-`consumers/evaluation/api/`, so `import consumers.evaluation` stays free of FastAPI/SQLAlchemy. It is
-attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never from
+Always mounted. Two halves since 2026-11-08: the library half is here, its prompts are
+`variatio/prompts/{es,en}/evaluation.py`, the server half is `server/functionalities/evaluation/`.
+**The library half never imports the server**; it runs the whole system through `variatio.api`
+and reuses the generator, both named exceptions of the import contracts. It never imports
+`server/functionalities/evaluation/`, so `import variatio.functionalities.evaluation` stays
+free of FastAPI/SQLAlchemy. It is
+attached in `server/app.py` (`server.functionalities.evaluation.install(app)`), never from
 `server/routing.py`.
 
 - **Arms**: `naive` (commercial chain `gemini → mistral → groq`, no `response_format`, no
@@ -37,7 +40,7 @@ attached in `server/app.py` (`consumers.evaluation.api.install(app)`), never fro
   positions (df 1), and **Scott's π** (not Cohen's κ) over evaluator pairs sharing a set.
 - **Every fixed route is declared above `/evaluations/{session_id}`** (FastAPI matches in
   order); `test_route_order.py` checks every router.
-- `consumers/evaluation/api/instruments.py` and `stage_instruments.py` are the single homes of what is
+- `server/functionalities/evaluation/instruments.py` and `stage_instruments.py` are the single homes of what is
   asked. The **stage questionnaire** (one per construction step, keyed by artifact hash
   resolved server-side, `stage_evaluations`) is a Likert form: five statements on shared axes
   (`precision`, `recall`, `function`, `effort`, `overall`), 1-5 agreement, 5 is best,

@@ -6,7 +6,7 @@ worth; the `rag → system` step measures what THE SYSTEM is worth on top of tha
 extraction of the bank, the profile, the tagging and the graph together — and that second
 one is the contribution being defended.
 
-What it retrieves over is `consumers.evaluation.raw_text`: the raw slots read with a plain extractor
+What it retrieves over is `variatio.functionalities.evaluation.raw_text`: the raw slots read with a plain extractor
 (pypdf and its Office twins), never the pipeline's vision transcription. Cut into pieces of
 `RAG_CHUNK_CHARS`, embedded flat, searched by cosine, `RAG_TOP_K_THEORY` pieces of the
 notes and `RAG_TOP_K_EXERCISES` of the exercise sheets handed over verbatim under a heading.
@@ -31,7 +31,7 @@ from variatio.functionalities.generation.generator import parse_item
 
 from .. import FAILED, OK, ArmResult, Commission, rag_index_path, raw_text
 from .. import config as evaluation_config
-from .. import prompts as evaluation_prompts
+from ....prompts import evaluation as evaluation_prompts
 from .naive import build_prompt as build_naive_prompt
 from .vector_store import FlatIndex
 

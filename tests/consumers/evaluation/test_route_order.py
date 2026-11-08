@@ -12,8 +12,8 @@ which is where anybody would naturally put one.
 
 from fastapi.routing import APIRoute
 
-from consumers.evaluation.api.admin import router as admin_router
-from consumers.evaluation.api.router import router as evaluation_router
+from server.functionalities.evaluation.admin import router as admin_router
+from server.functionalities.evaluation.router import router as evaluation_router
 
 
 def _routes(router):

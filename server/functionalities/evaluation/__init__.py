@@ -4,9 +4,10 @@
 where the evaluation is attached: importing it from `server/routing.py` instead would close
 a cycle, since these routers import `server.auth` and `server.pipeline.gates` back.
 
-Nothing here is imported until `install` runs, and `consumers/evaluation/__init__.py` never reaches
-this package: that is what keeps `import consumers.evaluation` free of FastAPI and SQLAlchemy for a
-runtime-only consumer, and `tests/consumers/test_consumers_boundary.py` pins it.
+Nothing here is imported until `install` runs, and the library half
+(`variatio/functionalities/evaluation/`) never reaches this package: that is what keeps
+`import variatio.functionalities.evaluation` free of FastAPI and SQLAlchemy for a runtime-only
+consumer, and `tests/consumers/test_consumers_boundary.py` pins it.
 """
 
 

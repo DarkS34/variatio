@@ -7,9 +7,10 @@ difference. Both sets are deliberately POOR, and translating one is not an occas
 improve it.
 """
 
-from variatio.utils import languages
+from ..utils import languages
 
-from . import en, es
+from .en import evaluation as en
+from .es import evaluation as es
 
 _SETS = {"es": es, "en": en}
 

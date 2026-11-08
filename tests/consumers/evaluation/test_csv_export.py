@@ -1,7 +1,7 @@
 import csv
 import io
 
-from consumers.evaluation.api.store import export_csv
+from server.functionalities.evaluation.store import export_csv
 
 
 def _rows(body: str) -> list[dict]:

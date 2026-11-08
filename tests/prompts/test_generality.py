@@ -15,7 +15,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULES = sorted(
-    [*ROOT.glob("variatio/prompts/*/*.py"), *ROOT.glob("consumers/*/prompts/*.py"),
+    [*ROOT.glob("variatio/prompts/*/*.py"), ROOT / "variatio/prompts/evaluation.py",
      ROOT / "variatio/prompts/conversation.py",
      ROOT / "variatio/prompts/chat.py", ROOT / "variatio/prompts/tutor.py"]
 )

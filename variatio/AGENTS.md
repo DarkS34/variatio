@@ -115,7 +115,7 @@ names exist). A tree renamed so is no longer readable by a version from before t
   `transcription, graph, bank, generation` since 2026-10-08: the profile's calls and the
   taggability review are the bank's lane, in the order they run before the extraction.
   The study's own settings say `("evaluation",)`; which PIPELINE settings a session also
-  reads is `consumers/evaluation/settings.READS`, never a stamp inside `variatio/`.
+  reads is `variatio/functionalities/evaluation/settings.READS`, never a stamp inside `variatio/`.
 - Precedence: default < `config.json` < environment. An invalid value warns and falls back.
   **`config.json` stores every non-secret value and beats the registry**, so bumping a
   registry default alone changes nothing on an installation — edit `config.json` too.
@@ -143,7 +143,7 @@ names exist). A tree renamed so is no longer readable by a version from before t
 - `LLM_CONTEXT` caps the KV cache per model (`context_window.overrides` 65536 for phases;
   guardrail 4096). Lowering one truncates silently — re-measure first.
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
-  `READS` are declared in `consumers/evaluation/settings.py`, picked up by an optional import — the
+  `READS` are declared in `variatio/functionalities/evaluation/settings.py`, picked up by an optional import — the
   one place `variatio/` names the evaluation.
 - The tutor's are declared the same way in `variatio/functionalities/tutor/settings.py` (`LANE` «Tutor», stage
   `tutoring`, last; `READS`; `MODEL_KEYS`), picked up by an optional import that switches off

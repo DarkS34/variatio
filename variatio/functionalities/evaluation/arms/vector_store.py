@@ -5,7 +5,7 @@ descriptions fused into weighted centroids, a kNN leg restricted to `primary_con
 so reusing it would measure the system against itself.
 
 What this one knows is a text per key and nothing else: the pieces of the raw documents
-`consumers.evaluation.raw_text` cut, keyed by document and position. No modality, no tag, no
+`variatio.functionalities.evaluation.raw_text` cut, keyed by document and position. No modality, no tag, no
 concept.
 
 Same embedding model as the pipeline on purpose: the variable under test is the graph,

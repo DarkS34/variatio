@@ -13,8 +13,8 @@ whose identity the seed records. Sessions recorded before that date hold three a
 everything below reads the session's own `shuffle` for how many cards it has.
 
 The boundary is the point, and `tests/consumers/test_consumers_boundary.py` pins both halves of it:
-`consumers.evaluation` imports `variatio` and never the reverse, and this module never imports
-`consumers.evaluation.api`, which is what keeps `import consumers.evaluation` free of FastAPI and
+`variatio.functionalities.evaluation` imports `variatio` and never the reverse, and this module never imports
+`server.functionalities.evaluation`, which is what keeps `import variatio.functionalities.evaluation` free of FastAPI and
 SQLAlchemy for a runtime-only consumer.
 """
 
@@ -86,7 +86,7 @@ class Commission:
     `admissibility.Ruling` would put a pipeline type in the evaluation's own contract.
 
     `model` is the writer of the TWO LOCAL arms — the installation's own setting
-    (`evaluation.local_model`, resolved by `run.evaluate` through `consumers.evaluation.config`),
+    (`evaluation.local_model`, resolved by `run.evaluate` through `variatio.functionalities.evaluation.config`),
     never the evaluator's choice. It is one model for both, which is what keeps the comparison
     about architectures; the commercial arm keeps its own chain. `effort` is what those two
     arms pass as `think`: the drawn boolean, or the level the installation declared when

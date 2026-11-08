@@ -72,7 +72,7 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
   from the retired table: what it never kept is null, never reconstructed. A student (role
   `viewer`) reads their own exercise whole, solution included, but not the bank it was made
   from: `GET /api/generations/{id}` answers them with `provenance.prompt` null and
-  `resolved.few_shot` as ids and origins (`consumers/generation/api/router.without_bank`), and a revealed
+  `resolved.few_shot` as ids and origins (`server/functionalities/generation/router.without_bank`), and a revealed
   comparison card answers them without `prompt` and `raw_response`.
 - Deleting from the panel is the administrator's (`DELETE /api/admin/workspaces/{slug}`,
   `.../artifacts/...`), and emptying a stage never touches `.history/`. When a subject's

@@ -23,12 +23,12 @@ def test_the_registry_exceptions_are_optional():
 
 def test_importing_a_function_s_library_half_does_not_pull_the_server_stack():
     code = (
-        "import sys, consumers, consumers.evaluation, consumers.evaluation.run,"
-        " consumers.evaluation.config, variatio.functionalities.tutor, variatio.functionalities.tutor.turn,"
+        "import sys, variatio.functionalities, variatio.functionalities.evaluation, variatio.functionalities.evaluation.run,"
+        " variatio.functionalities.evaluation.config, variatio.functionalities.tutor, variatio.functionalities.tutor.turn,"
         " variatio.functionalities.tutor.criteria_builder, variatio.functionalities.generation,"
         " variatio.functionalities.chat, variatio.functionalities.chat.turn, variatio.functionalities.chat.config;"
         "print(sorted(m for m in ('fastapi', 'sqlalchemy', 'server.functionalities.tutor',"
-        " 'consumers.evaluation.api', 'server.functionalities.generation', 'server.functionalities.chat')"
+        " 'server.functionalities.evaluation', 'server.functionalities.generation', 'server.functionalities.chat')"
         " if m in sys.modules))"
     )
     out = subprocess.run(

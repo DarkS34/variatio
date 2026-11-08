@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from consumers.evaluation import raw_text
+from variatio.functionalities.evaluation import raw_text
 from variatio.utils.workspace import Workspace
 
 

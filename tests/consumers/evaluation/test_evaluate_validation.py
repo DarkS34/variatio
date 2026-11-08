@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from consumers.evaluation import Commission
-from consumers.evaluation.run import _validate
+from variatio.functionalities.evaluation import Commission
+from variatio.functionalities.evaluation.run import _validate
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ...conftest import CHAIN_GRAPH

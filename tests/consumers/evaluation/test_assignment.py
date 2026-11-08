@@ -12,9 +12,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server.db.models import Base, User, Workspace
-from consumers.evaluation import EvaluationSession
-from consumers.evaluation.api import queries
-from consumers.evaluation.api import store as evaluation_store
+from variatio.functionalities.evaluation import EvaluationSession
+from server.functionalities.evaluation import queries
+from server.functionalities.evaluation import store as evaluation_store
 
 
 def _arm(name, text):

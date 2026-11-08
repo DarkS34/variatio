@@ -1,6 +1,6 @@
 import os
 
-from consumers.evaluation import config as evaluation_config
+from variatio.functionalities.evaluation import config as evaluation_config
 
 
 def base():

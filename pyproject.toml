@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.18"
+version = "1.185.19"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -75,7 +75,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["variatio", "server", "consumers"]
+packages = ["variatio", "server"]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not corpus and not model'"
@@ -87,70 +87,78 @@ markers = [
 # The import boundaries, checked by `uv run lint-imports`. Each exception is an import that
 # exists today and is named here so that no new one grows; removing one is always welcome.
 [tool.importlinter]
-root_packages = ["variatio", "server", "consumers"]
+root_packages = ["variatio", "server"]
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "The library knows neither the server nor the functions"
+name = "The library knows nothing of the server"
 type = "forbidden"
 source_modules = ["variatio"]
-forbidden_modules = ["server", "consumers"]
-ignore_imports = [
-    # Each function declares its settings beside the code that reads them; the registry
-    # picks them up by an optional import.
-    "variatio.settings.registry -> consumers.*.settings",
-]
-
-[[tool.importlinter.contracts]]
-name = "The server names the functions only where it mounts them"
-type = "forbidden"
-source_modules = ["server"]
-forbidden_modules = ["consumers"]
-ignore_imports = [
-    "variatio.settings.registry -> consumers.*.settings",
-    # The composition root mounts every function.
-    "server.app -> consumers.*.api",
-    # Four reads of the evaluation older than `consumers/`.
-    "server.pipeline.jobs -> consumers.evaluation.raw_text",
-    "server.jobs.lanes -> consumers.evaluation.config",
-    "server.raw.documents -> consumers.evaluation.raw_text",
-    "server.admin.accounts -> consumers.evaluation.api.store",
-]
+forbidden_modules = ["server"]
 
 [[tool.importlinter.contracts]]
 name = "The generation function imports no other function"
 type = "forbidden"
-source_modules = ["server.functionalities.generation"]
-forbidden_modules = ["consumers.evaluation", "variatio.functionalities.tutor", "server.functionalities.tutor", "variatio.functionalities.chat", "server.functionalities.chat"]
-# Direct imports only: each function reaches the server, and the server reaches the
-# evaluation in its four named reads.
+source_modules = ["variatio.functionalities.generation", "server.functionalities.generation"]
+forbidden_modules = [
+    "variatio.functionalities.evaluation",
+    "server.functionalities.evaluation",
+    "variatio.functionalities.tutor",
+    "server.functionalities.tutor",
+    "variatio.functionalities.chat",
+    "server.functionalities.chat",
+]
+# Direct imports only: a function reaches the library and the server, which reach others.
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "The evaluation function imports no other function"
 type = "forbidden"
-source_modules = ["consumers.evaluation"]
-forbidden_modules = ["server.functionalities.generation", "variatio.functionalities.tutor", "server.functionalities.tutor", "variatio.functionalities.chat", "server.functionalities.chat"]
-# Direct imports only: each function reaches the server, and the server reaches the
-# evaluation in its four named reads.
+source_modules = ["variatio.functionalities.evaluation", "server.functionalities.evaluation"]
+forbidden_modules = [
+    "variatio.functionalities.generation",
+    "server.functionalities.generation",
+    "variatio.functionalities.tutor",
+    "server.functionalities.tutor",
+    "variatio.functionalities.chat",
+    "server.functionalities.chat",
+]
+ignore_imports = [
+    # The evaluation measures the generation: its `system` arm and its checks are the
+    # generator's own.
+    "variatio.functionalities.evaluation.** -> variatio.functionalities.generation.**",
+]
+# Direct imports only: a function reaches the library and the server, which reach others.
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "The tutor function imports no other function"
 type = "forbidden"
 source_modules = ["variatio.functionalities.tutor", "server.functionalities.tutor"]
-forbidden_modules = ["server.functionalities.generation", "consumers.evaluation", "variatio.functionalities.chat", "server.functionalities.chat"]
-# Direct imports only: each function reaches the server, and the server reaches the
-# evaluation in its four named reads.
+forbidden_modules = [
+    "variatio.functionalities.generation",
+    "server.functionalities.generation",
+    "variatio.functionalities.evaluation",
+    "server.functionalities.evaluation",
+    "variatio.functionalities.chat",
+    "server.functionalities.chat",
+]
+# Direct imports only: a function reaches the library and the server, which reach others.
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "The chat function imports no other function"
 type = "forbidden"
 source_modules = ["variatio.functionalities.chat", "server.functionalities.chat"]
-forbidden_modules = ["server.functionalities.generation", "consumers.evaluation", "variatio.functionalities.tutor", "server.functionalities.tutor"]
-# Direct imports only: each function reaches the server, and the server reaches the
-# evaluation in its four named reads.
+forbidden_modules = [
+    "variatio.functionalities.generation",
+    "server.functionalities.generation",
+    "variatio.functionalities.evaluation",
+    "server.functionalities.evaluation",
+    "variatio.functionalities.tutor",
+    "server.functionalities.tutor",
+]
+# Direct imports only: a function reaches the library and the server, which reach others.
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
@@ -158,12 +166,16 @@ name = "Inside the library, a function imports only what the functions share"
 type = "layers"
 containers = ["variatio.functionalities"]
 layers = [
-    "generation | chat | tutor",
+    "generation | chat | tutor | evaluation",
     "shared",
 ]
 ignore_imports = [
     # The settings registry reaches every function's settings; see «The library's layers».
     "variatio.settings.registry -> variatio.functionalities.*.settings",
+    # The evaluation measures the generation; see «The evaluation function imports no other function».
+    "variatio.functionalities.evaluation.** -> variatio.functionalities.generation.**",
+    "variatio.functionalities.evaluation.** -> variatio.api",
+    "variatio.functionalities.evaluation.** -> variatio.api.**",
 ]
 
 [[tool.importlinter.contracts]]
@@ -184,6 +196,9 @@ layers = [
 ]
 ignore_imports = [
     "variatio.utils.lexicon -> variatio.prompts.wording",
+    # The evaluation runs the whole system, as its `system` arm, through the door.
+    "variatio.functionalities.evaluation.** -> variatio.api",
+    "variatio.functionalities.evaluation.** -> variatio.api.**",
     # Each function declares its settings beside the code that reads them; the registry
     # picks them up by an optional import.
     "variatio.settings.registry -> variatio.functionalities.*.settings",
@@ -223,7 +238,7 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "Only the local engine imports the Ollama SDK"
 type = "forbidden"
-source_modules = ["variatio", "server", "consumers"]
+source_modules = ["variatio", "server"]
 forbidden_modules = ["ollama"]
 ignore_imports = ["variatio.inference.ollama -> ollama"]
 allow_indirect_imports = true
@@ -304,6 +319,8 @@ type = "layers"
 containers = ["server"]
 layers = [
     "__main__ : app : cli : routing",
+    # The functions: only the composition root mounts them, and none imports another.
+    "functionalities.generation | functionalities.chat | functionalities.tutor | functionalities.evaluation",
     "admin",
     "bank | kg | raw",
     # The bank shows an exercise to the class's groups, so the class sits below the steps.

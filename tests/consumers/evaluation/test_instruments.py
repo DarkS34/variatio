@@ -9,8 +9,8 @@ never move, because renaming one strands every session already judged.
 import pytest
 
 from server.db.models import EVALUATOR_PROFILES, STUDENT, TEACHER
-from consumers.evaluation.api import instruments
-from consumers.evaluation.api.store import RATING_SCALES
+from server.functionalities.evaluation import instruments
+from server.functionalities.evaluation.store import RATING_SCALES
 
 
 def test_every_declared_profile_has_both_instruments():

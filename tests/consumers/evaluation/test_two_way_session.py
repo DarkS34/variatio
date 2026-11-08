@@ -14,12 +14,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from consumers.evaluation import FAILED, RIVALS, SYSTEM, ArmResult, EvaluationSession, draw_session
-from consumers.evaluation import run as evaluation_run
-from consumers.evaluation.api import jobs as evaluation_jobs
-from consumers.evaluation.api import queries
-from consumers.evaluation.api import router as evaluation_router
-from consumers.evaluation.api import store as evaluation_store
+from variatio.functionalities.evaluation import (
+    FAILED,
+    RIVALS,
+    SYSTEM,
+    ArmResult,
+    EvaluationSession,
+    draw_session,
+)
+from variatio.functionalities.evaluation import run as evaluation_run
+from server.functionalities.evaluation import jobs as evaluation_jobs
+from server.functionalities.evaluation import queries
+from server.functionalities.evaluation import router as evaluation_router
+from server.functionalities.evaluation import store as evaluation_store
 from server.db.models import Base, User, Workspace
 from server.jobs.catalogue import Job
 from variatio import config, settings

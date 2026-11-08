@@ -45,7 +45,7 @@ def db():
 
 
 def _accounts(session):
-    from consumers.evaluation.api.admin import assignable_accounts
+    from server.functionalities.evaluation.admin import assignable_accounts
 
     return {row["username"]: row for row in assignable_accounts(db=session)["accounts"]}
 
@@ -57,7 +57,7 @@ def test_the_workspace_list_does_not_depend_on_anything_having_been_evaluated():
     # The bug: the filter's options were derived from the recorded sessions, so a fresh
     # installation offered none — and with no workspace to pick, nothing could ever be
     # handed out, so nothing was ever evaluated. The list is the installation's, full stop.
-    from consumers.evaluation.api.store import headers
+    from server.functionalities.evaluation.store import headers
 
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -129,7 +129,7 @@ def test_an_approved_chain_is_offered_with_nothing_pending(db, monkeypatch):
     session, _ = db
     # The rule is `gate_error`'s and only `gate_error`'s — the same one the endpoint that
     # generates enforces, so the screen can never offer what it would refuse.
-    monkeypatch.setattr("consumers.evaluation.api.admin.gate_error", lambda ws, kind: None)
+    monkeypatch.setattr("server.functionalities.evaluation.admin.gate_error", lambda ws, kind: None)
 
     entry = _accounts(session)["ana"]["workspaces"][0]
     assert entry["ready"] is True
@@ -143,7 +143,7 @@ def test_the_gate_is_read_once_per_workspace_and_not_once_per_account(db, monkey
     # one was "default" measured twice.
     asked = []
     monkeypatch.setattr(
-        "consumers.evaluation.api.admin.gate_error",
+        "server.functionalities.evaluation.admin.gate_error",
         lambda ws, kind: asked.append(ws.slug) or "Para crear ejercicios hay que dar antes por buenos: X.",
     )
 

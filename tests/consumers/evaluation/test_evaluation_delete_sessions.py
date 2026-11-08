@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server.db import Base, repository
-from consumers.evaluation.api import queries
+from server.functionalities.evaluation import queries
 
 
 @pytest.fixture

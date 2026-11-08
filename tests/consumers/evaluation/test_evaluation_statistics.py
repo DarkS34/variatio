@@ -12,7 +12,7 @@ built explicitly where a test is about what the arithmetic does with a legacy ro
 
 import math
 
-from consumers.evaluation.api import store
+from server.functionalities.evaluation import store
 
 
 def _decided(

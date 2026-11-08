@@ -1,8 +1,9 @@
 """The composition root: the FastAPI app, its middleware stack and the built front-end.
 
 Nothing inside `server` may import this module. It is also the only place the functions under
-`consumers/` are mounted, because each `consumers.<function>.api` imports `server.auth` and the job
-runner back and mounting them from the router package would close a cycle.
+`server/functionalities/` are mounted, because each `server.functionalities.<function>` imports
+`server.auth` and the job runner back and mounting them from the router package would close a
+cycle.
 """
 
 import asyncio
@@ -29,21 +30,21 @@ WORKER_THREADS = 200
 from server.functionalities import generation as generation_api
 
 try:
-    from consumers.evaluation import api as evaluation_api
+    from server.functionalities import evaluation as evaluation_api
 except ImportError:
     evaluation_api = None
 
 try:
     from server.functionalities import tutor as tutor_api
 except ModuleNotFoundError as missing:
-    if missing.name not in ("consumers", "variatio.functionalities.tutor"):
+    if missing.name not in ("server.functionalities.tutor", "variatio.functionalities.tutor"):
         raise
     tutor_api = None
 
 try:
     from server.functionalities import chat as chat_api
 except ModuleNotFoundError as missing:
-    if missing.name not in ("consumers", "variatio.functionalities.chat"):
+    if missing.name not in ("server.functionalities.chat", "variatio.functionalities.chat"):
         raise
     chat_api = None
 

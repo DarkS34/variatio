@@ -10,14 +10,15 @@ from ..types import STAGES as PIPELINE_STAGES
 from ..types import Setting
 from . import access, builders, engine, generation, logging, reasoning, retrieval, sampling, tunnel
 
-# The one place `variatio` names the evaluation, the tutor and the chat, and optional on purpose:
-# they import `variatio` and never the reverse, so the registry reaches them by name, not by
-# import. Only the tutor's or the chat's package being absent switches it off; one whose own
-# import breaks fails loudly.
+# The one place the vocabulary names the evaluation, the tutor and the chat, and optional on
+# purpose: each function declares its settings beside the code that reads them
+# (`variatio/functionalities/<function>/settings.py`), above this layer, so the registry reaches
+# them by a named exception of the import contracts. Only the tutor's or the chat's package being
+# absent switches it off; one whose own import breaks fails loudly.
 try:
-    from consumers.evaluation.settings import LANE as STUDY_LANE
-    from consumers.evaluation.settings import READS as STUDY_READS
-    from consumers.evaluation.settings import SETTINGS as STUDY_SETTINGS
+    from variatio.functionalities.evaluation.settings import LANE as STUDY_LANE
+    from variatio.functionalities.evaluation.settings import READS as STUDY_READS
+    from variatio.functionalities.evaluation.settings import SETTINGS as STUDY_SETTINGS
 except ImportError:
     STUDY_LANE = None
     STUDY_READS: tuple[str, ...] = ()

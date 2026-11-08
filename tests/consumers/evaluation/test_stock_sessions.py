@@ -21,11 +21,11 @@ from server.auth.deps import Access
 from server.db import repository
 from server.db.models import Base
 from server.jobs.catalogue import Job
-from consumers.evaluation.api import admin as evaluation_admin
-from consumers.evaluation.api import jobs as evaluation_jobs
-from consumers.evaluation.api import queries
-from consumers.evaluation.api import router as evaluation_router
-from consumers.evaluation.api import store as evaluation_store
+from server.functionalities.evaluation import admin as evaluation_admin
+from server.functionalities.evaluation import jobs as evaluation_jobs
+from server.functionalities.evaluation import queries
+from server.functionalities.evaluation import router as evaluation_router
+from server.functionalities.evaluation import store as evaluation_store
 
 
 def _arm(name):

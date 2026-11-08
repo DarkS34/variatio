@@ -1,7 +1,7 @@
 import csv
 import io
 
-from consumers.evaluation.api import store
+from server.functionalities.evaluation import store
 
 PAYLOAD = "=cmd|'/c calc'!A1"
 

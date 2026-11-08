@@ -1,7 +1,7 @@
 """The evaluation's own index of settings, resolved on every read.
 
 The annotations below are the readable index, exactly as `variatio.config`'s are; the
-values are declared in `consumers/evaluation/settings.py` and derived here.
+values are declared in `variatio/functionalities/evaluation/settings.py` and derived here.
 """
 
 import os

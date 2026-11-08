@@ -10,9 +10,9 @@ from sqlalchemy.pool import StaticPool
 from server.db import Base, repository
 from server.db.models import StageEvaluation
 from server.pipeline import approvals
-from consumers.evaluation.api import stage_instruments as instruments
-from consumers.evaluation.api import stage_queries as queries
-from consumers.evaluation.api import stages
+from server.functionalities.evaluation import stage_instruments as instruments
+from server.functionalities.evaluation import stage_queries as queries
+from server.functionalities.evaluation import stages
 
 GRAPH = approvals.KNOWLEDGE_GRAPH
 
@@ -346,7 +346,7 @@ def test_scale_values_for_an_unknown_question_is_empty():
 
 
 def test_everything_carries_the_author_and_narrows_to_a_workspace(db, ws):
-    from consumers.evaluation.api import stage_store
+    from server.functionalities.evaluation import stage_store
 
     other = repository.ensure_workspace(db, "other")
     db.commit()

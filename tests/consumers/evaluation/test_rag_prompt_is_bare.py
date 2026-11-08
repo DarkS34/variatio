@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from consumers.evaluation import prompts as evaluation_prompts
+from variatio.prompts import evaluation as evaluation_prompts
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
 MODALITY = {

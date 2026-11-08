@@ -2,7 +2,7 @@
 
 Every handler resolves its paths from `job.workspace` and nothing else: the runner is one
 queue for the whole installation, so a handler reading a process-wide workspace would write
-one person's build into another's directory. The functions under `consumers/` add their own kinds
+one person's build into another's directory. The functions (`server/functionalities/`) add their own kinds
 to `catalogue.HANDLERS` when they are installed: a commission, a comparison, the tutor's turns.
 The construction's own register the same way, in `install()`.
 """
@@ -127,7 +127,7 @@ def handle_transcribe(job: Job, control: JobControl) -> dict:
     if slot not in _SLOTS:
         raise ValueError(f"Ranura desconocida: '{slot}'; esperaba una de {list(_SLOTS)}")
 
-    from consumers.evaluation import raw_text
+    from variatio.functionalities.evaluation import raw_text
     from variatio.api import transcribe_slot
 
     # The evaluation's plain reading of the same slot, first and best effort: seconds, and it

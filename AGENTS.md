@@ -54,8 +54,8 @@ at the diff. A change the user cannot explain is not finished, even when the tes
   stop and explain. New tests go in a separate commit.
 - **Self-review is not approval.** Approval comes from the user or a second model.
 - **The manual zone.** Only `web/`, `migrations/` and `tests/` may be edited on the agent's
-  own initiative, under the rules above. Every other path (`variatio/`, `server/`,
-  `consumers/` and the root files) changes only on an explicit instruction that names the file
+  own initiative, under the rules above. Every other path (`variatio/`, `server/` and
+  the root files) changes only on an explicit instruction that names the file
   and the change; never on the agent's initiative, never «in passing».
 - **Explaining.** When asked to explain, give the data flow, the invariants and the
   trade-offs, not lists of files.
@@ -156,8 +156,8 @@ in `variatio/AGENTS.md`.
 ## Where the rules live
 
 The hard line: **`artifacts/` holds the instance definition (data), `variatio/` is the code
-that produces and consumes it.** `consumers` imports `variatio` and `server`; neither imports
-`consumers` back. The rules of each part are beside it:
+that produces and consumes it.** `server` imports `variatio`, never the reverse; each function
+has a library half in `variatio/functionalities/` and a server half in `server/functionalities/`. The rules of each part are beside it:
 
 - `variatio/AGENTS.md` (library), `variatio/documents/AGENTS.md` (transcription).
 - `server/AGENTS.md` (database, subjects, exercises), `server/core/AGENTS.md` (contexts,
@@ -168,16 +168,16 @@ that produces and consumes it.** `consumers` imports `variatio` and `server`; ne
   `server/classroom/AGENTS.md` (people, groups, links, progress, activity),
   `server/admin/AGENTS.md` (the panel),
   `server/jobs/AGENTS.md` (the queue), `server/functionalities/shared/conversations/AGENTS.md`.
-- `consumers/AGENTS.md` and one per function: `evaluation/`;
-  `variatio/functionalities/tutor/AGENTS.md`, `variatio/functionalities/chat/AGENTS.md`, `server/functionalities/generation/AGENTS.md` and `server/functionalities/shared/conversations/AGENTS.md`.
+- `variatio/functionalities/AGENTS.md` and one per function: `variatio/functionalities/`
+  `evaluation/`, `tutor/` and `chat/`, and `server/functionalities/generation/AGENTS.md`.
 - `web/AGENTS.md` and `web/DESIGN.md` (read before any UI change), plus `src/features/bank/`,
   `src/features/class/`, `src/features/admin/`, `src/features/raw/`, `src/consumers/tutor/`,
   `src/landing/`.
 
 ## Logging
 
-loguru configured once in `variatio/__init__.py`. **`variatio/` logs in English; `server/`
-and `consumers/` in Spanish.** Format `[scope] Message`, no counters in the bracket, `«…»`
+loguru configured once in `variatio/__init__.py`. **`variatio/` logs in English, but for the tutor's, the chat's and
+the evaluation's library halves; those and `server/` log in Spanish.** Format `[scope] Message`, no counters in the bracket, `«…»`
 around user text, `'…'` around models/paths. Nothing inside a per-element loop logs at INFO —
 use `progress.step(...).tick(detail=…)` or `debug`. A fact is logged by one layer. Only
 `docling` is silenced.
@@ -191,10 +191,13 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
 - **D-001, D-003 — Licence.** The code is PolyForm Noncommercial 1.0.0 (from 1.171.0); the
   history is not rewritten, and copies taken while it was MIT keep MIT. *Why:* free for any
   noncommercial use, never sold; a rewrite would not take MIT back from existing copies.
-- **D-004, D-007 — Functions.** The functions live in `consumers/`, outside `variatio/` and
-  `server/`, with one-way imports; the evaluation is not made removable. What the tutor and
-  the chat share is `server/functionalities/shared/conversations/`, and the blocks of their system prompts are
-  `variatio/prompts/<language>/conversation.py`. *Why:* they consume what the construction builds.
+- **D-004, D-007 — Functions.** Each function has a library half in `variatio/functionalities/`
+  and a server half in `server/functionalities/` (until 2026-11-08 both lived in `consumers/`);
+  no function imports another, and what several use is `functionalities/shared/` on each side;
+  the evaluation is not made removable. What the tutor and the chat share is
+  `server/functionalities/shared/conversations/`, and the blocks of their system prompts are
+  `variatio/prompts/<language>/conversation.py`. *Why:* they consume what the construction
+  builds.
 - **D-008 — Layout by artifact.** `variatio/` is being reorganised by artifact
   (`plans/plan-reestructura.md`; each part updates this entry). Today: `api/` is the public
   door; `inference/` is the engine boundary (`inference/__init__.py`) with the engines, usage,
@@ -208,7 +211,8 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   `exemplars_bank/` holds the bank's build (`build.py`), its tagging (`tagging.py`) and the
   profile (`exemplars_profile/`: `profile.py` and its `build.py`), a layer between
   `functionalities` and `retrieval`; `retrieval/` holds the two vector indices (`Embedder`);
-  `functionalities/` holds one package per function (`generation/`) and what several share
+  `functionalities/` holds one package per function (`generation/`, `tutor/`, `chat/`,
+  `evaluation/`) and what several share
   (`shared/screening/`), the top layer below `api`; `documents/` and `settings/` keep their
   roles. The three builds take a `Workspace` only for
   their own paths; the package root holds

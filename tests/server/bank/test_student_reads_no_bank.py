@@ -13,8 +13,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from consumers.evaluation import EvaluationSession
-from consumers.evaluation.api import router as evaluation_router
+from variatio.functionalities.evaluation import EvaluationSession
+from server.functionalities.evaluation import router as evaluation_router
 from server.functionalities.generation.router import router as generations_router
 from server import auth
 from server.functionalities.shared import generations as store
