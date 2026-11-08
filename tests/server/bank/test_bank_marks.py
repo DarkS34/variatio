@@ -18,9 +18,9 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth
 from server.auth.deps import Access
-from server.bank import edit as bank_edit
-from server.bank import marks as bank_marks
-from server.bank.routes import bank as bank_routes
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank import marks as bank_marks
+from server.exemplars_bank.routes import bank as bank_routes
 from server.db import mirror
 from server.db.models import Base, User, Workspace as WorkspaceRow
 from variatio.utils.workspace import Workspace

@@ -27,8 +27,8 @@ from server.functionalities.tutor import store as tutor_store
 from server import auth
 from server.auth import features, queries
 from server.auth.deps import Access
-from server.bank import edit as bank_edit
-from server.bank import marks as bank_marks
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank import marks as bank_marks
 from server.classroom import groups
 from server.core import process
 from server.db import repository

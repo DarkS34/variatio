@@ -4,8 +4,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from server.bank import edit as bank_edit
-from server.bank.routes import bank as route
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank.routes import bank as route
 from variatio.utils.workspace import Workspace
 from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY
 

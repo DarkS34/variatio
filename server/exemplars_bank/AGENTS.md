@@ -1,14 +1,15 @@
-# AGENTS.md — `server/bank/` — step 3, «Banco de ejercicios»
+# AGENTS.md — `server/exemplars_bank/` — step 3, «Banco de ejercicios»
 
 Read the root `AGENTS.md` and `server/AGENTS.md` first. The screen is
 `web/src/features/bank/AGENTS.md`; the chain that collects and closes the bank is
 `pipeline/AGENTS.md`.
 
-`routes/` holds `/api/bank` (the teacher's bank, `auth.EDIT`, reads included), `/api/exercises`
-(the class's reading, `auth.VIEW`) and `/api/profile` (the types of exercise). `edit.py` edits
+`routes/` holds `/api/bank` (the teacher's bank, `auth.EDIT`, reads included) and `/api/exercises`
+(the class's reading, `auth.VIEW`); `exemplars_profile/routes/` holds `/api/profile` (the types of
+exercise). The folder was `bank/` until 2026-11-08; the URLs kept their names (D-009). `edit.py` edits
 the bank, `reading.py` cuts it to what a reader may see, `marks.py` keeps who sees each
 exercise and a teacher's stars, `tagging.py` queues the tagger on the exercises picked, and
-`profile_edit.py` edits the types.
+`exemplars_profile/edit.py` edits the types.
 
 - **A student reads the bank as its teachers show it** (D-102): every exercise is hidden until
   shown, whole or by fields, to the class or to chosen groups, through `reading.py` alone.

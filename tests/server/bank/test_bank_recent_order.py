@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from server.bank.routes import bank as route
+from server.exemplars_bank.routes import bank as route
 from variatio.utils.workspace import Workspace
 from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY
 

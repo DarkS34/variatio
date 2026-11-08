@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.24"
+version = "1.185.25"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -254,7 +254,8 @@ protected_modules = [
     "server.jobs.router",
     "server.documents.routes.*",
     "server.knowledge_graph.routes.*",
-    "server.bank.routes.*",
+    "server.exemplars_bank.routes.*",
+    "server.exemplars_bank.exemplars_profile.routes.*",
     "server.classroom.routes.*",
     "server.admin.accounts",
     "server.admin.invites",
@@ -276,7 +277,8 @@ allowed_importers = [
     "server.jobs.router",
     "server.documents.routes.*",
     "server.knowledge_graph.routes.*",
-    "server.bank.routes.*",
+    "server.exemplars_bank.routes.*",
+    "server.exemplars_bank.exemplars_profile.routes.*",
     "server.classroom.routes.*",
     "server.admin.accounts",
     "server.admin.invites",
@@ -300,7 +302,8 @@ modules = [
     "server.jobs.router",
     "server.documents.routes.*",
     "server.knowledge_graph.routes.*",
-    "server.bank.routes.*",
+    "server.exemplars_bank.routes.*",
+    "server.exemplars_bank.exemplars_profile.routes.*",
     "server.classroom.routes.*",
     "server.admin.accounts",
     "server.admin.invites",
@@ -322,7 +325,7 @@ layers = [
     # The functions: only the composition root mounts them, and none imports another.
     "functionalities.generation | functionalities.chat | functionalities.tutor | functionalities.evaluation",
     "admin",
-    "bank | knowledge_graph | documents",
+    "exemplars_bank | knowledge_graph | documents",
     # The bank shows an exercise to the class's groups, so the class sits below the steps.
     "classroom",
     "pipeline",
@@ -343,7 +346,8 @@ ignore_imports = [
     "server.jobs.router -> server.**",
     "server.documents.routes.** -> server.**",
     "server.knowledge_graph.routes.** -> server.**",
-    "server.bank.routes.** -> server.**",
+    "server.exemplars_bank.routes.** -> server.**",
+    "server.exemplars_bank.exemplars_profile.routes.** -> server.**",
     "server.classroom.routes.** -> server.**",
     # The construction's jobs are leaves too: only server/app.py installs them.
     "server.pipeline.jobs -> server.**",

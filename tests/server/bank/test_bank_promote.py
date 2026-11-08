@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from server.bank import edit as bank_edit
-from server.bank.edit import BankError
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank.edit import BankError
 from server.db import mirror
 from variatio.utils.workspace import Workspace
 from variatio.exemplars_bank.exemplars_profile.profile import ITEM_TYPE_KEY

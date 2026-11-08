@@ -17,7 +17,7 @@ from .. import auth
 from ..functionalities.shared import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import queries
-from ..bank import profile_edit
+from ..exemplars_bank.exemplars_profile import edit as profile_edit
 from ..classroom import members
 from ..core import contexts, installation, process
 from ..db import repository

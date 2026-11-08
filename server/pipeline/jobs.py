@@ -14,7 +14,7 @@ from variatio.exemplars_bank.tagging import ConceptTagger
 from variatio.utils import json_io, progress
 from variatio.utils.workspace import Workspace
 
-from ..bank import edit as bank_edit
+from ..exemplars_bank import edit as bank_edit
 from ..core import contexts, installation
 from ..core.contexts import context_for
 from ..db import mirror

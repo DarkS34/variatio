@@ -36,10 +36,10 @@ from sqlalchemy.orm import Session as DbSession
 
 from server import auth
 from server.functionalities.shared import generations as store
-from server.bank import edit as bank_edit
-from server.bank.edit import BankError, show
-from server.bank.marks import Shown, checked_groups
-from server.bank.tagging import queue_tagging, refuse_tagging
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank.edit import BankError, show
+from server.exemplars_bank.marks import Shown, checked_groups
+from server.exemplars_bank.tagging import queue_tagging, refuse_tagging
 from server.db.models import EDITOR, VIEWER
 from server.functionalities.shared.generations import row_view
 from server.pipeline.view import pipeline_payload

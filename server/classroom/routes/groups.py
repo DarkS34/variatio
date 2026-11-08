@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from ... import auth
-from ...bank import marks as bank_marks
+from ...exemplars_bank import marks as bank_marks
 from .. import groups
 from ..members import Refusal
 from ..shared import _groups_view, _http

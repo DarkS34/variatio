@@ -13,7 +13,7 @@ imports another. A person's id travels as `{user_id:int}` and a group's as
 four one after the other answers every path as the single router did.
 
 The three steps sit above the class in the server's layers: the bank shows an exercise to the
-class's groups (`bank/marks.checked_groups`).
+class's groups (`exemplars_bank/marks.checked_groups`).
 
 ## People, links and groups
 

@@ -2,7 +2,7 @@
 
 Declares `auth.VIEW`: a student reads here what `/api/bank` (`auth.EDIT`, reads included)
 never answers them (the user's decision, 2026-10-14). Each exercise is cut to the fields a
-teacher chose to show (`server/bank/marks.py`), with its type, its level and its concepts;
+teacher chose to show (`server/exemplars_bank/marks.py`), with its type, its level and its concepts;
 never where it comes from, who added it or the tagger's trace. A student sees the exercises
 shown to the whole class and those shown to their group; a teacher reading it sees the ones
 shown to anybody.

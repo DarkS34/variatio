@@ -13,6 +13,6 @@
     csv_safe.py      spreadsheet-safe CSV cells
     routes/          `/api/health`, `/api/maintenance` and the WebSocket stream
 
-Nothing here imports an area of the server (`auth/`, `pipeline/`, `bank/`, …): they import it.
+Nothing here imports an area of the server (`auth/`, `pipeline/`, `exemplars_bank/`, …): they import it.
 The queue's machinery (`jobs/`) is below the core, which assembles the live queue from it.
 """

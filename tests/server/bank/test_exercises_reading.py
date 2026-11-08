@@ -20,10 +20,10 @@ from sqlalchemy.pool import StaticPool
 from server import auth
 from server.auth import queries
 from server.auth.deps import Access
-from server.bank import edit as bank_edit
-from server.bank import marks as bank_marks
-from server.bank.routes import bank as bank_routes
-from server.bank.routes import exercises as exercise_routes
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank import marks as bank_marks
+from server.exemplars_bank.routes import bank as bank_routes
+from server.exemplars_bank.routes import exercises as exercise_routes
 from server.classroom import groups
 from server.classroom.routes import groups as group_routes
 from server.db import mirror, repository

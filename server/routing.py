@@ -12,7 +12,8 @@ from .admin import engine as admin_engine
 from .admin import maintenance as admin_maintenance
 from .admin import workspaces as admin_workspaces
 from .auth import router as auth
-from .bank.routes import bank, exercises, profile
+from .exemplars_bank.routes import bank, exercises
+from .exemplars_bank.exemplars_profile.routes import profile
 from .classroom.routes import activity, groups, links, people, uses
 from .core.routes import health, maintenance, stream
 from .jobs import router as jobs

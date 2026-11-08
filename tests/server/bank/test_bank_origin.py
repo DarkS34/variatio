@@ -18,10 +18,10 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth
 from server.auth.deps import Access
-from server.bank import edit as bank_edit
-from server.bank.edit import BankError
-from server.bank import tagging
-from server.bank.routes import bank as bank_routes
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank.edit import BankError
+from server.exemplars_bank import tagging
+from server.exemplars_bank.routes import bank as bank_routes
 from server.core import process
 from server.db import mirror
 from server.db.models import Base, User

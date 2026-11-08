@@ -4,7 +4,7 @@ Read the root `AGENTS.md` first.
 Rules for the server outside its subpackages: the database, how a request finds its subject,
 and the generated exercises. What every area stands on is `core/AGENTS.md`, identity
 `auth/AGENTS.md`, the subjects of an account `workspaces/AGENTS.md`, the build chain
-`pipeline/AGENTS.md`, step 1 `documents/AGENTS.md`, step 2 `knowledge_graph/AGENTS.md`, step 3 `bank/AGENTS.md`,
+`pipeline/AGENTS.md`, step 1 `documents/AGENTS.md`, step 2 `knowledge_graph/AGENTS.md`, step 3 `exemplars_bank/AGENTS.md`,
 «Clase» `classroom/AGENTS.md`, the panel `admin/AGENTS.md`, the queue `jobs/AGENTS.md`, what
 the tutor and the chat share `functionalities/shared/conversations/AGENTS.md`, and the transcription
 `variatio/documents/AGENTS.md`.
@@ -17,7 +17,7 @@ the tutor and the chat share `functionalities/shared/conversations/AGENTS.md`, a
   function reads an area's services, never its routes). The route comparison of a phase reads
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`, `cli/`),
-  `admin/`, `bank/`, `knowledge_graph/` and `documents/`, `classroom/`, `pipeline/`, `auth/` and `workspaces/` (no
+  `admin/`, `exemplars_bank/`, `knowledge_graph/` and `documents/`, `classroom/`, `pipeline/`, `auth/` and `workspaces/` (no
   two of one group import each other), then `functionalities/shared/` (`conversations/`, `generations.py`), then
   `core/`, then `jobs/`, then `db/`; each imports only what is below it. A route module is a
   leaf and may import any layer, and so are the construction's jobs (`pipeline/jobs.py`).
@@ -89,7 +89,7 @@ One line per rule of this folder. A number names an entry of the old register:
 `git show 6698e16:DECISIONS.md`.
 
 - D-227 — `server/` is organised by areas (`core/`, `auth/`, `workspaces/`, `pipeline/`,
-  `documents/`, `knowledge_graph/`, `bank/`, `classroom/`, `admin/`), each with its routes, services,
+  `documents/`, `knowledge_graph/`, `exemplars_bank/`, `classroom/`, `admin/`), each with its routes, services,
   `AGENTS.md` and tests in `tests/server/<area>/`; only `routing.py` imports a route module,
   and the areas' layers are an import contract.
 - D-114, D-116 — Deleting workspaces/artifacts from the panel is the admin's and takes the

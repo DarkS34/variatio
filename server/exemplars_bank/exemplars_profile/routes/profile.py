@@ -11,10 +11,10 @@ from variatio import prompts
 from variatio.utils import locale
 from variatio.exemplars_bank.exemplars_profile.profile import profile_drift
 
-from ... import auth
-from ...pipeline import approvals, storage
-from ...pipeline.view import pipeline_payload
-from .. import profile_edit
+from .... import auth
+from ....pipeline import approvals, storage
+from ....pipeline.view import pipeline_payload
+from .. import edit as profile_edit
 
 router = APIRouter(prefix="/api/profile", tags=["profile"], dependencies=[auth.VIEW])
 

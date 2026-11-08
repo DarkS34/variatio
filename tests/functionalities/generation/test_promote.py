@@ -16,8 +16,8 @@ from server.functionalities.generation.router import router as generations_route
 from server import auth
 from server.functionalities.shared import generations as store
 from server.auth.deps import Access
-from server.bank import edit as bank_edit
-from server.bank import tagging
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank import tagging
 from server.core import process
 from server.db import mirror
 from server.jobs import catalogue, lanes

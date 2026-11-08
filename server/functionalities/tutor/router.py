@@ -28,9 +28,9 @@ from server.functionalities.shared.conversations import routes as shared
 
 from server import auth
 from server.functionalities.shared import generations as generations_store
-from server.bank import edit as bank_edit
-from server.bank import reading as bank_reading
-from server.bank.reading import reader_of
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank import reading as bank_reading
+from server.exemplars_bank.reading import reader_of
 from server.core import process
 from server.jobs.catalogue import Job
 from server.pipeline import approvals, readings, storage
