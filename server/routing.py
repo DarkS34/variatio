@@ -18,7 +18,7 @@ from .core.routes import health, maintenance, stream
 from .jobs import router as jobs
 from .kg import router as kg
 from .pipeline.routes import context, pipeline
-from .raw import router as raw
+from .documents.routes import raw
 from .workspaces import router as workspaces
 
 ROUTERS = [

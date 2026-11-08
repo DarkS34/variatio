@@ -207,7 +207,7 @@ One line per folder: what it holds, and the file to open first.
 | `classroom/` | «Clase»: the people of a subject (`members.py`), its groups (`groups.py`), the course's progress (`curriculum.py`), the activity (`activity.py`); `routes/` holds `/api/members` (people, groups, uses, links) and `/api/activity` | `members.py` |
 | `bank/` | step 3: editing the bank (`edit.py`), the class's reading (`reading.py`), its marks (`marks.py`), the tagger (`tagging.py`), the types (`profile_edit.py`); `routes/` holds `/api/bank`, `/api/exercises` and `/api/profile` | `edit.py` |
 | `kg/` | step 2: the graph as the canvas reads it (`view.py`), its edits (`edit.py`) and `/api/kg` (`router.py`) | `edit.py` |
-| `raw/` | step 1: the slots' documents (`documents.py`), their originals (`originals.py`) and `/api/raw` (`router.py`) | `documents.py` |
+| `documents/` | step 1: the slots' documents (`documents.py`), their originals (`originals.py`) and `/api/raw` (`routes/raw.py`) | `documents.py` |
 | `workspaces/` | the subjects of an account: `router.py` (`/api/workspaces`) and `trees.py` (a subject's tree on disk) | `router.py` |
 | `auth/` | identity and permissions: route guards (`deps.py`), the account queries (`queries.py`), the optional functions (`features.py`), passwords, tokens, sealed links, mail, rate limits; `router.py` is login, one's account and password recovery | `deps.py` |
 | `db/` | ORM models, session, schema check, mirror, import/export | `models.py` |
@@ -250,7 +250,7 @@ there.
 
 | Area | Client | Server | Library | Jobs | Tests |
 |---|---|---|---|---|---|
-| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/documents/` |
+| Step 1 «Apuntes y ejercicios» | `features/raw/` | `documents/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/documents/` |
 | Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/knowledge_graph/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/exemplars_bank/`, `tests/knowledge_graph/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |

@@ -2,7 +2,7 @@
 
 The chain reads them — a build waits for a live transcription of the slot it reads
 (`gates.py`, `readings.py`) — and so does step 1, which lists, writes and transcribes their
-documents (`server/raw/documents.py`). `approvals.RAW_SOURCE` stays the one table of which
+documents (`server/documents/documents.py`). `approvals.RAW_SOURCE` stays the one table of which
 slot feeds which artifact.
 """
 

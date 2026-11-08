@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.20"
+version = "1.185.21"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -252,7 +252,7 @@ protected_modules = [
     "server.workspaces.router",
     "server.pipeline.routes.*",
     "server.jobs.router",
-    "server.raw.router",
+    "server.documents.routes.*",
     "server.kg.router",
     "server.bank.routes.*",
     "server.classroom.routes.*",
@@ -274,7 +274,7 @@ allowed_importers = [
     "server.workspaces.router",
     "server.pipeline.routes.*",
     "server.jobs.router",
-    "server.raw.router",
+    "server.documents.routes.*",
     "server.kg.router",
     "server.bank.routes.*",
     "server.classroom.routes.*",
@@ -298,7 +298,7 @@ modules = [
     "server.workspaces.router",
     "server.pipeline.routes.*",
     "server.jobs.router",
-    "server.raw.router",
+    "server.documents.routes.*",
     "server.kg.router",
     "server.bank.routes.*",
     "server.classroom.routes.*",
@@ -322,7 +322,7 @@ layers = [
     # The functions: only the composition root mounts them, and none imports another.
     "functionalities.generation | functionalities.chat | functionalities.tutor | functionalities.evaluation",
     "admin",
-    "bank | kg | raw",
+    "bank | kg | documents",
     # The bank shows an exercise to the class's groups, so the class sits below the steps.
     "classroom",
     "pipeline",
@@ -341,7 +341,7 @@ ignore_imports = [
     "server.workspaces.router -> server.**",
     "server.pipeline.routes.** -> server.**",
     "server.jobs.router -> server.**",
-    "server.raw.router -> server.**",
+    "server.documents.routes.** -> server.**",
     "server.kg.router -> server.**",
     "server.bank.routes.** -> server.**",
     "server.classroom.routes.** -> server.**",

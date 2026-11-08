@@ -10,9 +10,9 @@ from PIL import Image
 
 from server import auth
 from server.auth.deps import Access
-from server.raw import documents as raw_data
-from server.raw import originals
-from server.raw.router import router as raw_router
+from server.documents import documents as raw_data
+from server.documents import originals
+from server.documents.routes.raw import router as raw_router
 from variatio import documents
 from variatio.utils.workspace import Workspace
 from variatio.documents.files import source_hash

@@ -21,10 +21,10 @@ from pydantic import BaseModel
 
 from variatio import inference
 
-from .. import auth
-from ..core import process
-from ..pipeline import readings, slots
-from . import documents
+from ... import auth
+from ...core import process
+from ...pipeline import readings, slots
+from .. import documents
 
 router = APIRouter(prefix="/api/raw", tags=["raw"], dependencies=[auth.EDIT])
 

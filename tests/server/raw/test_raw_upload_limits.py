@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 
 from server import auth
 from server.auth.deps import Access
-from server.raw import documents
-from server.raw.router import router as raw_router
+from server.documents import documents
+from server.documents.routes.raw import router as raw_router
 from variatio import config
 from variatio.utils.workspace import Workspace
 

@@ -163,7 +163,7 @@ has a library half in `variatio/functionalities/` and a server half in `server/f
 - `server/AGENTS.md` (database, subjects, exercises), `server/core/AGENTS.md` (contexts,
   environment, tunnel, the door), `server/auth/AGENTS.md` (identity, roles),
   `server/workspaces/AGENTS.md` (a subject's life and tree), `server/pipeline/AGENTS.md` (the
-  build chain, approvals, the construction's jobs), `server/raw/AGENTS.md` (step 1),
+  build chain, approvals, the construction's jobs), `server/documents/AGENTS.md` (step 1),
   `server/kg/AGENTS.md` (step 2), `server/bank/AGENTS.md` (step 3),
   `server/classroom/AGENTS.md` (people, groups, links, progress, activity),
   `server/admin/AGENTS.md` (the panel),
