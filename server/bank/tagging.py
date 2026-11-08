@@ -2,7 +2,7 @@
 
 `tag_item` is a job of the teacher who asked, in the queue's second class, since somebody
 watches the concepts arrive. Passing a generated exercise into the bank
-(`consumers.generation`) asks the same of the same tagger.
+(`server.functionalities.generation`) asks the same of the same tagger.
 """
 
 from fastapi import HTTPException
@@ -18,7 +18,7 @@ from ..pipeline.gates import gate_error
 def refuse_tagging(access: auth.Access) -> None:
     """Refuse a tagging the chain or the engine would make fail: the gates of `tag`.
 
-    Public because passing a generated exercise into the bank (`consumers.generation`) asks the
+    Public because passing a generated exercise into the bank (`server.functionalities.generation`) asks the
     same of the same tagger.
     """
     error = gate_error(access.ws, "tag")

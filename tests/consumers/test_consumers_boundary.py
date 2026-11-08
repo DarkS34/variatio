@@ -25,10 +25,10 @@ def test_importing_a_function_s_library_half_does_not_pull_the_server_stack():
     code = (
         "import sys, consumers, consumers.evaluation, consumers.evaluation.run,"
         " consumers.evaluation.config, consumers.tutor, consumers.tutor.turn,"
-        " consumers.tutor.criteria_builder, consumers.generation,"
+        " consumers.tutor.criteria_builder, variatio.functionalities.generation,"
         " consumers.chat, consumers.chat.turn, consumers.chat.config;"
         "print(sorted(m for m in ('fastapi', 'sqlalchemy', 'consumers.tutor.api',"
-        " 'consumers.evaluation.api', 'consumers.generation.api', 'consumers.chat.api')"
+        " 'consumers.evaluation.api', 'server.functionalities.generation', 'consumers.chat.api')"
         " if m in sys.modules))"
     )
     out = subprocess.run(

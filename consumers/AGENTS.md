@@ -1,7 +1,8 @@
 # AGENTS.md — `consumers/` — the functions
 
 Read the root `AGENTS.md` first.
-Each function has its own `AGENTS.md`: `generation/`, `evaluation/`, `tutor/`, `chat/`. What
+Each function has its own `AGENTS.md`: `evaluation/`, `tutor/`, `chat/`, and the generation's
+is `server/functionalities/generation/AGENTS.md`. What
 the tutor and the chat share is `server/functionalities/shared/conversations/AGENTS.md`.
 
 ## `consumers/` — the functions the system is used through

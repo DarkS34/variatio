@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
-from consumers.generation.api import limits
+from server.functionalities.generation import limits
 from variatio import config
 
 FORM = Path(__file__).resolve().parents[3] / "web/src/consumers/generation/GenerateForm.tsx"

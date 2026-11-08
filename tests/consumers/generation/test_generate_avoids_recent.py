@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from consumers.generation.api import jobs as generation_jobs
+from server.functionalities.generation import jobs as generation_jobs
 from server.functionalities.shared import generations as store
 from server.jobs.catalogue import Job
 from variatio.utils import paths, progress

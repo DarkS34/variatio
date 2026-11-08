@@ -26,7 +26,7 @@ from .routing import ROUTERS
 # Worker threads for sync routes and `to_thread` calls (AnyIO's default is 40).
 WORKER_THREADS = 200
 
-from consumers.generation import api as generation_api
+from server.functionalities import generation as generation_api
 
 try:
     from consumers.evaluation import api as evaluation_api

@@ -9,7 +9,7 @@ word, because the offered list is edited from the panel while jobs sit in the qu
 import pytest
 from fastapi import HTTPException
 
-from consumers.generation.api import limits
+from server.functionalities.generation import limits
 from variatio import config
 
 

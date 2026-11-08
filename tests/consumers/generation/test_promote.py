@@ -12,7 +12,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from consumers.generation.api.router import router as generations_router
+from server.functionalities.generation.router import router as generations_router
 from server import auth
 from server.functionalities.shared import generations as store
 from server.auth.deps import Access
@@ -54,7 +54,7 @@ ANA = 1
 @pytest.fixture
 def ws(tmp_path, monkeypatch):
     monkeypatch.setattr(mirror, "mirror_file", lambda ws, path: None)
-    monkeypatch.setattr("consumers.generation.api.router.pipeline_payload", lambda access: {})
+    monkeypatch.setattr("server.functionalities.generation.router.pipeline_payload", lambda access: {})
     workspace = Workspace(tmp_path / "aula", slug="aula")
     workspace.artifacts_dir.mkdir(parents=True)
     workspace.exemplars_profile_path.write_text(json.dumps(PROFILE), encoding="utf-8")

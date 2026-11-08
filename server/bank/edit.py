@@ -499,7 +499,7 @@ def apply_tags(ws: Workspace, annotations: dict[str, dict]) -> dict:
 def show(access: auth.Access, item_id: str, visibility: Shown | None) -> None:
     """Let the class see an exercise just added, as its author chose; nothing to do if hidden.
 
-    Public because passing a generated exercise in (`consumers.generation`) chooses it too. The
+    Public because passing a generated exercise in (`server.functionalities.generation`) chooses it too. The
     groups were checked before anything was written (`checked_groups`).
     """
     if visibility is None or visibility.level == bank_marks.HIDDEN:

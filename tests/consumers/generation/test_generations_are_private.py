@@ -17,7 +17,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from consumers.generation.api.router import router as generations_router
+from server.functionalities.generation.router import router as generations_router
 from server import auth
 from server.functionalities.shared import generations as store
 from server.auth.deps import Access

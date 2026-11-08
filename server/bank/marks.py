@@ -260,7 +260,7 @@ class Shown(BaseModel):
 def checked_groups(db: Session, access: auth.Access, visibility: Shown | None) -> None:
     """Refuse groups that are not this class's, or a choice of groups that names none.
 
-    Public because passing a generated exercise in (`consumers.generation`) chooses the groups
+    Public because passing a generated exercise in (`server.functionalities.generation`) chooses the groups
     too, before anything is written.
     """
     if visibility is None or visibility.groups is None or visibility.level == HIDDEN:

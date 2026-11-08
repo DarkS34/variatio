@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from consumers.generation.api import limits
+from server.functionalities.generation import limits
 from server.auth.deps import Access
 from server.core import installation, process
 from server.db.models import EDITOR, VIEWER, Base

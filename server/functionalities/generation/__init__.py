@@ -1,4 +1,11 @@
-"""The commission's server side, mounted by the composition root and nowhere else.
+"""«Generar ejercicios»: the commission, as the server takes it, runs it and keeps it.
+
+The generator itself is the library's (`variatio/functionalities/generation/`, reached through
+`variatio.api.generate`), and the files of the exercises are shared
+(`server/functionalities/shared/generations.py`), read by the administrator's panel, the
+class's activity and the tutor too. What is this function's alone is here: the author's routes,
+the job that runs a commission, and the bounds a commission is admitted under. Mounted by the
+composition root and nowhere else.
 
 Generating is no optional function: there is no mode for it and it is always installed. It
 is installed FIRST, before the core's routers (`server/app.py`), because its

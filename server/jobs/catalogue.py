@@ -215,7 +215,7 @@ HANDLERS: dict[str, Callable[..., dict]] = {}
 FEATURE_OF: dict[str, str] = {"evaluate": "evaluation"}
 
 # What a kind's own function checks before one of its jobs is queued, registered when the
-# function is installed (`consumers.generation.api.install` for `generate`). It is handed
+# function is installed (`server.functionalities.generation.install` for `generate`). It is handed
 # the database session, the request's `auth.Access`, the job's params and the queueing
 # itself, so a check and the queueing it guards can share one lock, and it answers the job
 # queued or refuses with an `HTTPException`.

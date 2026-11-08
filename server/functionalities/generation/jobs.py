@@ -1,7 +1,7 @@
 """A commission: generate `n` exercises and save each one, with how it was made.
 
-Registered on `server.jobs.catalogue.HANDLERS` by `consumers.generation.api.install`, not declared
-there: the queue runs it as any other kind, and the construction's handlers know nothing of it.
+Registered on `server.jobs.catalogue.HANDLERS` by `server.functionalities.generation.install`,
+not declared there: the queue runs it as any other kind, and the construction's handlers know nothing of it.
 """
 
 from importlib import metadata

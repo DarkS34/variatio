@@ -7,7 +7,7 @@ indexing — takes a teacher, and a refusal says `role_too_low`.
 
 A kind's own function may admit it before it is queued (`catalogue.ADMISSIONS`): a commission's
 bounds — one live batch per account and subject, and a student's size and day — are
-`consumers.generation`'s, registered when it is installed.
+`server.functionalities.generation`'s, registered when it is installed.
 
 The chain's gates are enforced here and not merely drawn in the UI, so a stale artifact
 cannot be silently consumed. A job is only ever visible to the workspace it was submitted

@@ -46,7 +46,7 @@ The interface speaks Spanish; the code speaks English. One word per thing on eac
 | «Fase de construcción» / «Fase de pruebas» | `STEPS` / `USES` | `web/src/lib/steps.ts` |
 | puerta | one entry of `USES` | `web/src/lib/steps.ts` |
 | función | a package of `consumers/` | `consumers/` |
-| encargo | commission: the parameters of a `generate` job | `consumers/generation/` |
+| encargo | commission: the parameters of a `generate` job | `server/functionalities/generation/` |
 | ejercicio generado | generation, variant | `server/functionalities/shared/generations.py` |
 | «Avance de la asignatura» | curriculum | `server/classroom/curriculum.py` |
 | «Clase» | members, groups, activity | `server/classroom/` |
@@ -207,6 +207,7 @@ One line per folder: what it holds, and the file to open first.
 | `db/` | ORM models, session, schema check, mirror, import/export | `models.py` |
 | `jobs/` | the queue: catalogue, runner, lanes, priority, bus, build worker, and its routes (`router.py`) | `catalogue.py`, then `runner.py` |
 | `pipeline/` | the chain of the three steps: approvals, artifact writes, the label review, the context, what a job chains and what must be settled before it runs, the construction's jobs (`jobs.py`); `routes/` holds `/api/pipeline` and `/api/context` | `approvals.py`, then `chain.py` |
+| `functionalities/generation/` | the commission: its routes, the `generate` job and its bounds | `__init__.py` |
 | `functionalities/shared/` | what the tutor and the chat share (`conversations/`: store, daily count, quiet stream, route half) and the store of the generated exercises (`generations.py`) | `conversations/store.py` |
 | `cli/` | the `system` command | `main.py` |
 
@@ -215,7 +216,6 @@ an `api/` package whose `install(app)` the composition root calls.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `consumers/generation/` | the commission: its routes, the `generate` job and its bounds | `api/__init__.py` |
 | `consumers/evaluation/` | the study: arms, sessions, instruments, statistics | `run.py` |
 | `consumers/tutor/` | the Socratic tutor: card, turn, focus, checks, criteria, digest | `turn.py` |
 | `consumers/chat/` | the free chat: one guarded call per turn | `turn.py` |
@@ -254,7 +254,7 @@ there.
 | Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/knowledge_graph/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/exemplars_bank/`, `tests/knowledge_graph/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
-| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
+| Generating | `consumers/generation/` | `functionalities/generation/`, `functionalities/shared/generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `functionalities/shared/conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `functionalities/shared/conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
