@@ -37,12 +37,12 @@ except ModuleNotFoundError as missing:
     TUTOR_SETTINGS: list[Setting] = []
 
 try:
-    from consumers.chat.settings import LANE as CHAT_LANE
-    from consumers.chat.settings import MODEL_KEYS as CHAT_MODEL_KEYS
-    from consumers.chat.settings import READS as CHAT_READS
-    from consumers.chat.settings import SETTINGS as CHAT_SETTINGS
+    from variatio.functionalities.chat.settings import LANE as CHAT_LANE
+    from variatio.functionalities.chat.settings import MODEL_KEYS as CHAT_MODEL_KEYS
+    from variatio.functionalities.chat.settings import READS as CHAT_READS
+    from variatio.functionalities.chat.settings import SETTINGS as CHAT_SETTINGS
 except ModuleNotFoundError as missing:
-    if missing.name not in ("consumers", "consumers.chat", "consumers.chat.settings"):
+    if missing.name not in ("consumers", "variatio.functionalities.chat", "variatio.functionalities.chat.settings"):
         raise
     CHAT_LANE = None
     CHAT_MODEL_KEYS: tuple[str, ...] = ()

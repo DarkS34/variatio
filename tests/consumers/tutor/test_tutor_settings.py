@@ -6,7 +6,7 @@ library — is `tests/consumers/test_consumers_boundary.py`'s, with every other 
 
 import inspect
 
-from consumers.chat import settings as chat_settings
+from variatio.functionalities.chat import settings as chat_settings
 from consumers.tutor import prompts
 from consumers.tutor import settings as tutor_settings
 from variatio.settings.registry import BY_KEY, EXTRA_MODEL_KEYS, PIPELINE, STAGES

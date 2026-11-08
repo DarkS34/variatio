@@ -27,7 +27,7 @@ from server.core import process
 from server.pipeline import approvals
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 
-from .. import config as chat_config
+from variatio.functionalities.chat import config as chat_config
 from . import jobs, usage
 from .store import STORE
 

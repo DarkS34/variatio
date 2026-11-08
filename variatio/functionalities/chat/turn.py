@@ -25,7 +25,7 @@ from variatio.prompts import conversation as shared_prompts
 
 from . import BLOCKED, REPLIED
 from . import config as chat_config
-from . import prompts as chat_prompts_pkg
+from ...prompts import chat as chat_prompts_pkg
 
 
 @dataclass(frozen=True)

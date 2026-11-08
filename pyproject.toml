@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.16"
+version = "1.185.17"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -121,7 +121,7 @@ ignore_imports = [
 name = "The generation function imports no other function"
 type = "forbidden"
 source_modules = ["server.functionalities.generation"]
-forbidden_modules = ["consumers.evaluation", "consumers.tutor", "consumers.chat"]
+forbidden_modules = ["consumers.evaluation", "consumers.tutor", "variatio.functionalities.chat", "server.functionalities.chat"]
 # Direct imports only: each function reaches the server, and the server reaches the
 # evaluation in its four named reads.
 allow_indirect_imports = true
@@ -130,7 +130,7 @@ allow_indirect_imports = true
 name = "The evaluation function imports no other function"
 type = "forbidden"
 source_modules = ["consumers.evaluation"]
-forbidden_modules = ["server.functionalities.generation", "consumers.tutor", "consumers.chat"]
+forbidden_modules = ["server.functionalities.generation", "consumers.tutor", "variatio.functionalities.chat", "server.functionalities.chat"]
 # Direct imports only: each function reaches the server, and the server reaches the
 # evaluation in its four named reads.
 allow_indirect_imports = true
@@ -139,7 +139,7 @@ allow_indirect_imports = true
 name = "The tutor function imports no other function"
 type = "forbidden"
 source_modules = ["consumers.tutor"]
-forbidden_modules = ["server.functionalities.generation", "consumers.evaluation", "consumers.chat"]
+forbidden_modules = ["server.functionalities.generation", "consumers.evaluation", "variatio.functionalities.chat", "server.functionalities.chat"]
 # Direct imports only: each function reaches the server, and the server reaches the
 # evaluation in its four named reads.
 allow_indirect_imports = true
@@ -147,7 +147,7 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "The chat function imports no other function"
 type = "forbidden"
-source_modules = ["consumers.chat"]
+source_modules = ["variatio.functionalities.chat", "server.functionalities.chat"]
 forbidden_modules = ["server.functionalities.generation", "consumers.evaluation", "consumers.tutor"]
 # Direct imports only: each function reaches the server, and the server reaches the
 # evaluation in its four named reads.
@@ -158,8 +158,12 @@ name = "Inside the library, a function imports only what the functions share"
 type = "layers"
 containers = ["variatio.functionalities"]
 layers = [
-    "generation",
+    "generation | chat",
     "shared",
+]
+ignore_imports = [
+    # The settings registry reaches every function's settings; see «The library's layers».
+    "variatio.settings.registry -> variatio.functionalities.*.settings",
 ]
 
 [[tool.importlinter.contracts]]
@@ -180,6 +184,9 @@ layers = [
 ]
 ignore_imports = [
     "variatio.utils.lexicon -> variatio.prompts.wording",
+    # Each function declares its settings beside the code that reads them; the registry
+    # picks them up by an optional import.
+    "variatio.settings.registry -> variatio.functionalities.*.settings",
 ]
 
 [[tool.importlinter.contracts]]

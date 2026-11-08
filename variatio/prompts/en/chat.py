@@ -1,6 +1,6 @@
-"""The free chat's prompts in Spanish."""
+"""The free chat's prompts in English."""
 
-from variatio.prompts.es import conversation as shared
+from . import conversation as shared
 
 
 def system_prompt(subject: str, language: str, code: bool) -> str:
@@ -11,22 +11,22 @@ def system_prompt(subject: str, language: str, code: bool) -> str:
     2026-11-02 it answers in the subject's language, as the tutor does (plan §12).
     """
     role = (
-        "Eres el asistente de una asignatura. Ayudas a un alumno con lo que te pida sobre la "
-        "asignatura o sobre cómo estudiarla: explicas conceptos, resuelves ejercicios paso a "
-        "paso, propones ejemplos y prácticas, y corriges lo que el alumno haya hecho."
+        "You are the assistant of a course. You help a student with whatever they ask about the "
+        "course or about how to study it: you explain concepts, solve exercises step by step, "
+        "suggest examples and practice, and correct what the student has done."
     )
     method = (
-        "CÓMO AYUDAS\n"
-        "- Contesta con claridad y sin rodeos. Cuando resuelvas algo, explica los pasos.\n"
-        "- Si no estás seguro de un dato, dilo. No inventes datos, fuentes ni reglas "
-        "mnemotécnicas, y no des por bueno un intento que tiene un error."
+        "HOW YOU HELP\n"
+        "- Answer clearly and without detours. When you solve something, explain the steps.\n"
+        "- If you are not sure of a fact, say so. Do not invent facts, sources or mnemonics, and "
+        "do not accept an attempt that has an error in it."
     )
     return shared.system_prompt(role, method, subject=subject, language=language, code=code)
 
 
 def exercise_block(fields: list[tuple[str, str]]) -> str:
     """Render the exercise the conversation was opened on, with the fields the student reads."""
-    lines = ["EJERCICIO SOBRE EL QUE EL ALUMNO ABRIÓ LA CONVERSACIÓN"]
+    lines = ["EXERCISE THE STUDENT OPENED THE CONVERSATION ON"]
     for label, value in fields:
         lines += [f"{label}:", value]
     return "\n".join(lines)
@@ -35,18 +35,15 @@ def exercise_block(fields: list[tuple[str, str]]) -> str:
 def turn_prompt(history: list[tuple[str, str]], message: str, exercise: str | None = None) -> str:
     """Return the prompt of one reply: the exercise, the recent conversation and the message."""
     lines = [exercise, ""] if exercise else []
-    lines.append("CONVERSACIÓN HASTA AHORA")
+    lines.append("CONVERSATION SO FAR")
     if history:
-        lines += [f"{'Alumno' if role == 'student' else 'Asistente'}: {text}" for role, text in history]
+        lines += [f"{'Student' if role == 'student' else 'Assistant'}: {text}" for role, text in history]
     else:
-        lines.append("(es el primer mensaje)")
-    lines += ["", "MENSAJE DEL ALUMNO", message, "", "Responde solo con lo que le dirías al alumno."]
+        lines.append("(this is the first message)")
+    lines += ["", "THE STUDENT'S MESSAGE", message, "", "Answer only with what you would tell the student."]
     return "\n".join(lines)
 
 
 def blocked_reply() -> str:
     """Return the fixed answer to a message the guardrail refused."""
-    return (
-        "No puedo ayudarte con ese mensaje. Si tienes una duda de la asignatura, cuéntamela y la "
-        "vemos."
-    )
+    return "I can't help with that message. If you have a question about the subject, tell me and we'll look at it."

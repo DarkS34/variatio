@@ -26,9 +26,9 @@ def test_importing_a_function_s_library_half_does_not_pull_the_server_stack():
         "import sys, consumers, consumers.evaluation, consumers.evaluation.run,"
         " consumers.evaluation.config, consumers.tutor, consumers.tutor.turn,"
         " consumers.tutor.criteria_builder, variatio.functionalities.generation,"
-        " consumers.chat, consumers.chat.turn, consumers.chat.config;"
+        " variatio.functionalities.chat, variatio.functionalities.chat.turn, variatio.functionalities.chat.config;"
         "print(sorted(m for m in ('fastapi', 'sqlalchemy', 'consumers.tutor.api',"
-        " 'consumers.evaluation.api', 'server.functionalities.generation', 'consumers.chat.api')"
+        " 'consumers.evaluation.api', 'server.functionalities.generation', 'server.functionalities.chat')"
         " if m in sys.modules))"
     )
     out = subprocess.run(

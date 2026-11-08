@@ -1,7 +1,7 @@
 """The free chat's server side, mounted by the composition root and nowhere else.
 
-Nothing here is imported until `install` runs, and `consumers/chat/__init__.py` never reaches this
-package: that is what keeps `import consumers.chat` free of FastAPI and SQLAlchemy.
+Nothing here is imported until `install` runs, and `variatio/functionalities/chat/` never reaches this
+package: that is what keeps `import variatio.functionalities.chat` free of FastAPI and SQLAlchemy.
 """
 
 
@@ -19,7 +19,7 @@ def install(app) -> None:
         STUDENT_KINDS,
     )
 
-    from .. import config as chat_config
+    from variatio.functionalities.chat import config as chat_config
     from . import activity, jobs, router
 
     # A handler and no entry in `JOB_LABELS`: a turn comes through the chat's own routes,

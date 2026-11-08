@@ -168,8 +168,8 @@ that produces and consumes it.** `consumers` imports `variatio` and `server`; ne
   `server/classroom/AGENTS.md` (people, groups, links, progress, activity),
   `server/admin/AGENTS.md` (the panel),
   `server/jobs/AGENTS.md` (the queue), `server/functionalities/shared/conversations/AGENTS.md`.
-- `consumers/AGENTS.md` and one per function: `evaluation/`, `tutor/`, `chat/`;
-  `server/functionalities/generation/AGENTS.md` and `server/functionalities/shared/conversations/AGENTS.md`.
+- `consumers/AGENTS.md` and one per function: `evaluation/`, `tutor/`;
+  `variatio/functionalities/chat/AGENTS.md`, `server/functionalities/generation/AGENTS.md` and `server/functionalities/shared/conversations/AGENTS.md`.
 - `web/AGENTS.md` and `web/DESIGN.md` (read before any UI change), plus `src/features/bank/`,
   `src/features/class/`, `src/features/admin/`, `src/features/raw/`, `src/consumers/tutor/`,
   `src/landing/`.

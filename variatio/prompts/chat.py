@@ -6,9 +6,10 @@ the fixed answer a student reads — the refusal of the guardrail — comes from
 the replies around it. Both sets export the same names with the same signatures.
 """
 
-from variatio.utils import languages
+from ..utils import languages
 
-from . import en, es
+from .en import chat as en
+from .es import chat as es
 
 _SETS = {"es": es, "en": en}
 

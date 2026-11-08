@@ -143,7 +143,7 @@ inference/                           the engine boundary: every model call
 - **Inside `variatio/`, only `cli.py`, `functionalities/`, `retrieval/`, `documents/`,
   `exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
   `inference/repair.py` and `inference/vectors.py` call it on behalf of the builds and the functions.
-  Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
+  Outside the library the functions call it too (`consumers/tutor/`, `functionalities/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `functionalities`,
   `exemplars_bank`, `retrieval`, `knowledge_graph`, `documents`, `prompts`, `inference`, then `utils`, `settings` and
@@ -189,6 +189,7 @@ One line per folder: what it holds, and the file to open first.
 | `functionalities/generation/` | artifacts → exercises: generator, checks | `generator.py` |
 | `retrieval/` | the two vector indices (`Embedder`) and their caches | `index.py` |
 | `functionalities/shared/screening/` | the guardrail and the admissibility judge, used by several functions | `screening/__init__.py` |
+| `functionalities/chat/` | the free chat's library half: one guarded call per turn | `turn.py` |
 | `api/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `api/__init__.py` |
 
 **Server: `server/`**
@@ -208,6 +209,7 @@ One line per folder: what it holds, and the file to open first.
 | `jobs/` | the queue: catalogue, runner, lanes, priority, bus, build worker, and its routes (`router.py`) | `catalogue.py`, then `runner.py` |
 | `pipeline/` | the chain of the three steps: approvals, artifact writes, the label review, the context, what a job chains and what must be settled before it runs, the construction's jobs (`jobs.py`); `routes/` holds `/api/pipeline` and `/api/context` | `approvals.py`, then `chain.py` |
 | `functionalities/generation/` | the commission: its routes, the `generate` job and its bounds | `__init__.py` |
+| `functionalities/chat/` | the free chat's server half: routes, turn job, store, daily count | `router.py` |
 | `functionalities/shared/` | what the tutor and the chat share (`conversations/`: store, daily count, quiet stream, route half) and the store of the generated exercises (`generations.py`) | `conversations/store.py` |
 | `cli/` | the `system` command | `main.py` |
 
@@ -218,7 +220,6 @@ an `api/` package whose `install(app)` the composition root calls.
 |---|---|---|
 | `consumers/evaluation/` | the study: arms, sessions, instruments, statistics | `run.py` |
 | `consumers/tutor/` | the Socratic tutor: card, turn, focus, checks, criteria, digest | `turn.py` |
-| `consumers/chat/` | the free chat: one guarded call per turn | `turn.py` |
 
 **Client: `web/`**
 
@@ -257,7 +258,7 @@ there.
 | Generating | `consumers/generation/` | `functionalities/generation/`, `functionalities/shared/generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `functionalities/shared/conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
-| Free chat | `consumers/chat/` | `consumers/chat/`, `functionalities/shared/conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
+| Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
 | Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `admin/`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/admin/`, `tests/settings/` |

@@ -6,7 +6,7 @@ const conversation = (id: string) => `/api/chat/conversations/${encodeURICompone
 
 /**
  * The free chat's half of the API, apart from `lib/api.ts` as the chat is apart on the server
- * (`consumers/chat/api/`). Every call carries the active workspace through `request`.
+ * (`server/functionalities/chat/`). Every call carries the active workspace through `request`.
  */
 export const chatApi = {
   conversations: () => request<{ conversations: ChatRow[] }>("/api/chat/conversations"),

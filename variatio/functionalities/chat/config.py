@@ -1,7 +1,7 @@
 """The free chat's own index of settings, resolved on every read.
 
 The annotations below are the readable index, as `variatio.config`'s are; the values are
-declared in `consumers/chat/settings.py` and derived here.
+declared in `settings.py` and derived here.
 """
 
 from variatio import config as pipeline_config

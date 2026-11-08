@@ -18,8 +18,8 @@ HEAVY = ("variatio.inference", "docling", "torch", "server", "fastapi", "sqlalch
 # the packages that hold them, never more of a function.
 FUNCTION_SETTINGS = {
     "consumers",
-    "consumers.chat",
-    "consumers.chat.settings",
+    "variatio.functionalities.chat",
+    "variatio.functionalities.chat.settings",
     "consumers.evaluation",
     "consumers.evaluation.settings",
     "consumers.tutor",

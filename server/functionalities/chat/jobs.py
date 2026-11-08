@@ -1,6 +1,6 @@
 """The free chat's one job: answering one turn.
 
-Registered on `server.jobs.catalogue.HANDLERS` by `consumers.chat.api.install`. It goes through the
+Registered on `server.jobs.catalogue.HANDLERS` by `server.functionalities.chat.install`. It goes through the
 queue for the reason every model call does — the idle unloader reads the queue's clock — and
 says nothing in public (`server.functionalities.shared.conversations.jobs`): it names the conversation and the turn,
 reads the message from the author's own file and writes the reply back to it.
@@ -21,7 +21,7 @@ from variatio.utils import progress
 from variatio.knowledge_graph import context as content_context
 from variatio.utils import locale
 
-from ..turn import run_turn
+from variatio.functionalities.chat.turn import run_turn
 from .store import STORE
 
 TURN = "chat_turn"

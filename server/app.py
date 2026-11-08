@@ -41,9 +41,9 @@ except ModuleNotFoundError as missing:
     tutor_api = None
 
 try:
-    from consumers.chat import api as chat_api
+    from server.functionalities import chat as chat_api
 except ModuleNotFoundError as missing:
-    if missing.name not in ("consumers", "consumers.chat"):
+    if missing.name not in ("consumers", "variatio.functionalities.chat"):
         raise
     chat_api = None
 

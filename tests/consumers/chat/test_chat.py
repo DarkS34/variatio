@@ -18,11 +18,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from consumers.chat import BLOCKED, REPLIED
-from consumers.chat import config as chat_config
-from consumers.chat import turn as chat_turn
-from consumers.chat.api import jobs, router as router_module, usage
-from consumers.chat.api.store import STORE
+from variatio.functionalities.chat import BLOCKED, REPLIED
+from variatio.functionalities.chat import config as chat_config
+from variatio.functionalities.chat import turn as chat_turn
+from server.functionalities.chat import jobs, router as router_module, usage
+from server.functionalities.chat.store import STORE
 from consumers.tutor.api import store as tutor_store
 from server import auth
 from server.auth import features, queries
@@ -270,7 +270,7 @@ def test_a_turn_writes_the_reply_and_says_nothing_in_public(db, aula, monkeypatc
 
 
 def test_the_class_s_week_counts_the_chat_by_student_and_day(db, aula, monkeypatch):
-    from consumers.chat.api import activity as chat_activity
+    from server.functionalities.chat import activity as chat_activity
     from server.classroom import activity
 
     monkeypatch.setattr(activity, "CHAT_READER", chat_activity.read)

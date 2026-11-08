@@ -121,7 +121,7 @@ class ChatMessage:
 # The tutor's reader of its conversations, set by `consumers.tutor.api.install`; None without a
 # tutor.
 TUTOR_READER: Callable[[Workspace, list[int]], TutorReading] | None = None
-# The chat's, set by `consumers.chat.api.install`; None without the chat.
+# The chat's, set by `server.functionalities.chat.install`; None without the chat.
 CHAT_READER: Callable[[Workspace, list[int]], list[ChatMessage]] | None = None
 
 

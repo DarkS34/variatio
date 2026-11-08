@@ -1,13 +1,17 @@
-# AGENTS.md — `consumers/chat/` — the free chat
+# AGENTS.md — the free chat (`variatio/functionalities/chat/`, `server/functionalities/chat/`)
 
 Read the root `AGENTS.md` first.
 
-## `consumers/chat/` — «Chat libre»
+## The free chat — «Chat libre»
+
+The library half (`turn.py`, `config.py`, `settings.py`) is here; its prompts are
+`variatio/prompts/{es,en}/chat.py` (resolved by `variatio/prompts/chat.py`); the server half
+(routes, job, store, count, activity) is `server/functionalities/chat/`.
 
 An assistant without the tutor's method (the user's decision, 2026-10-14): it explains,
 solves and writes code, as the student asks, within the subject and education.
 
-- **A turn** (`consumers/chat/turn.py`): the guardrail (`screening.screen_message`; a refusal is a
+- **A turn** (`turn.py`): the guardrail (`screening.screen_message`; a refusal is a
   fixed text, kind `blocked`, and reaches no model), then ONE call (`chat_reply`) with the
   system prompt — its role and its way of helping over the shared blocks of
   `variatio/prompts/conversation.py` (the subject's `content_context.prompt_block()`, the reply
@@ -22,7 +26,7 @@ solves and writes code, as the student asks, within the subject and education.
   sampling triple, `chat.reply_max_tokens` (2048; `chat.reasoning_max_tokens`, 2048, when it
   reasons, which the `ollama` profile does since F3b), `chat.message_max_chars`,
   `chat.daily_messages` (empty = none; counted apart from the tutor's, `chat_daily_limit`).
-  Declared in `consumers/chat/settings.py` (stage `chat`, after the tutor's; `MODEL_KEYS` join
+  Declared in `settings.py` (stage `chat`, after the tutor's; `MODEL_KEYS` join
   `registry.EXTRA_MODEL_KEYS`), picked up by the registry's optional import, and drawn in
   «Configuración» — it is no optional function of the administrator's.
 - **Who uses it**: a subject's switch, `workspaces.student_chat` (migration 0023), CLOSED by

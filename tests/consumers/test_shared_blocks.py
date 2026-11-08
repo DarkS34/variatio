@@ -4,7 +4,7 @@ import inspect
 
 import pytest
 
-from consumers.chat import prompts as chat_prompts
+from variatio.prompts import chat as chat_prompts
 from consumers.tutor import prompts as tutor_prompts
 from consumers.tutor import checks
 from variatio.prompts import conversation as shared
