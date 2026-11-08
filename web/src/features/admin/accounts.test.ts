@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { accountsIn, coveredBy, groupOf, matchesAccount } from "./accounts";
+import { accountsIn, coveredBy, engineOptions, engineState, groupOf, matchesAccount } from "./accounts";
 
 const account = (over: Partial<Parameters<typeof groupOf>[0]> = {}) => ({
   disabled: false,
@@ -81,5 +81,45 @@ describe("coveredBy", () => {
 
   it("covers nobody while no subject is chosen", () => {
     expect(coveredBy(accounts, []).size).toBe(0);
+  });
+});
+
+describe("engineOptions", () => {
+  const engines = { default: "ollama", offered: ["ollama", "cerebras+ollama"] };
+
+  it("offers the default first, then every engine offered by its own name", () => {
+    expect(engineOptions(engines, null)).toEqual([
+      { value: null, name: "ollama" },
+      { value: "ollama", name: "ollama" },
+      { value: "cerebras+ollama", name: "cerebras+ollama" },
+    ]);
+  });
+
+  it("lists last an engine the account runs on that is no longer offered", () => {
+    expect(engineOptions(engines, "vllm").map((option) => option.value)).toEqual([
+      null,
+      "ollama",
+      "cerebras+ollama",
+      "vllm",
+    ]);
+    expect(engineOptions(engines, "ollama")).toHaveLength(3);
+  });
+
+  it("offers the default alone when an older answer lists nothing", () => {
+    expect(engineOptions({ default: "ollama", offered: undefined as unknown as string[] }, undefined)).toEqual([
+      { value: null, name: "ollama" },
+    ]);
+  });
+});
+
+describe("engineState", () => {
+  it("reads an engine nobody runs on as unused, whatever its instance", () => {
+    expect(engineState({ users: 0, live: false })).toBe("unused");
+    expect(engineState({ users: 0, live: true })).toBe("unused");
+  });
+
+  it("tells a live instance from one the server does not hold now", () => {
+    expect(engineState({ users: 3, live: true })).toBe("live");
+    expect(engineState({ users: 1, live: false })).toBe("idle");
   });
 });

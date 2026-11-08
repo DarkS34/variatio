@@ -45,6 +45,25 @@ export interface AdminAccount {
   /** Seconds the login rate limiter still refuses this account; 0 when it is not locked. */
   locked_seconds: number;
   email: string | null;
+  /** The engine it runs on; null on the installation's default (absent from an older API). */
+  engine?: string | null;
+}
+
+/** One engine an account may be given, and who runs on it now. */
+export interface EngineUse {
+  name: string;
+  /** The accounts that run on it, the ones on the default counted for the default. */
+  users: number;
+  /** The server holds an instance of it right now; one with no users has none. */
+  live: boolean;
+}
+
+/** The engines the installation offers its accounts (`GET /api/admin/engines`). */
+export interface AdminEngines {
+  default: string;
+  /** Every engine an account may be given; it holds the default. */
+  offered: string[];
+  engines: EngineUse[];
 }
 
 export interface DiskUsage {

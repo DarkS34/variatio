@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  Cpu,
   KeyRound,
   LockOpen,
   GraduationCap,
@@ -36,6 +37,7 @@ import { useT, type Key } from "@/lib/i18n";
 import { ROLE_HINT_KEYS, ROLE_LABEL_KEYS, useSession } from "@/state/auth";
 import {
   useAccountActions,
+  useAdminEngines,
   useAdminInvites,
   useDeleteAccount,
   useMembershipActions,
@@ -43,13 +45,17 @@ import {
 } from "@/state/queries";
 
 import { AccessSection, trustedNetworksOf, useAdminConfig } from "./AccessSection";
-import { groupOf, matchesAccount, type GroupKey } from "./accounts";
+import { engineOptions, groupOf, matchesAccount, type GroupKey } from "./accounts";
+import { EnginesSection } from "./EnginesSection";
 import { InvitesSection } from "./InvitesSection";
 
 const ROLES: Role[] = ["viewer", "editor", "owner"];
 
 /** The permissions from the widest to the narrowest: the order an account's subjects are read in. */
 const ROLE_ORDER: Role[] = ["owner", "editor", "viewer"];
+
+/** The sections of the tab that are not a kind of account. */
+type OtherSection = "invites" | "access" | "engines";
 
 /**
  * The kinds of account in the order they are listed (`accounts.groupOf`), each with the
@@ -93,11 +99,13 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   const session = useSession();
   const toast = useToast();
   const [open, setOpen] = useState<number | null>(null);
-  const [section, setSection] = useState<GroupKey | "invites" | "access">("teachers");
+  const [section, setSection] = useState<GroupKey | OtherSection>("teachers");
   const [search, setSearch] = useState("");
   const invites = useAdminInvites();
   const config = useAdminConfig();
   const networks = trustedNetworksOf(config.data);
+  const engines = useAdminEngines();
+  const offered = engines.data && Array.isArray(engines.data.offered) ? engines.data.offered : null;
   const now = Date.now();
   const waiting = invites.data
     ? invites.data.invites.filter((row) => inviteState(row, now) === "pending").length
@@ -109,7 +117,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
   })).filter((group) => group.accounts.length > 0);
   // An account that changes kind may empty the section open: the first one listed takes over.
   const current =
-    section === "invites" || section === "access"
+    section === "invites" || section === "access" || section === "engines"
       ? null
       : (groups.find((group) => group.key === section) ?? groups[0]);
   const term = search.trim();
@@ -182,7 +190,7 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
       value={matches ? null : (current?.key ?? section)}
       onChange={(key) => {
         setSearch("");
-        setSection(key as GroupKey | "invites" | "access");
+        setSection(key as GroupKey | OtherSection);
       }}
       before={
         <SearchInput
@@ -219,6 +227,13 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
                 : plural("acc.access.count", networks.length),
           separated: true,
         },
+        // Not a kind of account either: what the accounts run on.
+        {
+          key: "engines",
+          label: t("acc.engines"),
+          mark: <Cpu className="size-4" />,
+          detail: offered === null ? undefined : plural("acc.engines.count", offered.length),
+        },
       ]}
     >
       {matches ? (
@@ -250,6 +265,8 @@ export function AccountsTab({ overview }: { overview: AdminOverview }) {
         </>
       ) : section === "access" ? (
         <AccessSection />
+      ) : section === "engines" ? (
+        <EnginesSection />
       ) : (
         <InvitesSection overview={overview} />
       )}
@@ -496,7 +513,8 @@ function SubjectList({ account, names }: { account: AdminAccount; names: Map<str
 function AccountControls({ account, self }: { account: AdminAccount; self: boolean }) {
   const { plural, t } = useT();
   const confirm = useConfirm();
-  const { setAdmin, makeTeacher, resetLink, revokeSessions, unlock } = useAccountActions();
+  const { setAdmin, makeTeacher, resetLink, revokeSessions, unlock, setEngine } = useAccountActions();
+  const engines = useAdminEngines();
   const toast = useToast();
   const locked = account.locked_seconds > 0;
 
@@ -554,6 +572,16 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
         toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
     });
   };
+
+  const changeEngine = (engine: string | null) =>
+    setEngine.mutate(
+      { id: account.id, engine },
+      {
+        onSuccess: () => toast({ title: t("acc.engine.changed"), description: account.username }),
+        onError: (error: Error) =>
+          toast({ title: t("acc.changeFailed"), description: error.message, tone: "danger" }),
+      },
+    );
 
   return (
     <div className="space-y-3">
@@ -627,6 +655,27 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
         ) : null}
         <InfoHint label={t("acc.profileHint")}>{t("acc.profileHint.body")}</InfoHint>
       </div>
+      {/* The engine the account runs on, from the ones the installation offers. Drawn only
+          once they are read: an older API, with no such list, has no choice to offer. */}
+      {engines.data ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-small">{t("acc.engine")}:</span>
+          <Select
+            value={account.engine ?? ""}
+            className="w-auto min-w-48"
+            aria-label={t("acc.engine.of", { username: account.username })}
+            disabled={setEngine.isPending}
+            onChange={(event) => changeEngine(event.target.value || null)}
+          >
+            {engineOptions(engines.data, account.engine).map((option) => (
+              <option key={option.value ?? ""} value={option.value ?? ""}>
+                {option.value === null ? t("acc.engine.default", { name: option.name }) : option.name}
+              </option>
+            ))}
+          </Select>
+          {setEngine.isPending ? <Spinner /> : null}
+        </div>
+      ) : null}
 
       <FormError
         error={
@@ -634,7 +683,8 @@ function AccountControls({ account, self }: { account: AdminAccount; self: boole
           makeTeacher.error ??
           resetLink.error ??
           revokeSessions.error ??
-          unlock.error
+          unlock.error ??
+          setEngine.error
         }
       />
       {resetLink.isSuccess ? (

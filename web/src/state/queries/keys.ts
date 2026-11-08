@@ -38,6 +38,7 @@ export const keys = {
   adminJobs: ["admin", "jobs"] as const,
   adminJobHistory: ["admin", "jobs", "history"] as const,
   adminEngine: ["admin", "engine"] as const,
+  adminEngines: ["admin", "engines"] as const,
   adminFeatures: ["admin", "features"] as const,
   maintenance: ["maintenance"] as const,
   adminMaintenance: ["admin", "maintenance"] as const,

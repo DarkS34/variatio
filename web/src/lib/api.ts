@@ -4,6 +4,7 @@ import type {
   AdminClassLink,
   Allowance,
   AdminEngine,
+  AdminEngines,
   AdminFeaturesPayload,
   AdminGenerationListing,
   AdminJobQueue,
@@ -701,6 +702,12 @@ export const api = {
       `/api/admin/accounts/${userId}/profile`,
       { evaluator_profile: "teacher" },
     ),
+  // `null` puts the account back on the installation's default engine.
+  adminSetEngine: (userId: number, engine: string | null) =>
+    post<{ user_id: number; engine: string | null }>(`/api/admin/accounts/${userId}/engine`, {
+      engine,
+    }),
+  adminEngines: () => request<AdminEngines>("/api/admin/engines"),
   adminResetLink: (userId: number) =>
     post<{ user_id: number; link: string; expires_in_minutes: number }>(
       `/api/admin/accounts/${userId}/reset-link`,

@@ -65,7 +65,10 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   group with NEITHER marked, the button waiting until one is — and each row shows the profile
   as a badge. «Cuentas» has one section per kind of account, then «Invitaciones», then, ruled off,
   «Acceso» (`AccessSection`: the school networks, a draft saved with «Guardar los cambios»,
-  read-only when the environment sets them). The accounts are ONE TABLE PER
+  read-only when the environment sets them), then «Motores» (`EnginesSection`, a reading: each
+  engine the installation offers — `GET /api/admin/engines`, names drawn as the registry
+  gives them — with its accounts and whether the server holds its instance, «Sin usuarios»
+  when no account runs on it). The accounts are ONE TABLE PER
   KIND (user's request, 2026-10-04; `features/admin/accounts.ts`, `groupOf`): «Docentes» and «Alumnos» by
   `evaluator_profile` (no «Sin perfil» since 2026-10-06: migration 0017 left none, and an older
   API's NULL reads as a student's), «Administradores», and
@@ -79,7 +82,10 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first.
   opens the memberships and the account's controls under the row; a membership a teacher
   paused reads «Desactivada» with «Activar» in place of the role. The profile is a line
   there, «Perfil: …», with one button, «Hacer docente» (confirmed), on an account that is not
-  a teacher; a teacher's has no control, since the profile only climbs. No count of exercises,
+  a teacher; a teacher's has no control, since the profile only climbs. Under it, «Motor:»
+  is a select of «Por defecto (<default>)» (the account follows the installation) and every
+  engine offered (`accounts.engineOptions`); a change is saved at once and refreshes
+  «Motores». No count of exercises,
   no comparisons and no «ver sus sesiones» there: what an account evaluated is read in
   «Evaluaciones».
   «Motor» tab: **one section per part of the engine** — «General», «Local», and

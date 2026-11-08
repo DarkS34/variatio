@@ -1,4 +1,4 @@
-import type { AdminAccount } from "@/lib/types";
+import type { AdminAccount, AdminEngines, EngineUse } from "@/lib/types";
 import { fold } from "@/lib/text";
 
 /**
@@ -55,4 +55,39 @@ export function coveredBy(
 /** Whether an account is in a subject now: it has a membership there a teacher has not paused. */
 function isIn(account: Pick<AdminAccount, "workspaces">, slug: string): boolean {
   return account.workspaces.some((row) => row.slug === slug && !row.disabled);
+}
+
+/** One option of an account's «Motor»: `null` is the installation's default, named by `name`. */
+export interface EngineOption {
+  value: string | null;
+  name: string;
+}
+
+/**
+ * What an account's «Motor» offers: the default first, then every engine the installation
+ * offers, by its own name.
+ *
+ * The default and the default engine named are two options and not one: the first follows the
+ * installation if its default changes, the second keeps the account where it is. An engine the
+ * account runs on and the installation no longer offers is listed last, so the select says
+ * the truth about the account instead of showing another engine.
+ */
+export function engineOptions(
+  engines: Pick<AdminEngines, "default" | "offered">,
+  current: string | null | undefined,
+): EngineOption[] {
+  const offered = Array.isArray(engines.offered) ? engines.offered : [];
+  const names = current && !offered.includes(current) ? [...offered, current] : offered;
+  return [{ value: null, name: engines.default }, ...names.map((name) => ({ value: name, name }))];
+}
+
+/**
+ * What an engine is doing, in a word: «Sin usuarios» when no account runs on it (and so the
+ * server holds no instance of it), else whether its instance is live.
+ */
+export type EngineState = "unused" | "live" | "idle";
+
+export function engineState(engine: Pick<EngineUse, "users" | "live">): EngineState {
+  if (!(engine.users > 0)) return "unused";
+  return engine.live ? "live" : "idle";
 }

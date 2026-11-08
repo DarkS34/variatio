@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import type { ArtifactName, FeatureMode, GatedName, InviteTerms, Role } from "@/lib/types";
+import type { AdminOverview, ArtifactName, FeatureMode, GatedName, InviteTerms, Role } from "@/lib/types";
 import { authKeys } from "../auth";
 import { keys } from "./keys";
 import { useInvalidateChain } from "./pipeline";
@@ -141,11 +141,36 @@ export function useEngineActions() {
   };
 }
 
+/** The engines an account may be given, and how many accounts run on each. */
+export function useAdminEngines() {
+  return useQuery({ queryKey: keys.adminEngines, queryFn: api.adminEngines });
+}
+
 /** The account-level controls beyond enable/disable: the flag, the sessions, the lock. */
 export function useAccountActions() {
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: keys.adminOverview });
   return {
+    // The row takes the answer at once, so the select does not fall back to the old engine
+    // while the overview is read again; the engines' counts move with it.
+    setEngine: useMutation({
+      mutationFn: ({ id, engine }: { id: number; engine: string | null }) =>
+        api.adminSetEngine(id, engine),
+      onSuccess: ({ user_id, engine }) => {
+        client.setQueryData<AdminOverview>(keys.adminOverview, (overview) =>
+          overview
+            ? {
+                ...overview,
+                accounts: overview.accounts.map((account) =>
+                  account.id === user_id ? { ...account, engine } : account,
+                ),
+              }
+            : overview,
+        );
+        client.invalidateQueries({ queryKey: keys.adminEngines });
+        refresh();
+      },
+    }),
     setAdmin: useMutation({
       mutationFn: ({ id, isAdmin }: { id: number; isAdmin: boolean }) =>
         api.adminSetAdmin(id, isAdmin),
