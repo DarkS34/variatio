@@ -59,6 +59,9 @@ def run_build(artifact: str, control: JobControl, keep: Path | None = None) -> d
     if not control.job.workspace:
         raise ValueError("El trabajo no dice en qué asignatura construir.")
     command += ["--workspace", control.job.workspace]
+    # The build runs on the engine its job was accepted on, which is its person's.
+    if control.job.engine:
+        command += ["--engine", control.job.engine]
     if keep is not None:
         command += ["--keep", str(keep)]
     process = subprocess.Popen(

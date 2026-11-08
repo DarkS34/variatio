@@ -17,7 +17,8 @@ reserves nothing and never waits.
 import subprocess
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
 from loguru import logger
 
@@ -180,7 +181,8 @@ class JobRunner:
         # Resolved on submit rather than on dispatch: the engine can be switched from the
         # panel mid-queue, and a job runs on the engine and waits for the lanes it was
         # accepted against.
-        engine = self.engines.default()
+        # The request's engine is its person's; a job a job queues runs on the same engine.
+        engine = inference.current() or self.engines.default()
         job.engine = engine.name
         with inference.using(engine):
             job.backends = sorted(lanes.backends_for(kind, job.params))
@@ -433,18 +435,20 @@ class JobRunner:
         joblog.attach(job.workspace)
         token = progress.set_emitter(control)
         # What the job's model calls cost, whatever its end: a failed or stopped job spent too.
-        with usage.metering() as meter, inference.using(self.engines.get(job.engine)):
+        with usage.metering() as meter:
             try:
-                result = self.handlers[job.kind](job, control)
-                if control.should_cancel():
-                    self._settle(job, "cancelled", meter)
-                else:
-                    job.result = _with_usage(result, meter)
-                    # The next link is queued BEFORE this one is announced finished, so no
-                    # reading between the two finds the chain gone: the bank's step would offer
-                    # «Recoger el banco» again for the instant between its review and its build.
-                    self._chain(job)
-                    self._settle(job, "succeeded", meter)
+                with self._on_its_engine(job):
+                    result = self.handlers[job.kind](job, control)
+                    if control.should_cancel():
+                        self._settle(job, "cancelled", meter)
+                    else:
+                        job.result = _with_usage(result, meter)
+                        # The next link is queued BEFORE this one is announced finished, so no
+                        # reading between the two finds the chain gone: the bank's step would
+                        # offer «Recoger el banco» again for the instant between its review and
+                        # its build.
+                        self._chain(job)
+                        self._settle(job, "succeeded", meter)
             except progress.Cancelled:
                 self._settle(job, "cancelled", meter)
             except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
@@ -457,6 +461,16 @@ class JobRunner:
                 progress.reset_emitter(token)
                 joblog.detach(job.workspace)
                 self._release(job)
+
+    @contextmanager
+    def _on_its_engine(self, job: Job) -> Iterator[None]:
+        """Fix the engine the job was accepted on, held open until the job ends."""
+        engine = self.engines.hold(job.engine)
+        try:
+            with inference.using(engine):
+                yield
+        finally:
+            self.engines.release(job.engine)
 
     def _release(self, job: Job) -> None:
         """Give back every lane slot this job held and wake the dispatcher."""

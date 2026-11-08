@@ -12,7 +12,7 @@ fixes both, and `use(name)` is what it calls. Reading with no engine fixed raise
 """
 
 import contextvars
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
 from .derived import PHASES
@@ -24,7 +24,9 @@ DERIVED_NAMES = frozenset(
     {*PHASES.values(), "VARIANT_GENERATION_LLM", "LLM_CONTEXT", "SAMPLING", "EMBEDDING_MODELS"}
 )
 
-_engine: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+# A name, or a function that answers it the first time somebody asks: a request fixes its
+# engine without knowing it yet, and only a route that reads a setting resolves it.
+_engine: contextvars.ContextVar[str | Callable[[], str] | None] = contextvars.ContextVar(
     "settings_profile_engine", default=None
 )
 
@@ -43,8 +45,11 @@ class Profile:
 
 
 @contextmanager
-def use(engine: str) -> Iterator[None]:
-    """Make `engine`'s profile the one this context reads, for the block."""
+def use(engine: str | Callable[[], str]) -> Iterator[None]:
+    """Make `engine`'s profile the one this context reads, for the block.
+
+    `engine` may be a function that names it, called when a setting is first read.
+    """
     token = _engine.set(engine)
     try:
         yield
@@ -59,4 +64,4 @@ def current_engine() -> str:
         raise SettingError(
             "No hay perfil de motor activo: el proceso no fijó ningún motor para este trabajo"
         )
-    return engine
+    return engine if isinstance(engine, str) else engine()

@@ -41,39 +41,39 @@ class EngineReading:
     running: list[dict]
 
 
-_reading: EngineReading | None = None
+# One reading per engine: two people on two engines are reading two different servers.
+_readings: dict[str, EngineReading] = {}
 _reading_lock = threading.Lock()
 _clock = time.monotonic
 
 
 def engine_reading() -> EngineReading:
-    """Return the shared reading of the engine, reading it again when it is too old.
+    """Return the shared reading of the request's engine, reading it again when it is too old.
 
     One thread reads at a time; the others take the reading before it rather than queue
     behind the tunnel. Only when there is no reading at all does a request wait for one.
     """
-    global _reading
-    current = _reading
+    name = inference.engine_name()
+    current = _readings.get(name)
     if current is not None and _clock() - current.at < READ_EVERY:
         return current
     if not _reading_lock.acquire(blocking=current is None):
         return current
     try:
-        current = _reading
+        current = _readings.get(name)
         if current is not None and _clock() - current.at < READ_EVERY:
             return current
         available = inference.is_available()
         installed, running = _listings() if available else ([], [])
-        _reading = EngineReading(_clock(), available, installed, running)
-        return _reading
+        _readings[name] = EngineReading(_clock(), available, installed, running)
+        return _readings[name]
     finally:
         _reading_lock.release()
 
 
 def forget_reading() -> None:
     """Drop the shared reading, so the next request reads the engine again."""
-    global _reading
-    _reading = None
+    _readings.clear()
 
 
 def _listings() -> tuple[list[str], list[dict]]:

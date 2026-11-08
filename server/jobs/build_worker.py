@@ -32,6 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="build-worker")
     parser.add_argument("artifact", choices=["exemplars_profile", "knowledge_graph", "exemplars_bank"])
     parser.add_argument("--workspace", required=True, help="Workspace slug")
+    parser.add_argument("--engine", default=None, help="The engine to build on; the default without one")
     parser.add_argument(
         "--keep", default=None, help="The bank's: a JSON of the exercises the new bank starts from"
     )
@@ -59,7 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     progress.set_emitter(emitter)
     engines = EngineSet()
     try:
-        with inference.using(engines.default()):
+        engine = engines.get(args.engine) if args.engine else engines.default()
+        with inference.using(engine):
             return _build(args, emitter)
     finally:
         engines.close_all()

@@ -15,7 +15,8 @@ re-exports both.
 """
 
 import contextvars
-from collections.abc import Iterator
+import threading
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
 from loguru import logger
@@ -27,9 +28,26 @@ from .thinking import ThinkingSplitter, split_thinking
 from .interface import Engine
 from .types import GenerationResponse, InferenceError, ProgressSink, Sampling, TokenSink
 
-_current: contextvars.ContextVar[Engine | None] = contextvars.ContextVar(
+_current: contextvars.ContextVar["Engine | _Deferred | None"] = contextvars.ContextVar(
     "inference_engine", default=None
 )
+
+
+class _Deferred:
+    """An engine fixed by the function that builds it, built the first time it is asked for."""
+
+    def __init__(self, build: Callable[[], Engine]) -> None:
+        """Hold `build` until somebody asks for the engine."""
+        self._build = build
+        self._engine: Engine | None = None
+        self._lock = threading.Lock()
+
+    def get(self) -> Engine:
+        """The engine, built on the first call."""
+        with self._lock:
+            if self._engine is None:
+                self._engine = self._build()
+            return self._engine
 
 
 @contextmanager
@@ -45,6 +63,28 @@ def using(engine: Engine) -> Iterator[Engine]:
             yield engine
     finally:
         _current.reset(token)
+
+
+@contextmanager
+def using_deferred(build: Callable[[], Engine]) -> Iterator[None]:
+    """Fix the engine `build` returns for the block, building it only if a call asks for it.
+
+    A request fixes its person's engine this way: knowing which one it is costs a database
+    read, and most requests never ask.
+    """
+    deferred = _Deferred(build)
+    token = _current.set(deferred)
+    try:
+        with settings.use_profile(lambda: deferred.get().name):
+            yield
+    finally:
+        _current.reset(token)
+
+
+def current() -> Engine | None:
+    """The engine fixed for the current context, or None when there is none."""
+    fixed = _current.get()
+    return fixed.get() if isinstance(fixed, _Deferred) else fixed
 
 
 def generate(
@@ -146,12 +186,12 @@ def supports_vision(model: str) -> bool:
 
 def engine() -> Engine:
     """The engine fixed for the current context; raises when there is none."""
-    current = _current.get()
-    if current is None:
+    fixed = current()
+    if fixed is None:
         raise InferenceError(
             "No hay motor de inferencia activo: el proceso no fijó ninguno para este trabajo"
         )
-    return current
+    return fixed
 
 
 def engine_name() -> str:

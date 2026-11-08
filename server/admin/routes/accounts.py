@@ -18,8 +18,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from server.functionalities.evaluation import store as evaluation_store
+from variatio import config
 
 from ... import auth
+from ...auth import engines as auth_engines
 from ...functionalities.shared import generations as generations_store
 from ...auth import queries
 from ...auth.rate_limit import locked_seconds, unlock
@@ -52,6 +54,12 @@ class AdminBody(BaseModel):
     is_admin: bool
 
 
+class EngineBody(BaseModel):
+    """The engine an account is put on; None puts it back on the installation's default."""
+
+    engine: str | None = None
+
+
 class ProfileBody(BaseModel):
     """The profile an account is raised to, which can only be `teacher`."""
 
@@ -71,6 +79,8 @@ def _account_view(db: DbSession, user: User, generated: dict, by_account: dict) 
         # The functions an administrator switched off for their own account (D-245).
         "features_off": list(user.features_off or []) if user.is_admin else [],
         "evaluator_profile": user.evaluator_profile,
+        # The inference engine it runs on; None is the installation's default.
+        "engine": user.inference_engine,
         "disabled": not user.active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "workspaces": [
@@ -192,6 +202,47 @@ def set_profile(user_id: int, body: ProfileBody, db: DbSession = Depends(auth.db
         queries.set_evaluator_profile(db, user, TEACHER)
         logger.info("[cuentas] «{}» pasa a ser docente", user.username)
     return {"user_id": user.id, "evaluator_profile": user.evaluator_profile}
+
+
+@router.get("/engines")
+def engines(db: DbSession = Depends(auth.db)) -> dict:
+    """Answer the engines an account may be given, how many run on each, and which are live.
+
+    An engine nobody runs on has no instance (`users` 0, `live` false), and reading this
+    builds none.
+    """
+    counts = auth_engines.accounts_per_engine(db)
+    offered = auth_engines.offered()
+    return {
+        "default": str(config.INFERENCE_ENGINE),
+        "offered": offered,
+        "engines": [
+            {"name": name, "users": counts.get(name, 0), "live": process.engines.existing(name) is not None}
+            for name in offered
+        ],
+    }
+
+
+@router.post("/accounts/{user_id}/engine")
+def set_engine(user_id: int, body: EngineBody, db: DbSession = Depends(auth.db)) -> dict:
+    """Put an account on one of the offered engines, or back on the default with None.
+
+    The engine it moves to gets an instance if it had none, and the one it leaves is closed
+    when nobody runs on it any more. A job already queued keeps the engine it was accepted on.
+    """
+    user = queries.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(404, "Esa cuenta no existe.")
+    if body.engine is not None and body.engine not in auth_engines.offered():
+        raise HTTPException(
+            422,
+            f"El motor «{body.engine}» no está entre los que ofrece esta instalación "
+            f"({', '.join(auth_engines.offered())}).",
+        )
+    auth_engines.assign(db, user, body.engine)
+    auth_engines.sync()
+    logger.info("[cuentas] «{}» pasa al motor «{}»", user.username, body.engine or "por defecto")
+    return {"user_id": user.id, "engine": user.inference_engine}
 
 
 @router.delete("/accounts/{user_id}/memberships/{slug}")

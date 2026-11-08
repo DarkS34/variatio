@@ -19,6 +19,7 @@ from loguru import logger
 from variatio import config
 
 from . import jobs
+from .auth import engines as auth_engines
 from .core import environment, middleware, process
 from .pipeline import chain
 from .pipeline import jobs as pipeline_jobs
@@ -60,7 +61,7 @@ def create_app() -> FastAPI:
 
     # `add_middleware` inserts at the front, so the LAST call is the OUTERMOST layer.
     # `SecurityHeaders` goes last or `OriginCheck`'s own 403 leaves without a CSP.
-    app.add_middleware(middleware.EngineContext)
+    app.add_middleware(auth_engines.EngineContext)
     app.add_middleware(middleware.OriginCheck)
     app.add_middleware(middleware.SecurityHeaders)
 
@@ -114,6 +115,7 @@ async def lifespan(app: FastAPI):
     # once, each route reading files and the database, queued behind those 40.
     anyio.to_thread.current_default_thread_limiter().total_tokens = WORKER_THREADS
     _autostart_tunnel()
+    _start_engines()
     process.runner.start()
     process.idle_unloader.start()
     try:
@@ -127,6 +129,14 @@ async def lifespan(app: FastAPI):
             logger.warning(f"No se pudieron descargar los modelos de la GPU al apagar: {e}")
         process.engines.close_all()
         process.tunnel.stop()
+
+
+def _start_engines() -> None:
+    """Build the engines the accounts run on, and no other; a database away is a log line."""
+    try:
+        auth_engines.sync()
+    except Exception as e:  # noqa: BLE001 - the engines are also built when first asked for
+        logger.warning(f"No se pudieron preparar los motores de las cuentas al arrancar: {e}")
 
 
 def _autostart_tunnel() -> None:

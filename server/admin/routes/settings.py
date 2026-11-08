@@ -20,6 +20,7 @@ from variatio.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
 from ... import auth
+from ...auth import engines as auth_engines
 from ...core import contexts, process
 
 router = APIRouter(
@@ -86,6 +87,7 @@ def _act(impacts: set) -> list[str]:
     done: list[str] = []
     if Impact.ENGINE in impacts:
         process.engines.close_all()
+        auth_engines.sync()
         done.append("motor de inferencia reiniciado")
     if impacts & {Impact.CONTEXTS, Impact.REINDEX, Impact.ENGINE}:
         count = contexts.invalidate_all("configuración cambiada")

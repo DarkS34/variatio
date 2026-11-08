@@ -9,6 +9,11 @@ Two engines over the same Ollama server share ONE `OllamaEngine`: the `ollama` e
 instance, and the hybrid's local half is the same object. They share its client and its
 capability and listing caches; the models resident on the GPU are the server's and were
 shared already. The local instance is closed when the last engine that uses its host goes.
+
+An engine nobody uses has no instance. The owner says which engines are wanted (`keep`, the
+server's: the engines its accounts run on) and a job holds the one it runs on while it runs
+(`hold`/`release`); an engine neither wanted nor held is closed. A process that never calls
+`keep` (the CLI, a build) keeps whatever it built.
 """
 
 import threading
@@ -27,10 +32,12 @@ class EngineSet:
 
     def __init__(self) -> None:
         """Start empty: no engine exists until somebody asks for it."""
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._engines: dict[str, Engine] = {}
         self._hosts: dict[str, str] = {}
         self._locals: dict[str, Engine] = {}
+        self._wanted: set[str] | None = None
+        self._held: dict[str, int] = {}
 
     def default(self) -> Engine:
         """The installation's default engine, `engine.name`, built if it does not exist yet."""
@@ -59,6 +66,40 @@ class EngineSet:
         """One `OllamaEngine` per Ollama host in use: what residency and the GPU mean."""
         with self._lock:
             return list(self._locals.values())
+
+    def keep(self, names: set[str]) -> None:
+        """Make `names` the wanted engines: build each one, close every other nobody holds.
+
+        An engine that cannot be built (a name no longer known) is logged and skipped.
+        """
+        with self._lock:
+            self._wanted = set(names)
+            for name in sorted(names):
+                try:
+                    self.get(name)
+                except InferenceError as e:
+                    logger.warning(f"[inference] Not building the engine '{name}': {e}")
+            for name in self.names():
+                if name not in self._wanted and not self._held.get(name):
+                    self.close(name)
+
+    def hold(self, name: str) -> Engine:
+        """The engine called `name`, held open until `release`: what a running job does."""
+        with self._lock:
+            engine = self.get(name)
+            self._held[name] = self._held.get(name, 0) + 1
+            return engine
+
+    def release(self, name: str) -> None:
+        """Let go of one `hold`; the last one closes an engine that is no longer wanted."""
+        with self._lock:
+            left = self._held.get(name, 0) - 1
+            if left > 0:
+                self._held[name] = left
+                return
+            self._held.pop(name, None)
+            if self._wanted is not None and name not in self._wanted:
+                self.close(name)
 
     def close(self, name: str) -> None:
         """Close the engine called `name`, and its local half if no other engine uses it."""
