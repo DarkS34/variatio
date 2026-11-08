@@ -237,7 +237,7 @@ def _sort(rows: list[dict], order: str, profile: ExemplarsProfile) -> None:
     elif order == "recent":
         # Ids are C001, C002… in extraction order, so "the last thing written" is the tail of
         # that list. No screen asks for it: it stays because this listing is an API and
-        # "newest first" is a real order, and `tests/server/bank/test_bank_recent_order.py` is
+        # "newest first" is a real order, and `tests/server/exemplars_bank/test_bank_recent_order.py` is
         # what keeps it from being swept up as dead — as with the `concept` filter.
         rows.sort(key=lambda r: r["id"], reverse=True)
     else:
