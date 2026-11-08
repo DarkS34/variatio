@@ -239,7 +239,7 @@ an `api/` package whose `install(app)` the composition root calls.
 | Folder | Holds |
 |---|---|
 | `migrations/` | Alembic migrations; the ORM models must match them |
-| `tests/` | one folder per subsystem (`core`, `settings`, `loaders`, `prompts`, `builders`, `runtime/generation`, `runtime/screening`, `server/<area>`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
+| `tests/` | one folder per subsystem (`utils`, `inference`, `settings`, `prompts`, `documents`, `knowledge_graph`, `exemplars_bank`, `retrieval`, `runtime/generation`, `runtime/screening`, `server/<area>`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
 | `workspaces/` | the instances, one folder per slug (git-ignored) |
 | `plans/` | private work plans (git-ignored) |
 
@@ -250,9 +250,9 @@ there.
 
 | Area | Client | Server | Library | Jobs | Tests |
 |---|---|---|---|---|---|
-| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
-| Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
-| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/runtime/generation/test_taggability*` |
+| Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/documents/` |
+| Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/knowledge_graph/`, `tests/server/kg/` |
+| Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/exemplars_bank/`, `tests/knowledge_graph/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
@@ -276,7 +276,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **There is no default workspace**: every path takes one; `paths.workspace("")` raises.
   `tests/server/core/test_no_default_workspace.py`.
 - **One writer of persisted JSON**, `utils/json_io.write_json` (atomic; approval hashes are
-  hashes of its bytes). `tests/core/test_json_io_atomic.py` tests the writer; the rule itself
+  hashes of its bytes). `tests/utils/test_json_io_atomic.py` tests the writer; the rule itself
   is a convention.
 - **Every route declares its access level**, and a new route with no row fails.
   `tests/server/auth/test_route_roles.py`.
@@ -287,8 +287,8 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **Every setting names the stages that read it.** `tests/settings/test_setting_stages.py`.
 - **The library's two prompt sets have the same modules and signatures.**
   `tests/prompts/test_prompt_sets.py` (the functions' prompt sets are not covered).
-- **Every PDFium call holds one process-wide lock.** `tests/builders/test_pdfium_lock.py`.
-- **No header raises the Cerebras ceilings.** `tests/core/test_cerebras_budget.py`.
+- **Every PDFium call holds one process-wide lock.** `tests/documents/test_pdfium_lock.py`.
+- **No header raises the Cerebras ceilings.** `tests/inference/test_cerebras_budget.py`.
 - **The ORM models describe what the migrations built**: `alembic` autogenerate against the
   live schema reports zero differences. Checked by hand; `serve` refuses a schema behind or
   ahead of the migrations (`server/db/schema.py`).
