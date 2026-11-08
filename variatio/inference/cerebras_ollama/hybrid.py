@@ -24,10 +24,15 @@ class HybridEngine(Engine):
 
     name = "cerebras+ollama"
 
-    def __init__(self):
-        """Build both backends; which one serves a call is decided per model."""
-        self._ollama = OllamaEngine()
-        self._cerebras = CerebrasEngine()
+    def __init__(self, ollama: OllamaEngine, cerebras: CerebrasEngine):
+        """Take both backends; which one serves a call is decided per model.
+
+        The local half may be the very `OllamaEngine` another engine uses — two engines over
+        one Ollama server share its client and its caches — so it is not this engine's to
+        close.
+        """
+        self._ollama = ollama
+        self._cerebras = cerebras
 
     def is_available(self) -> bool:
         """Whether the LOCAL half answers, which is what this process cannot do without.
@@ -38,9 +43,8 @@ class HybridEngine(Engine):
         return self._ollama.is_available()
 
     def close(self) -> None:
-        """Close both backends."""
+        """Close the remote half; the local one belongs to whoever built it."""
         self._cerebras.close()
-        self._ollama.close()
 
     def generate(self, model: str, prompt: str, **kwargs) -> GenerationResponse:
         """Ask the backend that serves `model` for one answer."""

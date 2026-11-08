@@ -6,7 +6,6 @@ import pytest
 from variatio import prompts
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.functionalities.shared import screening
-from variatio.inference.cerebras_ollama import budget as cerebras_budget
 from variatio.knowledge_graph.context import ContentContext
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
@@ -50,10 +49,8 @@ PREREQUISITE = "tiene como prerrequisito"
 # transport — charged six phantom requests to the real Cerebras budget and the
 # panel then reported them as spent.
 @pytest.fixture(autouse=True)
-def _isolated_cerebras_ledger(tmp_path):
-    cerebras_budget.use(tmp_path / "cerebras_budget.json")
-    yield
-    cerebras_budget.use(None)
+def _isolated_cerebras_ledger(tmp_path, monkeypatch):
+    monkeypatch.setenv("CEREBRAS_BUDGET_PATH", str(tmp_path / "cerebras_budget.json"))
 
 
 # The fourth stops a test reading Cerebras' catalogue over the network. Routing asks the

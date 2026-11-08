@@ -6,12 +6,12 @@ import time
 import httpx
 from loguru import logger
 
-from ... import config
 from ...utils import progress, repetition
 from .. import usage
 from ..thinking import split_thinking
 from ..types import GenerationResponse, InferenceError, Sampling, TokenSink
 from . import budget as cerebras_budget
+from .budget import Budget
 from .schema import (
     _WRAPPER_NAME,
     _unwrap,
@@ -37,13 +37,16 @@ class CerebrasEngine:
 
     name = "cerebras"
 
-    def __init__(self):
-        """Open the client with the configured base URL and key, and empty the catalogue."""
+    def __init__(self, base_url: str, api_key: str, budget: Budget):
+        """Open the client on `base_url` with `api_key`, charging every call to `budget`."""
+        self._base_url = base_url
+        self._budget = budget
         self._client = httpx.Client(
-            base_url=config.CEREBRAS_BASE_URL,
-            headers={"Authorization": f"Bearer {config.CEREBRAS_API_KEY}"},
+            base_url=base_url,
+            headers={"Authorization": f"Bearer {api_key}"},
             timeout=httpx.Timeout(600.0, connect=10.0),
         )
+        self._warned: set[str] = set()
         self._catalog: tuple[float, list[str]] | None = None
         self._catalog_failed_at: float | None = None
 
@@ -90,7 +93,7 @@ class CerebrasEngine:
             logger.debug(f"[cerebras] Error body while listing models: {response.text[:300]}")
             raise InferenceError(
                 f"Cerebras respondió {response.status_code} al listar sus modelos "
-                f"({_endpoint_label('/models')}); el detalle está en el registro"
+                f"({_endpoint_label(self._base_url, '/models')}); el detalle está en el registro"
             )
         models = sorted(str(row.get("id", "")) for row in response.json().get("data", []))
         models = [model for model in models if model]
@@ -130,7 +133,7 @@ class CerebrasEngine:
         # ledger would charge a whole generation zero tokens.
         body["stream_options"] = {"include_usage": True}
 
-        ledger = cerebras_budget.shared()
+        ledger = self._budget
         phase = progress.current_activity()
         claim = ledger.wait(model, cerebras_budget.estimate_tokens(prompt), phase)
 
@@ -140,7 +143,7 @@ class CerebrasEngine:
                     response.read()
                     ledger.record(model, phase, 0, 0, response.headers, claim=claim)
                     raise InferenceError(
-                        _remote_error(response.status_code, model, response.text)
+                        _remote_error(self._base_url, response.status_code, model, response.text)
                     )
                 answer, thinking, prompt_tokens, completion_tokens = _consume_stream(
                     response, on_token
@@ -248,6 +251,7 @@ class CerebrasEngine:
                 body["top_p"] = sampling.top_p
             if sampling.top_k is not None:
                 _warn_once(
+                    self._warned,
                     f"top_k:{model}",
                     f"[cerebras] '{model}' is sent no top_k (the API does not document it); "
                     f"the {sampling.top_k} asked for is dropped",
@@ -257,7 +261,7 @@ class CerebrasEngine:
         effort = reasoning_effort(think)
         if effort is not None:
             body["reasoning_effort"] = effort
-        shaped = response_format(format)
+        shaped = response_format(format, self._warned)
         if shaped is not None:
             body["response_format"] = shaped
         return body
@@ -274,7 +278,7 @@ class CerebrasEngine:
         repeating. The ledger in front of this makes a 429 the exception: what is left is
         the answer to somebody ELSE spending the same account's budget.
         """
-        ledger = cerebras_budget.shared()
+        ledger = self._budget
         phase = progress.current_activity()
         estimate = cerebras_budget.estimate_tokens(_prompt_text(body))
         for attempt in range(1, _MAX_ATTEMPTS + 1):
@@ -288,7 +292,7 @@ class CerebrasEngine:
                 _sleep(wait)
                 continue
             if response.status_code != 200:
-                raise InferenceError(_remote_error(response.status_code, model, response.text))
+                raise InferenceError(_remote_error(self._base_url, response.status_code, model, response.text))
             return response
         raise InferenceError(f"Cerebras agotó los reintentos para '{model}'")
 
@@ -363,7 +367,7 @@ def _consume_stream(response: httpx.Response, on_token: TokenSink) -> tuple[str,
     return "".join(answer), "".join(thinking), prompt_tokens, completion_tokens
 
 
-def _remote_error(status: int, model: str, body: str) -> str:
+def _remote_error(base_url: str, status: int, model: str, body: str) -> str:
     """Phrase a remote failure for the panel: the status and the endpoint, not the body.
 
     Same rule as `ollama._upstream_error` — what a remote API answers is its text, not
@@ -372,13 +376,13 @@ def _remote_error(status: int, model: str, body: str) -> str:
     logger.debug(f"[cerebras] Body of error {status} for '{model}': {body[:300]}")
     return (
         f"Cerebras respondió {status} para '{model}' "
-        f"({_endpoint_label('/chat/completions')}); el detalle está en el registro"
+        f"({_endpoint_label(base_url, '/chat/completions')}); el detalle está en el registro"
     )
 
 
-def _endpoint_label(path: str) -> str:
+def _endpoint_label(base_url: str, path: str) -> str:
     """The full URL of `path`, for an error an operator has to act on."""
-    return f"{str(config.CEREBRAS_BASE_URL).rstrip('/')}{path}"
+    return f"{str(base_url).rstrip('/')}{path}"
 
 
 def _prompt_text(body: dict) -> str:
@@ -434,21 +438,3 @@ def _usage(response: httpx.Response) -> tuple[int, int]:
     except (ValueError, AttributeError):
         return 0, 0
     return int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
-
-
-_shared: CerebrasEngine | None = None
-_shared_base: str | None = None
-
-
-
-def catalog() -> list[str]:
-    """Cerebras' catalogue, readable without activating the engine.
-
-    Shared so the TTL survives between requests, and rebuilt when the base URL changes.
-    """
-    global _shared, _shared_base
-    base = str(config.CEREBRAS_BASE_URL)
-    if _shared is None or _shared_base != base:
-        _shared = CerebrasEngine()
-        _shared_base = base
-    return _shared.catalog()

@@ -191,7 +191,7 @@ def key_path() -> Path:
 
 
 def use(path: Path | None) -> None:
-    """Point the key file elsewhere — the test suite's door, like `cerebras_budget.use`."""
+    """Point the key file elsewhere — the test suite's door."""
     global _key_path
     _key_path = path
 

@@ -14,6 +14,7 @@ from variatio import config, inference, settings
 from variatio.api import transcribe
 from variatio.documents import pages
 from variatio.inference import Sampling
+from variatio.inference.cerebras_ollama.budget import account_ledger
 from variatio.inference.cerebras_ollama.remote import CerebrasEngine
 from variatio.inference.ollama import OllamaEngine
 from variatio.settings import derived, store
@@ -114,7 +115,7 @@ def test_cerebras_sends_top_p_and_drops_top_k():
         seen.update(json.loads(request.content))
         return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
 
-    engine = CerebrasEngine()
+    engine = CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger())
     engine._client = httpx.Client(
         transport=httpx.MockTransport(handler), base_url="https://api.cerebras.ai/v1"
     )

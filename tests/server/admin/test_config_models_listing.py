@@ -41,18 +41,18 @@ def test_the_cerebras_catalog_needs_a_key(monkeypatch):
 
 def test_the_cerebras_catalog_comes_from_the_api_when_there_is_a_key(monkeypatch):
     monkeypatch.setattr(vg_config, "CEREBRAS_API_KEY", "sk-prueba")
-    monkeypatch.setattr(cerebras, "catalog", lambda: ["gemma-4-31b", "qwen-3-235b"])
+    monkeypatch.setattr(cerebras.CerebrasEngine, "catalog", lambda self: ["gemma-4-31b", "qwen-3-235b"])
     out = config_router.cerebras_models()
     assert out == {"models": ["gemma-4-31b", "qwen-3-235b"], "source": "api", "error": None}
 
 
 def test_an_unreachable_cerebras_falls_back_to_the_declared_routing(monkeypatch):
-    def boom():
+    def boom(self):
         raise inference.InferenceError("sin red")
 
     monkeypatch.setattr(vg_config, "CEREBRAS_API_KEY", "sk-prueba")
     monkeypatch.setattr(vg_config, "CEREBRAS_MODELS", ["gemma-4-31b"])
-    monkeypatch.setattr(cerebras, "catalog", boom)
+    monkeypatch.setattr(cerebras.CerebrasEngine, "catalog", boom)
     out = config_router.cerebras_models()
     assert out["source"] == "config"
     assert out["models"] == ["gemma-4-31b"]

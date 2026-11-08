@@ -668,26 +668,15 @@ def _human(seconds: float) -> str:
 
 # THE ACCOUNT'S LEDGER ------------------------------------------------------------------------
 
-# Global rather than per workspace or per installation, because the quota is the account's:
-# a ledger per workspace, or per tree, would let each of them spend the whole thing.
-_shared: Budget | None = None
+def account_ledger() -> Budget:
+    """Open the account's ledger, at `paths.cerebras_budget_path()`.
 
-
-def shared() -> Budget:
-    """The account's ledger, at `paths.cerebras_budget_path()`."""
-    global _shared
-    if _shared is None:
-        from ..utils.paths import cerebras_budget_path
-
-        _shared = Budget(cerebras_budget_path())
-    return _shared
-
-
-def use(path: Path | None) -> None:
-    """Point the shared ledger somewhere else, which the test suite does for every test.
-
-    The engine tests answer a simulated transport, and without this they charge the
-    account's real budget for requests that never went out.
+    A new `Budget` each time, and that is safe: the FILE is the ledger, and every instance
+    over it serialises through the same `flock`, which on Linux excludes two open files of
+    one process as it excludes two processes. The path is the account's rather than the
+    workspace's or the installation's, because the quota is the account's: a ledger per
+    workspace, or per tree, would let each of them spend the whole thing.
     """
-    global _shared
-    _shared = None if path is None else Budget(path)
+    from ...utils.paths import cerebras_budget_path
+
+    return Budget(cerebras_budget_path())

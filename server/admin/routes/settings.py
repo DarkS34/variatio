@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from variatio import config as vg_config, inference
 from variatio import settings
 from variatio.inference.cerebras_ollama import remote as cerebras
+from variatio.inference.cerebras_ollama.budget import account_ledger
 from variatio.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
@@ -114,10 +115,15 @@ def cerebras_models() -> dict:
             "source": "config",
             "error": "Sin CEREBRAS_API_KEY en el entorno: se listan los modelos ya declarados.",
         }
+    remote = cerebras.CerebrasEngine(
+        vg_config.CEREBRAS_BASE_URL, vg_config.CEREBRAS_API_KEY, account_ledger()
+    )
     try:
-        return {"models": cerebras.catalog(), "source": "api", "error": None}
+        return {"models": remote.catalog(), "source": "api", "error": None}
     except InferenceError as error:
         return {"models": declared, "source": "config", "error": str(error)}
+    finally:
+        remote.close()
 
 
 @router.put("")

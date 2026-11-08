@@ -33,13 +33,14 @@ _INSTALLED_TTL_SECONDS = 30.0
 
 
 class OllamaEngine(Engine):
-    """The local half: an Ollama server, reached over `config.OLLAMA_HOST`."""
+    """The local half: an Ollama server, reached over the host it is built with."""
 
     name = "ollama"
 
-    def __init__(self):
-        """Open the client and start the per-model capability and listing caches."""
-        self._client = ollama.Client(host=config.OLLAMA_HOST)
+    def __init__(self, host: str):
+        """Open the client on `host` and start the per-model capability and listing caches."""
+        self._host = host
+        self._client = ollama.Client(host=host)
         self._capabilities: dict[str, list[str]] = {}
         self._installed: tuple[float, list[dict]] | None = None
 
@@ -51,7 +52,7 @@ class OllamaEngine(Engine):
         turn `GET /api/health` into a 500 for the whole panel.
         """
         try:
-            response = httpx.get(config.OLLAMA_HOST, timeout=3.0)
+            response = httpx.get(self._host, timeout=3.0)
             return response.status_code == 200
         except httpx.HTTPError:
             return False
@@ -111,7 +112,7 @@ class OllamaEngine(Engine):
             )
             answer, thinking, truncated, loop, counts = _drain(stream, stop_on_loop)
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
+            raise InferenceError(_upstream_error(self._host, f"Falló la generación con '{model}'", e)) from e
         usage.record(self.name, model, *counts)
         return split_thinking(answer, thinking or None, truncated, loop)
 
@@ -160,7 +161,7 @@ class OllamaEngine(Engine):
                 progress.checkpoint()
             take(splitter.flush())
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(_upstream_error(f"Falló la generación con '{model}'", e)) from e
+            raise InferenceError(_upstream_error(self._host, f"Falló la generación con '{model}'", e)) from e
         finally:
             usage.record(self.name, model, *counts)
 
@@ -275,7 +276,7 @@ class OllamaEngine(Engine):
                 model=model, prompt=text, **self._context_option(model)
             )["embedding"]
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(_upstream_error(f"Falló el embedding con '{model}'", e)) from e
+            raise InferenceError(_upstream_error(self._host, f"Falló el embedding con '{model}'", e)) from e
 
     def embed_batch(self, model: str, texts: list[str]) -> list[list[float]]:
         """Embed several texts in one call, in the order they were given."""
@@ -285,7 +286,7 @@ class OllamaEngine(Engine):
             return list(self._client.embed(model=model, input=texts, **self._context_option(model))["embeddings"])
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(
-                _upstream_error(f"Falló el embedding por lotes con '{model}'", e)
+                _upstream_error(self._host, f"Falló el embedding por lotes con '{model}'", e)
             ) from e
 
     def _looks_like_embedding(self, model: str) -> bool:
@@ -312,7 +313,7 @@ class OllamaEngine(Engine):
             listing = self._client.list()["models"]
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(
-                _upstream_error("No se pudieron listar los modelos de Ollama", e)
+                _upstream_error(self._host, "No se pudieron listar los modelos de Ollama", e)
             ) from e
         detail = [
             {"model": info["model"], "size": int(info["size"]) if info.get("size") else None}
@@ -332,7 +333,7 @@ class OllamaEngine(Engine):
             response = self._client.ps()
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(
-                _upstream_error("No se pudieron leer los modelos residentes", e)
+                _upstream_error(self._host, "No se pudieron leer los modelos residentes", e)
             ) from e
         return [
             {
@@ -414,7 +415,7 @@ class OllamaEngine(Engine):
                 if on_progress is not None:
                     on_progress(completed, total)
         except (ollama.ResponseError, httpx.RequestError) as e:
-            raise InferenceError(_upstream_error(f"Falló la descarga de '{model}'", e)) from e
+            raise InferenceError(_upstream_error(self._host, f"Falló la descarga de '{model}'", e)) from e
         self._capabilities.pop(model, None)
         self._installed = None
         logger.success(f"Model '{model}' pulled")
@@ -425,7 +426,7 @@ class OllamaEngine(Engine):
             self._client.delete(model)
         except (ollama.ResponseError, httpx.RequestError) as e:
             raise InferenceError(
-                _upstream_error(f"No se pudo borrar '{model}' del disco", e)
+                _upstream_error(self._host, f"No se pudo borrar '{model}' del disco", e)
             ) from e
         self._capabilities.pop(model, None)
         self._installed = None
@@ -494,18 +495,18 @@ def _counts(chunk, held: tuple[int | None, int | None]) -> tuple[int | None, int
     return (prompt if isinstance(prompt, int) else held[0], answer if isinstance(answer, int) else held[1])
 
 
-def _upstream_error(action: str, e: Exception) -> str:
+def _upstream_error(host: str, action: str, e: Exception) -> str:
     """Phrase an engine failure for the panel: what failed, against which host, and how.
 
     The engine's own reply is not ours to hand back — `ollama.ResponseError` carries the
     raw upstream body and these messages travel to the panel — so the body goes to the log
     at debug and only the status leaves.
     """
-    logger.debug(f"[ollama] {action}, against '{config.OLLAMA_HOST}': {e}")
+    logger.debug(f"[ollama] {action}, against '{host}': {e}")
     status = getattr(e, "status_code", None)
     if status:
-        return f"{action}: el motor en '{config.OLLAMA_HOST}' respondió {status}"
+        return f"{action}: el motor en '{host}' respondió {status}"
     return (
-        f"{action}: no se pudo hablar con el motor en '{config.OLLAMA_HOST}' "
+        f"{action}: no se pudo hablar con el motor en '{host}' "
         f"({type(e).__name__})"
     )

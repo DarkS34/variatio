@@ -137,7 +137,7 @@ def cerebras_state() -> dict:
     it is the same answer routing gives — the second what has actually been spent. A model can be in one and
     not the other, and collapsing them into one "models" loses exactly that difference.
     """
-    budget = cerebras_budget.shared().snapshot()
+    budget = cerebras_budget.account_ledger().snapshot()
     return {
         "active": inference.engine_name() == "cerebras+ollama",
         "configured": bool(config.CEREBRAS_API_KEY),
@@ -172,7 +172,7 @@ def cerebras_export() -> Response:
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=columns, delimiter=";", extrasaction="ignore")
     writer.writeheader()
-    for entry in cerebras_budget.shared().snapshot()["models"]:
+    for entry in cerebras_budget.account_ledger().snapshot()["models"]:
         ceiling = entry["windows"]["day"]["tokens_limit"] or 1
         for row in entry["phases"]:
             writer.writerow(

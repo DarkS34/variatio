@@ -66,15 +66,11 @@ def test_the_engine_export_defuses_a_phase_name(tmp_path, monkeypatch):
     from variatio import config
     from variatio.inference.cerebras_ollama import budget as cerebras_budget
 
-    cerebras_budget.use(tmp_path / "budget.json")
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
-    try:
-        cerebras_budget.shared().record(
-            "gemma-4-31b", "=cmd|'/c calc'!A1", prompt_tokens=10, completion_tokens=0, headers={}
-        )
-        body = admin_engine.cerebras_export().body.decode("utf-8")
-    finally:
-        cerebras_budget.use(None)
+    cerebras_budget.account_ledger().record(
+        "gemma-4-31b", "=cmd|'/c calc'!A1", prompt_tokens=10, completion_tokens=0, headers={}
+    )
+    body = admin_engine.cerebras_export().body.decode("utf-8")
 
     [row] = list(csv.DictReader(io.StringIO(body.lstrip("﻿")), delimiter=";"))
     assert row["fase"] == "'=cmd|'/c calc'!A1"

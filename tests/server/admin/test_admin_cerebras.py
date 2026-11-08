@@ -10,13 +10,10 @@ from variatio.inference.cerebras_ollama import budget as cerebras_budget
 
 @pytest.fixture
 def ledger(tmp_path, monkeypatch):
-    cerebras_budget.use(tmp_path / "budget.json")
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
     monkeypatch.setattr(config, "CEREBRAS_API_KEY", "sk-de-mentira")
     monkeypatch.setattr(config, "CEREBRAS_MAX_WAIT_SECONDS", 90)
-    book = cerebras_budget.shared()
-    yield book
-    cerebras_budget.use(None)
+    return cerebras_budget.account_ledger()
 
 
 # WHAT THE PANEL POLLS ---------------------------------------------------------------------

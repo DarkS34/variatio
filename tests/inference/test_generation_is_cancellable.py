@@ -79,7 +79,7 @@ class _Emitter:
 def engine(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
     monkeypatch.setattr(config, "LLM_CONTEXT", {})
-    engine = OllamaEngine()
+    engine = OllamaEngine(config.OLLAMA_HOST)
     # Both are asked of the model itself, and this test answers no HTTP.
     monkeypatch.setattr(type(engine), "supports_thinking", lambda self, m: True)
     monkeypatch.setattr(type(engine), "supports_vision", lambda self, m: True)

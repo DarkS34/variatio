@@ -6,10 +6,12 @@ import pytest
 from variatio import config
 from variatio.inference import InferenceError, Sampling
 from variatio.inference.cerebras_ollama import HybridEngine
-from variatio.inference.cerebras_ollama import schema as cerebras_schema
 from variatio.inference.cerebras_ollama import budget as cerebras_budget
 from variatio.inference.cerebras_ollama import remote as cerebras
+from variatio.inference.cerebras_ollama import schema as cerebras_schema
+from variatio.inference.cerebras_ollama.budget import account_ledger
 from variatio.inference.cerebras_ollama.remote import CerebrasEngine
+from variatio.inference.ollama import OllamaEngine
 from variatio.utils import progress
 
 # Captured at collection, before the autouse fixture in `conftest.py` stubs it out.
@@ -96,11 +98,7 @@ def test_a_root_array_is_wrapped_and_keeps_strict():
 def test_a_root_array_too_big_to_wrap_loses_strict_but_not_the_shape():
     campos = {f"campo_{i}": {"type": "string"} for i in range(400)}
     schema = {"type": "array", "items": {"type": "object", "properties": campos}}
-    cerebras_schema._WARNED.clear()
-    try:
-        shaped = cerebras_schema.response_format(schema)
-    finally:
-        cerebras_schema._WARNED.clear()
+    shaped = cerebras_schema.response_format(schema)
     assert shaped["json_schema"]["strict"] is False
     assert shaped["json_schema"]["name"] == "respuesta"
     assert shaped["json_schema"]["schema"]["type"] == "array"
@@ -150,19 +148,18 @@ def test_an_oversized_schema_is_reported_once_per_schema():
     from loguru import logger
 
     said: list[str] = []
-    cerebras_schema._WARNED.clear()
+    warned: set[str] = set()
     sink = logger.add(lambda m: said.append(m.record["message"]), level="WARNING")
     try:
         campos = {f"campo_{i}": {"type": "string"} for i in range(400)}
         otros = {f"otro_{i}": {"type": "string"} for i in range(400)}
         huge = {"type": "object", "properties": campos}
         other = {"type": "object", "properties": otros}
-        cerebras_schema.response_format(huge)
-        cerebras_schema.response_format(huge)
-        cerebras_schema.response_format(other)
+        cerebras_schema.response_format(huge, warned)
+        cerebras_schema.response_format(huge, warned)
+        cerebras_schema.response_format(other, warned)
     finally:
         logger.remove(sink)
-        cerebras_schema._WARNED.clear()
 
     assert len([m for m in said if "The schema measures" in m]) == 2
 
@@ -187,32 +184,10 @@ def test_a_per_phase_effort_travels_as_itself():
     assert cerebras_schema.reasoning_effort("max") == "high"
 
 
-def test_the_shared_catalog_reuses_one_engine_per_base_url(monkeypatch):
-    built = []
-
-    class Fake:
-        def __init__(self):
-            built.append(self)
-
-        def catalog(self):
-            return ["gemma-4-31b"]
-
-    monkeypatch.setattr(cerebras, "CerebrasEngine", Fake)
-    monkeypatch.setattr(cerebras, "_shared", None)
-    monkeypatch.setattr(cerebras, "_shared_base", None)
-    monkeypatch.setattr(config, "CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
-    assert cerebras.catalog() == ["gemma-4-31b"]
-    assert cerebras.catalog() == ["gemma-4-31b"]
-    assert len(built) == 1
-    monkeypatch.setattr(config, "CEREBRAS_BASE_URL", "http://localhost:9999/v1")
-    cerebras.catalog()
-    assert len(built) == 2
-
-
 @pytest.fixture
 def hybrid(monkeypatch):
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
-    return HybridEngine()
+    return HybridEngine(OllamaEngine(config.OLLAMA_HOST), CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger()))
 
 
 def test_the_hybrid_routes_by_membership(hybrid):
@@ -223,7 +198,7 @@ def test_the_hybrid_routes_by_membership(hybrid):
 
 def test_every_model_of_the_catalogue_is_routed_remote(monkeypatch):
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["gemma-4-31b"])
-    engine = HybridEngine()
+    engine = HybridEngine(OllamaEngine(config.OLLAMA_HOST), CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger()))
     engine._cerebras.known_models = lambda: frozenset({"gemma-4-31b", "qwen-3.8-27b"})
     assert engine._backend("qwen-3.8-27b") is engine._cerebras
     assert engine._backend("qwen3.8:27b-q8_0") is engine._ollama
@@ -287,7 +262,7 @@ def test_the_remote_capabilities_are_declared_not_asked(hybrid):
 
 
 def _engine_with(handler) -> CerebrasEngine:
-    engine = CerebrasEngine()
+    engine = CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger())
     engine.known_models = _REAL_KNOWN_MODELS.__get__(engine)
     engine._client = httpx.Client(
         transport=httpx.MockTransport(handler), base_url="https://api.cerebras.ai/v1"
@@ -458,7 +433,7 @@ def test_a_call_is_charged_to_the_ledger_with_its_usage_and_phase(monkeypatch):
     with progress.step("kg_extract", "Extrayendo"):
         _engine_with(handler).generate("gemma-4-31b", "texto")
 
-    entry = cerebras_budget.shared().snapshot()["models"][0]
+    entry = cerebras_budget.account_ledger().snapshot()["models"][0]
     assert entry["model"] == "gemma-4-31b"
     assert entry["windows"]["minute"]["requests_used"] == 1
     assert entry["phases"] == [
@@ -483,7 +458,7 @@ def test_a_refused_call_is_charged_too(monkeypatch):
     with pytest.raises(InferenceError):
         _engine_with(handler).generate("gemma-4-31b", "texto")
 
-    assert cerebras_budget.shared().snapshot()["models"][0]["windows"]["day"]["requests_used"] == 1
+    assert cerebras_budget.account_ledger().snapshot()["models"][0]["windows"]["day"]["requests_used"] == 1
 
 
 def test_the_engine_holds_the_call_until_the_window_has_room(monkeypatch):
@@ -513,7 +488,7 @@ def test_an_exhausted_day_stops_the_call_from_leaving(monkeypatch):
     # A ceiling the call would fit under, already spent: that is "agotado". A ceiling
     # SMALLER than the call is the other refusal, "no cabe", pinned in the budget's tests.
     monkeypatch.setattr(config, "CEREBRAS_MAX_TOKENS_DAY", 2_000)
-    cerebras_budget.shared().record(
+    cerebras_budget.account_ledger().record(
         "gemma-4-31b", "kg_extract", prompt_tokens=1_900, completion_tokens=0, headers={}
     )
 
@@ -540,7 +515,7 @@ def test_a_streamed_call_asks_for_its_usage():
     # Without `include_usage` a streamed answer carries none, and the generator — the one
     # call of the pipeline that streams — would be charged zero tokens.
     assert seen["stream_options"] == {"include_usage": True}
-    assert cerebras_budget.shared().snapshot()["models"][0]["phases"][0]["tokens"] == 100
+    assert cerebras_budget.account_ledger().snapshot()["models"][0]["phases"][0]["tokens"] == 100
 
 
 def test_the_output_cap_travels_as_max_completion_tokens():

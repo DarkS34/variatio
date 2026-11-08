@@ -83,12 +83,6 @@ def _open_map(node: object) -> bool:
     return False
 
 
-# A degradation is a property of the SCHEMA and not of the call, and the same schema goes
-# out on every call of a phase and again on every repair: one bank build printed the size
-# warning 29 times. A build has a process of its own, so once per process misses nothing.
-_WARNED: set[str] = set()
-
-
 
 def _unwrap(text: str) -> str:
     """Return the array inside a one-key wrapper object, or `text` unchanged."""
@@ -121,7 +115,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
     return "high" if effort == "max" else effort
 
 
-def response_format(format: dict | str | None) -> dict | None:
+def response_format(format: dict | str | None, warned: set[str] | None = None) -> dict | None:
     """Build Cerebras' `response_format`, degrading where strict mode cannot hold.
 
     Strict mode demands an OBJECT at the root — an array root answers 400 "Extra top level
@@ -160,6 +154,7 @@ def response_format(format: dict | str | None) -> dict | None:
     strict = True
     if adapted.get("type") != "object":
         _warn_once(
+            warned,
             f"root:{digest}",
             "[cerebras] The schema root is not an object, which strict mode demands; "
             "asking without 'strict'",
@@ -167,6 +162,7 @@ def response_format(format: dict | str | None) -> dict | None:
         strict = False
     if _open_map(adapted):
         _warn_once(
+            warned,
             f"map:{digest}",
             "[cerebras] The schema declares an open-keyed object, which strict mode "
             "refuses; asking without 'strict'",
@@ -174,6 +170,7 @@ def response_format(format: dict | str | None) -> dict | None:
         strict = False
     if len(compact) > STRICT_SCHEMA_MAX_CHARS:
         _warn_once(
+            warned,
             f"size:{digest}",
             f"[cerebras] The schema measures {len(compact)} characters (strict mode's "
             f"limit: {STRICT_SCHEMA_MAX_CHARS}); asking without 'strict'",
@@ -185,9 +182,15 @@ def response_format(format: dict | str | None) -> dict | None:
     }
 
 
-def _warn_once(digest: str, message: str) -> None:
-    """Log `message` the first time this process sees `digest`."""
-    if digest in _WARNED:
-        return
-    _WARNED.add(digest)
+def _warn_once(warned: set[str] | None, digest: str, message: str) -> None:
+    """Log `message` the first time `warned` sees `digest`; every time when there is none.
+
+    A degradation is a property of the SCHEMA and not of the call, and the same schema goes
+    out on every call of a phase and again on every repair: one bank build printed the size
+    warning 29 times. The engine passes its own set, so it warns once in its lifetime.
+    """
+    if warned is not None:
+        if digest in warned:
+            return
+        warned.add(digest)
     logger.warning(message)

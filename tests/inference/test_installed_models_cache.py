@@ -1,5 +1,6 @@
 import pytest
 
+from variatio import config
 from variatio.inference.ollama import engine as local
 
 
@@ -22,7 +23,7 @@ class FakeClient:
 
 @pytest.fixture
 def engine():
-    engine = local.OllamaEngine()
+    engine = local.OllamaEngine(config.OLLAMA_HOST)
     engine._client = FakeClient()
     return engine
 

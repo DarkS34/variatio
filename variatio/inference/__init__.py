@@ -3,7 +3,7 @@
 `config.INFERENCE_ENGINE` picks the implementation, and no business logic ever reaches an
 SDK directly. The engines are their own packages: `ollama/` (the local one) and
 `cerebras_ollama/` (the hybrid one, which keeps an Ollama engine for what it does not serve).
-Both import this module's types, so it reaches them lazily, from `_engine_class`. The types
+Both import this module's types, so it reaches them lazily, from `_build_engine`. The types
 live in `types.py` and the `<think>` split in `thinking.py`; this module re-exports both.
 """
 
@@ -120,30 +120,34 @@ def engine():
     """The configured engine, built once and kept until something invalidates it."""
     global _engine
     if _engine is None:
-        cls = _engine_class(config.INFERENCE_ENGINE)
-        if cls is None:
+        built = _build_engine(config.INFERENCE_ENGINE)
+        if built is None:
             raise InferenceError(
                 f"Unknown inference engine '{config.INFERENCE_ENGINE}'. "
                 f"Available: {', '.join(_ENGINE_NAMES)}"
             )
-        _engine = cls()
+        _engine = built
     return _engine
 
 
-def _engine_class(name: str):
-    """Return the engine class called `name`, or None when nothing answers to it.
+def _build_engine(name: str):
+    """Build the engine called `name` from its settings, or return None when nothing answers to it.
 
-    Both engines live in their own modules and import this one, so they are reached here
-    lazily rather than at import time.
+    The engines live in their own packages and import this one, so they are reached here
+    lazily rather than at import time. The hybrid's ledger is the account's
+    (`budget.account_ledger`).
     """
     from .ollama import OllamaEngine
 
     if name == OllamaEngine.name:
-        return OllamaEngine
+        return OllamaEngine(config.OLLAMA_HOST)
     if name == "cerebras+ollama":
         from .cerebras_ollama import HybridEngine
+        from .cerebras_ollama.budget import account_ledger
+        from .cerebras_ollama.remote import CerebrasEngine
 
-        return HybridEngine
+        remote = CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger())
+        return HybridEngine(OllamaEngine(config.OLLAMA_HOST), remote)
     return None
 
 

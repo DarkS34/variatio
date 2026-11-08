@@ -4,6 +4,7 @@ import pytest
 
 from variatio import config
 from variatio.inference import InferenceError
+from variatio.inference.cerebras_ollama.budget import account_ledger
 from variatio.inference.cerebras_ollama.remote import CerebrasEngine
 from variatio.inference.ollama import OllamaEngine
 from variatio.inference.ollama import engine as local
@@ -17,7 +18,7 @@ BODY = "<html>traza del motor con lo que haya dentro</html>"
 @pytest.fixture
 def engine(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
-    return OllamaEngine()
+    return OllamaEngine(config.OLLAMA_HOST)
 
 
 class _Client:
@@ -33,7 +34,7 @@ class _Client:
 
 def test_the_helper_keeps_the_status_and_drops_the_body(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
-    message = local._upstream_error("Falló algo", ollama.ResponseError(BODY, 404))
+    message = local._upstream_error(config.OLLAMA_HOST, "Falló algo", ollama.ResponseError(BODY, 404))
     assert "404" in message
     assert "localhost:13434" in message
     assert BODY not in message
@@ -41,7 +42,7 @@ def test_the_helper_keeps_the_status_and_drops_the_body(monkeypatch):
 
 def test_the_helper_says_it_could_not_reach_the_engine_when_there_is_no_status(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
-    message = local._upstream_error("Falló algo", httpx.ConnectError(BODY))
+    message = local._upstream_error(config.OLLAMA_HOST, "Falló algo", httpx.ConnectError(BODY))
     assert "ConnectError" in message
     assert BODY not in message
 
@@ -93,7 +94,7 @@ def test_a_failed_pull_reaches_the_panel_without_the_body(engine):
 # non-200 in `stream` was read whole with `response.read()` and put into the error.
 def test_the_streaming_path_names_the_status_but_not_the_body(monkeypatch):
     monkeypatch.setattr(config, "CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
-    engine = CerebrasEngine()
+    engine = CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger())
     engine._client = httpx.Client(
         transport=httpx.MockTransport(lambda request: httpx.Response(413, text=BODY)),
         base_url="https://api.cerebras.ai/v1",
