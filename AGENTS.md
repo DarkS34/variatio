@@ -59,16 +59,12 @@ at the diff. A change the user cannot explain is not finished, even when the tes
   and the change; never on the agent's initiative, never «in passing».
 - **Explaining.** When asked to explain, give the data flow, the invariants and the
   trade-offs, not lists of files.
-- **The comprehension map**, `plans/mapa-comprension.md` (git-ignored), marks each module
-  green (the user explains it without looking), yellow (explains it looking) or red (cannot
-  explain it); the user reviews it every two weeks. Read it before a change: a red module is
-  not extended until it is yellow; explain it instead.
 - **Alarm signals.** Name one when it shows: a diff accepted unread, a bug fixed without the
   user knowing its cause, a commit that changes many tests at once, a module whose structure
   the user cannot justify. Then stop: a diff over 150 lines or a session over two hours waits
   for the next day or is split.
 
-The numbers (150 lines, two hours, two weeks) are a starting point, adjusted after a month of
+The numbers (150 lines, two hours) are a starting point, adjusted after a month of
 use, not before (adopted 2026-11-05).
 
 ## Project
