@@ -16,7 +16,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 MODULES = sorted(
     [*ROOT.glob("variatio/prompts/*/*.py"), *ROOT.glob("consumers/*/prompts/*.py"),
-     *ROOT.glob("server/conversations/prompts/*.py")]
+     ROOT / "variatio/prompts/conversation.py"]
 )
 # The transcription's prompts (P7) and the tutor's pattern tables, which are vocabulary.
 EXEMPT_FUNCTIONS = {"transcribe_page_prompt", "transcribe_image_prompt", "transcribe_retry_note", "merge_pages_prompt"}

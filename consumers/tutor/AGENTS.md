@@ -90,7 +90,7 @@ admin's read.
 - **The reply is in the subject's language** (`content_context.language_of_instruction`, D-235),
   whatever the student writes in: the method says it, and the fixed texts and the patterns the
   checks read come from the prompt set of that language when there is one. The method is the
-  tutor's own: the blocks the chat shares (`server/conversations/prompts/`) were tried three
+  tutor's own: the blocks the chat shares (`variatio/prompts/conversation.py`) were tried three
   times in plan-prompts F8 and lost each time against it (without fallbacks, 15–9 and 13–6 in
   the last try, against a noise of 11–13 and 10–10).
 - **Distress and sensitive topics are the method's** (D-236, since the guardrail no longer asks
@@ -202,5 +202,5 @@ One line per rule of this folder. A number names an entry of the old register:
 - D-214 — A bank exercise's solution never enters the card.
 - D-215 — No "System One" classifier: the kind is decided by signals and one grammar call.
 - D-235 — The tutor and the chat answer in the subject's language of instruction, whatever the
-  student writes in; the chat's system prompt is the shared blocks of `server/conversations/prompts/`,
+  student writes in; the chat's system prompt is the shared blocks of `variatio/prompts/conversation.py`,
   the tutor keeps its own method.

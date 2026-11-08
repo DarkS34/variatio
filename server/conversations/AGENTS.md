@@ -17,9 +17,11 @@ route half — `require` (one's own or the same 404), `admit` (one reply per acc
 workspace, then the day's limit, 429 with the function's code and `Retry-After`),
 `queue_turn`, `heal`, `detail`, `row`, `checked_message`, `require_engine`. It imports
 `server` and the database, never `consumers`; the two functions' `api` packages import its
-store, usage, jobs and routes, and the chat's prompts and both turns import `prompts`.
+store, usage, jobs and routes. The chat's prompts and both turns import the blocks below.
 
-**`prompts/`, the blocks of a chat-like system prompt** (plan-prompts F8, 2026-11-03; D-235). One
+**The blocks of a chat-like system prompt**, in the library since 2026-11-08:
+`variatio/prompts/conversation.py` resolves them, `variatio/prompts/{es,en}/conversation.py`
+hold them (plan-prompts F8, 2026-11-03; D-235). One
 set per prompt language (`of`). `system_prompt(role, method, subject=, language=, code=)` joins
 six blocks in a fixed order: the function's role, the subject's `prompt_block()`, the language,
 the scope, the format and the function's way of helping. The language block says the reply is in

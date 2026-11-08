@@ -21,7 +21,7 @@ from variatio import inference
 from variatio.utils import progress
 from variatio.functionalities.shared import screening
 
-from server.conversations import prompts as shared_prompts
+from variatio.prompts import conversation as shared_prompts
 
 from . import BLOCKED, REPLIED
 from . import config as chat_config

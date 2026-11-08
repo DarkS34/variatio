@@ -10,7 +10,7 @@ solves and writes code, as the student asks, within the subject and education.
 - **A turn** (`consumers/chat/turn.py`): the guardrail (`screening.screen_message`; a refusal is a
   fixed text, kind `blocked`, and reaches no model), then ONE call (`chat_reply`) with the
   system prompt — its role and its way of helping over the shared blocks of
-  `server/conversations/prompts/` (the subject's `content_context.prompt_block()`, the reply
+  `variatio/prompts/conversation.py` (the subject's `content_context.prompt_block()`, the reply
   in the subject's `language_of_instruction`, the scope, the format, and the code rule only when
   code is in play; D-235) — the last `chat.history_turns` exchanges and, when the
   conversation was opened on an exercise, that exercise. No classification, no card, no

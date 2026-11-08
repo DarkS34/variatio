@@ -1,6 +1,6 @@
 """The free chat's prompts in English."""
 
-from server.conversations.prompts import en as shared
+from variatio.prompts.en import conversation as shared
 
 
 def system_prompt(subject: str, language: str, code: bool) -> str:

@@ -192,12 +192,13 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   noncommercial use, never sold; a rewrite would not take MIT back from existing copies.
 - **D-004, D-007 — Functions.** The functions live in `consumers/`, outside `variatio/` and
   `server/`, with one-way imports; the evaluation is not made removable. What the tutor and
-  the chat share is `server/conversations/`. *Why:* they consume what the construction builds.
+  the chat share is `server/conversations/`, and the blocks of their system prompts are
+  `variatio/prompts/<language>/conversation.py`. *Why:* they consume what the construction builds.
 - **D-008 — Layout by artifact.** `variatio/` is being reorganised by artifact
   (`plans/plan-reestructura.md`; each part updates this entry). Today: `api/` is the public
   door; `inference/` is the engine boundary (`inference/__init__.py`) with the engines, usage,
   vectors and repair, a layer between `prompts` and `utils : settings : config`;
-  `prompts/<language>/` holds each prompt set with its `wording.py`;
+  `prompts/<language>/` holds each prompt set with its `wording.py` and `conversation.py`;
   `utils/` holds what knows nothing about the subject (paths, `Workspace`, progress, JSON I/O,
   the workspace's language in `locale.py`);
   `knowledge_graph/` holds the graph (`graph.py`), the subject's context (`context.py`), the

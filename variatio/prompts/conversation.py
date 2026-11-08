@@ -4,6 +4,8 @@ A consumer writes its role and its way of helping; the subject, the language of 
 the scope and the format are said here, in a fixed order. The free chat is built on them. The
 tutor keeps its own method (it lost against it three times in plan-prompts F8) and takes only
 `instruction_code`. A consumer imports this; nothing here imports a consumer (D-004, D-007).
+`es/conversation.py` and `en/conversation.py` hold the blocks; this module resolves them and
+reads the facts. In `server/conversations/prompts/` until 2026-11-08.
 
 The reply is in the subject's language of instruction, never in the account's interface
 language nor in the one the student writes in (the user's decision P5, 2026-10-31).
@@ -11,10 +13,11 @@ language nor in the one the student writes in (the user's decision P5, 2026-10-3
 
 import re
 
-from variatio.utils import languages
-from variatio.utils.lexicon import fold
+from ..utils import languages
+from ..utils.lexicon import fold
 
-from . import en, es
+from .en import conversation as en
+from .es import conversation as es
 
 _SETS = {"es": es, "en": en}
 

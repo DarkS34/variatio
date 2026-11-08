@@ -360,6 +360,8 @@ Take objects, return data, know no `Workspace`, write no files.
   workspace (injection patterns, stopwords, labels, reasons, marks, prompt fragments);
   `prompts/wording.py`'s `beside(prompts)` resolves it. English attack vocabulary lives in
   `prompts/shared.py` for both sets.
+- `prompts/es/conversation.py` and `prompts/en/conversation.py` hold the blocks of a chat-like
+  system prompt, shared by the tutor and the chat; `prompts/conversation.py` resolves them.
   The settings registry and error messages are NOT in it (Spanish UI copy).
 
 ## Pipeline shape

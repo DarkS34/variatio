@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 
 from loguru import logger
 
-from server.conversations import prompts as shared_prompts
+from variatio.prompts import conversation as shared_prompts
 from variatio import inference
 from variatio.utils import progress
 from variatio.utils.lexicon import mentions
