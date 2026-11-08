@@ -14,6 +14,7 @@ import numpy as np
 from loguru import logger
 
 from .. import config, inference
+from ..settings import engine_profile
 from ..prompts import wording as wording_sets
 from ..utils import progress
 from ..utils.json_io import write_json
@@ -274,18 +275,18 @@ class ConceptDescriber:
             name_documents=self.name_documents,
         )
         response = inference.generate(
-            model=config.DESCRIPTION_GENERATION_LLM,
-            think=config.THINK_DESCRIPTION_GENERATION,
+            model=engine_profile().DESCRIPTION_GENERATION_LLM,
+            think=engine_profile().THINK_DESCRIPTION_GENERATION,
             prompt=prompt,
-            format=None if config.THINK_DESCRIPTION_GENERATION else DESCRIPTION_SCHEMA,
+            format=None if engine_profile().THINK_DESCRIPTION_GENERATION else DESCRIPTION_SCHEMA,
             sampling=inference.sampling(
-                "description_generation", config.THINK_DESCRIPTION_GENERATION
+                "description_generation", engine_profile().THINK_DESCRIPTION_GENERATION
             ),
         ).response
         parsed, error = parse_with_repair(
             response,
             _parse_description,
-            config.REPAIR_LLM,
+            engine_profile().REPAIR_LLM,
             config.MAX_JSON_REPAIR_TRIES,
             shape="object",
             format=DESCRIPTION_SCHEMA,
@@ -404,18 +405,18 @@ class ConceptDescriber:
             existing_block=self._existing_block(domain, concepts, written or {}),
         )
         response = inference.generate(
-            model=config.DESCRIPTION_GENERATION_LLM,
-            think=config.THINK_DESCRIPTION_GENERATION,
+            model=engine_profile().DESCRIPTION_GENERATION_LLM,
+            think=engine_profile().THINK_DESCRIPTION_GENERATION,
             prompt=prompt,
-            format=None if config.THINK_DESCRIPTION_GENERATION else _batch_schema(concepts),
+            format=None if engine_profile().THINK_DESCRIPTION_GENERATION else _batch_schema(concepts),
             sampling=inference.sampling(
-                "description_generation", config.THINK_DESCRIPTION_GENERATION
+                "description_generation", engine_profile().THINK_DESCRIPTION_GENERATION
             ),
         ).response
         parsed, error = parse_with_repair(
             response,
             lambda text: _parse_batch(text, concepts),
-            config.REPAIR_LLM,
+            engine_profile().REPAIR_LLM,
             config.MAX_JSON_REPAIR_TRIES,
             shape="object",
             format=_batch_schema(concepts),

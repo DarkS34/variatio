@@ -19,6 +19,7 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
 from server.pipeline import approvals, storage
 from variatio import api, config, inference
+from variatio.settings import SCOPED_NAMES, engine_profile
 from variatio.utils import progress
 from variatio.utils.workspace import Workspace
 from variatio.utils import locale
@@ -234,9 +235,9 @@ def _run_record(job: Job, ws: Workspace, n: int, asked_think, model: str) -> dic
         },
         "inputs": _inputs(ws),
         "settings": {
-            **{name: getattr(config, name, None) for name in _RECORDED_SETTINGS},
-            "LLM_CONTEXT": (config.LLM_CONTEXT or {}).get(model),
-            "SAMPLING": {phase: config.SAMPLING.get(phase) for phase in _RECORDED_SAMPLING},
+            **{name: getattr(engine_profile() if name in SCOPED_NAMES else config, name, None) for name in _RECORDED_SETTINGS},
+            "LLM_CONTEXT": (engine_profile().LLM_CONTEXT or {}).get(model),
+            "SAMPLING": {phase: engine_profile().SAMPLING.get(phase) for phase in _RECORDED_SAMPLING},
         },
         "system_version": _system_version(),
     }

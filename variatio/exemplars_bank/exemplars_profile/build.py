@@ -14,6 +14,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...utils import locale, progress
 from ...inference import ensure_models
 from ...utils.json_io import write_json
@@ -65,12 +66,12 @@ SCAN_SCHEMA = {
 def build_models() -> list[str]:
     """Every model a profile build calls."""
     return [
-        config.TRANSCRIBE_MODEL,
-        config.TRANSCRIBE_SEAM_MODEL,
-        config.EP_SCAN_MODEL,
-        config.EP_CONSOLIDATE_MODEL,
-        config.EP_CONTEXT_MODEL,
-        config.REPAIR_LLM,
+        engine_profile().TRANSCRIBE_MODEL,
+        engine_profile().TRANSCRIBE_SEAM_MODEL,
+        engine_profile().EP_SCAN_MODEL,
+        engine_profile().EP_CONSOLIDATE_MODEL,
+        engine_profile().EP_CONTEXT_MODEL,
+        engine_profile().REPAIR_LLM,
     ]
 
 
@@ -90,9 +91,9 @@ class ExemplarsProfileBuilder:
         self.prompts = prompts_pkg.of(locale.prompt_language(workspace))
         self._wording = wording_sets.beside(self.prompts)
         self._context_cache: str | None = None
-        self.scan_model = scan_model or config.EP_SCAN_MODEL
-        self.consolidate_model = consolidate_model or config.EP_CONSOLIDATE_MODEL
-        self.context_model = context_model or config.EP_CONTEXT_MODEL
+        self.scan_model = scan_model or engine_profile().EP_SCAN_MODEL
+        self.consolidate_model = consolidate_model or engine_profile().EP_CONSOLIDATE_MODEL
+        self.context_model = context_model or engine_profile().EP_CONTEXT_MODEL
         self.chunk_size = config.EP_CHUNK_SIZE
         self.excerpt_chars = config.EP_SCAN_EXCERPT_CHARS
         self.max_item_types = config.EP_MAX_ITEM_TYPES
@@ -155,12 +156,12 @@ class ExemplarsProfileBuilder:
         """Check this build's own models are installed, the overridden ones included."""
         ensure_models(
             [
-                config.TRANSCRIBE_MODEL,
-                config.TRANSCRIBE_SEAM_MODEL,
+                engine_profile().TRANSCRIBE_MODEL,
+                engine_profile().TRANSCRIBE_SEAM_MODEL,
                 self.scan_model,
                 self.consolidate_model,
                 self.context_model,
-                config.REPAIR_LLM,
+                engine_profile().REPAIR_LLM,
             ],
             "exemplars profile",
         )
@@ -198,7 +199,7 @@ class ExemplarsProfileBuilder:
             self._wording.CONTEXT_SOURCE_PROFILE,
             self.context_model,
             phase="ep_context",
-            think=config.THINK_EP_CONTEXT,
+            think=engine_profile().THINK_EP_CONTEXT,
         )
         progress.advance(1.0)
 
@@ -276,16 +277,16 @@ class ExemplarsProfileBuilder:
         prompt = self.prompts.scan_item_types_prompt(body, location, self.excerpt_chars)
         response = inference.generate(
             model=self.scan_model,
-            think=config.THINK_EP_SCAN,
+            think=engine_profile().THINK_EP_SCAN,
             prompt=prompt,
-            format=None if config.THINK_EP_SCAN else SCAN_SCHEMA,
-            sampling=inference.sampling("ep_scan", config.THINK_EP_SCAN),
+            format=None if engine_profile().THINK_EP_SCAN else SCAN_SCHEMA,
+            sampling=inference.sampling("ep_scan", engine_profile().THINK_EP_SCAN),
         ).response
 
         entries, err = parse_with_repair(
             response,
             self._parse_scan,
-            repair_model=config.REPAIR_LLM,
+            repair_model=engine_profile().REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
             shape="object",
             format=SCAN_SCHEMA,
@@ -423,7 +424,7 @@ class ExemplarsProfileBuilder:
         answer, err = parse_with_repair(
             response,
             self._parse_criteria,
-            repair_model=config.REPAIR_LLM,
+            repair_model=engine_profile().REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
             shape="object",
             format="json",
@@ -505,7 +506,7 @@ class ExemplarsProfileBuilder:
                 break
             logger.warning(f"Repair {attempt}/{self.max_repair_attempts}: {err}")
             if profile is None:
-                repair_model = config.REPAIR_LLM
+                repair_model = engine_profile().REPAIR_LLM
                 repair_prompt = self.prompts.json_repair_prompt(
                     broken_output=response, error_msg=err, shape="object", grammar=False
                 )
@@ -553,7 +554,7 @@ class ExemplarsProfileBuilder:
     def _consolidation_think(self) -> bool | str:
         """The consolidation's reasoning level, off on a model that cannot reason."""
         if inference.supports_thinking(self.consolidate_model):
-            return config.THINK_EP_CONSOLIDATE
+            return engine_profile().THINK_EP_CONSOLIDATE
         return False
 
 

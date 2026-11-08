@@ -13,6 +13,7 @@ import time
 from loguru import logger
 
 from variatio import config
+from variatio.settings import engine_profile
 from variatio.inference.repair import parse_with_repair
 from variatio.functionalities.generation.generator import parse_item
 
@@ -55,7 +56,7 @@ def run(commission: Commission, context) -> ArmResult:
     item, error = parse_with_repair(
         answer.text,
         lambda text: parse_item(text, commission.fixed, item_type),
-        repair_model=config.REPAIR_LLM,
+        repair_model=engine_profile().REPAIR_LLM,
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
         shape="object",
         format=item_type.stripped_schema(),

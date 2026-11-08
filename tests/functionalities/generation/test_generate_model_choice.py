@@ -10,12 +10,12 @@ import pytest
 from fastapi import HTTPException
 
 from server.functionalities.generation import limits
-from variatio import config
+from variatio.settings import engine_profile
 
 
 @pytest.fixture(autouse=True)
 def offered(monkeypatch):
-    monkeypatch.setattr(config, "GENERATION_MODELS", ["el-rapido", "el-que-delibera"])
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido", "el-que-delibera"])
 
 
 def test_a_commission_may_name_any_offered_model():

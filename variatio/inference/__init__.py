@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from loguru import logger
 
 from .. import config, settings
+from ..settings import engine_profile
 from ..utils import progress
 from .thinking import ThinkingSplitter, split_thinking
 from .interface import Engine
@@ -124,7 +125,7 @@ def sampling(phase: str, think: bool | str = False) -> Sampling:
     top-p by the model, by not being sent. An undeclared phase raises: a misspelt name would
     otherwise sample at the inherited values in silence.
     """
-    own = config.SAMPLING[phase]
+    own = engine_profile().SAMPLING[phase]
     temperature = own.get("temperature")
     if temperature is None:
         temperature = (
@@ -232,8 +233,8 @@ def required_models() -> dict[str, str]:
     from ..settings.registry import EXTRA_MODEL_KEYS
 
     names = ["GUARDRAIL_LLM", "EMBEDDING_LLM", *PHASES.values()]
-    required = {name: getattr(config, name) for name in names}
-    for index, model in enumerate(config.GENERATION_MODELS):
+    required = {name: getattr(engine_profile(), name) for name in names}
+    for index, model in enumerate(engine_profile().GENERATION_MODELS):
         required[f"GENERATION_MODELS[{index}]"] = str(model)
     resolved = values()
     for key in EXTRA_MODEL_KEYS:

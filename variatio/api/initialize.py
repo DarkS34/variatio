@@ -13,6 +13,7 @@ from pathlib import Path
 from loguru import logger
 
 from .. import config
+from ..settings import engine_profile
 from ..exemplars_bank.tagging import ConceptTagger
 from ..utils import locale, progress
 from ..utils.workspace import Workspace
@@ -39,7 +40,7 @@ def make_embedder(
     """
     return Embedder(
         knowledge_graph,
-        config.EMBEDDING_LLM,
+        engine_profile().EMBEDDING_LLM,
         prompts=prompts_pkg.of(locale.prompt_language(ws)),
         embed_text=_embed_text(exemplars_profile),
         embed_signature=exemplars_profile.embed_signature,
@@ -60,7 +61,7 @@ def make_tagger(
     """Build the tagger over an existing index, for the same reason as `make_embedder`."""
     return ConceptTagger(
         embedder,
-        config.CONCEPT_TAGGER_LLM,
+        engine_profile().CONCEPT_TAGGER_LLM,
         prompts=prompts_pkg.of(locale.prompt_language(ws)),
         embed_text=_embed_text(exemplars_profile),
         primary_text=exemplars_profile.primary_text,
@@ -170,7 +171,7 @@ def initialize(ws: Workspace, tag: bool = False) -> RuntimeContext:
         embedder=embedder,
         exemplars_profile=exemplars_profile,
         content_context=content_context,
-        generator_model=config.VARIANT_GENERATION_LLM,
+        generator_model=engine_profile().VARIANT_GENERATION_LLM,
         prompts=prompts_pkg.of(language),
         prerequisite_relation=relations.prerequisite_relation(ws),
         tagger=tagger,

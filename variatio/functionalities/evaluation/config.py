@@ -6,7 +6,7 @@ values are declared in `variatio/functionalities/evaluation/settings.py` and der
 
 import os
 
-from variatio import config as pipeline_config
+from variatio.settings import engine_profile
 from variatio import settings
 
 EXTERNAL_PROVIDERS: list[str]
@@ -45,7 +45,7 @@ def derive(values: dict[str, object], environ: dict[str, str]) -> dict[str, obje
         # the same model that writes a generation, which is what every session before the
         # setting existed ran with.
         "LOCAL_MODEL": str(values.get("evaluation.local_model") or "")
-        or pipeline_config.VARIANT_GENERATION_LLM,
+        or engine_profile().VARIANT_GENERATION_LLM,
         "EXTERNAL_PROVIDERS": providers,
         "PROVIDER_MODELS": models,
         "PROVIDER_KEYS": keys,

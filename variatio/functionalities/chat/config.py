@@ -4,7 +4,7 @@ The annotations below are the readable index, as `variatio.config`'s are; the va
 declared in `settings.py` and derived here.
 """
 
-from variatio import config as pipeline_config
+from variatio.settings import engine_profile
 from variatio import settings
 
 REPLY_MODEL: str
@@ -20,7 +20,7 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     """Compute the chat's resolved values from the registry's."""
     # An empty model is the writer of a generation, which every installation already has
     # loaded, capped and protected (the user's decision, 2026-10-14).
-    reply = str(values.get("chat.models.reply") or "") or pipeline_config.VARIANT_GENERATION_LLM
+    reply = str(values.get("chat.models.reply") or "") or engine_profile().VARIANT_GENERATION_LLM
     return {
         "REPLY_MODEL": reply,
         "THINK_REPLY": values["chat.effort.reply"] if values["chat.reasoning.reply"] else False,

@@ -11,10 +11,11 @@ import json
 
 import pytest
 
-from variatio import config, inference
+from variatio import inference
 from variatio.exemplars_bank.build import ExemplarsBankBuilder
-from variatio.utils.workspace import Workspace
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
+from variatio.settings import engine_profile
+from variatio.utils.workspace import Workspace
 
 PROFILE = {
     "item_types": {
@@ -53,9 +54,9 @@ def calls(monkeypatch):
         return type("R", (), {"response": REPLY, "thinking": ""})()
 
     monkeypatch.setattr(inference, "generate", _generate)
-    monkeypatch.setattr(config, "THINK_EB_EXTRACT", False)
-    monkeypatch.setattr(config, "EB_EXTRACT_MODEL", "gemma-4-31b")
-    monkeypatch.setattr(config, "REPAIR_LLM", "gemma-4-31b")
+    monkeypatch.setattr(engine_profile(), "THINK_EB_EXTRACT", False)
+    monkeypatch.setattr(engine_profile(), "EB_EXTRACT_MODEL", "gemma-4-31b")
+    monkeypatch.setattr(engine_profile(), "REPAIR_LLM", "gemma-4-31b")
     return seen
 
 
@@ -84,7 +85,7 @@ def test_a_remote_model_is_asked_without_one(builder, calls, monkeypatch):
 
 def test_reasoning_drops_it_on_a_local_model_too(builder, calls, monkeypatch):
     _local(monkeypatch)
-    monkeypatch.setattr(config, "THINK_EB_EXTRACT", True)
+    monkeypatch.setattr(engine_profile(), "THINK_EB_EXTRACT", True)
     builder._extract_batch("un lote", "tag")
     assert calls[0]["format"] is None
 

@@ -13,6 +13,7 @@ import pytest
 from server.functionalities.generation import jobs as generation_jobs
 from server.functionalities.shared import generations as store
 from server.jobs.catalogue import Job
+from variatio.settings import engine_profile
 from variatio.utils import paths, progress
 from variatio.utils.progress import Cancelled
 
@@ -161,9 +162,9 @@ def test_the_record_keeps_the_prompt_the_provenance_and_the_inputs(stubbed, monk
 # The level that ran is what the old row lost: it stored `bool(think)`, so "high" and "low"
 # read the same, and a level the installation locked was not recorded at all.
 def test_the_effort_asked_and_the_effort_that_ran_are_both_kept(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-rapido", "el-fijo"])
-    monkeypatch.setattr(generation_jobs.config, "FIXED_EFFORT_MODELS", ["el-fijo"])
-    monkeypatch.setattr(generation_jobs.config, "FIXED_EFFORT_LEVELS", {"el-fijo": "medium"})
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido", "el-fijo"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", ["el-fijo"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_LEVELS", {"el-fijo": "medium"})
     monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     _run(_job(think="high", model="el-fijo"))
 
@@ -187,7 +188,7 @@ def test_the_commission_curriculum_is_kept_as_it_was_asked(stubbed, monkeypatch)
 
 
 def test_the_record_names_the_model_the_commission_chose(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido", "el-lento"])
     monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     result, _, error = _run(_job(model="el-lento"))
 
@@ -199,7 +200,7 @@ def test_the_record_names_the_model_the_commission_chose(stubbed, monkeypatch):
 
 
 def test_a_commission_naming_no_model_records_the_default_one(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-rapido", "el-lento"])
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido", "el-lento"])
     monkeypatch.setattr(generation_jobs.api, "generate", _accepting("uno"))
     result, _, _ = _run(_job())
 
@@ -213,7 +214,7 @@ def test_a_commission_naming_no_model_records_the_default_one(stubbed, monkeypat
 # under a job that was waiting: the job fails saying so instead of quietly running on
 # whatever the installation offers today.
 def test_a_model_that_stopped_being_offered_stops_the_job(stubbed, monkeypatch):
-    monkeypatch.setattr(generation_jobs.config, "GENERATION_MODELS", ["el-que-hay"])
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-que-hay"])
     monkeypatch.setattr(generation_jobs.api, "generate", lambda *a, **k: pytest.fail("no llega"))
     result, _, error = _run(_job(model="el-que-ya-no"))
 

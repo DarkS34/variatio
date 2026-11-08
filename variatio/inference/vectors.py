@@ -9,6 +9,7 @@ import numpy as np
 from loguru import logger
 
 from .. import config, inference
+from ..settings import engine_profile
 from ..utils import progress
 
 
@@ -37,7 +38,7 @@ def embed_normalized(texts: list[str], what: str, model: str | None = None):
     shortlist, a sibling shortlist, a collision check — and degrading to "no signal" is
     better than failing a build that can still produce a graph.
     """
-    model = model or config.EMBEDDING_LLM
+    model = model or engine_profile().EMBEDDING_LLM
     try:
         vectors: list[list[float]] = []
         for start in range(0, len(texts), config.EMBEDDING_BATCH_SIZE):

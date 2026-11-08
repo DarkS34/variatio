@@ -15,6 +15,7 @@ import numpy as np
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...prompts import wording as wording_sets
 from ...utils import progress
 from ...inference.vectors import embed_normalized
@@ -170,10 +171,10 @@ def propose_merges(
                 )
             )
             response = inference.generate(
-                model=config.KG_CLEAN_MERGE_MODEL,
+                model=engine_profile().KG_CLEAN_MERGE_MODEL,
                 prompt=prompt,
-                think=config.THINK_KG_CLEAN_MERGE,
-                sampling=inference.sampling("kg_clean_merge", config.THINK_KG_CLEAN_MERGE),
+                think=engine_profile().THINK_KG_CLEAN_MERGE,
+                sampling=inference.sampling("kg_clean_merge", engine_profile().THINK_KG_CLEAN_MERGE),
             ).response
             raw = parsing.parse_object(
                 response, f"[merge {idx}/{len(batches)}] ", MERGE_SCHEMA, max_attempts, prompts
@@ -195,7 +196,7 @@ def merge_candidates(nodes: list[str]) -> list[list[str]]:
     if len(nodes) < 2:
         return []
     vectors = embed_normalized(
-        nodes, "the node names", model=config.EMBEDDING_LLM
+        nodes, "the node names", model=engine_profile().EMBEDDING_LLM
     )
     if vectors is None:
         return []
@@ -314,10 +315,10 @@ def propose_drops(
             # turning it off is 6.8x faster and goes from 1 drop to 20. The deliberation is
             # what keeps this pass timid, and a concept dropped here is gone for good.
             response = inference.generate(
-                model=config.KG_CLEAN_DROP_MODEL,
+                model=engine_profile().KG_CLEAN_DROP_MODEL,
                 prompt=prompt,
-                think=config.THINK_KG_CLEAN_DROP,
-                sampling=inference.sampling("kg_clean_drop", config.THINK_KG_CLEAN_DROP),
+                think=engine_profile().THINK_KG_CLEAN_DROP,
+                sampling=inference.sampling("kg_clean_drop", engine_profile().THINK_KG_CLEAN_DROP),
             ).response
             raw = parsing.parse_object(
                 response, f"[drop {idx}/{len(batches)}] ", DROP_SCHEMA, max_attempts, prompts

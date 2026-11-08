@@ -9,6 +9,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from ... import config
+from ...settings import engine_profile
 from ...inference.repair import parse_with_repair
 
 
@@ -19,7 +20,7 @@ def parse_object(
     result, error = parse_with_repair(
         response,
         parse_json_object,
-        repair_model=config.REPAIR_LLM,
+        repair_model=engine_profile().REPAIR_LLM,
         max_attempts=max_attempts,
         shape="object",
         format=format,

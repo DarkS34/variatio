@@ -10,6 +10,7 @@ from pathlib import Path
 from loguru import logger
 
 from .. import config, documents
+from ..settings import engine_profile
 from .. import prompts as prompts_pkg
 from ..utils import locale, paths, progress
 from ..utils.workspace import Workspace
@@ -162,7 +163,7 @@ def _cache_dir_for(ws: Workspace, source: Path) -> Path:
 def _expected_fingerprint(source: Path, slot: str) -> dict:
     """Return the fingerprint this document would be transcribed under right now."""
     return documents.fingerprint_for(
-        source, config.TRANSCRIBE_MODEL, config.TRANSCRIBE_DPI, _slot_ocr(slot)
+        source, engine_profile().TRANSCRIBE_MODEL, config.TRANSCRIBE_DPI, _slot_ocr(slot)
     )
 
 

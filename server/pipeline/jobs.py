@@ -9,7 +9,8 @@ The construction's own register the same way, in `install()`.
 
 from loguru import logger
 
-from variatio import api, config
+from variatio import api
+from variatio.settings import engine_profile
 from variatio.exemplars_bank.tagging import ConceptTagger
 from variatio.utils import json_io, progress
 from variatio.utils.workspace import Workspace
@@ -149,7 +150,7 @@ def handle_describe_concepts(job: Job, control: JobControl) -> dict:
     concepts = job.params.get("concepts")
     overwrite = bool(job.params.get("overwrite"))
     logger.info(
-        f"Escribiendo descripciones con '{config.DESCRIPTION_GENERATION_LLM}': "
+        f"Escribiendo descripciones con '{engine_profile().DESCRIPTION_GENERATION_LLM}': "
         + (
             f"{len(concepts)} concepto(s) seleccionado(s)"
             if concepts
@@ -190,7 +191,7 @@ def handle_tag(job: Job, control: JobControl) -> dict:
     pending = ids if ids is not None else ConceptTagger.pending_ids(context.exemplars_bank)
     logger.info(
         f"A etiquetar: {len(pending)} de {len(context.exemplars_bank)} ítem(s), "
-        f"verificados con '{config.CONCEPT_TAGGER_LLM}'"
+        f"verificados con '{engine_profile().CONCEPT_TAGGER_LLM}'"
     )
     bank = api.tag_bank(context, ids=ids)
     untagged = [i for i, item in bank.items() if not item.get("concepts")]
@@ -222,7 +223,7 @@ def handle_tag_item(job: Job, control: JobControl) -> dict:
     if not ids:
         logger.info(f"Ninguno de {asked} sigue en el banco: no hay nada que etiquetar")
         return {"items": asked, "tagged": [], "untagged": []}
-    logger.info(f"A etiquetar {', '.join(ids)}, verificados con '{config.CONCEPT_TAGGER_LLM}'")
+    logger.info(f"A etiquetar {', '.join(ids)}, verificados con '{engine_profile().CONCEPT_TAGGER_LLM}'")
     annotated = context.tagger.tag_all(context.exemplars_bank, ids=ids)
     written = bank_edit.apply_tags(ws, {item_id: annotated[item_id] for item_id in ids})["written"]
     tagged = [item_id for item_id in written if annotated[item_id].get("concepts")]

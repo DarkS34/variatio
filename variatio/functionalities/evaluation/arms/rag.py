@@ -24,6 +24,7 @@ import time
 from loguru import logger
 
 from variatio import config, inference
+from variatio.settings import engine_profile
 from variatio.utils import progress
 from variatio.inference.repair import parse_with_repair
 from variatio.api.transcribe import CORPUS, EXEMPLARS
@@ -76,7 +77,7 @@ def run(commission: Commission, context) -> ArmResult:
     )
 
     resp = inference.generate_stream(
-        model=commission.model or config.VARIANT_GENERATION_LLM,
+        model=commission.model or engine_profile().VARIANT_GENERATION_LLM,
         prompt=prompt,
         think=commission.effort,
         on_token=progress.token_sink("eval"),
@@ -89,7 +90,7 @@ def run(commission: Commission, context) -> ArmResult:
         lambda text: parse_item(
             inference.split_thinking(text).response, commission.fixed, item_type
         ),
-        repair_model=config.REPAIR_LLM,
+        repair_model=engine_profile().REPAIR_LLM,
         max_attempts=config.MAX_JSON_REPAIR_TRIES,
         shape="object",
         format=item_type.stripped_schema(),
@@ -103,7 +104,7 @@ def run(commission: Commission, context) -> ArmResult:
         item=item.model_dump(mode="json") if item is not None else None,
         raw_response=raw,
         prompt=prompt,
-        model=commission.model or config.VARIANT_GENERATION_LLM,
+        model=commission.model or engine_profile().VARIANT_GENERATION_LLM,
         provider=inference.engine_name(),
         exemplar_ids=[key for key, _text, _score in retrieved],
         elapsed_ms=round((time.perf_counter() - started) * 1000),

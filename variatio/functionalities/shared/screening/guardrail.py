@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from .... import config, inference
+from ....settings import engine_profile
 from ....prompts import wording as wording_sets
 from ....utils import progress
 from ....inference import InferenceError
@@ -118,7 +119,7 @@ def _score(text: str, criterion: str) -> bool | None:
     """Ask the guardrail model about one criterion; None when the answer is unreadable."""
     try:
         response = inference.generate(
-            model=config.GUARDRAIL_LLM,
+            model=engine_profile().GUARDRAIL_LLM,
             prompt=text,
             system=criterion,
             think=False,

@@ -18,27 +18,28 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from variatio.functionalities.chat import BLOCKED, REPLIED
-from variatio.functionalities.chat import config as chat_config
-from variatio.functionalities.chat import turn as chat_turn
-from server.functionalities.chat import jobs, router as router_module, usage
-from server.functionalities.chat.store import STORE
-from server.functionalities.tutor import store as tutor_store
 from server import auth
 from server.auth import features, queries
 from server.auth.deps import Access
-from server.exemplars_bank import edit as bank_edit
-from server.exemplars_bank import marks as bank_marks
 from server.classroom import groups
 from server.core import process
 from server.db import repository
 from server.db.models import OWNER, VIEWER, Base
+from server.exemplars_bank import edit as bank_edit
+from server.exemplars_bank import marks as bank_marks
+from server.functionalities.chat import jobs, usage
+from server.functionalities.chat import router as router_module
+from server.functionalities.chat.store import STORE
+from server.functionalities.tutor import store as tutor_store
 from server.jobs.bus import EventBus
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobRunner
-from variatio import config as pipeline_config
-from variatio.utils.workspace import Workspace
+from variatio.functionalities.chat import BLOCKED, REPLIED
+from variatio.functionalities.chat import config as chat_config
+from variatio.functionalities.chat import turn as chat_turn
 from variatio.functionalities.shared.screening import Verdict
+from variatio.settings import engine_profile
+from variatio.utils.workspace import Workspace
 
 # A type with a solution, which a teacher may hide.
 PROFILE = {
@@ -154,7 +155,7 @@ def test_a_refused_message_reaches_no_model(monkeypatch):
 
 
 def test_an_empty_model_is_the_generation_s():
-    assert chat_config.derive({**_values(), "chat.models.reply": None})["REPLY_MODEL"] == pipeline_config.VARIANT_GENERATION_LLM
+    assert chat_config.derive({**_values(), "chat.models.reply": None})["REPLY_MODEL"] == engine_profile().VARIANT_GENERATION_LLM
     assert chat_config.derive({**_values(), "chat.models.reply": "otro:7b"})["REPLY_MODEL"] == "otro:7b"
 
 
@@ -270,8 +271,8 @@ def test_a_turn_writes_the_reply_and_says_nothing_in_public(db, aula, monkeypatc
 
 
 def test_the_class_s_week_counts_the_chat_by_student_and_day(db, aula, monkeypatch):
-    from server.functionalities.chat import activity as chat_activity
     from server.classroom import activity
+    from server.functionalities.chat import activity as chat_activity
 
     monkeypatch.setattr(activity, "CHAT_READER", chat_activity.read)
     moment = datetime(2026, 10, 14, 10, 0)  # a Wednesday

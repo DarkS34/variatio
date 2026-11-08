@@ -15,6 +15,7 @@ from loguru import logger
 from pydantic import ValidationError
 
 from .. import config, documents, inference
+from ..settings import engine_profile
 from .. import prompts as prompts_pkg
 from ..prompts import wording as wording_sets
 from ..utils import locale, progress
@@ -37,12 +38,12 @@ BUILD_PHASES = (
 def build_models() -> list[str]:
     """Every model a bank build calls, the tagger's and the embedder's included."""
     return [
-        config.TRANSCRIBE_MODEL,
-        config.TRANSCRIBE_SEAM_MODEL,
-        config.EB_EXTRACT_MODEL,
-        config.EMBEDDING_LLM,
-        config.CONCEPT_TAGGER_LLM,
-        config.REPAIR_LLM,
+        engine_profile().TRANSCRIBE_MODEL,
+        engine_profile().TRANSCRIBE_SEAM_MODEL,
+        engine_profile().EB_EXTRACT_MODEL,
+        engine_profile().EMBEDDING_LLM,
+        engine_profile().CONCEPT_TAGGER_LLM,
+        engine_profile().REPAIR_LLM,
     ]
 
 
@@ -326,22 +327,22 @@ class ExemplarsBankBuilder:
             type_keys=self._type_keys,
         )
         response = inference.generate(
-            model=config.EB_EXTRACT_MODEL,
-            think=config.THINK_EB_EXTRACT,
+            model=engine_profile().EB_EXTRACT_MODEL,
+            think=engine_profile().THINK_EB_EXTRACT,
             prompt=prompt,
             format=self._grammar(),
-            sampling=inference.sampling("eb_extract", config.THINK_EB_EXTRACT),
+            sampling=inference.sampling("eb_extract", engine_profile().THINK_EB_EXTRACT),
         ).response
 
         # A repair re-emits the same paragraphs, so a grammar kept here would undo the drop
         # above on the one path that runs when the reply was already malformed.
         repair_grammar = (
-            None if self._grammar_costs_the_text(config.REPAIR_LLM) else self._extraction_schema
+            None if self._grammar_costs_the_text(engine_profile().REPAIR_LLM) else self._extraction_schema
         )
         items, err = parse_with_repair(
             response,
             self._parse_and_validate,
-            repair_model=config.REPAIR_LLM,
+            repair_model=engine_profile().REPAIR_LLM,
             max_attempts=self.max_repair_attempts,
             shape="array",
             format=repair_grammar,
@@ -362,9 +363,9 @@ class ExemplarsBankBuilder:
         decoder's guarantee, which `parse_with_repair` takes over exactly as it does for
         the phases that reason.
         """
-        if config.THINK_EB_EXTRACT:
+        if engine_profile().THINK_EB_EXTRACT:
             return None
-        if self._grammar_costs_the_text(config.EB_EXTRACT_MODEL):
+        if self._grammar_costs_the_text(engine_profile().EB_EXTRACT_MODEL):
             return None
         return self._extraction_schema
 

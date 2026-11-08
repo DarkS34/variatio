@@ -10,6 +10,7 @@ import json
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ... import prompts as prompts_pkg
 from ...utils import locale
 from ...inference.repair import parse_with_repair
@@ -61,7 +62,7 @@ def synthesize(
     parsed, error = parse_with_repair(
         response,
         _parse,
-        config.REPAIR_LLM,
+        engine_profile().REPAIR_LLM,
         config.MAX_JSON_REPAIR_TRIES,
         shape="object",
         format=CONTENT_CONTEXT_SCHEMA,

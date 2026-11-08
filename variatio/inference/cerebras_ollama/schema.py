@@ -5,7 +5,7 @@ import json
 
 from loguru import logger
 
-from ... import config
+from ...settings import engine_profile
 
 STRICT_SCHEMA_MAX_CHARS = 5000
 _WRAPPER_NAME = "lista"
@@ -83,7 +83,6 @@ def _open_map(node: object) -> bool:
     return False
 
 
-
 def _unwrap(text: str) -> str:
     """Return the array inside a one-key wrapper object, or `text` unchanged."""
     try:
@@ -101,7 +100,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
     The same translation `OllamaEngine._think_option` does, in the other dialect: the
     levels are "none"/"low"/"medium"/"high", Cerebras has no "max", so Ollama's top level
     maps down to "high". A string is a per-phase effort already resolved by
-    `settings.derived` and travels untouched; `True` becomes `config.DEFAULT_THINK_EFFORT`.
+    `settings.derived` and travels untouched; `True` becomes `engine_profile().DEFAULT_THINK_EFFORT`.
 
     It assumes every routed model has an off switch. Some families answer 400 "Unsupported
     reasoning effort: none" and would need `False` floored at their own minimum; none is
@@ -111,7 +110,7 @@ def reasoning_effort(think: bool | str | None) -> str | None:
         return None
     if think is False:
         return "none"
-    effort = think if isinstance(think, str) else config.DEFAULT_THINK_EFFORT
+    effort = think if isinstance(think, str) else engine_profile().DEFAULT_THINK_EFFORT
     return "high" if effort == "max" else effort
 
 

@@ -13,6 +13,7 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...utils import progress
 from ...utils.lexicon import mentions
 from ...documents import chunk_sections, document_markdown, headings_by_level, list_source_files
@@ -387,11 +388,11 @@ def _ask(
 ) -> tuple[list[str], list[list[str]], dict[str, str]]:
     """Make one extraction call and read its answer, `([], [], {})` when it is unusable."""
     response = inference.generate(
-        model=config.KG_EXTRACT_MODEL,
+        model=engine_profile().KG_EXTRACT_MODEL,
         prompt=prompt,
-        think=config.THINK_KG_EXTRACT,
-        format=None if config.THINK_KG_EXTRACT else EXTRACT_SCHEMA,
-        sampling=inference.sampling("kg_extract", config.THINK_KG_EXTRACT),
+        think=engine_profile().THINK_KG_EXTRACT,
+        format=None if engine_profile().THINK_KG_EXTRACT else EXTRACT_SCHEMA,
+        sampling=inference.sampling("kg_extract", engine_profile().THINK_KG_EXTRACT),
     ).response
     raw = parsing.parse_object(response, log_prefix, EXTRACT_SCHEMA, max_attempts, prompts)
     if raw is None:

@@ -13,10 +13,11 @@ side must not rewrite the other.
 
 import pytest
 
+from variatio.api import transcribe
+from variatio.documents import pages
+from variatio.settings import engine_profile
 from variatio.utils import paths
 from variatio.utils.workspace import Workspace
-from variatio.documents import pages
-from variatio.api import transcribe
 
 TEXT = "Un enunciado que ocupa una página entera."
 
@@ -112,11 +113,10 @@ def test_settings_that_moved_are_not_adopted_over(workspaces, monkeypatch):
     put(uno, "corpus", "apuntes.md")
     transcribe.transcribe_slot(uno, "corpus")
 
-    from variatio import config
 
-    moved = {"temperature": config.TRANSCRIBE_TEMPERATURE + 0.5, "top_k": None, "top_p": None}
-    sampling = {**config.SAMPLING, "transcribe": moved, "transcribe_image": moved}
-    monkeypatch.setattr(config, "SAMPLING", sampling)
+    moved = {"temperature": engine_profile().TRANSCRIBE_TEMPERATURE + 0.5, "top_k": None, "top_p": None}
+    sampling = {**engine_profile().SAMPLING, "transcribe": moved, "transcribe_image": moved}
+    monkeypatch.setattr(engine_profile(), "SAMPLING", sampling)
     put(dos, "corpus", "apuntes.md")
     assert transcribe.adopt_transcriptions(dos, "corpus")["adopted"] == 0
 

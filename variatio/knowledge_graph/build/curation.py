@@ -12,6 +12,7 @@ import networkx as nx
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...utils import progress
 from ...utils.json_io import write_json
 from ...utils.lexicon import fold
@@ -209,11 +210,11 @@ def segment_syllabus(
         return []
     prompt = prompts.segment_syllabus_prompt(blocks.outline_block(outline, documents))
     response = inference.generate(
-        model=config.KG_UNITS_MODEL,
+        model=engine_profile().KG_UNITS_MODEL,
         prompt=prompt,
-        think=config.THINK_KG_UNITS,
-        format=None if config.THINK_KG_UNITS else UNITS_SCHEMA,
-        sampling=inference.sampling("kg_units", config.THINK_KG_UNITS),
+        think=engine_profile().THINK_KG_UNITS,
+        format=None if engine_profile().THINK_KG_UNITS else UNITS_SCHEMA,
+        sampling=inference.sampling("kg_units", engine_profile().THINK_KG_UNITS),
     ).response
     raw = parsing.parse_object(response, "[units] ", UNITS_SCHEMA, max_attempts, prompts) or {}
     units = accept_units(raw.get("units") or [], outline)
@@ -347,11 +348,11 @@ def curate_domains(
         blocks.documents_block(documents),
     )
     response = inference.generate(
-        model=config.KG_DOMAINS_MODEL,
+        model=engine_profile().KG_DOMAINS_MODEL,
         prompt=prompt,
-        think=config.THINK_KG_DOMAINS,
-        format=None if config.THINK_KG_DOMAINS else DOMAIN_NAMES_SCHEMA,
-        sampling=inference.sampling("kg_domains", config.THINK_KG_DOMAINS),
+        think=engine_profile().THINK_KG_DOMAINS,
+        format=None if engine_profile().THINK_KG_DOMAINS else DOMAIN_NAMES_SCHEMA,
+        sampling=inference.sampling("kg_domains", engine_profile().THINK_KG_DOMAINS),
     ).response
     raw = parsing.parse_object(response, "[domains] ", DOMAIN_NAMES_SCHEMA, max_attempts, prompts) or {}
 
@@ -457,12 +458,12 @@ def assign_round(
             blocks.nodes_block(batch, relations, {}, definitions=definitions),
         )
         response = inference.generate(
-            model=config.KG_DOMAINS_LEFTOVERS_MODEL,
+            model=engine_profile().KG_DOMAINS_LEFTOVERS_MODEL,
             prompt=prompt,
-            think=config.THINK_KG_DOMAINS_LEFTOVERS,
-            format=None if config.THINK_KG_DOMAINS_LEFTOVERS else DOMAINS_SCHEMA,
+            think=engine_profile().THINK_KG_DOMAINS_LEFTOVERS,
+            format=None if engine_profile().THINK_KG_DOMAINS_LEFTOVERS else DOMAINS_SCHEMA,
             sampling=inference.sampling(
-                "kg_domains_leftovers", config.THINK_KG_DOMAINS_LEFTOVERS
+                "kg_domains_leftovers", engine_profile().THINK_KG_DOMAINS_LEFTOVERS
             ),
         ).response
         raw = (
@@ -574,11 +575,11 @@ def link_cross_domain(
         blocks.domains_block(concepts_by_domains, definitions), schema
     )
     response = inference.generate(
-        model=config.KG_LINK_CROSS_DOMAIN_MODEL,
+        model=engine_profile().KG_LINK_CROSS_DOMAIN_MODEL,
         prompt=prompt,
-        think=config.THINK_KG_LINK_CROSS_DOMAIN,
+        think=engine_profile().THINK_KG_LINK_CROSS_DOMAIN,
         sampling=inference.sampling(
-            "kg_link_cross_domain", config.THINK_KG_LINK_CROSS_DOMAIN
+            "kg_link_cross_domain", engine_profile().THINK_KG_LINK_CROSS_DOMAIN
         ),
     ).response
     raw = parsing.parse_object(response, "[link · global] ", LINK_SCHEMA, max_attempts, prompts)
@@ -615,10 +616,10 @@ def link_domain(
         domain, blocks.nodes_block(members, relations, {}, definitions=definitions), schema
     )
     response = inference.generate(
-        model=config.KG_LINK_DOMAIN_MODEL,
+        model=engine_profile().KG_LINK_DOMAIN_MODEL,
         prompt=prompt,
-        think=config.THINK_KG_LINK_DOMAIN,
-        sampling=inference.sampling("kg_link_domain", config.THINK_KG_LINK_DOMAIN),
+        think=engine_profile().THINK_KG_LINK_DOMAIN,
+        sampling=inference.sampling("kg_link_domain", engine_profile().THINK_KG_LINK_DOMAIN),
     ).response
     raw = parsing.parse_object(response, f"[link · {domain}] ", LINK_SCHEMA, max_attempts, prompts)
     if raw is None:

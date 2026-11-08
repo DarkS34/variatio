@@ -17,7 +17,7 @@ from variatio.inference import Sampling
 from variatio.inference.cerebras_ollama.budget import account_ledger
 from variatio.inference.cerebras_ollama.remote import CerebrasEngine
 from variatio.inference.ollama import OllamaEngine
-from variatio.settings import derived, store
+from variatio.settings import derived, engine_profile, store
 from variatio.settings.registry import BY_KEY, reasoning
 
 EMPTY = {"temperature": None, "top_k": None, "top_p": None}
@@ -26,8 +26,8 @@ EMPTY = {"temperature": None, "top_k": None, "top_p": None}
 @pytest.fixture
 def triples(monkeypatch):
     """Install a SAMPLING map the test edits, with the judging pair at known values."""
-    table = {phase: dict(EMPTY) for phase in config.SAMPLING}
-    monkeypatch.setattr(config, "SAMPLING", table)
+    table = {phase: dict(EMPTY) for phase in engine_profile().SAMPLING}
+    monkeypatch.setattr(engine_profile(), "SAMPLING", table)
     monkeypatch.setattr(config, "TEMPERATURE_DETERMINISTIC", 0.0)
     monkeypatch.setattr(config, "TEMPERATURE_REASONING", 0.2)
     return table
@@ -40,7 +40,7 @@ def test_every_call_of_the_pipeline_has_its_triple():
         for phase in lane.phases:
             for param in ("temperature", "top_k", "top_p"):
                 assert f"sampling.phases.{phase.key}.{param}" in BY_KEY
-            assert phase.key in config.SAMPLING
+            assert phase.key in engine_profile().SAMPLING
 
 
 def test_an_empty_temperature_follows_whether_the_call_reasons(triples):
@@ -66,9 +66,9 @@ def test_a_misspelt_phase_is_refused_rather_than_inherited(triples):
 
 
 def test_the_three_temperatures_that_were_one_call_s_keep_their_values():
-    assert config.SAMPLING["transcribe"]["temperature"] == config.TRANSCRIBE_TEMPERATURE
-    assert config.SAMPLING["variant_generation"]["temperature"] == config.TEMPERATURE_GENERATION
-    assert config.SAMPLING["repair"]["temperature"] == config.TEMPERATURE_REPAIR
+    assert engine_profile().SAMPLING["transcribe"]["temperature"] == engine_profile().TRANSCRIBE_TEMPERATURE
+    assert engine_profile().SAMPLING["variant_generation"]["temperature"] == engine_profile().TEMPERATURE_GENERATION
+    assert engine_profile().SAMPLING["repair"]["temperature"] == engine_profile().TEMPERATURE_REPAIR
 
 
 def test_the_pictures_inherit_what_they_leave_empty_from_the_pages():
@@ -101,7 +101,7 @@ def test_a_file_written_before_the_triples_keeps_its_temperatures(tmp_path, old,
 
 
 def test_ollama_sends_top_k_and_top_p_only_when_set(monkeypatch):
-    monkeypatch.setattr(config, "LLM_CONTEXT", {})
+    monkeypatch.setattr(engine_profile(), "LLM_CONTEXT", {})
     plain = OllamaEngine._context_option("m", Sampling(0.1))
     assert plain == {"options": {"temperature": 0.1}}
     full = OllamaEngine._context_option("m", Sampling(0.1, 20, 0.9))

@@ -23,7 +23,7 @@ def install(app) -> None:
         PRIVATE_KINDS,
         STUDENT_KINDS,
     )
-    from variatio import config as pipeline_config
+    from variatio.settings import engine_profile
 
     from variatio.functionalities.tutor import config as tutor_config
     from . import activity, admin, digest, jobs, router
@@ -61,7 +61,7 @@ def install(app) -> None:
     # warming a cold context may call (the concept describer and the repair).
     def warming() -> list[str]:
         """Return the models a cold context may call while it warms."""
-        return [pipeline_config.DESCRIPTION_GENERATION_LLM, pipeline_config.REPAIR_LLM]
+        return [engine_profile().DESCRIPTION_GENERATION_LLM, engine_profile().REPAIR_LLM]
 
     lanes.EXTRA_MODELS[jobs.TURN] = lambda params: [
         tutor_config.REPLY_MODEL,
@@ -71,7 +71,7 @@ def install(app) -> None:
     lanes.EXTRA_MODELS[jobs.CRITERIA] = lambda params: [tutor_config.CRITERIA_MODEL, *warming()]
     lanes.EXTRA_MODELS[digest.DIGEST] = lambda params: [
         tutor_config.DIGEST_MODEL,
-        pipeline_config.REPAIR_LLM,
+        engine_profile().REPAIR_LLM,
     ]
 
     app.include_router(router.router)

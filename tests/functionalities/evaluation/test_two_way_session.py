@@ -14,6 +14,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from server.db.models import Base, User, Workspace
+from server.functionalities.evaluation import jobs as evaluation_jobs
+from server.functionalities.evaluation import queries
+from server.functionalities.evaluation import router as evaluation_router
+from server.functionalities.evaluation import store as evaluation_store
+from server.jobs.catalogue import Job
+from variatio import settings
 from variatio.functionalities.evaluation import (
     FAILED,
     RIVALS,
@@ -23,14 +30,7 @@ from variatio.functionalities.evaluation import (
     draw_session,
 )
 from variatio.functionalities.evaluation import run as evaluation_run
-from server.functionalities.evaluation import jobs as evaluation_jobs
-from server.functionalities.evaluation import queries
-from server.functionalities.evaluation import router as evaluation_router
-from server.functionalities.evaluation import store as evaluation_store
-from server.db.models import Base, User, Workspace
-from server.jobs.catalogue import Job
-from variatio import config, settings
-
+from variatio.settings import engine_profile
 
 # THE DRAW --------------------------------------------------------------------------------
 
@@ -63,10 +63,10 @@ def test_the_draw_is_reproducible_from_the_seed_alone():
 
 @pytest.fixture
 def offered(monkeypatch):
-    monkeypatch.setattr(config, "GENERATION_MODELS", ["el-rapido"])
-    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "el-rapido")
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", [])
-    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {})
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido"])
+    monkeypatch.setattr(engine_profile(), "VARIANT_GENERATION_LLM", "el-rapido")
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", [])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_LEVELS", {})
     real = settings.values
 
     def patched():

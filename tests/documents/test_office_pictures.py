@@ -17,10 +17,11 @@ import pytest
 
 from variatio import config, inference
 from variatio.documents import markdown, pages
+from variatio.prompts.es import wording as ES_WORDING
 from variatio.prompts.marks import EMPTY_IMAGE_MARK
+from variatio.settings import engine_profile
 
 from ..conftest import ES
-from variatio.prompts.es import wording as ES_WORDING
 
 docling = pytest.importorskip("docling_core.types.doc")
 
@@ -115,7 +116,7 @@ def test_a_reading_is_cached_by_content_and_by_what_read_it(source, model, tmp_p
     _read(source, model_name="otro", images_dir=images_dir)
     assert model.calls == 2, "another model is another reading"
 
-    monkeypatch.setattr(config, "TRANSCRIBE_TEMPERATURE", config.TRANSCRIBE_TEMPERATURE + 0.5)
+    monkeypatch.setattr(engine_profile(), "TRANSCRIBE_TEMPERATURE", engine_profile().TRANSCRIBE_TEMPERATURE + 0.5)
     _read(source, images_dir=images_dir)
     assert model.calls == 3, "another temperature expires the reading, exactly as it expires a page"
 
@@ -178,7 +179,7 @@ def test_the_office_pages_carry_the_model_and_expire_with_it(source):
     # once and only once.
     expected = pages.fingerprint_for(source, "m", 200, False)
     assert expected["mode"] == "docling" and expected["model"] == "m" and expected["dpi"] == 0
-    assert expected["temperature"] == config.TRANSCRIBE_TEMPERATURE
+    assert expected["temperature"] == engine_profile().TRANSCRIBE_TEMPERATURE
     assert "rasteriser" in expected
 
     stored = {**expected, "model": "", "temperature": None}

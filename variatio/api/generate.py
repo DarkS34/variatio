@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from .. import config
+from ..settings import engine_profile
 from ..functionalities.generation.generator import GeneratedVariant
 from .initialize import RuntimeContext
 
@@ -83,7 +83,7 @@ def resolve_generation_model(requested: str | None) -> str:
 
 def generation_models() -> list[str]:
     """Return the models a commission may choose from, the default one first."""
-    return [str(model) for model in config.GENERATION_MODELS]
+    return [str(model) for model in engine_profile().GENERATION_MODELS]
 
 
 def resolve_generation_effort(model: str, think: bool | str) -> bool | str:
@@ -108,7 +108,7 @@ def fixed_effort_models() -> list[str]:
     from the offer for an afternoon does not throw away a measurement of how it reasons.
     Nothing here reads it: it travels to the browser, which draws or withholds one slider.
     """
-    return [str(model) for model in config.FIXED_EFFORT_MODELS]
+    return [str(model) for model in engine_profile().FIXED_EFFORT_MODELS]
 
 
 def fixed_effort_levels() -> dict[str, str]:
@@ -117,4 +117,4 @@ def fixed_effort_levels() -> dict[str, str]:
     Only the names in `fixed_effort_models()` are read from it; one that is not locked is
     kept and ignored, so taking the lock off for an afternoon does not lose the level.
     """
-    return {str(model): str(level) for model, level in config.FIXED_EFFORT_LEVELS.items()}
+    return {str(model): str(level) for model, level in engine_profile().FIXED_EFFORT_LEVELS.items()}

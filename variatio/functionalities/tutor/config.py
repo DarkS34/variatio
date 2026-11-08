@@ -4,7 +4,7 @@ The annotations below are the readable index, exactly as `variatio.config`'s are
 are declared in `variatio/functionalities/tutor/settings.py` and derived here.
 """
 
-from variatio import config as pipeline_config
+from variatio.settings import engine_profile
 from variatio import settings
 
 REPLY_MODEL: str
@@ -42,7 +42,7 @@ def derive(values: dict[str, object]) -> dict[str, object]:
     """Compute the tutor's resolved values from the registry's."""
     # An empty model is the writer of a generation, which every installation already has
     # loaded, capped and protected; the two other calls follow the reply's.
-    reply = str(values.get("tutor.models.reply") or "") or pipeline_config.VARIANT_GENERATION_LLM
+    reply = str(values.get("tutor.models.reply") or "") or engine_profile().VARIANT_GENERATION_LLM
     classify = str(values.get("tutor.models.classify") or "") or reply
     return {
         "REPLY_MODEL": reply,

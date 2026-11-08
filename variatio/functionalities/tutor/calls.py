@@ -14,6 +14,7 @@ import re
 from loguru import logger
 
 from variatio import config as pipeline_config, inference
+from variatio.settings import engine_profile
 from variatio.inference.repair import parse_with_repair
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
@@ -45,7 +46,7 @@ def ask_object(
     result, error = parse_with_repair(
         raw,
         parse_object,
-        repair_model=pipeline_config.REPAIR_LLM,
+        repair_model=engine_profile().REPAIR_LLM,
         max_attempts=pipeline_config.MAX_JSON_REPAIR_TRIES,
         shape="object",
         format=format,

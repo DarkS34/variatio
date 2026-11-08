@@ -7,19 +7,20 @@ model runs at the level the installation declared, exactly as a generation does.
 
 import pytest
 
+from variatio import settings
 from variatio.functionalities.evaluation import Commission
 from variatio.functionalities.evaluation import config as evaluation_config
 from variatio.functionalities.evaluation import run as evaluation_run
 from variatio.functionalities.evaluation.arms import system as system_arm
-from variatio import config, settings
+from variatio.settings import engine_profile
 
 
 @pytest.fixture
 def offered(monkeypatch):
-    monkeypatch.setattr(config, "GENERATION_MODELS", ["el-rapido", "el-que-delibera"])
-    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "el-rapido")
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-que-delibera"])
-    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {"el-que-delibera": "high"})
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido", "el-que-delibera"])
+    monkeypatch.setattr(engine_profile(), "VARIANT_GENERATION_LLM", "el-rapido")
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", ["el-que-delibera"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_LEVELS", {"el-que-delibera": "high"})
 
 
 def _local_model(monkeypatch, value):

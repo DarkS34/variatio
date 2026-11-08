@@ -17,6 +17,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...prompts import wording as wording_sets
 from ...utils import progress
 from ...inference.repair import parse_with_repair
@@ -293,7 +294,7 @@ class VariantGenerator:
         self.prerequisite_relation = prerequisite_relation
         self.content_context = content_context or ContentContext()
         self.generator_model = generator_model
-        self.repair_model = config.REPAIR_LLM if repair_model is None else repair_model
+        self.repair_model = engine_profile().REPAIR_LLM if repair_model is None else repair_model
         self.tagger = tagger
 
         self.max_repair_attempts = config.MAX_JSON_REPAIR_TRIES

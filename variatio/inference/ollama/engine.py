@@ -14,6 +14,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from ... import config
+from ...settings import engine_profile
 from ...utils import progress, repetition
 from .. import usage
 from ..interface import Engine
@@ -174,7 +175,7 @@ class OllamaEngine(Engine):
 
         THIS IS WHERE `True` BECOMES AN EFFORT LEVEL — with `cerebras.reasoning_effort`,
         the only place it does. The boolean callers (the evaluation's `Commission`, the
-        `generations.think` column, the UI switch) get `config.DEFAULT_THINK_EFFORT`; a
+        `generations.think` column, the UI switch) get `engine_profile().DEFAULT_THINK_EFFORT`; a
         pipeline phase passes what `settings.derived` resolved for it, so a string travels
         through untouched and `False` stays `False` — no reasoning at all, which the
         constrained-decoding call sites depend on.
@@ -189,7 +190,7 @@ class OllamaEngine(Engine):
         if not self.supports_thinking(model):
             logger.debug(f"'{model}' has no reasoning mode; ignoring think={think}")
             return {}
-        return {"think": config.DEFAULT_THINK_EFFORT if think is True else think}
+        return {"think": engine_profile().DEFAULT_THINK_EFFORT if think is True else think}
 
     @staticmethod
     def _format_option(format: dict | str | None) -> dict:
@@ -210,7 +211,7 @@ class OllamaEngine(Engine):
         """Build the per-call options: the KV cache cap, the sampling and the output cap.
 
         Left to itself Ollama sizes the KV cache from the model's declared context, which
-        is where most of this box's VRAM was going; `config.LLM_CONTEXT` decides it in one
+        is where most of this box's VRAM was going; `engine_profile().LLM_CONTEXT` decides it in one
         place so no call site has to know. Both options share one dict, so building them
         apart is how one ends up overwriting the other.
 
@@ -218,7 +219,7 @@ class OllamaEngine(Engine):
         with none and must keep sending none, an embedding having no sampler to steer.
         """
         options: dict = {}
-        num_ctx = config.LLM_CONTEXT.get(model)
+        num_ctx = engine_profile().LLM_CONTEXT.get(model)
         if num_ctx is not None:
             options["num_ctx"] = num_ctx
         if sampling is not None:
@@ -292,11 +293,11 @@ class OllamaEngine(Engine):
     def _looks_like_embedding(self, model: str) -> bool:
         """Whether `model` has to be unloaded through the embedding endpoint.
 
-        `config.EMBEDDING_MODELS` names the ones this instance uses; `/api/ps` may also
+        `engine_profile().EMBEDDING_MODELS` names the ones this instance uses; `/api/ps` may also
         return one the server loaded on its own, and there the declared capability is the
         only reliable source.
         """
-        if model in config.EMBEDDING_MODELS:
+        if model in engine_profile().EMBEDDING_MODELS:
             return True
         return "embedding" in self.capabilities(model)
 

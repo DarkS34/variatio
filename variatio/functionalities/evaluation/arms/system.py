@@ -17,7 +17,8 @@ import time
 
 from loguru import logger
 
-from variatio import config, inference
+from variatio import inference
+from variatio.settings import engine_profile
 from variatio.utils import progress
 
 from .. import FAILED, OK, ArmResult, Commission
@@ -61,7 +62,7 @@ def run(commission: Commission, context) -> ArmResult:
         item=item,
         raw_response=capture.raw,
         prompt=capture.prompt,
-        model=commission.model or config.VARIANT_GENERATION_LLM,
+        model=commission.model or engine_profile().VARIANT_GENERATION_LLM,
         provider=inference.engine_name(),
         exemplar_ids=capture.exemplar_ids,
         elapsed_ms=round((time.perf_counter() - started) * 1000),

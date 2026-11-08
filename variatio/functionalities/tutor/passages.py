@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
-from variatio import config as pipeline_config
+from variatio.settings import engine_profile
 from variatio import documents
 from variatio.utils import progress
 from variatio.utils.lexicon import fold
@@ -225,7 +225,7 @@ def _fingerprint(passages: list[Passage], max_chars: int) -> str:
         json.dumps(
             {
                 "format": _FORMAT,
-                "model": pipeline_config.EMBEDDING_LLM,
+                "model": engine_profile().EMBEDDING_LLM,
                 "prefix": prefix_for("document"),
                 "chars": max_chars,
                 "passages": [[p.document, p.location, p.unit, p.text] for p in passages],

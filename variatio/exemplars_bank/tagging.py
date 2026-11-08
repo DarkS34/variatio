@@ -13,6 +13,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from .. import config, inference
+from ..settings import engine_profile
 from ..utils import progress
 from ..inference.repair import parse_with_repair
 from ..retrieval import Embedder
@@ -188,11 +189,11 @@ class ConceptTagger:
         result = self._verify(prompt, candidate_names, think=False)
         if (
             self._is_inconclusive(result)
-            and config.THINK_CONCEPT_TAGGER
+            and engine_profile().THINK_CONCEPT_TAGGER
             and inference.supports_thinking(self.concept_tagger_model)
         ):
             logger.debug(f"Tagging inconclusive; retrying with reasoning: {statement[:40]}…")
-            escalated = self._verify(prompt, candidate_names, think=config.THINK_CONCEPT_TAGGER)
+            escalated = self._verify(prompt, candidate_names, think=engine_profile().THINK_CONCEPT_TAGGER)
             if not self._is_inconclusive(escalated):
                 return escalated, f"{method}_thinking"
         return result, method

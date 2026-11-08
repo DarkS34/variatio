@@ -7,6 +7,7 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config
+from ...settings import engine_profile
 from ...utils import progress
 from ..files import PLAIN_TEXT_EXTS, SUPPORTED_EXTS, required_cache_dir
 from ..markdown import tidy_markdown
@@ -113,8 +114,8 @@ def _read_document(
         raise ValueError(f"Unsupported file extension: {suffix}")
 
     is_pdf = suffix == ".pdf"
-    model = model or config.TRANSCRIBE_MODEL
-    seam_model = seam_model or config.TRANSCRIBE_SEAM_MODEL
+    model = model or engine_profile().TRANSCRIBE_MODEL
+    seam_model = seam_model or engine_profile().TRANSCRIBE_SEAM_MODEL
     dpi = dpi or config.TRANSCRIBE_DPI
     fingerprint = fingerprint_for(source, model, dpi, ocr)
 

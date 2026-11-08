@@ -16,7 +16,7 @@ from server.jobs import lanes
 from server.jobs.catalogue import JOB_LABELS
 from variatio import config, inference
 from variatio.inference.engines import EngineSet
-from variatio.settings import derived
+from variatio.settings import derived, profile_of
 
 # `VARIANT_GENERATION_LLM` is derived rather than declared since the commission started
 # choosing its own writer, so it is named here beside the phases it stopped being one of.
@@ -45,13 +45,18 @@ def ollama(monkeypatch):
 def hybrid(monkeypatch):
     monkeypatch.setattr(config, "INFERENCE_ENGINE", "cerebras+ollama")
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["remoto"])
-    monkeypatch.setattr(config, "KG_TAGGABLE_MODEL", "remoto")
-    monkeypatch.setattr(config, "REPAIR_LLM", "local-repair")
-    monkeypatch.setattr(config, "DESCRIPTION_GENERATION_LLM", "local-describe")
-    monkeypatch.setattr(config, "TRANSCRIBE_MODEL", "remoto")
-    monkeypatch.setattr(config, "TRANSCRIBE_SEAM_MODEL", "remoto")
+    monkeypatch.setattr(_profile(), "KG_TAGGABLE_MODEL", "remoto")
+    monkeypatch.setattr(_profile(), "REPAIR_LLM", "local-repair")
+    monkeypatch.setattr(_profile(), "DESCRIPTION_GENERATION_LLM", "local-describe")
+    monkeypatch.setattr(_profile(), "TRANSCRIBE_MODEL", "remoto")
+    monkeypatch.setattr(_profile(), "TRANSCRIBE_SEAM_MODEL", "remoto")
     with _on_the_default_engine():
         yield
+
+
+def _profile():
+    """The profile of the engine the settings name, the one a fixture below then fixes."""
+    return profile_of(config.INFERENCE_ENGINE)
 
 
 @contextmanager
@@ -89,8 +94,8 @@ def test_a_kind_reserves_a_lane_per_backend_it_actually_calls(hybrid):
 
 def test_the_embedder_and_the_guardrail_never_reserve_a_lane(monkeypatch):
     monkeypatch.setattr(config, "INFERENCE_ENGINE", "cerebras+ollama")
-    monkeypatch.setattr(config, "EMBEDDING_LLM", "emb")
-    monkeypatch.setattr(config, "GUARDRAIL_LLM", "guard")
+    monkeypatch.setattr(_profile(), "EMBEDDING_LLM", "emb")
+    monkeypatch.setattr(_profile(), "GUARDRAIL_LLM", "guard")
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["emb", "guard"])
     with _on_the_default_engine():
         for kind in COMPONENT_KINDS:
@@ -119,10 +124,10 @@ def test_every_model_the_table_names_is_one_the_registry_declares():
 # installation's default instead sends it behind the wrong queue, or reserves a lane it
 # never touches.
 def test_a_generate_job_reserves_the_lane_of_the_model_its_commission_names(hybrid, monkeypatch):
-    monkeypatch.setattr(config, "GENERATION_MODELS", ["remoto", "local-escritor"])
-    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "remoto")
-    monkeypatch.setattr(config, "ADMISSIBILITY_LLM", "local-juez")
-    monkeypatch.setattr(config, "CONCEPT_TAGGER_LLM", "local-etiquetador")
+    monkeypatch.setattr(_profile(), "GENERATION_MODELS", ["remoto", "local-escritor"])
+    monkeypatch.setattr(_profile(), "VARIANT_GENERATION_LLM", "remoto")
+    monkeypatch.setattr(_profile(), "ADMISSIBILITY_LLM", "local-juez")
+    monkeypatch.setattr(_profile(), "CONCEPT_TAGGER_LLM", "local-etiquetador")
 
     assert lanes.models_for("generate", {"model": "local-escritor"})[0] == "local-escritor"
     assert lanes.backends_for("generate", {"model": "local-escritor"}) == frozenset(
@@ -137,8 +142,8 @@ def test_a_generate_job_reserves_the_lane_of_the_model_its_commission_names(hybr
 # A name the installation stopped offering is the submit route's 422, never a 500 here:
 # a lane calculation that raises turns a queueing problem into a broken button.
 def test_an_unoffered_model_falls_back_instead_of_raising(ollama, monkeypatch):
-    monkeypatch.setattr(config, "GENERATION_MODELS", ["el-que-hay"])
-    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "el-que-hay")
+    monkeypatch.setattr(_profile(), "GENERATION_MODELS", ["el-que-hay"])
+    monkeypatch.setattr(_profile(), "VARIANT_GENERATION_LLM", "el-que-hay")
     assert lanes.models_for("generate", {"model": "el-que-ya-no"})[0] == "el-que-hay"
     assert lanes.backends_for("generate", {"model": "el-que-ya-no"}) == frozenset(
         {lanes.LOCAL}
@@ -146,7 +151,7 @@ def test_an_unoffered_model_falls_back_instead_of_raising(ollama, monkeypatch):
 
 
 def test_transcribing_reserves_the_lane_of_the_model_that_reads_the_pages(ollama):
-    assert lanes.models_for("transcribe")[0] == config.TRANSCRIBE_MODEL
+    assert lanes.models_for("transcribe")[0] == _profile().TRANSCRIBE_MODEL
     assert lanes.backends_for("transcribe") == frozenset({lanes.LOCAL})
 
 
@@ -154,7 +159,7 @@ def test_transcribing_reserves_the_lane_of_the_model_that_reads_the_pages(ollama
 # (`evaluation.local_model`), so the lane it reserves is that model's and never the
 # generation default's alone.
 def test_an_evaluate_job_reserves_the_lane_of_the_installations_writer(hybrid, monkeypatch):
-    monkeypatch.setattr(config, "VARIANT_GENERATION_LLM", "remoto")
+    monkeypatch.setattr(_profile(), "VARIANT_GENERATION_LLM", "remoto")
     monkeypatch.setattr(lanes, "_evaluation_writer", lambda: "local-escritor")
     assert lanes.models_for("evaluate")[0] == "local-escritor"
     assert lanes.backends_for("evaluate") >= frozenset({lanes.LOCAL})

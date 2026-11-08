@@ -21,6 +21,7 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config, documents
+from ...settings import engine_profile
 from ... import prompts as prompts_pkg
 from ...prompts import wording as wording_sets
 from ...utils import locale, progress
@@ -66,19 +67,19 @@ BUILD_PHASES = (
 def build_models() -> list[str]:
     """Every model a graph build calls, so they can be checked before the first phase."""
     return [
-        config.TRANSCRIBE_MODEL,
-        config.TRANSCRIBE_SEAM_MODEL,
-        config.KG_EXTRACT_MODEL,
-        config.EMBEDDING_LLM,
-        config.KG_CLEAN_MERGE_MODEL,
-        config.KG_CLEAN_DROP_MODEL,
-        config.KG_UNITS_MODEL,
-        config.KG_DOMAINS_MODEL,
-        config.KG_DOMAINS_LEFTOVERS_MODEL,
-        config.KG_LINK_DOMAIN_MODEL,
-        config.KG_LINK_CROSS_DOMAIN_MODEL,
-        config.KG_CONTEXT_MODEL,
-        config.REPAIR_LLM,
+        engine_profile().TRANSCRIBE_MODEL,
+        engine_profile().TRANSCRIBE_SEAM_MODEL,
+        engine_profile().KG_EXTRACT_MODEL,
+        engine_profile().EMBEDDING_LLM,
+        engine_profile().KG_CLEAN_MERGE_MODEL,
+        engine_profile().KG_CLEAN_DROP_MODEL,
+        engine_profile().KG_UNITS_MODEL,
+        engine_profile().KG_DOMAINS_MODEL,
+        engine_profile().KG_DOMAINS_LEFTOVERS_MODEL,
+        engine_profile().KG_LINK_DOMAIN_MODEL,
+        engine_profile().KG_LINK_CROSS_DOMAIN_MODEL,
+        engine_profile().KG_CONTEXT_MODEL,
+        engine_profile().REPAIR_LLM,
     ]
 
 
@@ -201,8 +202,8 @@ class KnowledgeGraphBuilder:
             self.workspace,
             evidence,
             self._wording.CONTEXT_SOURCE_GRAPH,
-            config.KG_CONTEXT_MODEL,
+            engine_profile().KG_CONTEXT_MODEL,
             phase="kg_context",
-            think=config.THINK_KG_CONTEXT,
+            think=engine_profile().THINK_KG_CONTEXT,
         )
         progress.advance(1.0)

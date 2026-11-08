@@ -10,6 +10,7 @@ a second copy of them would desynchronise this block format from the graph's own
 from loguru import logger
 
 from .. import config, inference
+from ..settings import engine_profile
 from .build import blocks, parsing
 from ..utils import progress
 from .context import ContentContext
@@ -132,10 +133,10 @@ def _judge_domain(
         _samples_block(exemplars_profile, exemplars_bank, members),
     )
     response = inference.generate(
-        model=config.KG_TAGGABLE_MODEL,
+        model=engine_profile().KG_TAGGABLE_MODEL,
         prompt=prompt,
-        think=config.THINK_KG_TAGGABLE,
-        sampling=inference.sampling("kg_taggable", config.THINK_KG_TAGGABLE),
+        think=engine_profile().THINK_KG_TAGGABLE,
+        sampling=inference.sampling("kg_taggable", engine_profile().THINK_KG_TAGGABLE),
     ).response
     raw = (
         parsing.parse_object(

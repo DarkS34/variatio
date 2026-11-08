@@ -21,7 +21,7 @@ from dataclasses import dataclass
 import httpx
 from loguru import logger
 
-from variatio import config
+from variatio.settings import engine_profile
 
 from .. import ArmUnavailable
 from .. import config as evaluation_config
@@ -151,7 +151,7 @@ def _gemini(prompt: str, model: str, key: str) -> str:
     still sent, and it is the same number the local arms use, so the sampler is not a
     loose variable between the three.
     """
-    generation_config = {"temperature": config.TEMPERATURE_GENERATION}
+    generation_config = {"temperature": engine_profile().TEMPERATURE_GENERATION}
     response = httpx.post(
         GEMINI_URL.format(model=model),
         headers={"x-goog-api-key": key},
@@ -204,7 +204,7 @@ def _openai_compatible(url: str, prompt: str, model: str, key: str) -> str:
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": config.TEMPERATURE_GENERATION,
+            "temperature": engine_profile().TEMPERATURE_GENERATION,
         },
         timeout=evaluation_config.EXTERNAL_TIMEOUT,
     )

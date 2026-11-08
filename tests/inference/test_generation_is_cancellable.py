@@ -14,6 +14,7 @@ from variatio import config
 from variatio.inference import Sampling
 from variatio.inference.ollama import OllamaEngine
 from variatio.inference.ollama import engine as local
+from variatio.settings import engine_profile
 from variatio.utils import progress
 
 
@@ -78,7 +79,7 @@ class _Emitter:
 @pytest.fixture
 def engine(monkeypatch):
     monkeypatch.setattr(config, "OLLAMA_HOST", "http://localhost:13434")
-    monkeypatch.setattr(config, "LLM_CONTEXT", {})
+    monkeypatch.setattr(engine_profile(), "LLM_CONTEXT", {})
     engine = OllamaEngine(config.OLLAMA_HOST)
     # Both are asked of the model itself, and this test answers no HTTP.
     monkeypatch.setattr(type(engine), "supports_thinking", lambda self, m: True)
@@ -197,7 +198,7 @@ def test_without_the_flag_a_repetition_is_read_whole(engine):
 
 
 def test_the_output_cap_travels_as_num_predict_beside_the_context(engine, monkeypatch):
-    monkeypatch.setattr(config, "LLM_CONTEXT", {"m": 8192})
+    monkeypatch.setattr(engine_profile(), "LLM_CONTEXT", {"m": 8192})
     engine._client = _Client(_Stream([_Chunk("ok", done_reason="stop")]))
     engine.generate(model="m", prompt="p", sampling=Sampling(0.0), max_output_tokens=4096)
     assert engine._client.kwargs["options"] == {

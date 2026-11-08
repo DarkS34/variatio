@@ -8,6 +8,7 @@ from pathlib import Path
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...utils.json_io import write_json
 from ...prompts.marks import EMPTY_IMAGE_MARK
 from .cache import sampling_record
@@ -103,7 +104,7 @@ def _transcribe_image(
             lambda note: prompts.transcribe_image_prompt(index, count, note=note),
             image,
             "transcribe_image",
-            config.THINK_TRANSCRIBE_IMAGE,
+            engine_profile().THINK_TRANSCRIBE_IMAGE,
             tag,
             what,
             prompts,

@@ -15,6 +15,7 @@ from dataclasses import replace
 from loguru import logger
 
 from variatio import api, config, inference
+from variatio.settings import engine_profile
 from variatio.functionalities.generation import checks
 from variatio.functionalities.shared import screening
 from variatio.utils import progress
@@ -212,7 +213,7 @@ def _settle_scenario(context, commission: Commission) -> str:
     )
     try:
         answer = inference.generate(
-            model=commission.model or config.VARIANT_GENERATION_LLM,
+            model=commission.model or engine_profile().VARIANT_GENERATION_LLM,
             prompt=prompt,
             think=False,
             sampling=inference.sampling("scenario"),

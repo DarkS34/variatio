@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from json_repair import repair_json
 from loguru import logger
 
-from .... import config, inference
+from .... import inference
+from ....settings import engine_profile
 from ....prompts import wording as wording_sets
 from ....utils import progress
 from ....inference import InferenceError
@@ -101,11 +102,11 @@ def screen(
 
     try:
         response = inference.generate(
-            model=config.ADMISSIBILITY_LLM,
+            model=engine_profile().ADMISSIBILITY_LLM,
             prompt=prompt,
-            think=config.THINK_ADMISSIBILITY,
-            format=None if config.THINK_ADMISSIBILITY else _schema(owners),
-            sampling=inference.sampling("admissibility", config.THINK_ADMISSIBILITY),
+            think=engine_profile().THINK_ADMISSIBILITY,
+            format=None if engine_profile().THINK_ADMISSIBILITY else _schema(owners),
+            sampling=inference.sampling("admissibility", engine_profile().THINK_ADMISSIBILITY),
         ).response
     except InferenceError as e:
         logger.warning(f"[admissibility] The judge could not answer: {e}; the commission goes ahead")

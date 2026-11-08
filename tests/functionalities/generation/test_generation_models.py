@@ -10,14 +10,15 @@ request carries would let a job run on a model the installation stopped offering
 
 import pytest
 
-from variatio import api, config
+from variatio import api
+from variatio.settings import engine_profile
 from variatio.settings.registry import BY_KEY
 from variatio.settings.types import SettingError, coerce
 
 
 @pytest.fixture
 def offered(monkeypatch):
-    monkeypatch.setattr(config, "GENERATION_MODELS", ["el-rapido", "el-que-delibera"])
+    monkeypatch.setattr(engine_profile(), "GENERATION_MODELS", ["el-rapido", "el-que-delibera"])
     return ["el-rapido", "el-que-delibera"]
 
 
@@ -60,7 +61,7 @@ def test_the_offered_list_may_not_be_emptied():
 # a model is taken off the offer far more often than its reasoning is re-measured, and
 # dropping the measurement with it would force a re-run.
 def test_the_fixed_effort_listing_is_a_copy_of_the_setting(monkeypatch):
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", ["el-rapido"])
     listing = api.fixed_effort_models()
     assert listing == ["el-rapido"]
     listing.append("intruso")
@@ -68,7 +69,7 @@ def test_the_fixed_effort_listing_is_a_copy_of_the_setting(monkeypatch):
 
 
 def test_naming_a_model_nobody_offers_as_fixed_effort_is_not_an_error(offered, monkeypatch):
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-que-se-retiro-un-rato"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", ["el-que-se-retiro-un-rato"])
     assert api.fixed_effort_models() == ["el-que-se-retiro-un-rato"]
     # And it changes nothing about what may be generated with.
     assert api.resolve_generation_model(None) == "el-rapido"
@@ -105,8 +106,8 @@ def test_a_fixed_effort_value_reads_as_a_comma_list_or_is_refused():
 # is whatever the browser's slider happens to hold.
 @pytest.fixture
 def locked(monkeypatch):
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
-    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", ["el-rapido"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
 
 
 def test_a_locked_model_is_called_with_the_declared_level(locked):
@@ -125,8 +126,8 @@ def test_a_model_whose_effort_is_not_locked_keeps_what_arrived(locked):
 
 
 def test_a_locked_model_with_no_level_declared_is_left_to_the_engine(monkeypatch):
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", ["el-rapido"])
-    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {})
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", ["el-rapido"])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_LEVELS", {})
     # `True`, and not a level this layer picked: `inference._think_option` is the one place
     # that turns it into `DEFAULT_THINK_EFFORT`, which is what the lock has always promised.
     assert api.resolve_generation_effort("el-rapido", "max") is True
@@ -138,8 +139,8 @@ def test_reasoning_switched_off_is_never_turned_back_on(locked):
 
 
 def test_the_level_of_a_model_nobody_locked_is_kept_and_not_read(monkeypatch):
-    monkeypatch.setattr(config, "FIXED_EFFORT_MODELS", [])
-    monkeypatch.setattr(config, "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_MODELS", [])
+    monkeypatch.setattr(engine_profile(), "FIXED_EFFORT_LEVELS", {"el-rapido": "high"})
     assert api.fixed_effort_levels() == {"el-rapido": "high"}
     assert api.resolve_generation_effort("el-rapido", "low") == "low"
 

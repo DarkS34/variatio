@@ -7,6 +7,7 @@ import re
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...prompts import wording as wording_sets
 from ...utils import repetition
 from ...prompts.marks import EMPTY_PAGE_MARK
@@ -33,7 +34,7 @@ def _transcribe_page(
             lambda note: prompts.transcribe_page_prompt(index, count, note=note),
             image,
             "transcribe",
-            config.THINK_TRANSCRIBE,
+            engine_profile().THINK_TRANSCRIBE,
             tag,
             what,
             prompts,

@@ -8,8 +8,8 @@ changed in the panel (the case D-156 was about) or an engine with no file shows 
 
 import json
 
-from .. import config
 from ..utils.paths import PROJECT_ROOT
+from ..settings import engine_profile
 from ..settings.derived import PHASES
 
 RATES_DIR = PROJECT_ROOT / "rates"
@@ -32,7 +32,7 @@ STEP_PHASES = {
 def step_rates() -> dict[str, dict]:
     """Return `{step: {"unit", "seconds"}}` for the steps measured on today's engine and models."""
     try:
-        measured = json.loads((RATES_DIR / f"{config.INFERENCE_ENGINE}.json").read_text())["steps"]
+        measured = json.loads((RATES_DIR / f"{engine_profile().engine}.json").read_text())["steps"]
     except (OSError, ValueError, KeyError, TypeError):
         return {}
     rates = {}
@@ -47,4 +47,4 @@ def step_rates() -> dict[str, dict]:
 
 def _model(phase: str) -> str:
     """Return the model a pipeline phase is configured with right now."""
-    return str(getattr(config, PHASES[f"models.phases.{phase}"]))
+    return str(getattr(engine_profile(), PHASES[f"models.phases.{phase}"]))

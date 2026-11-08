@@ -20,6 +20,7 @@ import numpy as np
 from loguru import logger
 
 from variatio import config, inference
+from variatio.settings import engine_profile
 from variatio.utils import progress
 
 CACHE_VERSION = 2
@@ -47,7 +48,7 @@ class FlatIndex:
         the client translates by id, so the slot has to be in the id to reach the screen.
         """
         self.entries = dict(entries)
-        self.model = model or config.EMBEDDING_LLM
+        self.model = model or engine_profile().EMBEDDING_LLM
         self.cache_path = Path(cache_path)
         self.label = label
         self.step_id = step_id

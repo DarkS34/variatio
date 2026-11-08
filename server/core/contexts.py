@@ -25,7 +25,8 @@ from collections import OrderedDict
 
 from loguru import logger
 
-from variatio import api, config, inference
+from variatio import api, inference
+from variatio.settings import engine_profile
 from variatio.utils import progress
 from variatio.utils.workspace import Workspace
 from variatio.api import RuntimeContext
@@ -60,7 +61,7 @@ def context_for(job, reload: bool = False):
         else "Preparando el contexto: cargando la instancia e indexando"
     )
     with progress.step("context", label):
-        logger.info(f"Cargando la instancia e indexando con '{config.EMBEDDING_LLM}'")
+        logger.info(f"Cargando la instancia e indexando con '{engine_profile().EMBEDDING_LLM}'")
         context = reload_context(ws) if reload else get_context(ws)
     logger.success(
         f"Contexto listo: {len(context.embedder.concepts_index)} concepto(s) indexado(s), "

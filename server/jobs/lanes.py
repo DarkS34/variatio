@@ -18,6 +18,7 @@ from collections.abc import Callable
 from loguru import logger
 
 from variatio import api, config, inference
+from variatio.settings import engine_profile
 
 LOCAL = "local"
 REMOTE = "remote"
@@ -138,7 +139,7 @@ def models_for(kind: str, params: dict | None = None) -> list[str]:
     elif kind in EXTRA_MODELS:
         models = EXTRA_MODELS[kind](params)
     else:
-        models = [getattr(config, name, None) for name in _COMPONENT_MODELS.get(kind, ())]
+        models = [getattr(engine_profile(), name, None) for name in _COMPONENT_MODELS.get(kind, ())]
 
     if kind == "generate":
         models = [_writer(params), *models]
@@ -160,7 +161,7 @@ def _writer(params: dict | None) -> str:
     try:
         return api.resolve_generation_model(requested if isinstance(requested, str) else None)
     except api.UnofferedModelError:
-        return config.VARIANT_GENERATION_LLM
+        return engine_profile().VARIANT_GENERATION_LLM
 
 
 def _evaluation_writer() -> str:
@@ -177,4 +178,4 @@ def _evaluation_writer() -> str:
 
 def _excluded() -> set[str]:
     """Return the two models that reserve nothing: small, always local, and co-resident."""
-    return {config.EMBEDDING_LLM, config.GUARDRAIL_LLM}
+    return {engine_profile().EMBEDDING_LLM, engine_profile().GUARDRAIL_LLM}

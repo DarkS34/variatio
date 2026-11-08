@@ -11,6 +11,7 @@ from json_repair import repair_json
 from loguru import logger
 
 from ... import config, inference
+from ...settings import engine_profile
 from ...utils import progress
 from ...prompts.marks import SEAM_SEPARATORS
 from ..markdown import page_mark
@@ -286,7 +287,7 @@ def review_seams(
     `only` limits the question to the seams named after those pages — the two around a page
     that was just read again — so the rest keep the answers already paid for.
     """
-    model = model or config.TRANSCRIBE_SEAM_MODEL
+    model = model or engine_profile().TRANSCRIBE_SEAM_MODEL
     boundaries = [
         boundary for boundary in _boundaries(pages) if only is None or boundary[2] in only
     ]
@@ -340,9 +341,9 @@ def _review_seam(
         response = inference.generate(
             model=model,
             prompt=prompts.merge_pages_prompt(tail, head, index, count),
-            think=config.THINK_TRANSCRIBE_SEAM,
-            format=None if config.THINK_TRANSCRIBE_SEAM else SEAM_SCHEMA,
-            sampling=inference.sampling("transcribe_seam", config.THINK_TRANSCRIBE_SEAM),
+            think=engine_profile().THINK_TRANSCRIBE_SEAM,
+            format=None if engine_profile().THINK_TRANSCRIBE_SEAM else SEAM_SCHEMA,
+            sampling=inference.sampling("transcribe_seam", engine_profile().THINK_TRANSCRIBE_SEAM),
         ).response
     except inference.InferenceError as e:
         logger.warning(f"{tag}seam {index - 1}→{index}: not reviewed ({e}); joined by rule")
