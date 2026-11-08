@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from variatio.runtime import screening
+from variatio.functionalities.shared import screening
 from variatio.utils import paths
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.knowledge_graph.graph import KnowledgeGraph

@@ -12,11 +12,11 @@ from dataclasses import dataclass
 from json_repair import repair_json
 from loguru import logger
 
-from ... import config, inference
-from ...prompts import wording as wording_sets
-from ...utils import progress
-from ...inference import InferenceError
-from ...utils.lexicon import fold
+from .... import config, inference
+from ....prompts import wording as wording_sets
+from ....utils import progress
+from ....inference import InferenceError
+from ....utils.lexicon import fold
 
 
 @dataclass(frozen=True)

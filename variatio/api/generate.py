@@ -3,7 +3,7 @@
 from collections.abc import Callable
 
 from .. import config
-from ..runtime.generator import GeneratedVariant
+from ..functionalities.generation.generator import GeneratedVariant
 from .initialize import RuntimeContext
 
 

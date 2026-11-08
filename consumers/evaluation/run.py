@@ -14,10 +14,11 @@ from dataclasses import replace
 from loguru import logger
 
 from variatio import api, config, inference
-from variatio.runtime import checks, screening
+from variatio.functionalities.generation import checks
+from variatio.functionalities.shared import screening
 from variatio.utils import progress
 from variatio.api.initialize import RuntimeContext
-from variatio.runtime.generator import clean_fixed, forbidden
+from variatio.functionalities.generation.generator import clean_fixed, forbidden
 
 from . import FAILED, SYSTEM, ArmResult, Commission, EvaluationSession, draw_session, run_arm
 from . import config as evaluation_config

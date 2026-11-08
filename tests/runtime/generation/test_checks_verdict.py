@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from variatio import config
-from variatio.runtime import checks
+from variatio.functionalities.generation import checks
 from variatio.exemplars_bank.tagging import TRACE_KEY
 
 

@@ -22,7 +22,7 @@ from ..knowledge_graph.context import ContentContext
 from .. import prompts as prompts_pkg
 from ..exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from ..knowledge_graph.graph import KnowledgeGraph
-from ..runtime.generator import VariantGenerator
+from ..functionalities.generation.generator import VariantGenerator
 from . import _artifacts
 
 

@@ -3,7 +3,7 @@ import json
 import pytest
 
 from variatio.knowledge_graph.graph import KnowledgeGraph
-from variatio.runtime.generator import VariantGenerator
+from variatio.functionalities.generation.generator import VariantGenerator
 
 from ...conftest import CHAIN_GRAPH
 

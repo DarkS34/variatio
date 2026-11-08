@@ -1,14 +1,14 @@
 """The library's public API: one function per thing that can be asked of a workspace.
 
 Everything in here takes a `Workspace` and nothing else takes one. That is the whole
-division: the builds and `runtime/` receive OBJECTS and call the model, and these
+division: the builds and the functions receive OBJECTS and call the model, and these
 functions are what turns a slug into those objects — resolving curated-over-draft paths,
 loading the artifacts, installing the phase plan and persisting what came back.
 
 They are mechanism, not policy: they return data and raise (`MissingArtifactError`), never
 `print()`, never `SystemExit`, and never trigger a heavier phase on their own — deciding to
 auto-build belongs to the caller. Two properties hold across the package and both are one
-grep away: nothing under `exemplars_bank/`, `knowledge_graph/` or `runtime/` imports an entry
+grep away: nothing under `exemplars_bank/`, `knowledge_graph/` or `functionalities/` imports an entry
 point back, and no module here imports the engine — every model call is delegated to the component or the
 builder that owns it, which is what lets the orchestration be read without reading a prompt.
 `build.py` is the only one that reaches a builder; `transcribe.py` reaches `documents`,

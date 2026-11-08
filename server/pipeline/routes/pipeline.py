@@ -12,7 +12,7 @@ wildcard reads "phases" as an artifact and answers "Artefacto desconocido". Do n
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from variatio.runtime import screening
+from variatio.functionalities.shared import screening
 from variatio.prompts import wording as wording_sets
 from variatio.utils import locale
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile

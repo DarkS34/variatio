@@ -1,5 +1,5 @@
-from variatio.runtime import screening
-from variatio.runtime.screening import admissibility
+from variatio.functionalities.shared import screening
+from variatio.functionalities.shared.screening import admissibility
 
 
 def test_accept_takes_a_valid_slot(owners_for):

@@ -4,7 +4,7 @@ import numpy as np
 
 from consumers.tutor import ADMINISTRATIVE, BLOCKED, EXERCISE, OFF_TOPIC, THEORY, criteria, turn
 from consumers.tutor.passages import Passage, PassageIndex
-from variatio.runtime import screening
+from variatio.functionalities.shared import screening
 
 from .conftest import SOURCES, vector_for
 

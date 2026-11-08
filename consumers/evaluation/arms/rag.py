@@ -27,7 +27,7 @@ from variatio import config, inference
 from variatio.utils import progress
 from variatio.inference.repair import parse_with_repair
 from variatio.api.transcribe import CORPUS, EXEMPLARS
-from variatio.runtime.generator import parse_item
+from variatio.functionalities.generation.generator import parse_item
 
 from .. import FAILED, OK, ArmResult, Commission, rag_index_path, raw_text
 from .. import config as evaluation_config

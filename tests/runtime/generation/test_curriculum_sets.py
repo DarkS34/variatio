@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from variatio.runtime.generator import assumed_known, forbidden
+from variatio.functionalities.generation.generator import assumed_known, forbidden
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "curriculum_sets.json"
 CASES = json.loads(FIXTURE.read_text(encoding="utf-8"))

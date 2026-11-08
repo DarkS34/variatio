@@ -157,7 +157,7 @@ class ScriptedEngine:
 @pytest.fixture
 def engine(monkeypatch):
     """Install a scripted engine and a guardrail that lets everything through."""
-    from variatio.runtime import screening
+    from variatio.functionalities.shared import screening
 
     holder = {}
 

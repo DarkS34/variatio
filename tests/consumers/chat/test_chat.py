@@ -38,7 +38,7 @@ from server.jobs.catalogue import Job
 from server.jobs.runner import JobRunner
 from variatio import config as pipeline_config
 from variatio.utils.workspace import Workspace
-from variatio.runtime.screening import Verdict
+from variatio.functionalities.shared.screening import Verdict
 
 # A type with a solution, which a teacher may hide.
 PROFILE = {

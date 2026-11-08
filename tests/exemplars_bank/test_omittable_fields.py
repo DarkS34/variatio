@@ -13,14 +13,14 @@ import pytest
 
 from variatio.prompts import wording
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
-from variatio.runtime import checks
-from variatio.runtime.generator import (
+from variatio.functionalities.generation import checks
+from variatio.functionalities.generation.generator import (
     VariantGenerator,
     build_few_shot_block,
     clean_fixed,
     parse_item,
 )
-from variatio.runtime.screening import admissibility
+from variatio.functionalities.shared.screening import admissibility
 
 from ..conftest import ES
 

@@ -204,9 +204,11 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   relation vocabulary (`relations.py`), their build (`build/`), the concept descriptions and
   the taggability review, a layer between `retrieval` and `documents`;
   `exemplars_bank/` holds the bank's build (`build.py`), its tagging (`tagging.py`) and the
-  profile (`exemplars_profile/`: `profile.py` and its `build.py`), a layer between `runtime` and
-  `retrieval`; `retrieval/` holds the two vector indices (`Embedder`); `runtime/`,
-  `documents/` and `settings/` keep their roles. The three builds take a `Workspace` only for
+  profile (`exemplars_profile/`: `profile.py` and its `build.py`), a layer between
+  `functionalities` and `retrieval`; `retrieval/` holds the two vector indices (`Embedder`);
+  `functionalities/` holds one package per function (`generation/`) and what several share
+  (`shared/screening/`), the top layer below `api`; `documents/` and `settings/` keep their
+  roles. The three builds take a `Workspace` only for
   their own paths; the package root holds
   `config.py`, `cli.py` and `__init__.py`. *Why:* a person new to the code finds a thing by name.
 - **D-009 — Renames.** Setting keys, on-disk names, URLs and job kinds do not follow module
@@ -231,7 +233,7 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   (viewer/editor/owner). A generated exercise and a tutor conversation are private to their
   author: anyone else gets the 404 of a missing one; the installation administrator reads
   conversations read-only. *Why:* a filter is not privacy, and a 403 confirms the id exists.
-- **D-230 — Who calls the engine.** Inside `variatio/`, only `cli.py`, `runtime/`, `retrieval/`,
+- **D-230 — Who calls the engine.** Inside `variatio/`, only `cli.py`, `functionalities/`, `retrieval/`,
   `documents/`, `exemplars_bank/` (its builds and tagging) and `knowledge_graph/` (its build,
   descriptions and taggability review) import `inference/`. *Why:* `api/`, `prompts/`,
   `settings/`, the profile reader (`exemplars_bank/exemplars_profile/profile.py`) and the graph's

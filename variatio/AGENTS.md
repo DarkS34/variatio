@@ -51,19 +51,21 @@ of three kinds:
 - **An artifact**: `knowledge_graph/` (the graph and the subject's context: their classes, their
   build, the concept descriptions and the taggability review) and `exemplars_bank/` (the bank's
   build and tagging; the profile in `exemplars_profile/`, its class and its build).
-- **Work**: `runtime/` (artifacts → exercises: `generator.py`, `checks.py`, `screening/`) and
-  `retrieval/` (the two vector indices, `Embedder`, that the tagger and `runtime/` search).
+- **Work**: `functionalities/` (what the artifacts are used for: `generation/` with
+  `generator.py` and `checks.py`; `shared/screening/`, used by several functions) and
+  `retrieval/` (the two vector indices, `Embedder`, that the tagger and the generation search).
 - **The door**: `api/`.
 
 Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
 **`api/` is the library's public door; the builds take a `Workspace` only to resolve their own
-paths, and `runtime/`, `retrieval/`, `exemplars_bank/tagging.py`, `prompts/` and `settings/` do
-not import it**; and **inside `variatio/`, only `cli.py`, `runtime/`, `retrieval/`, `documents/`,
+paths, and `functionalities/`, `retrieval/`, `exemplars_bank/tagging.py`, `prompts/` and
+`settings/` do not import it**; and **inside `variatio/`, only `cli.py`, `functionalities/`,
+`retrieval/`, `documents/`,
 `exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import
 `inference/`** (D-230) — `documents/pages/` transcribes
 with the vision model, and `inference/repair.py` and `inference/vectors.py` call it on behalf of
-the builds and `runtime/`. `runtime/__init__.py` and `utils/__init__.py`
+the builds and the generation. `functionalities/` and `utils/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one
 job becomes a package named after itself whose `__init__` re-exports the public names. Do not
 put a component back at the root.
@@ -305,7 +307,7 @@ step's phases name the model it was measured with; `STEP_PHASES` says which phas
 calls). A step whose units span loops of their own — the slot's pages, the bank's batches —
 is a `progress.counter`, advanced by `progress.count()` from the nested work.
 
-## Runtime components (`variatio/runtime/`)
+## Runtime components (`retrieval/`, `exemplars_bank/tagging.py`, `functionalities/`)
 
 Take objects, return data, know no `Workspace`, write no files.
 
@@ -327,7 +329,7 @@ Take objects, return data, know no `Workspace`, write no files.
   lie after the target); with one, forbidden concepts may not be mentioned.
 - **Checks** (`checks.py`): `CHECK_MAX_RETRIES` = 2; a flag names something to look at; the
   tagger flag reads `targets_found` (a target among the tags), not the primary.
-- **Screening** (`runtime/screening/`): `guardrail` then `admissibility`, sequence in
+- **Screening** (`functionalities/shared/screening/`): `guardrail` then `admissibility`, sequence in
   `screen_instructions` (one copy, used by the pipeline and the evaluation). The guardrail asks
   granite for «jailbreak» only (D-236): «harm» blocked a legitimate course topic 14 times in 383
   texts and no attack the injection patterns or «jailbreak» let through. Admissibility is

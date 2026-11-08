@@ -4,7 +4,7 @@ import os
 import pytest
 
 from variatio import prompts
-from variatio.runtime import screening
+from variatio.functionalities.shared import screening
 from variatio.inference import cerebras_budget
 from variatio.knowledge_graph.context import ContentContext
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile

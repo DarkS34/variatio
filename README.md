@@ -158,7 +158,7 @@ the product lives, and the invariants with the test that pins each one. The impo
 `server`, never the reverse. Importing `variatio` pulls in neither Docling nor the server
 (`tests/boundaries/`), and secrets live only in `.env`, never in `config.json`.
 Inside `variatio/`, `api/` is the public door (the builds take a `Workspace` only for their
-own paths), and only `cli.py`, `runtime/`, `retrieval/`, `documents/`, `exemplars_bank/` and
+own paths), and only `cli.py`, `functionalities/`, `retrieval/`, `documents/`, `exemplars_bank/` and
 `knowledge_graph/` import the engine boundary, `inference/`.
 
 ## Configuration

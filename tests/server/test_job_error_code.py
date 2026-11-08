@@ -9,7 +9,7 @@ import time
 
 
 from server.jobs import EventBus, JobRunner
-from variatio.runtime.screening import InstructionsBlocked
+from variatio.functionalities.shared.screening import InstructionsBlocked
 
 
 def _run(handler):

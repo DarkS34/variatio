@@ -19,7 +19,7 @@ from loguru import logger
 
 from variatio import inference
 from variatio.utils import progress
-from variatio.runtime import screening
+from variatio.functionalities.shared import screening
 
 from server.conversations import prompts as shared_prompts
 

@@ -130,7 +130,7 @@ variatio/       the library          imports neither
 ```text
 api/                                 the door: one function per thing asked of a workspace
 knowledge_graph/   exemplars_bank/   the artifacts: each one's class, its build and its readers
-runtime/   documents/                the work: artifacts → exercises, files → pages
+functionalities/   documents/        the work: artifacts → exercises, files → pages
 retrieval/                           the two vector indices the work searches
 prompts/  settings/  utils/          the vocabulary
 inference/                           the engine boundary: every model call
@@ -138,14 +138,14 @@ inference/                           the engine boundary: every model call
 
 - **`api/` is the library's public door.** The builds (`knowledge_graph/build/`,
   `exemplars_bank/build.py`, `exemplars_bank/exemplars_profile/build.py`) take a
-  `Workspace` only to resolve their own paths. `runtime/`, `retrieval/`, `prompts/` and
+  `Workspace` only to resolve their own paths. `functionalities/`, `retrieval/`, `prompts/` and
   `settings/` do not import it.
-- **Inside `variatio/`, only `cli.py`, `runtime/`, `retrieval/`, `documents/`,
+- **Inside `variatio/`, only `cli.py`, `functionalities/`, `retrieval/`, `documents/`,
   `exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
-  `inference/repair.py` and `inference/vectors.py` call it on behalf of the builds and `runtime/`.
+  `inference/repair.py` and `inference/vectors.py` call it on behalf of the builds and the functions.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
-- The layers above are an import contract: `cli`, `api`, `runtime`,
+- The layers above are an import contract: `cli`, `api`, `functionalities`,
   `exemplars_bank`, `retrieval`, `knowledge_graph`, `documents`, `prompts`, `inference`, then `utils`, `settings` and
   `config`. One crossing is named in it: `utils/lexicon.py` imports `prompts/wording.py`. The two rules above and
   «only `inference/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
@@ -186,9 +186,9 @@ One line per folder: what it holds, and the file to open first.
 | `exemplars_bank/` | the bank's build (`build.py`) and tagging (`tagging.py`, `ConceptTagger`); the profile in `exemplars_profile/` (`profile.py`, `ExemplarsProfile`; `build.py`) | `__init__.py`, then `build.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
 | `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
-| `runtime/` | artifacts → exercises: generator, checks | `generator.py` |
+| `functionalities/generation/` | artifacts → exercises: generator, checks | `generator.py` |
 | `retrieval/` | the two vector indices (`Embedder`) and their caches | `index.py` |
-| `runtime/screening/` | the guardrail and the admissibility judge | `screening/__init__.py` |
+| `functionalities/shared/screening/` | the guardrail and the admissibility judge, used by several functions | `screening/__init__.py` |
 | `api/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `api/__init__.py` |
 
 **Server: `server/`**
@@ -254,7 +254,7 @@ there.
 | Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/knowledge_graph/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/exemplars_bank/`, `tests/knowledge_graph/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
-| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
+| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
