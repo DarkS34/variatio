@@ -155,11 +155,18 @@ def _read_file() -> dict[str, object]:
 
 
 def _write(namespace: dict) -> None:
-    """Write the named settings and everything derived into a namespace."""
+    """Write the installation's named settings and what is derived from them into a namespace.
+
+    The engine-scoped names stay out: their value depends on the engine a piece of work runs
+    on, so they live in each engine's profile (`engine_profile()`), and a read of one from
+    `config` fails at once instead of reading the profile of another engine.
+    """
     for setting in REGISTRY:
-        if setting.name:
+        if setting.name and setting.name not in SCOPED_NAMES:
             namespace[setting.name] = _values[setting.key]
-    namespace.update(derived.derive(_values))
+    namespace.update(
+        {name: value for name, value in derived.derive(_values).items() if name not in SCOPED_NAMES}
+    )
 
 
 def _impacts(changed: set[str]) -> set[Impact]:

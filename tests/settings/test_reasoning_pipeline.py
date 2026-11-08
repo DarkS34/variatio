@@ -1,5 +1,5 @@
-from variatio import config, settings
-from variatio.settings import derived
+from variatio import settings
+from variatio.settings import derived, engine_profile
 from variatio.settings.registry import BY_KEY, PIPELINE
 from variatio.settings.registry import reasoning
 from variatio.settings.registry.reasoning import Phase
@@ -57,7 +57,7 @@ def test_every_toggle_is_a_bool_setting_of_the_reasoning_group():
         assert setting.kind == "bool"
         assert setting.group == reasoning.GROUP
         assert setting.name == f"THINK_{phase.key.upper()}"
-        assert hasattr(config, setting.name)
+        assert hasattr(engine_profile(), setting.name)
 
 
 def test_every_reasoning_switch_has_a_place_in_the_pipeline():

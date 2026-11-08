@@ -1,5 +1,5 @@
 from variatio import config
-from variatio.settings import derived
+from variatio.settings import SCOPED_NAMES, derived, engine_profile
 from variatio.settings.registry import BY_KEY, BY_NAME, GROUPS, REGISTRY
 
 DERIVED_ONLY = {
@@ -19,11 +19,15 @@ DERIVED_ONLY = {
 MAY_BE_EMPTY = {"EMBEDDING_DOCUMENT_PREFIX", "GENERATION_STUDENT_DAILY_ITEMS"}
 
 
-def test_every_named_setting_is_an_attribute_of_config():
+def test_every_named_setting_is_an_attribute_of_config_or_of_the_engine_profile():
     for setting in REGISTRY:
         if not setting.name:
             continue
-        assert hasattr(config, setting.name), f"config no expone {setting.name}"
+        if setting.name in SCOPED_NAMES:
+            assert not hasattr(config, setting.name), f"config expone {setting.name}, del perfil"
+            assert hasattr(engine_profile(), setting.name), f"el perfil no expone {setting.name}"
+        else:
+            assert hasattr(config, setting.name), f"config no expone {setting.name}"
 
 
 def test_config_exposes_nothing_the_registry_does_not_declare():
@@ -36,7 +40,7 @@ def test_config_exposes_nothing_the_registry_does_not_declare():
 
 def test_every_declared_name_is_annotated_in_config():
     annotated = set(config.__annotations__)
-    declared = set(BY_NAME) | DERIVED_ONLY
+    declared = (set(BY_NAME) | DERIVED_ONLY) - SCOPED_NAMES
     assert declared - annotated == set(), f"sin anotar en config.py: {declared - annotated}"
 
 
