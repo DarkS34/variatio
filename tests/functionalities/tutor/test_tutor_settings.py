@@ -1,7 +1,7 @@
 """The tutor's settings: its stage after the study's, its lane drawn, its two prompt sets alike.
 
 Its boundary — `variatio` names it only in the registry, and `import variatio.functionalities.tutor` stays a
-library — is `tests/consumers/test_consumers_boundary.py`'s, with every other function's.
+library — is `tests/functionalities/test_functions_boundary.py`'s, with every other function's.
 """
 
 import inspect

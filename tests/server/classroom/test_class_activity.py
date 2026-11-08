@@ -45,7 +45,7 @@ CLASS = [ANA, LUIS, MARTA]
 @pytest.fixture(autouse=True)
 def tutor_reader(monkeypatch):
     # The tutor's reader, and no chat's: an app built by an earlier test leaves its own set,
-    # and the chat's page is `tests/consumers/chat`'s to read.
+    # and the chat's page is `tests/functionalities/chat`'s to read.
     monkeypatch.setattr(activity, "TUTOR_READER", tutor_activity.read)
     monkeypatch.setattr(activity, "CHAT_READER", None)
     activity._cache.clear()

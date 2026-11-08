@@ -12,7 +12,7 @@ system beat this alternative — and the answer is a coin that either way falls 
 whose identity the seed records. Sessions recorded before that date hold three arms, and
 everything below reads the session's own `shuffle` for how many cards it has.
 
-The boundary is the point, and `tests/consumers/test_consumers_boundary.py` pins both halves of it:
+The boundary is the point, and `tests/functionalities/test_functions_boundary.py` pins both halves of it:
 `variatio.functionalities.evaluation` imports `variatio` and never the reverse, and this module never imports
 `server.functionalities.evaluation`, which is what keeps `import variatio.functionalities.evaluation` free of FastAPI and
 SQLAlchemy for a runtime-only consumer.

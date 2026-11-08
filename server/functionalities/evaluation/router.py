@@ -199,7 +199,7 @@ def _queue(rows: list) -> dict:
 #
 # Every fixed path stays ABOVE the `/{session_id}` wildcards below. FastAPI matches in
 # declaration order, so one added underneath is swallowed and answers a plausible 404 from
-# a route nobody meant to call. `tests/consumers/evaluation/test_route_order.py` pins it.
+# a route nobody meant to call. `tests/functionalities/evaluation/test_route_order.py` pins it.
 
 
 @router.delete("")

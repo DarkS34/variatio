@@ -12,7 +12,7 @@ from server.raw.router import router as raw_router
 from variatio import inference
 from variatio.utils.workspace import Workspace
 
-from ...consumers.evaluation.test_route_order import _wildcard_shadows
+from ...functionalities.evaluation.test_route_order import _wildcard_shadows
 
 STATUS = {
     "slot": "exemplars",

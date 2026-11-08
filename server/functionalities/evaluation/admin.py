@@ -253,7 +253,7 @@ def delete_evaluator_records(
 # EVERY ROUTE WITH A FIXED PATH GOES ABOVE `/evaluations/{session_id}`. FastAPI matches in
 # declaration order, so a wildcard declared first swallows `/evaluations/accounts` as a
 # session called "accounts" and answers a plausible 404 from a route nobody meant to call.
-# `tests/consumers/evaluation/test_route_order.py` is what keeps the next addition from landing
+# `tests/functionalities/evaluation/test_route_order.py` is what keeps the next addition from landing
 # below it.
 
 

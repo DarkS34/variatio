@@ -7,7 +7,7 @@ a cycle, since these routers import `server.auth` and `server.pipeline.gates` ba
 Nothing here is imported until `install` runs, and the library half
 (`variatio/functionalities/evaluation/`) never reaches this package: that is what keeps
 `import variatio.functionalities.evaluation` free of FastAPI and SQLAlchemy for a runtime-only
-consumer, and `tests/consumers/test_consumers_boundary.py` pins it.
+consumer, and `tests/functionalities/test_functions_boundary.py` pins it.
 """
 
 

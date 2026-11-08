@@ -11,7 +11,7 @@ lives in `variatio.prompts.tutor` and in the deterministic `checks`, and no file
 The CRITERIA are the subject's: drafted from the artifacts and curated by a teacher
 (`variatio.functionalities.tutor.criteria`).
 
-The boundary is pinned with every function's (`tests/consumers/test_consumers_boundary.py`):
+The boundary is pinned with every function's (`tests/functionalities/test_functions_boundary.py`):
 `variatio.functionalities.tutor` imports `variatio` and never the reverse — save the settings registry's optional
 import of `variatio.functionalities.tutor.settings` — and nothing outside `server.functionalities.tutor` imports FastAPI or
 SQLAlchemy, so `import variatio.functionalities.tutor` stays a library.

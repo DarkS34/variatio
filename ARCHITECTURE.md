@@ -113,7 +113,7 @@ variatio/       the library          imports neither
   contracts (`[tool.importlinter]` in `pyproject.toml`, `uv run lint-imports`): the settings
   registry's optional imports of each function's `settings.py`, and the evaluation, which runs
   the whole system through `variatio.api` and reuses the generator.
-  `tests/consumers/test_consumers_boundary.py` pins that a function's library half imports
+  `tests/functionalities/test_functions_boundary.py` pins that a function's library half imports
   neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
   `inference/` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
@@ -187,7 +187,7 @@ One line per folder: what it holds, and the file to open first.
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
 | `knowledge_graph/` | the graph (`graph.py`, `KnowledgeGraph`), the subject's context (`context.py`, `ContentContext`), the relation vocabulary (`relations.py`), their build (`build/`: extract, clean, curate, and the context synthesis), the concept descriptions and the taggability review | `__init__.py`, then `build/__init__.py` |
 | `exemplars_bank/` | the bank's build (`build.py`) and tagging (`tagging.py`, `ConceptTagger`); the profile in `exemplars_profile/` (`profile.py`, `ExemplarsProfile`; `build.py`) | `__init__.py`, then `build.py` |
-| `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language) and its `conversation.py` (the blocks of a chat-like system prompt); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
+| `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language) and its `conversation.py` (the blocks of a chat-like system prompt); `marks.py` and `shared.py`, shared by both; the tutor's, the chat's and the evaluation's prompts are `es/<function>.py` and `en/<function>.py`, resolved by `<function>.py` | `prompts/__init__.py`, `prompts/wording.py` |
 | `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
 | `functionalities/generation/` | artifacts → exercises: generator, checks | `generator.py` |
 | `retrieval/` | the two vector indices (`Embedder`) and their caches | `index.py` |
@@ -239,7 +239,7 @@ One line per folder: what it holds, and the file to open first.
 | Folder | Holds |
 |---|---|
 | `migrations/` | Alembic migrations; the ORM models must match them |
-| `tests/` | one folder per subsystem (`utils`, `inference`, `settings`, `prompts`, `documents`, `knowledge_graph`, `exemplars_bank`, `retrieval`, `functionalities/generation`, `functionalities/shared/screening`, `server/<area>`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
+| `tests/` | one folder per subsystem (`utils`, `inference`, `settings`, `prompts`, `documents`, `knowledge_graph`, `exemplars_bank`, `retrieval`, `functionalities/generation`, `functionalities/shared/screening`, `functionalities/<function>`, `server/<area>`); `conftest.py` and `fixtures/` at the root |
 | `workspaces/` | the instances, one folder per slug (git-ignored) |
 | `plans/` | private work plans (git-ignored) |
 
@@ -254,11 +254,11 @@ there.
 | Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/knowledge_graph/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/exemplars_bank/`, `tests/knowledge_graph/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
-| Generating | `consumers/generation/` | `functionalities/generation/`, `functionalities/shared/generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
+| Generating | `consumers/generation/` | `functionalities/generation/`, `functionalities/shared/generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/functionalities/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
-| Tutor | `consumers/tutor/` | `functionalities/tutor/`, `functionalities/shared/conversations/` | `functionalities/tutor/`, the embedder, and the guardrail on the student's message (`functionalities/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
-| Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | `functionalities/chat/` and the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
-| Evaluation | `consumers/evaluation/` | `functionalities/evaluation/` | `functionalities/evaluation/`, and the whole pipeline as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
+| Tutor | `consumers/tutor/` | `functionalities/tutor/`, `functionalities/shared/conversations/` | `functionalities/tutor/`, the embedder, and the guardrail on the student's message (`functionalities/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/functionalities/tutor/` |
+| Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | `functionalities/chat/` and the guardrail on the student's message | `chat_turn` | `tests/functionalities/chat/` |
+| Evaluation | `consumers/evaluation/` | `functionalities/evaluation/` | `functionalities/evaluation/`, and the whole pipeline as the `system` arm | `evaluate` | `tests/functionalities/evaluation/` |
 | Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `admin/`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/admin/`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
@@ -281,7 +281,7 @@ Each rule holds everywhere. The check after it is what fails when the rule break
 - **Every route declares its access level**, and a new route with no row fails.
   `tests/server/auth/test_route_roles.py`.
 - **A fixed route sits above any wildcard that could swallow it**, in every router.
-  `tests/consumers/evaluation/test_route_order.py`.
+  `tests/functionalities/evaluation/test_route_order.py`.
 - **A private job is its author's alone** (`catalogue.PRIVATE_KINDS`).
   `tests/server/test_private_jobs.py`.
 - **Every setting names the stages that read it.** `tests/settings/test_setting_stages.py`.

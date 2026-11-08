@@ -24,8 +24,8 @@ the free chat — is a function, an application in Django's sense, in two halves
 exception is named in the import contracts of `pyproject.toml` (`uv run lint-imports`): the
 settings registry's optional imports of each `settings.py`, and the evaluation, which runs the
 whole system through `variatio.api` and reuses the generator.
-`tests/consumers/test_consumers_boundary.py` pins that a function's library half imports neither
+`tests/functionalities/test_functions_boundary.py` pins that a function's library half imports neither
 FastAPI nor SQLAlchemy. The functions were `apps/` until 2026-10-16 and `consumers/` until
 2026-11-08. On-disk names, setting keys, job kinds and log scopes did not move with the code
 (`<workspace>/tutor/`, `tutor.*`, `evaluation.*`, `tutor_turn`, `[tutor]`). The client keeps
-`web/src/consumers/<function>/`. Tests live in `tests/consumers/<function>/`.
+`web/src/consumers/<function>/`. Tests live in `tests/functionalities/<function>/`.
