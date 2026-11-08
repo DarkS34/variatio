@@ -14,7 +14,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from ... import config
-from ...settings import engine_profile
+from ...settings import LOCAL_PROFILE, engine_profile, profile_of
 from ...utils import progress, repetition
 from .. import usage
 from ..interface import Engine
@@ -293,11 +293,12 @@ class OllamaEngine(Engine):
     def _looks_like_embedding(self, model: str) -> bool:
         """Whether `model` has to be unloaded through the embedding endpoint.
 
-        `engine_profile().EMBEDDING_MODELS` names the ones this instance uses; `/api/ps` may also
-        return one the server loaded on its own, and there the declared capability is the
-        only reliable source.
+        The `ollama` profile's `EMBEDDING_MODELS` names the ones this server uses: every
+        engine reads the embedder from there, and the release runs outside any job, with no
+        profile of its own. `/api/ps` may also return one the server loaded on its own, and
+        there the declared capability is the only reliable source.
         """
-        if model in engine_profile().EMBEDDING_MODELS:
+        if model in profile_of(LOCAL_PROFILE).EMBEDDING_MODELS:
             return True
         return "embedding" in self.capabilities(model)
 
