@@ -10,7 +10,7 @@ words one more time.
 from variatio.utils.workspace import Workspace
 from variatio.knowledge_graph.context import ContentContext
 
-from . import storage
+from ..pipeline import storage
 
 HISTORY_NAME = "content_context"
 

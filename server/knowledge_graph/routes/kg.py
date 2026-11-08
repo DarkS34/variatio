@@ -17,14 +17,14 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.knowledge_graph import relations
 
-from .. import auth
-from ..auth import queries
-from ..classroom import curriculum, groups
-from ..db.models import VIEWER
-from ..pipeline.view import pipeline_payload
-from . import edit as kg_edit
-from . import view as kg_view
-from .edit import KGError
+from ... import auth
+from ...auth import queries
+from ...classroom import curriculum, groups
+from ...db.models import VIEWER
+from ...pipeline.view import pipeline_payload
+from .. import edit as kg_edit
+from .. import view as kg_view
+from ..edit import KGError
 
 router = APIRouter(prefix="/api/kg", tags=["kg"], dependencies=[auth.VIEW])
 

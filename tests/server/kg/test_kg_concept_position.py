@@ -11,7 +11,7 @@ the index, and a real move still lands at the end of the destination.
 
 import pytest
 
-from server.kg import edit as kg_edit
+from server.knowledge_graph import edit as kg_edit
 from variatio.utils.json_io import write_json
 from variatio.utils.workspace import Workspace
 

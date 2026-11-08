@@ -25,8 +25,8 @@ from server.db import repository
 from server.db.session import session_scope
 from server.jobs.catalogue import Job
 from server.jobs.runner import JobControl
-from server.kg import edit as kg_edit
-from server.kg.edit import KGError
+from server.knowledge_graph import edit as kg_edit
+from server.knowledge_graph.edit import KGError
 from variatio import prompts as prompts_pkg
 from variatio.utils import json_io, progress
 from variatio.utils import locale

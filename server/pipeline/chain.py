@@ -9,7 +9,7 @@ A phase that HAS to happen should not be a button. Two jobs leave mandatory work
   decided against the APPROVED profile, the bank is extracted and tagged with them, and the
   indices are warmed: the teacher presses «Recoger el banco» once and the three run in
   order. The review is skipped inside its own handler when nothing it reads has changed
-  (`taggability.py`); the chain goes on either way.
+  (`server/knowledge_graph/taggability.py`); the chain goes on either way.
 
 Each link declares its condition, and the condition is what the LINK ITSELF reads:
 describing needs the graph, collecting the bank needs the profile and the graph approved and

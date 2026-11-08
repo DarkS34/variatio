@@ -44,7 +44,7 @@ def test_all_concepts_walks_the_domains_in_that_order(graph_path):
 
 
 def test_the_view_emits_the_groups_in_the_syllabus_order(graph_path):
-    from server.kg import view as kg_view
+    from server.knowledge_graph import view as kg_view
 
     kg = KnowledgeGraph(str(graph_path))
     payload = kg_view.build(GRAPH, kg, RELATION_SCHEMA_ES)
@@ -71,13 +71,13 @@ def ws(tmp_path, monkeypatch):
 
 
 def order(ws) -> list[str]:
-    from server.kg import edit as kg_edit
+    from server.knowledge_graph import edit as kg_edit
 
     return list(kg_edit.raw(ws)["concepts_by_domains"])
 
 
 def test_reorder_add_rename_and_delete_all_respect_the_order(ws):
-    from server.kg import edit as kg_edit
+    from server.knowledge_graph import edit as kg_edit
 
     kg_edit.reorder_domains(ws, ["Alfa segundo", "Vacío cuarto", "Zeta primero", "Media tercero"])
     assert order(ws) == ["Alfa segundo", "Vacío cuarto", "Zeta primero", "Media tercero"]
@@ -100,8 +100,8 @@ def test_reorder_add_rename_and_delete_all_respect_the_order(ws):
 
 
 def test_reorder_domains_refuses_anything_that_is_not_an_exact_permutation(ws):
-    from server.kg import edit as kg_edit
-    from server.kg.edit import KGError
+    from server.knowledge_graph import edit as kg_edit
+    from server.knowledge_graph.edit import KGError
 
     for bad in (
         ["Zeta primero", "Alfa segundo"],

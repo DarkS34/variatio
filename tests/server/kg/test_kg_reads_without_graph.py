@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from server.kg import router as route
+from server.knowledge_graph.routes import kg as route
 from variatio.utils.workspace import Workspace
 
 

@@ -1,9 +1,10 @@
-# AGENTS.md — `server/kg/` — step 2, «Temario»
+# AGENTS.md — `server/knowledge_graph/` — step 2, «Temario»
 
 Read the root `AGENTS.md` and `server/AGENTS.md` first. Building and reading the graph are the
 library's (`variatio/AGENTS.md`); its chain and approval are `pipeline/AGENTS.md`.
 
-`router.py` is `/api/kg`: the graph, its concepts, domains and relations, the document
+`routes/kg.py` is `/api/kg` (the URL kept its name, D-009; the folder was `kg/` until
+2026-11-08): the graph, its concepts, domains and relations, the document
 verbatim, and the course's progress (`/api/kg/curriculum`, whose rules are in
 `server/AGENTS.md`). `view.py` shapes the graph for the canvas; `edit.py` writes it.
 

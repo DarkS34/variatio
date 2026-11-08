@@ -3,10 +3,10 @@
 Read the root `AGENTS.md` and `server/AGENTS.md` first.
 
 What is approved and what each artifact depends on (`approvals.py`), the one writer of an
-artifact's files (`storage.py`), the label review's record (`taggability.py`), the subject's
-context (`context_edit.py`), what a job chains (`chain.py`), what must be settled before a job
+artifact's files (`storage.py`), the label review's record (`server/knowledge_graph/taggability.py`), the subject's
+context (`server/knowledge_graph/context_edit.py`), what a job chains (`chain.py`), what must be settled before a job
 runs (`gates.py`), the chain as the bar reads it (`view.py`), the construction's job kinds
-(`jobs.py`) and the routes of `/api/pipeline` and `/api/context` (`routes/`).
+(`jobs.py`) and the routes of `/api/pipeline` (`routes/`; `/api/context` is `server/knowledge_graph/routes/`).
 
 - **The construction's jobs register at `jobs.install()`**, which `server/app.py` calls as it
   installs each function. A test that runs one of these kinds without making the app calls
@@ -43,7 +43,7 @@ runs (`gates.py`), the chain as the bar reads it (`view.py`), the construction's
   `review_taggability` whose chain names `build_bank`), and the runner queues a job's next
   link BEFORE announcing the job finished (`runner._execute`), so no reading between the two
   finds the chain gone and offers to collect again.
-- **The review is skipped when nothing it reads changed** (`taggability.py`): a
+- **The review is skipped when nothing it reads changed** (`server/knowledge_graph/taggability.py`): a
   fingerprint of the profile's bytes, the graph's units and concepts in their order and the
   context's bytes — NOT the non-taggable list, which is what a teacher corrects by hand, and
   not the bank —, kept in `cache/taggability_review.json` (a cache: a graph that says

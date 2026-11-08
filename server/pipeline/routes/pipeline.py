@@ -22,7 +22,7 @@ from variatio.api import step_rates
 
 from ... import auth
 from ...core import contexts, process
-from ...kg import edit as kg_edit
+from ...knowledge_graph import edit as kg_edit
 from .. import approvals, readings, storage
 from ..view import pipeline_payload
 

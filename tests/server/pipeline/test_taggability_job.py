@@ -3,7 +3,7 @@
 The model pass is `api.review_taggability`; what stays in the handler is
 `kg_edit.set_non_taggable` — which owns the history, the database mirror and the approval —
 turning the library's exception into a sentence somebody can act on, and skipping the pass
-when nothing it reads changed (`server/pipeline/taggability.py`). The review heads every
+when nothing it reads changed (`server/knowledge_graph/taggability.py`). The review heads every
 collection of the bank since 2026-10-08, so the skip is what keeps a second collection from
 paying the model again and from undoing what a teacher switched by hand.
 """
@@ -13,8 +13,9 @@ import json
 import pytest
 
 from server.jobs.catalogue import JOB_ARTIFACT, Job
-from server.kg import edit as kg_edit
-from server.pipeline import approvals, taggability
+from server.knowledge_graph import edit as kg_edit
+from server.pipeline import approvals
+from server.knowledge_graph import taggability
 from server.pipeline import jobs as handlers
 from variatio import api
 from variatio.utils.workspace import Workspace

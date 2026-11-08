@@ -21,8 +21,9 @@ from ..db import mirror
 from ..jobs.build_process import run_build
 from ..jobs.catalogue import HANDLERS, Job
 from ..jobs.runner import JobControl
-from ..kg import edit as kg_edit
-from . import approvals, storage, taggability
+from ..knowledge_graph import edit as kg_edit
+from . import approvals, storage
+from ..knowledge_graph import taggability
 
 
 def install() -> None:

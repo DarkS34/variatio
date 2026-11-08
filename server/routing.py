@@ -16,8 +16,9 @@ from .bank.routes import bank, exercises, profile
 from .classroom.routes import activity, groups, links, people, uses
 from .core.routes import health, maintenance, stream
 from .jobs import router as jobs
-from .kg import router as kg
-from .pipeline.routes import context, pipeline
+from .knowledge_graph.routes import kg
+from .knowledge_graph.routes import context
+from .pipeline.routes import pipeline
 from .documents.routes import raw
 from .workspaces import router as workspaces
 

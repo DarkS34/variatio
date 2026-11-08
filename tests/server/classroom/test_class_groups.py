@@ -36,7 +36,7 @@ from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
-from server.kg import router as kg_routes
+from server.knowledge_graph.routes import kg as kg_routes
 from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH

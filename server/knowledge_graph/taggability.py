@@ -23,7 +23,7 @@ from variatio import api
 from variatio.utils import json_io
 from variatio.utils.workspace import Workspace
 
-from . import storage
+from ..pipeline import storage
 
 
 def up_to_date(ws: Workspace) -> bool:
