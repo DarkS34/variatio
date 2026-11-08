@@ -19,7 +19,7 @@ from .. import config
 from ..prompts import wording as wording_sets
 from .tagger import TRACE_KEY, ConceptTagger
 from ..utils.lexicon import mentions
-from .embedder import Embedder
+from ..retrieval import Embedder
 from ..loaders.exemplars_profile import ItemType
 
 # How much of a close text a similarity reason quotes: enough to recognise it (plan F5, G2).

@@ -16,7 +16,7 @@ from .. import config
 from ..runtime.tagger import ConceptTagger
 from ..utils import locale, progress
 from ..utils.workspace import Workspace
-from ..runtime.embedder import Embedder
+from ..retrieval import Embedder
 from ..knowledge_graph import relations
 from ..knowledge_graph.context import ContentContext
 from .. import prompts as prompts_pkg

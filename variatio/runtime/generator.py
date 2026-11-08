@@ -24,7 +24,7 @@ from ..knowledge_graph.context import ContentContext
 from ..loaders.exemplars_profile import ITEM_TYPE_KEY, ExemplarsProfile, ItemType
 from ..knowledge_graph.graph import KnowledgeGraph
 from . import checks, screening
-from .embedder import Embedder
+from ..retrieval import Embedder
 from .tagger import ConceptTagger
 
 

@@ -11,7 +11,7 @@ from loguru import logger
 from .. import prompts as prompts_pkg
 from ..utils import locale
 from ..utils.workspace import Workspace
-from ..runtime.embedder import (
+from ..knowledge_graph.descriptions import (
     ConceptDescriber,
     load_descriptions,
     load_sources,

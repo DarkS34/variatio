@@ -130,20 +130,21 @@ variatio/       the library          imports neither
 ```text
 api/                                 the door: one function per thing asked of a workspace
 builders/   runtime/   documents/    the work: raw → artifacts, artifacts → exercises, files → pages
+retrieval/                           the two vector indices the work searches
 loaders/  prompts/  settings/  utils/               the vocabulary
 inference/                           the engine boundary: every model call
 ```
 
 - **`api/` is the library's public door.** `builders/` and `loaders/` take a
-  `Workspace` only to resolve their own paths. `runtime/`, `prompts/` and `settings/` do
-  not import it.
-- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and
+  `Workspace` only to resolve their own paths. `runtime/`, `retrieval/`, `prompts/` and
+  `settings/` do not import it.
+- **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `retrieval/`, `documents/` and
   `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
   `inference/repair.py` and `inference/vectors.py` call it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `builders | runtime`,
-  `knowledge_graph`, `loaders | documents`, `prompts`, `inference`, then `utils`, `settings` and
+  `retrieval`, `knowledge_graph`, `loaders | documents`, `prompts`, `inference`, then `utils`, `settings` and
   `config`. One crossing is named in it: `utils/lexicon.py` imports `prompts/wording.py`. The two rules above and
   «only `inference/ollama.py`, the local engine, imports the Ollama SDK» are contracts too.
 
@@ -185,7 +186,7 @@ One line per folder: what it holds, and the file to open first.
 | `builders/` | raw → artifacts: the profile and bank builders | `exemplars_profile_builder.py` |
 | `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |
 | `runtime/` | artifacts → exercises: generator, tagger, checks | `generator.py` |
-| `runtime/embedder/` | the two vector indices | `embedder/__init__.py` |
+| `retrieval/` | the two vector indices (`Embedder`) and their caches | `index.py` |
 | `runtime/screening/` | the guardrail and the admissibility judge | `screening/__init__.py` |
 | `api/` | `transcribe`, `build`, `initialize`, `generate`, `taggability`, `descriptions`, `tag` | `api/__init__.py` |
 
@@ -249,7 +250,7 @@ there.
 | Area | Client | Server | Library | Jobs | Tests |
 |---|---|---|---|---|---|
 | Step 1 «Apuntes y ejercicios» | `features/raw/` | `raw/`, `pipeline/slots.py` | `documents/`, `api/transcribe.py` | `transcribe` | `tests/server/raw/`, `tests/builders/` |
-| Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `runtime/embedder/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
+| Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/builders/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `builders/exemplars_bank_builder.py`, `builders/exemplars_profile_builder.py`, `runtime/tagger.py`, `knowledge_graph/taggability.py`, `loaders/exemplars_profile.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/runtime/generation/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `runtime/generator.py`, `runtime/checks.py`, `runtime/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |

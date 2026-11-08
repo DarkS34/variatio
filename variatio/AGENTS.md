@@ -51,15 +51,17 @@ of three kinds:
 - **An artifact**: `knowledge_graph/` (the graph and the subject's context: their classes, their
   build, the concept descriptions and the taggability review).
 - **Work**: `builders/` (raw → artifacts, authoring) and `runtime/` (artifacts → exercises:
-  `generator.py`, `tagger.py`, `checks.py`, `embedder/`, `screening/`).
+  `generator.py`, `tagger.py`, `checks.py`, `screening/`) and `retrieval/` (the two vector
+  indices, `Embedder`, that `runtime/` searches).
 - **The door**: `api/`.
 
 Two rules (rewritten 2026-10-16: the earlier wording, «only `api/` takes a
 `Workspace`» and «only `builders/` and `runtime/` call the model», was never true):
 **`api/` is the library's public door; `builders/` and `loaders/` take a `Workspace`
-only to resolve their own paths, and `runtime/`, `prompts/` and `settings/` do
-not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and
-`knowledge_graph/` (not its readers `graph.py` and `context.py`) import `inference/`** (D-230) — `documents/pages/` transcribes
+only to resolve their own paths, and `runtime/`, `retrieval/`, `prompts/` and `settings/` do
+not import it**; and **inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `retrieval/`, `documents/`
+and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import
+`inference/`** (D-230) — `documents/pages/` transcribes
 with the vision model, and `inference/repair.py` and `inference/vectors.py` call it on behalf of
 `builders/` and `runtime/`. `runtime/__init__.py` and `utils/__init__.py`
 are empty/docstring-only on purpose (numpy cost; an import cycle). A module that outgrows one

@@ -235,7 +235,7 @@ def test_write_sources_omits_the_two_keys_when_there_is_no_syllabus(tmp_path):
 
 
 def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
-    from variatio.runtime.embedder import load_sources
+    from variatio.knowledge_graph.descriptions import load_sources
 
     path = tmp_path / "concept_sources.json"
     path.write_text(
@@ -258,7 +258,7 @@ def test_load_sources_keeps_what_it_does_not_know_about(tmp_path):
 
 
 def test_restamp_adopts_the_new_fingerprints_without_touching_the_texts(tmp_path):
-    from variatio.runtime.embedder import ConceptDescriber, load_descriptions
+    from variatio.knowledge_graph.descriptions import ConceptDescriber, load_descriptions
     from variatio.knowledge_graph.context import ContentContext
     from variatio.knowledge_graph.graph import KnowledgeGraph
 

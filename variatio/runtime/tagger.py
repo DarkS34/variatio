@@ -15,7 +15,7 @@ from loguru import logger
 from .. import config, inference
 from ..utils import progress
 from ..inference.repair import parse_with_repair
-from .embedder import Embedder
+from ..retrieval import Embedder
 from ..knowledge_graph.context import ContentContext
 
 TRACE_KEY = "_tagging"
