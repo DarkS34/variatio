@@ -1,8 +1,8 @@
 """The engine boundary: every model call this system makes goes through here.
 
 `config.INFERENCE_ENGINE` picks the implementation, and no business logic ever reaches an
-SDK directly. The engines are their own modules: `ollama.py` (the local one) and
-`cerebras.py` (the hybrid one, which keeps an Ollama engine for what it does not serve).
+SDK directly. The engines are their own packages: `ollama/` (the local one) and
+`cerebras_ollama/` (the hybrid one, which keeps an Ollama engine for what it does not serve).
 Both import this module's types, so it reaches them lazily, from `_engine_class`. The types
 live in `types.py` and the `<think>` split in `thinking.py`; this module re-exports both.
 """
@@ -141,7 +141,7 @@ def _engine_class(name: str):
     if name == OllamaEngine.name:
         return OllamaEngine
     if name == "cerebras+ollama":
-        from .cerebras import HybridEngine
+        from .cerebras_ollama import HybridEngine
 
         return HybridEngine
     return None

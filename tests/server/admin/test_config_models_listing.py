@@ -1,6 +1,7 @@
 from server.admin.routes import settings as config_router
-from variatio import config as vg_config, inference
-from variatio.inference import cerebras
+from variatio import config as vg_config
+from variatio import inference
+from variatio.inference.cerebras_ollama import remote as cerebras
 
 
 def test_an_unreachable_engine_offers_no_models_and_no_error(monkeypatch):

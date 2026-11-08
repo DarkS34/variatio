@@ -47,10 +47,10 @@ except ImportError:  # pragma: no cover - this project runs on Linux
 
 from loguru import logger
 
-from .. import config
-from ..utils import progress
-from ..utils.json_io import write_json
-from . import InferenceError
+from ... import config
+from ...utils import progress
+from ...utils.json_io import write_json
+from ..types import InferenceError
 
 # The hour window is deliberately absent: measured, it never binds before the minute and the
 # day do — gemma reported 44 999 994 tokens left of the hour against 999 994 of the day.

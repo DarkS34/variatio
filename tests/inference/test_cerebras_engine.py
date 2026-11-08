@@ -4,11 +4,13 @@ import httpx
 import pytest
 
 from variatio import config
+from variatio.inference import InferenceError, Sampling
+from variatio.inference.cerebras_ollama import HybridEngine
+from variatio.inference.cerebras_ollama import schema as cerebras_schema
+from variatio.inference.cerebras_ollama import budget as cerebras_budget
+from variatio.inference.cerebras_ollama import remote as cerebras
+from variatio.inference.cerebras_ollama.remote import CerebrasEngine
 from variatio.utils import progress
-from variatio.inference import cerebras, cerebras_budget
-from variatio.inference.cerebras import CerebrasEngine, HybridEngine
-from variatio.inference import Sampling
-from variatio.inference import InferenceError
 
 # Captured at collection, before the autouse fixture in `conftest.py` stubs it out.
 _REAL_KNOWN_MODELS = CerebrasEngine.known_models
@@ -25,7 +27,7 @@ def test_strict_schema_closes_every_object():
         },
         "required": ["concepts"],
     }
-    adapted = cerebras.strict_schema(schema)
+    adapted = cerebras_schema.strict_schema(schema)
     assert adapted["additionalProperties"] is False
     assert adapted["properties"]["concepts"]["items"]["additionalProperties"] is False
 
@@ -38,7 +40,7 @@ def test_strict_schema_drops_what_strict_mode_refuses():
             "tags": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 3},
         },
     }
-    adapted = cerebras.strict_schema(schema)
+    adapted = cerebras_schema.strict_schema(schema)
     assert "pattern" not in adapted["properties"]["name"]
     assert "maxLength" not in adapted["properties"]["name"]
     assert "minItems" not in adapted["properties"]["tags"]
@@ -50,7 +52,7 @@ def test_strict_schema_keeps_a_property_named_like_a_keyword():
         "type": "object",
         "properties": {"format": {"type": "string"}, "pattern": {"type": "string"}},
     }
-    adapted = cerebras.strict_schema(schema)
+    adapted = cerebras_schema.strict_schema(schema)
     assert set(adapted["properties"]) == {"format", "pattern"}
 
 
@@ -63,7 +65,7 @@ def test_strict_schema_drops_the_titles_pydantic_writes():
             "title": {"type": "string", "title": "Title"},
         },
     }
-    adapted = cerebras.strict_schema(schema)
+    adapted = cerebras_schema.strict_schema(schema)
     assert "title" not in adapted
     assert set(adapted["properties"]) == {"enunciado", "title"}
     assert "title" not in adapted["properties"]["enunciado"]
@@ -75,15 +77,15 @@ def test_strict_schema_rewrites_const_as_a_single_enum():
         "properties": {"item_type": {"const": "problema_formal"}},
         "required": ["item_type"],
     }
-    adapted = cerebras.strict_schema(schema)
+    adapted = cerebras_schema.strict_schema(schema)
     assert adapted["properties"]["item_type"] == {"enum": ["problema_formal"]}
 
 
 def test_a_root_array_is_wrapped_and_keeps_strict():
     schema = {"type": "array", "items": {"type": "object", "properties": {"a": {"type": "string"}}}}
-    shaped = cerebras.response_format(schema)
+    shaped = cerebras_schema.response_format(schema)
     assert shaped["json_schema"]["strict"] is True
-    assert shaped["json_schema"]["name"] == cerebras._WRAPPER_NAME
+    assert shaped["json_schema"]["name"] == cerebras_schema._WRAPPER_NAME
     wrapper = shaped["json_schema"]["schema"]
     assert wrapper["type"] == "object"
     assert wrapper["required"] == ["items"]
@@ -94,20 +96,20 @@ def test_a_root_array_is_wrapped_and_keeps_strict():
 def test_a_root_array_too_big_to_wrap_loses_strict_but_not_the_shape():
     campos = {f"campo_{i}": {"type": "string"} for i in range(400)}
     schema = {"type": "array", "items": {"type": "object", "properties": campos}}
-    cerebras._WARNED.clear()
+    cerebras_schema._WARNED.clear()
     try:
-        shaped = cerebras.response_format(schema)
+        shaped = cerebras_schema.response_format(schema)
     finally:
-        cerebras._WARNED.clear()
+        cerebras_schema._WARNED.clear()
     assert shaped["json_schema"]["strict"] is False
     assert shaped["json_schema"]["name"] == "respuesta"
     assert shaped["json_schema"]["schema"]["type"] == "array"
 
 
 def test_response_format_maps_the_three_shapes():
-    assert cerebras.response_format(None) is None
-    assert cerebras.response_format("json") == {"type": "json_object"}
-    shaped = cerebras.response_format({"type": "object", "properties": {}})
+    assert cerebras_schema.response_format(None) is None
+    assert cerebras_schema.response_format("json") == {"type": "json_object"}
+    shaped = cerebras_schema.response_format({"type": "object", "properties": {}})
     assert shaped["type"] == "json_schema"
     assert shaped["json_schema"]["strict"] is True
 
@@ -123,7 +125,7 @@ def test_strict_schema_keeps_an_open_map_typed():
         },
         "required": ["domains"],
     }
-    adapted = cerebras.strict_schema(schema)
+    adapted = cerebras_schema.strict_schema(schema)
     assert adapted["additionalProperties"] is False
     assert adapted["properties"]["domains"]["additionalProperties"] == {
         "type": "array",
@@ -137,7 +139,7 @@ def test_an_open_map_loses_strict_but_not_the_shape():
         "properties": {"drop": {"type": "object", "additionalProperties": {"type": "string"}}},
         "required": ["drop"],
     }
-    shaped = cerebras.response_format(schema)
+    shaped = cerebras_schema.response_format(schema)
     assert shaped["json_schema"]["strict"] is False
     assert shaped["json_schema"]["schema"]["properties"]["drop"]["additionalProperties"] == {
         "type": "string"
@@ -148,19 +150,19 @@ def test_an_oversized_schema_is_reported_once_per_schema():
     from loguru import logger
 
     said: list[str] = []
-    cerebras._WARNED.clear()
+    cerebras_schema._WARNED.clear()
     sink = logger.add(lambda m: said.append(m.record["message"]), level="WARNING")
     try:
         campos = {f"campo_{i}": {"type": "string"} for i in range(400)}
         otros = {f"otro_{i}": {"type": "string"} for i in range(400)}
         huge = {"type": "object", "properties": campos}
         other = {"type": "object", "properties": otros}
-        cerebras.response_format(huge)
-        cerebras.response_format(huge)
-        cerebras.response_format(other)
+        cerebras_schema.response_format(huge)
+        cerebras_schema.response_format(huge)
+        cerebras_schema.response_format(other)
     finally:
         logger.remove(sink)
-        cerebras._WARNED.clear()
+        cerebras_schema._WARNED.clear()
 
     assert len([m for m in said if "The schema measures" in m]) == 2
 
@@ -170,19 +172,19 @@ def test_an_oversized_schema_loses_strict_but_not_the_shape():
         "type": "object",
         "properties": {f"campo_{i}": {"type": "string"} for i in range(400)},
     }
-    shaped = cerebras.response_format(huge)
+    shaped = cerebras_schema.response_format(huge)
     assert shaped["json_schema"]["strict"] is False
 
 
 def test_reasoning_effort_speaks_cerebras():
-    assert cerebras.reasoning_effort(None) is None
-    assert cerebras.reasoning_effort(False) == "none"
-    assert cerebras.reasoning_effort(True) == "low"
+    assert cerebras_schema.reasoning_effort(None) is None
+    assert cerebras_schema.reasoning_effort(False) == "none"
+    assert cerebras_schema.reasoning_effort(True) == "low"
 
 
 def test_a_per_phase_effort_travels_as_itself():
-    assert cerebras.reasoning_effort("medium") == "medium"
-    assert cerebras.reasoning_effort("max") == "high"
+    assert cerebras_schema.reasoning_effort("medium") == "medium"
+    assert cerebras_schema.reasoning_effort("max") == "high"
 
 
 def test_the_shared_catalog_reuses_one_engine_per_base_url(monkeypatch):
@@ -358,7 +360,7 @@ def test_a_jpeg_picture_is_sent_as_a_jpeg_data_url():
 def test_generate_unwraps_the_reply_to_a_wrapped_array_schema():
     def handler(request: httpx.Request) -> httpx.Response:
         sent = json.loads(request.content)
-        assert sent["response_format"]["json_schema"]["name"] == cerebras._WRAPPER_NAME
+        assert sent["response_format"]["json_schema"]["name"] == cerebras_schema._WRAPPER_NAME
         return httpx.Response(
             200,
             json={"choices": [{"message": {"content": '{"items": [{"a": "x"}]}'}}]},

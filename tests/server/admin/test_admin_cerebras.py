@@ -5,7 +5,7 @@ import pytest
 
 from server.admin.routes import engine as admin_engine
 from variatio import config
-from variatio.inference import cerebras_budget
+from variatio.inference.cerebras_ollama import budget as cerebras_budget
 
 
 @pytest.fixture

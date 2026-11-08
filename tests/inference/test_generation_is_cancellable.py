@@ -10,11 +10,11 @@ plain request returned, and the stop lands on the next token instead of the next
 
 import pytest
 
-from variatio import config, inference
-from variatio.utils import progress
-from variatio.inference import ollama as local
+from variatio import config
 from variatio.inference import Sampling
 from variatio.inference.ollama import OllamaEngine
+from variatio.inference.ollama import engine as local
+from variatio.utils import progress
 
 
 class _Chunk:

@@ -3,10 +3,10 @@ import ollama
 import pytest
 
 from variatio import config
-from variatio.inference import ollama as local
-from variatio.inference.cerebras import CerebrasEngine
 from variatio.inference import InferenceError
+from variatio.inference.cerebras_ollama.remote import CerebrasEngine
 from variatio.inference.ollama import OllamaEngine
+from variatio.inference.ollama import engine as local
 
 # What an engine answers is ITS text and not ours: `ollama.ResponseError` carries the raw
 # response body, and those messages reach the panel — so whatever the host `OLLAMA_HOST`

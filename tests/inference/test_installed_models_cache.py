@@ -1,6 +1,6 @@
 import pytest
 
-from variatio.inference import ollama as local
+from variatio.inference.ollama import engine as local
 
 
 class FakeClient:

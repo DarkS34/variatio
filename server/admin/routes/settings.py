@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from variatio import config as vg_config, inference
 from variatio import settings
-from variatio.inference import cerebras
+from variatio.inference.cerebras_ollama import remote as cerebras
 from variatio.inference import InferenceError
 from variatio.settings import Impact, SettingError
 

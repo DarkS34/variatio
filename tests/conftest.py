@@ -4,10 +4,10 @@ import os
 import pytest
 
 from variatio import prompts
-from variatio.functionalities.shared import screening
-from variatio.inference import cerebras_budget
-from variatio.knowledge_graph.context import ContentContext
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
+from variatio.functionalities.shared import screening
+from variatio.inference.cerebras_ollama import budget as cerebras_budget
+from variatio.knowledge_graph.context import ContentContext
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 # The Spanish set, which is what every measurement in this suite was taken against.
@@ -63,7 +63,7 @@ def _isolated_cerebras_ledger(tmp_path):
 # `known_models` itself restore the real method on their own instance.
 @pytest.fixture(autouse=True)
 def _no_cerebras_catalogue(monkeypatch):
-    from variatio.inference import cerebras
+    from variatio.inference.cerebras_ollama import remote as cerebras
 
     monkeypatch.setattr(cerebras.CerebrasEngine, "known_models", lambda self: frozenset())
 

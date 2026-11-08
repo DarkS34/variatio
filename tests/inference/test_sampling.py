@@ -11,11 +11,11 @@ import httpx
 import pytest
 
 from variatio import config, inference, settings
-from variatio.inference.cerebras import CerebrasEngine
-from variatio.inference import Sampling
-from variatio.inference.ollama import OllamaEngine
-from variatio.documents import pages
 from variatio.api import transcribe
+from variatio.documents import pages
+from variatio.inference import Sampling
+from variatio.inference.cerebras_ollama.remote import CerebrasEngine
+from variatio.inference.ollama import OllamaEngine
 from variatio.settings import derived, store
 from variatio.settings.registry import BY_KEY, reasoning
 

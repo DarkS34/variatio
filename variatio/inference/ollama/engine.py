@@ -13,17 +13,16 @@ import ollama
 from loguru import logger
 from tqdm import tqdm
 
-from .. import config
-from ..utils import progress, repetition
-from . import usage
-from . import (
+from ... import config
+from ...utils import progress, repetition
+from .. import usage
+from ..thinking import ThinkingSplitter, split_thinking
+from ..types import (
     GenerationResponse,
     InferenceError,
     ProgressSink,
     Sampling,
-    ThinkingSplitter,
     TokenSink,
-    split_thinking,
 )
 
 # What is installed changes only on a pull or a delete, and this process invalidates on
