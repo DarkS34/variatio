@@ -4,7 +4,7 @@ from variatio.functionalities.shared import screening
 from variatio.functionalities.shared.screening import admissibility
 from variatio.prompts.es import generate_content_prompt
 
-from ...conftest import ES
+from ....conftest import ES
 
 BLOCKS = dict(
     context_block="", item_type_block="t", target_concepts_block="c",

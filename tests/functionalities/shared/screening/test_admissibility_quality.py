@@ -8,7 +8,7 @@ from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.knowledge_graph.graph import KnowledgeGraph
 from variatio.api import _artifacts
 
-from ...conftest import ES
+from ....conftest import ES
 
 ITEM_TYPE = "escritura_codigo"
 TARGETS = ["Recursividad"]

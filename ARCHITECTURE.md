@@ -239,7 +239,7 @@ an `api/` package whose `install(app)` the composition root calls.
 | Folder | Holds |
 |---|---|
 | `migrations/` | Alembic migrations; the ORM models must match them |
-| `tests/` | one folder per subsystem (`utils`, `inference`, `settings`, `prompts`, `documents`, `knowledge_graph`, `exemplars_bank`, `retrieval`, `runtime/generation`, `runtime/screening`, `server/<area>`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
+| `tests/` | one folder per subsystem (`utils`, `inference`, `settings`, `prompts`, `documents`, `knowledge_graph`, `exemplars_bank`, `retrieval`, `functionalities/generation`, `functionalities/shared/screening`, `server/<area>`, `consumers/<function>`); `conftest.py` and `fixtures/` at the root |
 | `workspaces/` | the instances, one folder per slug (git-ignored) |
 | `plans/` | private work plans (git-ignored) |
 
@@ -254,7 +254,7 @@ there.
 | Step 2 «Temario» | `features/kg/` | `kg/` | `knowledge_graph/`, `retrieval/` | `build_kg`, `describe_concepts` | `tests/knowledge_graph/`, `tests/server/kg/` |
 | Step 3 «Banco de ejercicios» | `features/bank/`, `features/profile/` | `bank/`, `pipeline/taggability.py` | `exemplars_bank/`, `knowledge_graph/taggability.py` | `review_taggability`, `build_profile`, `build_bank`, `index`, `tag`, `tag_item` | `tests/server/bank/`, `tests/exemplars_bank/`, `tests/knowledge_graph/test_taggability*` |
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
-| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/runtime/generation/`, `tests/runtime/screening/` |
+| Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
 | Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
