@@ -16,6 +16,15 @@ _namespace: dict | None = None
 # One resolved profile per engine, dropped whenever the settings are re-read.
 _profiles: dict[str, Profile] = {}
 
+# The profile the always-local models are read from, and those models' keys.
+LOCAL_PROFILE = "ollama"
+LOCAL_KEYS = (
+    "models.guardrail",
+    "models.embedding",
+    "context_window.guardrail",
+    "context_window.embedding",
+)
+
 # Every `config` name whose value depends on the engine: what `engine_profile()` holds.
 SCOPED_NAMES = frozenset(
     {s.name for s in REGISTRY if s.scope == "engine" and s.name} | DERIVED_NAMES
@@ -36,8 +45,17 @@ def profile_of(engine: str) -> Profile:
 
 
 def _build_profile(engine: str) -> Profile:
-    """Resolve every setting as `engine` reads it and keep its engine-scoped names."""
-    resolved, _ = store.resolve(list(REGISTRY), _read_file(), dict(os.environ), engine)
+    """Resolve every setting as `engine` reads it and keep its engine-scoped names.
+
+    The guardrail and the embedder always run on the local Ollama server, whatever the
+    engine, so every engine reads them — and their context windows — from the `ollama`
+    profile: two engines over one server then load the same weights instead of two.
+    """
+    file_values, environ = _read_file(), dict(os.environ)
+    resolved, _ = store.resolve(list(REGISTRY), file_values, environ, engine)
+    if engine != LOCAL_PROFILE:
+        local, _ = store.resolve(list(REGISTRY), file_values, environ, LOCAL_PROFILE)
+        resolved.update({key: local[key] for key in LOCAL_KEYS})
     namespace = {s.name: resolved[s.key] for s in REGISTRY if s.name}
     namespace.update(derived.derive(resolved))
     return Profile(engine, {name: namespace[name] for name in SCOPED_NAMES})
@@ -82,15 +100,20 @@ def update(patch: dict[str, object]) -> set[Impact]:
     """Save a patch and re-resolve, returning what the change obliges the caller to redo.
 
     The engine-scoped keys are written into the profile of the engine the patch leaves
-    active, and only there: the other profiles travel through the write untouched.
+    active, and only there: the other profiles travel through the write untouched. The
+    always-local models (`LOCAL_KEYS`) go to the `ollama` profile, the one every engine
+    reads them from.
     """
     coerced = store.validate_patch(list(REGISTRY), patch)
     flat = _read_file()
     profiles = _stored_profiles(flat, active_engine())
     target = str(coerced.get(store.ENGINE_KEY) or active_engine() or "") or None
     scoped = {key: value for key, value in coerced.items() if BY_KEY[key].scope == "engine"}
+    local = {key: scoped.pop(key) for key in LOCAL_KEYS if key in scoped}
     if scoped and target:
         profiles.setdefault(target, {}).update(scoped)
+    if local:
+        profiles.setdefault(LOCAL_PROFILE, {}).update(local)
     store.write_file(store.CONFIG_PATH, list(REGISTRY), _globals_after(coerced), profiles)
     changed = {key for key, value in coerced.items() if _values.get(key) != value}
     before = _reload_keeping_previous()
@@ -116,7 +139,9 @@ def reset(keys: list[str]) -> set[Impact]:
     flat = _read_file()
     profiles = _stored_profiles(flat, engine)
     for key in keys:
-        if BY_KEY[key].scope == "engine" and engine:
+        if key in LOCAL_KEYS:
+            profiles.get(LOCAL_PROFILE, {}).pop(key, None)
+        elif BY_KEY[key].scope == "engine" and engine:
             profiles.get(engine, {}).pop(key, None)
     kept = {
         key: value
@@ -141,11 +166,19 @@ def _reload_keeping_previous() -> dict[str, object]:
 
 
 def load() -> None:
-    """Resolve every setting from the registry, `config.json` and the environment."""
+    """Resolve every setting from the registry, `config.json` and the environment.
+
+    The always-local models are read from the `ollama` profile whatever the active engine,
+    as every engine's profile reads them (`_build_profile`), so the panel shows what runs.
+    """
     global _values, _sources
-    _values, _sources = store.resolve(
-        list(REGISTRY), _read_file(), dict(os.environ)
-    )
+    file_values, environ = _read_file(), dict(os.environ)
+    _values, _sources = store.resolve(list(REGISTRY), file_values, environ)
+    engine = active_engine()
+    if engine and engine != LOCAL_PROFILE:
+        local, local_sources = store.resolve(list(REGISTRY), file_values, environ, LOCAL_PROFILE)
+        for key in LOCAL_KEYS:
+            _values[key], _sources[key] = local[key], local_sources[key]
     _profiles.clear()
 
 
