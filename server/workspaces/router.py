@@ -26,8 +26,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
-from variatio.utils import languages
-from variatio.loaders import locale
+from variatio.utils import languages, locale
 
 from .. import auth
 from .. import generations as generations_store

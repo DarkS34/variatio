@@ -18,7 +18,7 @@ import json
 from datetime import datetime, timezone
 
 from variatio.utils.workspace import Workspace
-from variatio.loaders import locale
+from variatio.knowledge_graph import relations
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from ..pipeline import storage
@@ -44,7 +44,7 @@ def resolve(ws: Workspace, graph: KnowledgeGraph, param: list[str] | None) -> li
     what the selector marks on screen and what the row must record as having run. Closing an
     already-closed list changes nothing.
     """
-    relation = locale.prerequisite_relation(ws)
+    relation = relations.prerequisite_relation(ws)
     if param is not None:
         return closure(param, graph, relation) if param else param
     stored = load(ws, graph)["concepts"]

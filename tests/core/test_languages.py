@@ -3,7 +3,7 @@
 Two different questions get answered with a language in this project — what a person READS
 and what a model is INSTRUCTED in — and the whole reason they can stay separate without
 drifting is that the set of admissible values is declared once, in a module that imports
-nothing, the same trick `workspace.py` and `relations.py` use.
+nothing, the same trick `workspace.py` uses.
 """
 
 import pytest

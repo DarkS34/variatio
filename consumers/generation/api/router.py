@@ -43,7 +43,8 @@ from server.bank.tagging import queue_tagging, refuse_tagging
 from server.db.models import EDITOR, VIEWER
 from server.generations import row_view
 from server.pipeline.view import pipeline_payload
-from variatio.loaders import locale
+from variatio import prompts
+from variatio.utils import locale
 
 router = APIRouter(prefix="/api/generations", tags=["generations"], dependencies=[auth.VIEW])
 
@@ -85,7 +86,7 @@ def listing(
     """
     teacher = auth.at_least(access, EDITOR)
     in_bank = bank_edit.item_ids(access.ws) if teacher else frozenset()
-    level_field = locale.difficulty(access.ws)[0] if difficulty else None
+    level_field = prompts.difficulty(locale.prompt_language(access.ws))[0] if difficulty else None
 
     def keep(record: dict) -> bool:
         """Whether a record answers the bank's and the level's filters."""

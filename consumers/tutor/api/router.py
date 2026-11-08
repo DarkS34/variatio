@@ -35,7 +35,7 @@ from server.core import process
 from server.jobs.catalogue import Job
 from server.pipeline import approvals, readings, storage
 from variatio import api, inference
-from variatio.loaders import locale
+from variatio.utils import locale
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from .. import config as tutor_config

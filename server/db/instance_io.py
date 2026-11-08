@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from variatio import api
 from variatio.utils import json_io
 from variatio.utils.workspace import Workspace as FsWorkspace
-from variatio.loaders import locale
+from variatio.utils import locale
 
 from . import repository as repo
 from .layout import KINDS, artifact_paths

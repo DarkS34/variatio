@@ -138,7 +138,7 @@ inference/                           the engine boundary: every model call
   `Workspace` only to resolve their own paths. `runtime/`, `prompts/` and `settings/` do
   not import it.
 - **Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`, `documents/` and
-  `knowledge_graph/` (not its readers `graph.py` and `context.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
+  `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
   `inference/repair.py` and `inference/vectors.py` call it on behalf of `builders/` and `runtime/`.
   Outside the library the functions call it too (`consumers/tutor/`, `consumers/chat/`,
   `consumers/evaluation/`).
@@ -177,10 +177,10 @@ One line per folder: what it holds, and the file to open first.
 |---|---|---|
 | `variatio/` (root) | `cli.py`, `config.py`, `__init__.py` (logging) and nothing else | `cli.py` |
 | `inference/` | the engine boundary (`__init__.py`) and its engines (`ollama.py`, `cerebras.py`, `cerebras_budget.py`), batched embedding (`vectors.py`), repair, usage meters | `__init__.py` |
-| `utils/` | paths, `Workspace`, progress, JSON I/O, languages, lexicon, repetition, dotenv | `workspace.py` |
+| `utils/` | paths, `Workspace`, progress, JSON I/O, languages, the workspace's language (`locale.py`), lexicon, repetition, dotenv | `workspace.py` |
 | `settings/` | the settings registry, its store (`config.json`) and derived values | `registry/__init__.py` |
-| `knowledge_graph/` | the graph (`graph.py`, `KnowledgeGraph`), the subject's context (`context.py`, `ContentContext`), their build (`build/`: extract, clean, curate, and the context synthesis), the concept descriptions and the taggability review | `__init__.py`, then `build/__init__.py` |
-| `loaders/` | readers of the other artifacts: profile, relations, locale | `exemplars_profile.py` |
+| `knowledge_graph/` | the graph (`graph.py`, `KnowledgeGraph`), the subject's context (`context.py`, `ContentContext`), the relation vocabulary (`relations.py`), their build (`build/`: extract, clean, curate, and the context synthesis), the concept descriptions and the taggability review | `__init__.py`, then `build/__init__.py` |
+| `loaders/` | the exemplars profile reader | `exemplars_profile.py` |
 | `prompts/` | the library's two prompt sets, `es/` and `en/`, same modules and signatures, each with its `wording.py` (the strings the code composes in the workspace's language); `marks.py` and `shared.py`, shared by both; each function keeps its own prompts in `consumers/<function>/prompts/` | `prompts/__init__.py`, `prompts/wording.py` |
 | `builders/` | raw → artifacts: the profile and bank builders | `exemplars_profile_builder.py` |
 | `documents/` | document plumbing: files, markdown, chunking, page transcription (`pages/`, a package by step), Office | `files.py`, then `pages/__init__.py` |

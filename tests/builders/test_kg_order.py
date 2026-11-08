@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from variatio import config
 from variatio.knowledge_graph.build import blocks, cleaning, curation, extraction, parsing
-from variatio.loaders.relations import RELATION_SCHEMA_ES as SCHEMA
+from variatio.knowledge_graph.relations import RELATION_SCHEMA_ES as SCHEMA
 
 from ..conftest import ES
 

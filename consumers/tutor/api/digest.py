@@ -29,7 +29,7 @@ from server.kg import edit as kg_edit
 from server.kg.edit import KGError
 from variatio import prompts as prompts_pkg
 from variatio.utils import json_io, progress
-from variatio.loaders import locale
+from variatio.utils import locale
 
 from .. import config as tutor_config
 from .. import prompts as tutor_prompts_pkg

@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from variatio.loaders import locale
+from variatio.knowledge_graph import relations
 
 from .. import auth
 from ..auth import queries
@@ -115,7 +115,7 @@ def graph(access: auth.Access = auth.VIEW) -> dict:
         return kg_view.build(
             graph_raw,
             kg_edit.load_graph(access.ws, graph_raw),
-            locale.relation_schema(access.ws),
+            relations.relation_schema(access.ws),
         )
     except KGError as exc:
         raise HTTPException(404, str(exc)) from exc
@@ -292,7 +292,7 @@ def write_curriculum(
     concepts = body.concepts
     if body.close_prerequisites:
         concepts = curriculum.closure(
-            concepts, graph, locale.prerequisite_relation(access.ws)
+            concepts, graph, relations.prerequisite_relation(access.ws)
         )
     if body.group is None:
         return curriculum.save(access.ws, concepts, graph)

@@ -130,7 +130,7 @@ class's cut to the group's students, as for one student.
 - **Counted by code, never read**: of a conversation, each student turn's date, its reply's
   kind (`on_subject` for theory/exercise/attempt/solution), the concept (chosen, else the
   reply's first focus) and `sent_back`; of an exercise, its date, type, level (the workspace's
-  difficulty field, `locale.difficulty`) and concepts, and whether a conversation was opened on
+  difficulty field, `prompts.difficulty`) and concepts, and whether a conversation was opened on
   it. The tutor's half comes through `activity.TUTOR_READER`, which `consumers.tutor.api.install` sets
   (the server never opens the tutor's files); every file goes through `activity.cached`, keyed
   by modification time and size.

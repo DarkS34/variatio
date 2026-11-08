@@ -7,7 +7,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from variatio.utils.workspace import Workspace
-from variatio.loaders import locale
+from variatio import prompts
+from variatio.utils import locale
 from variatio.loaders.exemplars_profile import profile_drift
 
 from ... import auth
@@ -60,7 +61,7 @@ def read(access: auth.Access = auth.VIEW) -> dict:
     client guessing which language a workspace was built in.
     """
     payload = profile_edit.load(access.ws)
-    field, levels = locale.difficulty(access.ws)
+    field, levels = prompts.difficulty(locale.prompt_language(access.ws))
     return {
         **payload,
         "pending_draft": pending_draft(access.ws, payload),

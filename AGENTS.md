@@ -198,11 +198,12 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   door; `inference/` is the engine boundary (`inference/__init__.py`) with the engines, usage,
   vectors and repair, a layer between `prompts` and `utils : settings : config`;
   `prompts/<language>/` holds each prompt set with its `wording.py`;
-  `utils/` holds what knows nothing about the subject (paths, `Workspace`, progress, JSON I/O);
-  `knowledge_graph/` holds the graph (`graph.py`), the subject's context (`context.py`), their
-  build (`build/`), the concept descriptions and the taggability review, a layer between
+  `utils/` holds what knows nothing about the subject (paths, `Workspace`, progress, JSON I/O,
+  the workspace's language in `locale.py`);
+  `knowledge_graph/` holds the graph (`graph.py`), the subject's context (`context.py`), the
+  relation vocabulary (`relations.py`), their build (`build/`), the concept descriptions and the taggability review, a layer between
   `builders | runtime` and `loaders | documents`; `builders/`, `runtime/`, `loaders/` (the
-  profile, the relation vocabulary and the locale), `documents/` and `settings/` keep their roles.
+  profile), `documents/` and `settings/` keep their roles.
   `builders/`, `loaders/` and the graph's build and loaders take a `Workspace` only for their own
   paths; the package root holds
   `config.py`, `cli.py` and `__init__.py`. *Why:* a person new to the code finds a thing by name.
@@ -230,8 +231,8 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   conversations read-only. *Why:* a filter is not privacy, and a 403 confirms the id exists.
 - **D-230 — Who calls the engine.** Inside `variatio/`, only `cli.py`, `builders/`, `runtime/`,
   `documents/` and `knowledge_graph/` (its build, descriptions and taggability review) import
-  `inference/`. *Why:* `api/`, `loaders/`, `prompts/`, `settings/` and the graph's two readers
-  (`knowledge_graph/graph.py`, `context.py`) stay cheap to import and never call a model.
+  `inference/`. *Why:* `api/`, `loaders/`, `prompts/`, `settings/` and the graph's three readers
+  (`knowledge_graph/graph.py`, `context.py`, `relations.py`) stay cheap to import and never call a model.
 - **D-220, D-223 — Documentation.** This section is the only register of closed decisions. One
   `AGENTS.md` per folder holds that folder's rules and their why; this file holds what holds
   everywhere, at most 200 lines. *Why:* the old register (1 295 lines) read as a history, and

@@ -38,7 +38,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from variatio.utils.workspace import Workspace
-from variatio.loaders import locale
+from variatio import prompts
+from variatio.utils import locale
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 from .. import generations
@@ -186,7 +187,7 @@ def students_of(session: Session, workspace: WorkspaceRow) -> list[Student]:
 
 def exercises(ws: Workspace, user_ids: list[int]) -> list[Exercise]:
     """Return every exercise these accounts generated in the subject."""
-    field_name, _ = locale.difficulty(ws)
+    field_name, _ = prompts.difficulty(locale.prompt_language(ws))
     found: list[Exercise] = []
     for user_id in user_ids:
         directory = generations.author_dir(ws, user_id)

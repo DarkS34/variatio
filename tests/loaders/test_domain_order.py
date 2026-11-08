@@ -3,7 +3,7 @@ import json
 import pytest
 
 from variatio.knowledge_graph.graph import KnowledgeGraph
-from variatio.loaders.relations import RELATION_SCHEMA_ES
+from variatio.knowledge_graph.relations import RELATION_SCHEMA_ES
 
 # The domains are deliberately NOT in size order, NOT alphabetical and NOT in the order
 # the concepts sort in: any test that passes by accident here proves nothing.

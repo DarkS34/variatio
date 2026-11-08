@@ -182,7 +182,7 @@ def _render(function, schema=None):
 
 @pytest.mark.parametrize("code", languages.LANGUAGES)
 def test_the_json_keys_are_never_translated(code):
-    from variatio.loaders.relations import RELATION_SCHEMAS
+    from variatio.knowledge_graph.relations import RELATION_SCHEMAS
 
     module = prompts.of(code)
     schema = RELATION_SCHEMAS[code]
@@ -203,12 +203,13 @@ def test_a_workspace_resolves_a_matching_prompt_set_and_relation_schema(tmp_path
     # definition under a Spanish heading — which is exactly what kept `RELATION_SCHEMA_EN`
     # unusable before this.
     from variatio.utils.workspace import Workspace
-    from variatio.loaders import locale
+    from variatio.knowledge_graph import relations
+    from variatio.utils import locale
 
     ws = Workspace(root=tmp_path / code, slug=code)
     locale.set_prompt_language(ws, code)
 
-    schema = locale.relation_schema(ws)
+    schema = relations.relation_schema(ws)
     module = prompts.of(locale.prompt_language(ws))
 
     assert schema.language == code
@@ -217,7 +218,7 @@ def test_a_workspace_resolves_a_matching_prompt_set_and_relation_schema(tmp_path
     assert schema.target_slot in rendered
     # And never the other language's slot names, which is what a mismatch would look like.
     other = next(c for c in languages.LANGUAGES if c != code)
-    from variatio.loaders.relations import CATALOG_WORDS
+    from variatio.knowledge_graph.relations import CATALOG_WORDS
 
     assert CATALOG_WORDS[other]["source"] not in rendered
 
@@ -226,7 +227,7 @@ def test_the_relation_keys_differ_by_language_and_that_is_why_it_is_chosen_once(
     # `verbose` is what the loader indexes a graph by and it is written into
     # `knowledge_graph.json`, so the language is baked into the artifact at build time.
     # This test exists to make that consequence visible rather than surprising.
-    from variatio.loaders.relations import RELATION_SCHEMA_EN, RELATION_SCHEMA_ES
+    from variatio.knowledge_graph.relations import RELATION_SCHEMA_EN, RELATION_SCHEMA_ES
 
     assert RELATION_SCHEMA_ES.prerequisite_verbose != RELATION_SCHEMA_EN.prerequisite_verbose
     assert set(RELATION_SCHEMA_ES.keys) != set(RELATION_SCHEMA_EN.keys)

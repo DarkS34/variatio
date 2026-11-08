@@ -13,7 +13,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from variatio.runtime import screening
-from variatio.loaders import locale
+from variatio.prompts import wording as wording_sets
+from variatio.utils import locale
 from variatio.loaders.exemplars_profile import ExemplarsProfile
 from variatio.api import TAGGABILITY_PHASES, _artifacts
 from variatio.api import build_phases as phases_of
@@ -130,7 +131,7 @@ def scope(item_type: str, access: auth.Access = auth.VIEW) -> dict:
         profile,
         _artifacts.load_content_context(access.ws),
         item_type,
-        locale.wording(access.ws),
+        wording_sets.of(locale.prompt_language(access.ws)),
     )
 
 

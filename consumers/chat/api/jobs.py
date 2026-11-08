@@ -19,7 +19,7 @@ from server.jobs.runner import JobControl
 from variatio import prompts as prompt_sets
 from variatio.utils import progress
 from variatio.knowledge_graph import context as content_context
-from variatio.loaders import locale
+from variatio.utils import locale
 
 from ..turn import run_turn
 from .store import STORE

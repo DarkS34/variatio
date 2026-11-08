@@ -21,7 +21,7 @@ from server.pipeline import approvals, storage
 from variatio import api, config, inference
 from variatio.utils import progress
 from variatio.utils.workspace import Workspace
-from variatio.loaders import locale
+from variatio.utils import locale
 
 # The kind this module handles.
 GENERATE = "generate"
