@@ -12,7 +12,7 @@ stream (`/ws`).
 ## Boundaries
 
 - **The core imports no area.** In the server's layers (an import contract) `core/` sits
-  above `jobs/` and `db/`, and below `conversations/`, `generations.py`, `auth/` and every
+  above `jobs/` and `db/`, and below `functionalities/shared/`, `auth/` and every
   area. Its routes are leaves: they may import any area, and only `server/routing.py`
   imports them.
 - **One bus and one queue for the whole installation** (`process.py`, with the idle unloader,

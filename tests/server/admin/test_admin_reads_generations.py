@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from server import auth
-from server import generations as store
+from server.functionalities.shared import generations as store
 from server.admin import workspaces as admin_workspaces
 from server.auth import queries
 from server.core import installation

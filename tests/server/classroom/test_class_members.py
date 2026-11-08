@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server import auth
-from server import generations as store
+from server.functionalities.shared import generations as store
 from server.admin import accounts as admin_routes
 from server.admin import workspaces as admin_workspaces
 from server.auth import links, queries

@@ -36,7 +36,7 @@ from .. import prompts as tutor_prompts_pkg
 from ..digest import Asked, summarise
 from . import activity as tutor_activity
 from . import store
-from server.conversations.jobs import QuietEmitter
+from server.functionalities.shared.conversations.jobs import QuietEmitter
 
 DIGEST = "activity_digest"
 FORMAT = 1

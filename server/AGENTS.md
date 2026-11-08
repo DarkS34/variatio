@@ -6,7 +6,7 @@ and the generated exercises. What every area stands on is `core/AGENTS.md`, iden
 `auth/AGENTS.md`, the subjects of an account `workspaces/AGENTS.md`, the build chain
 `pipeline/AGENTS.md`, step 1 `raw/AGENTS.md`, step 2 `kg/AGENTS.md`, step 3 `bank/AGENTS.md`,
 «Clase» `classroom/AGENTS.md`, the panel `admin/AGENTS.md`, the queue `jobs/AGENTS.md`, what
-the tutor and the chat share `conversations/AGENTS.md`, and the transcription
+the tutor and the chat share `functionalities/shared/conversations/AGENTS.md`, and the transcription
 `variatio/documents/AGENTS.md`.
 
 
@@ -18,7 +18,7 @@ the tutor and the chat share `conversations/AGENTS.md`, and the transcription
   `app.routes` whole.
 - The server's layers are an import contract too: composition (`app.py`, `routing.py`, `cli/`),
   `admin/`, `bank/`, `kg/` and `raw/`, `classroom/`, `pipeline/`, `auth/` and `workspaces/` (no
-  two of one group import each other), then `conversations/` and `generations.py`, then
+  two of one group import each other), then `functionalities/shared/` (`conversations/`, `generations.py`), then
   `core/`, then `jobs/`, then `db/`; each imports only what is below it. A route module is a
   leaf and may import any layer, and so are the construction's jobs (`pipeline/jobs.py`).
 - The registries a function fills at its install live in `jobs/catalogue.py`: `HANDLERS`,
@@ -54,7 +54,7 @@ with no database. `Json = JSON().with_variant(JSONB(), "postgresql")`.
 - Sync routes run in 200 AnyIO worker threads (`app.WORKER_THREADS`, set in `lifespan`; the
   default 40 queued a class's polls).
 - Every validated item is a JSON file, `<workspace>/generations/user_<id>/<id>.json`
-  ([server/generations.py](server/generations.py)), written the moment it validates
+  ([generations.py](server/functionalities/shared/generations.py)), written the moment it validates
   (`on_accepted`) with `json_io.write_json`; one file per exercise, so concurrent jobs never
   share one. It keeps `commission` (as asked; `think` a level or a bool) beside `resolved`
   (targets, `assumed_known`/`forbidden` and the closure rule, few-shot with origins, ruling,

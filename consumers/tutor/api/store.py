@@ -2,12 +2,12 @@
 
 How a conversation is kept — one file per conversation under its author, written whole under
 a lock per file, `pending` naming the job a reply comes from — is shared with the free chat
-and lives once in `server.conversations.store`. Here are the tutor's folder, the role its
+and lives once in `server.functionalities.shared.conversations.store`. Here are the tutor's folder, the role its
 replies are written under, and the state a new conversation starts with: the concept it
 stands on and the trail it walked (`consumers.tutor.focus`). The files did not move.
 """
 
-from server.conversations import store as shared
+from server.functionalities.shared.conversations import store as shared
 
 from .. import paths
 

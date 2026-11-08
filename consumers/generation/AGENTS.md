@@ -25,6 +25,6 @@ Generating is no optional function and is always installed, FIRST: its
 the author's routes (`/api/generations`, `api/router.py`), the `generate` job (`api/jobs.py`,
 registered in `HANDLERS`) and a commission's bounds (`api/limits.py` and the day's count,
 `api/usage.py`, registered in `catalogue.ADMISSIONS`). The generator is the library's and
-the exercise files are the server's (`server/generations.py`, with `row_view`, read by the
+the exercise files are the server's (`server/functionalities/shared/generations.py`, with `row_view`, read by the
 panel, the activity and the tutor too). Its client is `web/src/consumers/generation/` (the form,
 the run, «Mis ejercicios»), loaded like any screen: every account generates.

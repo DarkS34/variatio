@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session as DbSession
 from consumers.evaluation.api import store as evaluation_store
 
 from .. import auth
-from .. import generations as generations_store
+from ..functionalities.shared import generations as generations_store
 from ..auth import queries
 from ..auth.rate_limit import locked_seconds, unlock
 from ..classroom import members

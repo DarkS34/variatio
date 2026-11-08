@@ -42,7 +42,7 @@ from variatio import prompts
 from variatio.utils import locale
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
-from .. import generations
+from ..functionalities.shared import generations
 from ..auth import queries
 from ..core import daily
 from ..db.models import VIEWER, Workspace as WorkspaceRow

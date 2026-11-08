@@ -31,7 +31,7 @@ solves and writes code, as the student asks, within the subject and education.
   class A, private and a student's kind.
 - **Its routes** (`/api/chat`, `auth.VIEW` + `auth.CHAT`): one's conversations, open (with a
   `generation_id` of one's own or a `bank_id` one reads), read, send, ask again, stop, delete
-  — the tutor's, through `server/conversations/routes`. An exercise is checked before the
+  — the tutor's, through `server/functionalities/shared/conversations/routes`. An exercise is checked before the
   queue, and `opened_from.exercise` keeps it as labels and texts: every field of one's own
   generated exercise, only the fields shown of the bank's (the level always) — a hidden field
   never reaches the model.

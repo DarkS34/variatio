@@ -8,7 +8,7 @@ from importlib import metadata
 
 from loguru import logger
 
-from server import generations as generations_store
+from server.functionalities.shared import generations as generations_store
 from server.auth import queries
 from server.classroom import curriculum as curriculum_store
 from server.core import contexts, installation

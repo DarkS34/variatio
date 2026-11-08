@@ -2,7 +2,7 @@
 
 The generator itself is the library's (`variatio.functionalities.generation.generator`, reached through
 `variatio.api.generate`), and the files of the exercises are the server's
-(`server/generations.py`), read by the administrator's panel, the class's activity and the
+(`server/functionalities/shared/generations.py`), read by the administrator's panel, the class's activity and the
 tutor too. What is this function's alone is in `api/`: the author's routes, the job that runs
 a commission, and the bounds a commission is admitted under.
 """

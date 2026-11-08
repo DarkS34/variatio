@@ -2,7 +2,7 @@
 
 Read the root `AGENTS.md` first.
 Each function has its own `AGENTS.md`: `generation/`, `evaluation/`, `tutor/`, `chat/`. What
-the tutor and the chat share is `server/conversations/AGENTS.md`.
+the tutor and the chat share is `server/functionalities/shared/conversations/AGENTS.md`.
 
 ## `consumers/` — the functions the system is used through
 

@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from consumers.generation.api.router import router as generations_router
 from server import auth
-from server import generations as store
+from server.functionalities.shared import generations as store
 from server.auth.deps import Access
 from server.bank import edit as bank_edit
 from server.bank import tagging

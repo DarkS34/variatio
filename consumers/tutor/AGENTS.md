@@ -168,7 +168,7 @@ admin's read.
   (`PRIVATE_KINDS`). One reply on its way per conversation and per account in the workspace
   (409).
 - The store of conversations, the daily count, the quiet stream of a turn's job and the
-  routes' common half are the free chat's too, kept once in `server/conversations/` (see
+  routes' common half are the free chat's too, kept once in `server/functionalities/shared/conversations/` (see
   its `AGENTS.md`); `consumers/tutor/api/store.py` and `usage.py` bind them to the tutor's folder, role
   (`tutor`), initial state (`focus`, `trail`) and limit (`tutor_daily_limit`). The files did
   not move.

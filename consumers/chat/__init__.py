@@ -9,7 +9,7 @@ dangerous or out of place. Nothing else: no classification, no checks, no concep
 
 A subject's teachers open it to their students — it starts closed — and to each group apart
 (`server.auth.features`); its teachers always have it. Its conversations are kept as the
-tutor's are (`server.conversations`), under `<workspace>/chat/`.
+tutor's are (`server.functionalities.shared.conversations`), under `<workspace>/chat/`.
 
 Like every function, `consumers.chat` imports `variatio` and never the reverse — save the settings
 registry's optional import of `consumers.chat.settings` — and nothing outside `consumers.chat.api`

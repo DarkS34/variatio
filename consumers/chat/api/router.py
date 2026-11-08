@@ -3,7 +3,7 @@
 Declares `auth.VIEW` and `auth.CHAT` for the whole router: the chat is the subject's to open
 to its students (`server.auth.features`, closed until a teacher opens it), and its teachers
 always have it. Every conversation route is scoped to the account that asks
-(`server.conversations.routes`); a message is answered by a job of the queue, one reply at a
+(`server.functionalities.shared.conversations.routes`); a message is answered by a job of the queue, one reply at a
 time per account in the workspace, under the installation's daily limit of the chat.
 
 A conversation may open on an exercise: one of the author's generated exercises, or one of the
@@ -17,12 +17,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from server import auth
-from server import generations as generations_store
+from server.functionalities.shared import generations as generations_store
 from server.bank import edit as bank_edit
 from server.bank import reading as bank_reading
 from server.bank.reading import reader_of
-from server.conversations import routes as shared
-from server.conversations import store as shared_store
+from server.functionalities.shared.conversations import routes as shared
+from server.functionalities.shared.conversations import store as shared_store
 from server.core import process
 from server.pipeline import approvals
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile

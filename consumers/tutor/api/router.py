@@ -24,10 +24,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from server.conversations import routes as shared
+from server.functionalities.shared.conversations import routes as shared
 
 from server import auth
-from server import generations as generations_store
+from server.functionalities.shared import generations as generations_store
 from server.bank import edit as bank_edit
 from server.bank import reading as bank_reading
 from server.bank.reading import reader_of

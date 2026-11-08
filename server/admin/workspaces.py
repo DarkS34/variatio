@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from .. import auth
-from .. import generations as generations_store
+from ..functionalities.shared import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import queries
 from ..bank import profile_edit

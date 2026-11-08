@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 
-from server import generations as store
+from server.functionalities.shared import generations as store
 from server.auth import queries
 from server.cli.generations import export_generations
 from server.db import Base, repository, session

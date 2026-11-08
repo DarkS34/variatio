@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session as DbSession
 from variatio.utils import languages, locale
 
 from .. import auth
-from .. import generations as generations_store
+from ..functionalities.shared import generations as generations_store
 from ..auth import deps as auth_deps
 from ..auth import queries
 from ..classroom import members

@@ -3,7 +3,7 @@
 Declares `auth.VIEW` for the whole router, deleting one's own included; promoting into the
 bank adds `auth.EDIT`.
 
-Every validated item is a file (`server/generations.py`) carrying the commission that
+Every validated item is a file (`server/functionalities/shared/generations.py`) carrying the commission that
 produced it — concepts, curriculum, fixed fields, extra instructions, which model wrote it
 and how much it deliberated — and what that commission resolved to, because a statement
 without its parameters can be read but neither judged nor reproduced.
@@ -35,13 +35,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from server import auth
-from server import generations as store
+from server.functionalities.shared import generations as store
 from server.bank import edit as bank_edit
 from server.bank.edit import BankError, show
 from server.bank.marks import Shown, checked_groups
 from server.bank.tagging import queue_tagging, refuse_tagging
 from server.db.models import EDITOR, VIEWER
-from server.generations import row_view
+from server.functionalities.shared.generations import row_view
 from server.pipeline.view import pipeline_payload
 from variatio import prompts
 from variatio.utils import locale

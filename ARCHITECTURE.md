@@ -47,7 +47,7 @@ The interface speaks Spanish; the code speaks English. One word per thing on eac
 | puerta | one entry of `USES` | `web/src/lib/steps.ts` |
 | función | a package of `consumers/` | `consumers/` |
 | encargo | commission: the parameters of a `generate` job | `consumers/generation/` |
-| ejercicio generado | generation, variant | `server/generations.py` |
+| ejercicio generado | generation, variant | `server/functionalities/shared/generations.py` |
 | «Avance de la asignatura» | curriculum | `server/classroom/curriculum.py` |
 | «Clase» | members, groups, activity | `server/classroom/` |
 | alumno / docente / propietario | role `viewer` / `editor` / `owner` | `server/auth/deps.py` |
@@ -159,7 +159,7 @@ bank/  kg/  raw/                          step 3, the bank; step 2, the syllabus
 classroom/                                «Clase»: people, groups, progress, activity
 pipeline/                                 the chain of the three steps
 auth/  workspaces/                        identity and permissions; the subjects of an account
-conversations/  generations.py            what the tutor and the chat share; the exercises
+functionalities/shared/                   what the tutor and the chat share; the exercises
 core/                                     what every area stands on, the live queue among it
 jobs/                                     the queue's machinery
 db/                                       models, session, mirror
@@ -167,7 +167,7 @@ db/                                       models, session, mirror
 
 - The order is an import contract («The server's layers»). A route module is a leaf wherever
   it lives (an area's `router.py` or `routes/`, the panel's modules,
-  `conversations/routes.py`), and so are the construction's jobs (`pipeline/jobs.py`): what
+  `functionalities/shared/conversations/routes.py`), and so are the construction's jobs (`pipeline/jobs.py`): what
   they import is out of the order. Every module of the server is in it (D-227).
 
 ## 5. Code map
@@ -195,7 +195,7 @@ One line per folder: what it holds, and the file to open first.
 
 | Folder | Holds | Start at |
 |---|---|---|
-| `server/` (root) | `app.py` (composition root), `routing.py` (the order the areas' routes are mounted in; `app.py` mounts the generation's before them and the other functions' after them) and `generations.py`, the store of the generated exercises | `routing.py`, then `app.py` |
+| `server/` (root) | `app.py` (composition root), `routing.py` (the order the areas' routes are mounted in; `app.py` mounts the generation's before them and the other functions' after them) | `routing.py`, then `app.py` |
 | `core/` | what every area stands on: the process's live pieces (`process.py`: the bus, the queue, the tunnel, the downloads), the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
 | `admin/` | the administration panel, one route module per tab or section: accounts and the front page, invitations, class links, subjects, the queue, the door, the optional functions, the engine, the settings | `accounts.py` |
 | `classroom/` | «Clase»: the people of a subject (`members.py`), its groups (`groups.py`), the course's progress (`curriculum.py`), the activity (`activity.py`); `routes/` holds `/api/members` (people, groups, uses, links) and `/api/activity` | `members.py` |
@@ -207,7 +207,7 @@ One line per folder: what it holds, and the file to open first.
 | `db/` | ORM models, session, schema check, mirror, import/export | `models.py` |
 | `jobs/` | the queue: catalogue, runner, lanes, priority, bus, build worker, and its routes (`router.py`) | `catalogue.py`, then `runner.py` |
 | `pipeline/` | the chain of the three steps: approvals, artifact writes, the label review, the context, what a job chains and what must be settled before it runs, the construction's jobs (`jobs.py`); `routes/` holds `/api/pipeline` and `/api/context` | `approvals.py`, then `chain.py` |
-| `conversations/` | what the tutor and the chat share: store, daily count, quiet stream, route half | `store.py` |
+| `functionalities/shared/` | what the tutor and the chat share (`conversations/`: store, daily count, quiet stream, route half) and the store of the generated exercises (`generations.py`) | `conversations/store.py` |
 | `cli/` | the `system` command | `main.py` |
 
 **Functions: `consumers/`** — each package has a library half (no FastAPI, no SQLAlchemy) and
@@ -256,8 +256,8 @@ there.
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `consumers/generation/`, `generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
-| Tutor | `consumers/tutor/` | `consumers/tutor/`, `conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
-| Free chat | `consumers/chat/` | `consumers/chat/`, `conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
+| Tutor | `consumers/tutor/` | `consumers/tutor/`, `functionalities/shared/conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
+| Free chat | `consumers/chat/` | `consumers/chat/`, `functionalities/shared/conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
 | Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `admin/`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/admin/`, `tests/settings/` |

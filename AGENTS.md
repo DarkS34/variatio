@@ -167,7 +167,7 @@ that produces and consumes it.** `consumers` imports `variatio` and `server`; ne
   `server/kg/AGENTS.md` (step 2), `server/bank/AGENTS.md` (step 3),
   `server/classroom/AGENTS.md` (people, groups, links, progress, activity),
   `server/admin/AGENTS.md` (the panel),
-  `server/jobs/AGENTS.md` (the queue), `server/conversations/AGENTS.md`.
+  `server/jobs/AGENTS.md` (the queue), `server/functionalities/shared/conversations/AGENTS.md`.
 - `consumers/AGENTS.md` and one per function: `generation/`, `evaluation/`, `tutor/`, `chat/`.
 - `web/AGENTS.md` and `web/DESIGN.md` (read before any UI change), plus `src/features/bank/`,
   `src/features/class/`, `src/features/admin/`, `src/features/raw/`, `src/consumers/tutor/`,
@@ -192,7 +192,7 @@ the same commit as the code; git keeps the history. A number cited elsewhere (co
   noncommercial use, never sold; a rewrite would not take MIT back from existing copies.
 - **D-004, D-007 — Functions.** The functions live in `consumers/`, outside `variatio/` and
   `server/`, with one-way imports; the evaluation is not made removable. What the tutor and
-  the chat share is `server/conversations/`, and the blocks of their system prompts are
+  the chat share is `server/functionalities/shared/conversations/`, and the blocks of their system prompts are
   `variatio/prompts/<language>/conversation.py`. *Why:* they consume what the construction builds.
 - **D-008 — Layout by artifact.** `variatio/` is being reorganised by artifact
   (`plans/plan-reestructura.md`; each part updates this entry). Today: `api/` is the public

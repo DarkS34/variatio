@@ -15,7 +15,7 @@ def export_generations(args) -> int:
     """Write every row of `generations` as `<workspace>/generations/user_<id>/<UTC>-db<id>.json`."""
     from sqlalchemy import MetaData, Table, inspect, select
 
-    from .. import generations as store
+    from ..functionalities.shared import generations as store
     from ..core.installation import workspace_for
     from ..db import session_scope
 
@@ -84,7 +84,7 @@ def legacy_record(row) -> dict:
     The targets, closures, few-shot, ruling, prompt and artifact hashes were never stored,
     and are not reconstructed.
     """
-    from .. import generations as store
+    from ..functionalities.shared import generations as store
 
     created = row["created_at"] or datetime.fromtimestamp(0, timezone.utc)
     return {

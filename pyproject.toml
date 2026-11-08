@@ -1,6 +1,6 @@
 [project]
 name = "variatio"
-version = "1.185.14"
+version = "1.185.15"
 description = "Knowledge graph-guided generation of educational content variants"
 requires-python = ">=3.10"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -303,7 +303,7 @@ layers = [
     "classroom",
     "pipeline",
     "auth | workspaces",
-    "conversations | generations",
+    "functionalities.shared",
     # The process's live queue is the core's (core/process.py); the queue's machinery is below.
     "core",
     "jobs",
@@ -323,5 +323,5 @@ ignore_imports = [
     "server.classroom.routes.** -> server.**",
     # The construction's jobs are leaves too: only server/app.py installs them.
     "server.pipeline.jobs -> server.**",
-    "server.conversations.routes -> server.**",
+    "server.functionalities.shared.conversations.routes -> server.**",
 ]

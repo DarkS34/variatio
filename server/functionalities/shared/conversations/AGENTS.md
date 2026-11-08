@@ -1,8 +1,8 @@
-# AGENTS.md — `server/conversations/` — what the tutor and the chat share
+# AGENTS.md — `server/functionalities/shared/conversations/` — what the tutor and the chat share
 
 Read the root `AGENTS.md` first.
 
-## `server/conversations/` — what the tutor and the chat share
+## `server/functionalities/shared/conversations/` — what the tutor and the chat share
 
 Decided 2026-10-14 with the chat («nothing copied»); in `apps/conversations/` until 2026-10-16,
 when the user moved it out: `consumers/` keeps the functions that work on the artifacts, and this

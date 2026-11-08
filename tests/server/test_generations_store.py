@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from server import generations as store
+from server.functionalities.shared import generations as store
 from server.cli.generations import legacy_record
 from variatio.utils.workspace import Workspace
 

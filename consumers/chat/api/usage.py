@@ -1,5 +1,5 @@
-"""The free chat's daily count, kept beside the tutor's (`server.conversations.usage`)."""
+"""The free chat's daily count, kept beside the tutor's (`server.functionalities.shared.conversations.usage`)."""
 
-from server.conversations.usage import Limit
+from server.functionalities.shared.conversations.usage import Limit
 
 LIMIT = Limit(feature="chat", code="chat_daily_limit", to="al chat libre")
