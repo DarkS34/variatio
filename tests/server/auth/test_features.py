@@ -194,7 +194,7 @@ def test_an_administrator_cannot_switch_an_unknown_function(db):
 def test_the_routers_of_both_functions_declare_their_dependency():
     from consumers.evaluation.api import router as evaluation_router
     from consumers.evaluation.api import stages as stages_router
-    from consumers.tutor.api import router as tutor_router
+    from server.functionalities.tutor import router as tutor_router
 
     def declared(router):
         return [dependency.dependency for dependency in router.dependencies]

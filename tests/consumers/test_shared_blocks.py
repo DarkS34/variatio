@@ -5,8 +5,8 @@ import inspect
 import pytest
 
 from variatio.prompts import chat as chat_prompts
-from consumers.tutor import prompts as tutor_prompts
-from consumers.tutor import checks
+from variatio.prompts import tutor as tutor_prompts
+from variatio.functionalities.tutor import checks
 from variatio.prompts import conversation as shared
 
 HEADINGS = {"es": ["LA ASIGNATURA", "IDIOMA", "ALCANCE", "FORMATO"], "en": ["THE COURSE", "LANGUAGE", "SCOPE", "FORMAT"]}

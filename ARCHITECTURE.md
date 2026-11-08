@@ -143,7 +143,7 @@ inference/                           the engine boundary: every model call
 - **Inside `variatio/`, only `cli.py`, `functionalities/`, `retrieval/`, `documents/`,
   `exemplars_bank/` (not its reader `exemplars_profile/profile.py`) and `knowledge_graph/` (not its readers `graph.py`, `context.py` and `relations.py`) import `inference/`.** `documents/pages/` asks the vision model for each page;
   `inference/repair.py` and `inference/vectors.py` call it on behalf of the builds and the functions.
-  Outside the library the functions call it too (`consumers/tutor/`, `functionalities/chat/`,
+  Outside the library the functions call it too (`variatio/functionalities/tutor/`, `functionalities/chat/`,
   `consumers/evaluation/`).
 - The layers above are an import contract: `cli`, `api`, `functionalities`,
   `exemplars_bank`, `retrieval`, `knowledge_graph`, `documents`, `prompts`, `inference`, then `utils`, `settings` and
@@ -219,7 +219,7 @@ an `api/` package whose `install(app)` the composition root calls.
 | Folder | Holds | Start at |
 |---|---|---|
 | `consumers/evaluation/` | the study: arms, sessions, instruments, statistics | `run.py` |
-| `consumers/tutor/` | the Socratic tutor: card, turn, focus, checks, criteria, digest | `turn.py` |
+| `variatio/functionalities/tutor/` | the Socratic tutor: card, turn, focus, checks, criteria, digest | `turn.py` |
 
 **Client: `web/`**
 
@@ -257,7 +257,7 @@ there.
 | The bar and approvals | `lib/steps.ts`, `components/StageGate.tsx` | `pipeline/` | — | the chains of the three steps | `tests/server/pipeline/` |
 | Generating | `consumers/generation/` | `functionalities/generation/`, `functionalities/shared/generations.py` | `functionalities/generation/`, `functionalities/shared/screening/`, `api/generate.py` | `generate` | `tests/consumers/generation/`, `tests/functionalities/generation/`, `tests/functionalities/shared/screening/` |
 | «Clase» | `features/class/` | `classroom/`, `kg/router.py` (the progress's `GET`/`PUT /api/kg/curriculum`) | — | `activity_digest` (the tutor's) | `tests/server/classroom/` |
-| Tutor | `consumers/tutor/` | `consumers/tutor/`, `functionalities/shared/conversations/` | the embedder, and the guardrail on the student's message (`consumers/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
+| Tutor | `variatio/functionalities/tutor/` | `variatio/functionalities/tutor/`, `functionalities/shared/conversations/` | the embedder, and the guardrail on the student's message (`variatio/functionalities/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/consumers/tutor/` |
 | Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | the guardrail on the student's message | `chat_turn` | `tests/consumers/chat/` |
 | Evaluation | `consumers/evaluation/` | `consumers/evaluation/` | the whole pipeline, as the `system` arm | `evaluate` | `tests/consumers/evaluation/` |
 | Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |

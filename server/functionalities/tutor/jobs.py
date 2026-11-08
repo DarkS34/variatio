@@ -1,6 +1,6 @@
 """The tutor's two jobs: answering one turn, and drafting the subject's criteria.
 
-Registered on `server.jobs.catalogue.HANDLERS` by `consumers.tutor.api.install`, not declared there:
+Registered on `server.jobs.catalogue.HANDLERS` by `server.functionalities.tutor.install`, not declared there:
 the queue is the installation's and the jobs are the tutor's. Both go through the queue for the
 reason every model call does — the idle unloader reads the queue's clock, and a call outside
 it would have the GPU released under it.
@@ -24,15 +24,15 @@ from server.pipeline import storage
 from variatio import api
 from variatio.utils import progress
 
-from .. import ATTEMPT, EXERCISE, SOLUTION, THEORY
-from .. import config as tutor_config
-from .. import criteria as criteria_store
-from .. import paths
-from .. import prompts as tutor_prompts_pkg
-from ..criteria_builder import build_criteria
-from ..passages import cut_corpus, index_for
-from ..title import name_conversation
-from ..turn import run_turn
+from variatio.functionalities.tutor import ATTEMPT, EXERCISE, SOLUTION, THEORY
+from variatio.functionalities.tutor import config as tutor_config
+from variatio.functionalities.tutor import criteria as criteria_store
+from variatio.functionalities.tutor import paths
+from variatio.prompts import tutor as tutor_prompts_pkg
+from variatio.functionalities.tutor.criteria_builder import build_criteria
+from variatio.functionalities.tutor.passages import cut_corpus, index_for
+from variatio.functionalities.tutor.title import name_conversation
+from variatio.functionalities.tutor.turn import run_turn
 from . import store
 
 TURN = "tutor_turn"

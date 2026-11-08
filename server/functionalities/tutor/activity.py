@@ -1,7 +1,7 @@
 """The tutor's half of a class's weekly activity: its conversations as dated, wordless messages.
 
 `server/classroom/activity.py` counts what a subject's students do for its teachers, and
-reaches the conversations through `read`, which `consumers.tutor.api.install` sets as its
+reaches the conversations through `read`, which `server.functionalities.tutor.install` sets as its
 `TUTOR_READER`: the server never opens the tutor's files itself. Each student turn becomes a
 `Message` with its date, the kind of reply it got, the concept it was about and the
 prerequisite it was sent back to — never its text, which only the digest's job reads, from the
@@ -11,7 +11,7 @@ file, when a teacher asks.
 from server.classroom import activity
 from variatio.utils.workspace import Workspace
 
-from .. import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL
+from variatio.functionalities.tutor import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL
 from . import store
 
 # The kinds of reply that do not work on the subject: counted, never grouped by concept nor

@@ -1,7 +1,7 @@
 """The tutor's own index of settings, resolved on every read.
 
 The annotations below are the readable index, exactly as `variatio.config`'s are; the values
-are declared in `consumers/tutor/settings.py` and derived here.
+are declared in `variatio/functionalities/tutor/settings.py` and derived here.
 """
 
 from variatio import config as pipeline_config

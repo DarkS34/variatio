@@ -1,6 +1,6 @@
 """The weekly digest's job: what a class asked the tutor in one week, for its teachers.
 
-Registered by `consumers.tutor.api.install` and queued by `POST /api/activity/weeks/{week}/digest`,
+Registered by `server.functionalities.tutor.install` and queued by `POST /api/activity/weeks/{week}/digest`,
 a teacher's route of the server: a teacher may read the digest of their class whether or not the
 tutor is open to their own account, so the job is not behind the tutor's function. It is
 background work (class C): the class's own turns go first.
@@ -31,9 +31,9 @@ from variatio import prompts as prompts_pkg
 from variatio.utils import json_io, progress
 from variatio.utils import locale
 
-from .. import config as tutor_config
-from .. import prompts as tutor_prompts_pkg
-from ..digest import Asked, summarise
+from variatio.functionalities.tutor import config as tutor_config
+from variatio.prompts import tutor as tutor_prompts_pkg
+from variatio.functionalities.tutor.digest import Asked, summarise
 from . import activity as tutor_activity
 from . import store
 from server.functionalities.shared.conversations.jobs import QuietEmitter

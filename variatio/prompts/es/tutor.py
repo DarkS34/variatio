@@ -218,7 +218,7 @@ def turn_prompt(card: str, history: list[tuple[str, str]], message: str, kind: s
 def card_block(card) -> str:
     """Render the turn's card, the material code chose for this exact moment of the talk.
 
-    `card` is a `consumers.tutor.card.Card`, read by attribute so this module imports nothing of the
+    `card` is a `variatio.functionalities.tutor.card.Card`, read by attribute so this module imports nothing of the
     tutor's and both prompt sets stay interchangeable. The notes are quoted WITHOUT where they
     are, and not as notes: the card is what the tutor knows, which a reply tells in its own
     words, so it has no heading to repeat and no place to send the student to.

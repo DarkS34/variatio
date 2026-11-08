@@ -145,10 +145,10 @@ names exist). A tree renamed so is no longer readable by a version from before t
 - The evaluation's settings, its lane (`LANE`: scenario, local arms, external arm) and
   `READS` are declared in `consumers/evaluation/settings.py`, picked up by an optional import — the
   one place `variatio/` names the evaluation.
-- The tutor's are declared the same way in `consumers/tutor/settings.py` (`LANE` «Tutor», stage
+- The tutor's are declared the same way in `variatio/functionalities/tutor/settings.py` (`LANE` «Tutor», stage
   `tutoring`, last; `READS`; `MODEL_KEYS`), picked up by an optional import that switches off
-  only on `ModuleNotFoundError` for `consumers.tutor` itself. Their names are empty: they are read
-  through `consumers/tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
+  only on `ModuleNotFoundError` for `variatio.functionalities.tutor` itself. Their names are empty: they are read
+  through `variatio/functionalities/tutor/config.py`, never `variatio.config`. `registry.EXTRA_MODEL_KEYS` gives a model named
   only there the context cap (`derived`) and the deletion guard (`required_models`).
 
 ## Which model writes a variant

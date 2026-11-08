@@ -4,7 +4,7 @@
 the tutor is attached, as the evaluation was: importing it from `server/routing.py`
 would close a cycle, since these routers import `server.auth` back.
 
-Nothing here is imported until `install` runs, and `consumers/tutor/__init__.py` never reaches this
+Nothing here is imported until `install` runs, and `variatio/functionalities/tutor/__init__.py` never reaches this
 package: that is what keeps `import tutor` free of FastAPI and SQLAlchemy.
 """
 
@@ -25,7 +25,7 @@ def install(app) -> None:
     )
     from variatio import config as pipeline_config
 
-    from .. import config as tutor_config
+    from variatio.functionalities.tutor import config as tutor_config
     from . import activity, admin, digest, jobs, router
 
     # Handlers only, and no entry in `JOB_LABELS`: that table is what `POST /api/jobs` accepts,

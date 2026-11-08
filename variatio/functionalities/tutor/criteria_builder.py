@@ -26,7 +26,7 @@ from variatio.utils.lexicon import fold
 
 from . import calls
 from . import config as tutor_config
-from . import prompts as tutor_prompts_pkg
+from ...prompts import tutor as tutor_prompts_pkg
 from .criteria import MUST, STRENGTHS
 from .passages import Passage
 

@@ -34,9 +34,9 @@ except ImportError:
     evaluation_api = None
 
 try:
-    from consumers.tutor import api as tutor_api
+    from server.functionalities import tutor as tutor_api
 except ModuleNotFoundError as missing:
-    if missing.name not in ("consumers", "consumers.tutor"):
+    if missing.name not in ("consumers", "variatio.functionalities.tutor"):
         raise
     tutor_api = None
 

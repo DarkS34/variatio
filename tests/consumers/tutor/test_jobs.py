@@ -6,9 +6,9 @@ from types import SimpleNamespace
 import pytest
 
 from server.jobs.catalogue import Job
-from consumers.tutor import paths
-from consumers.tutor.api import jobs, store
-from consumers.tutor.turn import TurnResult
+from variatio.functionalities.tutor import paths
+from server.functionalities.tutor import jobs, store
+from variatio.functionalities.tutor.turn import TurnResult
 from variatio.utils import progress
 
 from .conftest import SOURCES
@@ -176,7 +176,7 @@ def test_a_greeting_leaves_the_first_line_as_the_title(wired, monkeypatch):
 
 
 def test_a_title_is_cleaned_or_refused():
-    from consumers.tutor.title import clean
+    from variatio.functionalities.tutor.title import clean
 
     assert clean(' «recursividad y caso base». ') == "Recursividad y caso base"
     assert clean("") is None and clean("x" * 61) is None and clean('{"title": 1}') is None

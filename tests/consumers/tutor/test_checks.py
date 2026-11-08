@@ -1,6 +1,6 @@
 """The parts of the method a machine can verify are verified, one rule per check."""
 
-from consumers.tutor import checks
+from variatio.functionalities.tutor import checks
 
 LIMITS = {"max_questions": 3, "max_code_lines": 3, "copy_max_words": 8}
 
@@ -74,7 +74,7 @@ def test_a_forbidden_term_fails_in_code_always_and_in_prose_only_when_unprompted
 
 
 def test_a_sentence_that_opens_by_telling_the_student_they_are_right_fails():
-    from consumers.tutor import prompts
+    from variatio.prompts import tutor as prompts
 
     pattern = prompts.of("es").VALIDATION_PATTERN
 
@@ -87,7 +87,7 @@ def test_a_sentence_that_opens_by_telling_the_student_they_are_right_fails():
 
 
 def test_a_reply_that_sends_the_student_to_the_notes_fails_and_a_topic_or_a_part_does_not():
-    from consumers.tutor import prompts
+    from variatio.prompts import tutor as prompts
 
     pattern = prompts.of("es").POINTING_PATTERN
 
@@ -175,6 +175,6 @@ def test_the_names_are_named_in_the_retry_note():
     )
 
     assert ("code_specific", {"names": "`ordenarPorDni`, `alumnos`"}) in found
-    from consumers.tutor import prompts
+    from variatio.prompts import tutor as prompts
 
     assert "ordenarPorDni" in prompts.of("es").retry_note(found, 3, 3)

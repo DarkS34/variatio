@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MODULES = sorted(
     [*ROOT.glob("variatio/prompts/*/*.py"), *ROOT.glob("consumers/*/prompts/*.py"),
      ROOT / "variatio/prompts/conversation.py",
-     ROOT / "variatio/prompts/chat.py"]
+     ROOT / "variatio/prompts/chat.py", ROOT / "variatio/prompts/tutor.py"]
 )
 # The transcription's prompts (P7) and the tutor's pattern tables, which are vocabulary.
 EXEMPT_FUNCTIONS = {"transcribe_page_prompt", "transcribe_image_prompt", "transcribe_retry_note", "merge_pages_prompt"}

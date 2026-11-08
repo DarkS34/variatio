@@ -2,7 +2,7 @@
 
 Read the root `AGENTS.md` first.
 Read `web/AGENTS.md` and `web/DESIGN.md` first. The tutor's server side is
-`consumers/tutor/AGENTS.md`.
+`variatio/functionalities/tutor/AGENTS.md`.
 
 ## The tutor's screen
 
@@ -59,7 +59,7 @@ Read `web/AGENTS.md` and `web/DESIGN.md` first. The tutor's server side is
   apart): the three parts of the subject whole lead — «Para toda la asignatura», «Lo que el
   tutor nunca sugiere», «Consultas administrativas» — and one per unit follows under a
   caption (`SectionEntry.group`), numbered; a row counts what its part holds and its rows
-  changed and not saved (`consumers/tutor/criteria.changes`, counted as sets); a criterion is a ruled
+  changed and not saved (`variatio/functionalities/tutor/criteria.changes`, counted as sets); a criterion is a ruled
   row with no caption per control; the bar is the stage screens' (state, «Dejar de modificar»
   asking first when dirty, the save) and saves every part at once. «Trabajar con el tutor» on a saved exercise — in «Mis
   asignaturas y ejercicios» and Generate's «Mis ejercicios», and on a result card once its

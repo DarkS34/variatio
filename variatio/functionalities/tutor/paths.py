@@ -13,7 +13,7 @@ from variatio.utils.workspace import Workspace
 
 CRITERIA_STEM = "tutor_criteria"
 
-# The conversations' directory, under the workspace's root (`consumers.tutor.api.store`).
+# The conversations' directory, under the workspace's root (`server.functionalities.tutor.store`).
 CONVERSATIONS_FOLDER = "tutor"
 
 

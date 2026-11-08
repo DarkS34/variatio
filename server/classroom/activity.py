@@ -18,7 +18,7 @@ WHO COUNTS: the subject's students (`viewer`), active and paused, a paused one m
 student removed from the subject is no longer of the class and counts for nothing, though
 their files stay. A teacher's own exercises and conversations are not the class's.
 
-The tutor's half is the tutor's to read: `consumers.tutor.api.install` sets `TUTOR_READER`, which
+The tutor's half is the tutor's to read: `server.functionalities.tutor.install` sets `TUTOR_READER`, which
 turns the conversations into `Message`s, and without it the activity has no tutor block. The free
 chat's the same way (`CHAT_READER`, 2026-10-15), and less: a chat turn is not classified, so
 it is counted by student and day and nothing else. Every file is read once and kept by its
@@ -118,7 +118,7 @@ class ChatMessage:
     at: datetime
 
 
-# The tutor's reader of its conversations, set by `consumers.tutor.api.install`; None without a
+# The tutor's reader of its conversations, set by `server.functionalities.tutor.install`; None without a
 # tutor.
 TUTOR_READER: Callable[[Workspace, list[int]], TutorReading] | None = None
 # The chat's, set by `server.functionalities.chat.install`; None without the chat.

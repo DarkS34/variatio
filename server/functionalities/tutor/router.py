@@ -8,7 +8,7 @@ authorises nothing inside a subject, where the membership role is the one that c
 EVERY CONVERSATION ROUTE IS SCOPED TO THE ACCOUNT THAT ASKS, exactly as the generated exercises
 are: the author's directory is the only one read, and another account's conversation, another
 workspace's and a malformed id all answer the same 404. The installation administrator reads
-every account's, read-only, through its own panel (`consumers.tutor.api.admin`), never through
+every account's, read-only, through its own panel (`server.functionalities.tutor.admin`), never through
 these.
 
 A message is answered by a job of the queue, so it waits behind a build on the local lane like
@@ -38,10 +38,10 @@ from variatio import api, inference
 from variatio.utils import locale
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
-from .. import config as tutor_config
-from .. import criteria as criteria_store
-from .. import paths
-from .. import prompts as tutor_prompts_pkg
+from variatio.functionalities.tutor import config as tutor_config
+from variatio.functionalities.tutor import criteria as criteria_store
+from variatio.functionalities.tutor import paths
+from variatio.prompts import tutor as tutor_prompts_pkg
 from . import jobs, store, usage
 
 router = APIRouter(prefix="/api/tutor", tags=["tutor"], dependencies=[auth.VIEW, auth.TUTOR])

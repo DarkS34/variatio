@@ -7,14 +7,14 @@ the subject's criteria), so the model is told where in the notes the answer live
 student is assumed to know and what comes later, instead of searching blind.
 
 Two layers of rules, never mixed. The METHOD is the system's and holds in every subject: it
-lives in `consumers.tutor.prompts` and in the deterministic `checks`, and no file can switch it off.
+lives in `variatio.prompts.tutor` and in the deterministic `checks`, and no file can switch it off.
 The CRITERIA are the subject's: drafted from the artifacts and curated by a teacher
-(`consumers.tutor.criteria`).
+(`variatio.functionalities.tutor.criteria`).
 
 The boundary is pinned with every function's (`tests/consumers/test_consumers_boundary.py`):
-`consumers.tutor` imports `variatio` and never the reverse — save the settings registry's optional
-import of `consumers.tutor.settings` — and nothing outside `consumers.tutor.api` imports FastAPI or
-SQLAlchemy, so `import consumers.tutor` stays a library.
+`variatio.functionalities.tutor` imports `variatio` and never the reverse — save the settings registry's optional
+import of `variatio.functionalities.tutor.settings` — and nothing outside `server.functionalities.tutor` imports FastAPI or
+SQLAlchemy, so `import variatio.functionalities.tutor` stays a library.
 """
 
 # What a student's message can be, which decides the card a turn is answered with. The two

@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from consumers.tutor import ATTEMPT, SOCIAL, SOLUTION, THEORY, concept_map
-from consumers.tutor.card import Card, FocusConcept, Prerequisite, Quote
+from variatio.functionalities.tutor import ATTEMPT, SOCIAL, SOLUTION, THEORY, concept_map
+from variatio.functionalities.tutor.card import Card, FocusConcept, Prerequisite, Quote
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
 PREREQUISITE = "tiene como prerrequisito"
@@ -129,7 +129,7 @@ def a_card() -> Card:
 
 
 def test_a_reply_sends_the_student_back_only_when_one_sentence_names_the_prerequisite_to_review():
-    from consumers.tutor.prompts import es
+    from variatio.prompts.es import tutor as es
 
     card = a_card()
 

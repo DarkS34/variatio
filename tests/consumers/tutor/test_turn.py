@@ -2,8 +2,16 @@
 
 import numpy as np
 
-from consumers.tutor import ADMINISTRATIVE, BLOCKED, EXERCISE, OFF_TOPIC, THEORY, criteria, turn
-from consumers.tutor.passages import Passage, PassageIndex
+from variatio.functionalities.tutor import (
+    ADMINISTRATIVE,
+    BLOCKED,
+    EXERCISE,
+    OFF_TOPIC,
+    THEORY,
+    criteria,
+    turn,
+)
+from variatio.functionalities.tutor.passages import Passage, PassageIndex
 from variatio.functionalities.shared import screening
 
 from .conftest import SOURCES, vector_for
@@ -185,7 +193,7 @@ def test_a_greeting_carries_no_notes_and_leaves_the_focus_where_it_was(tutor_con
 
 
 def test_a_concept_of_the_focus_is_never_a_later_one():
-    from consumers.tutor.card import Card, FocusConcept
+    from variatio.functionalities.tutor.card import Card, FocusConcept
 
     recursion = FocusConcept(name="Recursividad", unit="Avanzado", later=("Memoización", "Subproblema"))
     with_subproblem = Card(kind=THEORY, focus=(recursion, FocusConcept("Subproblema", "Avanzado")))

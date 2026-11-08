@@ -23,7 +23,7 @@ from variatio.functionalities.chat import config as chat_config
 from variatio.functionalities.chat import turn as chat_turn
 from server.functionalities.chat import jobs, router as router_module, usage
 from server.functionalities.chat.store import STORE
-from consumers.tutor.api import store as tutor_store
+from server.functionalities.tutor import store as tutor_store
 from server import auth
 from server.auth import features, queries
 from server.auth.deps import Access
@@ -211,7 +211,7 @@ def test_the_tutor_reads_its_conversations_as_before(aula):
 
 def test_the_chat_counts_its_own_day_apart_from_the_tutor_s(db, aula, runner, monkeypatch):
     monkeypatch.setattr(router_module.chat_config, "DAILY_MESSAGES", 1, raising=False)
-    from consumers.tutor.api import usage as tutor_usage
+    from server.functionalities.tutor import usage as tutor_usage
 
     tutor_usage.record(db, aula.sara.id)
     tutor_usage.record(db, aula.sara.id)

@@ -2,7 +2,7 @@
 
 import json
 
-from consumers.tutor import criteria, paths
+from variatio.functionalities.tutor import criteria, paths
 
 DEFAULT = "Pregunta a tu docente."
 

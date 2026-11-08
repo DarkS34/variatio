@@ -6,9 +6,10 @@ the fixed answers a student reads — the off-topic offer, the refusal, the fall
 come from the same set as the replies around them.
 """
 
-from variatio.utils import languages
+from ..utils import languages
 
-from . import en, es
+from .en import tutor as en
+from .es import tutor as es
 
 _SETS = {"es": es, "en": en}
 

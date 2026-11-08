@@ -22,10 +22,10 @@ from server.classroom import activity, curriculum
 from server.classroom.routes import activity as activity_routes
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
-from consumers.tutor.api import activity as tutor_activity
-from consumers.tutor.api import digest as digest_job
-from consumers.tutor.digest import Asked, clean_themes, names_someone
-from consumers.tutor.turn import TurnResult
+from server.functionalities.tutor import activity as tutor_activity
+from server.functionalities.tutor import digest as digest_job
+from variatio.functionalities.tutor.digest import Asked, clean_themes, names_someone
+from variatio.functionalities.tutor.turn import TurnResult
 from variatio.utils.workspace import Workspace
 from variatio.knowledge_graph.graph import KnowledgeGraph
 

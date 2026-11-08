@@ -22,8 +22,8 @@ FUNCTION_SETTINGS = {
     "variatio.functionalities.chat.settings",
     "consumers.evaluation",
     "consumers.evaluation.settings",
-    "consumers.tutor",
-    "consumers.tutor.settings",
+    "variatio.functionalities.tutor",
+    "variatio.functionalities.tutor.settings",
 }
 
 

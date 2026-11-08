@@ -113,7 +113,7 @@ def after_reply(state: dict, focus: list[str], drawn: list[str] | None = None) -
 
     The trail keeps every concept the conversation has stood on, in order, for whoever reads
     the conversation afterwards. `drawn` are the keys of the concept map shown under this
-    reply, if one was (`consumers.tutor.concept_map`): `mapped` remembers them so no map is shown
+    reply, if one was (`variatio.functionalities.tutor.concept_map`): `mapped` remembers them so no map is shown
     twice, and `since_map` counts the replies since the last one — absent until a first map
     is shown, since there is nothing yet to keep a distance from.
     """

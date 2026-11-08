@@ -12,7 +12,7 @@ unit that is gone. The same `normalize` cleans what a build drafts and what a te
 so the two cannot disagree about what a criterion is.
 
 What a criterion is NOT: the method. Guiding with questions, never handing over a solution
-and citing the notes are the system's rules (`consumers.tutor.prompts`), hold in every subject, and
+and citing the notes are the system's rules (`variatio.prompts.tutor`), hold in every subject, and
 no file can switch them off.
 """
 

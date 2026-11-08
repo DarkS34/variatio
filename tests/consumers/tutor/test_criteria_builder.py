@@ -2,8 +2,8 @@
 
 import json
 
-from consumers.tutor import criteria_builder
-from consumers.tutor.passages import Passage
+from variatio.functionalities.tutor import criteria_builder
+from variatio.functionalities.tutor.passages import Passage
 
 from .conftest import SOURCES
 
@@ -63,7 +63,7 @@ def test_a_forbidden_term_is_a_name_as_code_writes_it_and_not_a_practice():
 def test_the_normative_paragraphs_lead_the_evidence(tutor_context):
     import re
 
-    from consumers.tutor import prompts
+    from variatio.prompts import tutor as prompts
 
     pattern = re.compile(prompts.of("es").NORMATIVE_PATTERN)
     evidence = criteria_builder._notes("Avanzado", ["Recursividad"], SOURCES, NOTES, pattern)

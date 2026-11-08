@@ -4,12 +4,12 @@ How a conversation is kept — one file per conversation under its author, writt
 a lock per file, `pending` naming the job a reply comes from — is shared with the free chat
 and lives once in `server.functionalities.shared.conversations.store`. Here are the tutor's folder, the role its
 replies are written under, and the state a new conversation starts with: the concept it
-stands on and the trail it walked (`consumers.tutor.focus`). The files did not move.
+stands on and the trail it walked (`variatio.functionalities.tutor.focus`). The files did not move.
 """
 
 from server.functionalities.shared.conversations import store as shared
 
-from .. import paths
+from variatio.functionalities.tutor import paths
 
 FORMAT = shared.FORMAT
 AUTHOR_PREFIX = shared.AUTHOR_PREFIX

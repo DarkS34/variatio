@@ -1,14 +1,14 @@
 """The tutor's settings: its stage after the study's, its lane drawn, its two prompt sets alike.
 
-Its boundary — `variatio` names it only in the registry, and `import consumers.tutor` stays a
+Its boundary — `variatio` names it only in the registry, and `import variatio.functionalities.tutor` stays a
 library — is `tests/consumers/test_consumers_boundary.py`'s, with every other function's.
 """
 
 import inspect
 
 from variatio.functionalities.chat import settings as chat_settings
-from consumers.tutor import prompts
-from consumers.tutor import settings as tutor_settings
+from variatio.prompts import tutor as prompts
+from variatio.functionalities.tutor import settings as tutor_settings
 from variatio.settings.registry import BY_KEY, EXTRA_MODEL_KEYS, PIPELINE, STAGES
 
 

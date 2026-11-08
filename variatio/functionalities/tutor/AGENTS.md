@@ -1,20 +1,23 @@
-# AGENTS.md — `consumers/tutor/` — the Socratic tutor
+# AGENTS.md — `variatio/functionalities/tutor/` — the Socratic tutor
 
 Read the root `AGENTS.md` first.
 The client is `web/src/consumers/tutor/AGENTS.md`.
 
-## `consumers/tutor/` — the Socratic tutor, beside the system it reads
+## The Socratic tutor, beside the system it reads
 
-Mounted like the evaluation: **`consumers.tutor` imports `variatio` and never the reverse** (the
-registry's optional import is the exception); `consumers/tutor/__init__.py` never imports
-`consumers/tutor/api/`, so `import consumers.tutor` stays free of FastAPI/SQLAlchemy.
-`server/app.py` calls `consumers.tutor.api.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
+Two halves since 2026-11-08: the library half is here, its prompts are
+`variatio/prompts/{es,en}/tutor.py` (resolved by `variatio/prompts/tutor.py`), and the server
+half (routes, jobs, store, count, activity, panel) is `server/functionalities/tutor/`. **The
+library half never imports the server**, nor another function (the settings registry's optional
+import is the exception), so `import variatio.functionalities.tutor` stays free of
+FastAPI/SQLAlchemy.
+`server/app.py` calls `server.functionalities.tutor.install(app)`, which registers the three jobs in `HANDLERS` (never in `JOB_LABELS`,
 which is what `POST /api/jobs` accepts: a turn comes through the tutor's routes or not at
 all), their models in `server/jobs/lanes.EXTRA_MODELS`, and mounts `/api/tutor` and the
 admin's read.
 
 - **A chat and a card.** The interaction is a plain conversation; the advantage is the CARD
-  (`consumers/tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
+  (`variatio/functionalities/tutor/card.py`) code writes for every reply from the artifacts: the focus concept with its
   definition and the graph's anchored passages, its direct prerequisites (TAKEN AS KNOWN: the
   reply neither quizzes the student on them nor steers towards them, and only tells a student
   who says one is missing to review it — decision of 2026-10-03, after a question about
@@ -27,7 +30,7 @@ admin's read.
   review it, never an explanation. The method's rule alone was not followed: measured on 8
   messages saying a prerequisite was missing, twice, 3 replies of 16 sent the student back
   before and 12 after; 2 messages that only name one, twice, were sent back 0 times of 4.
-- **A turn** (`consumers/tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
+- **A turn** (`variatio/functionalities/tutor/turn.py`): `screening.screen_message` (the guardrail alone — decision of
   2026-10-03; admissibility rules on commissions) → one query-side embedding (concepts and
   passages) and one document-side one (`classify.bank_match`) → kind → focus → card → reply →
   checks. Seven kinds (`theory exercise attempt solution social administrative off_topic`);
@@ -35,7 +38,7 @@ admin's read.
   (bank match ≥ `tutor.bank_match_threshold`, a conversation opened on a generated exercise),
   then one grammar call to the classify model, failing open to `theory`; the graph overrules
   an `off_topic` verdict on a message whose best concept clears `tutor.focus_threshold`.
-- **The concept map** (`consumers/tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
+- **The concept map** (`variatio/functionalities/tutor/concept_map.py`) is drawn by CODE, never by the model: one hop
   of the graph around a focus concept — prerequisites (`before`), dependents (`after`) and the
   other relations (`links`, with the graph's own label and direction) — capped (4/3/3, the
   closest by description vectors kept, the rest counted) and sent as data in the turn's
@@ -68,7 +71,7 @@ admin's read.
   message is answered as theory (`decided_by: "chosen"`), an administrative one stays.
   `GET /api/tutor/syllabus` (`auth.VIEW`) lists the units and their non-generic concepts. The state is the focus and the trail;
   older records may still carry a `verified` list, which nothing reads.
-- **The method is code, not only prompt.** `consumers/tutor/checks.py` verifies what a machine can: at
+- **The method is code, not only prompt.** `variatio/functionalities/tutor/checks.py` verifies what a machine can: at
   least one question and at most `max_questions`, at most `max_code_lines` in fences, no name
   of the student's exercise in its code that the card's notes do not use (`code_specific`,
   2026-10-15, a colleague's rule: a generic fragment of how a construct is used yes, code the
@@ -127,7 +130,7 @@ admin's read.
   author (the same 404 for others' and malformed ids); the installation administrator reads
   every account's, read-only, at `/api/admin/workspaces/{slug}/tutor`. A subject's teachers
   read what their students asked as figures and a weekly digest in paraphrase, never a
-  conversation (`consumers/tutor/api/activity.read`, `consumers/tutor/digest.py`; see *Class activity* in `server/AGENTS.md`). Every
+  conversation (`server/functionalities/tutor/activity.read`, `variatio/functionalities/tutor/digest.py`; see *Class activity* in `server/AGENTS.md`). Every
   reply keeps `sent_back` — the concept and the prerequisite it sent the student back to, or
   null — which the weekly counts read; an older turn says it only through its map's `review`. A file is written whole
   under a per-file lock; the job reads it under that lock too (the route holds it until
@@ -136,7 +139,7 @@ admin's read.
   `failed` and frees the conversation; «Pedir la respuesta otra vez» is `/retry`. A
   conversation starts titled by its first line; the first reply of a substantive kind (not
   social, blocked or a fixed text) asks the classify model for a short title once
-  (`consumers/tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
+  (`variatio/functionalities/tutor/title.py`), written with that reply (`titled: true`); a failure keeps the old title.
 - **The tutor speaks for itself** (user's decision of 2026-10-08): the card is what the tutor
   KNOWS, not what it cites. Its labels name no source («Definición», «Lo que sabes de él»,
   «Otras cosas que sabes»: with «En los apuntes» and then «Lo que el material dice» the
@@ -154,7 +157,7 @@ admin's read.
   installation's and a count of files could be reset by deleting a conversation. Only a turn
   that enters the queue counts, a reply asked again included. The refusal is a 429 with
   `X-Error-Code: tutor_daily_limit`, `Retry-After` and the wait in words. The client builds
-  its own sentence from the code and `Retry-After` (`consumers/tutor/limit.ts`; the server's only
+  its own sentence from the code and `Retry-After` (`web/src/consumers/tutor/limit.ts`; the server's only
   without the header) and shows it alone where the conversation reports a failure, never
   under «No se pudo enviar»; the next send or retry clears it.
 - **A conversation may open on an exercise** (`opened_from`): a generated one of the author's
@@ -169,7 +172,7 @@ admin's read.
   (409).
 - The store of conversations, the daily count, the quiet stream of a turn's job and the
   routes' common half are the free chat's too, kept once in `server/functionalities/shared/conversations/` (see
-  its `AGENTS.md`); `consumers/tutor/api/store.py` and `usage.py` bind them to the tutor's folder, role
+  its `AGENTS.md`); `server/functionalities/tutor/store.py` and `usage.py` bind them to the tutor's folder, role
   (`tutor`), initial state (`focus`, `trail`) and limit (`tutor_daily_limit`). The files did
   not move.
 - Logs in Spanish with `[tutor]`; never the message text.

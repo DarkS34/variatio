@@ -38,7 +38,7 @@ from variatio.prompts import wording as wording_sets
 
 from . import ADMINISTRATIVE, BLOCKED, OFF_TOPIC, SOCIAL, card, checks, classify, concept_map, focus
 from . import config as tutor_config
-from . import prompts as tutor_prompts_pkg
+from ...prompts import tutor as tutor_prompts_pkg
 from .criteria import Criteria
 from .passages import PassageIndex
 

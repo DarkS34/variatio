@@ -33,4 +33,4 @@ someone they trust (D-236: what the guardrail's «harm» covered before); the fo
 how formulas are written, and how code is when `has_code` finds code in the message, the history
 or the exercise. The chat is built on it and won 33–13 against its earlier prompt on the gold
 messages. The tutor writes the language into its own method and takes only `instruction_code`:
-the blocks lost against its method three times (see `consumers/tutor/AGENTS.md`).
+the blocks lost against its method three times (see `variatio/functionalities/tutor/AGENTS.md`).

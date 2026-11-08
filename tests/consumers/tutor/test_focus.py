@@ -1,6 +1,6 @@
 """The focus belongs to the conversation: set once, moved only by a clearly different message."""
 
-from consumers.tutor import focus
+from variatio.functionalities.tutor import focus
 
 ELIGIBLE = {"Variable", "Función", "Recursividad", "Memoización"}
 

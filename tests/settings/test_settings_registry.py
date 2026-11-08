@@ -91,7 +91,7 @@ def test_the_registry_holds_what_this_work_transcribed():
     # the temperatures that already were one call's (renamed, their names kept). 218 → 256
     # and 117 → 153 the same day: every stage's hard-coded knobs became settings.
     # 256 → 290 on 2026-10-03: the tutor's thirty-four settings, read through the registry's
-    # optional import of `consumers.tutor.settings`; none carries a name, so `BY_NAME` does not
+    # optional import of `variatio.functionalities.tutor.settings`; none carries a name, so `BY_NAME` does not
     # move.
     # 290 → 291 the same day: the tutor's daily limit of messages per account.
     # 305 → 315 on 2026-10-15: the free chat's ten (`variatio.functionalities.chat.settings`, its model, reasoning,

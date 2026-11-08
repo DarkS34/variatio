@@ -131,7 +131,7 @@ class's cut to the group's students, as for one student.
   kind (`on_subject` for theory/exercise/attempt/solution), the concept (chosen, else the
   reply's first focus) and `sent_back`; of an exercise, its date, type, level (the workspace's
   difficulty field, `prompts.difficulty`) and concepts, and whether a conversation was opened on
-  it. The tutor's half comes through `activity.TUTOR_READER`, which `consumers.tutor.api.install` sets
+  it. The tutor's half comes through `activity.TUTOR_READER`, which `server.functionalities.tutor.install` sets
   (the server never opens the tutor's files); every file goes through `activity.cached`, keyed
   by modification time and size.
 - **Findings** are typed by the server, each of one page (`area`: `tutor` — `asked`,
@@ -154,7 +154,7 @@ class's cut to the group's students, as for one student.
   three themes per concept, one sentence of 20 words at most, with the numbers of the messages
   they cover. **Paraphrase only**: a theme that copies more than 8 running words of a message,
   names a student (whole name, username, or a part of 4 letters or more), is too long or covers
-  nothing is asked again once with a note, then dropped (`consumers/tutor/digest.clean_themes`). Only
+  nothing is asked again once with a note, then dropped (`variatio/functionalities/tutor/digest.clean_themes`). Only
   step events cross the stream, the log says counts, and the file —
   `<workspace>/analytics/digest/<week>.json` — keeps the themes and REFERENCES to the messages
   (author, conversation, turn), never a message. One digest per week, of the class: a theme's

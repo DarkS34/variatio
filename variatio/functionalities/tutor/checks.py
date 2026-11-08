@@ -13,7 +13,7 @@ rule of the method, and a failure is a code the retry note turns back into the r
   exercise by changing one name is not (`code_specific`, the user's colleague's rule,
   2026-10-14). A line quoted from the student's own code is theirs, not the tutor's. No
   language is named here: the language's vocabulary comes from the notes of the card;
-- it draws no diagram: a concept map is read off the graph by code (`consumers.tutor.concept_map`),
+- it draws no diagram: a concept map is read off the graph by code (`variatio.functionalities.tutor.concept_map`),
   where a relation cannot be invented, and a model's own flowchart of an algorithm is its
   solution drawn (`diagram`). A formula between dollar signs is not code and is not counted;
 - it does not copy a passage of its own card for more than a few words running: the material

@@ -20,11 +20,11 @@ from server.db import session as db_session
 from server.db.models import Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
-from consumers.tutor import paths
-from consumers.tutor.api import admin as admin_module
-from consumers.tutor.api import jobs
-from consumers.tutor.api import router as router_module
-from consumers.tutor.api import store
+from variatio.functionalities.tutor import paths
+from server.functionalities.tutor import admin as admin_module
+from server.functionalities.tutor import jobs
+from server.functionalities.tutor import router as router_module
+from server.functionalities.tutor import store
 from variatio.utils.workspace import Workspace
 
 from ...conftest import CHAIN_GRAPH, PROFILE
@@ -307,7 +307,7 @@ def test_the_generic_job_route_does_not_take_the_tutor_s_jobs():
     from fastapi import FastAPI as App
 
     from server.jobs.catalogue import JOB_LABELS
-    from consumers.tutor.api import install
+    from server.functionalities.tutor import install
 
     install(App())
 
