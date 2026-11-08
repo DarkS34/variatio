@@ -19,17 +19,17 @@ from sqlalchemy.orm import Session as DbSession
 
 from server.functionalities.evaluation import store as evaluation_store
 
-from .. import auth
-from ..functionalities.shared import generations as generations_store
-from ..auth import queries
-from ..auth.rate_limit import locked_seconds, unlock
-from ..classroom import members
-from ..core import contexts, environment, installation, process
-from ..db import repository
-from ..db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, User
-from ..pipeline import readings
-from ..workspaces import trees as workspaces_trees
-from .shared import _lane_jobs
+from ... import auth
+from ...functionalities.shared import generations as generations_store
+from ...auth import queries
+from ...auth.rate_limit import locked_seconds, unlock
+from ...classroom import members
+from ...core import contexts, environment, installation, process
+from ...db import repository
+from ...db.models import EDITOR, ROLES, TEACHER, VIA_ADMIN, User
+from ...pipeline import readings
+from ...workspaces import trees as workspaces_trees
+from ..shared import _lane_jobs
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

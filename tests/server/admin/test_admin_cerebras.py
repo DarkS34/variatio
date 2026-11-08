@@ -3,7 +3,7 @@ import io
 
 import pytest
 
-from server.admin import engine as admin_engine
+from server.admin.routes import engine as admin_engine
 from variatio import config
 from variatio.inference import cerebras_budget
 

@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server.auth import passwords, queries, rate_limit, tokens
-from server.auth.router import AcceptBody, accept_invite
+from server.auth.routes.auth import AcceptBody, accept_invite
 from server.db.models import Base
 
 TOKEN = "un-enlace-para-el-nombre"

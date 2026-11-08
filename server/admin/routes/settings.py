@@ -18,8 +18,8 @@ from variatio.inference import cerebras
 from variatio.inference import InferenceError
 from variatio.settings import Impact, SettingError
 
-from .. import auth
-from ..core import contexts, process
+from ... import auth
+from ...core import contexts, process
 
 router = APIRouter(
     prefix="/api/admin/config", tags=["config"], dependencies=[Depends(auth.require_admin)]

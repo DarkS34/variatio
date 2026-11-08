@@ -10,9 +10,9 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import auth
-from ..auth import queries
-from ..db.models import ClassGroup, ClassLink, User
+from ... import auth
+from ...auth import queries
+from ...db.models import ClassGroup, ClassLink, User
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

@@ -7,9 +7,9 @@ closed (`core/routes/maintenance.py`).
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from .. import auth
-from ..core import maintenance
-from ..db.models import User
+from ... import auth
+from ...core import maintenance
+from ...db.models import User
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

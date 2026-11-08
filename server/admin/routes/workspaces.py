@@ -13,17 +13,17 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
-from .. import auth
-from ..functionalities.shared import generations as generations_store
-from ..auth import deps as auth_deps
-from ..auth import queries
-from ..exemplars_bank.exemplars_profile import edit as profile_edit
-from ..classroom import members
-from ..core import contexts, installation, process
-from ..db import repository
-from ..db.models import User
-from ..pipeline import approvals, storage
-from ..workspaces import trees as workspaces_trees
+from ... import auth
+from ...functionalities.shared import generations as generations_store
+from ...auth import deps as auth_deps
+from ...auth import queries
+from ...exemplars_bank.exemplars_profile import edit as profile_edit
+from ...classroom import members
+from ...core import contexts, installation, process
+from ...db import repository
+from ...db.models import User
+from ...pipeline import approvals, storage
+from ...workspaces import trees as workspaces_trees
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

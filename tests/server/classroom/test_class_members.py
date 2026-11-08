@@ -20,10 +20,10 @@ from sqlalchemy.pool import StaticPool
 
 from server import auth
 from server.functionalities.shared import generations as store
-from server.admin import accounts as admin_routes
-from server.admin import workspaces as admin_workspaces
+from server.admin.routes import accounts as admin_routes
+from server.admin.routes import workspaces as admin_workspaces
 from server.auth import links, queries
-from server.auth import router as auth_routes
+from server.auth.routes import auth as auth_routes
 from server.auth.deps import FORBIDDEN, Access
 from server.classroom import members
 from server.classroom.routes import groups as group_routes
@@ -36,7 +36,7 @@ from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
-from server.workspaces import router as workspace_routes
+from server.workspaces.routes import workspaces as workspace_routes
 from server.workspaces import trees
 
 

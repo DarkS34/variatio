@@ -24,11 +24,11 @@ from sqlalchemy.orm import Session as DbSession
 from variatio import config, inference
 from variatio.inference import cerebras_budget
 
-from .. import auth, jobs
-from ..core import contexts, csv_safe, process
-from ..core.tunnel import TunnelError
-from ..db import Base, database_url
-from ..db.models import User
+from ... import auth, jobs
+from ...core import contexts, csv_safe, process
+from ...core.tunnel import TunnelError
+from ...db import Base, database_url
+from ...db.models import User
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

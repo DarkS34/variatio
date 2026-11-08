@@ -3,7 +3,7 @@
 The area holds the sessions and the route guards (`deps.py`), the queries over accounts,
 invitations and memberships (`queries.py`), who may use each optional function
 (`features.py`), passwords, tokens, sealed links, mail and rate limits, and the routes of
-login, one's own account and password recovery (`router.py`). Who belongs to a subject and
+login, one's own account and password recovery (`routes/auth.py`). Who belongs to a subject and
 its groups is `server/classroom/`.
 
 `VIEW`, `EDIT` and `MANAGE` are the three membership levels as FastAPI dependencies, and

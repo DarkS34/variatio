@@ -17,13 +17,13 @@ from sqlalchemy.pool import StaticPool
 
 from server.auth import features, queries
 from server.auth.deps import require_feature
-from server.auth.router import _me
+from server.auth.routes.auth import _me
 from server.classroom import activity, curriculum
 from server.classroom.routes import uses as use_routes
 from server.classroom.routes.uses import UsesBody
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
-from server.jobs import router as jobs_routes
+from server.jobs.routes import jobs as jobs_routes
 from variatio.utils.workspace import Workspace
 from variatio.knowledge_graph.graph import KnowledgeGraph
 

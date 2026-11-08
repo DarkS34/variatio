@@ -7,21 +7,21 @@ after the generation's routes (its `/api/jobs/allowance` must come before the qu
 `/api/jobs/{job_id}`) and before the other functions'. Nothing else imports a route module.
 """
 
-from .admin import accounts, class_links, features, invites, queue, settings
-from .admin import engine as admin_engine
-from .admin import maintenance as admin_maintenance
-from .admin import workspaces as admin_workspaces
-from .auth import router as auth
+from .admin.routes import accounts, class_links, features, invites, queue, settings
+from .admin.routes import engine as admin_engine
+from .admin.routes import maintenance as admin_maintenance
+from .admin.routes import workspaces as admin_workspaces
+from .auth.routes import auth
 from .exemplars_bank.routes import bank, exercises
 from .exemplars_bank.exemplars_profile.routes import profile
 from .classroom.routes import activity, groups, links, people, uses
 from .core.routes import health, maintenance, stream
-from .jobs import router as jobs
+from .jobs.routes import jobs
 from .knowledge_graph.routes import kg
 from .knowledge_graph.routes import context
 from .pipeline.routes import pipeline
 from .documents.routes import raw
-from .workspaces import router as workspaces
+from .workspaces.routes import workspaces
 
 ROUTERS = [
     auth.router,

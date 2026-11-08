@@ -22,10 +22,10 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server import auth
-from server.admin import class_links as admin_class_links
+from server.admin.routes import class_links as admin_class_links
 from server.auth import links, passwords, queries, rate_limit
-from server.auth import router as auth_routes
-from server.auth.router import AcceptBody, JoinBody
+from server.auth.routes import auth as auth_routes
+from server.auth.routes.auth import AcceptBody, JoinBody
 from server.classroom.routes import links as link_routes
 from server.core import environment
 from server.db import repository

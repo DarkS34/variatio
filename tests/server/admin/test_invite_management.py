@@ -22,11 +22,11 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.admin import invites as admin_invites
-from server.admin.invites import InviteBody, InviteEditBody, InviteImportBody
+from server.admin.routes import invites as admin_invites
+from server.admin.routes.invites import InviteBody, InviteEditBody, InviteImportBody
 from server.auth import links, passwords, queries, rate_limit, tokens
 from server.auth.rate_limit import RateLimiter
-from server.auth.router import AcceptBody, accept_invite, preview_invite
+from server.auth.routes.auth import AcceptBody, accept_invite, preview_invite
 from server.core import environment
 from server.db import repository
 from server.db.models import Base, Invite

@@ -2,7 +2,7 @@
 
 Read the root `AGENTS.md` and `server/AGENTS.md` first.
 
-`router.py` is `/api/workspaces`: the selector's list, creating a subject, entering one,
+`routes/workspaces.py` is `/api/workspaces`: the selector's list, creating a subject, entering one,
 leaving it and deleting it. `trees.py` is a subject's tree on disk. Resolving a slug to its
 paths is `core/installation.py`, and a request's subject is resolved once, by
 `auth.require_member`.

@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from server.auth import mail, queries
-from server.auth.router import _me
+from server.auth.routes.auth import _me
 from server.core import environment
 from server.db.models import Base
 

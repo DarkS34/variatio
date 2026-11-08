@@ -18,15 +18,15 @@ from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 from starlette.responses import Response
 
-from server.admin import accounts as admin_routes
-from server.admin import invites as admin_invites
-from server.admin.accounts import ProfileBody
-from server.admin.invites import InviteBody, InviteEditBody
+from server.admin.routes import accounts as admin_routes
+from server.admin.routes import invites as admin_invites
+from server.admin.routes.accounts import ProfileBody
+from server.admin.routes.invites import InviteBody, InviteEditBody
 from server.auth import passwords, queries, rate_limit
-from server.auth.router import AcceptBody, accept_invite, preview_invite
+from server.auth.routes.auth import AcceptBody, accept_invite, preview_invite
 from server.db import repository
 from server.db.models import Base
-from server.workspaces import router as workspace_routes
+from server.workspaces.routes import workspaces as workspace_routes
 
 
 @pytest.fixture

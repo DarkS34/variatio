@@ -23,7 +23,7 @@ from server.auth.deps import Access
 from server.core import installation, process
 from server.db import repository
 from server.db.models import EDITOR, OWNER, VIEWER, Base
-from server.jobs import router as jobs_router
+from server.jobs.routes import jobs as jobs_router
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 

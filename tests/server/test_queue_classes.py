@@ -23,7 +23,7 @@ from server.auth.deps import Access
 from server.core import installation, process
 from server.db.models import EDITOR, VIEWER, Base
 from server.jobs import catalogue, lanes, priority
-from server.jobs import router as jobs_router
+from server.jobs.routes import jobs as jobs_router
 from server.jobs.bus import EventBus
 from server.jobs.runner import JobRunner
 from variatio import config

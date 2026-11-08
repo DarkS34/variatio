@@ -23,13 +23,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio import inference
 
-from .. import auth
-from ..auth import features
-from ..core import process
-from ..db.models import EDITOR, VIEWER
-from ..pipeline.gates import gate_error, transcription_error
-from . import lanes
-from .catalogue import ADMISSIONS, FEATURE_OF, JOB_LABELS, STUDENT_KINDS, Job
+from ... import auth
+from ...auth import features
+from ...core import process
+from ...db.models import EDITOR, VIEWER
+from ...pipeline.gates import gate_error, transcription_error
+from .. import lanes
+from ..catalogue import ADMISSIONS, FEATURE_OF, JOB_LABELS, STUDENT_KINDS, Job
 
 router = APIRouter(prefix="/api", tags=["jobs"], dependencies=[auth.VIEW])
 

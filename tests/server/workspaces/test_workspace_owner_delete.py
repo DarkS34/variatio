@@ -21,7 +21,7 @@ from server.core import installation, process
 from server.db import repository
 from server.db.models import Base, EDITOR, OWNER
 from server.workspaces import trees
-from server.workspaces.router import remove
+from server.workspaces.routes.workspaces import remove
 
 
 @pytest.fixture

@@ -28,16 +28,16 @@ from sqlalchemy.orm import Session as DbSession
 
 from variatio.utils import languages, locale
 
-from .. import auth
-from ..functionalities.shared import generations as generations_store
-from ..auth import deps as auth_deps
-from ..auth import queries
-from ..classroom import members
-from ..core import contexts, installation, process
-from ..db import repository
-from ..db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
-from ..pipeline import readings
-from . import trees
+from ... import auth
+from ...functionalities.shared import generations as generations_store
+from ...auth import deps as auth_deps
+from ...auth import queries
+from ...classroom import members
+from ...core import contexts, installation, process
+from ...db import repository
+from ...db.models import EDITOR, OWNER, TEACHER, VIA_OWNER, VIEWER, User, Workspace
+from ...pipeline import readings
+from .. import trees
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
 

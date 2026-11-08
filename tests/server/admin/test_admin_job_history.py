@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from server.admin import engine as admin_engine
+from server.admin.routes import engine as admin_engine
 from server.core import process
 
 

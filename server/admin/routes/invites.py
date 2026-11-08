@@ -14,12 +14,12 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
-from .. import auth
-from ..auth import features, links, queries
-from ..auth.rate_limit import throttle
-from ..core import environment
-from ..db import repository
-from ..db.models import EDITOR, ROLES, Invite, User, Workspace
+from ... import auth
+from ...auth import features, links, queries
+from ...auth.rate_limit import throttle
+from ...core import environment
+from ...db import repository
+from ...db.models import EDITOR, ROLES, Invite, User, Workspace
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

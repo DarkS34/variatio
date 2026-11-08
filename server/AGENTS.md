@@ -89,8 +89,9 @@ One line per rule of this folder. A number names an entry of the old register:
 `git show 6698e16:DECISIONS.md`.
 
 - D-227 — `server/` is organised by areas (`core/`, `auth/`, `workspaces/`, `pipeline/`,
-  `documents/`, `knowledge_graph/`, `exemplars_bank/`, `classroom/`, `admin/`), each with its routes, services,
-  `AGENTS.md` and tests in `tests/server/<area>/`; only `routing.py` imports a route module,
+  `documents/`, `knowledge_graph/`, `exemplars_bank/`, `classroom/`, `admin/`), each with its
+  routes in a `routes/` package (since 2026-11-08), services, `AGENTS.md` and tests in
+  `tests/server/<area>/`; only `routing.py` imports a route module,
   and the areas' layers are an import contract.
 - D-114, D-116 — Deleting workspaces/artifacts from the panel is the admin's and takes the
   files; `.history/` is never emptied by it. CORS off. D-115, a last-member deletion taking

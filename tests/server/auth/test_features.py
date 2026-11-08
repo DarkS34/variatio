@@ -18,13 +18,13 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server import auth
-from server.admin import features as admin_features
-from server.admin import invites as admin_invites
-from server.admin.features import FeatureBody
-from server.admin.invites import InviteBody, InviteEditBody
+from server.admin.routes import features as admin_features
+from server.admin.routes import invites as admin_invites
+from server.admin.routes.features import FeatureBody
+from server.admin.routes.invites import InviteBody, InviteEditBody
 from server.auth import features, passwords, queries, rate_limit
 from server.auth.deps import require_feature
-from server.auth.router import AcceptBody, _me, accept_invite
+from server.auth.routes.auth import AcceptBody, _me, accept_invite
 from server.db.models import Base
 
 IP = "10.0.0.3"
@@ -205,7 +205,7 @@ def test_the_routers_of_both_functions_declare_their_dependency():
 
 
 def test_the_generic_jobs_route_is_no_way_round_the_evaluation_s_switch(db):
-    from server.jobs import router as jobs_router
+    from server.jobs.routes import jobs as jobs_router
 
     ana = _user(db, "ana")
     access = SimpleNamespace(user=ana, ws=None, workspace=None, role="viewer")

@@ -5,9 +5,9 @@ Behind `require_admin`, under `/api/admin` like every route of the panel.
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from .. import auth
-from ..core import process
-from .shared import _lane_jobs
+from ... import auth
+from ...core import process
+from ..shared import _lane_jobs
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(auth.require_admin)]

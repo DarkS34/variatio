@@ -17,10 +17,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from starlette.requests import Request
 
-from server.admin import features as admin_features
-from server.admin.features import FeatureBody
+from server.admin.routes import features as admin_features
+from server.admin.routes.features import FeatureBody
 from server.auth import features, mail, passwords, queries, rate_limit
-from server.auth.router import _me
+from server.auth.routes.auth import _me
 from server.classroom.routes import links as link_routes
 from server.classroom.routes import people as member_routes
 from server.classroom.routes.links import InvitesBody

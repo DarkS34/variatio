@@ -8,7 +8,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from server.auth import passwords, queries, rate_limit, tokens
-from server.auth.router import (
+from server.auth.routes.auth import (
     Credentials,
     PasswordBody,
     ResetBody,

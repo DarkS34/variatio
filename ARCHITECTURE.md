@@ -117,7 +117,7 @@ variatio/       the library          imports neither
   neither FastAPI nor SQLAlchemy.
 - **`import variatio` imports neither `server` nor Docling nor torch**, and it does not reach
   `inference/` (measured: 116 ms). `tests/boundaries/test_light_import.py`.
-- **Only `server/routing.py` imports a route module** (an area's `router.py` or `routes/`, and
+- **Only `server/routing.py` imports a route module** (an area's `routes/`, and
   the panel's modules), and the route modules do not import each other. Neither contract has
   an exception: a function reads an area's services, never its routes.
 - `import server` works with no database (`server/__init__.py`).
@@ -169,7 +169,7 @@ db/                                       models, session, mirror
 ```
 
 - The order is an import contract («The server's layers»). A route module is a leaf wherever
-  it lives (an area's `router.py` or `routes/`, the panel's modules,
+  it lives (an area's `routes/`, the panel's among them,
   `functionalities/shared/conversations/routes.py`), and so are the construction's jobs (`pipeline/jobs.py`): what
   they import is out of the order. Every module of the server is in it (D-227).
 
@@ -203,15 +203,15 @@ One line per folder: what it holds, and the file to open first.
 |---|---|---|
 | `server/` (root) | `app.py` (composition root), `routing.py` (the order the areas' routes are mounted in; `app.py` mounts the generation's before them and the other functions' after them) | `routing.py`, then `app.py` |
 | `core/` | what every area stands on: the process's live pieces (`process.py`: the bus, the queue, the tunnel, the downloads), the warm contexts, resolving a subject, the environment, the tunnel, model downloads, the maintenance door, the middleware, days and weeks, CSV cells; `routes/` holds `/api/health`, `/api/maintenance` and the WebSocket stream | `core/__init__.py` |
-| `admin/` | the administration panel, one route module per tab or section: accounts and the front page, invitations, class links, subjects, the queue, the door, the optional functions, the engine, the settings | `accounts.py` |
+| `admin/` | the administration panel, one route module per tab or section, in `routes/`: accounts and the front page, invitations, class links, subjects, the queue, the door, the optional functions, the engine, the settings | `routes/accounts.py` |
 | `classroom/` | «Clase»: the people of a subject (`members.py`), its groups (`groups.py`), the course's progress (`curriculum.py`), the activity (`activity.py`); `routes/` holds `/api/members` (people, groups, uses, links) and `/api/activity` | `members.py` |
 | `exemplars_bank/` | step 3: editing the bank (`edit.py`), the class's reading (`reading.py`), its marks (`marks.py`), the tagger (`tagging.py`), the types (`exemplars_profile/`, with `/api/profile` in its `routes/`); `routes/` holds `/api/bank`, `/api/exercises` and `/api/profile` | `edit.py` |
 | `knowledge_graph/` | step 2: the graph as the canvas reads it (`view.py`), its edits (`edit.py`), the label review's record (`taggability.py`), the subject's context (`context_edit.py`), and `routes/`: `/api/kg` (`kg.py`) and `/api/context` (`context.py`) | `edit.py` |
 | `documents/` | step 1: the slots' documents (`documents.py`), their originals (`originals.py`) and `/api/raw` (`routes/raw.py`) | `documents.py` |
-| `workspaces/` | the subjects of an account: `router.py` (`/api/workspaces`) and `trees.py` (a subject's tree on disk) | `router.py` |
-| `auth/` | identity and permissions: route guards (`deps.py`), the account queries (`queries.py`), the optional functions (`features.py`), passwords, tokens, sealed links, mail, rate limits; `router.py` is login, one's account and password recovery | `deps.py` |
+| `workspaces/` | the subjects of an account: `routes/workspaces.py` (`/api/workspaces`) and `trees.py` (a subject's tree on disk) | `routes/workspaces.py` |
+| `auth/` | identity and permissions: route guards (`deps.py`), the account queries (`queries.py`), the optional functions (`features.py`), passwords, tokens, sealed links, mail, rate limits; `routes/auth.py` is login, one's account and password recovery | `deps.py` |
 | `db/` | ORM models, session, schema check, mirror, import/export | `models.py` |
-| `jobs/` | the queue: catalogue, runner, lanes, priority, bus, build worker, and its routes (`router.py`) | `catalogue.py`, then `runner.py` |
+| `jobs/` | the queue: catalogue, runner, lanes, priority, bus, build worker, and its routes (`routes/jobs.py`) | `catalogue.py`, then `runner.py` |
 | `pipeline/` | the chain of the three steps: approvals, artifact writes, the label review, the context, what a job chains and what must be settled before it runs, the construction's jobs (`jobs.py`); `routes/` holds `/api/pipeline` and `/api/context` | `approvals.py`, then `chain.py` |
 | `functionalities/generation/` | the commission: its routes, the `generate` job and its bounds | `__init__.py` |
 | `functionalities/chat/` | the free chat's server half: routes, turn job, store, daily count | `router.py` |
@@ -259,7 +259,7 @@ there.
 | Tutor | `consumers/tutor/` | `functionalities/tutor/`, `functionalities/shared/conversations/` | `functionalities/tutor/`, the embedder, and the guardrail on the student's message (`functionalities/tutor/checks.py` checks the reply) | `tutor_turn`, `tutor_criteria`, `activity_digest` | `tests/functionalities/tutor/` |
 | Free chat | `consumers/chat/` | `functionalities/chat/`, `functionalities/shared/conversations/` | `functionalities/chat/` and the guardrail on the student's message | `chat_turn` | `tests/functionalities/chat/` |
 | Evaluation | `consumers/evaluation/` | `functionalities/evaluation/` | `functionalities/evaluation/`, and the whole pipeline as the `system` arm | `evaluate` | `tests/functionalities/evaluation/` |
-| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `router.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
+| Accounts and subjects | `features/auth/`, `features/account/`, `features/workspaces/` | `auth/` (its `routes/auth.py`, `queries.py` and `features.py`), `workspaces/`, `core/installation.py`, `core/environment.py` | — | — | `tests/server/auth/`, `tests/server/workspaces/`, `tests/server/admin/test_invite_management.py` |
 | Administration | `features/admin/`, `features/maintenance/` | `admin/`, `core/routes/maintenance.py`, `core/routes/health.py` | `settings/` | — | `tests/server/admin/`, `tests/settings/` |
 | Landing and demo | `landing/` | — | — | simulated in `landing/demo/jobs.ts` | `landing/**/*.test.ts` |
 

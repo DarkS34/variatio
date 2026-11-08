@@ -69,7 +69,7 @@ PRIVATE_KINDS: set[str] = {"generate", "evaluate", TAG_ITEM}
 
 # The kinds a student of the subject (`viewer`) may queue: a commission, a comparison and —
 # added by `server.functionalities.tutor.install` — a tutor's turn, each behind its own permission besides.
-# Every other kind is the construction's and takes a teacher (`jobs/router.submit`).
+# Every other kind is the construction's and takes a teacher (`jobs/routes/jobs.submit`).
 STUDENT_KINDS: set[str] = {"generate", "evaluate"}
 
 # The queue's three classes (`jobs/priority.py`), by how long a kind lasts and who waits for
