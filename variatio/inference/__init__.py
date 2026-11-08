@@ -3,157 +3,16 @@
 `config.INFERENCE_ENGINE` picks the implementation, and no business logic ever reaches an
 SDK directly. The engines are their own modules: `ollama.py` (the local one) and
 `cerebras.py` (the hybrid one, which keeps an Ollama engine for what it does not serve).
-Both import this module's types, so it reaches them lazily, from `_engine_class`.
+Both import this module's types, so it reaches them lazily, from `_engine_class`. The types
+live in `types.py` and the `<think>` split in `thinking.py`; this module re-exports both.
 """
-
-from collections.abc import Callable
-from dataclasses import dataclass
 
 from loguru import logger
 
 from .. import config
 from ..utils import progress
-
-TokenSink = Callable[[str, str], None]
-ProgressSink = Callable[[int, int], None]
-
-THINK_OPEN = "<think>"
-THINK_CLOSE = "</think>"
-_MAX_TAG = max(len(THINK_OPEN), len(THINK_CLOSE))
-
-
-class InferenceError(Exception):
-    """Anything the engine could not do, phrased for the panel rather than for a log."""
-
-
-@dataclass
-class GenerationResponse:
-    """One answer, with the model's deliberation kept out of it.
-
-    `truncated` says the engine stopped for want of output budget rather than because the
-    model finished — Ollama's `done_reason == "length"`, Cerebras' `finish_reason ==
-    "length"`. It is the engine's own reading and not a heuristic, which is what lets a
-    caller treat a cut answer as a failure instead of as a short one.
-
-    `loop` is the unit the answer was repeating when the engine stopped reading it — set
-    only for a caller that asked with `stop_on_loop`, and the reason `response` ends where
-    it does: what the model wrote up to the loop is there, the repetitions are not.
-    """
-
-    response: str
-    thinking: str | None = None
-    truncated: bool = False
-    loop: str | None = None
-
-
-@dataclass(frozen=True)
-class Sampling:
-    """How the engine draws each token: a temperature, and a top-k and top-p when set.
-
-    An empty top-k or top-p is not sent, and the model's own value decides — its Modelfile
-    on Ollama, the provider's default on Cerebras.
-    """
-
-    temperature: float
-    top_k: int | None = None
-    top_p: float | None = None
-
-
-def split_thinking(
-    text: str,
-    sdk_thinking: str | None = None,
-    truncated: bool = False,
-    loop: str | None = None,
-) -> GenerationResponse:
-    """Same split as the streaming path, for a response that arrived in one piece."""
-    splitter = ThinkingSplitter()
-    answer: list[str] = []
-    thinking: list[str] = [sdk_thinking.strip()] if (sdk_thinking or "").strip() else []
-    
-    for part, channel in [*splitter.feed(text or ""), *splitter.flush()]:
-        (thinking if channel == "thinking" else answer).append(part)
-    
-    return GenerationResponse(
-        response="".join(answer).strip(),
-        thinking="\n\n".join(p.strip() for p in thinking if p.strip()) or None,
-        truncated=truncated,
-        loop=loop,
-    )
-
-
-class ThinkingSplitter:
-    """Routes `<think>…</think>` out of the answer, chunk by chunk.
-
-    Some models report their reasoning in the SDK's own `thinking` field; others just
-    print the tags inline in the response. Without this the inline ones flood the answer
-    pane with their scratchpad and the final parse has to guess which of the JSON blobs
-    they wrote along the way was the actual answer.
-
-    Chunks arrive at arbitrary boundaries, so a tag can be cut in half between two of
-    them: whatever trailing text could still grow into a tag is held back until the next
-    chunk decides it.
-    """
-
-    def __init__(self) -> None:
-        """Start outside a think block, holding nothing back."""
-        self._inside = False
-        self._pending = ""
-
-    @property
-    def inside(self) -> bool:
-        """True when the stream ended (or paused) in the middle of a think block."""
-        return self._inside
-
-    def feed(self, text: str) -> list[tuple[str, str]]:
-        """`(text, channel)` pairs for one chunk, with the tags themselves removed."""
-        if not text:
-            return []
-
-        out: list[tuple[str, str]] = []
-        buffer = self._pending + text
-        self._pending = ""
-
-        while buffer:
-            tag = THINK_CLOSE if self._inside else THINK_OPEN
-            index = buffer.lower().find(tag)
-            if index < 0:
-                break
-            if index:
-                out.append((buffer[:index], self._channel))
-            buffer = buffer[index + len(tag) :]
-            self._inside = not self._inside
-
-        held = _partial_tag_length(buffer)
-        if held:
-            self._pending = buffer[len(buffer) - held :]
-            buffer = buffer[: len(buffer) - held]
-        if buffer:
-            out.append((buffer, self._channel))
-        return out
-
-    @property
-    def _channel(self) -> str:
-        """Which channel the text being emitted right now belongs to."""
-        return "thinking" if self._inside else "answer"
-
-    def flush(self) -> list[tuple[str, str]]:
-        """Whatever was held back waiting for a tag that never arrived."""
-        if not self._pending:
-            return []
-        out = [(self._pending, self._channel)]
-        self._pending = ""
-        return out
-
-
-def _partial_tag_length(buffer: str) -> int:
-    """Length of the trailing slice that could still turn out to be a think tag."""
-    lowered = buffer.lower()
-    for size in range(min(len(buffer), _MAX_TAG - 1), 0, -1):
-        suffix = lowered[-size:]
-        if THINK_OPEN.startswith(suffix) or THINK_CLOSE.startswith(suffix):
-            return size
-    return 0
-
+from .thinking import ThinkingSplitter, split_thinking
+from .types import GenerationResponse, InferenceError, ProgressSink, Sampling, TokenSink
 
 _ENGINE_NAMES = ("ollama", "cerebras+ollama")
 
