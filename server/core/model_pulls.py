@@ -10,6 +10,7 @@ import time
 from loguru import logger
 
 from variatio import inference
+from variatio.inference.interface import Engine
 
 KEEP_FINISHED = 10
 
@@ -43,8 +44,9 @@ class PullTracker:
             }
             self._pulls[model] = entry
             self._prune()
+        # The download thread starts with an empty context, so it takes the request's engine.
         threading.Thread(
-            target=self._run, args=(model,), name=f"pull-{model}", daemon=True
+            target=self._run, args=(model, inference.engine()), name=f"pull-{model}", daemon=True
         ).start()
         return dict(entry)
 
@@ -68,7 +70,7 @@ class PullTracker:
             entry = self._pulls.get(model)
             return entry is not None and entry["status"] == "running"
 
-    def _run(self, model: str) -> None:
+    def _run(self, model: str, engine: Engine) -> None:
         """Download one model, recording a failure as the pull's outcome rather than raising."""
 
         def on_progress(completed: int, total: int) -> None:
@@ -79,7 +81,7 @@ class PullTracker:
                 entry["total"] = total
 
         try:
-            inference.pull_model(model, on_progress)
+            engine.pull(model, on_progress)
             status, error = "succeeded", None
         except Exception as exc:  # noqa: BLE001 - the failure is the record, not a crash
             status, error = "failed", str(exc)

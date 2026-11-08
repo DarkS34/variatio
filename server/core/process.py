@@ -9,12 +9,17 @@ hold different lanes and run at once. The queue knows nothing about the chain, w
 NOT one of these: it is one per workspace, built where it is used.
 """
 
+from variatio.inference.engines import EngineSet
+
 from ..jobs import HANDLERS, EventBus, IdleUnloader, JobRunner
 from .model_pulls import PullTracker
 from .tunnel import SshTunnel
 
 bus = EventBus()
-runner = JobRunner(bus, HANDLERS)
+# The engines this process serves with. It builds none until one is asked for: a job fixes its
+# own (`runner._execute`), a request the installation's default (`middleware.EngineContext`).
+engines = EngineSet()
+runner = JobRunner(bus, HANDLERS, engines)
 # Reads every lane of the queue's clock and releases the GPU after half an hour idle.
 idle_unloader = IdleUnloader(runner)
 # The port forward to the GPU box, and the model downloads — network and disk, never the

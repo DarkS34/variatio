@@ -8,6 +8,7 @@ raises exceptions and NEVER writes to disk or knows about a database. Persisting
 import random
 import time
 import uuid
+import contextvars
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 
@@ -89,7 +90,12 @@ def evaluate(
     # execution order would tell the evaluator which card each arm produced.
     local = [arm for arm in order if arm != "naive"]
     with ThreadPoolExecutor(max_workers=1) as pool:
-        external = pool.submit(_safe_run, "naive", commission, context) if "naive" in order else None
+        # A pool thread starts with an empty context: without the copy it has no engine.
+        external = (
+            pool.submit(contextvars.copy_context().run, _safe_run, "naive", commission, context)
+            if "naive" in order
+            else None
+        )
 
         with progress.step("eval.arms", "Preparando las dos propuestas", total=len(order)) as reporter:
             done = 0

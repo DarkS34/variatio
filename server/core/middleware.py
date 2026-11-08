@@ -12,7 +12,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
-from . import environment
+from variatio import inference
+from variatio.inference import InferenceError
+
+from . import environment, process
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
@@ -146,3 +149,31 @@ def _refused() -> JSONResponse:
     return JSONResponse(
         {"detail": "Petición rechazada: origen distinto al del servidor."}, status_code=403
     )
+
+
+class EngineContext:
+    """Fix the installation's default engine for every HTTP request, as a job fixes its own.
+
+    The routes that ask the engine something — health, the panel, the checks before a job
+    is queued — read the context's engine through the boundary. Plain ASGI rather than
+    `BaseHTTPMiddleware`: the context set here is the request task's, and AnyIO copies it
+    into the worker thread of a sync route. An engine that cannot be built (an unknown
+    name) leaves the request without one, and only what asks the engine fails.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap `app`."""
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        """Run the request with the default engine fixed, when it builds."""
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        try:
+            engine = process.engines.default()
+        except InferenceError:
+            await self.app(scope, receive, send)
+            return
+        with inference.using(engine):
+            await self.app(scope, receive, send)

@@ -207,7 +207,7 @@ def release(admin: User = Depends(auth.require_admin)) -> dict:
         )
     if not inference.is_available():
         raise HTTPException(503, "El motor no responde: no hay nada que descargar.")
-    return {"released": jobs.release_gpu(f"a petición de «{admin.username}»")}
+    return {"released": jobs.release_gpu(process.engines, f"a petición de «{admin.username}»")}
 
 
 # MODELS ON DISK --------------------------------------------------------------------------

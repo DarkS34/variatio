@@ -8,11 +8,14 @@ embedder and the guardrail never reserve anything, whatever they are routed to: 
 small, co-resident and not what a wait is ever about.
 """
 
+from contextlib import contextmanager
+
 import pytest
 
 from server.jobs import lanes
 from server.jobs.catalogue import JOB_LABELS
 from variatio import config, inference
+from variatio.inference.engines import EngineSet
 from variatio.settings import derived
 
 # `VARIANT_GENERATION_LLM` is derived rather than declared since the commission started
@@ -32,9 +35,8 @@ COMPONENT_KINDS = tuple(k for k in JOB_LABELS if k not in BUILD_KINDS)
 @pytest.fixture
 def ollama(monkeypatch):
     monkeypatch.setattr(config, "INFERENCE_ENGINE", "ollama")
-    inference.reset_engine()
-    yield
-    inference.reset_engine()
+    with _on_the_default_engine():
+        yield
 
 
 # One model on Cerebras and everything else on Ollama, with distinct names per phase so
@@ -48,9 +50,17 @@ def hybrid(monkeypatch):
     monkeypatch.setattr(config, "DESCRIPTION_GENERATION_LLM", "local-describe")
     monkeypatch.setattr(config, "TRANSCRIBE_MODEL", "remoto")
     monkeypatch.setattr(config, "TRANSCRIBE_SEAM_MODEL", "remoto")
-    inference.reset_engine()
-    yield
-    inference.reset_engine()
+    with _on_the_default_engine():
+        yield
+
+
+@contextmanager
+def _on_the_default_engine():
+    """Fix the default engine the settings above name, as the runner does around a submit."""
+    engines = EngineSet()
+    with inference.using(engines.default()):
+        yield
+    engines.close_all()
 
 
 def test_one_engine_means_one_lane_for_every_component(ollama):
@@ -82,8 +92,7 @@ def test_the_embedder_and_the_guardrail_never_reserve_a_lane(monkeypatch):
     monkeypatch.setattr(config, "EMBEDDING_LLM", "emb")
     monkeypatch.setattr(config, "GUARDRAIL_LLM", "guard")
     monkeypatch.setattr(config, "CEREBRAS_MODELS", ["emb", "guard"])
-    inference.reset_engine()
-    try:
+    with _on_the_default_engine():
         for kind in COMPONENT_KINDS:
             assert lanes.REMOTE not in lanes.backends_for(kind), kind
             assert "guard" not in lanes.models_for(kind), kind
@@ -91,8 +100,6 @@ def test_the_embedder_and_the_guardrail_never_reserve_a_lane(monkeypatch):
         # drops it, so what would otherwise be a remote reservation is not one.
         assert "emb" not in lanes.models_for("build_kg")
         assert lanes.REMOTE not in lanes.backends_for("build_kg")
-    finally:
-        inference.reset_engine()
 
 
 def test_a_job_that_calls_no_model_reserves_nothing(ollama):

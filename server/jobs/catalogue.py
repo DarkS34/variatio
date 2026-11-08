@@ -120,6 +120,8 @@ class Job:
     workspace: str = ""
     user_id: int | None = None
     user_name: str | None = None
+    # The `engine.name` of the engine the job runs on, stamped by the runner at submission.
+    engine: str = ""
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     status: str = "queued"
     created_at: float = field(default_factory=time.time)

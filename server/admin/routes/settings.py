@@ -85,7 +85,7 @@ def _act(impacts: set) -> list[str]:
     """Invalidate what the changed settings' `Impact` says has to go, and say what went."""
     done: list[str] = []
     if Impact.ENGINE in impacts:
-        inference.reset_engine()
+        process.engines.close_all()
         done.append("motor de inferencia reiniciado")
     if impacts & {Impact.CONTEXTS, Impact.REINDEX, Impact.ENGINE}:
         count = contexts.invalidate_all("configuración cambiada")

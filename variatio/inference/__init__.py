@@ -1,22 +1,44 @@
 """The engine boundary: every model call this system makes goes through here.
 
-`config.INFERENCE_ENGINE` picks the implementation, and no business logic ever reaches an
-SDK directly. The engines are their own packages: `ollama/` (the local one) and
-`cerebras_ollama/` (the hybrid one, which keeps an Ollama engine for what it does not serve).
-Both import this module's types, so it reaches them lazily, from `_build_engine`. The types
-live in `types.py` and the `<think>` split in `thinking.py`; this module re-exports both.
+No business logic ever reaches an SDK directly. The engines are their own packages:
+`ollama/` (the local one) and `cerebras_ollama/` (the hybrid one, which keeps an Ollama engine
+for what it does not serve); `interface.py` is what both implement.
+
+THIS MODULE HOLDS NO ENGINE. The owner of a process builds an `engines.EngineSet` and fixes
+the engine of each piece of work with `using(engine)`, a context variable: per thread, like
+`progress` and `usage`. Every function below asks the engine of the current context, and
+raises when there is none — the library never picks an engine on its own. A thread started
+by the work (a pool) takes the context along with `contextvars.copy_context()`.
+
+The types live in `types.py` and the `<think>` split in `thinking.py`; this module
+re-exports both.
 """
+
+import contextvars
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from loguru import logger
 
 from .. import config
 from ..utils import progress
 from .thinking import ThinkingSplitter, split_thinking
+from .interface import Engine
 from .types import GenerationResponse, InferenceError, ProgressSink, Sampling, TokenSink
 
-_ENGINE_NAMES = ("ollama", "cerebras+ollama")
+_current: contextvars.ContextVar[Engine | None] = contextvars.ContextVar(
+    "inference_engine", default=None
+)
 
-_engine = None
+
+@contextmanager
+def using(engine: Engine) -> Iterator[Engine]:
+    """Fix `engine` as the one every call of this context makes, for the block."""
+    token = _current.set(engine)
+    try:
+        yield engine
+    finally:
+        _current.reset(token)
 
 
 def generate(
@@ -116,54 +138,19 @@ def supports_vision(model: str) -> bool:
     return engine().supports_vision(model)
 
 
-def engine():
-    """The configured engine, built once and kept until something invalidates it."""
-    global _engine
-    if _engine is None:
-        built = _build_engine(config.INFERENCE_ENGINE)
-        if built is None:
-            raise InferenceError(
-                f"Unknown inference engine '{config.INFERENCE_ENGINE}'. "
-                f"Available: {', '.join(_ENGINE_NAMES)}"
-            )
-        _engine = built
-    return _engine
-
-
-def _build_engine(name: str):
-    """Build the engine called `name` from its settings, or return None when nothing answers to it.
-
-    The engines live in their own packages and import this one, so they are reached here
-    lazily rather than at import time. The hybrid's ledger is the account's
-    (`budget.account_ledger`).
-    """
-    from .ollama import OllamaEngine
-
-    if name == OllamaEngine.name:
-        return OllamaEngine(config.OLLAMA_HOST)
-    if name == "cerebras+ollama":
-        from .cerebras_ollama import HybridEngine
-        from .cerebras_ollama.budget import account_ledger
-        from .cerebras_ollama.remote import CerebrasEngine
-
-        remote = CerebrasEngine(config.CEREBRAS_BASE_URL, config.CEREBRAS_API_KEY, account_ledger())
-        return HybridEngine(OllamaEngine(config.OLLAMA_HOST), remote)
-    return None
+def engine() -> Engine:
+    """The engine fixed for the current context; raises when there is none."""
+    current = _current.get()
+    if current is None:
+        raise InferenceError(
+            "No hay motor de inferencia activo: el proceso no fijó ninguno para este trabajo"
+        )
+    return current
 
 
 def engine_name() -> str:
-    """Which engine the configuration currently names."""
-    return config.INFERENCE_ENGINE
-
-
-def reset_engine() -> None:
-    """Drop the cached engine.
-
-    It holds the host it was built with, so a change to `INFERENCE_ENGINE` or
-    `OLLAMA_HOST` is only real once this has run.
-    """
-    global _engine
-    _engine = None
+    """The `engine.name` value of the engine fixed for the current context."""
+    return engine().name
 
 
 def is_available() -> bool:
@@ -172,7 +159,7 @@ def is_available() -> bool:
 
 
 def require_engine() -> None:
-    """Raise unless the configured inference engine answers.
+    """Raise unless the engine of the current context answers.
 
     Every entry point that talks to a model calls this before its first phase; the entry points
     never do. On the hybrid engine it is the LOCAL half that is checked, which is what this

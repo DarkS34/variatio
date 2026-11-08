@@ -22,7 +22,9 @@ from collections.abc import Callable
 from loguru import logger
 
 from variatio.utils import progress
+from variatio import inference
 from variatio.inference import usage
+from variatio.inference.engines import EngineSet
 
 from . import joblog, lanes, priority, usage_log
 from .bus import EventBus
@@ -100,10 +102,17 @@ class JobControl:
 class JobRunner:
     """The queue itself: one dispatch thread, one worker thread per running job."""
 
-    def __init__(self, bus: EventBus, handlers: dict[str, Handler]):
-        """Build an idle runner; `start()` is what puts the dispatch thread on the road."""
+    def __init__(
+        self, bus: EventBus, handlers: dict[str, Handler], engines: EngineSet | None = None
+    ):
+        """Build an idle runner; `start()` is what puts the dispatch thread on the road.
+
+        `engines` is the process's; a runner built without one (a test's) owns a set of its
+        own, which builds nothing until a job asks for an engine.
+        """
         self.bus = bus
         self.handlers = handlers
+        self.engines = engines if engines is not None else EngineSet()
         # Enqueued by itself when a job finishes well. The queue stays generic: who follows
         # whom is `pipeline/chain.py`'s, wired by `server/app.py` (`chain.wire`).
         self.after_success: Callable[["JobRunner", Job], None] | None = None
@@ -169,8 +178,12 @@ class JobRunner:
         )
         job.created_at = self._clock()
         # Resolved on submit rather than on dispatch: the engine can be switched from the
-        # panel mid-queue, and a job waits for the lanes it was accepted against.
-        job.backends = sorted(lanes.backends_for(kind, job.params))
+        # panel mid-queue, and a job runs on the engine and waits for the lanes it was
+        # accepted against.
+        engine = self.engines.default()
+        job.engine = engine.name
+        with inference.using(engine):
+            job.backends = sorted(lanes.backends_for(kind, job.params))
         with self._lock:
             self._jobs[job.id] = job
             self._controls[job.id] = JobControl(self.bus, job)
@@ -420,7 +433,7 @@ class JobRunner:
         joblog.attach(job.workspace)
         token = progress.set_emitter(control)
         # What the job's model calls cost, whatever its end: a failed or stopped job spent too.
-        with usage.metering() as meter:
+        with usage.metering() as meter, inference.using(self.engines.get(job.engine)):
             try:
                 result = self.handlers[job.kind](job, control)
                 if control.should_cancel():

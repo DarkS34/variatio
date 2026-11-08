@@ -39,10 +39,9 @@ def main(argv: list[str] | None = None) -> int:
 
     from loguru import logger
 
-    from variatio import api
     from variatio import inference
-    from variatio.utils import paths, progress
-    from variatio.inference import usage
+    from variatio.inference.engines import EngineSet
+    from variatio.utils import progress
 
     from . import joblog
 
@@ -58,6 +57,23 @@ def main(argv: list[str] | None = None) -> int:
     joblog.attach(args.workspace)
 
     progress.set_emitter(emitter)
+    engines = EngineSet()
+    try:
+        with inference.using(engines.default()):
+            return _build(args, emitter)
+    finally:
+        engines.close_all()
+
+
+def _build(args: argparse.Namespace, emitter: "StdoutEmitter") -> int:
+    """Build the artifact on the engine fixed for this process; return the exit code."""
+    from loguru import logger
+
+    from variatio import api
+    from variatio import inference
+    from variatio.utils import paths, progress
+    from variatio.inference import usage
+
     try:
         inference.require_engine()
         keep = json.loads(Path(args.keep).read_text(encoding="utf-8")) if args.keep else None

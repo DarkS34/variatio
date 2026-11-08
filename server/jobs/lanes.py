@@ -119,10 +119,11 @@ def backends_for(kind: str, params: dict | None = None) -> frozenset[str]:
 
 
 def _remote_models() -> frozenset[str]:
-    """Return the models served remotely, and nothing at all if the engine will not build.
+    """Return the models the current context's engine serves remotely; nothing if it has none.
 
-    Asked of the engine rather than compared against `config.INFERENCE_ENGINE`: plain Ollama
-    answers with nothing remote, so one reading covers both engines.
+    The runner fixes the job's engine around the call (`runner.submit`), and a generation
+    job reads it from its own context. Asked of the engine rather than compared against its
+    name: plain Ollama answers with nothing remote, so one reading covers both engines.
     """
     try:
         return inference.remote_models()

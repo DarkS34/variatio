@@ -20,7 +20,8 @@ import threading
 
 from loguru import logger
 
-from variatio import config, inference
+from variatio import config
+from variatio.inference.engines import EngineSet
 
 from .runner import JobRunner
 
@@ -72,14 +73,19 @@ class IdleUnloader:
             return
 
         self._released = True
-        release_gpu(f"tras {int(idle // 60)} minuto(s) de inactividad")
+        release_gpu(self.runner.engines, f"tras {int(idle // 60)} minuto(s) de inactividad")
 
 
-def release_gpu(reason: str) -> list[str]:
-    """Unload every resident model and return their names; empty when the engine is away."""
-    if not inference.is_available():
-        return []
-    released = inference.unload_all()
+def release_gpu(engines: EngineSet, reason: str) -> list[str]:
+    """Unload every resident model of `engines` and return their names.
+
+    Residency is the local servers': one `OllamaEngine` per host, whichever engines share it.
+    An engine that is away releases nothing.
+    """
+    released: list[str] = []
+    for local in engines.local_engines():
+        if local.is_available():
+            released.extend(local.unload_all())
     if released:
         logger.info(
             f"{len(released)} modelo(s) descargados de la GPU {reason}: {', '.join(released)}"

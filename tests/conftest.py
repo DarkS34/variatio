@@ -3,9 +3,10 @@ import os
 
 import pytest
 
-from variatio import prompts
+from variatio import inference, prompts
 from variatio.exemplars_bank.exemplars_profile.profile import ExemplarsProfile
 from variatio.functionalities.shared import screening
+from variatio.inference.engines import EngineSet
 from variatio.knowledge_graph.context import ContentContext
 from variatio.knowledge_graph.graph import KnowledgeGraph
 
@@ -48,6 +49,19 @@ PREREQUISITE = "tiene como prerrequisito"
 # every call in the account's ledger, so the engine tests — which answer a simulated
 # transport — charged six phantom requests to the real Cerebras budget and the
 # panel then reported them as spent.
+# The library holds no engine: the owner of a process fixes one for each piece of work
+# (`inference.using`). A test is a piece of work, so it gets the installation's default,
+# built lazily as the old module-level engine was; a test that needs another fixes its own.
+# It asks for the ledger and the catalogue fixtures so a hybrid default is never built over
+# the real ledger or the real catalogue.
+@pytest.fixture(autouse=True)
+def _default_engine(_isolated_cerebras_ledger, _no_cerebras_catalogue):
+    engines = EngineSet()
+    with inference.using(engines.default()):
+        yield
+    engines.close_all()
+
+
 @pytest.fixture(autouse=True)
 def _isolated_cerebras_ledger(tmp_path, monkeypatch):
     monkeypatch.setenv("CEREBRAS_BUDGET_PATH", str(tmp_path / "cerebras_budget.json"))

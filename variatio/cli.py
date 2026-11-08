@@ -10,15 +10,29 @@ import json
 from loguru import logger
 
 from . import api, inference
+from .inference.engines import EngineSet
 from .utils import paths
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run one subcommand and return its exit code."""
+    """Run one subcommand and return its exit code.
+
+    The process owns its engines: it builds the installation's default and fixes it for the
+    whole command, and closes it on the way out.
+    """
     args = build_parser().parse_args(argv)
 
     ws = paths.workspace(args.workspace)
+    engines = EngineSet()
+    try:
+        with inference.using(engines.default()):
+            return _run(args, ws)
+    finally:
+        engines.close_all()
 
+
+def _run(args: argparse.Namespace, ws: paths.Workspace) -> int:
+    """Run the parsed subcommand against `ws` and return its exit code."""
     try:
         # `restamp-descriptions` calls no model, so it must not demand a live engine.
         if args.command != "restamp-descriptions":

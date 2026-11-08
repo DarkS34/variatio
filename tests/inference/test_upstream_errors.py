@@ -84,7 +84,7 @@ def test_a_failed_pull_reaches_the_panel_without_the_body(engine):
         "error": None,
         "user": None,
     }
-    tracker._run("m")
+    tracker._run("m", engine)
     entry = tracker._pulls["m"]
     assert entry["status"] == "failed"
     assert BODY not in (entry["error"] or "")

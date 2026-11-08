@@ -60,6 +60,7 @@ def create_app() -> FastAPI:
 
     # `add_middleware` inserts at the front, so the LAST call is the OUTERMOST layer.
     # `SecurityHeaders` goes last or `OriginCheck`'s own 403 leaves without a CSP.
+    app.add_middleware(middleware.EngineContext)
     app.add_middleware(middleware.OriginCheck)
     app.add_middleware(middleware.SecurityHeaders)
 
@@ -121,9 +122,10 @@ async def lifespan(app: FastAPI):
         process.idle_unloader.stop()
         process.runner.shutdown()
         try:
-            await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, "al apagar la API"), 20)
+            await asyncio.wait_for(asyncio.to_thread(jobs.release_gpu, process.engines, "al apagar la API"), 20)
         except Exception as e:  # noqa: BLE001 - shutdown must finish whatever the engine does
             logger.warning(f"No se pudieron descargar los modelos de la GPU al apagar: {e}")
+        process.engines.close_all()
         process.tunnel.stop()
 
 
