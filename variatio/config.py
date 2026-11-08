@@ -8,6 +8,7 @@ of what the system exposes, not its definition.
 from .settings import apply
 
 INFERENCE_ENGINE: str
+ENGINES_AVAILABLE: list[str]
 OLLAMA_HOST: str
 CEREBRAS_BASE_URL: str
 CEREBRAS_API_KEY: str

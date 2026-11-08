@@ -238,6 +238,9 @@ class User(Base):
     features_off: Mapped[list] = mapped_column(Json, default=list, server_default="[]")
     evaluator_profile: Mapped[str | None] = mapped_column(String(16), default=None)
     ui_language: Mapped[str] = mapped_column(String(8), default="es", server_default="es")
+    # The inference engine this account runs on, by its `engine.name` value; NULL is the
+    # installation's default (`engine.name`), which is every account until one is assigned.
+    inference_engine: Mapped[str | None] = mapped_column(String(32), default=None)
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )

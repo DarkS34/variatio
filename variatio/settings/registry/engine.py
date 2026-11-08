@@ -291,6 +291,22 @@ registro de decisiones. La memoria tiene que decir con qué motor se produjo lo 
 reporte.""",
     ),
     Setting(
+        key="engine.available",
+        name="ENGINES_AVAILABLE",
+        kind="list[str]",
+        default=["ollama"],
+        group="Motor",
+        impact=Impact.ENGINE,
+        doc="""Los motores que el administrador puede asignar a una cuenta, además de `engine.name`.
+
+`engine.name` es el motor POR DEFECTO: el de toda cuenta sin motor asignado. Este ajuste
+dice cuáles más se ofrecen; el motor por defecto se ofrece siempre, esté o no en la lista.
+Un nombre que no sea un motor conocido ('ollama', 'cerebras+ollama') se ignora.
+
+Cada motor que alguna cuenta usa tiene su instancia viva en el proceso, y ninguno más: quitar
+de aquí un motor no reasigna a nadie, pero impide asignarlo de nuevo.""",
+    ),
+    Setting(
         key="engine.cerebras_base_url",
         name="CEREBRAS_BASE_URL",
         kind="str",

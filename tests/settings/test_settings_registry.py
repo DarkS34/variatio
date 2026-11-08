@@ -101,5 +101,7 @@ def test_the_registry_holds_what_this_work_transcribed():
     # 305 → 315 on 2026-10-15: the free chat's ten (`variatio.functionalities.chat.settings`, its model, reasoning,
     # effort, caps, history and sampling triple); none carries a name either.
     # 315 → 317 on 2026-11-02: the tutor's and the chat's caps for a reply that reasons.
-    assert len(REGISTRY) == 317
-    assert len(BY_NAME) == 159
+    # 317 → 318 and 159 → 160 on 2026-11-08: `engine.available`, the engines an account may
+    # be given besides the default.
+    assert len(REGISTRY) == 318
+    assert len(BY_NAME) == 160
