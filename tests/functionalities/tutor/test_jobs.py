@@ -24,6 +24,8 @@ def wired(tutor_context, monkeypatch):
     monkeypatch.setattr(jobs, "context_for", lambda job: tutor_context)
     monkeypatch.setattr(jobs.api, "load_concept_sources", lambda ws: SOURCES)
     monkeypatch.setattr(jobs, "index_for", lambda ws, sources, chars: None)
+    # The title is a model call; a test that does not stub it reaches whatever Ollama listens.
+    monkeypatch.setattr(jobs, "name_conversation", lambda *a, **k: None)
     return ws
 
 
