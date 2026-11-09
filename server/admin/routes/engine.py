@@ -136,12 +136,17 @@ def cerebras_state() -> dict:
     Cerebras — its catalogue as last read plus the declared list, asked of the engine so
     it is the same answer routing gives — the second what has actually been spent. A model can be in one and
     not the other, and collapsing them into one "models" loses exactly that difference.
+
+    Both are read from the process's hybrid engine, not from the administrator's own: an
+    administrator on `ollama` still watches the accounts that run on `cerebras+ollama`. With
+    no account on the hybrid there is no catalogue read, and the declared list is the answer.
     """
     budget = cerebras_budget.account_ledger().snapshot()
+    hybrid = process.engines.existing("cerebras+ollama")
     return {
-        "active": inference.engine_name() == "cerebras+ollama",
+        "active": hybrid is not None,
         "configured": bool(config.CEREBRAS_API_KEY),
-        "routed": sorted(inference.remote_models()),
+        "routed": sorted(hybrid.remote_models() if hybrid else config.CEREBRAS_MODELS),
         "max_wait": config.CEREBRAS_MAX_WAIT_SECONDS,
         "usage": budget["models"],
         # One call and how many there are: the strip draws the one worth acting on — a
