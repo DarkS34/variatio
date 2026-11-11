@@ -21,6 +21,7 @@ class MissingArtifactError(Exception):
 
     def __init__(self, artifact: str):
         """Name the artifact on the exception, so a caller can act on which one it was."""
+        self.artifact = artifact
         super().__init__(f"Missing instance artifact '{artifact}'")
 
 

@@ -194,7 +194,10 @@ def _export(
     outdir.mkdir(parents=True, exist_ok=True)
     target = "png"
     if size is not None:
-        target += rf':draw_png_Export:\{"PixelWidth":\{"type":"long","value":"{size}"\},"PixelHeight":\{"type":"long","value":"{size}"\}\}'
+        target += (
+            f':draw_png_Export:{{"PixelWidth":{{"type":"long","value":"{size[0]}"}},'
+            f'"PixelHeight":{{"type":"long","value":"{size[1]}"}}}}'
+        )
     # A profile of its own per run: LibreOffice refuses to start while another instance
     # holds the default profile's lock, and two documents may be read at once.
     profile = (workdir / "profile").resolve()
