@@ -10,11 +10,11 @@ from pathlib import Path
 from loguru import logger
 
 from .. import config, documents
-from ..settings import engine_profile
 from .. import prompts as prompts_pkg
+from ..documents.pages import META_NAME
+from ..settings import engine_profile
 from ..utils import locale, paths, progress
 from ..utils.workspace import Workspace
-from ..documents.pages import META_NAME
 
 CORPUS = "corpus"
 EXEMPLARS = "exemplars"
@@ -360,7 +360,7 @@ def transcribe_slot(ws: Workspace, slot: str) -> dict:
                     )
                 except progress.Cancelled:
                     raise
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.exception(f"[{source.name}] transcription skipped: {e}")
                     continue
                 meta = documents.read_meta(_cache_dir_for(ws, source))

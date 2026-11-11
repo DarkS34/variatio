@@ -101,7 +101,9 @@ def pdf_copy(source: str | Path, workdir: str | Path, timeout: float) -> Path | 
         return None
     profile = (workdir / "profile").resolve()
     made = workdir / f"{source.stem}.pdf"
-    for target in dict.fromkeys((_PDF_TARGETS.get(source.suffix.lower(), "pdf"), "pdf")):
+    for target in dict.fromkeys(
+        (_PDF_TARGETS.get(source.suffix.lower(), "pdf"), "pdf")
+    ):
         command = [
             tool,
             "--headless",
@@ -138,7 +140,9 @@ def rasteriser() -> str | None:
     return shutil.which("soffice") or shutil.which("libreoffice")
 
 
-def _render(tool: str, source: Path, names: list[str], workdir: Path) -> dict[str, bytes]:
+def _render(
+    tool: str, source: Path, names: list[str], workdir: Path
+) -> dict[str, bytes]:
     """Render each metafile through LibreOffice, keyed by its zip entry; misses are absent."""
     inputs = workdir / "metafiles"
     inputs.mkdir(parents=True, exist_ok=True)
@@ -171,23 +175,26 @@ def _render(tool: str, source: Path, names: list[str], workdir: Path) -> dict[st
         rendered = full.get(path.stem) or page.get(path.stem)
         image = _open_png(rendered) if rendered else None
         if image is None:
-            logger.warning(f"[{source.name}] '{name}' could not be rasterised; left as it is")
+            logger.warning(
+                f"[{source.name}] '{name}' could not be rasterised; left as it is"
+            )
             continue
         out[name] = crop_to_content(image)
     return out
 
 
 def _export(
-    tool: str, inputs: list[Path], outdir: Path, workdir: Path, size: tuple[int, int] | None
+    tool: str,
+    inputs: list[Path],
+    outdir: Path,
+    workdir: Path,
+    size: tuple[int, int] | None,
 ) -> dict[str, Path]:
     """Run one LibreOffice export over `inputs`, returning the PNGs it wrote by stem."""
     outdir.mkdir(parents=True, exist_ok=True)
     target = "png"
     if size is not None:
-        target += (
-            ':draw_png_Export:{"PixelWidth":{"type":"long","value":"%d"},'
-            '"PixelHeight":{"type":"long","value":"%d"}}' % size
-        )
+        target += rf':draw_png_Export:\{"PixelWidth":\{"type":"long","value":"{size}"\},"PixelHeight":\{"type":"long","value":"{size}"\}\}'
     # A profile of its own per run: LibreOffice refuses to start while another instance
     # holds the default profile's lock, and two documents may be read at once.
     profile = (workdir / "profile").resolve()
@@ -278,9 +285,10 @@ def _rewrite(source: Path, copy: Path, rendered: dict[str, bytes]) -> None:
     """
     renamed = {name: f"{name}.png" for name in rendered}
     basenames = {Path(name).name: Path(new).name for name, new in renamed.items()}
-    with zipfile.ZipFile(source) as archive, zipfile.ZipFile(
-        copy, "w", compression=zipfile.ZIP_DEFLATED
-    ) as out:
+    with (
+        zipfile.ZipFile(source) as archive,
+        zipfile.ZipFile(copy, "w", compression=zipfile.ZIP_DEFLATED) as out,
+    ):
         for info in archive.infolist():
             name = info.filename
             if name in renamed:
@@ -298,7 +306,9 @@ def _rewrite_targets(data: bytes, basenames: dict[str, str]) -> bytes:
     """Point every relationship at the PNG that replaced its metafile."""
     text = data.decode("utf-8")
     for old, new in basenames.items():
-        text = re.sub(_RELS_TARGET_RE.format(name=re.escape(old)), rf'\g<1>{new}"', text)
+        text = re.sub(
+            _RELS_TARGET_RE.format(name=re.escape(old)), rf'\g<1>{new}"', text
+        )
     return text.encode("utf-8")
 
 

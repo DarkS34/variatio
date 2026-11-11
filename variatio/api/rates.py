@@ -8,9 +8,9 @@ changed in the panel (the case D-156 was about) or an engine with no file shows 
 
 import json
 
-from ..utils.paths import PROJECT_ROOT
 from ..settings import engine_profile
 from ..settings.derived import PHASES
+from ..utils.paths import PROJECT_ROOT
 
 RATES_DIR = PROJECT_ROOT / "rates"
 

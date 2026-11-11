@@ -2,8 +2,8 @@
 
 from collections.abc import Callable
 
-from ..settings import engine_profile
 from ..functionalities.generation.generator import GeneratedVariant
+from ..settings import engine_profile
 from .initialize import RuntimeContext
 
 

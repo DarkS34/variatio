@@ -69,11 +69,11 @@ from .pages import (
 
 __all__ = [
     "CONVERTED_EXTS",
+    "FAILED_PAGE_PREFIXES",
     "OFFICE_EXTS",
     "PARAGRAPH",
     "PLAIN_TEXT_EXTS",
     "SUPPORTED_EXTS",
-    "FAILED_PAGE_PREFIXES",
     "LazyConverter",
     "adopt_pages",
     "chunk_markdown",

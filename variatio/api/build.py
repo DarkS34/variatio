@@ -10,16 +10,16 @@ from pathlib import Path
 from loguru import logger
 
 from ..exemplars_bank import build as exemplars_bank_builder
-from ..exemplars_bank.exemplars_profile import build as exemplars_profile_builder
-from ..knowledge_graph import build as knowledge_graph_builder
 from ..exemplars_bank.build import ExemplarsBankBuilder
+from ..exemplars_bank.exemplars_profile import build as exemplars_profile_builder
 from ..exemplars_bank.exemplars_profile.build import ExemplarsProfileBuilder
+from ..exemplars_bank.exemplars_profile.profile import ExemplarsProfile
+from ..knowledge_graph import build as knowledge_graph_builder
 from ..knowledge_graph.build import KnowledgeGraphBuilder
+from ..knowledge_graph.graph import KnowledgeGraph
 from ..utils import progress
 from ..utils.json_io import write_json
 from ..utils.workspace import Workspace
-from ..exemplars_bank.exemplars_profile.profile import ExemplarsProfile
-from ..knowledge_graph.graph import KnowledgeGraph
 from . import _artifacts
 from .initialize import make_embedder, make_tagger
 
@@ -91,9 +91,7 @@ def _tagging_hook(ws: Workspace, exemplars_profile: ExemplarsProfile, path: Path
     """
     kg_path = _artifacts.knowledge_graph_path(ws)
     if kg_path is None:
-        logger.warning(
-            "No knowledge graph: the items are extracted untagged"
-        )
+        logger.warning("No knowledge graph: the items are extracted untagged")
         return None
 
     # Lazy: building the `Embedder` indexes every concept and writes the missing

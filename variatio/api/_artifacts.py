@@ -8,11 +8,11 @@ had to name — nothing here falls back to an instance nobody asked for.
 import json
 from pathlib import Path
 
-from ..utils.workspace import Workspace
 from ..knowledge_graph.context import ContentContext, load_for, resolve_path
+from ..utils.workspace import Workspace
 
-EXEMPLARS_PROFILE = "exemplars_profile"
 KNOWLEDGE_GRAPH = "knowledge_graph"
+EXEMPLARS_PROFILE = "exemplars_profile"
 EXEMPLARS_BANK = "exemplars_bank"
 
 
@@ -21,7 +21,6 @@ class MissingArtifactError(Exception):
 
     def __init__(self, artifact: str):
         """Name the artifact on the exception, so a caller can act on which one it was."""
-        self.artifact = artifact
         super().__init__(f"Missing instance artifact '{artifact}'")
 
 
